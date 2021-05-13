@@ -343,7 +343,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 TEST_F(DriverRunnerTest, StartRootDriver) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
 
@@ -357,14 +357,15 @@ TEST_F(DriverRunnerTest, StartRootDriver) {
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("false", entries[1].value->str());
   });
-  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).is_ok());
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 }
 
 // Start the root driver, and add a child node owned by the root driver.
 TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -388,14 +389,14 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild) {
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 }
 
 // Start the root driver, add a child node, then remove it.
 TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -419,7 +420,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   node_controller->Remove();
   loop().RunUntilIdle();
@@ -431,7 +432,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_RemoveOwnedChild) {
 TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_InvalidName) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -448,7 +449,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_InvalidName) {
                         [](auto result) { EXPECT_TRUE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   loop().RunUntilIdle();
   EXPECT_FALSE(invalid_node.is_bound());
@@ -459,7 +460,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_InvalidName) {
 TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_DuplicateNames) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -480,7 +481,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_DuplicateNames) {
                         [](auto result) { EXPECT_TRUE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   loop().RunUntilIdle();
   EXPECT_FALSE(invalid_node.is_bound());
@@ -494,7 +495,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddOwnedChild_DuplicateNames) {
 TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -514,7 +515,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
                         [](auto result) { EXPECT_TRUE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   loop().RunUntilIdle();
   ASSERT_FALSE(node_controller.is_bound());
@@ -525,7 +526,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
 TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingAddress) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -542,7 +543,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingAddress) {
                         [](auto result) { EXPECT_TRUE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   loop().RunUntilIdle();
   ASSERT_FALSE(node_controller.is_bound());
@@ -552,7 +553,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingAddress) {
 TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingName) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -569,7 +570,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingName) {
                         [](auto result) { EXPECT_TRUE(result.is_err()); });
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   loop().RunUntilIdle();
   ASSERT_FALSE(node_controller.is_bound());
@@ -579,7 +580,7 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_SymbolMissingName) {
 TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -615,7 +616,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
     BindDriver(std::move(request), std::move(root_node));
   });
-  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).is_ok());
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
     auto& offers = start_args.offers();
@@ -642,7 +644,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
 TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -678,7 +680,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
     BindDriver(std::move(request), std::move(root_node));
   });
-  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).is_ok());
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
     auto& offers = start_args.offers();
@@ -718,7 +721,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
         }
       });
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -753,7 +756,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
     BindDriver(std::move(request), std::move(root_node));
   });
-  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).is_ok());
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
     auto& entries = start_args.program().entries();
@@ -776,7 +780,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
 TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -797,7 +801,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
   });
-  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).is_ok());
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   StartDriver(driver_runner, {.close = true});
 }
@@ -806,7 +811,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
 TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -827,7 +832,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
     BindDriver(std::move(request), std::move(root_node));
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   fdf::NodePtr second_node;
   driver_host().SetStartHandler([this, &second_node](fdf::DriverStartArgs start_args,
@@ -866,7 +871,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
 TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -887,7 +892,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
     BindDriver(std::move(request), std::move(root_node));
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   fdf::NodePtr second_node;
   fidl::InterfaceRequest<fdf::Driver> second_request;
@@ -924,7 +929,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
                                  });
                                });
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -945,7 +950,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
     BindDriver(std::move(request), std::move(root_node));
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   constexpr size_t kMaxNodes = 10;
   fdf::NodePtr second_node;
@@ -999,7 +1004,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
 TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -1022,7 +1027,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
     root_node = std::move(driver.node());
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     fdf::NodePtr second_node;
@@ -1052,7 +1057,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
 TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -1073,7 +1078,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
     BindDriver(std::move(request), std::move(root_node));
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     fdf::NodePtr node;
@@ -1104,7 +1109,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
 TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -1125,7 +1130,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
     BindDriver(std::move(request), std::move(root_node));
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
-  ASSERT_TRUE(root_driver.is_ok());
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
 
   fdf::NodePtr second_node;
   driver_host().SetStartHandler(
@@ -1176,7 +1181,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
 TEST_F(DriverRunnerTest, StartAndInspect) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
-  ASSERT_EQ(driver_index_client.status_value(), ZX_OK);
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
   DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
                              loop().dispatcher());
   auto defer = fit::defer([this] { Unbind(); });
@@ -1201,7 +1206,8 @@ TEST_F(DriverRunnerTest, StartAndInspect) {
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
   });
-  ASSERT_TRUE(StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).is_ok());
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   EXPECT_THAT(
       Inspect(driver_runner),
