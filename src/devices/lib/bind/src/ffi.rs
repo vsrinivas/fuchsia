@@ -10,17 +10,36 @@ use std::ffi::CStr;
 const BIND_PROTOCOL: u64 = 0x0001;
 const BIND_AUTOBIND: u64 = 0x0002;
 
+#[repr(u32)]
+enum ValueType {
+    NumberVal = 0,
+    StringVal = 1,
+    BoolVal = 2,
+}
+
 #[repr(C)]
 pub struct device_property_t {
     key: u32,
     value: u32,
 }
 
-// TODO(fxb/73943): Add support for more value types.
+#[repr(C)]
+pub union value_t {
+    num_value: u32,
+    str_value: *const libc::c_char,
+    bool_value: bool,
+}
+
+#[repr(C)]
+struct property_value_t {
+    val_type: ValueType,
+    value: value_t,
+}
+
 #[repr(C)]
 pub struct device_str_property_t {
     key: *const libc::c_char,
-    value: *const libc::c_char,
+    value: property_value_t,
 }
 
 fn convert_str(c_str: *const libc::c_char) -> Option<String> {
@@ -28,6 +47,67 @@ fn convert_str(c_str: *const libc::c_char) -> Option<String> {
     match str.to_str() {
         Ok(value) => Some(value.to_string()),
         Err(_) => None,
+    }
+}
+
+fn convert_to_symbol(prop_value: &property_value_t) -> Option<Symbol> {
+    unsafe {
+        match prop_value {
+            property_value_t {
+                val_type: ValueType::NumberVal,
+                value: value_t { num_value: val },
+            } => Some(Symbol::NumberValue(*val as u64)),
+            property_value_t {
+                val_type: ValueType::BoolVal,
+                value: value_t { bool_value: val },
+            } => Some(Symbol::BoolValue(*val)),
+            property_value_t {
+                val_type: ValueType::StringVal,
+                value: value_t { str_value: val },
+            } => convert_str(*val).map(|str_val| Symbol::StringValue(str_val)),
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn str_property_with_string(
+    key: *const libc::c_char,
+    value: *const libc::c_char,
+) -> device_str_property_t {
+    device_str_property_t {
+        key: key,
+        value: property_value_t {
+            val_type: ValueType::StringVal,
+            value: value_t { str_value: value },
+        },
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn str_property_with_int(
+    key: *const libc::c_char,
+    value: u32,
+) -> device_str_property_t {
+    device_str_property_t {
+        key: key,
+        value: property_value_t {
+            val_type: ValueType::NumberVal,
+            value: value_t { num_value: value },
+        },
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn str_property_with_bool(
+    key: *const libc::c_char,
+    value: bool,
+) -> device_str_property_t {
+    device_str_property_t {
+        key: key,
+        value: property_value_t {
+            val_type: ValueType::BoolVal,
+            value: value_t { bool_value: value },
+        },
     }
 }
 
@@ -72,10 +152,10 @@ pub extern "C" fn match_bind_rules(
             unsafe { std::slice::from_raw_parts(str_properties_c, str_properties_sz) };
         for str_property in str_properties.iter() {
             let key = convert_str(str_property.key);
-            let value = convert_str(str_property.value);
-            assert!(key.is_some() && value.is_some());
-            device_properties
-                .insert(PropertyKey::StringKey(key.unwrap()), Symbol::StringValue(value.unwrap()));
+            let symbol = convert_to_symbol(&str_property.value);
+
+            assert!(key.is_some() && symbol.is_some());
+            device_properties.insert(PropertyKey::StringKey(key.unwrap()), symbol.unwrap());
         }
     }
 

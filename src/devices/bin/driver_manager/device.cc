@@ -687,7 +687,16 @@ zx_status_t Device::SetStrProps(fbl::Array<const StrProperty> str_props) {
 
   // Ensure that the string properties are encoded in UTF-8 format.
   for (const auto str_prop : str_props_) {
-    if (!fxl::IsStringUTF8(str_prop.key) || !fxl::IsStringUTF8(str_prop.value)) {
+    if (!fxl::IsStringUTF8(str_prop.key)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (str_prop.value.valueless_by_exception()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto* str_value = std::get_if<std::string>(&str_prop.value);
+    if (str_value && !fxl::IsStringUTF8(*str_value)) {
       return ZX_ERR_INVALID_ARGS;
     }
   }

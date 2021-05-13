@@ -163,12 +163,30 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
     fbl::Array<device_str_property_t> str_properties(new device_str_property_t[str_props.size()],
                                                      str_props.size());
     for (size_t i = 0; i < str_props.size(); i++) {
-      if (!fxl::IsStringUTF8(str_props[i].key) || !fxl::IsStringUTF8(str_props[i].value)) {
-        LOGF(ERROR, "String properties are not in UTF-8 encoding");
+      if (!fxl::IsStringUTF8(str_props[i].key)) {
+        LOGF(ERROR, "String property key is not in UTF-8 encoding");
         return false;
       }
-      str_properties[i] = device_str_property_t{.key = str_props[i].key.c_str(),
-                                                .value = str_props[i].value.c_str()};
+
+      if (str_props[i].value.valueless_by_exception()) {
+        LOGF(ERROR, "String property value is not set");
+        return false;
+      }
+
+      if (std::holds_alternative<uint32_t>(str_props[i].value)) {
+        auto* prop_val = std::get_if<uint32_t>(&str_props[i].value);
+        str_properties[i] = str_property_with_int(str_props[i].key.c_str(), *prop_val);
+      } else if (std::holds_alternative<std::string>(str_props[i].value)) {
+        auto* prop_val = std::get_if<std::string>(&str_props[i].value);
+        if (prop_val && !fxl::IsStringUTF8(*prop_val)) {
+          LOGF(ERROR, "String property value is not in UTF-8 encoding");
+          return false;
+        }
+        str_properties[i] = str_property_with_string(str_props[i].key.c_str(), prop_val->c_str());
+      } else if (std::holds_alternative<bool>(str_props[i].value)) {
+        auto* prop_val = std::get_if<bool>(&str_props[i].value);
+        str_properties[i] = str_property_with_bool(str_props[i].key.c_str(), *prop_val);
+      }
     }
 
     return match_bind_rules(bytecode ? bytecode->get() : nullptr, drv->binding_size,

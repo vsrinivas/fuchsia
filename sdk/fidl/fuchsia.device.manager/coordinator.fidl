@@ -15,13 +15,17 @@ struct DeviceProperty {
     uint32 value;
 };
 
-/// This has the same structure as zx_device_str_prop_t.
-struct DeviceStrProperty {
-    string:STR_LENGTH_MAX key;
-    string:STR_LENGTH_MAX value;
+union PropertyValue {
+    1: uint32 int_value;
+    2: string:STR_LENGTH_MAX str_value;
+    3: bool bool_value;
 };
 
-// TODO(fxb/74654): String properties are unimplemented.
+struct DeviceStrProperty {
+    string:STR_LENGTH_MAX key;
+    PropertyValue value;
+};
+
 struct DevicePropertyList {
     vector<DeviceProperty>:PROPERTIES_MAX props;
     vector<DeviceStrProperty>:STR_PROPERTIES_MAX str_props;

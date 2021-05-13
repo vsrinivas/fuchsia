@@ -517,6 +517,25 @@ TEST(MiscTestCase, TestOutput) {
   loop.RunUntilIdle();
 }
 
+void CompareStrProperty(const fuchsia_device_manager::wire::DeviceStrProperty expected,
+                        const StrProperty actual) {
+  ASSERT_STR_EQ(expected.key.get(), actual.key);
+
+  if (expected.value.is_int_value()) {
+    auto* value = std::get_if<uint32_t>(&actual.value);
+    ASSERT_TRUE(value);
+    ASSERT_EQ(expected.value.int_value(), *value);
+  } else if (expected.value.is_str_value()) {
+    auto* value = std::get_if<std::string>(&actual.value);
+    ASSERT_TRUE(value);
+    ASSERT_STR_EQ(expected.value.str_value(), *value);
+  } else if (expected.value.is_bool_value()) {
+    auto* value = std::get_if<bool>(&actual.value);
+    ASSERT_TRUE(value);
+    ASSERT_EQ(expected.value.bool_value(), *value);
+  }
+}
+
 // Adds a device with the given properties to the device coordinator, then checks that the
 // coordinator contains the device, and that its properties are correct.
 void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty* props_data,
@@ -558,8 +577,7 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
 
   ASSERT_EQ(dev.str_props().size(), str_props_count);
   for (size_t i = 0; i < str_props_count; i++) {
-    ASSERT_STR_EQ(str_props_data[i].key.get(), dev.str_props()[i].key);
-    ASSERT_STR_EQ(str_props_data[i].value.get(), dev.str_props()[i].value);
+    CompareStrProperty(str_props_data[i], dev.str_props()[i]);
   }
 
   controller_remote.reset();
@@ -578,10 +596,17 @@ TEST(MiscTestCase, DeviceProperties) {
   };
   AddDeviceWithProperties(props, std::size(props), nullptr, 0);
 
+  uint32_t int_val = 1000;
+  auto str_val = fidl::StringView::FromExternal("timberdoodle");
+
   // Multiple device string properties. No device properties.
   fuchsia_device_manager::wire::DeviceStrProperty str_props[] = {
-      fuchsia_device_manager::wire::DeviceStrProperty{"snipe", "timberdoodle"},
-      fuchsia_device_manager::wire::DeviceStrProperty{"sandpiper", "turnstone"},
+      fuchsia_device_manager::wire::DeviceStrProperty{
+          "snipe", fuchsia_device_manager::wire::PropertyValue::WithStrValue(
+                       fidl::ObjectView<fidl::StringView>::FromExternal(&str_val))},
+      fuchsia_device_manager::wire::DeviceStrProperty{
+          "sandpiper", fuchsia_device_manager::wire::PropertyValue::WithIntValue(
+                           fidl::ObjectView<uint32_t>::FromExternal(&int_val))},
   };
   AddDeviceWithProperties(nullptr, 0, str_props, std::size(str_props));
 
@@ -606,9 +631,12 @@ TEST(MiscTestCase, InvalidStringProperties) {
 
   // Create an invalid string with invalid UTF-8 characters.
   const char kInvalidStr[] = {static_cast<char>(0xC0), 0};
+  auto str_val = fidl::StringView::FromExternal("ovenbird");
   fuchsia_device_manager::wire::DeviceStrProperty str_props[] = {
       fuchsia_device_manager::wire::DeviceStrProperty{
-          fidl::StringView::FromExternal(kInvalidStr, std::size(kInvalidStr)), "ovenbird"},
+          fidl::StringView::FromExternal(kInvalidStr, std::size(kInvalidStr)),
+          fuchsia_device_manager::wire::PropertyValue::WithStrValue(
+              fidl::ObjectView<fidl::StringView>::FromExternal(&str_val))},
   };
 
   fbl::RefPtr<Device> device;

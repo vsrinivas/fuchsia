@@ -94,7 +94,7 @@ struct DeviceAllDevicesListTag {};
 
 struct StrProperty {
   std::string key;
-  std::string value;
+  std::variant<uint32_t, std::string, bool> value;
 };
 
 class Device

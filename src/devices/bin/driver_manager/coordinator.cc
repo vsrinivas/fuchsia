@@ -520,7 +520,13 @@ zx_status_t Coordinator::AddDevice(
   }
   for (uint32_t i = 0; i < str_props_count; i++) {
     str_props[i].key = str_props_data[i].key.get();
-    str_props[i].value = str_props_data[i].value.get();
+    if (str_props_data[i].value.is_int_value()) {
+      str_props[i].value = str_props_data[i].value.int_value();
+    } else if (str_props_data[i].value.is_str_value()) {
+      str_props[i].value = std::string(str_props_data[i].value.str_value().get());
+    } else if (str_props_data[i].value.is_bool_value()) {
+      str_props[i].value = str_props_data[i].value.bool_value();
+    }
   }
 
   fbl::String name_str(name);
