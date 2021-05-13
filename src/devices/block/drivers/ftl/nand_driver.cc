@@ -70,7 +70,16 @@ class NandDriverImpl final : public ftl::NandDriver {
  public:
   NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block,
                  ftl::OperationCounters* counters)
-      : parent_(parent), bad_block_protocol_(bad_block), counters_(counters) {}
+      : NandDriver(FtlLogger{
+            .trace = &LogTrace,
+            .debug = &LogDebug,
+            .info = &LogInfo,
+            .warn = &LogWarning,
+            .error = &LogError,
+        }),
+        parent_(parent),
+        bad_block_protocol_(bad_block),
+        counters_(counters) {}
   ~NandDriverImpl() final {}
 
   // NdmDriver interface:
@@ -137,14 +146,7 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
   } else if (BadBbtReservation()) {
     return "Unable to use bad block reservation";
   }
-  ftl::LoggerProxy logger = {
-      .trace = &LogTrace,
-      .debug = &LogDebug,
-      .info = &LogInfo,
-      .warn = &LogWarning,
-      .error = &LogError,
-  };
-  const char* error = CreateNdmVolumeWithLogger(ftl_volume, options, true, logger);
+  const char* error = CreateNdmVolume(ftl_volume, options, true);
   if (error) {
     // Retry allowing the volume to be fixed as needed.
     zxlogf(INFO, "FTL: About to retry volume creation");

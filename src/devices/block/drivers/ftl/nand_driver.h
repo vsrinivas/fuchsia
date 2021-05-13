@@ -42,6 +42,9 @@ class NandDriver : public ftl::NdmBaseDriver {
   // Cleans all non bad blocks in a given block range. Erase failures are logged amd deemed non
   // fatal.
   virtual void TryEraseRange(uint32_t start_block, uint32_t end_block) = 0;
+
+ protected:
+  explicit NandDriver(FtlLogger logger) : NdmBaseDriver(logger) {}
 };
 
 }  // namespace ftl.

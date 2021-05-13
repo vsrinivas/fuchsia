@@ -41,7 +41,8 @@ zx_status_t NandVolumeDriver::Create(uint32_t block_offset, uint32_t max_bad_blo
 NandVolumeDriver::NandVolumeDriver(uint32_t block_offset, uint32_t max_bad_blocks,
                                    uint32_t page_multiplier,
                                    std::unique_ptr<mtd::NandInterface> interface)
-    : block_offset_(block_offset),
+    : NdmBaseDriver(ftl::DefaultLogger()),
+      block_offset_(block_offset),
       page_multiplier_(page_multiplier),
       max_bad_blocks_(max_bad_blocks),
       interface_(std::move(interface)) {}

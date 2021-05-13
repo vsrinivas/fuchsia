@@ -187,19 +187,17 @@ __PRINTFLIKE(3, 4) void LogError(const char* file, int line, const char* format,
   fprintf(stderr, "\n");
 }
 
-Logger GetDefaultLogger() {
-  Logger logger = {
+}  // namespace
+
+FtlLogger DefaultLogger() {
+  return FtlLogger{
       .trace = &LogTrace,
       .debug = &LogDebug,
       .info = &LogInfo,
-      .warning = &LogWarning,
+      .warn = &LogWarning,
       .error = &LogError,
   };
-
-  return logger;
 }
-
-}  // namespace
 
 NdmBaseDriver::~NdmBaseDriver() { RemoveNdmVolume(); }
 
@@ -229,14 +227,6 @@ bool NdmBaseDriver::BadBbtReservation() const {
 
 const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
                                            bool save_volume_data) {
-  return CreateNdmVolumeWithLogger(ftl_volume, options, save_volume_data, std::nullopt);
-}
-
-const char* NdmBaseDriver::CreateNdmVolumeWithLogger(const Volume* ftl_volume,
-                                                     const VolumeOptions& options,
-                                                     bool save_volume_data,
-                                                     std::optional<LoggerProxy> logger) {
-  logger_ = logger;
   if (!ndm_) {
     IsNdmDataPresent(options, save_volume_data);
   }
@@ -254,7 +244,7 @@ const char* NdmBaseDriver::CreateNdmVolumeWithLogger(const Volume* ftl_volume,
   ftl.cached_map_pages = options.num_blocks * (options.block_size / options.page_size);
   ftl.extra_free = 6;  // Over-provision 6% of the device.
   xfs.ftl_volume = const_cast<Volume*>(ftl_volume);
-  ftl.logger = ndm_->logger;
+  ftl.logger = logger_;
 
   partition.exploded.basic_data.num_blocks = ndmGetNumVBlocks(ndm_);
   strncpy(partition.exploded.basic_data.name, "ftl", sizeof(partition.exploded.basic_data.name));
@@ -375,29 +365,7 @@ void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_
   driver->data_and_spare_check = CheckPage;
   driver->erase_block = EraseBlock;
   driver->is_block_bad = IsBadBlockImpl;
-  driver->logger = GetDefaultLogger();
-
-  if (logger_.has_value()) {
-    if (logger_->trace != nullptr) {
-      driver->logger.trace = logger_->trace;
-    }
-
-    if (logger_->debug != nullptr) {
-      driver->logger.debug = logger_->debug;
-    }
-
-    if (logger_->info != nullptr) {
-      driver->logger.info = logger_->info;
-    }
-
-    if (logger_->warn != nullptr) {
-      driver->logger.warning = logger_->warn;
-    }
-
-    if (logger_->error != nullptr) {
-      driver->logger.error = logger_->error;
-    }
-  }
+  driver->logger = logger_;
 }
 
 __EXPORT

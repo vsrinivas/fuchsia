@@ -27,17 +27,16 @@ constexpr ftl::VolumeOptions kDefaultOptions = {kNumBlocks, 2, kBlockSize, kPage
 
 class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
-  NdmRamDriver(const ftl::VolumeOptions options = kDefaultOptions) : options_(options) {}
-  ~NdmRamDriver() final {}
+  NdmRamDriver(const ftl::VolumeOptions options = kDefaultOptions,
+               FtlLogger logger = ftl::DefaultLogger())
+      : NdmBaseDriver(logger), options_(options) {}
 
   const uint8_t* data(uint32_t page_num) const { return &volume_[page_num * kPageSize]; }
   NDM ndm() { return GetNdmForTest(); }
   void format_using_v2(bool value) { format_using_v2_ = value; }
 
   // Goes through the normal logic to create a volume with user data info.
-  const char* CreateVolume(std::optional<ftl::LoggerProxy> logger = std::nullopt) {
-    return CreateNdmVolumeWithLogger(nullptr, options_, true, logger);
-  }
+  const char* CreateVolume() { return CreateNdmVolume(nullptr, options_, true); }
 
   // NdmDriver interface:
   const char* Init() final;
@@ -466,7 +465,7 @@ constexpr uint32_t kControlBlockBadBlocksV2[] = {
     0x00000003, 0x0000001b, 0xffffffff, 0xffffffff, 0x00000000, 0x0000001a, 0x006c7466, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
 
-TEST_F(NdmReadOnlyTest, BadBlocksV2) {
+TEST(NdmReadOnlyTestWithLogger, BadBlocksV2) {
   static bool logger_called = false;
   logger_called = false;
 
@@ -477,18 +476,25 @@ TEST_F(NdmReadOnlyTest, BadBlocksV2) {
     }
   };
 
-  ftl::LoggerProxy logger;
+  FtlLogger logger;
   logger.trace = &LoggerHelper::Log;
   logger.debug = &LoggerHelper::Log;
   logger.info = &LoggerHelper::Log;
   logger.warn = &LoggerHelper::Log;
   logger.error = &LoggerHelper::Log;
 
-  memcpy(buffer_.data(), kControlBlockBadBlocksV2, sizeof(kControlBlockBadBlocksV2));
-  ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
+  ASSERT_TRUE(ftl::InitModules());
+  ftl::VolumeOptions options = kDefaultOptions;
+  options.flags |= ftl::kReadOnlyInit;
+  auto ndm_driver = std::make_unique<NdmRamDriver>(options, logger);
+  ASSERT_NULL(ndm_driver->Init());
+  std::vector<uint8_t> buffer(kPageSize, 0xff);
 
-  ASSERT_NULL(ndm_driver_->CreateVolume(logger));
-  EXPECT_EQ(2, ndm_driver_->ndm()->num_bad_blks);
+  memcpy(buffer.data(), kControlBlockBadBlocksV2, sizeof(kControlBlockBadBlocksV2));
+  ASSERT_EQ(ftl::kNdmOk, ndm_driver->NandWrite(kControlPage0, 1, buffer.data(), kControlOob));
+
+  ASSERT_NULL(ndm_driver->CreateVolume());
+  EXPECT_EQ(2, ndm_driver->ndm()->num_bad_blks);
   EXPECT_TRUE(logger_called);
 }
 

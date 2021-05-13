@@ -47,7 +47,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
   explicit NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, {}) {}
   NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)
-      : options_(options), test_options_(test_options) {}
+      : NdmBaseDriver(ftl::DefaultLogger()), options_(options), test_options_(test_options) {}
   ~NdmRamDriver() final = default;
 
   // Extends the visible volume to the whole size of the storage.

@@ -28,6 +28,11 @@
 #define FTLN_3B_PN TRUE  // If true, use 3B page numbers.
 #endif
 
+// Prefer to use this function rather than #if FTLN_DEBUG directly because this will
+// ensure what's within will actually build whilst any reasonable compiler will ensure
+// the code is not actually included.
+__UNUSED static inline int ftln_debug() { return FTLN_DEBUG; }
+
 //
 // Symbol Definitions.
 //
@@ -215,8 +220,7 @@ struct ftln {
 #endif
   char vol_name[FTL_NAME_MAX];  // Volume name.
 
-  // Logger used by the FTL.
-  Logger logger;
+  FtlLogger logger;
 };
 
 __BEGIN_CDECLS

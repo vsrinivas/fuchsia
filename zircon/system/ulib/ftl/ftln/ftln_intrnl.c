@@ -583,10 +583,9 @@ static ui32 next_recycle_blk(FTLN ftl, int should_boost_low_wear) {
 static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
   ui32 pn, past_end;
 
-#if FTLN_DEBUG > 1
-  if (ftl->flags & FTLN_VERBOSE)
+  if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
     printf("recycle_vblk: block# %u\n", recycle_b);
-#endif
+  }
 
   // Transfer all used pages from recycle block to free block.
   pn = recycle_b * ftl->pgs_per_blk;
@@ -924,10 +923,9 @@ int FtlnRecNeeded(CFTLN ftl, int wr_cnt) {
 int FtlnRecycleMapBlk(FTLN ftl, ui32 recycle_b) {
   ui32 i, pn;
 
-#if FTLN_DEBUG > 1
-  if (ftl->flags & FTLN_VERBOSE)
+  if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
     printf("FtlnRecycleMapBlk: block# %u\n", recycle_b);
-#endif
+  }
 
   // Transfer all used pages from recycle block to free block.
   pn = recycle_b * ftl->pgs_per_blk;
@@ -1032,14 +1030,13 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
     // Count number of times any recycle is done in FtlnRecCheck().
     ++ftl->recycle_needed;
 
-#if FTLN_DEBUG > 1
-    if (ftl->flags & FTLN_VERBOSE)
-      printf(
-          "\n0 rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
-          " free blocks = %2u\n",
-          ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
-          ftl->num_free_blks);
-#endif
+    if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
+        printf(
+            "\n0 rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
+            " free blocks = %2u\n",
+            ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
+            ftl->num_free_blks);
+    }
 
     // Loop until enough pages are free.
     for (count = 1;; ++count) {
@@ -1055,20 +1052,19 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
       // Record the highest number of consecutive recycles.
       if (ftl->wear_data.max_consec_rec < count) {
         ftl->wear_data.max_consec_rec = count;
-#if FTLN_DEBUG > 2
-        printf("max_consec_rec=%u, avg_wc_lag=%u\n", ftl->wear_data.max_consec_rec,
-               ftl->wear_data.avg_wc_lag);
-#endif
+        if (ftln_debug() > 2) {
+          printf("max_consec_rec=%u, avg_wc_lag=%u\n", ftl->wear_data.max_consec_rec,
+                 ftl->wear_data.avg_wc_lag);
+        }
       }
 
-#if FTLN_DEBUG > 1
-      if (ftl->flags & FTLN_VERBOSE)
+      if (ftln_debug() > 1 && ftl->flags & FTLN_VERBOSE) {
         printf(
             "%u rec begin: free vpn = %5u (%3u), free mpn = %5u (%3u)"
             " free blocks = %2u\n",
             count, ftl->free_vpn, free_vol_list_pgs(ftl), ftl->free_mpn, free_map_list_pgs(ftl),
             ftl->num_free_blks);
-#endif
+      }
 
       // Break if enough pages have been freed.
       if (FtlnRecNeeded(ftl, wr_cnt) == FALSE)
@@ -1085,10 +1081,10 @@ int FtlnRecCheck(FTLN ftl, int wr_cnt) {
       // Ensure we haven't recycled too many times.
       PfAssert(count <= 2 * ftl->num_blks);
       if (count > 2 * ftl->num_blks) {
-#if FTLN_DEBUG
-        printf("FTL NDM too many consec recycles = %u\n", count);
-        FtlnBlkStats(ftl);
-#endif
+        if (ftln_debug() > 0) {
+          printf("FTL NDM too many consec recycles = %u\n", count);
+          FtlnBlkStats(ftl);
+        }
         return FsError2(FTL_RECYCLE_CNT, ENOSPC);
       }
     }

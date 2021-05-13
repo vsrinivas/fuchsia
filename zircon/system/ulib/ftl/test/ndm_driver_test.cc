@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/ftl/ndm-driver.h"
-
 #include <zxtest/zxtest.h>
 
 #include "ftl_private.h"
+#include "lib/ftl/ndm-driver.h"
 
 namespace {
 
 class MockDriver final : public ftl::NdmBaseDriver {
  public:
-  MockDriver() {}
+  MockDriver() : NdmBaseDriver(ftl::DefaultLogger()) {}
   ~MockDriver() final {}
 
   void set_result(int result) { result_ = result; }
@@ -37,18 +36,16 @@ class MockDriver final : public ftl::NdmBaseDriver {
 };
 
 int MockDriver::NandRead(uint32_t start_page, uint32_t page_count, void* page_buffer,
-                           void* oob_buffer) {
+                         void* oob_buffer) {
   return result_;
 }
 
 int MockDriver::NandWrite(uint32_t start_page, uint32_t page_count, const void* page_buffer,
-                            const void* oob_buffer) {
+                          const void* oob_buffer) {
   return result_;
 }
 
-int MockDriver::NandErase(uint32_t page_num) {
-  return result_;
-}
+int MockDriver::NandErase(uint32_t page_num) { return result_; }
 
 bool MockDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
   return empty_;

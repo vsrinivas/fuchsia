@@ -263,11 +263,11 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       }
 #endif  // INC_ELIST
 
-#if FTLN_DEBUG > 1
-      // Display FTL statistics.
-      FtlnStats(ftl);
-      FtlnBlkStats(ftl);
-#endif
+      if (ftln_debug() > 1) {
+        // Display FTL statistics.
+        FtlnStats(ftl);
+        FtlnBlkStats(ftl);
+      }
 
       // Return success.
       return 0;
@@ -372,14 +372,14 @@ int FtlnReport(void* vol, ui32 msg, ...) {
       ftl->stats.ram_used = sizeof(struct ftln) + ftl->num_map_pgs * sizeof(ui32) + ftl->page_size +
                             ftl->eb_size * ftl->pgs_per_blk + ftlmcRAM(ftl->map_cache) +
                             ftl->num_blks * (sizeof(ui32) + sizeof(ui8));
-#if FTLN_DEBUG > 1
-      printf("TargetFTL-NDM RAM usage:\n");
-      printf(" - sizeof(Ftln) : %u\n", (int)sizeof(FTLN));
-      printf(" - tmp buffers  : %u\n", ftl->page_size + ftl->eb_size * ftl->pgs_per_blk);
-      printf(" - map pages    : %u\n", ftl->num_map_pgs * 4);
-      printf(" - map cache    : %u\n", ftlmcRAM(ftl->map_cache));
-      printf(" - bdata[]      : %u\n", ftl->num_blks * (int)(sizeof(ui32) + sizeof(ui8)));
-#endif
+      if (ftln_debug() > 1) {
+        printf("TargetFTL-NDM RAM usage:\n");
+        printf(" - sizeof(Ftln) : %u\n", (int)sizeof(FTLN));
+        printf(" - tmp buffers  : %u\n", ftl->page_size + ftl->eb_size * ftl->pgs_per_blk);
+        printf(" - map pages    : %u\n", ftl->num_map_pgs * 4);
+        printf(" - map cache    : %u\n", ftlmcRAM(ftl->map_cache));
+        printf(" - bdata[]      : %u\n", ftl->num_blks * (int)(sizeof(ui32) + sizeof(ui8)));
+      }
 
       const int kNumBuckets = sizeof(buf->wear_histogram) / sizeof(ui32);
       PfAssert(kNumBuckets == 20);
@@ -412,13 +412,13 @@ int FtlnReport(void* vol, ui32 msg, ...) {
         return FsError2(FTL_MOUNTED, EEXIST);
       ftl->flags |= FTLN_MOUNTED;
 
-#if FTLN_DEBUG > 1
-      // Display FTL statistics.
-      FtlnStats(ftl);
-      FtlnBlkStats(ftl);
-#elif FTLN_DEBUG
-      printf("FTL: total blocks: %u, free blocks: %u\n", ftl->num_blks, ftl->num_free_blks);
-#endif
+      if (ftln_debug() > 1) {
+        // Display FTL statistics.
+        FtlnStats(ftl);
+        FtlnBlkStats(ftl);
+      } else {
+        printf("FTL: total blocks: %u, free blocks: %u\n", ftl->num_blks, ftl->num_free_blks);
+      }
 
       // Return success.
       return 0;
@@ -440,9 +440,9 @@ void FtlnMlcSafeFreeVpn(FTLN ftl) {
   if (ftl->free_vpn != (ui32)-1) {
     ui32 pn = ndmPastPrevPair(ftl->ndm, ftl->free_vpn);
 
-#if FTLN_DEBUG
-    printf("FtlnMlcSafeFreeVpn: old free = %u, new free = %u\n", ftl->free_vpn, pn);
-#endif
+    if (ftln_debug() > 0) {
+      printf("FtlnMlcSafeFreeVpn: old free = %u, new free = %u\n", ftl->free_vpn, pn);
+    }
     ftl->free_vpn = pn;
   }
 }
@@ -654,10 +654,10 @@ int FtlnFormat(FTLN ftl, ui32 meta_block) {
   FtlnStateRst(ftl);
   ftl->high_bc = 1;  // initial block count of unformatted volumes
 
-#if FTLN_DEBUG
-  // Display FTL statistics.
-  FtlnBlkStats(ftl);
-#endif
+  if (ftln_debug() > 0) {
+    // Display FTL statistics.
+    FtlnBlkStats(ftl);
+  }
 
   // Return success.
   return 0;
@@ -703,14 +703,14 @@ void FtlnDecUsed(FTLN ftl, ui32 pn, ui32 vpn) {
   PfAssert(!IS_FREE(ftl->bdata[b]));
   DEC_USED(ftl->bdata[b]);
 
-#if FTLN_DEBUG
-  // Read page spare area and assert VPNs match.
-  ++ftl->stats.read_spare;
-  // Ignore errors here.
-  if (ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) >= 0) {
-    PfAssert(GET_SA_VPN(ftl->spare_buf) == vpn);
+  if (ftln_debug() > 0) {
+    // Read page spare area and assert VPNs match.
+    ++ftl->stats.read_spare;
+    // Ignore errors here.
+    if (ndmReadSpare(ftl->start_pn + pn, ftl->spare_buf, ftl->ndm) >= 0) {
+      PfAssert(GET_SA_VPN(ftl->spare_buf) == vpn);
+    }
   }
-#endif
 }  // lint !e818
 
 //  FtlnFatErr: Process FTL-NDM fatal error
@@ -804,107 +804,6 @@ FtlWearData FtlnGetWearData(void* vol) {
   // Return structure of metrics on wear data.
   return wear_data;
 }
-
-#if FTLN_DEBUG
-// flush_bstat: Flush buffered statistics counts
-//
-//      Inputs: ftl = pointer to FTL control block
-//              b = block number of current block
-//              type = "FREE", "MAP", or "VOLUME"
-//  In/Outputs: *blk0 = first consecutive block number or -1
-//              *blke = end consecutive block number
-//
-static void flush_bstat(CFTLN ftl, int* blk0, int* blke, int b, const char* type) {
-  if (*blk0 == -1)
-    *blk0 = *blke = b;
-  else if (*blke + 1 == b)
-    *blke = b;
-  else {
-    printf("B = %4u", *blk0);
-    if (*blk0 == *blke) {
-      printf(" - used = %2u, wc lag = %3d, rc = %8u", NUM_USED(ftl->bdata[*blk0]),
-             ftl->blk_wc_lag[*blk0], GET_RC(ftl->bdata[*blk0]));
-      printf(" - %s BLOCK\n", type);
-    } else {
-      printf("-%-4u", *blke);
-      printf("%*s", 37, " ");
-      printf("- %s BLOCKS\n", type);
-    }
-    *blk0 = *blke = b;
-  }
-}
-
-// FtlnBlkStats: Debug function to display blocks statistics
-//
-//       Input: ftl = pointer to FTL control block
-//
-void FtlnBlkStats(CFTLN ftl) {
-  int free0 = -1, freee, vol0 = -1, vole;
-  ui32 b;
-
-  printf(
-      "\nBLOCK STATS: %u blocks, %u pages per block, curr free "
-      "blocks = %u\n",
-      ftl->num_blks, ftl->pgs_per_blk, ftl->num_free_blks);
-
-  // Loop over FTL blocks.
-  for (b = 0; b < ftl->num_blks; ++b) {
-    // Check if block is free.
-    if (IS_FREE(ftl->bdata[b])) {
-      flush_bstat(ftl, &vol0, &vole, -1, "VOLUME");
-      flush_bstat(ftl, &free0, &freee, b, "FREE");
-    }
-
-    // Else check if map block.
-    else if (IS_MAP_BLK(ftl->bdata[b])) {
-      flush_bstat(ftl, &free0, &freee, -1, "FREE");
-      flush_bstat(ftl, &vol0, &vole, -1, "VOLUME");
-      printf("B = %4u - used = %2u, wc lag = %3d, rc = %8u - ", b, NUM_USED(ftl->bdata[b]),
-             ftl->blk_wc_lag[b], GET_RC(ftl->bdata[b]));
-      printf("MAP BLOCK\n");
-    }
-
-    // Else is volume block.
-    else {
-      flush_bstat(ftl, &free0, &freee, -1, "FREE");
-#if FTLN_DEBUG <= 1
-      flush_bstat(ftl, &vol0, &vole, b, "VOLUME");
-#else
-      printf("B = %4u - used = %2u, wc lag = %3d, rc = %8u - ", b, NUM_USED(ftl->bdata[b]),
-             ftl->blk_wc_lag[b], GET_RC(ftl->bdata[b]));
-      printf("VOLUME BLOCK\n");
-#endif
-    }
-  }
-  flush_bstat(ftl, &free0, &freee, -1, "FREE");
-  flush_bstat(ftl, &vol0, &vole, -1, "VOLUME");
-}
-#endif  // FTLN_DEBUG
-
-#if FTLN_DEBUG > 1
-//   FtlnStats: Display FTL statistics
-//
-//       Input: ftl = pointer to FTL control block
-//
-void FtlnStats(FTLN ftl) {
-  ui32 b, n;
-
-  printf("\nFTL STATS:\n");
-  printf("  - # vol pages    = %d\n", ftl->num_vpages);
-  printf("  - # map pages    = %d\n", ftl->num_map_pgs);
-  printf("  - # free blocks  = %d\n", ftl->num_free_blks);
-  for (n = b = 0; b < ftl->num_blks; ++b)
-    if (IS_ERASED(ftl->bdata[b]))
-      ++n;
-  printf("  - # erased blks  = %d\n", n);
-  printf("  - flags =");
-  if (ftl->flags & FTLN_FATAL_ERR)
-    printf(" FTLN_FATAL_ERR");
-  if (ftl->flags & FTLN_MOUNTED)
-    printf(" FTLN_MOUNTED");
-  putchar('\n');
-}
-#endif  // FTLN_DEBUG
 
 #if DEBUG_ELIST
 // FtlnCheckBlank: Ensure the specified block is blank

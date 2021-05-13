@@ -203,8 +203,8 @@ static int map_page_check(FTLN ftl, ui32 apn, int process) {
 
             // If page is erased or invalid, return its status.
             if (status != NDM_PAGE_VALID) {
-              ftl->logger.warning(__FILE__, __LINE__,
-                                  "Erased or Invalid page found in erase block list.");
+              ftl->logger.warn(__FILE__, __LINE__,
+                               "Erased or Invalid page found in erase block list.");
               return status;
             }
 
@@ -345,10 +345,10 @@ static int build_map(FTLN ftl) {
       if (po == 0) {
         bc = GET_SA_BC(ftl->spare_buf);
       } else if (bc != GET_SA_BC(ftl->spare_buf)) {
-#if FTLN_DEBUG > 1
-        ftl->logger.debug(__FILE__, __LINE__, "build_map: b = %u, po = %u, i_bc = %u vs 0_bc = %u",
-                          b, po, GET_SA_BC(ftl->spare_buf), bc);
-#endif
+        if (ftln_debug() > 1) {
+          ftl->logger.debug(__FILE__, __LINE__, "build_map: b = %u, po = %u, i_bc = %u vs 0_bc = %u",
+                            b, po, GET_SA_BC(ftl->spare_buf), bc);
+        }
 
         // Should not be, but page is invalid. Break to skip block.
         break;
@@ -364,10 +364,10 @@ static int build_map(FTLN ftl) {
       // Retrieve MPN and check that it is valid.
       mpn = GET_SA_VPN(ftl->spare_buf);
       if (mpn > ftl->num_map_pgs) {
-#if FTLN_DEBUG > 1
-        ftl->logger.debug(__FILE__, __LINE__, "build_map: b = %u, po = %u, mpn = %u, max = %u", b,
-                          po, mpn, ftl->num_map_pgs);
-#endif
+        if (ftln_debug() > 1) {
+          ftl->logger.debug(__FILE__, __LINE__, "build_map: b = %u, po = %u, mpn = %u, max = %u", b,
+                            po, mpn, ftl->num_map_pgs);
+        }
 
         // Should not be, but page is invalid. Break to skip block.
         break;
@@ -392,10 +392,10 @@ static int build_map(FTLN ftl) {
           PfAssert(IS_MAP_BLK(ftl->bdata[b]));
           INC_USED(ftl->bdata[b]);
         }
-#if FTLN_DEBUG > 1
-        ftl->logger.debug(__FILE__, __LINE__, "build_map: mpn = %u, old_pn = %d, new_pn = %u", mpn,
-                          ftl->mpns[mpn], b * ftl->pgs_per_blk + po);
-#endif
+        if (ftln_debug() > 1) {
+          ftl->logger.debug(__FILE__, __LINE__, "build_map: mpn = %u, old_pn = %d, new_pn = %u", mpn,
+                            ftl->mpns[mpn], b * ftl->pgs_per_blk + po);
+        }
 
         // Save the map page number and (temporarily) the block count.
         ftl->mpns[mpn] = b * ftl->pgs_per_blk + po;
@@ -424,9 +424,9 @@ static int build_map(FTLN ftl) {
     if (pn == (ui32)-1)
       continue;
 
-#if FTLN_DEBUG > 1
-    ftl->logger.debug(__FILE__, __LINE__, "  -> MPN[%2u] = %u", mpn, pn);
-#endif
+    if (ftln_debug() > 1) {
+      ftl->logger.debug(__FILE__, __LINE__, "  -> MPN[%2u] = %u", mpn, pn);
+    }
 
     // Read map page. Return -1 if error.
     if (FtlnRdPage(ftl, pn, ftl->main_buf))
@@ -490,10 +490,10 @@ static int build_map(FTLN ftl) {
       }
     }
   }
-#if FTLN_DEBUG > 1
-  ftl->logger.debug(__FILE__, __LINE__, "volume block %d has lowest used page offset (%d)\n",
-                    ftl->resume_vblk, ftl->resume_po);
-#endif
+  if (ftln_debug() > 1) {
+    ftl->logger.debug(__FILE__, __LINE__, "volume block %d has lowest used page offset (%d)\n",
+                      ftl->resume_vblk, ftl->resume_po);
+  }
 
   // Clean temporary use of vol block read-wear field for page offset.
   for (b = 0; b < ftl->num_blks; ++b)
@@ -844,7 +844,7 @@ static int format_status(FTLN ftl) {
     uint32_t column = i % 8;
     sprintf(line_buffer + 5 * column, "%5u", wear_lag_histogram[255 - i]);
     if (column == 7) {
-      ftl->logger.info(__FILE__, __LINE__, line_buffer);
+      ftl->logger.info(__FILE__, __LINE__, "%s", line_buffer);
     }
   }
 
@@ -1203,12 +1203,12 @@ static int init_ftln(FTLN ftl) {
     }
   }
 
-#if FTLN_DEBUG > 1
-  ftl->logger.debug(
-      __FILE__, __LINE__,
-      "FTL formatted successfully. [Current Generation Number = %u  Highest Wear Count = %u",
-      ftl->high_bc, ftl->high_wc);
-#endif
+  if (ftln_debug() > 1) {
+    ftl->logger.debug(
+        __FILE__, __LINE__,
+        "FTL formatted successfully. [Current Generation Number = %u  Highest Wear Count = %u",
+        ftl->high_bc, ftl->high_wc);
+  }
 
   // Do recycles if needed and return status.
   return FtlnRecCheck(ftl, 0);
@@ -1221,10 +1221,10 @@ static int init_ftln(FTLN ftl) {
 static void free_ftl(void* vol) {
   FTLN ftl = vol;
 
-#if FTLN_DEBUG > 1
-  // Display FTL statistics.
-  FtlnStats(ftl);
-#endif
+  if (ftln_debug() > 1) {
+    // Display FTL statistics.
+    FtlnStats(ftl);
+  }
 
   // Free FTL memory allocations.
   if (ftl->bdata)
@@ -1452,10 +1452,10 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   ftl->num_map_pgs = 1 + (ftl->num_vpages + ftl->mappings_per_mpg - 1) / ftl->mappings_per_mpg;
   PfAssert(ftl->num_vpages / ftl->mappings_per_mpg < ftl->num_map_pgs);
 
-#if FTLN_DEBUG > 1
-  ftl->logger.debug(__FILE__, __LINE__, "Volume Pages = %u. FTL pages = %u. %u%% usage",
-                    ftl->num_vpages, ftl->num_pages, (ftl->num_vpages * 100) / ftl->num_pages);
-#endif
+  if (ftln_debug() > 1) {
+    ftl->logger.debug(__FILE__, __LINE__, "Volume Pages = %u. FTL pages = %u. %u%% usage",
+                      ftl->num_vpages, ftl->num_pages, (ftl->num_vpages * 100) / ftl->num_pages);
+  }
 
   // Allocate one or two main data pages and spare buffers. Max spare
   // use is one block worth of spare areas for multi-page writes.
@@ -1554,10 +1554,10 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   ftl->wear_data.lft_max_lag = ftl->wear_data.cur_max_lag;
   ftl->wear_data.avg_wc_lag = ftl->wc_lag_sum / ftl->num_blks;
 
-#if FTLN_DEBUG > 1
-  // Display FTL statistics.
-  FtlnStats(ftl);
-#endif
+  if (ftln_debug() > 1) {
+    // Display FTL statistics.
+    FtlnStats(ftl);
+  }
 
   // Initialize FTL interface structure.
   xfs->num_pages = ftl->num_vpages;
@@ -1567,9 +1567,9 @@ void* FtlnAddVol(FtlNdmVol* ftl_cfg, XfsVol* xfs) {
   xfs->report = FtlnReport;
   xfs->vol = ftl;
 
-#if FTLN_DEBUG > 1
-  ftl->logger.debug(__FILE__, __LINE__, "[XFS] num_pages       = %u\n\n", xfs->num_pages);
-#endif
+  if (ftln_debug() > 1) {
+    ftl->logger.debug(__FILE__, __LINE__, "[XFS] num_pages       = %u\n\n", xfs->num_pages);
+  }
 
   // Register FTL volume with user.
   if (XfsAddVol(xfs))
