@@ -62,7 +62,7 @@ def main():
         'name', help='Name of the zbi_test() target to run', nargs='?')
     args = parser.parse_args()
 
-    build_dir = os.getenv('FUCHSIA_BUILD_DIR')
+    build_dir = os.path.relpath(os.getenv('FUCHSIA_BUILD_DIR'))
     if build_dir is None:
         print('FUCHSIA_BUILD_DIR not set')
         return 1
