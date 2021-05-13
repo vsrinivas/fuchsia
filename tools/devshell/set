@@ -204,7 +204,17 @@ function main {
         ln -s "$FUCHSIA_DIR"/third_party/golibs/$target .
       done
       ln -s "$FUCHSIA_DIR"/tools .
-      GOPROXY=off fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd
+      if ! GOPROXY=off fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd; then
+        # TODO(fxbug.dev/68465): Remove this error handling once the Go version
+        # of fx-set has been rolled out and the old `fx set` code deleted.
+        if ! $dev; then # If running in dev mode, compilation failures are expected.
+          fx-error "Failed to build fx set."
+          fx-error "Please file a bug using \`fx report-bug set\` with the full error copy-pasted."
+          fx-error "Rerun your command using the uncompiled version:"
+          fx-error "  fx --enable=legacy_set set $*"
+        fi
+        return 1
+      fi
       popd > /dev/null
 
       # Record the current HEAD *after* building fx-set so that we always try
