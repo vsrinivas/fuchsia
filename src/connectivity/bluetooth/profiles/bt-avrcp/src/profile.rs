@@ -5,10 +5,10 @@
 use {
     anyhow::{Context, Error},
     bitflags::bitflags,
-    fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
     log::{debug, info},
+    profile_client::ProfileClient,
     std::fmt::Debug,
 };
 
@@ -250,8 +250,7 @@ impl AvrcpService {
     }
 }
 
-pub fn connect_and_advertise(
-) -> Result<(ProfileProxy, ConnectionReceiverRequestStream, SearchResultsRequestStream), Error> {
+pub fn connect_and_advertise() -> Result<(ProfileProxy, ProfileClient), Error> {
     let profile_svc = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
         .context("Failed to connect to Bluetooth profile service")?;
 
@@ -263,33 +262,20 @@ pub fn connect_and_advertise(
         SDP_SUPPORTED_FEATURES,
     ];
 
-    let (search_results, search_results_requests) =
-        create_request_stream().context("Couldn't create SearchResults")?;
-
-    profile_svc.search(
-        ServiceClassProfileIdentifier::AvRemoteControl,
-        &SEARCH_ATTRIBUTES,
-        search_results,
-    )?;
-
-    let (connection_client, connection_requests) =
-        create_request_stream().context("Couldn't create ConnectionTarget")?;
-
     let service_defs = vec![make_controller_service_definition(), make_target_service_definition()];
-    let _ = profile_svc
-        .advertise(
-            &mut service_defs.into_iter(),
-            ChannelParameters {
-                channel_mode: Some(ChannelMode::EnhancedRetransmission),
-                ..ChannelParameters::EMPTY
-            },
-            connection_client,
-        )
-        .check()?;
+    let channel_parameters = ChannelParameters {
+        channel_mode: Some(ChannelMode::EnhancedRetransmission),
+        ..ChannelParameters::EMPTY
+    };
+    let mut profile_client =
+        ProfileClient::advertise(profile_svc.clone(), &service_defs, channel_parameters)?;
 
-    info!("Advertised Service");
+    profile_client
+        .add_search(ServiceClassProfileIdentifier::AvRemoteControl, &SEARCH_ATTRIBUTES)?;
 
-    Ok((profile_svc, connection_requests, search_results_requests))
+    info!("Registered service search & advertisement");
+
+    Ok((profile_svc, profile_client))
 }
 
 #[cfg(test)]
