@@ -1,8 +1,9 @@
-thatguy@google.com
-lindkvist@google.com
+include /src/session/OWNERS
+
 neelsa@google.com
 
-# backup
+# graphics/input
 jaeheon@google.com
+mikaelpessa@google.com
 
 # COMPONENT: ComponentFramework>Sessions
