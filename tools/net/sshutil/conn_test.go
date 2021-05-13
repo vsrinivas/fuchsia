@@ -63,7 +63,7 @@ func TestKeepalive(t *testing.T) {
 				t.Errorf("keepalive pings must have WantReply set")
 			}
 			requestsReceived <- req
-			if err := req.Reply(true, nil); err != nil {
+			if err := req.Reply(true, nil); err != nil && !errors.Is(err, io.EOF) {
 				t.Error(err)
 			}
 		})
