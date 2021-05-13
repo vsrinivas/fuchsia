@@ -13,6 +13,7 @@
 
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/session/session_constants.h"
@@ -107,6 +108,28 @@ fit::promise<void, zx_status_t> Launch(fuchsia::sys::Launcher* launcher,
               controller->Detach();
             });
       });
+}
+
+fit::result<void, zx_status_t> LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {
+  // Connect to the |Launcher| exposed by the session.
+  auto launcher_result = ConnectInPaths<fuchsia::modular::session::Launcher>({kLauncherGlob});
+  if (launcher_result.is_error()) {
+    FX_PLOGS(ERROR, launcher_result.error())
+        << "Could not connect to the fuchsia.modular.session.Launcher protocol. "
+           "A session that exposes this protocol must be running.";
+    return launcher_result.take_error_result();
+  }
+  auto launcher = launcher_result.take_value();
+
+  fuchsia::mem::Buffer config_buf;
+  if (!fsl::VmoFromString(modular::ConfigToJsonString(config), &config_buf)) {
+    FX_LOGS(ERROR) << "Could not convert config to a buffer";
+    return fit::error(ZX_ERR_INTERNAL);
+  }
+
+  launcher->LaunchSessionmgr(std::move(config_buf));
+
+  return fit::ok();
 }
 
 fit::promise<void, zx_status_t> Shutdown() {

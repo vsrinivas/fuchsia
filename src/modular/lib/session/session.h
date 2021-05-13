@@ -26,6 +26,17 @@ fit::promise<void, zx_status_t> Launch(fuchsia::sys::Launcher* launcher,
                                        fuchsia::modular::session::ModularConfig config,
                                        async_dispatcher_t* dispatcher = nullptr);
 
+// Launches an instance of sessionmgr with the given configuration using the
+// |fuchsia.modular.session.Launcher| protocol exposed by a session.
+//
+// The session's |Launcher| protocol is found in a path under /hub-v2
+// in this component's namespace.
+//
+// # Errors
+//
+// ZX_ERR_NOT_FOUND: session is not running or it does not expose |Launcher|
+fit::result<void, zx_status_t> LaunchSessionmgr(fuchsia::modular::session::ModularConfig config);
+
 // Shuts down any currently running instance of basemgr.
 fit::promise<void, zx_status_t> Shutdown();
 

@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/files/path.h"
+#include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
@@ -37,13 +38,12 @@ class SessionTest : public gtest::RealLoopFixture {
     bound_ns_paths_.emplace_back(path);
   }
 
-  // Serves the |BasemgrDebug| protocol at the given |path|.
+  // Serves a protocol at the given |path|.
   //
   // Can only be called once per test.
-  void ServeBasemgrDebugAt(
-      std::string_view path,
-      fidl::InterfaceRequestHandler<fuchsia::modular::internal::BasemgrDebug> handler) {
-    FX_CHECK(!basemgr_debug_server_);
+  template <typename Interface>
+  void ServeProtocolAt(std::string_view path, fidl::InterfaceRequestHandler<Interface> handler) {
+    FX_CHECK(!protocol_server_);
 
     // Split the path into two parts: a path to a directory, and the last segment,
     // an entry in that directory.
@@ -58,14 +58,14 @@ class SessionTest : public gtest::RealLoopFixture {
     auto vfs = std::make_unique<vfs::PseudoDir>();
     ASSERT_EQ(ZX_OK, vfs->AddEntry(entry_name, std::make_unique<vfs::Service>(std::move(handler))));
 
-    basemgr_debug_server_ = std::make_unique<modular::PseudoDirServer>(std::move(vfs));
-    BindNamespacePath(namespace_path, basemgr_debug_server_->Serve().Unbind().TakeChannel());
+    protocol_server_ = std::make_unique<modular::PseudoDirServer>(std::move(vfs));
+    BindNamespacePath(namespace_path, protocol_server_->Serve().Unbind().TakeChannel());
   }
 
  private:
   fdio_ns_t* ns_ = nullptr;
   std::vector<std::string> bound_ns_paths_;
-  std::unique_ptr<modular::PseudoDirServer> basemgr_debug_server_;
+  std::unique_ptr<modular::PseudoDirServer> protocol_server_;
 };
 
 class TestComponentController : fuchsia::sys::ComponentController {
@@ -122,6 +122,53 @@ class TestBasemgrDebug : fuchsia::modular::internal::BasemgrDebug {
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> bindings_;
 };
 
+class TestLauncher : fuchsia::modular::session::Launcher {
+ public:
+  TestLauncher() = default;
+
+  fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher> GetHandler() {
+    return [this](fidl::InterfaceRequest<fuchsia::modular::session::Launcher> request) {
+      bindings_.AddBinding(this, std::move(request));
+    };
+  }
+
+  // |Launcher|
+  void LaunchSessionmgr(fuchsia::mem::Buffer config) override {
+    // Read the configuration from the buffer.
+    std::string config_str;
+    if (auto is_read_ok = fsl::StringFromVmo(config, &config_str); !is_read_ok) {
+      bindings_.CloseAll(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    // Parse the configuration.
+    auto config_result = modular::ParseConfig(config_str);
+    if (config_result.is_error()) {
+      bindings_.CloseAll(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    is_launched_ = true;
+    config_ =
+        std::make_unique<fuchsia::modular::session::ModularConfig>(config_result.take_value());
+  }
+
+  // |Launcher|
+  void LaunchSessionmgrWithServices(fuchsia::mem::Buffer config,
+                                    fuchsia::sys::ServiceList additional_services) override {
+    FX_NOTREACHED();
+  }
+
+  bool is_launched() const { return is_launched_; }
+  fuchsia::modular::session::ModularConfig* config() const { return config_.get(); }
+
+ private:
+  bool is_launched_ = false;
+  std::unique_ptr<fuchsia::modular::session::ModularConfig> config_;
+
+  fidl::BindingSet<fuchsia::modular::session::Launcher> bindings_;
+};
+
 // Tests that |ConnectToBasemgrDebug| can connect to |BasemgrDebug| served under the hub path
 // that exists when basemgr is running as a v1 component.
 TEST_F(SessionTest, ConnectToBasemgrDebugV1) {
@@ -133,7 +180,8 @@ TEST_F(SessionTest, ConnectToBasemgrDebugV1) {
       [&](fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
         got_request = true;
       };
-  ServeBasemgrDebugAt(kTestBasemgrDebugPath, std::move(handler));
+  ServeProtocolAt<fuchsia::modular::internal::BasemgrDebug>(kTestBasemgrDebugPath,
+                                                            std::move(handler));
 
   // Connect to the |BasemgrDebug| service.
   auto result = modular::session::ConnectToBasemgrDebug();
@@ -161,7 +209,8 @@ TEST_F(SessionTest, ConnectToBasemgrDebugSession) {
       [&](fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
         got_request = true;
       };
-  ServeBasemgrDebugAt(kTestBasemgrDebugPath, std::move(handler));
+  ServeProtocolAt<fuchsia::modular::internal::BasemgrDebug>(kTestBasemgrDebugPath,
+                                                            std::move(handler));
 
   // Connect to the |BasemgrDebug| service.
   auto result = modular::session::ConnectToBasemgrDebug();
@@ -266,6 +315,33 @@ TEST_F(SessionTest, LaunchProvidesConfig) {
   EXPECT_TRUE(launched);
 }
 
+// Tests that LaunchSessionmgr can call the Launcher protocol exposed by a session under
+// a hub-v2 path with a given config.
+TEST_F(SessionTest, LaunchSessionmgr) {
+  static constexpr auto kTestLauncherPath =
+      "/hub-v2/children/core/children/session-manager/children/session:session/"
+      "exec/expose/fuchsia.modular.session.Launcher";
+
+  static constexpr auto kTestSessionLauncherUrl = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
+
+  // Serve the |Launcher| protocol in the process namespace at the path |kTestLauncherPath|.
+  TestLauncher launcher;
+  ServeProtocolAt<fuchsia::modular::session::Launcher>(kTestLauncherPath, launcher.GetHandler());
+
+  // Create a ModularConfig to pass to Launcher with some non-default contents.
+  auto modular_config = modular::DefaultConfig();
+  modular_config.mutable_basemgr_config()->mutable_session_launcher()->set_url(
+      kTestSessionLauncherUrl);
+
+  auto result = modular::session::LaunchSessionmgr(std::move(modular_config));
+  EXPECT_TRUE(result.is_ok());
+
+  RunLoopUntil([&]() { return launcher.is_launched(); });
+
+  ASSERT_NE(nullptr, launcher.config());
+  EXPECT_EQ(kTestSessionLauncherUrl, launcher.config()->basemgr_config().session_launcher().url());
+}
+
 // Tests that Shutdown can shut down basemgr when the |BasemgrDebug| protocol is served
 // under the hub path that exists when basemgr is running as a v1 component.
 TEST_F(SessionTest, ShutdownV1) {
@@ -273,7 +349,8 @@ TEST_F(SessionTest, ShutdownV1) {
 
   // Serve the |BasemgrDebug| service in the process namespace at the path |kTestBasemgrDebugPath|.
   TestBasemgrDebug basemgr_debug;
-  ServeBasemgrDebugAt(kTestBasemgrDebugPath, basemgr_debug.GetHandler());
+  ServeProtocolAt<fuchsia::modular::internal::BasemgrDebug>(kTestBasemgrDebugPath,
+                                                            basemgr_debug.GetHandler());
 
   ASSERT_TRUE(basemgr_debug.is_running());
 
@@ -296,7 +373,8 @@ TEST_F(SessionTest, ShutdownSession) {
   // Serve the |BasemgrDebug| service in the process namespace at the path
   // |kTestBasemgrDebugPath|.
   TestBasemgrDebug basemgr_debug;
-  ServeBasemgrDebugAt(kTestBasemgrDebugPath, basemgr_debug.GetHandler());
+  ServeProtocolAt<fuchsia::modular::internal::BasemgrDebug>(kTestBasemgrDebugPath,
+                                                            basemgr_debug.GetHandler());
 
   ASSERT_TRUE(basemgr_debug.is_running());
 

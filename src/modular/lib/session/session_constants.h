@@ -16,4 +16,9 @@ constexpr char kBasemgrDebugSessionGlob[] =
     "/hub-v2/children/core/children/session-manager/children/session:session/"
     "exec/expose/fuchsia.modular.internal.BasemgrDebug";
 
+// Glob pattern for the path to the |Launcher| protocol exposed by a session.
+constexpr char kLauncherGlob[] =
+    "/hub-v2/children/core/children/session-manager/children/session:session/"
+    "exec/expose/fuchsia.modular.session.Launcher";
+
 #endif  // SRC_MODULAR_LIB_SESSION_SESSION_CONSTANTS_H_
