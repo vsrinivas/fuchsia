@@ -190,6 +190,8 @@ radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *              
 // The keyval count must be less than (1 << 30) as well as be less than or equal
 // to the count used to obtain the the memory requirements.
 //
+// The info struct's `ext` member must be NULL.
+//
 // This function appends push constants, dispatch commands, and barriers.
 //
 // Pipeline barriers should be applied as necessary, both before and after
@@ -241,6 +243,8 @@ radix_sort_vk_sort(VkDevice                               device,
 //
 // The keyval count must be less than (1 << 30) as well as be less than or equal
 // to the count used to obtain the the memory requirements.
+//
+// The info struct's `ext` member must be NULL.
 //
 // This function appends push constants, dispatch commands, and barriers.
 //
