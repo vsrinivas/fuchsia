@@ -1171,6 +1171,31 @@ protocol Foo {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, ProtocolWithResource) {
+  std::string old_version = R"FIDL(
+library example;
+
+using zx;
+
+protocol Foo {
+  DoFoo(zx.handle i) -> (zx.handle:VMO o);
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+using zx;
+
+protocol Foo {
+  DoFoo(resource struct { i zx.handle; }) -> (resource struct { o zx.handle:VMO; });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, ResourceDeclaration) {
   std::string old_version = R"FIDL(
 library example;

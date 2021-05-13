@@ -189,6 +189,9 @@ std::string ParameterListConversion::Write(fidl::utils::Syntax syntax) {
     }
   } else {
     if (!parameters_.empty() || in_response_with_error_) {
+      if (resourced_) {
+        out += "resource ";
+      }
       out += "struct { ";
       for (auto& parameter : parameters_) {
         out += parameter;

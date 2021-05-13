@@ -291,10 +291,22 @@ void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter>& e
 
 void ConvertingTreeVisitor::OnParameterListOld(
     const std::unique_ptr<raw::ParameterListOld>& element) {
+  in_parameter_list_ = true;
+  in_resourced_parameter_list_ = false;
   std::unique_ptr<Conversion> conv =
       std::make_unique<ParameterListConversion>(in_response_with_error_);
   Converting converting(this, std::move(conv), element->start_, element->end_);
   TreeVisitor::OnParameterListOld(element);
+
+  // The ParameterListConversion created and moved into a "Converting" earlier
+  // in this function must now be at top of the stack.  If we cast it back to a
+  // ParameterListConversion, we can update its resourceness based on the
+  // TypeConversions performed by each of its constituent types.
+  auto& top = open_conversions_.top();
+  auto parameter_list_conv = static_cast<ParameterListConversion*>(top.get());
+  parameter_list_conv->resourced_ = in_resourced_parameter_list_;
+  in_resourced_parameter_list_ = false;
+  in_parameter_list_ = false;
 }
 
 void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::ProtocolMethod>& element) {
@@ -315,6 +327,7 @@ void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::Protocol
   if (in_response_with_error_) {
     OnTypeConstructor(element->maybe_error_ctor);
   }
+  in_response_with_error_ = false;
 }
 
 void ConvertingTreeVisitor::OnResourceProperty(
@@ -395,6 +408,9 @@ void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember
 void ConvertingTreeVisitor::OnTypeConstructorOld(
     const std::unique_ptr<raw::TypeConstructorOld>& element) {
   std::optional<UnderlyingType> underlying_type = resolve(element);
+  if (in_parameter_list_ && underlying_type->kind() == UnderlyingType::Kind::kHandle) {
+    in_resourced_parameter_list_ = true;
+  }
 
   // We should never get a null Builtin - if we do, there is a mistake in the
   // converter code.  Failing this assert means we are looking at an

@@ -182,11 +182,12 @@ class NameAndTypeConversion : public Conversion {
 class ParameterListConversion : public Conversion {
  public:
   explicit ParameterListConversion(bool in_response_with_error)
-      : in_response_with_error_(in_response_with_error) {}
+      : in_response_with_error_(in_response_with_error), resourced_(false) {}
   ~ParameterListConversion() override = default;
 
   std::vector<std::string> parameters_;
-  bool in_response_with_error_;
+  const bool in_response_with_error_;
+  bool resourced_;
 
   void AddChildText(std::string child) override { parameters_.push_back(child); }
 
