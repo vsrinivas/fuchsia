@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use std::convert::TryFrom;
+use std::sync::Arc;
 
 use crate::signals::*;
 use crate::syscalls::*;
+use crate::task::{Task, ThreadGroup};
 use crate::types::*;
 
 pub fn sys_rt_sigaction(
@@ -120,6 +122,114 @@ pub fn sys_sigaltstack(
     }
 
     Ok(SUCCESS)
+}
+
+pub fn sys_kill(
+    ctx: &SyscallContext<'_>,
+    pid: pid_t,
+    unchecked_signal: UncheckedSignal,
+) -> Result<SyscallResult, Errno> {
+    let task = ctx.task;
+    match pid {
+        pid if pid > 0 => {
+            // "If pid is positive, then signal sig is sent to the process with
+            // the ID specified by pid."
+            let target = task.get_task(pid).ok_or(ESRCH)?;
+            if !task.can_signal(&target, &unchecked_signal) {
+                return Err(EPERM);
+            }
+            target.send_signal(&unchecked_signal)?;
+        }
+        pid if pid == -1 => {
+            // "If pid equals -1, then sig is sent to every process for which
+            // the calling process has permission to send signals, except for
+            // process 1 (init), but ... POSIX.1-2001 requires that kill(-1,sig)
+            // send sig to all processes that the calling process may send
+            // signals to, except possibly for some implementation-defined
+            // system processes. Linux allows a process to signal itself, but on
+            // Linux the call kill(-1,sig) does not signal the calling process."
+
+            let thread_groups = task.thread_group.kernel.pids.read().get_thread_groups();
+            signal_thread_groups(
+                &task,
+                &unchecked_signal,
+                thread_groups.into_iter().filter(|thread_group| {
+                    if task.thread_group == *thread_group {
+                        return false;
+                    }
+                    // TODO(lindkvist): This should be compared to the init pid.
+                    if thread_group.leader == 0 {
+                        return false;
+                    }
+                    true
+                }),
+            )?;
+        }
+        _ => {
+            // "If pid equals 0, then sig is sent to every process in the
+            // process group of the calling process."
+            //
+            // "If pid is less than -1, then sig is sent to every process in the
+            // process group whose ID is -pid."
+            let process_group_id = match pid {
+                0 => task.get_pgrp(),
+                _ => -pid,
+            };
+
+            let thread_groups = task.thread_group.kernel.pids.read().get_thread_groups();
+            signal_thread_groups(
+                &task,
+                &unchecked_signal,
+                thread_groups.into_iter().filter(|thread_group| {
+                    task.get_task(thread_group.leader).unwrap().get_pgrp() == process_group_id
+                }),
+            )?;
+        }
+    };
+
+    Ok(SUCCESS)
+}
+
+/// Sends a signal to all thread groups in `thread_groups`.
+///
+/// # Parameters
+/// - `task`: The task that is sending the signal.
+/// - `unchecked_signal`: The signal that is to be sent. Unchecked, since `0` is a sentinel value
+/// where rights are to be checked but no signal is actually sent.
+/// - `thread_groups`: The thread groups to signal.
+///
+/// # Returns
+/// Returns Ok(()) if at least one signal was sent, otherwise the last error that was encountered.
+fn signal_thread_groups<F>(
+    task: &Task,
+    unchecked_signal: &UncheckedSignal,
+    thread_groups: F,
+) -> Result<(), Errno>
+where
+    F: Iterator<Item = Arc<ThreadGroup>>,
+{
+    let mut last_error = ESRCH;
+    let mut sent_signal = false;
+
+    // This loop keeps track of whether a signal was sent, so that "on
+    // success (at least one signal was sent), zero is returned."
+    for thread_group in thread_groups {
+        let leader = task.get_task(thread_group.leader).ok_or(ESRCH)?;
+        if !task.can_signal(&leader, &unchecked_signal) {
+            last_error = EPERM;
+        }
+
+        match leader.send_signal(unchecked_signal) {
+            Ok(_) => sent_signal = true,
+            Err(errno) => last_error = errno,
+        }
+    }
+
+    if sent_signal {
+        return Ok(());
+    } else {
+        return Err(last_error);
+    }
 }
 
 #[cfg(test)]
@@ -526,5 +636,32 @@ mod tests {
         );
 
         assert_eq!(ctx.task.thread_group.signal_actions.read()[&Signal::SIGINT], original_action,);
+    }
+
+    /// A task should be able to signal itself.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_kill_same_task() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGINT.into()), Ok(SUCCESS));
+    }
+
+    /// A task should not be able to signal a nonexistent task.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_kill_invalid_task() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        assert_eq!(sys_kill(&ctx, 9, SIGINT.into()), Err(ESRCH));
+    }
+
+    /// A task should not be able to send an invalid signal.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_kill_invalid_signal() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, UncheckedSignal::from(75)), Err(EINVAL));
     }
 }

@@ -6,6 +6,7 @@ use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task as zxTask};
 use log::warn;
 use parking_lot::{Mutex, RwLock};
 use std::collections::{HashMap, HashSet};
+use std::convert::TryFrom;
 use std::ffi::CString;
 use std::ops;
 use std::sync::{Arc, Weak};
@@ -58,15 +59,22 @@ pub struct PidTable {
     ///
     /// This reference is the primary reference keeping the tasks alive.
     tasks: HashMap<pid_t, Weak<Task>>,
+
+    /// The thread groups that are present in this table.
+    thread_groups: HashMap<pid_t, Weak<ThreadGroup>>,
 }
 
 impl PidTable {
     pub fn new() -> PidTable {
-        PidTable { last_pid: 0, tasks: HashMap::new() }
+        PidTable { last_pid: 0, tasks: HashMap::new(), thread_groups: HashMap::new() }
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
         self.tasks.get(&pid).and_then(|task| task.upgrade())
+    }
+
+    pub fn get_thread_groups(&self) -> Vec<Arc<ThreadGroup>> {
+        self.thread_groups.iter().flat_map(|(_pid, thread_group)| thread_group.upgrade()).collect()
     }
 
     fn allocate_pid(&mut self) -> pid_t {
@@ -79,8 +87,17 @@ impl PidTable {
         self.tasks.insert(task.id, Arc::downgrade(task));
     }
 
+    fn add_thread_group(&mut self, thread_group: &Arc<ThreadGroup>) {
+        assert!(!self.thread_groups.contains_key(&thread_group.leader));
+        self.thread_groups.insert(thread_group.leader, Arc::downgrade(thread_group));
+    }
+
     fn remove_task(&mut self, pid: pid_t) {
         self.tasks.remove(&pid);
+    }
+
+    fn remove_thread_group(&mut self, pid: pid_t) {
+        self.thread_groups.remove(&pid);
     }
 }
 
@@ -111,6 +128,12 @@ pub struct ThreadGroup {
     pub signal_actions: RwLock<SignalActions>,
 }
 
+impl PartialEq for ThreadGroup {
+    fn eq(&self, other: &Self) -> bool {
+        self.leader == other.leader
+    }
+}
+
 impl ThreadGroup {
     fn new(kernel: Arc<Kernel>, process: zx::Process, leader: pid_t) -> ThreadGroup {
         let mut tasks = HashSet::new();
@@ -136,6 +159,7 @@ impl ThreadGroup {
             if let Err(e) = self.process.kill() {
                 warn!("Failed to kill process: {}", e);
             }
+            self.kernel.pids.write().remove_thread_group(self.leader);
         }
     }
 }
@@ -219,6 +243,7 @@ impl Task {
             signal_mask: Mutex::new(sigset_t::default()),
         });
         pids.add_task(&task);
+        pids.add_thread_group(&task.thread_group);
 
         Ok(TaskOwner { task })
     }
@@ -243,6 +268,49 @@ impl Task {
     pub fn get_pgrp(&self) -> pid_t {
         // TODO: Implement process groups.
         1
+    }
+
+    /// Returns whether or not the task has the given `capability`.
+    ///
+    // TODO(lindkvist): This should do a proper check for the capability in the namespace.
+    // TODO(lindkvist): `capability` should be a type, just like we do for signals.
+    pub fn has_capability(&self, _capability: u32) -> bool {
+        false
+    }
+
+    pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
+        // If both the tasks share a thread group the signal can be sent. This is not documented
+        // in kill(2) because kill does not support task-level granularity in signal sending.
+        if self.thread_group == target.thread_group {
+            return true;
+        }
+
+        if self.has_capability(CAP_KILL) {
+            return true;
+        }
+
+        if self.creds.has_same_uid(&target.creds) {
+            return true;
+        }
+
+        // TODO(lindkvist): This check should also verify that the sessions are the same.
+        if Signal::try_from(unchecked_signal) == Ok(Signal::SIGCONT) {
+            return true;
+        }
+
+        false
+    }
+
+    // TODO(lindkvist): Implement proper signal sending.
+    pub fn send_signal(&self, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
+        // 0 is a sentinel value used to do permission checks.
+        let sentinel_signal = UncheckedSignal::from(0);
+        if *unchecked_signal == sentinel_signal {
+            return Ok(());
+        }
+
+        let _signal = Signal::try_from(unchecked_signal)?;
+        Ok(())
     }
 }
 

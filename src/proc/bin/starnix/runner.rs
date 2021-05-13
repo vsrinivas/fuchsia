@@ -177,7 +177,7 @@ async fn start_component(
     let name = CString::new(binary_path.clone())?;
     let files = FdTable::new();
     let fs = Arc::new(FileSystem::new(root));
-    let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
+    let creds = Credentials::new(3);
 
     let stdio = SyslogFile::new();
     files.insert(FdNumber::from_raw(0), stdio.clone());
