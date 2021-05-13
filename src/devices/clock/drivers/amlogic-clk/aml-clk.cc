@@ -4,7 +4,7 @@
 
 #include "aml-clk.h"
 
-#include <fuchsia/hardware/clock/c/fidl.h>
+#include <fuchsia/hardware/clock/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -800,22 +800,33 @@ zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq) {
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t AmlClock::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
-  if (clk >= clk_table_count_) {
-    return ZX_ERR_INVALID_ARGS;
+void AmlClock::Measure(MeasureRequestView request, MeasureCompleter::Sync& completer) {
+  fuchsia_hardware_clock::wire::FrequencyInfo info;
+  if (request->clock >= clk_table_count_) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
-  size_t max_len = sizeof(info->name);
-  size_t len = strnlen(clk_table_[clk], max_len);
+  size_t max_len = info.name.size();
+  size_t len = strnlen(clk_table_[request->clock], max_len);
   if (len == max_len) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
-  memcpy(info->name, clk_table_[clk], len + 1);
-  return ClkMeasureUtil(clk, &info->frequency);
+  memcpy(info.name.data(), clk_table_[request->clock], len + 1);
+  zx_status_t status = ClkMeasureUtil(request->clock, &info.frequency);
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+
+  completer.Reply(info);
 }
 
-uint32_t AmlClock::GetClkCount() { return static_cast<uint32_t>(clk_table_count_); }
+void AmlClock::GetCount(GetCountRequestView request, GetCountCompleter::Sync& completer) {
+  completer.Reply(static_cast<uint32_t>(clk_table_count_));
+}
 
 void AmlClock::ShutDown() {
   hiu_mmio_.reset();
@@ -862,30 +873,6 @@ zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out
   }
 
   __UNREACHABLE;
-}
-
-zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
-  auto dev = static_cast<AmlClock*>(ctx);
-  fuchsia_hardware_clock_FrequencyInfo info;
-
-  dev->ClkMeasure(clk, &info);
-
-  return fuchsia_hardware_clock_DeviceMeasure_reply(txn, &info);
-}
-
-zx_status_t fidl_clk_get_count(void* ctx, fidl_txn_t* txn) {
-  auto dev = static_cast<AmlClock*>(ctx);
-
-  return fuchsia_hardware_clock_DeviceGetCount_reply(txn, dev->GetClkCount());
-}
-
-static const fuchsia_hardware_clock_Device_ops_t fidl_ops_ = {
-    .Measure = fidl_clk_measure,
-    .GetCount = fidl_clk_get_count,
-};
-
-zx_status_t AmlClock::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 
 void AmlClock::InitHiu() {

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
 #define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
 
-#include <fuchsia/hardware/clock/c/fidl.h>
+#include <fuchsia/hardware/clock/llcpp/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/device.h>
@@ -36,9 +36,12 @@ class MesonCpuClock;
 class MesonRateClock;
 
 class AmlClock;
-using DeviceType = ddk::Device<AmlClock, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<AmlClock, ddk::Unbindable, ddk::Messageable<fuchsia_hardware_clock::Device>::Mixin>;
 
-class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
+class AmlClock : public DeviceType,
+                 public fidl::WireServer<fuchsia_hardware_clock::Device>,
+                 public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
   AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer dosbus_mmio,
@@ -61,11 +64,9 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   zx_status_t ClockImplGetNumInputs(uint32_t id, uint32_t* out_num_inputs);
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out_input);
 
-  // CLK IOCTL implementation.
-  zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info);
-  uint32_t GetClkCount();
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  // CLK FIDL implementation.
+  void Measure(MeasureRequestView request, MeasureCompleter::Sync& completer);
+  void GetCount(GetCountRequestView request, GetCountCompleter::Sync& completer);
 
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn);
