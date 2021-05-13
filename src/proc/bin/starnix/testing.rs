@@ -47,6 +47,20 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
     (kernel, task)
 }
 
+/// Creates a new `Task` in the provided kernel.
+///
+/// The `Task` is backed by a real process, and can be used to test syscalls.
+pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
+    Task::new(
+        kernel,
+        &CString::new(task_name).unwrap(),
+        FdTable::new(),
+        create_test_file_system(),
+        Credentials::default(),
+    )
+    .expect("failed to create second task")
+}
+
 /// Maps `length` at `address` with `PROT_READ | PROT_WRITE`, `MAP_ANONYMOUS | MAP_PRIVATE`.
 ///
 /// Returns the address returned by `sys_mmap`.

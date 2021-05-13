@@ -124,6 +124,40 @@ pub fn sys_sigaltstack(
     Ok(SUCCESS)
 }
 
+pub fn sys_rt_sigsuspend(
+    ctx: &SyscallContext<'_>,
+    user_mask: UserRef<sigset_t>,
+    sigset_size: usize,
+) -> Result<SyscallResult, Errno> {
+    if sigset_size != std::mem::size_of::<sigset_t>() {
+        return Err(EINVAL);
+    }
+
+    let mut mask = sigset_t::default();
+    ctx.task.mm.read_object(user_mask, &mut mask)?;
+
+    // Save the old signal mask so it can be restored once the task wakes back up.
+    let mut current_signal_mask = ctx.task.signal_mask.lock();
+    let old_mask = *current_signal_mask;
+    *current_signal_mask = mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+
+    // This block makes sure the write lock on the pids is dropped before waiting.
+    let waiter = {
+        let mut pid_table = ctx.task.thread_group.kernel.pids.write();
+        pid_table.add_suspended_task(ctx.task.id)
+    };
+
+    // Since a given task can't wait twice, it's fine to pass the current signal mask as the
+    // associated mutex.
+    waiter.wait(&mut current_signal_mask);
+
+    // Restore the signal mask to its pre-suspend value.
+    *current_signal_mask = old_mask;
+
+    // sigsuspend always returns an error.
+    Err(EINTR)
+}
+
 pub fn sys_kill(
     ctx: &SyscallContext<'_>,
     pid: pid_t,
@@ -663,5 +697,45 @@ mod tests {
         let ctx = SyscallContext::new(&task_owner.task);
 
         assert_eq!(sys_kill(&ctx, task_owner.task.id, UncheckedSignal::from(75)), Err(EINVAL));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_suspend() {
+        let (kernel, task_owner) = create_kernel_and_task();
+        let first_task_id = task_owner.task.id;
+
+        let thread = std::thread::spawn(move || {
+            let ctx = SyscallContext::new(&task_owner.task);
+            let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+            let user_ref = UserRef::<sigset_t>::new(addr);
+
+            let sigset: sigset_t = Signal::SIGPOLL.mask();
+            ctx.task.mm.write_object(user_ref, &sigset).expect("failed to set action");
+
+            assert_eq!(
+                sys_rt_sigsuspend(&ctx, user_ref, std::mem::size_of::<sigset_t>()),
+                Err(EINTR)
+            );
+        });
+
+        let second_task_owner = create_task(&kernel, "test-task-2");
+        let ctx = SyscallContext::new(&second_task_owner.task);
+
+        // Wait for the first task to be suspended.
+        let mut suspended = false;
+        while !suspended {
+            let pid_table = kernel.pids.read();
+            suspended = pid_table.is_task_suspended(first_task_id);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        // Signal the suspended task with a signal that is not blocked (only SIGPOLL in this test).
+        let _ = sys_kill(&ctx, first_task_id, UncheckedSignal::from(SIGPOLL));
+
+        // Wait for the sigsuspend to complete.
+        let _ = thread.join();
+
+        let pid_table = kernel.pids.read();
+        assert!(!pid_table.is_task_suspended(first_task_id));
     }
 }

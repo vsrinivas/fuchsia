@@ -145,6 +145,7 @@ pub fn dispatch_syscall(
         readlinkat[4],
         rt_sigaction[3],
         rt_sigprocmask[4],
+        rt_sigsuspend[2],
         sched_getaffinity[3],
         sched_getscheduler[1],
         sched_setaffinity[3],

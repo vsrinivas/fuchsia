@@ -4,7 +4,7 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task as zxTask};
 use log::warn;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{Condvar, Mutex, RwLock};
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::ffi::CString;
@@ -62,11 +62,19 @@ pub struct PidTable {
 
     /// The thread groups that are present in this table.
     thread_groups: HashMap<pid_t, Weak<ThreadGroup>>,
+
+    /// The condvars that suspended tasks are waiting on, organized by pid_t of the suspended task.
+    suspended_tasks: HashMap<pid_t, Arc<Condvar>>,
 }
 
 impl PidTable {
     pub fn new() -> PidTable {
-        PidTable { last_pid: 0, tasks: HashMap::new(), thread_groups: HashMap::new() }
+        PidTable {
+            last_pid: 0,
+            tasks: HashMap::new(),
+            thread_groups: HashMap::new(),
+            suspended_tasks: HashMap::new(),
+        }
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
@@ -75,6 +83,32 @@ impl PidTable {
 
     pub fn get_thread_groups(&self) -> Vec<Arc<ThreadGroup>> {
         self.thread_groups.iter().flat_map(|(_pid, thread_group)| thread_group.upgrade()).collect()
+    }
+
+    /// Adds a task to the set of tasks currently suspended via `rt_sigsuspend`.
+    ///
+    /// Attempting to add a task that already exists is an error, and will panic.
+    ///
+    /// The suspended task will wait on the condition variable, and will be notified when it is
+    /// the target of an appropriate signal.
+    pub fn add_suspended_task(&mut self, pid: pid_t) -> Arc<Condvar> {
+        assert!(!self.is_task_suspended(pid));
+        let condvar = Arc::new(Condvar::new());
+        self.suspended_tasks.insert(pid, condvar.clone());
+        condvar
+    }
+
+    /// Returns true if the Task associated with `pid` is currently suspended in `rt_sigsuspend`.
+    pub fn is_task_suspended(&self, pid: pid_t) -> bool {
+        self.suspended_tasks.contains_key(&pid)
+    }
+
+    /// Removes the condition variable that `pid` is waiting on.
+    ///
+    /// The returned condition variable is meant to be notified before it is dropped in order
+    /// for the task to resume operation in `rt_sigsuspend`.
+    pub fn remove_suspended_task(&mut self, pid: pid_t) -> Option<Arc<Condvar>> {
+        self.suspended_tasks.remove(&pid)
     }
 
     fn allocate_pid(&mut self) -> pid_t {
@@ -309,7 +343,14 @@ impl Task {
             return Ok(());
         }
 
-        let _signal = Signal::try_from(unchecked_signal)?;
+        let signal = Signal::try_from(unchecked_signal)?;
+        if signal.mask() & *self.signal_mask.lock() != 0 {
+            if let Some(waiter_condvar) =
+                self.thread_group.kernel.pids.write().remove_suspended_task(self.id)
+            {
+                waiter_condvar.notify_all();
+            }
+        }
         Ok(())
     }
 }
