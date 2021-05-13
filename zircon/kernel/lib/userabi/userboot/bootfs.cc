@@ -6,6 +6,7 @@
 
 #include "bootfs.h"
 
+#include <lib/stdcompat/string_view.h>
 #include <string.h>
 #include <zircon/boot/bootfs.h>
 #include <zircon/syscalls.h>
@@ -37,7 +38,8 @@ Bootfs::~Bootfs() {
   check(log_, status, "zx_vmar_unmap failed on bootfs mapping");
 }
 
-const zbi_bootfs_dirent_t* Bootfs::Search(const char* root_prefix, const char* filename) const {
+const zbi_bootfs_dirent_t* Bootfs::Search(std::string_view root_prefix,
+                                          std::string_view filename) const {
   std::basic_string_view<std::byte> p = contents_;
 
   if (p.size() < sizeof(zbi_bootfs_header_t)) {
@@ -49,9 +51,6 @@ const zbi_bootfs_dirent_t* Bootfs::Search(const char* root_prefix, const char* f
     fail(log_, "bootfs bad magic or size");
   }
 
-  size_t prefix_len = strlen(root_prefix);
-  size_t filename_len = strlen(filename) + 1;
-
   p = p.substr(sizeof(zbi_bootfs_header_t));
   while (p.size() > sizeof(zbi_bootfs_dirent_t)) {
     auto e = reinterpret_cast<const zbi_bootfs_dirent_t*>(p.data());
@@ -61,8 +60,9 @@ const zbi_bootfs_dirent_t* Bootfs::Search(const char* root_prefix, const char* f
       fail(log_, "bootfs has bogus namelen in header");
     }
 
-    if (e->name_len == prefix_len + filename_len && !memcmp(e->name, root_prefix, prefix_len) &&
-        !memcmp(&e->name[prefix_len], filename, filename_len)) {
+    std::string_view name{e->name, e->name_len - 1};  // Truncate the NUL terminator.
+    if (name.size() == root_prefix.size() + filename.size() &&
+        cpp20::starts_with(name, root_prefix) && cpp20::ends_with(name, filename)) {
       return e;
     }
 
@@ -72,8 +72,12 @@ const zbi_bootfs_dirent_t* Bootfs::Search(const char* root_prefix, const char* f
   return NULL;
 }
 
-zx::vmo Bootfs::Open(const char* root_prefix, const char* filename, const char* purpose) const {
-  printl(log_, "searching bootfs for '%s%s' (%s)", root_prefix, filename, purpose);
+zx::vmo Bootfs::Open(std::string_view root_prefix, std::string_view filename,
+                     std::string_view purpose) const {
+  printl(log_, "searching bootfs for '%.*s%.*s' (%.*s)",            //
+         static_cast<int>(root_prefix.size()), root_prefix.data(),  //
+         static_cast<int>(filename.size()), filename.data(),        //
+         static_cast<int>(purpose.size()), purpose.data());
 
   const zbi_bootfs_dirent_t* e = Search(root_prefix, filename);
   if (e == NULL) {
@@ -93,7 +97,7 @@ zx::vmo Bootfs::Open(const char* root_prefix, const char* filename, const char* 
                                          e->data_len, &file_vmo);
   check(log_, status, "zx_vmo_create_child failed");
 
-  file_vmo.set_property(ZX_PROP_NAME, filename, strlen(filename));
+  file_vmo.set_property(ZX_PROP_NAME, filename.data(), filename.size());
 
   status = file_vmo.replace_as_executable(vmex_resource_, &file_vmo);
   check(log_, status, "zx_vmo_replace_as_executable failed");

@@ -16,6 +16,8 @@
 #include <stddef.h>
 #include <zircon/types.h>
 
+#include <string_view>
+
 class Bootfs;
 
 // Returns the base address (p_vaddr bias).
@@ -30,9 +32,9 @@ zx_vaddr_t elf_load_vdso(const zx::debuglog& log, const zx::vmar& vmar, const zx
 // the dynamic linker) with the given log handle and a VMO for the
 // main executable and a loader-service channel, the other end of
 // which is returned here.
-zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& fs, const char* root_prefix,
+zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& fs, std::string_view root_prefix,
                            const zx::process& proc, const zx::vmar& vmar, const zx::thread& thread,
-                           const char* filename, const zx::channel& to_child, size_t* stack_size,
-                           zx::channel* loader_svc);
+                           std::string_view filename, const zx::channel& to_child,
+                           size_t* stack_size, zx::channel* loader_svc);
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_USERBOOT_ELF_H_

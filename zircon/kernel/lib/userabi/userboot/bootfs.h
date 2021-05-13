@@ -21,10 +21,11 @@ class Bootfs {
   Bootfs(zx::vmar vmar_self, zx::vmo vmo, zx::resource vmex_resource, zx::debuglog log);
   ~Bootfs();
 
-  zx::vmo Open(const char* root_prefix, const char* filename, const char* purpose) const;
+  zx::vmo Open(std::string_view root_prefix, std::string_view filename,
+               std::string_view purpose) const;
 
  private:
-  const zbi_bootfs_dirent_t* Search(const char* root_prefix, const char* filename) const;
+  const zbi_bootfs_dirent_t* Search(std::string_view root_prefix, std::string_view filename) const;
 
   zx::vmar vmar_self_;
   zx::vmo vmo_;

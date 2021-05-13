@@ -12,13 +12,15 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <cstddef>
+#include <string_view>
 
 class Bootfs;
 
 class LoaderService {
  public:
-  LoaderService(zx::debuglog log, Bootfs* fs, const char* root)
+  LoaderService(zx::debuglog log, Bootfs* fs, std::string_view root)
       : log_(std::move(log)), fs_(fs), root_(root) {}
 
   // Handle loader-service RPCs on channel until there are no more.
@@ -26,18 +28,18 @@ class LoaderService {
   void Serve(zx::channel);
 
  private:
-  static constexpr const char kLoadObjectFilePrefix[] = "lib/";
+  static constexpr std::string_view kLoadObjectFilePrefix = "lib/";
   zx::debuglog log_;
   Bootfs* fs_;
-  const char* root_;
-  char prefix_[32];
+  std::string_view root_;
+  std::array<char, 32> prefix_;
   size_t prefix_len_ = 0;
   bool exclusive_ = false;
 
   bool HandleRequest(const zx::channel&);
-  void Config(const char* string, size_t len);
-  zx::vmo LoadObject(const char* name, size_t len);
-  zx::vmo TryLoadObject(const char* name, size_t len, bool use_prefix);
+  void Config(std::string_view string);
+  zx::vmo LoadObject(std::string_view name);
+  zx::vmo TryLoadObject(std::string_view name, bool use_prefix);
 };
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_LOADER_SERVICE_H_

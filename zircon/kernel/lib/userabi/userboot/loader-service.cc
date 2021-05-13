@@ -7,47 +7,49 @@
 #include "loader-service.h"
 
 #include <lib/fidl/txn_header.h>
+#include <zircon/boot/bootfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include <cstring>
 
+#include <fbl/string_buffer.h>
 #include <ldmsg/ldmsg.h>
 
 #include "bootfs.h"
 #include "util.h"
 
-void LoaderService::Config(const char* string, size_t len) {
+void LoaderService::Config(std::string_view string) {
   exclusive_ = false;
-  if (string[len - 1] == '!') {
-    --len;
+  if (!string.empty() && string.back() == '!') {
+    string.remove_suffix(1);
     exclusive_ = true;
   }
-  if (len >= sizeof(prefix_) - 1) {
+  if (string.size() >= prefix_.size() - 1) {
     fail(log_, "loader-service config string too long");
   }
-  memcpy(prefix_, string, len);
-  prefix_[len++] = '/';
-  prefix_len_ = len;
+  string.copy(prefix_.data(), prefix_.size());
+  prefix_len_ = string.size();
+  prefix_[prefix_len_++] = '/';
 }
 
-zx::vmo LoaderService::TryLoadObject(const char* name, size_t len, bool use_prefix) {
-  size_t prefix_len = use_prefix ? prefix_len_ : 0;
-  char file[len + sizeof(kLoadObjectFilePrefix) + prefix_len + 1];
-  memcpy(file, kLoadObjectFilePrefix, sizeof(kLoadObjectFilePrefix) - 1);
-  memcpy(&file[sizeof(kLoadObjectFilePrefix) - 1], prefix_, prefix_len);
-  memcpy(&file[sizeof(kLoadObjectFilePrefix) - 1 + prefix_len], name, len);
-  file[sizeof(kLoadObjectFilePrefix) - 1 + prefix_len + len] = '\0';
+zx::vmo LoaderService::TryLoadObject(std::string_view name, bool use_prefix) {
+  fbl::StringBuffer<ZBI_BOOTFS_MAX_NAME_LEN> file;
+  file.Append(kLoadObjectFilePrefix);
+  if (use_prefix && prefix_len_) {
+    file.Append(prefix_.data(), prefix_len_);
+  }
+  file.Append(name);
   return fs_->Open(root_, file, "shared library");
 }
 
-zx::vmo LoaderService::LoadObject(const char* name, size_t len) {
-  zx::vmo vmo = TryLoadObject(name, len, true);
+zx::vmo LoaderService::LoadObject(std::string_view name) {
+  zx::vmo vmo = TryLoadObject(name, true);
   if (!vmo && prefix_len_ > 0 && !exclusive_) {
-    vmo = TryLoadObject(name, len, false);
+    vmo = TryLoadObject(name, false);
   }
   if (!vmo) {
-    fail(log_, "cannot find shared library '%s'", name);
+    fail(log_, "cannot find shared library '%.*s'", static_cast<int>(name.size()), name.data());
   }
   return vmo;
 }
@@ -87,11 +89,11 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
       return false;
 
     case LDMSG_OP_CONFIG:
-      Config(string, string_len);
+      Config({string, string_len});
       break;
 
     case LDMSG_OP_LOAD_OBJECT:
-      vmo = LoadObject(string, string_len);
+      vmo = LoadObject({string, string_len});
       break;
 
     case LDMSG_OP_CLONE:

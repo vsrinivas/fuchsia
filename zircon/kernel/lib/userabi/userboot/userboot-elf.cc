@@ -22,7 +22,7 @@
 
 #define INTERP_PREFIX "lib/"
 
-static zx_vaddr_t load(const zx::debuglog& log, const char* what, const zx::vmar& vmar,
+static zx_vaddr_t load(const zx::debuglog& log, std::string_view what, const zx::vmar& vmar,
                        const zx::vmo& vmo, uintptr_t* interp_off, size_t* interp_len,
                        zx::vmar* segments_vmar, size_t* stack_size, bool return_entry) {
   elf_load_header_t header;
@@ -49,7 +49,8 @@ static zx_vaddr_t load(const zx::debuglog& log, const char* what, const zx::vmar
   status = elf_load_map_segments(vmar.get(), &header, phdrs, vmo.get(), vmar_ptr, &base, &entry);
   check(log, status, "elf_load_map_segments failed");
 
-  printl(log, "userboot: loaded %s at %p, entry point %p\n", what, (void*)base, (void*)entry);
+  printl(log, "userboot: loaded %.*s at %p, entry point %p\n", static_cast<int>(what.size()),
+         what.data(), (void*)base, (void*)entry);
   return return_entry ? entry : base;
 }
 
@@ -131,10 +132,11 @@ static void stuff_loader_bootstrap(const zx::debuglog& log, const zx::process& p
   check(log, status, "zx_channel_write of loader bootstrap message failed");
 }
 
-zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs, const char* root_prefix,
-                           const zx::process& proc, const zx::vmar& vmar, const zx::thread& thread,
-                           const char* filename, const zx::channel& to_child, size_t* stack_size,
-                           zx::channel* loader_svc) {
+zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs,
+                           std::string_view root_prefix, const zx::process& proc,
+                           const zx::vmar& vmar, const zx::thread& thread,
+                           std::string_view filename, const zx::channel& to_child,
+                           size_t* stack_size, zx::channel* loader_svc) {
   zx::vmo vmo = bootfs.Open(root_prefix, filename, "program");
 
   uintptr_t interp_off = 0;
@@ -167,7 +169,8 @@ zx_vaddr_t elf_load_bootfs(const zx::debuglog& log, const Bootfs& bootfs, const 
     // Copy the nul.
     interp[kInterpPrefixLen + interp_len] = '\0';
 
-    printl(log, "'%s' has PT_INTERP \"%s\"", filename, interp);
+    printl(log, "'%.*s' has PT_INTERP \"%s\"", static_cast<int>(filename.size()), filename.data(),
+           interp);
 
     zx::vmo interp_vmo = bootfs.Open(root_prefix, interp, "dynamic linker");
     zx::vmar interp_vmar;
