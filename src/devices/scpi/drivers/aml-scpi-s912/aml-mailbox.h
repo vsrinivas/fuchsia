@@ -9,10 +9,10 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
@@ -31,8 +31,6 @@ using DeviceType = ddk::Device<AmlMailbox, ddk::Unbindable>;
 
 class AmlMailbox : public DeviceType, public ddk::MailboxProtocol<AmlMailbox, ddk::base_protocol> {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMailbox);
-
   explicit AmlMailbox(zx_device_t* parent) : DeviceType(parent), pdev_(parent) {}
 
   static zx_status_t Create(zx_device_t* parent);

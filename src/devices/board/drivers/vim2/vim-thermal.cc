@@ -4,12 +4,13 @@
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/scpi/c/banjo.h>
+#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-s912/s912-gpio.h>
@@ -75,7 +76,7 @@ static const pbus_irq_t mailbox_irqs[] = {
  * Operating point -1 - INVALID/No throttling needed
  */
 
-static fuchsia_hardware_thermal_ThermalDeviceInfo aml_vim2_config = {
+static fuchsia_hardware_thermal::wire::ThermalDeviceInfo aml_vim2_config = {
     .active_cooling = true,
     .passive_cooling = true,
     .gpu_throttling = true,
@@ -84,7 +85,7 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo aml_vim2_config = {
     .critical_temp_celsius = 81.0f,
     .trip_point_info =
         {
-            {
+            fuchsia_hardware_thermal::wire::ThermalTemperatureInfo{
                 // This is the initial thermal setup of the device
                 // Fan set to OFF
                 // CPU freq set to a known stable MAX
@@ -158,12 +159,6 @@ static fuchsia_hardware_thermal_ThermalDeviceInfo aml_vim2_config = {
     .opps = {},
 };
 
-static const pbus_metadata_t vim_thermal_metadata[] = {{
-    .type = DEVICE_METADATA_THERMAL_CONFIG,
-    .data_buffer = reinterpret_cast<const uint8_t*>(&aml_vim2_config),
-    .data_size = sizeof(aml_vim2_config),
-}};
-
 // Composite binding rules for thermal driver.
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
@@ -199,6 +194,20 @@ static const device_fragment_t fragments[] = {
 };
 
 zx_status_t Vim::ThermalInit() {
+  fidl::OwnedEncodedMessage<fuchsia_hardware_thermal::wire::ThermalDeviceInfo> encoded_metadata(
+      &aml_vim2_config);
+  if (!encoded_metadata.ok()) {
+    zxlogf(ERROR, "ThermalInit: failed to encode metadata: %d", encoded_metadata.status());
+    return encoded_metadata.status();
+  }
+  auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();
+
+  pbus_metadata_t vim_thermal_metadata[] = {{
+      .type = DEVICE_METADATA_THERMAL_CONFIG,
+      .data_buffer = encoded_metadata_bytes.data(),
+      .data_size = encoded_metadata_bytes.size(),
+  }};
+
   pbus_dev_t mailbox_dev = {};
   mailbox_dev.name = "mailbox";
   mailbox_dev.vid = PDEV_VID_AMLOGIC;

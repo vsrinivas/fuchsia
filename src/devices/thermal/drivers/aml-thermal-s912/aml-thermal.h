@@ -4,8 +4,8 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <fuchsia/hardware/thermal/cpp/banjo.h>
+#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
@@ -36,11 +36,16 @@ enum FanLevel {
   FAN_L3,
 };
 
+namespace fthermal = fuchsia_hardware_thermal;
+
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Initializable, ddk::MessageableOld, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Initializable,
+                               ddk::Messageable<fthermal::Device>::Mixin, ddk::Unbindable>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
-class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
+class AmlThermal : public DeviceType,
+                   public fidl::WireServer<fthermal::Device>,
+                   public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
  public:
   AmlThermal(zx_device_t* device, const ddk::GpioProtocolClient& fan0_gpio,
              const ddk::GpioProtocolClient& fan1_gpio, const ddk::ScpiProtocolClient& scpi,
@@ -63,7 +68,6 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
 
   // Ddk-required methods.
   void DdkInit(ddk::InitTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -71,46 +75,31 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_status_t ThermalConnect(zx::channel ch);
 
   // Visible for testing.
-  zx_status_t GetInfo(fidl_txn_t* txn);
-  zx_status_t GetDeviceInfo(fidl_txn_t* txn);
-  zx_status_t GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain, fidl_txn_t* txn);
-  zx_status_t GetTemperatureCelsius(fidl_txn_t* txn);
-  zx_status_t GetStateChangeEvent(fidl_txn_t* txn);
-  zx_status_t GetStateChangePort(fidl_txn_t* txn);
-  zx_status_t SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn);
-  zx_status_t GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
-                                    fidl_txn_t* txn);
-  zx_status_t SetDvfsOperatingPoint(uint16_t op_idx,
-                                    fuchsia_hardware_thermal_PowerDomain power_domain,
-                                    fidl_txn_t* txn);
-  zx_status_t GetFanLevel(fidl_txn_t* txn);
-  zx_status_t SetFanLevel(uint32_t fan_level, fidl_txn_t* txn);
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer);
+  void GetDeviceInfo(GetDeviceInfoRequestView request, GetDeviceInfoCompleter::Sync& completer);
+  void GetDvfsInfo(GetDvfsInfoRequestView request, GetDvfsInfoCompleter::Sync& completer);
+  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
+                             GetTemperatureCelsiusCompleter::Sync& completer);
+  void GetStateChangeEvent(GetStateChangeEventRequestView request,
+                           GetStateChangeEventCompleter::Sync& completer);
+  void GetStateChangePort(GetStateChangePortRequestView request,
+                          GetStateChangePortCompleter::Sync& completer);
+  void SetTripCelsius(SetTripCelsiusRequestView request, SetTripCelsiusCompleter::Sync& completer);
+  void GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView request,
+                             GetDvfsOperatingPointCompleter::Sync& completer);
+  void SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView request,
+                             SetDvfsOperatingPointCompleter::Sync& completer);
+  void GetFanLevel(GetFanLevelRequestView request, GetFanLevelCompleter::Sync& completer);
+  void SetFanLevel(SetFanLevelRequestView request, SetFanLevelCompleter::Sync& completer);
 
   void JoinWorkerThread();
-
-  static constexpr fuchsia_hardware_thermal_Device_ops_t fidl_ops = {
-      .GetTemperatureCelsius =
-          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetTemperatureCelsius>,
-      .GetInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetInfo>,
-      .GetDeviceInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDeviceInfo>,
-      .GetDvfsInfo = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsInfo>,
-      .GetStateChangeEvent = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangeEvent>,
-      .GetStateChangePort = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetStateChangePort>,
-      .SetTripCelsius = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetTripCelsius>,
-      .GetDvfsOperatingPoint =
-          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetDvfsOperatingPoint>,
-      .SetDvfsOperatingPoint =
-          fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetDvfsOperatingPoint>,
-      .GetFanLevel = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::GetFanLevel>,
-      .SetFanLevel = fidl::Binder<AmlThermal>::BindMember<&AmlThermal::SetFanLevel>,
-  };
 
  private:
   // Notification thread implementation.
   int Worker();
 
   // Set the fans to the given level.
-  zx_status_t SetFanLevel(FanLevel level);
+  zx_status_t SetFanLevelInternal(FanLevel level);
 
   // Notify the thermal daemon of the current settings.
   zx_status_t NotifyThermalDaemon(uint32_t trip_point) const;
@@ -125,7 +114,7 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_device_t* scpi_dev_;
 
   thrd_t worker_ = {};
-  fuchsia_hardware_thermal_ThermalDeviceInfo info_ = {};
+  fthermal::wire::ThermalDeviceInfo info_ = {};
   FanLevel fan_level_ = FAN_L0;
   float temperature_ = 0.0f;
   sync_completion quit_;

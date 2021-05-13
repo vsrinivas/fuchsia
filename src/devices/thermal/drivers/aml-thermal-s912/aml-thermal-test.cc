@@ -6,18 +6,19 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/scpi/cpp/banjo-mock.h>
+#include <fuchsia/hardware/thermal/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
-#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
 bool FloatNear(float a, float b) { return std::abs(a - b) < 0.001f; }
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPointInfo(
+fuchsia_hardware_thermal::wire::ThermalTemperatureInfo TripPointInfo(
     float up_temp, float down_temp, uint16_t big_cluster_dvfs_opp,
     uint16_t little_cluster_dvfs_opp) {
   return {.up_temp_celsius = up_temp,
@@ -29,7 +30,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPointInfo(
 }
 
 // vim2 thermal device info.
-constexpr fuchsia_hardware_thermal_ThermalDeviceInfo kDeviceInfo = {
+fuchsia_hardware_thermal::wire::ThermalDeviceInfo kDeviceInfo = {
     .active_cooling = true,
     .passive_cooling = true,
     .gpu_throttling = true,
@@ -85,20 +86,23 @@ class MockScpi : public ddk::MockScpi {
 
 class AmlThermalTest : public zxtest::Test {
  public:
-  AmlThermalTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
+  AmlThermalTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
+    fidl::OwnedEncodedMessage<fthermal::wire::ThermalDeviceInfo> encoded_metadata(&kDeviceInfo);
+    ASSERT_OK(encoded_metadata.status());
+    encoded_metadata_ = encoded_metadata.GetOutgoingMessage().CopyBytes();
+  }
 
   void StartFidlServer(AmlThermal* device) {
-    zx::channel server;
-    ASSERT_OK(zx::channel::create(0, &client_, &server));
-    ASSERT_OK(
-        fidl_bind(loop_.dispatcher(), server.release(),
-                  reinterpret_cast<fidl_dispatch_t*>(fuchsia_hardware_thermal_Device_dispatch),
-                  device, &AmlThermal::fidl_ops));
+    auto endpoints = fidl::CreateEndpoints<fthermal::Device>();
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), device);
+    client_ = fidl::BindSyncClient(std::move(endpoints->client));
     ASSERT_OK(loop_.StartThread("aml-thermal-test-loop"));
   }
 
  protected:
-  zx::channel client_;
+  fidl::WireSyncClient<fthermal::Device> client_;
+
+  fidl::OutgoingMessage::CopiedBytes encoded_metadata_;
 
  private:
   async::Loop loop_;
@@ -132,32 +136,28 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
-  scpi.ExpectGetDvfsInfo(ZX_ERR_IO, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
+  scpi.ExpectGetDvfsInfo(ZX_ERR_IO,
+                         static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain),
                          kExpectedBigClusterOpp)
-      .ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN,
+      .ExpectGetDvfsInfo(ZX_OK,
+                         static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain),
                          kExpectedBigClusterOpp)
-      .ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
-                         kExpectedLittleClusterOpp);
+      .ExpectGetDvfsInfo(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain),
+          kExpectedLittleClusterOpp);
 
-  zx_status_t status;
-  fuchsia_hardware_thermal_OperatingPoint out_opp;
+  auto result = client_.GetDvfsInfo(fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+  ASSERT_OK(result.status());
+  EXPECT_EQ(result->status, ZX_ERR_IO);
 
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsInfo(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,
-      &out_opp));
-  EXPECT_EQ(status, ZX_ERR_IO);
+  auto result2 = client_.GetDvfsInfo(fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+  EXPECT_OK(result2->status);
+  EXPECT_BYTES_EQ(result2->info.get(), &kExpectedBigClusterOpp, sizeof(scpi_opp_t));
 
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsInfo(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,
-      &out_opp));
-  EXPECT_OK(status);
-  EXPECT_BYTES_EQ(&out_opp, &kExpectedBigClusterOpp, sizeof(scpi_opp_t));
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsInfo(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, &status,
-      &out_opp));
-  EXPECT_OK(status);
-  EXPECT_BYTES_EQ(&out_opp, &kExpectedLittleClusterOpp, sizeof(scpi_opp_t));
+  auto result3 = client_.GetDvfsInfo(fthermal::wire::PowerDomain::kLittleClusterPowerDomain);
+  ASSERT_OK(result3.status());
+  ASSERT_OK(result3->status);
+  EXPECT_BYTES_EQ(result3->info.get(), &kExpectedLittleClusterOpp, sizeof(scpi_opp_t));
 
   scpi.VerifyAndClear();
 }
@@ -168,74 +168,94 @@ TEST_F(AmlThermalTest, DvfsOperatingPoint) {
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
-  scpi.ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 1)
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 3)
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 0)
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 10)
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 7);
+  scpi.ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), 1)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), 3)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), 0)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), 10)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), 7);
 
-  zx_status_t status;
-  uint16_t op_idx;
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 1, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,
-      &op_idx));
-  EXPECT_OK(status);
-  EXPECT_EQ(op_idx, 1);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 3, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, &status,
-      &op_idx));
-  EXPECT_OK(status);
-  EXPECT_EQ(op_idx, 3);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 0, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,
-      &op_idx));
-  EXPECT_OK(status);
-  EXPECT_EQ(op_idx, 0);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 0, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 10, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
-      &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, &status,
-      &op_idx));
-  EXPECT_OK(status);
-  EXPECT_EQ(op_idx, 10);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 10, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
-      &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-      client_.get(), 7, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
-      client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,
-      &op_idx));
-  EXPECT_OK(status);
-  EXPECT_EQ(op_idx, 7);
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(1, fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.GetDvfsOperatingPoint(fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->op_idx, 1);
+  }
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(3, fthermal::wire::PowerDomain::kLittleClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.GetDvfsOperatingPoint(fthermal::wire::PowerDomain::kLittleClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->op_idx, 3);
+  }
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(0, fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.GetDvfsOperatingPoint(fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->op_idx, 0);
+  }
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(0, fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(10, fthermal::wire::PowerDomain::kLittleClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.GetDvfsOperatingPoint(fthermal::wire::PowerDomain::kLittleClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->op_idx, 10);
+  }
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(10, fthermal::wire::PowerDomain::kLittleClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.SetDvfsOperatingPoint(7, fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result =
+        client_.GetDvfsOperatingPoint(fthermal::wire::PowerDomain::kBigClusterPowerDomain);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->op_idx, 7);
+  }
 
   scpi.VerifyAndClear();
 }
@@ -258,43 +278,61 @@ TEST_F(AmlThermalTest, FanLevel) {
       .ExpectWrite(ZX_OK, 1)
       .ExpectWrite(ZX_OK, 0);
 
-  zx_status_t status;
-  uint32_t fan_level;
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetFanLevel(client_.get(), FAN_L0, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetFanLevel(client_.get(), &status, &fan_level));
-  EXPECT_OK(status);
-  EXPECT_EQ(fan_level, FAN_L0);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetFanLevel(client_.get(), FAN_L2, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetFanLevel(client_.get(), &status, &fan_level));
-  EXPECT_OK(status);
-  EXPECT_EQ(fan_level, FAN_L2);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetFanLevel(client_.get(), FAN_L1, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetFanLevel(client_.get(), &status, &fan_level));
-  EXPECT_OK(status);
-  EXPECT_EQ(fan_level, FAN_L1);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetFanLevel(client_.get(), FAN_L3, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetFanLevel(client_.get(), &status, &fan_level));
-  EXPECT_OK(status);
-  EXPECT_EQ(fan_level, FAN_L3);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceSetFanLevel(client_.get(), FAN_L0, &status));
-  EXPECT_OK(status);
-
-  EXPECT_OK(fuchsia_hardware_thermal_DeviceGetFanLevel(client_.get(), &status, &fan_level));
-  EXPECT_OK(status);
-  EXPECT_EQ(fan_level, FAN_L0);
+  {
+    auto result = client_.SetFanLevel(FAN_L0);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result = client_.GetFanLevel();
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->fan_level, FAN_L0);
+  }
+  {
+    auto result = client_.SetFanLevel(FAN_L2);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result = client_.GetFanLevel();
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->fan_level, FAN_L2);
+  }
+  {
+    auto result = client_.SetFanLevel(FAN_L1);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result = client_.GetFanLevel();
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->fan_level, FAN_L1);
+  }
+  {
+    auto result = client_.SetFanLevel(FAN_L3);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result = client_.GetFanLevel();
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->fan_level, FAN_L3);
+  }
+  {
+    auto result = client_.SetFanLevel(FAN_L0);
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+  }
+  {
+    auto result = client_.GetFanLevel();
+    ASSERT_OK(result.status());
+    EXPECT_OK(result->status);
+    EXPECT_EQ(result->fan_level, FAN_L0);
+  }
 
   fan0.VerifyAndClear();
   fan1.VerifyAndClear();
@@ -302,32 +340,33 @@ TEST_F(AmlThermalTest, FanLevel) {
 
 TEST_F(AmlThermalTest, TripPointThread) {
   fake_ddk::Bind ddk;
-  ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, &kDeviceInfo, sizeof(kDeviceInfo));
+  ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, encoded_metadata_.data(),
+                  encoded_metadata_.size());
 
   ddk::MockGpio fan0, fan1;
   MockScpi scpi;
 
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
+  zx::unowned_port port_ref(port.get());
 
   AmlThermal dut(fake_ddk::kFakeDevice, fan0.GetProto(), fan1.GetProto(), scpi.GetProto(), 1234,
                  std::move(port), fake_ddk::kFakeDevice, zx::msec(10));
 
   ASSERT_NO_FATAL_FAILURES(StartFidlServer(&dut));
 
-  zx_status_t status;
-
-  ASSERT_OK(fuchsia_hardware_thermal_DeviceGetStateChangePort(client_.get(), &status,
-                                                              port.reset_and_get_address()));
-  ASSERT_OK(status);
-  ASSERT_TRUE(port.is_valid());
+  auto result = client_.GetStateChangePort();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  ASSERT_TRUE(result->handle.is_valid());
 
   fan0.ExpectConfigOut(ZX_OK, 0);
   fan1.ExpectConfigOut(ZX_OK, 0);
 
-  scpi.ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, {})
-      .ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
-                         {})
+  scpi.ExpectGetDvfsInfo(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), {})
+      .ExpectGetDvfsInfo(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), {})
       .ExpectGetSensorValue(ZX_OK, 1234, 30.0f)  // Trip point 0
       .ExpectGetSensorValue(ZX_OK, 1234, 75.0f)  // 0 -> 1
       .ExpectGetSensorValue(ZX_OK, 1234, 75.0f)  // 1 -> 2
@@ -339,8 +378,10 @@ TEST_F(AmlThermalTest, TripPointThread) {
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 5 -> 6
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 6 -> 7
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 7 -> critical
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 0)
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 0)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), 0)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), 0)
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)
       .ExpectGetSensorValue(ZX_OK, 1234, 78.0f)  // 7 -> 6
@@ -352,73 +393,73 @@ TEST_F(AmlThermalTest, TripPointThread) {
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 5 -> 6
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 6 -> 7
       .ExpectGetSensorValue(ZX_OK, 1234, 96.0f)  // 7 -> critical
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, 0)
-      .ExpectSetDvfsIdx(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN, 0);
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), 0)
+      .ExpectSetDvfsIdx(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), 0);
 
   ASSERT_OK(dut.Init(fake_ddk::kFakeDevice));
 
   zx_port_packet_t packet;
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 0);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 1);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 2);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 3);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 2);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 3);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 4);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 5);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 6);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 6);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 5);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 4);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 5);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 6);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
 
-  ASSERT_OK(port.wait(zx::time::infinite(), &packet));
+  ASSERT_OK(port_ref->wait(zx::time::infinite(), &packet));
   EXPECT_EQ(packet.key, 7);
 
-  float temperature;
-
-  ASSERT_OK(
-      fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(client_.get(), &status, &temperature));
-  ASSERT_OK(status);
-  ASSERT_TRUE(FloatNear(temperature, 96.0f));
+  auto result2 = client_.GetTemperatureCelsius();
+  ASSERT_OK(result2.status());
+  ASSERT_OK(result2->status);
+  ASSERT_TRUE(FloatNear(result2->temp, 96.0f));
 
   dut.DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
   dut.JoinWorkerThread();
@@ -430,7 +471,8 @@ TEST_F(AmlThermalTest, TripPointThread) {
 
 TEST_F(AmlThermalTest, DdkLifecycle) {
   fake_ddk::Bind ddk;
-  ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, &kDeviceInfo, sizeof(kDeviceInfo));
+  ddk.SetMetadata(DEVICE_METADATA_THERMAL_CONFIG, encoded_metadata_.data(),
+                  encoded_metadata_.size());
 
   ddk::MockGpio fan0, fan1;
   MockScpi scpi;
@@ -444,9 +486,10 @@ TEST_F(AmlThermalTest, DdkLifecycle) {
   fan0.ExpectConfigOut(ZX_OK, 0);
   fan1.ExpectConfigOut(ZX_OK, 0);
 
-  scpi.ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, {})
-      .ExpectGetDvfsInfo(ZX_OK, fuchsia_hardware_thermal_PowerDomain_LITTLE_CLUSTER_POWER_DOMAIN,
-                         {});
+  scpi.ExpectGetDvfsInfo(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kBigClusterPowerDomain), {})
+      .ExpectGetDvfsInfo(
+          ZX_OK, static_cast<uint8_t>(fthermal::wire::PowerDomain::kLittleClusterPowerDomain), {});
 
   // The DdkInit hook will run after DdkAdd.
   dut.DdkAdd("vim-thermal");

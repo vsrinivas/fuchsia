@@ -9,10 +9,10 @@
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -43,8 +43,6 @@ using DeviceType = ddk::Device<AmlSCPI, ddk::Unbindable>;
 
 class AmlSCPI : public DeviceType, public ddk::ScpiProtocol<AmlSCPI, ddk::base_protocol> {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlSCPI);
-
   explicit AmlSCPI(zx_device_t* parent) : DeviceType(parent), mailbox_(parent) {}
 
   static zx_status_t Create(zx_device_t* parent);
