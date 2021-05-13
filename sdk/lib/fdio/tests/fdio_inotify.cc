@@ -24,7 +24,7 @@ namespace {
 namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 constexpr char kTmpfsPath[] = "/tmp-inotify";
-constexpr char kPayload[] = "fake inotify event";
+constexpr struct inotify_event kEvent { .wd = 1, .mask = IN_OPEN, .cookie = 10 };
 
 class Server final : public fio::testing::Directory_TestBase {
  public:
@@ -36,17 +36,20 @@ class Server final : public fio::testing::Directory_TestBase {
   }
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
-    // Normally inotify would send an event on the registered socket. At the time of writing, we are
-    // only interested in testing that AddInotifyFilter and Open are properly serialized by the
-    // client, so we just send a known payload as a simpler alternative that we can observe in the
-    // test.
+    uint32_t incoming_filter = static_cast<uint32_t>(filter_) & IN_OPEN;
+    ASSERT_EQ(incoming_filter, IN_OPEN, "Inotify filter %u does not match open event",
+              static_cast<uint32_t>(filter_));
     ASSERT_TRUE(inotify_socket_.has_value());
-    ASSERT_OK(inotify_socket_.value().write(0, kPayload, sizeof(kPayload), nullptr));
-    completer.Close(ZX_OK);
+
+    // Write the Open event to the socket.
+    size_t actual;
+    ASSERT_OK(inotify_socket_.value().write(0, &kEvent, sizeof(kEvent), &actual));
+    ASSERT_EQ(actual, sizeof(kEvent));
   }
 
   void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {
+    filter_ = request->filters;
     if (add_inotify_filter_async_) {
       async::PostDelayedTask(
           dispatcher_,
@@ -70,6 +73,7 @@ class Server final : public fio::testing::Directory_TestBase {
 
   bool add_inotify_filter_async_ = false;
   std::optional<zx::socket> inotify_socket_;
+  fio2::wire::InotifyWatchMask filter_;
 };
 
 class InotifyAddFilter : public zxtest::Test {
@@ -120,28 +124,28 @@ TEST_F(InotifyAddFilter, AddWatchWithZeroLengthFilePath) {
 }
 
 TEST_F(InotifyAddFilter, AddWatch) {
-  ASSERT_GE(inotify_add_watch(fd().get(), kTmpfsPath, IN_CREATE), 0);
+  ASSERT_GE(inotify_add_watch(fd().get(), kTmpfsPath, IN_OPEN), 0);
 }
 
 TEST_F(InotifyAddFilter, AddWatchOpenRace) {
   mutable_server().SetAddInotifyFilterAsync();
 
-  ASSERT_GE(inotify_add_watch(fd().get(), kTmpfsPath, IN_CREATE), 0);
+  ASSERT_GE(inotify_add_watch(fd().get(), kTmpfsPath, IN_OPEN), 0);
 
   // Expected to fail since Server::Open drops the request on the floor. That's OK, we don't really
   // need to open, just to trigger an inotify event.
   ASSERT_EQ(open(((std::string(kTmpfsPath) + "/" + __FUNCTION__).c_str()), O_CREAT, 0644), -1);
-  ASSERT_ERRNO(EPIPE);
 
   // Mark the inotify fd nonblocking to avoid deadlock in this test's failure case.
   int flags;
   ASSERT_GE(flags = fcntl(fd().get(), F_GETFL), 0, "%s", strerror(errno));
   ASSERT_SUCCESS(fcntl(fd().get(), F_SETFL, flags | O_NONBLOCK));
 
-  char buf[sizeof(kPayload) + 1];
-  ASSERT_EQ(read(fd().get(), buf, sizeof(buf)), sizeof(kPayload), "%s", strerror(errno));
-  buf[sizeof(buf) - 1] = 0;
-  ASSERT_STREQ(buf, kPayload);
+  std::unique_ptr<struct inotify_event> event = std::make_unique<inotify_event>();
+  ASSERT_EQ(read(fd().get(), event.get(), sizeof(*event)), sizeof(*event), "%s", strerror(errno));
+  ASSERT_EQ(event->mask, kEvent.mask);
+  ASSERT_EQ(event->wd, kEvent.wd);
+  ASSERT_EQ(event->cookie, kEvent.cookie);
 }
 
 TEST_F(InotifyAddFilter, AddWatchWithTooLongFilePath) {
@@ -150,11 +154,47 @@ TEST_F(InotifyAddFilter, AddWatchWithTooLongFilePath) {
   ASSERT_ERRNO(ENAMETOOLONG);
 }
 
+TEST_F(InotifyAddFilter, AddMultipleFilters) {
+  mutable_server().SetAddInotifyFilterAsync();
+
+  // Use multiple filters in the same add_watch.
+  ASSERT_GE(inotify_add_watch(fd().get(), kTmpfsPath, IN_OPEN | IN_CREATE), 0);
+  ASSERT_EQ(open(((std::string(kTmpfsPath) + "/" + __FUNCTION__).c_str()), O_CREAT, 0644), -1);
+
+  std::unique_ptr<struct inotify_event> event = std::make_unique<inotify_event>();
+  ASSERT_EQ(read(fd().get(), event.get(), sizeof(*event)), sizeof(*event), "%s", strerror(errno));
+  ASSERT_EQ(event->mask, kEvent.mask);
+  ASSERT_EQ(event->wd, kEvent.wd);
+  ASSERT_EQ(event->cookie, kEvent.cookie);
+}
+
+TEST_F(InotifyAddFilter, DatagramPayloadNoShortReads) {
+  mutable_server().SetAddInotifyFilterAsync();
+
+  ASSERT_GE(inotify_add_watch(fd().get(), kTmpfsPath, IN_OPEN), 0);
+
+  // Call open multiple times and see if we receive the inotify_event event in the form of
+  // of a single unit, without short reads/writes.
+  for (int i = 0; i < 3; i++) {
+    ASSERT_EQ(open(((std::string(kTmpfsPath) + "/" + __FUNCTION__).c_str()), O_CREAT, 0644), -1);
+    std::vector<uint8_t> buffer(sizeof(inotify_event) + PATH_MAX + 1);
+    // Try to read events. Make sure we always receive inotify_event as a whole structure, i.e
+    // no short reads.
+    // Try to read 1 more byte than the actual datagram size.
+    ASSERT_EQ(read(fd().get(), buffer.data(), sizeof(inotify_event) + 1), sizeof(inotify_event),
+              "%s", strerror(errno));
+    struct inotify_event* event = reinterpret_cast<inotify_event*>(buffer.data());
+    ASSERT_EQ(event->mask, kEvent.mask);
+    ASSERT_EQ(event->wd, kEvent.wd);
+    ASSERT_EQ(event->cookie, kEvent.cookie);
+  }
+}
+
 class InotifyRemove : public InotifyAddFilter {
  protected:
   void SetUp() override {
     InotifyAddFilter::SetUp();
-    ASSERT_GE(wd_ = inotify_add_watch(fd().get(), kTmpfsPath, IN_CREATE), 0, "%s", strerror(errno));
+    ASSERT_GE(wd_ = inotify_add_watch(fd().get(), kTmpfsPath, IN_OPEN), 0, "%s", strerror(errno));
   }
 
   int wd() const { return wd_; }

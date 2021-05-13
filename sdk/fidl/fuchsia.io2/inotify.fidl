@@ -16,7 +16,7 @@ protocol Inotifier {
 /// Used by InotifyAddWatch to indicate the server the events to be watched on.
 /// Also used by [`fuchsia.io2/Node.Inotify`] to indicate the types of events
 /// that occured on server side, to be notified to clients. See InotifyEvent.
-enum InotifyWatchMask : uint32 {
+bits InotifyWatchMask : uint32 {
     // Events to watch in inotify
     ACCESS = 0x00000001; // File was accessed.
     MODIFY = 0x00000002; // File was modified.
@@ -34,10 +34,6 @@ enum InotifyWatchMask : uint32 {
     Q_OVERFLOW = 0x00004000; // Event queued overflowed.
     IGNORED = 0x00008000; // File was ignored.
 
-    // Helper events
-    CLOSE = 0x00000018; //( CLOSE_WRITE |  CLOSE_NOWRITE);
-    MOVE = 0x000000C0; //( MOVED_FROM |  MOVED_TO);
-
     // Special flags
     ONLYDIR = 0x01000000; // only watch the path if it is a directory.
     DONT_FOLLOW =	0x02000000; // don't follow a sym link.
@@ -47,6 +43,10 @@ enum InotifyWatchMask : uint32 {
     ISDIRECTORY = 0x40000000; // event occurred against dir.
     ONESHOT = 0x80000000; // only send event once.
 };
+
+// Helper events
+const InotifyWatchMask CLOSE_ALL = InotifyWatchMask.CLOSE_WRITE | InotifyWatchMask.CLOSE_NOWRITE;
+const InotifyWatchMask MOVE = InotifyWatchMask.MOVED_FROM | InotifyWatchMask.MOVED_TO;
 
 // Events returned from reading the inotifier file descriptor.
 struct InotifyEvent {

@@ -81,7 +81,7 @@ zx_status_t inotify_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_co
   std::vector<uint8_t> buf(total);
 
   size_t actual;
-  zx_status_t status = zxio_to_inotify(io)->client.read(flags, buf.data(), total, &actual);
+  zx_status_t status = zxio_to_inotify(io)->client.read(0, buf.data(), total, &actual);
   if (status != ZX_OK) {
     return status;
   }
@@ -90,10 +90,38 @@ zx_status_t inotify_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_co
   return ZX_OK;
 }
 
+static void inotify_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                               zx_signals_t* out_zx_signals) {
+  *out_handle = zxio_to_inotify(io)->client.get();
+
+  zx_signals_t zx_signals = ZX_SIGNAL_NONE;
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    zx_signals |= ZX_SOCKET_READABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
+    zx_signals |= ZX_SOCKET_PEER_CLOSED;
+  }
+  *out_zx_signals = zx_signals;
+}
+
+static void inotify_wait_end(zxio_t* io, zx_signals_t zx_signals,
+                             zxio_signals_t* out_zxio_signals) {
+  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  if (zx_signals & ZX_SOCKET_READABLE) {
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (zx_signals & ZX_SOCKET_PEER_CLOSED) {
+    zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
+  }
+  *out_zxio_signals = zxio_signals;
+}
+
 constexpr zxio_ops_t inotify_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = inotify_close;
   ops.readv = inotify_readv;
+  ops.wait_begin = inotify_wait_begin;
+  ops.wait_end = inotify_wait_end;
   return ops;
 }();
 
@@ -122,7 +150,9 @@ int inotify_init1(int flags) {
   zx::socket client, server;
 
   // Create a common socket shared between all the filters in an inotify instance.
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &client, &server);
+  // We need to avoid short writes for inotify events, and hence need to set
+  // socket type as datagram.
+  zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &client, &server);
   if (status != ZX_OK) {
     return ERROR(status);
   }
