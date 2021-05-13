@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn spawn_element_controller_stream_never_resolves_if_none_stream() {
         init_logger();
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (element, _channel) = make_mock_element();
         let mut fut =
@@ -281,7 +281,7 @@ mod tests {
     #[test]
     fn wait_for_optional_view_controller_close_never_resolves_if_none_proxy() {
         init_logger();
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let mut fut = Box::pin(wait_for_optional_view_controller_close(None));
 
