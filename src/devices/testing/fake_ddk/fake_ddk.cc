@@ -11,8 +11,6 @@
 
 #include <utility>
 
-#include <zxtest/zxtest.h>
-
 namespace fake_ddk {
 
 zx_device_t* kFakeDevice = reinterpret_cast<zx_device_t*>(0x55);
@@ -57,15 +55,11 @@ void Bind::JoinUnbindThread() {
 
 bool Bind::Ok() {
   JoinUnbindThread();
-  EXPECT_TRUE(add_called_);
-  EXPECT_EQ(has_init_hook_, init_reply_.has_value());
-  // We do not check the actual value of |init_reply_|, as the test may wish to test
-  // scenarios where the init failure is handled.
-  EXPECT_TRUE(remove_called_);
-  EXPECT_FALSE(bad_parent_);
-  EXPECT_FALSE(bad_device_);
-  // TODO(fxbug.dev/34344): Remove and make void once all dependent tests migrate to zxtest.
-  return !zxtest::Runner::GetInstance()->CurrentTestHasFailures();
+  return add_called_ &&
+         // We do not check the actual value of |init_reply_|, as the test may wish to test
+         // scenarios where the init failure is handled.
+         has_init_hook_ == init_reply_.has_value() &&
+         remove_called_ && !bad_parent_ && !bad_device_;
 }
 
 zx_status_t Bind::WaitUntilInitComplete() {
