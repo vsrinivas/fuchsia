@@ -332,19 +332,13 @@ void netifc_close(void) {
   snp->Stop(snp);
 }
 
-int netifc_active(void) { return (snp != 0); }
-
-void netifc_poll(void) {
-  uint8_t data[1514];
-  efi_status r;
-  size_t hsz, bsz;
+static void cleanup_tx_buf(void) {
   uint32_t irq;
   void* txdone;
-
-  if (eth_buffers_avail < num_eth_buffers) {
+  while (eth_buffers_avail < num_eth_buffers) {
     // Only check for completion if we have operations in progress.
     // Otherwise, the result of GetStatus is unreliable. See fxbug.dev/30712.
-    if ((r = snp->GetStatus(snp, &irq, &txdone))) {
+    if (snp->GetStatus(snp, &irq, &txdone)) {
       printf("no ops in progress \n");
       return;
     }
@@ -355,28 +349,51 @@ void netifc_poll(void) {
           (buf_paddr < (eth_buffers_base + (NUM_BUFFER_PAGES * PAGE_SIZE)))) {
         eth_put_buffer(txdone);
       }
+    } else {
+      // no buffers ready, so give up.
+      return;
     }
   }
+}
 
-  hsz = 0;
-  bsz = sizeof(data);
-  r = snp->Receive(snp, &hsz, &bsz, data, NULL, NULL, NULL);
-  if (r != EFI_SUCCESS) {
-    return;
-  }
+int netifc_active(void) { return (snp != 0); }
+void netifc_poll(void) {
+  uint8_t data[1514];
+  efi_status r;
+  size_t hsz, bsz;
+
+  cleanup_tx_buf();
+
+  // Drain all incoming packets from the interface.
+  // If we don't do this as aggressively as we do, the interface might get backed up
+  // and start rejecting packets.
+  r = EFI_SUCCESS;
+  do {
+    hsz = 0;
+    bsz = sizeof(data);
+    r = snp->Receive(snp, &hsz, &bsz, data, NULL, NULL, NULL);
+    if (r != EFI_SUCCESS) {
+      return;
+    }
 
 #if DROP_PACKETS
-  rxc++;
-  if ((random() % DROP_PACKETS) == 0) {
-    printf("rx drop %d\n", rxc);
-    return;
-  }
+    rxc++;
+    if ((random() % DROP_PACKETS) == 0) {
+      printf("rx drop %d\n", rxc);
+      return;
+    }
 #endif
 
 #if TRACE
-  printf("RX %02x:%02x:%02x:%02x:%02x:%02x < %02x:%02x:%02x:%02x:%02x:%02x %02x%02x %d\n", data[0],
-         data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10],
-         data[11], data[12], data[13], (int)(bsz - hsz));
+    printf("RX %02x:%02x:%02x:%02x:%02x:%02x < %02x:%02x:%02x:%02x:%02x:%02x %02x%02x %d\n",
+           data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9],
+           data[10], data[11], data[12], data[13], (int)(bsz - hsz));
 #endif
-  eth_recv(data, bsz);
+    eth_recv(data, bsz);
+
+    if (eth_buffers_avail <= 2) {
+      // running out of tx buffers - clean some up.
+      cleanup_tx_buf();
+    }
+  } while (r != EFI_NOT_READY);
 }
