@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn wait_to_reboot_times_out() {
-        let mut executor = fuchsia_async::Executor::new_with_fake_time().unwrap();
+        let mut executor = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();
 
         let mut wait = RebootController::spawn(future::pending()).wait_to_reboot().boxed();
         assert_eq!(executor.run_until_stalled(&mut wait), Poll::Pending);

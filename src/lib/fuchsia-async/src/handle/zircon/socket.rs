@@ -374,7 +374,7 @@ mod tests {
     use super::*;
     use crate::{
         temp::{TempAsyncReadExt, TempAsyncWriteExt},
-        Executor, Time, TimeoutExt, Timer,
+        TestExecutor, Time, TimeoutExt, Timer,
     };
     use fuchsia_zircon::prelude::*;
     use futures::future::{try_join, FutureExt, TryFutureExt};
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn can_read_write() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let bytes = &[0, 1, 2, 3];
 
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     fn can_read_datagram() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
 
         let (one, two) = (&[0, 1], &[2, 3, 4, 5]);
 
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn stream_datagram() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
 
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let mut rx = Socket::from_socket(rx).unwrap().into_datagram_stream();

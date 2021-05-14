@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn schedule() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (sched, req_stream) = create_scheduler();
         let mut fut1 = sched.get_stats();
@@ -82,7 +82,6 @@ mod tests {
             Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock())
         );
 
-
         assert_variant!(
             exec.run_until_stalled(&mut fut2),
             Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock())
@@ -98,7 +97,7 @@ mod tests {
 
     #[test]
     fn canceled_if_server_dropped_after_request() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (sched, req_stream) = create_scheduler();
         let mut fut = sched.get_stats();
@@ -110,7 +109,7 @@ mod tests {
 
     #[test]
     fn canceled_if_server_dropped_before_request() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (sched, req_stream) = create_scheduler();
         ::std::mem::drop(req_stream);
@@ -146,5 +145,4 @@ mod tests {
     fn fake_counter(count: u64) -> Counter {
         Counter { count, name: "foo".to_string() }
     }
-
 }

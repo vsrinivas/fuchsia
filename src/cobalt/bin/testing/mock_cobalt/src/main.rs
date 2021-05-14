@@ -817,7 +817,7 @@ mod cobalt_tests {
 
     #[test]
     fn mock_query_interface_no_logger_never_completes() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let loggers = LoggersHandle::default();
 
@@ -869,7 +869,7 @@ mod cobalt_tests {
 
     #[test]
     fn mock_query_interface_no_events_never_completes() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let loggers = LoggersHandle::default();
 
@@ -1015,7 +1015,7 @@ mod cobalt_tests {
 
     #[test]
     fn mock_query_interface_hanging_get() {
-        let mut executor = fuchsia_async::Executor::new().unwrap();
+        let mut executor = fuchsia_async::TestExecutor::new().unwrap();
         let loggers = LoggersHandle::default();
 
         let (factory_proxy, factory_stream) = create_proxy_and_stream::<LoggerFactoryMarker>()
@@ -1240,7 +1240,7 @@ mod metrics_tests {
 
     #[test]
     fn mock_query_interface_no_logger_never_completes() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let loggers = LoggersHandle::default();
 
@@ -1297,7 +1297,7 @@ mod metrics_tests {
 
     #[test]
     fn mock_query_interface_no_events_never_completes() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let loggers = LoggersHandle::default();
 
@@ -1447,7 +1447,7 @@ mod metrics_tests {
 
     #[test]
     fn mock_query_interface_hanging_get() {
-        let mut executor = fuchsia_async::Executor::new().unwrap();
+        let mut executor = fuchsia_async::TestExecutor::new().unwrap();
         let loggers = LoggersHandle::default();
 
         let (factory_proxy, factory_stream) =

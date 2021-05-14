@@ -458,7 +458,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         Ok((fs, delegate))
     }
 
-    pub fn spawn(self, mut executor: fasync::Executor) -> Result<(), Error> {
+    pub fn spawn(self, mut executor: fasync::LocalExecutor) -> Result<(), Error> {
         match executor.run_singlethreaded(self.prepare_env(Runtime::Service)) {
             Ok((mut fs, _)) => {
                 fs.take_and_serve_directory_handle().expect("could not service directory handle");

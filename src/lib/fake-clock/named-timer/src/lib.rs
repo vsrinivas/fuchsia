@@ -112,7 +112,7 @@ mod test {
     use core::task::Poll;
     // When the fake-clock library is not linked in, these timers should behave identical to
     // fasync::Timer. These tests verify that the fake time utilities provided by
-    // fasync::Executor continue to work when fake-clock is NOT linked in. Behavior with
+    // fasync::TestExecutor continue to work when fake-clock is NOT linked in. Behavior with
     // fake-clock linked in is verified by integration tests in fake-clock/examples.
 
     const ONE_HOUR: zx::Duration = zx::Duration::from_hours(1);
@@ -121,7 +121,7 @@ mod test {
     #[test]
     fn test_timer() {
         let mut executor =
-            fasync::Executor::new_with_fake_time().expect("creating executor failed");
+            fasync::TestExecutor::new_with_fake_time().expect("creating executor failed");
         let start_time = executor.now();
         let mut timer = NamedTimer::new(&DEADLINE_ID, ONE_HOUR);
         assert!(executor.run_until_stalled(&mut timer).is_pending());
@@ -134,7 +134,7 @@ mod test {
     #[test]
     fn test_timeout_not_invoked() {
         let mut executor =
-            fasync::Executor::new_with_fake_time().expect("creating executor failed");
+            fasync::TestExecutor::new_with_fake_time().expect("creating executor failed");
 
         let mut ready_future =
             futures::future::ready("ready").on_timeout_named(&DEADLINE_ID, ONE_HOUR, || "timeout");
@@ -144,7 +144,7 @@ mod test {
     #[test]
     fn test_timeout_invoked() {
         let mut executor =
-            fasync::Executor::new_with_fake_time().expect("creating executor failed");
+            fasync::TestExecutor::new_with_fake_time().expect("creating executor failed");
 
         let start_time = executor.now();
         let mut stalled_future =

@@ -88,7 +88,7 @@ mod tests {
 
     #[test]
     fn empty() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (item, _) = exec
             .run_singlethreaded(
                 stream::empty::<Result<(), Void>>().group_available().try_into_future(),
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn pending() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let always_pending = stream::poll_fn(|_lw| Poll::Pending::<Option<Result<(), Void>>>);
         let mut group_available = always_pending.group_available();
         let mut fut = group_available.try_next();
@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn group_available_items() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (send, recv) = mpsc::unbounded();
 
         send.unbounded_send(10i32).unwrap();
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn buffer_error() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let mut s = stream::iter(vec![Ok(10i32), Ok(20i32), Err(-30i32)]).group_available();
         let item = exec.run_singlethreaded(s.try_next()).expect("expected a successful value");

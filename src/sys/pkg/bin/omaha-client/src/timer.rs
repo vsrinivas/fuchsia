@@ -54,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_timer() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let start_time = fasync::Time::now();
 
         let mut timer = FuchsiaTimer;

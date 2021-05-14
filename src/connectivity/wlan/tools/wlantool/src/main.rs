@@ -43,7 +43,7 @@ fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     println!("{:?}", opt);
 
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
     let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to `connect` to device service")?;
 
@@ -890,7 +890,7 @@ mod tests {
 
     #[test]
     fn destroy_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
@@ -923,7 +923,7 @@ mod tests {
 
     #[test]
     fn test_get_country() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
@@ -949,7 +949,7 @@ mod tests {
 
     #[test]
     fn test_set_country() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
@@ -972,7 +972,7 @@ mod tests {
 
     #[test]
     fn test_clear_country() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
@@ -1037,7 +1037,7 @@ mod tests {
 
     #[test]
     fn reject_connect_ssid_too_long() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
@@ -1064,7 +1064,7 @@ mod tests {
 
     #[test]
     fn test_wmm_status() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (wlansvc_local, wlansvc_remote) =
             create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");

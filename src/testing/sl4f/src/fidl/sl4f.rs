@@ -292,7 +292,7 @@ mod tests {
     /// 6. Releases the client end so that the server end can exit.
     #[test]
     fn test_facade_provider() -> Result<(), Error> {
-        let mut executor = fasync::Executor::new().expect("Failed to create an executor!");
+        let mut executor = fasync::TestExecutor::new().expect("Failed to create an executor!");
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FacadeProviderMarker>()?;
         let server_fut = async {

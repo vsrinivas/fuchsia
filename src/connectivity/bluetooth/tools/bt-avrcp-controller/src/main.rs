@@ -15,8 +15,8 @@ use {
     fidl_fuchsia_bluetooth_avrcp_test::{
         ControllerExtMarker, ControllerExtProxy, PeerManagerExtMarker,
     },
-    fuchsia_bluetooth::types::PeerId,
     fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
     fuchsia_component::client::connect_to_protocol,
     futures::{
         channel::mpsc::{channel, SendError},
@@ -297,7 +297,8 @@ fn cmd_stream() -> (impl Stream<Item = String>, impl Sink<(), Error = SendError>
     let (ack_sender, mut ack_receiver) = channel(512);
 
     thread::spawn(move || -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().context("error creating readline event loop")?;
+        let mut exec =
+            fasync::LocalExecutor::new().context("error creating readline event loop")?;
 
         let fut = async {
             let config = Config::builder()

@@ -160,7 +160,7 @@ fn run_root(opt: &Opt) -> Result<(), Error> {
     let () = check_path_present(&device_path("class/ethernet/ep0"))?;
     let () = check_path_present(&device_path("class/ethernet/ep1"))?;
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::TestExecutor::new().context("Error creating executor")?;
 
     // check that network was created according to spec
     let () = executor.run_singlethreaded(check_network())?;
@@ -184,7 +184,7 @@ fn run_test_1(opt: &Opt) -> Result<(), Error> {
     let () = check_path_absent(&device_path("class/ethernet/ep0"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep1"))?;
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::TestExecutor::new().context("Error creating executor")?;
     let bus = BusConnection::new(&opt.name)?;
     executor.run_singlethreaded(child_publish_on_bus(bus))
 }
@@ -197,7 +197,7 @@ fn run_test_2(opt: &Opt) -> Result<(), Error> {
     let () = check_path_absent(&device_path("class/ethernet/ep0"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep1"))?;
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::TestExecutor::new().context("Error creating executor")?;
     let bus = BusConnection::new(&opt.name)?;
     executor.run_singlethreaded(child_publish_on_bus(bus))
 }

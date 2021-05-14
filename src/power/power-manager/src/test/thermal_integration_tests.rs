@@ -285,9 +285,9 @@ struct ThermalPolicyTest<'a> {
     // zircon objects tied to the executor in this struct, and those can't outlive the executor.
     //
     // See
-    // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+    // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
     // - https://doc.rust-lang.org/reference/destructors.html.
-    executor: fasync::Executor,
+    executor: fasync::TestExecutor,
 }
 
 impl<'a> ThermalPolicyTest<'a> {
@@ -307,7 +307,7 @@ impl<'a> ThermalPolicyTest<'a> {
             );
         }
         let time = Seconds(0.0);
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(time.into());
 
         let cpu_params = sim_params.cpu_params.clone();

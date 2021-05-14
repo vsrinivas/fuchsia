@@ -39,7 +39,7 @@ use {
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
         VMO_FLAG_WRITE,
     },
-    fuchsia_async::Executor,
+    fuchsia_async::TestExecutor,
     fuchsia_zircon::{sys::ZX_OK, Status, Vmo},
     futures::{channel::oneshot, future::join, FutureExt},
     libc::{S_IRUSR, S_IWUSR},
@@ -126,7 +126,7 @@ fn read_only_read_no_status() {
 
 #[test]
 fn read_only_read_with_describe() {
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new();
 
     let server = simple_read_only(b"Read only test");
@@ -231,7 +231,7 @@ fn write_twice() {
 fn read_error() {
     let read_attempt = Arc::new(AtomicUsize::new(0));
 
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new();
 
     let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
@@ -978,7 +978,7 @@ fn node_reference_can_not_seek() {
 /// content once again.
 #[test]
 fn mock_directory_with_one_file_and_two_connections() {
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new();
 
     let server = simple_read_write_resizeable(b"Initial", b"Second update");

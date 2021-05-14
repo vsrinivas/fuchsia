@@ -95,7 +95,7 @@ mod tests {
 
     #[test]
     fn generates_items() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let mut count = 0;
         let mut stream = GeneratedFutureStream::new(Box::new(move || {
             count += 1;
@@ -109,7 +109,7 @@ mod tests {
 
     #[test]
     fn terminates_when_none() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let mut stream =
             GeneratedFutureStream::<futures::future::Ready<u32>, u32>::new(Box::new(|| None));
 

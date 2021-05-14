@@ -1336,7 +1336,7 @@ mod tests {
 
     #[test]
     fn client_always_wakes_pending_futures() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
@@ -1394,7 +1394,7 @@ mod tests {
 
     #[test]
     fn client_always_wakes_pending_futures_on_epitaph() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
@@ -1586,7 +1586,7 @@ mod tests {
 
     #[test]
     fn client_query_result_check() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
         let client = Client::new(client_end, "test_service");

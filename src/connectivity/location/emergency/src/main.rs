@@ -334,7 +334,7 @@ mod tests {
             };
             pin_mut!(test_fut);
             matches::assert_matches!(
-                fasync::Executor::new()
+                fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
                 Poll::Ready(_)
@@ -620,7 +620,7 @@ mod tests {
             };
             pin_mut!(test_fut);
             matches::assert_matches!(
-                fasync::Executor::new()
+                fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
                 Poll::Ready(_)
@@ -670,7 +670,7 @@ mod tests {
             };
             pin_mut!(test_fut);
             matches::assert_matches!(
-                fasync::Executor::new()
+                fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
                 Poll::Ready(_)

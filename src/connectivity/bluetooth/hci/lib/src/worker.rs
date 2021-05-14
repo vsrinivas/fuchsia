@@ -72,7 +72,7 @@ impl WorkerHandle {
             let result = move || -> Result<(), anyhow::Error> {
                 let handle = fuchsia_runtime::thread_self().duplicate(zx::Rights::SAME_RIGHTS)?;
                 th_tx.send(handle)?;
-                let mut executor = fasync::Executor::new()?;
+                let mut executor = fasync::TestExecutor::new()?;
                 executor.run_singlethreaded(run(receiver));
                 Ok(())
             }();

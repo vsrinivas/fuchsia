@@ -49,9 +49,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let target_pwd = opt.target_pwd.as_bytes();
     let target_channel = opt.target_channel;
     let mut test_pass = false;
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
-    let wlan_svc =
-        connect_to_protocol::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
+    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
+    let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()
+        .context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
 
     let fut = async {

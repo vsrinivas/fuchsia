@@ -191,14 +191,14 @@ impl<'a> Future for RecvEtcMsg<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Executor;
+    use crate::TestExecutor;
     use fuchsia_zircon::{self as zx, MessageBuf};
     use pin_utils::pin_mut;
     use std::mem;
 
     #[test]
     fn can_receive() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let bytes = &[0, 1, 2, 3];
 
         let (tx, rx) = zx::Channel::create().unwrap();
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn can_receive_etc() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let bytes = &[0, 1, 2, 3];
 
         let (tx, rx) = zx::Channel::create().unwrap();
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn key_reuse() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let (tx0, rx0) = zx::Channel::create().unwrap();
         let (_tx1, rx1) = zx::Channel::create().unwrap();
         let f_rx0 = Channel::from_channel(rx0).unwrap();
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn key_reuse_etc() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let (tx0, rx0) = zx::Channel::create().unwrap();
         let (_tx1, rx1) = zx::Channel::create().unwrap();
         let f_rx0 = Channel::from_channel(rx0).unwrap();

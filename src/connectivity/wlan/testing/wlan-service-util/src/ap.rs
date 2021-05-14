@@ -130,7 +130,7 @@ mod tests {
         channel: u8,
         result_code: StartApResultCode,
     ) -> StartApResultCode {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (ap_sme, server) = create_ap_sme_proxy();
         let mut ap_sme_req = server.into_future();
         let target_ssid = ssid.as_bytes().to_vec();
@@ -178,7 +178,7 @@ mod tests {
     }
 
     fn send_start_ap_response(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         server: &mut StreamFuture<ApSmeRequestStream>,
         expected_config: fidl_sme::ApConfig,
         result_code: StartApResultCode,
@@ -196,7 +196,7 @@ mod tests {
     }
 
     fn poll_ap_sme_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         next_ap_sme_req: &mut StreamFuture<ApSmeRequestStream>,
     ) -> Poll<ApSmeRequest> {
         exec.run_until_stalled(next_ap_sme_req).map(|(req, stream)| {
@@ -207,7 +207,7 @@ mod tests {
     }
 
     fn respond_to_get_ap_sme_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
         status: zx::Status,
     ) {

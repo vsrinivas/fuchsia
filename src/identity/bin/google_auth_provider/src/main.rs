@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting Google Auth Provider");
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     let url_loader = connect_to_protocol::<LoaderMarker>()?;
     let frame_supplier = WebFrameSupplier::new();

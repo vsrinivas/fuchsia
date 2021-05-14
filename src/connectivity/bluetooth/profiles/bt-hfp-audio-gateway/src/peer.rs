@@ -140,8 +140,8 @@ mod tests {
 
     #[test]
     fn peer_id_returns_expected_id() {
-        // Executor must exist in order to create fidl endpoints
-        let _exec = fasync::Executor::new().unwrap();
+        // TestExecutor must exist in order to create fidl endpoints
+        let _exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn profile_event_request_respawns_task_successfully() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn manager_request_returns_error_when_task_is_stopped() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;

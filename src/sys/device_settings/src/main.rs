@@ -179,7 +179,7 @@ fn main() {
 
 fn main_ds() -> Result<(), Error> {
     syslog::init_with_tags(&["device_settings"])?;
-    let mut core = fasync::Executor::new().context("unable to create executor")?;
+    let mut core = fasync::SendExecutor::new().context("unable to create executor")?;
 
     let watchers = Arc::new(Mutex::new(HashMap::new()));
     // Attempt to create data directory
@@ -224,8 +224,10 @@ mod tests {
         exec.run_singlethreaded(test_fut).expect("executor run failed");
     }
 
-    fn setup(keys: &[&str]) -> Result<(fasync::Executor, DeviceSettingsManagerProxy, TempDir), ()> {
-        let exec = fasync::Executor::new().unwrap();
+    fn setup(
+        keys: &[&str],
+    ) -> Result<(fasync::LocalExecutor, DeviceSettingsManagerProxy, TempDir), ()> {
+        let exec = fasync::LocalExecutor::new().unwrap();
         let mut device_settings = DeviceSettingsManagerServer {
             setting_file_map: HashMap::new(),
             watchers: Arc::new(Mutex::new(HashMap::new())),

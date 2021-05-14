@@ -17,7 +17,7 @@ const BOARD_WIDTH: f64 = 20.0;
 const BOARD_HEIGHT: f64 = 10.0;
 
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
 
     let mut first_print = true;

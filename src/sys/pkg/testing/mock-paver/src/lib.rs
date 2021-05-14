@@ -262,10 +262,10 @@ pub mod hooks {
     impl<F> Hook for WriteFirmware<F>
     where
         F: Fn(
-            paver::Configuration,
-            /* firmware_type */ String,
-            /* payload */ Vec<u8>,
-        ) -> paver::WriteFirmwareResult
+                paver::Configuration,
+                /* firmware_type */ String,
+                /* payload */ Vec<u8>,
+            ) -> paver::WriteFirmwareResult
             + Sync,
     {
         async fn data_sink(
@@ -767,7 +767,7 @@ pub mod tests {
 
     #[test]
     pub fn test_throttle_hook() -> Result<(), Error> {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (throttle_hook, throttler) = hooks::throttle();
         let paver = MockPaverForTest::new(|p| p.insert_hook(throttle_hook));

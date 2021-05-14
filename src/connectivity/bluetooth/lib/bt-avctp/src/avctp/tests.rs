@@ -18,8 +18,8 @@ pub(crate) fn setup_peer() -> (Peer, Channel) {
     (peer, remote)
 }
 
-fn setup_stream_test() -> (fasync::Executor, CommandStream, Peer, Channel) {
-    let exec = fasync::Executor::new().expect("failed to create an executor");
+fn setup_stream_test() -> (fasync::TestExecutor, CommandStream, Peer, Channel) {
+    let exec = fasync::TestExecutor::new().expect("failed to create an executor");
     let (peer, remote) = setup_peer();
     let stream = peer.take_command_stream();
     (exec, stream, peer, remote)
@@ -44,7 +44,7 @@ pub(crate) fn expect_remote_recv(expected: &[u8], remote: &Channel) {
     assert_eq!(expected, &response[0..expected.len()]);
 }
 
-fn next_request(stream: &mut CommandStream, exec: &mut fasync::Executor) -> Command {
+fn next_request(stream: &mut CommandStream, exec: &mut fasync::TestExecutor) -> Command {
     let mut fut = stream.next();
     let complete = exec.run_until_stalled(&mut fut);
 
@@ -56,7 +56,7 @@ fn next_request(stream: &mut CommandStream, exec: &mut fasync::Executor) -> Comm
 
 #[test]
 fn closes_socket_when_dropped() {
-    let mut _exec = fasync::Executor::new().expect("failed to create an executor");
+    let mut _exec = fasync::TestExecutor::new().expect("failed to create an executor");
     let (peer_chan, control) = Channel::create();
 
     {
@@ -72,7 +72,7 @@ fn closes_socket_when_dropped() {
 
 #[test]
 fn socket_open_when_stream_open() {
-    let mut _exec = fasync::Executor::new().expect("failed to create an executor");
+    let mut _exec = fasync::TestExecutor::new().expect("failed to create an executor");
     let (peer_chan, control) = Channel::create();
 
     {
@@ -96,7 +96,7 @@ fn socket_open_when_stream_open() {
 #[test]
 #[should_panic(expected = "Command stream has already been taken")]
 fn can_only_take_stream_once() {
-    let mut _exec = fasync::Executor::new().expect("failed to create an executor");
+    let mut _exec = fasync::TestExecutor::new().expect("failed to create an executor");
     let (_, control) = Channel::create();
 
     let peer = Peer::new(control);

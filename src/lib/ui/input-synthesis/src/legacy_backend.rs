@@ -331,7 +331,7 @@ mod tests {
             };
             pin_mut!(test_fut);
             assert_matches!(
-                fasync::Executor::new()
+                fasync::TestExecutor::new()
                     .expect("internal error: failed to create executor")
                     .run_until_stalled(&mut test_fut),
                 Poll::Ready(_)
@@ -562,7 +562,7 @@ mod tests {
     #[test]
     fn serve_reports_resolves_immediately() -> Result<(), Error> {
         let mut executor =
-            fasync::Executor::new().expect("internal error: failed to create executor");
+            fasync::TestExecutor::new().expect("internal error: failed to create executor");
         let (fidl_proxy, _request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
         let mut input_device = Box::new(InputDevice { fidl_proxy });

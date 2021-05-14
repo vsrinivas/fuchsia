@@ -799,7 +799,7 @@ mod tests {
 
     #[test]
     fn test_stop_critical_component() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("Unable to create new executor");
+        let mut exec = fasync::TestExecutor::new().expect("Unable to create new executor");
         // Presence of the Lifecycle channel isn't use by ElfComponent to sense
         // component exit, but it does modify the stop behavior and this is
         // what we want to test.
@@ -843,7 +843,7 @@ mod tests {
 
     #[test]
     fn test_stop_noncritical_component() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("Unable to create new executor");
+        let mut exec = fasync::TestExecutor::new().expect("Unable to create new executor");
         // Presence of the Lifecycle channel isn't use by ElfComponent to sense
         // component exit, but it does modify the stop behavior and this is
         // what we want to test.

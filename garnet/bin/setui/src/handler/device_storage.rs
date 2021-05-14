@@ -722,7 +722,7 @@ mod tests {
         StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
     };
     use fuchsia_async as fasync;
-    use fuchsia_async::{Executor, Time};
+    use fuchsia_async::{TestExecutor, Time};
     use futures::prelude::*;
     use matches::assert_matches;
     use serde::{Deserialize, Serialize};
@@ -752,7 +752,7 @@ mod tests {
     }
 
     /// Advances `future` until `executor` finishes. Panics if the end result was a stall.
-    fn advance_executor<F>(executor: &mut Executor, mut future: &mut F)
+    fn advance_executor<F>(executor: &mut TestExecutor, mut future: &mut F)
     where
         F: Future + Unpin,
     {
@@ -760,7 +760,7 @@ mod tests {
             executor.wake_main_future();
             match executor.run_one_step(&mut future) {
                 Some(Poll::Ready(_)) => return,
-                None => panic!("Executor stalled!"),
+                None => panic!("TestExecutor stalled!"),
                 Some(Poll::Pending) => {}
             }
         }
@@ -904,7 +904,7 @@ mod tests {
     #[test]
     fn test_first_write_commits_immediately() {
         let written_value = VALUE2;
-        let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
@@ -1006,7 +1006,7 @@ mod tests {
     fn test_multiple_write_debounce() {
         // Custom executor for this test so that we can advance the clock arbitrarily and verify the
         // state of the executor at any given point.
-        let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
         executor.set_fake_time(Time::from_nanos(0));
 
         let (stash_proxy, mut stash_stream) =
@@ -1081,7 +1081,7 @@ mod tests {
         let commit_future = verify_stash_commit(&mut stash_stream);
         futures::pin_mut!(commit_future);
 
-        // Executor stalls due to waiting on timer to finish.
+        // TextExecutor stalls due to waiting on timer to finish.
         assert_matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
 
         // Advance time to 1ms before the commit triggers.
@@ -1089,7 +1089,7 @@ mod tests {
             ((MIN_COMMIT_INTERVAL_MS - 1) * 10_u64.pow(6)).try_into().unwrap(),
         ));
 
-        // Executor is still waiting on the time to finish.
+        // TextExecutor is still waiting on the time to finish.
         assert_matches!(executor.run_until_stalled(&mut commit_future), Poll::Pending);
 
         // Advance time so that the commit will trigger.
@@ -1105,7 +1105,7 @@ mod tests {
     #[test]
     fn test_write_with_flush() {
         let written_value = VALUE2;
-        let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+        let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
         let (stash_proxy, mut stash_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();

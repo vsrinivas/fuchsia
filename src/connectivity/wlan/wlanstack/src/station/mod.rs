@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_timer() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let fut = async {
             let (timer, time_stream) = mpsc::unbounded::<TimeEntry<Event>>();
             let mut timeout_stream = make_timer_stream(time_stream);

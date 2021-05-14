@@ -12,7 +12,7 @@
 //!
 //! ```
 //! fn main() -> Result<(), Error> {
-//!     let mut executor = fasync::Executor::new().unwrap();
+//!     let mut executor = fasync::LocalExecutor::new().unwrap();
 //!     let actual_main = async {
 //!         // Actual main code
 //!         Ok(())
@@ -26,7 +26,7 @@
 //! ```
 //! #[test]
 //! fn test_foo() -> Result<(), Error> {
-//!     let mut executor = fasync::Executor::new().unwrap();
+//!     let mut executor = fasync::LocalExecutor::new().unwrap();
 //!     let test = async {
 //!         // Actual test code here
 //!         Ok(())
@@ -189,13 +189,13 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
     let executor = executor_ident();
     let run_executor = if test {
         quote! {
-            let mut #executor = ::fuchsia_async::Executor::new()
+            let mut #executor = ::fuchsia_async::TestExecutor::new()
                 .expect("Failed to create executor");
             ::fuchsia_async::test_support::run_until_stalled_test(&mut #executor, func)
         }
     } else {
         quote! {
-            let mut #executor = ::fuchsia_async::Executor::new()
+            let mut #executor = ::fuchsia_async::TestExecutor::new()
                 .expect("Failed to create executor");
             let mut fut = func();
             ::fuchsia_async::pin_mut!(fut);
@@ -246,7 +246,7 @@ pub fn run_singlethreaded(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     } else {
         quote! {
-            ::fuchsia_async::Executor::new()
+            ::fuchsia_async::LocalExecutor::new()
                 .expect("Failed to create executor")
                 .run_singlethreaded(func())
         }
@@ -307,7 +307,7 @@ pub fn run(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     } else {
         quote! {
-            ::fuchsia_async::Executor::new()
+            ::fuchsia_async::SendExecutor::new()
                 .expect("Failed to create executor")
                 .run(func(), #threads)
         }

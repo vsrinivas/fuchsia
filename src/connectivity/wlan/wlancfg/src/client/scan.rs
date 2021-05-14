@@ -999,7 +999,7 @@ mod tests {
 
     #[test]
     fn sme_scan_with_passive_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
@@ -1038,7 +1038,7 @@ mod tests {
 
     #[test]
     fn sme_scan_with_active_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
@@ -1081,7 +1081,7 @@ mod tests {
     #[test_case(fidl_sme::ScanErrorCode::InternalError; "SME scan error InternalError")]
     #[test_case(fidl_sme::ScanErrorCode::NotSupported; "SME scan error NotSupported")]
     fn sme_scan_error(error_code: fidl_sme::ScanErrorCode) {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
@@ -1122,7 +1122,7 @@ mod tests {
     #[test_case(fidl_sme::ScanErrorCode::ShouldWait, true; "SME scan error ShouldWait with successful retry")]
     #[test_case(fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware, true; "SME scan error CanceledByDriverOrFirmware with successful retry")]
     fn sme_scan_error_with_retry(error_code: fidl_sme::ScanErrorCode, retry_succeeds: bool) {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
@@ -1206,7 +1206,7 @@ mod tests {
 
     #[test]
     fn sme_scan_channel_closed() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
@@ -1239,7 +1239,7 @@ mod tests {
 
     #[test]
     fn basic_scan() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
@@ -1319,7 +1319,7 @@ mod tests {
 
     #[test]
     fn scan_with_active_scan_decider() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
@@ -1585,7 +1585,7 @@ mod tests {
 
     #[test]
     fn scan_with_active_scan_decider_and_active_scan_failure() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
@@ -1688,7 +1688,7 @@ mod tests {
 
     #[test]
     fn scan_iterator_never_polled() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector1, network_selector_results1) = MockScanResultConsumer::new();
         let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
@@ -1791,7 +1791,7 @@ mod tests {
 
     #[test]
     fn scan_iterator_shut_down() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
@@ -1850,7 +1850,7 @@ mod tests {
 
     #[test]
     fn scan_error() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
@@ -1910,7 +1910,7 @@ mod tests {
 
     #[test]
     fn overlapping_scans() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
         let (network_selector1, network_selector_results1) = MockScanResultConsumer::new();
         let (location_sensor1, location_sensor_results1) = MockScanResultConsumer::new();
@@ -2055,7 +2055,7 @@ mod tests {
     #[test_case(true)]
     #[test_case(false)]
     fn perform_scan_wpa3_supported(wpa3_capable: bool) {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
         let saved_networks_manager = create_saved_networks_manager(&mut exec);
@@ -2187,7 +2187,7 @@ mod tests {
     #[test]
     fn partial_scan_result_consumption_has_no_error() {
         set_logger_for_test();
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let MockScanData {
             passive_input_aps: _,
             passive_internal_aps: _,
@@ -2230,7 +2230,7 @@ mod tests {
     #[test]
     fn no_scan_result_consumption_has_error() {
         set_logger_for_test();
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let MockScanData {
             passive_input_aps: _,
             passive_internal_aps: _,
@@ -2255,7 +2255,7 @@ mod tests {
 
     #[test]
     fn directed_active_scan_filters_desired_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
 
         // Issue request to scan.
@@ -2328,7 +2328,7 @@ mod tests {
     #[test]
     fn scan_observer_sends_to_location_sensor() {
         set_logger_for_test();
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut location_sensor_updater = LocationSensorUpdater { wpa3_supported: true };
         let MockScanData {
             passive_input_aps: _,
@@ -2343,7 +2343,9 @@ mod tests {
         panic!("Need to reach into location sensor and check it got data")
     }
 
-    fn create_saved_networks_manager(exec: &mut fasync::Executor) -> Arc<SavedNetworksManager> {
+    fn create_saved_networks_manager(
+        exec: &mut fasync::TestExecutor,
+    ) -> Arc<SavedNetworksManager> {
         let saved_networks_manager = exec
             .run_singlethreaded(SavedNetworksManager::new_for_test())
             .expect("failed to create saved networks manager");

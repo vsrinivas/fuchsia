@@ -231,7 +231,7 @@ mod tests {
         let (mut control_plane, mut receiver) = ControlPlane::new();
 
         std::thread::spawn(move || {
-            let mut e = fuchsia_async::Executor::new().unwrap();
+            let mut e = fuchsia_async::TestExecutor::new().unwrap();
             let fut = async {
                 let (_, mut responder) = receiver.next().await.expect(
                     "ControlPlane dropped the sender end of the channel before sending a message",

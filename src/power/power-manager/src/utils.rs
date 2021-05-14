@@ -208,7 +208,7 @@ mod tests {
     fn test_get_current_timestamp() {
         use crate::types::Nanoseconds;
 
-        let exec = fuchsia_async::Executor::new_with_fake_time().unwrap();
+        let exec = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();
 
         exec.set_fake_time(fuchsia_async::Time::from_nanos(0));
         assert_eq!(get_current_timestamp(), Nanoseconds(0));

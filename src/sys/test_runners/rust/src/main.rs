@@ -18,7 +18,7 @@ use {
 fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["rust_test_runner"])?;
     info!("started");
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(

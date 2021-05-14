@@ -13,7 +13,7 @@ use fuchsia_component::server::ServiceFs;
 use std::sync::{Arc, Mutex};
 
 fn main() {
-    let mut executor = fasync::Executor::new().context("Error creating executor").unwrap();
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor").unwrap();
 
     let mut fs = ServiceFs::new();
 

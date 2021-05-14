@@ -40,7 +40,7 @@ use {
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
-    fuchsia_async::Executor,
+    fuchsia_async::TestExecutor,
     fuchsia_zircon::{
         sys::{self, ZX_OK},
         Status,
@@ -91,7 +91,7 @@ fn empty_directory_describe() {
 
 #[test]
 fn open_empty_directory_with_describe() {
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("TestExecutor creation failed");
     let scope = ExecutionScope::new();
 
     let server = simple();
@@ -1056,7 +1056,7 @@ fn in_tree_open() {
         },
     };
 
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("TestExecutor creation failed");
     let scope = ExecutionScope::new();
 
     run_client(exec, || async move {
@@ -1084,7 +1084,7 @@ fn in_tree_open_path_one_component() {
         },
     };
 
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("TestExecutor creation failed");
     let scope = ExecutionScope::new();
 
     run_client(exec, || async move {
@@ -1113,7 +1113,7 @@ fn in_tree_open_path_two_components() {
         },
     };
 
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("TestExecutor creation failed");
     let scope = ExecutionScope::new();
 
     run_client(exec, || async move {
@@ -1438,7 +1438,7 @@ fn watch_addition_with_two_scopes() {
         },
     };
 
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("TestExecutor creation failed");
     let scope1 = ExecutionScope::new();
     let scope2 = ExecutionScope::new();
 

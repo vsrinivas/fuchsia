@@ -14,7 +14,7 @@ use {
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init()?;
     info!("started");
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new_local();
     let test_map = test_manager_lib::TestMap::new(zx::Duration::from_minutes(5));
     let test_map_clone = test_map.clone();

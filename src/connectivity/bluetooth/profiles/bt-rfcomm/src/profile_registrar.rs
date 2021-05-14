@@ -571,7 +571,7 @@ mod tests {
 
     /// Creates a Profile::Search request.
     fn generate_search_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
     ) -> (bredr::ProfileRequest, bredr::SearchResultsRequestStream) {
         let (c, mut s) = create_proxy_and_stream::<bredr::ProfileMarker>().unwrap();
         let (results, server) = create_request_stream::<bredr::SearchResultsMarker>().unwrap();
@@ -586,7 +586,7 @@ mod tests {
 
     /// Creates a Profile::ConnectSco request.
     fn generate_connect_sco_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
     ) -> (bredr::ProfileRequest, bredr::ScoConnectionReceiverRequestStream) {
         let (profile_proxy, mut profile_request_stream) =
             create_proxy_and_stream::<bredr::ProfileMarker>().unwrap();
@@ -644,7 +644,7 @@ mod tests {
     }
 
     fn new_client(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         mut profile_sender: mpsc::Sender<bredr::ProfileRequestStream>,
     ) -> bredr::ProfileProxy {
         let (profile_client, profile_server) =
@@ -666,8 +666,8 @@ mod tests {
     }
 
     /// Creates the ProfileRegistrar with the upstream Profile service.
-    fn setup_server() -> (fasync::Executor, ProfileRegistrar, bredr::ProfileRequestStream) {
-        let exec = fasync::Executor::new().unwrap();
+    fn setup_server() -> (fasync::TestExecutor, ProfileRegistrar, bredr::ProfileRequestStream) {
+        let exec = fasync::TestExecutor::new().unwrap();
         let (client, server) = create_proxy_and_stream::<bredr::ProfileMarker>().unwrap();
         let profile_server = ProfileRegistrar::new(client);
         (exec, profile_server, server)
@@ -1118,7 +1118,7 @@ mod tests {
     /// 2) When the call resolves, the Future resolves.
     #[test]
     fn test_advertise_relay() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (upstream, mut upstream_server) =
             create_proxy_and_stream::<bredr::ProfileMarker>().unwrap();
         let (connect_client, _connect_requests) =
@@ -1149,7 +1149,7 @@ mod tests {
     /// to the Sender of the connection task.
     #[test]
     fn test_connection_request_relay() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (connect_client, connect_requests) =
             create_proxy_and_stream::<bredr::ConnectionReceiverMarker>().unwrap();

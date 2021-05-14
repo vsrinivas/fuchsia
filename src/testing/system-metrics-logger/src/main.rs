@@ -258,14 +258,14 @@ mod tests {
         // zircon objects tied to the executor in this struct, and those can't outlive the executor.
         //
         // See
-        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
         // - https://doc.rust-lang.org/reference/destructors.html.
-        executor: fasync::Executor,
+        executor: fasync::TestExecutor,
     }
 
     impl Runner {
         fn new() -> Self {
-            let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+            let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
             executor.set_fake_time(fasync::Time::from_nanos(0));
 
             let cpu_stats = Rc::new(RefCell::new(CpuStats {

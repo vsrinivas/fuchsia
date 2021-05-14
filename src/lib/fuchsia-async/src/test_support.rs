@@ -41,7 +41,7 @@ pub trait TestResult: Sized {
     /// Similarly, but use run_until_stalled
     #[cfg(target_os = "fuchsia")]
     fn run_until_stalled<F: 'static + Fn(usize) -> Fut, Fut: 'static + Future<Output = Self>>(
-        executor: &mut crate::Executor,
+        executor: &mut crate::TestExecutor,
         test: F,
         cfg: Config,
     ) -> Poll<Self>;
@@ -67,7 +67,7 @@ impl<E: 'static + std::fmt::Debug> TestResult for Result<(), E> {
         cfg.in_parallel(Arc::new(move || {
             let run_stream = run_stream.clone();
             let test = test.clone();
-            crate::Executor::new().expect("Failed to create executor").run_singlethreaded(
+            crate::LocalExecutor::new().expect("Failed to create executor").run_singlethreaded(
                 async move {
                     while let Some(run) = run_stream.lock().await.next().await {
                         if let Err(e) = test(run).await {
@@ -82,7 +82,7 @@ impl<E: 'static + std::fmt::Debug> TestResult for Result<(), E> {
 
     #[cfg(target_os = "fuchsia")]
     fn run_until_stalled<F: 'static + Fn(usize) -> Fut, Fut: 'static + Future<Output = Self>>(
-        executor: &mut crate::Executor,
+        executor: &mut crate::TestExecutor,
         test: F,
         cfg: Config,
     ) -> Poll<Self> {
@@ -100,7 +100,7 @@ impl<E: 'static + Send> MultithreadedTestResult for Result<(), E> {
         threads: usize,
         cfg: Config,
     ) -> Self {
-        crate::Executor::new().expect("Failed to create executor").run(
+        crate::SendExecutor::new().expect("Failed to create executor").run(
             stream::iter(0..cfg.repeat_count)
                 .map(Ok)
                 .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
@@ -119,7 +119,7 @@ impl TestResult for () {
         cfg.in_parallel(Arc::new(move || {
             let run_stream = run_stream.clone();
             let test = test.clone();
-            crate::Executor::new().expect("Failed to create executor").run_singlethreaded(
+            crate::LocalExecutor::new().expect("Failed to create executor").run_singlethreaded(
                 async move {
                     while let Some(run) = run_stream.lock().await.next().await {
                         test(run).await;
@@ -131,7 +131,7 @@ impl TestResult for () {
 
     #[cfg(target_os = "fuchsia")]
     fn run_until_stalled<F: 'static + Fn(usize) -> Fut, Fut: 'static + Future<Output = Self>>(
-        executor: &mut crate::Executor,
+        executor: &mut crate::TestExecutor,
         test: F,
         cfg: Config,
     ) -> Poll<Self> {
@@ -155,7 +155,7 @@ impl MultithreadedTestResult for () {
         threads: usize,
         cfg: Config,
     ) -> Self {
-        crate::Executor::new().expect("Failed to create executor").run(
+        crate::SendExecutor::new().expect("Failed to create executor").run(
             stream::iter(0..cfg.repeat_count)
                 .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
             cfg.scale_threads(threads),
@@ -235,7 +235,7 @@ where
 
 /// Runs a test in an executor until it's stalled
 #[cfg(target_os = "fuchsia")]
-pub fn run_until_stalled_test<F, Fut, R>(executor: &mut crate::Executor, test: F) -> R
+pub fn run_until_stalled_test<F, Fut, R>(executor: &mut crate::TestExecutor, test: F) -> R
 where
     F: 'static + Fn(usize) -> Fut,
     Fut: 'static + Future<Output = R>,
@@ -342,7 +342,7 @@ mod tests {
             Arc::new(Mutex::new((0..REPEAT_COUNT).collect()));
         let pending_runs_child = pending_runs.clone();
         match TestResult::run_until_stalled(
-            &mut crate::Executor::new().unwrap(),
+            &mut crate::TestExecutor::new().unwrap(),
             move |i| {
                 let pending_runs_child = pending_runs_child.clone();
                 async move {

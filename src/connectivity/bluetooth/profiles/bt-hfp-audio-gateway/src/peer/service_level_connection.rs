@@ -687,7 +687,7 @@ pub(crate) mod tests {
     /// of the received message.
     #[track_caller]
     pub fn expect_peer_ready(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         remote: &mut Channel,
         expected: Option<Vec<u8>>,
     ) {
@@ -709,7 +709,7 @@ pub(crate) mod tests {
 
     /// Expects nothing to be received by the `remote` peer.
     #[track_caller]
-    fn expect_peer_pending(exec: &mut fasync::Executor, remote: &mut Channel) {
+    fn expect_peer_pending(exec: &mut fasync::TestExecutor, remote: &mut Channel) {
         let mut vec = Vec::new();
         let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
         assert_matches!(exec.run_until_stalled(&mut remote_fut), Poll::Pending);
@@ -717,7 +717,7 @@ pub(crate) mod tests {
 
     /// Expects the service level connection to be pending, and polls to check that it is.
     #[track_caller]
-    fn expect_slc_pending(exec: &mut fasync::Executor, slc: &mut ServiceLevelConnection) {
+    fn expect_slc_pending(exec: &mut fasync::TestExecutor, slc: &mut ServiceLevelConnection) {
         assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
     }
 
@@ -732,7 +732,7 @@ pub(crate) mod tests {
     /// Simulates the HFP component responding to the `slc` with the provided `update`.
     #[track_caller]
     fn do_ag_update(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         slc: &mut ServiceLevelConnection,
         marker: ProcedureMarker,
         update: AgUpdate,
@@ -779,7 +779,7 @@ pub(crate) mod tests {
     #[test]
     #[ignore]
     fn unexpected_command_before_initialization_closes_channel() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut slc, remote) = create_and_connect_slc();
 
         // Peer sends an unexpected AT command.
@@ -824,7 +824,7 @@ pub(crate) mod tests {
 
     #[test]
     fn completing_slc_init_procedure_initializes_channel() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (mut slc, mut remote) = create_and_connect_slc();
         let slci_marker = ProcedureMarker::SlcInitialization;
@@ -909,7 +909,7 @@ pub(crate) mod tests {
 
     #[test]
     fn slci_command_after_initialization_returns_error() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
         let (mut slc, _remote) = create_and_connect_slc();
         // Bypass the SLCI procedure by setting the channel to initialized.
         slc.set_initialized();
@@ -956,7 +956,7 @@ pub(crate) mod tests {
 
     #[test]
     fn ag_updates_are_queued_until_slc_initialization() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (mut slc, mut remote) = create_and_connect_slc();
         assert!(!slc.initialized());
@@ -1070,7 +1070,7 @@ pub(crate) mod tests {
 
     #[test]
     fn queued_packets_get_sent_to_connection() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (local, mut remote) = Channel::create();
         let mut connection = DataController::new(local);

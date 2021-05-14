@@ -453,11 +453,11 @@ mod tests {
         (CobaltSender::new(sender), receiver)
     }
 
-    fn run_to_stalled(exec: &mut fasync::Executor) {
+    fn run_to_stalled(exec: &mut fasync::TestExecutor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn exercise_avdtp(exec: &mut fasync::Executor, remote: Channel, peer: &Peer) {
+    fn exercise_avdtp(exec: &mut fasync::TestExecutor, remote: Channel, peer: &Peer) {
         let remote_avdtp = avdtp::Peer::new(remote);
         let mut remote_requests = remote_avdtp.take_request_stream();
 
@@ -492,8 +492,8 @@ mod tests {
     }
 
     fn setup_connected_peer_test(
-    ) -> (fasync::Executor, PeerId, ConnectedPeers, ProfileRequestStream) {
-        let exec = fasync::Executor::new().expect("executor should build");
+    ) -> (fasync::TestExecutor, PeerId, ConnectedPeers, ProfileRequestStream) {
+        let exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
@@ -643,13 +643,13 @@ mod tests {
     /// Returns the executor, connected peers (under test), request stream for profile interaction,
     /// and an SBC and AAC Sink service capability.
     fn setup_negotiation_test() -> (
-        fasync::Executor,
+        fasync::TestExecutor,
         ConnectedPeers,
         ProfileRequestStream,
         ServiceCapability,
         ServiceCapability,
     ) {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000));
         let (proxy, stream) =
             create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
@@ -763,7 +763,7 @@ mod tests {
     /// Expects an AVDTP Discovery request on the `requests` stream. Responds to
     /// the request with the provided `response` endpoints.
     fn expect_peer_discovery(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         requests: &mut avdtp::RequestStream,
         response: Vec<avdtp::StreamInformation>,
     ) {

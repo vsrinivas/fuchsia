@@ -154,13 +154,13 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 	let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
 	let (sender_fidl_chan_end, receiver_fidl_chan_end) = zx::Channel::create().unwrap();
 	std::thread::spawn(|| {
-		fuchsia_async::Executor::new()
+		fuchsia_async::LocalExecutor::new()
 			.unwrap()
 			.run_singlethreaded(async move {
 			{{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end, sender_fifo).await;
 		});
 	});
-	fuchsia_async::Executor::new()
+	fuchsia_async::LocalExecutor::new()
 		.unwrap()
 		.run_singlethreaded(async move {
 			let async_sender_fidl_chan_end = fuchsia_async::Channel::from_channel(sender_fidl_chan_end).unwrap();
@@ -203,7 +203,7 @@ async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
 fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	let (client_end, server_end) = zx::Channel::create().unwrap();
 	std::thread::spawn(|| {
-		fuchsia_async::Executor::new()
+		fuchsia_async::LocalExecutor::new()
 			.unwrap()
 			.run_singlethreaded(async move {
 			{{ .Name }}_echo_call_server_thread(server_end).await;

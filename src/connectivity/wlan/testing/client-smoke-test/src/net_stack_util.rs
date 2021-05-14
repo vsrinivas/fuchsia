@@ -45,7 +45,7 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_net_stack::StackMarker,
-        fuchsia_async::Executor,
+        fuchsia_async::TestExecutor,
         futures::{stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
@@ -110,7 +110,7 @@ mod tests {
     }
 
     fn send_fake_list_iface_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut fidl_fuchsia_net_stack::StackRequestStream,
         mut iface_info_list: Vec<fidl_fuchsia_net_stack::InterfaceInfo>,
     ) {
@@ -148,7 +148,7 @@ mod tests {
         mac_to_query: &[u8; 6],
         is_dhcp: bool,
     ) {
-        let mut exec = fuchsia_async::Executor::new().expect("creating executor");
+        let mut exec = fuchsia_async::TestExecutor::new().expect("creating executor");
         let (proxy, server) =
             fidl::endpoints::create_proxy::<StackMarker>().expect("creating proxy");
         let mut req_stream = server.into_stream().expect("creating stream");

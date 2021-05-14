@@ -118,7 +118,7 @@ mod tests {
 
     #[test]
     fn test_wait_for_commit() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<CommitStatusProviderMarker>().unwrap();

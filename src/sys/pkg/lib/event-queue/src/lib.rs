@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn flush_with_no_clients_completes_immediately() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
         let (event_queue, mut handle) = EventQueue::<MpscNotifier<String>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
@@ -552,7 +552,7 @@ mod tests {
 
     #[test]
     fn flush_with_no_pending_events_completes_immediately() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
         let (event_queue, mut handle) = EventQueue::<MpscNotifier<String>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
@@ -568,7 +568,7 @@ mod tests {
 
     #[test]
     fn flush_with_pending_events_completes_once_events_are_flushed() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
         let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 
@@ -604,7 +604,7 @@ mod tests {
 
     #[test]
     fn flush_with_pending_events_fails_at_timeout() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let (event_queue, mut handle) = EventQueue::<MpscNotifier<&'static str>>::new();
         let _event_queue = fasync::Task::local(event_queue);
 

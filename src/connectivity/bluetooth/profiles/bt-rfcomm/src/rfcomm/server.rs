@@ -239,8 +239,8 @@ mod tests {
 
     use crate::rfcomm::test_util::{expect_frame_received_by_peer, send_peer_frame};
 
-    fn setup_rfcomm_manager() -> (fasync::Executor, RfcommServer) {
-        let exec = fasync::Executor::new().unwrap();
+    fn setup_rfcomm_manager() -> (fasync::TestExecutor, RfcommServer) {
+        let exec = fasync::TestExecutor::new().unwrap();
         let rfcomm = RfcommServer::new();
         (exec, rfcomm)
     }
@@ -389,7 +389,7 @@ mod tests {
     /// and a Future associated with the request.
     #[track_caller]
     fn make_client_connect_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         id: PeerId,
     ) -> (
         bredr::ProfileConnectResponder,

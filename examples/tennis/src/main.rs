@@ -13,7 +13,7 @@ use futures::StreamExt;
 fn main() -> Result<(), Error> {
     init_with_tags(&["tennis_service"]).expect("tennis syslog init should not fail");
     fx_log_info!("tennis service started");
-    let mut executor = fuchsia_async::Executor::new()
+    let mut executor = fuchsia_async::LocalExecutor::new()
         .context("Creating fuchsia_async executor for tennis service failed")?;
     let tennis = tennis_service::TennisService::new();
     let mut fs = ServiceFs::new_local();

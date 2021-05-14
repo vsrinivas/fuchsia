@@ -1781,7 +1781,7 @@ mod tests {
     }
 
     fn run_fake_lookup(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stats: Arc<QueryStats>,
         error: Option<ResolveErrorKind>,
         delay: fuchsia_zircon::Duration,
@@ -1801,7 +1801,7 @@ mod tests {
 
     #[test]
     fn test_query_stats_inspect_average() {
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
@@ -1853,7 +1853,7 @@ mod tests {
 
     #[test]
     fn test_query_stats_inspect_error_counters() {
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
@@ -1897,7 +1897,7 @@ mod tests {
 
     #[test]
     fn test_query_stats_inspect_oldest_stats_erased() {
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 

@@ -35,7 +35,7 @@ fn main() -> Result<(), Error> {
     };
 
     // Set up async executor
-    let mut exec = fasync::Executor::new()?;
+    let mut exec = fasync::LocalExecutor::new()?;
 
     //// Run the future to completion
     exec.run_singlethreaded(http_get(url))

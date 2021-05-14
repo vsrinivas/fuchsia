@@ -679,7 +679,7 @@ mod tests {
 
     #[fuchsia::test]
     fn slew_clock_updates_fn() {
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fasync::Time::from_nanos(0));
 
         // Simple constructor lambdas to improve readability of the test logic.
@@ -782,7 +782,7 @@ mod tests {
 
     #[fuchsia::test]
     fn single_update_with_rtc() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let clock = create_clock();
         let rtc = FakeRtc::valid(BACKSTOP_TIME);
@@ -828,7 +828,7 @@ mod tests {
 
     #[fuchsia::test]
     fn single_update_without_rtc() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
@@ -883,7 +883,7 @@ mod tests {
 
     #[fuchsia::test]
     fn subsequent_updates_accepted() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
@@ -951,7 +951,7 @@ mod tests {
 
     #[fuchsia::test]
     fn correction_by_slew() {
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         // Calculate a small change in offset that will be corrected by slewing and is large enough
         // to require an error bound reduction. Note the tests doesn't have to actually wait this

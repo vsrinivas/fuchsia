@@ -112,7 +112,7 @@ async fn do_fuzz(disk: Cursor<Vec<u8>>) -> Result<(), Error> {
 }
 
 pub fn fuzz_fatfs(fs: &[u8]) {
-    let mut executor = fuchsia_async::Executor::new().unwrap();
+    let mut executor = fuchsia_async::TestExecutor::new().unwrap();
     executor.run_singlethreaded(async {
         let mut vec = fs.to_vec();
         // Make sure the "disk" is always a length that's a multiple of 512.

@@ -374,7 +374,7 @@ mod tests {
         scan_error: fidl_sme::ScanErrorCode,
         err_msg: &str,
     ) {
-        let mut exec = fuchsia_async::Executor::new().expect("Failed to create executor");
+        let mut exec = fuchsia_async::TestExecutor::new().expect("Failed to create executor");
         let (proxy, server) =
             create_proxy::<fidl_sme::ScanTransactionMarker>().expect("failed to create scan proxy");
         let handle = server.into_stream().expect("Failed to create stream").control_handle();
@@ -430,7 +430,7 @@ mod tests {
     // Verify that we don't exceed FIDL maximum message limit when sending scan results
     #[test]
     fn test_large_on_scan_result() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (proxy, txn) = create_proxy::<fidl_sme::ScanTransactionMarker>()
             .expect("failed to create ScanTransaction proxy");
         let handle = txn.into_stream().expect("expect into_stream to succeed").control_handle();

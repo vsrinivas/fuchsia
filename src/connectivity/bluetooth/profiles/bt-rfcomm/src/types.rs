@@ -266,7 +266,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_services_collection() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
         let mut services = Services::new();
 
         let mut expected_psms = HashSet::new();
@@ -323,7 +323,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_service_group() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
 
         let (mut service_group, _server) = build_service_group();
 
@@ -352,7 +352,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_service_group_relay_connected() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (mut service_group, mut server) = build_service_group();
 

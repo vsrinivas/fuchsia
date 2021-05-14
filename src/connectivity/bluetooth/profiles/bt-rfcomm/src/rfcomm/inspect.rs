@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn duplex_data_stream_inspect_tree_updates_when_changed() {
-        let exec = fasync::Executor::new_with_fake_time().unwrap();
+        let exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(fasync::Time::from_nanos(1_234_567));
 
         let inspect = inspect::Inspector::new();

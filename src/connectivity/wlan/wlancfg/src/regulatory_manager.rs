@@ -104,9 +104,9 @@ mod tests {
         // zircon objects tied to the executor in this struct, and those can't outlive the executor.
         //
         // See
-        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.Executor.html
+        // - https://fuchsia-docs.firebaseapp.com/rust/fuchsia_async/struct.TestExecutor.html
         // - https://doc.rust-lang.org/reference/destructors.html.
-        executor: fasync::Executor,
+        executor: fasync::TestExecutor,
     }
 
     impl<S> TestContext<S>
@@ -116,7 +116,7 @@ mod tests {
         fn new(
             iface_manager: StubIfaceManager<S>,
         ) -> TestContext<impl Stream<Item = Result<(), Error>> + Send + Unpin> {
-            let executor = fasync::Executor::new().expect("failed to create an executor");
+            let executor = fasync::TestExecutor::new().expect("failed to create an executor");
             let (regulatory_region_proxy, regulatory_region_server_channel) =
                 create_proxy::<RegulatoryRegionWatcherMarker>()
                     .expect("failed to create RegulatoryRegionWatcher proxy");

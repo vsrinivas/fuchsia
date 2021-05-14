@@ -287,7 +287,7 @@ mod tests {
     // Test that we can set again after the target handler has closed.
     #[test]
     fn set_target_test() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
         let (target_proxy_1, target_stream_1) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
         let (target_proxy_2, _target_stream_2) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     // Test getting correct response from a get_media_attributes command.
     fn test_get_media_attributes() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
         let target_delegate = TargetDelegate::new();
 
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -341,7 +341,7 @@ mod tests {
     #[test]
     // Test getting correct response from a list_player_application_settings command.
     fn test_list_player_application_settings() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
         let target_delegate = TargetDelegate::new();
 
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -375,7 +375,7 @@ mod tests {
     #[test]
     // Test getting correct response from a get_player_application_settings command.
     fn test_get_player_application_settings() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
         let target_delegate = TargetDelegate::new();
 
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     // Test getting correct response from a get_player_application_settings command.
     fn test_set_player_application_settings() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
         let target_delegate = TargetDelegate::new();
 
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     // Test getting correct response from a get_media_player_items request.
     fn test_get_media_player_items() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
         let target_delegate = TargetDelegate::new();
 
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
@@ -502,7 +502,7 @@ mod tests {
     // from a target handler that we expected.
     #[test]
     fn target_handler_response() {
-        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let mut exec = fasync::TestExecutor::new().expect("executor::new failed");
 
         let target_delegate = TargetDelegate::new();
         {

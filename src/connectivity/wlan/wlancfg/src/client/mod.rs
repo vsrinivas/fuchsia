@@ -735,7 +735,7 @@ mod tests {
     // test will have a unique persistent store behind it.
     fn test_setup(
         stash_id: impl AsRef<str>,
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         connect_succeeds: bool,
     ) -> TestValues {
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
@@ -774,7 +774,7 @@ mod tests {
 
     /// Move stash requests forward so that a save request can progress.
     fn process_stash_write(
-        mut exec: &mut fasync::Executor,
+        mut exec: &mut fasync::TestExecutor,
         mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
     ) {
         assert_variant!(
@@ -786,7 +786,7 @@ mod tests {
 
     /// Move stash requests forward so that a remove request can progress.
     fn process_stash_remove(
-        mut exec: &mut fasync::Executor,
+        mut exec: &mut fasync::TestExecutor,
         mut stash_server: &mut fidl_stash::StoreAccessorRequestStream,
     ) {
         assert_variant!(
@@ -797,7 +797,7 @@ mod tests {
     }
 
     fn process_stash_flush(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stash_server: &mut fidl_stash::StoreAccessorRequestStream,
     ) {
         assert_variant!(
@@ -815,7 +815,7 @@ mod tests {
     #[test]
     fn connect_request_unknown_network() {
         let ssid = b"foobar-unknown".to_vec();
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup("connect_request_unknown_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -858,7 +858,7 @@ mod tests {
 
     #[test]
     fn connect_request_open_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
@@ -907,7 +907,7 @@ mod tests {
 
     #[test]
     fn connect_request_protected_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
@@ -957,7 +957,7 @@ mod tests {
 
     #[test]
     fn connect_request_protected_psk_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut test_values = test_setup("connect_request_open_network", &mut exec, true);
         let serve_fut = serve_provider_requests(
@@ -1007,7 +1007,7 @@ mod tests {
 
     #[test]
     fn connect_request_success() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup("connect_request_success", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1047,7 +1047,7 @@ mod tests {
 
     #[test]
     fn connect_request_failure() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup("connect_request_failure", &mut exec, false);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1087,7 +1087,7 @@ mod tests {
 
     #[test]
     fn connect_request_bad_password() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup("connect_request_bad_password", &mut exec, false);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1127,7 +1127,7 @@ mod tests {
 
     #[test]
     fn test_connect_wpa3_not_supported() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup("test_connect_wpa3_not_supported", &mut exec, false);
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1179,7 +1179,7 @@ mod tests {
 
     #[test]
     fn test_connect_wpa3_is_supported() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup("test_connect_wpa3_is_supported", &mut exec, true);
         let serve_fut = serve_provider_requests(
             Arc::clone(&test_values.iface_manager),
@@ -1220,7 +1220,7 @@ mod tests {
 
     #[test]
     fn start_and_stop_client_connections() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup("start_and_stop_client_connections", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1289,7 +1289,7 @@ mod tests {
     /// make it back to the requester.
     #[test]
     fn scan_end_to_end() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup("scan_request_sent_to_sme", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1328,7 +1328,7 @@ mod tests {
 
     #[test]
     fn save_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
@@ -1400,7 +1400,7 @@ mod tests {
 
     #[test]
     fn save_network_with_disconnected_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
@@ -1484,7 +1484,7 @@ mod tests {
 
     #[test]
     fn save_network_overwrite_disconnects() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
@@ -1563,7 +1563,7 @@ mod tests {
 
     #[test]
     fn save_bad_network_should_fail() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let stash_id = "save_bad_network_should_fail";
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join("networks.json");
@@ -1642,7 +1642,7 @@ mod tests {
 
     #[test]
     fn test_remove_a_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());
@@ -1802,7 +1802,7 @@ mod tests {
         expected_configs: Vec<fidl_policy::NetworkConfig>,
         expected_num_sends: usize,
     ) {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let temp_dir = TempDir::new().expect("failed to create temp dir");
         let path = temp_dir.path().join("networks.json");
         let tmp_path = temp_dir.path().join("tmp.json");
@@ -1892,7 +1892,7 @@ mod tests {
 
     #[test]
     fn register_update_listener() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup("register_update_listener", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -1918,7 +1918,7 @@ mod tests {
 
     #[test]
     fn get_listener() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (listener, requests) = create_proxy::<fidl_policy::ClientListenerMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -1945,7 +1945,7 @@ mod tests {
 
     #[test]
     fn multiple_controllers_write_attempt() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup("multiple_controllers_write_attempt", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -2026,7 +2026,7 @@ mod tests {
 
     #[test]
     fn multiple_controllers_epitaph() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup("multiple_controllers_epitaph", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager,
@@ -2154,7 +2154,7 @@ mod tests {
 
     #[test]
     fn no_client_interface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let stash_id = "no_client_interface";
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
@@ -2271,7 +2271,7 @@ mod tests {
 
     #[test]
     fn multiple_api_clients() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup("multiple_client_provider_requests", &mut exec, true);
         let serve_fut = serve_provider_requests(
             test_values.iface_manager.clone(),

@@ -22,7 +22,7 @@ use fidl_fuchsia_stash::{KeyValue, ListItem, SecureStoreMarker, StoreMarker, Val
 fn main() -> Result<(), Error> {
     let cfg: StashCtlConfig = env::args().try_into()?;
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     let acc = if cfg.secure {
         let stashserver = connect_to_protocol::<SecureStoreMarker>()?;

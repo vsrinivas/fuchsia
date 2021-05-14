@@ -28,7 +28,7 @@ const CONFIG_PATH: &str = "/config/data/crypto_provider_config.json";
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["kms"]).expect("syslog init should not fail");
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let key_manager_ref = Arc::new({
         let mut key_manager = KeyManager::new();
         match get_provider_from_config() {

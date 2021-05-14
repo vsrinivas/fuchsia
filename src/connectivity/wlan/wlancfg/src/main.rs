@@ -206,7 +206,7 @@ fn run_regulatory_manager(
 fn main() -> Result<(), Error> {
     util::logger::init();
 
-    let mut executor = fasync::Executor::new().context("error create event loop")?;
+    let mut executor = fasync::LocalExecutor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
     let (cobalt_api, cobalt_fut) =

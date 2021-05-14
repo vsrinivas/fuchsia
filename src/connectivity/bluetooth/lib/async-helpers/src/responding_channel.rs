@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn sender_receives_response() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (mut sender, mut receiver) = channel(0);
 
         let received = receiver.next();
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn cloned_senders_go_to_same_receiver() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (mut sender, mut receiver) = channel(0);
         let mut sender2 = sender.clone();
 
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn sender_receives_error_on_dropped_receiver() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (mut sender, receiver) = channel::<(), ()>(0);
 
         let request = sender.request(());
@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn sender_receives_error_on_dropped_responder() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (mut sender, mut receiver) = channel::<(), ()>(0);
 
         let request = sender.request(());
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn receiver_receives_error_on_dropped_sender() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (sender, mut receiver) = channel::<(), ()>(0);
 
         let received = receiver.next();
@@ -246,7 +246,7 @@ mod tests {
 
     #[test]
     fn responder_returns_error_on_dropped_sender() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (mut sender, mut receiver) = channel(0);
 
         {
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn try_receive_returns_value_when_channel_has_value() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
         let (mut sender, mut receiver) = channel::<(), ()>(0);
 
         let request = sender.request(());

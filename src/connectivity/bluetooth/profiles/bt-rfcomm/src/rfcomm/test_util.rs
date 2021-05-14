@@ -24,7 +24,7 @@ pub fn send_peer_frame(remote: &fidl::Socket, frame: Frame) {
 /// Expects a frame to be received by the peer. This expectation does not validate the
 /// contents of the data received.
 #[track_caller]
-pub fn expect_frame_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
+pub fn expect_frame_received_by_peer(exec: &mut fasync::TestExecutor, remote: &mut Channel) {
     let mut vec = Vec::new();
     let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
     assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
@@ -32,7 +32,7 @@ pub fn expect_frame_received_by_peer(exec: &mut fasync::Executor, remote: &mut C
 
 #[track_caller]
 pub fn expect_pending<T: std::fmt::Debug>(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     receiver: &mut mpsc::Receiver<T>,
 ) {
     let mut stream = Box::pin(receiver.next());
@@ -44,7 +44,7 @@ pub fn expect_pending<T: std::fmt::Debug>(
 
 #[track_caller]
 pub fn expect_ready<T: std::fmt::Debug>(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     receiver: &mut mpsc::Receiver<T>,
 ) -> T {
     let mut stream = Box::pin(receiver.next());
@@ -57,7 +57,7 @@ pub fn expect_ready<T: std::fmt::Debug>(
 /// Expects the provided `expected` frame data on the `receiver`.
 #[track_caller]
 pub fn expect_frame(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     receiver: &mut mpsc::Receiver<Frame>,
     expected: FrameData,
     dlci: Option<DLCI>,
@@ -72,7 +72,7 @@ pub fn expect_frame(
 /// Expects the `expected` UserData with potential `credits` on the `receiver`.
 #[track_caller]
 pub fn expect_user_data_frame(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     receiver: &mut mpsc::Receiver<Frame>,
     expected: UserData,
     expected_credits: Option<u8>,
@@ -85,7 +85,7 @@ pub fn expect_user_data_frame(
 /// Expects the provided `expected` MuxCommand on the `receiver`.
 #[track_caller]
 pub fn expect_mux_command(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     receiver: &mut mpsc::Receiver<Frame>,
     expected: MuxCommandMarker,
 ) {

@@ -77,8 +77,9 @@ impl AvrcpRelay {
         peer_id: PeerId,
         player_request_stream: sessions2::PlayerRequestStream,
     ) -> Result<fasync::Task<()>, Error> {
-        let avrcp_svc = fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
-            .context("Failed to connect to Bluetooth AVRCP interface")?;
+        let avrcp_svc =
+            fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
+                .context("Failed to connect to Bluetooth AVRCP interface")?;
         let session_fut = Self::session_relay(avrcp_svc, peer_id, player_request_stream);
         Ok(fasync::Task::spawn(async move {
             if let Err(e) = session_fut.await {
@@ -331,7 +332,7 @@ mod tests {
     }
 
     fn expect_media_attributes_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         controller_requests: &mut avrcp::ControllerRequestStream,
     ) -> Result<(), fidl::Error> {
         // Should ask for the current media info and the status to return the correct results.
@@ -353,7 +354,7 @@ mod tests {
     }
 
     fn expect_play_status_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         controller_requests: &mut avrcp::ControllerRequestStream,
     ) -> Result<(), fidl::Error> {
         match exec.run_until_stalled(&mut controller_requests.next()) {
@@ -371,7 +372,7 @@ mod tests {
 
     fn finish_relay_setup(
         mut relay_fut: &mut Pin<&mut impl Future>,
-        mut exec: &mut fasync::Executor,
+        mut exec: &mut fasync::TestExecutor,
         mut avrcp_request_stream: avrcp::PeerManagerRequestStream,
     ) -> Result<avrcp::ControllerRequestStream, Error> {
         // Connects to AVRCP.
@@ -412,7 +413,7 @@ mod tests {
         Ok(controller_request_stream)
     }
 
-    fn run_to_stalled(exec: &mut fasync::Executor) {
+    fn run_to_stalled(exec: &mut fasync::TestExecutor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
@@ -420,7 +421,7 @@ mod tests {
     /// Test that the relay sets up the connection to AVRCP and Sessions and stops on the stop
     /// signal.
     fn test_relay_setup() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
         let controller_requests;
@@ -455,7 +456,7 @@ mod tests {
     #[test]
     /// Relay will stop when AVRCP closes the notification channel.
     fn test_relay_avrcp_ends() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
 
@@ -484,7 +485,7 @@ mod tests {
     #[test]
     /// Relay will stop when Player stops asking for updates.
     fn test_relay_player_ends() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
 
@@ -513,7 +514,7 @@ mod tests {
     /// When mediasession initially asks for media info, a query of the remote AVRCP is made and
     /// the data is translated.
     fn test_relay_sends_correct_media_info() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
@@ -558,7 +559,7 @@ mod tests {
     #[test]
     /// When playback status changes the new track info is sent to the Player client.
     fn test_relay_new_avrcp_track_info() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
@@ -666,7 +667,7 @@ mod tests {
     #[test]
     /// When the position update happens, the new position is updated for the Player.
     fn test_relay_updates_position() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
@@ -740,7 +741,7 @@ mod tests {
     }
 
     fn expect_panel_command(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         controller_requests: &mut avrcp::ControllerRequestStream,
         expected_command: avrcp::AvcPanelCommand,
     ) -> Result<(), fidl::Error> {
@@ -756,7 +757,7 @@ mod tests {
     #[test]
     /// When commands come from the Player, they are relayed to the AVRCP commands.
     fn test_relay_sends_commands() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
         let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
 

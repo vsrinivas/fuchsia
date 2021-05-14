@@ -16,7 +16,7 @@ fn main() -> Result<(), anyhow::Error> {
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-1);
 
-    let mut executor = fuchsia_async::Executor::new()?;
+    let mut executor = fuchsia_async::LocalExecutor::new()?;
 
     let eventloop = Netstack::new();
     executor.run_singlethreaded(eventloop.serve())

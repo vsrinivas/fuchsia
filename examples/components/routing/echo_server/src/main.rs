@@ -9,7 +9,7 @@ use {
 };
 
 fn main() {
-    let mut executor = fasync::Executor::new().expect("error creating executor");
+    let mut executor = fasync::LocalExecutor::new().expect("error creating executor");
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {

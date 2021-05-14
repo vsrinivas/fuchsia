@@ -415,7 +415,7 @@ pub(crate) mod tests {
             return;
         }
 
-        let mut executor = fasync::Executor::new().expect("Error creating executor");
+        let mut executor = fasync::LocalExecutor::new().expect("Error creating executor");
         let f = async { f() };
         executor.run_singlethreaded(f);
     }

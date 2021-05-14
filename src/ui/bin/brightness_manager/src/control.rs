@@ -1233,7 +1233,7 @@ mod tests {
 
     #[test]
     fn test_set_manual_brightness_updates_brightness() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let func_fut1 = generate_control_struct(400, 0.5);
         futures::pin_mut!(func_fut1);
@@ -1260,7 +1260,7 @@ mod tests {
         assert!((TARGET_BRIGHTNESS - ORIGINAL_BRIGHTNESS).abs() < BRIGHTNESS_STEP_SIZE);
         assert!((TARGET_BRIGHTNESS - ORIGINAL_BRIGHTNESS).abs() > BRIGHTNESS_MINIMUM_CHANGE);
 
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let func_fut1 = generate_control_struct(400, ORIGINAL_BRIGHTNESS as f64);
         futures::pin_mut!(func_fut1);
         let mut control = exec.run_singlethreaded(&mut func_fut1);

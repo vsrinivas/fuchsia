@@ -186,7 +186,7 @@ impl<T: FusedStream + Stream + Unpin> FusedStream for MaybeStream<T> {
 mod tests {
     use super::*;
 
-    use fuchsia_async::Executor;
+    use fuchsia_async::TestExecutor;
     use futures::stream::StreamExt;
 
     struct CountStream {
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn maybestream() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
 
         let mut s = MaybeStream::default();
 

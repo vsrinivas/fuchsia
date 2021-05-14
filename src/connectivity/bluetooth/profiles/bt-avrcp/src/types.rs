@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_state_change_listener() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let scl = StateChangeListener::new();
 

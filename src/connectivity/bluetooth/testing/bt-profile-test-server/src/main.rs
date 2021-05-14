@@ -564,7 +564,7 @@ mod tests {
     }
 
     fn generate_register_peer_request(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         id: PeerId,
     ) -> (MockPeerProxy, PeerObserverRequestStream, ProfileTestRequest) {
         // Used to simulate behavior of an integration test client. Sends
@@ -587,7 +587,7 @@ mod tests {
 
     #[test]
     fn test_register_peer() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let pts = TestProfileServer::new(true);
         let (mut sender, receiver) = mpsc::channel(0);
 
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn test_advertisement_request_resolves_when_terminated() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let pts = TestProfileServer::new(true);
         let (mut sender, receiver) = mpsc::channel(0);
 

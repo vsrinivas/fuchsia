@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_next_frame_after() {
-        let _exec = fasync::Executor::new();
+        let _exec = fasync::TestExecutor::new();
         let mut vmo = get_test_vmo(5);
 
         assert_eq!(Err(Error::InvalidState), vmo.next_frame_after(get_time_now()));
@@ -368,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_start_stop() {
-        let _exec = fasync::Executor::new();
+        let _exec = fasync::TestExecutor::new();
         let mut vmo = get_test_vmo(5);
 
         let start_time = get_time_now();
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn test_frames_before() {
-        let _exec = fasync::Executor::new();
+        let _exec = fasync::TestExecutor::new();
         let mut vmo = get_test_vmo(5);
 
         let start_time = get_time_now();
@@ -423,7 +423,7 @@ mod tests {
 
     #[test]
     fn test_get_frames() {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor needed");
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
         let frames = TEST_FPS as usize / 2;
         let mut vmo = get_test_vmo(frames);
@@ -478,7 +478,7 @@ mod tests {
 
     #[test]
     fn test_multibyte_get_frames() {
-        let _exec = fasync::Executor::new();
+        let _exec = fasync::TestExecutor::new();
         let mut vmo = FrameVmo::new().expect("can't make a framevmo");
         let format = AudioSampleFormat::Sixteen { unsigned: false, invert_endian: false };
         let frames = TEST_FPS as usize / 2;
@@ -501,7 +501,7 @@ mod tests {
 
     #[test]
     fn test_get_frames_boundaries() {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor needed");
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
         let frames = TEST_FPS as usize / 2;
         let mut vmo = get_test_vmo(frames);

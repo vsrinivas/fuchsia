@@ -12,7 +12,7 @@ use parking_lot::Mutex;
 use std::io::{self, Read};
 use std::sync::Arc;
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
     let (client_end, paddle_controller) = create_endpoints()?;
     let (mut prs, paddle_control_handle) = paddle_controller.into_stream_and_control_handle()?;

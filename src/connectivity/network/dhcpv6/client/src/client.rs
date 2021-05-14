@@ -612,7 +612,7 @@ mod tests {
 
     #[test]
     fn test_client_starts_with_valid_args() {
-        let mut exec = fasync::Executor::new().expect("failed to create test executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create test executor");
 
         let (client_end, server_end) =
             create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
@@ -739,7 +739,7 @@ mod tests {
 
     #[test]
     fn test_client_should_respond_to_dns_watch_requests() {
-        let mut exec = fasync::Executor::new().expect("failed to create test ecexutor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create test ecexutor");
         let transaction_id = [1, 2, 3];
 
         let (client_end, server_end) =

@@ -598,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_map_works() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let test_map = TestMap::new(zx::Duration::from_seconds(10));
 
         test_map.insert("my_test".into(), "my_test_url".into());

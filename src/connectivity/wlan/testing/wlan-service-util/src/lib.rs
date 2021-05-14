@@ -82,15 +82,15 @@ mod tests {
             DeviceServiceMarker, DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem,
             ListIfacesResponse, QueryIfaceResponse,
         },
-        fuchsia_async::Executor,
+        fuchsia_async::TestExecutor,
         futures::{task::Poll, StreamExt},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
     };
 
     pub(crate) fn setup_fake_service<M: fidl::endpoints::ServiceMarker>(
-    ) -> (fuchsia_async::Executor, M::Proxy, M::RequestStream) {
-        let exec = fuchsia_async::Executor::new().expect("creating executor");
+    ) -> (fuchsia_async::TestExecutor, M::Proxy, M::RequestStream) {
+        let exec = fuchsia_async::TestExecutor::new().expect("creating executor");
         let (proxy, server) = fidl::endpoints::create_proxy::<M>().expect("creating proxy");
         (exec, proxy, server.into_stream().expect("creating stream"))
     }
@@ -110,7 +110,7 @@ mod tests {
     }
 
     pub fn respond_to_query_iface_list_request(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
         iface_list_vec: Vec<IfaceListItem>,
     ) {
@@ -125,7 +125,7 @@ mod tests {
     }
 
     pub fn respond_to_query_iface_request(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
         role: fidl_fuchsia_wlan_device::MacRole,
         fake_mac_addr: Option<[u8; 6]>,

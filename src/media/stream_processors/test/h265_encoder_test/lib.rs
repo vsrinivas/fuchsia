@@ -30,7 +30,7 @@ fn h265_stream_output_generated() -> Result<()> {
     *LOGGER;
     const WIDTH: u32 = 320;
     const HEIGHT: u32 = 240;
-    let mut exec = fasync::Executor::new()?;
+    let mut exec = fasync::TestExecutor::new()?;
 
     let test_case = H265EncoderTestCase {
         input_format: sysmem::ImageFormat2 {

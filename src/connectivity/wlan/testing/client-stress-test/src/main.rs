@@ -66,9 +66,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut scan_test_pass = true;
     let mut connect_test_pass = true;
     let mut disconnect_test_pass = true;
-    let mut exec = fasync::Executor::new().context("Error creating event loop")?;
-    let wlan_svc =
-        connect_to_protocol::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
+    let mut exec = fasync::LocalExecutor::new().context("Error creating event loop")?;
+    let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()
+        .context("Failed to connect to wlan_service")?;
 
     let fut = async {
         let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)

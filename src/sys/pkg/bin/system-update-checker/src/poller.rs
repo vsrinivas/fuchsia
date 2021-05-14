@@ -68,7 +68,7 @@ mod tests {
 
     #[test]
     fn test_disabled_periodic_update_check() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let (manager, mut requests) = FakeUpdateManagerControlHandle::<StateChangeCollector>::new();
 
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_periodic_update_check() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let (manager, mut requests) = FakeUpdateManagerControlHandle::<StateChangeCollector>::new();
 
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_simultaneous_user_update_check_and_periodic_update_check() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let checker = FakeUpdateChecker::new_up_to_date();
         let update_blocked = checker.block().unwrap();

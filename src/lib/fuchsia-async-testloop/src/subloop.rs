@@ -28,14 +28,14 @@ pub(crate) trait Subloop {
 
 /// A subloop wrapping an executor and its main future.
 pub(crate) struct SubloopExecutor<F> {
-    executor: fasync::Executor,
+    executor: fasync::TestExecutor,
     future: F,
     _pinned: PhantomPinned,
 }
 
 /// A mutable borrow of the fields of a `SubloopExecutor`.
 struct SubloopExecutorBorrowMut<'a, F> {
-    executor: &'a mut fasync::Executor,
+    executor: &'a mut fasync::TestExecutor,
     future: Pin<&'a mut F>,
 }
 
@@ -43,7 +43,7 @@ impl<F> SubloopExecutor<F> {
     /// Constructs a new `SubloopExecutor` with the given main future.
     pub(crate) fn new(future: F) -> SubloopExecutor<F> {
         let mut executor =
-            fasync::Executor::new_with_fake_time().expect("unable to create executor");
+            fasync::TestExecutor::new_with_fake_time().expect("unable to create executor");
         executor.wake_main_future();
         SubloopExecutor { executor, future, _pinned: PhantomPinned }
     }

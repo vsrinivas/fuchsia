@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
     // so that locales could be used in the server.
     let _loader = icu_data::Loader::new()?;
 
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     let mut fs = server::ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {

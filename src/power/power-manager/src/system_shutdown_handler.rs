@@ -597,8 +597,8 @@ pub mod tests {
     fn test_shutdown_timeout() {
         let mut mock_maker = MockNodeMaker::new();
 
-        // Need to use an Executor with fake time to test the timeout value
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        // Need to use an TestExecutor with fake time to test the timeout value
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(Seconds(0.0).into());
 
         // Arbitrary shutdown request to be used in the test
@@ -646,7 +646,7 @@ pub mod tests {
     #[test]
     fn test_ignore_second_shutdown() {
         let mut mock_maker = MockNodeMaker::new();
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Arbitrary shutdown request to be used in the test
         let shutdown_request = ShutdownRequest::PowerOff;

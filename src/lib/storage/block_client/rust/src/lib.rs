@@ -584,7 +584,7 @@ impl RemoteBlockClientSync {
         // the fifo registers for notifications to be delivered.
         let (sender, receiver) = oneshot::channel::<Result<Self, Error>>();
         std::thread::spawn(move || {
-            let mut executor = fasync::Executor::new().expect("failed to create executor");
+            let mut executor = fasync::LocalExecutor::new().expect("failed to create executor");
             match fasync::Fifo::from_fifo(fifo) {
                 Ok(fifo) => {
                     let common = Common::new(fifo, &info, temp_vmo, vmo_id);

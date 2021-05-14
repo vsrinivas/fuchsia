@@ -73,7 +73,7 @@ where
     Fut: Future<Output = Result<(), Error>> + Send + 'static,
     H: TestHarness,
 {
-    let mut executor = fasync::Executor::new().context("error creating event loop")?;
+    let mut executor = fasync::LocalExecutor::new().context("error creating event loop")?;
     info!("[ RUN      ] {}...", name);
     let result = executor.run_singlethreaded(run_with_harness(test));
     if let Err(err) = &result {

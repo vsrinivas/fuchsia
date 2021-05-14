@@ -41,7 +41,7 @@ text_field_tests! {
 }
 
 fn main() -> Result<(), Error> {
-    let mut executor = fuchsia_async::Executor::new()
+    let mut executor = fuchsia_async::LocalExecutor::new()
         .context("Creating fuchsia_async executor for text tests failed")?;
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(bind_text_tester);

@@ -673,7 +673,7 @@ mod tests {
     /// returning an error after the registration is not received after the expected time.
     #[test]
     fn test_wait_for_registration_timeout() {
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
         let (_sender, receiver) = mpsc::channel(1);
@@ -697,7 +697,7 @@ mod tests {
     /// the client.
     #[test]
     fn test_registration_invalid_handles() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Immitate opening a connection with the DriverManagerRegistration service
         let (sender, receiver) = mpsc::channel(1);
@@ -729,7 +729,7 @@ mod tests {
     /// Tests that the proxy closure monitor fires after the underlying channel is closed
     #[test]
     fn test_termination_channel_closure() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let channel_closed = Rc::new(Cell::new(false));
         let channel_closed_clone = channel_closed.clone();

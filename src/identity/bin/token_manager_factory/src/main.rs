@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
     info!("Starting token manager factory");
     let token_manager_factory = Arc::new(TokenManagerFactory::new(DATA_DIR.into()));
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
         let tmf_clone = Arc::clone(&token_manager_factory);

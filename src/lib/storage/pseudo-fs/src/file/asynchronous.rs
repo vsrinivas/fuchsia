@@ -604,7 +604,7 @@ mod tests {
 
     #[test]
     fn read_only_read_no_status() {
-        let exec = fasync::Executor::new().expect("Executor creation failed");
+        let exec = fasync::TestExecutor::new().expect("Executor creation failed");
         let (check_event_send, check_event_recv) = oneshot::channel::<()>();
 
         run_server_client_with_open_requests_channel_and_executor(
@@ -1039,7 +1039,7 @@ mod tests {
     /// `run_server_client_with_open_requests_channel_and_executor` invocation.
     #[test]
     fn mock_directory_with_one_file_and_two_connections() {
-        let exec = fasync::Executor::new().expect("Executor creation failed");
+        let exec = fasync::TestExecutor::new().expect("Executor creation failed");
 
         let create_client = move |expected_content: &'static str| {
             let (proxy, server_end) =
@@ -1129,7 +1129,7 @@ mod tests {
         // behavior we expect from the file - notably that we are able to send multiple requests to
         // the file before the connection is actually created and populated, and have them be
         // executed once the buffer is filled with what we expect.
-        let exec = fasync::Executor::new().expect("Executor creation failed");
+        let exec = fasync::TestExecutor::new().expect("Executor creation failed");
 
         let read_counter = Arc::new(AtomicUsize::new(0));
         let client_counter = Arc::new(AtomicUsize::new(0));
@@ -1185,7 +1185,7 @@ mod tests {
     #[test]
     fn slow_on_write() {
         // this test is pretty similar to the above, except that it lags the on_write call instead.
-        let exec = fasync::Executor::new().expect("Executor creation failed");
+        let exec = fasync::TestExecutor::new().expect("Executor creation failed");
 
         let write_counter = Arc::new(AtomicUsize::new(0));
         let client_counter = Arc::new(AtomicUsize::new(0));

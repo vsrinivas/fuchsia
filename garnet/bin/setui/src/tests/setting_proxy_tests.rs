@@ -346,7 +346,8 @@ fn test_notify() {
         environment
     }
 
-    let mut executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+    let mut executor =
+        fasync::TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
     let environment_fut = run_to_end_listen();
     futures::pin_mut!(environment_fut);
@@ -472,7 +473,8 @@ async fn test_request_order() {
 fn test_regeneration() {
     let setting_type = SettingType::Unknown;
 
-    let mut executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+    let mut executor =
+        fasync::TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
     async fn run_once(setting_type: SettingType) -> (oneshot::Receiver<()>, TestEnvironment) {
         let (done_tx, done_rx) = oneshot::channel();
@@ -700,7 +702,8 @@ fn test_retry() {
         (environment, _event_receptor)
     }
 
-    let mut executor = fasync::Executor::new_with_fake_time().expect("Failed to create executor");
+    let mut executor =
+        fasync::TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
     let environment_fut = run_retries(setting_type);
     futures::pin_mut!(environment_fut);
@@ -823,7 +826,7 @@ async fn test_early_exit() {
 #[test]
 fn test_timeout() {
     let mut executor =
-        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+        fuchsia_async::TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
     let fut = async move {
         let setting_type = SettingType::Unknown;
@@ -930,7 +933,7 @@ fn test_timeout() {
 #[test]
 fn test_timeout_no_retry() {
     let mut executor =
-        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+        fuchsia_async::TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
     let fut = async move {
         let setting_type = SettingType::Unknown;

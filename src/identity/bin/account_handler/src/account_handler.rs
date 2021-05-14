@@ -753,7 +753,7 @@ mod tests {
         TestFn: FnOnce(AccountHandlerControlProxy) -> Fut,
         Fut: Future<Output = TestResult>,
     {
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
+        let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
         let mut fake_context = FakeAccountHandlerContext::new();
         if let Some(fake_authenticator) = fake_authenticator {
             fake_context.insert_authenticator(TEST_AUTH_MECHANISM_ID, fake_authenticator);

@@ -93,7 +93,7 @@ mod tests {
     /// Runs a asynchronous test on the supplied executor to contruct a new AuthProviderSupplier
     /// and request TEST_AUTH_PROVIDER.
     fn do_get_test(
-        mut executor: fasync::Executor,
+        mut executor: fasync::LocalExecutor,
         client_end: ClientEnd<AccountHandlerContextMarker>,
         expected_error: Option<Status>,
     ) {
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_get_valid() {
-        let executor = fasync::Executor::new().expect("Failed to create executor");
+        let executor = fasync::LocalExecutor::new().expect("Failed to create executor");
         let (client_end, server_end) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
 
         spawn_account_handler_context_server(server_end, Ok(()));
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn test_get_invalid() {
-        let executor = fasync::Executor::new().expect("Failed to create executor");
+        let executor = fasync::LocalExecutor::new().expect("Failed to create executor");
         let (client_end, server_end) = create_endpoints::<AccountHandlerContextMarker>().unwrap();
 
         spawn_account_handler_context_server(

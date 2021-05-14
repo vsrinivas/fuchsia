@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn item_future_pending_on_buffer_full() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut sender, mut receiver) = mpsc::channel(0);
 
         let send_result = exec.run_singlethreaded(sender.try_send_fut(vec![1]));

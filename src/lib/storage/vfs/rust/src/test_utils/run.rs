@@ -13,7 +13,7 @@ use crate::{
 
 use {
     fidl::endpoints::{create_proxy, ServiceMarker},
-    fuchsia_async::Executor,
+    fuchsia_async::TestExecutor,
     std::{future::Future, pin::Pin, sync::Arc, task::Poll},
 };
 
@@ -47,7 +47,7 @@ pub fn run_server_client<Marker, GetClient, GetClientRes>(
 /// This is the second most common case for the test execution, and, similarly to
 /// [`run_server_client`] it is actually just forwarding to [`test_client()`] followed by a
 /// [`AsyncClientTestParams::run()`] call.
-pub fn run_client<GetClient, GetClientRes>(exec: Executor, get_client: GetClient)
+pub fn run_client<GetClient, GetClientRes>(exec: TestExecutor, get_client: GetClient)
 where
     GetClient: FnOnce() -> GetClientRes,
     GetClientRes: Future<Output = ()>,
@@ -66,12 +66,12 @@ where
 /// ensure that the test execution
 /// finishes completely, not just stalls.
 pub struct TestController<'test_refs> {
-    exec: Executor,
+    exec: TestExecutor,
     client: Pin<Box<dyn Future<Output = ()> + 'test_refs>>,
 }
 
 impl<'test_refs> TestController<'test_refs> {
-    fn new(exec: Executor, client: Pin<Box<dyn Future<Output = ()> + 'test_refs>>) -> Self {
+    fn new(exec: TestExecutor, client: Pin<Box<dyn Future<Output = ()> + 'test_refs>>) -> Self {
         Self { exec, client }
     }
 
@@ -184,7 +184,7 @@ pub struct AsyncServerClientTestParams<'test_refs, Marker>
 where
     Marker: ServiceMarker,
 {
-    exec: Option<Executor>,
+    exec: Option<TestExecutor>,
     flags: u32,
     mode: Option<u32>,
     server: Arc<dyn DirectoryEntry>,
@@ -200,7 +200,7 @@ where
 /// A helper that holds all the parameters necessary to run an async client-only test.
 #[must_use = "Need to call `run` to actually run the test"]
 pub struct AsyncClientTestParams<'test_refs> {
-    exec: Option<Executor>,
+    exec: Option<TestExecutor>,
     get_client: Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + 'test_refs>> + 'test_refs>,
     coordinator: Option<Box<dyn FnOnce(TestController) + 'test_refs>>,
 }
@@ -219,7 +219,7 @@ impl<'test_refs, Marker> AsyncServerClientTestParams<'test_refs, Marker>
 where
     Marker: ServiceMarker,
 {
-    field_setter!(exec, Executor);
+    field_setter!(exec, TestExecutor);
     field_setter!(mode, u32);
 
     pub fn coordinator(
@@ -238,7 +238,8 @@ where
     /// Runs the test based on the parameters specified in the [`test_server_client`] and other
     /// method calls.
     pub fn run(self) {
-        let exec = self.exec.unwrap_or_else(|| Executor::new().expect("Executor creation failed"));
+        let exec =
+            self.exec.unwrap_or_else(|| TestExecutor::new().expect("TestExecutor creation failed"));
 
         let (client_proxy, server_end) =
             create_proxy::<Marker>().expect("Failed to create connection endpoints");
@@ -274,7 +275,7 @@ where
 }
 
 impl<'test_refs> AsyncClientTestParams<'test_refs> {
-    field_setter!(exec, Executor);
+    field_setter!(exec, TestExecutor);
 
     pub fn coordinator(
         mut self,
@@ -288,7 +289,8 @@ impl<'test_refs> AsyncClientTestParams<'test_refs> {
     /// Runs the test based on the parameters specified in the [`test_server_client`] and other
     /// method calls.
     pub fn run(self) {
-        let exec = self.exec.unwrap_or_else(|| Executor::new().expect("Executor creation failed"));
+        let exec =
+            self.exec.unwrap_or_else(|| TestExecutor::new().expect("TestExecutor creation failed"));
 
         let client = (self.get_client)();
 

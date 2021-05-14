@@ -657,7 +657,7 @@ mod tests {
         crate::opts,
         fidl::endpoints,
         fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
-        fuchsia_async::Executor,
+        fuchsia_async::TestExecutor,
         futures::{stream::StreamExt, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
@@ -692,7 +692,7 @@ mod tests {
     /// Allows callers to respond to StartClientConnections, StopClientConnections, and Connect
     /// calls with the RequestStatus response of their choice.
     fn send_client_request_status(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut wlan_policy::ClientControllerRequestStream,
         response: fidl_wlan_common::RequestStatus,
     ) {
@@ -757,7 +757,7 @@ mod tests {
 
     /// Allows callers to send a response to SaveNetwork and RemoveNetwork calls.
     fn send_network_config_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         mut server: wlan_policy::ClientControllerRequestStream,
         success: bool,
     ) {
@@ -819,7 +819,7 @@ mod tests {
     /// Allows callers to respond to StartAccessPoint and StopAccessPoint
     /// calls with the RequestStatus response of their choice.
     fn send_ap_request_status(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut wlan_policy::AccessPointControllerRequestStream,
         response: fidl_wlan_common::RequestStatus,
     ) {
@@ -893,7 +893,7 @@ mod tests {
     /// Respond to a ScanForNetworks request and provide an iterator so that tests can inject scan
     /// results.
     fn get_scan_result_iterator(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         mut server: wlan_policy::ClientControllerRequestStream,
     ) -> wlan_policy::ScanResultIteratorRequestStream {
         let poll = exec.run_until_stalled(&mut server.next());
@@ -918,7 +918,7 @@ mod tests {
 
     /// Sends scan results back to the client that is requesting a scan.
     fn send_scan_result(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut wlan_policy::ScanResultIteratorRequestStream,
         mut scan_result: &mut Result<Vec<wlan_policy::ScanResult>, wlan_policy::ScanErrorCode>,
     ) {
@@ -938,7 +938,7 @@ mod tests {
     /// Responds to a GetSavedNetworks request and provide an iterator for sending back saved
     /// networks.
     fn get_saved_networks_iterator(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         mut server: wlan_policy::ClientControllerRequestStream,
     ) -> wlan_policy::NetworkConfigIteratorRequestStream {
         let poll = exec.run_until_stalled(&mut server.next());
@@ -963,7 +963,7 @@ mod tests {
 
     /// Uses the provided iterator and send back saved networks.
     fn send_saved_networks(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut wlan_policy::NetworkConfigIteratorRequestStream,
         saved_networks_response: Vec<wlan_policy::NetworkConfig>,
     ) {
@@ -983,7 +983,7 @@ mod tests {
     /// Tests the case where start client connections is called and the operation is successful.
     #[test]
     fn test_start_client_connections_success() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = client_test_setup();
         let fut = handle_start_client_connections(test_values.client_proxy);
         pin_mut!(fut);
@@ -1004,7 +1004,7 @@ mod tests {
     /// Tests the case where starting client connections fails.
     #[test]
     fn test_start_client_connections_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = client_test_setup();
         let fut = handle_start_client_connections(test_values.client_proxy);
         pin_mut!(fut);
@@ -1025,7 +1025,7 @@ mod tests {
     /// Tests the case where starting client connections is successful.
     #[test]
     fn test_stop_client_connections_success() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = client_test_setup();
         let fut = handle_stop_client_connections(test_values.client_proxy);
         pin_mut!(fut);
@@ -1046,7 +1046,7 @@ mod tests {
     /// Tests the case where starting client connections fails.
     #[test]
     fn test_stop_client_connections_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = client_test_setup();
         let fut = handle_stop_client_connections(test_values.client_proxy);
         pin_mut!(fut);
@@ -1067,7 +1067,7 @@ mod tests {
     /// Tests the case where a network is successfully saved.
     #[test]
     fn test_save_network_pass() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
@@ -1085,7 +1085,7 @@ mod tests {
     /// Tests the case where a network configuration cannot be saved.
     #[test]
     fn test_save_network_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_save_network(test_values.client_proxy, config);
@@ -1103,7 +1103,7 @@ mod tests {
     /// Tests the case where a network config can be successfully removed.
     #[test]
     fn test_remove_network_pass() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_remove_network(test_values.client_proxy, config);
@@ -1121,7 +1121,7 @@ mod tests {
     /// Tests the case where network removal fails.
     #[test]
     fn test_remove_network_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
         let config = create_network_config_arg(TEST_SSID);
         let fut = handle_remove_network(test_values.client_proxy, config);
@@ -1266,7 +1266,7 @@ mod tests {
     /// Tests the case where the client successfully connects.
     #[test]
     fn test_connect_pass() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = client_test_setup();
 
         // Start the connect routine.
@@ -1305,7 +1305,7 @@ mod tests {
     /// Tests the case where a client fails to connect.
     #[test]
     fn test_connect_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = client_test_setup();
 
         // Start the connect routine.
@@ -1337,7 +1337,7 @@ mod tests {
     /// Tests the case where a scan is requested and results are sent back to the requester.
     #[test]
     fn test_scan_pass() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
 
         let fut = handle_scan(test_values.client_proxy);
@@ -1369,7 +1369,7 @@ mod tests {
     /// Tests the case where the scan cannot be performed.
     #[test]
     fn test_scan_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
 
         let fut = handle_scan(test_values.client_proxy);
@@ -1393,7 +1393,7 @@ mod tests {
     /// Tests the ability to get saved networks from the client policy layer.
     #[test]
     fn test_get_saved_networks() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
 
         let fut = handle_get_saved_networks(test_values.client_proxy);
@@ -1423,7 +1423,7 @@ mod tests {
     /// Tests to ensure that the listening loop continues to be active after receiving client state updates.
     #[test]
     fn test_client_listen() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = client_test_setup();
 
         let fut = handle_listen(test_values.update_stream);
@@ -1451,7 +1451,7 @@ mod tests {
     /// error.
     #[test]
     fn test_stop_ap_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
         let network_config = create_network_config_arg(&TEST_SSID);
@@ -1475,7 +1475,7 @@ mod tests {
     /// Tests the case where an AP is successfully stopped.
     #[test]
     fn test_stop_ap_pass() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
         let network_config = create_network_config_arg(&TEST_SSID);
@@ -1499,7 +1499,7 @@ mod tests {
     /// Tests the case where the request to start an AP results in an error.
     #[test]
     fn test_start_ap_request_fail() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
         let network_config = create_network_config_arg(&TEST_SSID);
@@ -1524,7 +1524,7 @@ mod tests {
     /// wait for an update indicating that the AP is active.
     #[test]
     fn test_start_ap_pass() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
         let network_config = create_network_config_arg(&TEST_SSID);
@@ -1566,7 +1566,7 @@ mod tests {
     /// the startup process.
     #[test]
     fn test_ap_failed_to_start() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
         let network_config = create_network_config_arg(&TEST_SSID);
@@ -1597,7 +1597,7 @@ mod tests {
     /// Tests the case where all APs are requested to be stopped.
     #[test]
     fn test_stop_all_aps() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = ap_test_setup();
 
         let fut = handle_stop_all_aps(test_values.ap_proxy);
@@ -1618,7 +1618,7 @@ mod tests {
     /// Tests that the AP listen routine continues listening for new updates.
     #[test]
     fn test_ap_listen() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = ap_test_setup();
 
         let mut state_updates = vec![
@@ -1650,7 +1650,7 @@ mod tests {
 
     #[test]
     fn test_suggest_ap_mac_succeeds() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
 
         let (configurator_proxy, mut configurator_stream) =
             endpoints::create_proxy_and_stream::<wlan_deprecated::DeprecatedConfiguratorMarker>()
@@ -1675,7 +1675,7 @@ mod tests {
 
     #[test]
     fn test_suggest_ap_mac_fails() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
 
         let (configurator_proxy, mut configurator_stream) =
             endpoints::create_proxy_and_stream::<wlan_deprecated::DeprecatedConfiguratorMarker>()

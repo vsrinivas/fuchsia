@@ -630,7 +630,7 @@ mod tests {
 
     #[test]
     fn read_only_read_no_status() {
-        let exec = fasync::Executor::new().expect("Executor creation failed");
+        let exec = fasync::TestExecutor::new().expect("Executor creation failed");
 
         run_server_client_with_open_requests_channel_and_executor(
             exec,
@@ -1725,7 +1725,7 @@ mod tests {
         //     panic!("Server failed: {:?}", e);
         // }
 
-        let exec = fasync::Executor::new().expect("Executor creation failed");
+        let exec = fasync::TestExecutor::new().expect("Executor creation failed");
 
         let create_client = move |expected_content: &'static str| {
             let (proxy, server_end) =

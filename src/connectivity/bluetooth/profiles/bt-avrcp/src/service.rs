@@ -552,7 +552,7 @@ mod tests {
     #[test]
     /// Tests that a request to register a target handler responds correctly.
     fn test_spawn_avrcp_client_target() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("Executor should be created");
+        let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
         let (peer_manager_proxy, peer_manager_requests) =
             create_proxy_and_stream::<PeerManagerMarker>()?;
 
@@ -602,7 +602,7 @@ mod tests {
     /// Tests that the client strream handler will spawn a controller when a controller request
     /// successfully sets up a controller.
     fn test_avrcp_client_stream_handler_controller_request() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("Executor should be created");
+        let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
         let (peer_manager_proxy, peer_manager_requests) =
             create_proxy_and_stream::<PeerManagerMarker>()?;
 
@@ -665,7 +665,7 @@ mod tests {
     #[test]
     /// Test that getting a controller from the test server (PeerManagerExt) works.
     fn test_spawn_test_avrcp_client() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("Executor should be created");
+        let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
         let (peer_manager_ext_proxy, peer_manager_ext_requests) =
             create_proxy_and_stream::<PeerManagerExtMarker>()?;
 

@@ -134,7 +134,7 @@ mod tests {
             &mut super::InputDeviceRegistry,
         ) -> Result<Box<dyn synthesizer::InputDevice>, Error>,
     ) -> Result<(), Error> {
-        let mut executor = fasync::Executor::new().context("creating executor")?;
+        let mut executor = fasync::TestExecutor::new().context("creating executor")?;
         let (proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
                 .context("failed to create proxy and stream for InputDeviceRegistry")?;
@@ -168,7 +168,7 @@ mod tests {
             &mut super::InputDeviceRegistry,
         ) -> Result<Box<dyn synthesizer::InputDevice>, Error>,
     ) -> Result<DeviceDescriptor, Error> {
-        let mut executor = fasync::Executor::new().context("creating executor")?;
+        let mut executor = fasync::TestExecutor::new().context("creating executor")?;
         // Create an `InputDeviceRegistry`, and add a keyboard to it.
         let (registry_proxy, mut registry_request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
@@ -218,7 +218,7 @@ mod tests {
 
         #[test]
         fn add_media_buttons_device_yields_error() -> Result<(), Error> {
-            let _executor = fuchsia_async::Executor::new(); // Create TLS executor used by `endpoints`.
+            let _executor = fuchsia_async::TestExecutor::new(); // Create TLS executor used by `endpoints`.
             let (proxy, _request_stream) =
                 endpoints::create_proxy_and_stream::<InputDeviceRegistryMarker>()
                     .context("internal error creating InputDevice proxy and stream")?;

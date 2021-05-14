@@ -174,7 +174,7 @@ mod time_tests {
             },
         },
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
-        fuchsia_async::{Executor, Time, WaitState},
+        fuchsia_async::{TestExecutor, Time, WaitState},
         futures::{executor::block_on, future::BoxFuture, lock::Mutex, Future},
         moniker::AbsoluteMoniker,
         std::sync::Arc,
@@ -272,7 +272,7 @@ mod time_tests {
     }
 
     struct TimeTest {
-        executor: Executor,
+        executor: TestExecutor,
         work_scheduler: Arc<WorkScheduler>,
         // Retain `Arc` to keep `Binder` alive throughout test.
         _binder: Arc<dyn Binder>,
@@ -280,7 +280,7 @@ mod time_tests {
 
     impl TimeTest {
         fn new() -> Self {
-            let executor = Executor::new_with_fake_time().unwrap();
+            let executor = TestExecutor::new_with_fake_time().unwrap();
             executor.set_fake_time(Time::from_nanos(0));
             let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
             let binder = FakeBinder::new(top_instance);

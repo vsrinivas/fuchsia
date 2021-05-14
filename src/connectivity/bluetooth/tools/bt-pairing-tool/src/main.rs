@@ -35,7 +35,7 @@ struct Opt {
 }
 
 fn run(opt: Opt) -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().context("Error creating event loop")?;
+    let mut exec = fasync::LocalExecutor::new().context("Error creating event loop")?;
 
     let access = connect_to_protocol::<AccessMarker>()
         .context("Failed to connect to bluetooth access interface")?;

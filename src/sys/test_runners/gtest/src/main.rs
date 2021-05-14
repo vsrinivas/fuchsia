@@ -22,7 +22,7 @@ use {
 fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["gtest_runner"])?;
     fx_log_info!("started");
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     // We will divide this directory up and pass to  tests as /test_result so that they can write
     // their json output
     let path = Path::new("/data/test_data");

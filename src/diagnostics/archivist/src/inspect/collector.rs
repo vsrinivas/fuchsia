@@ -235,7 +235,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
                 let collector = InspectDataCollector::new();
@@ -310,7 +310,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
                 let collector = InspectDataCollector::new();

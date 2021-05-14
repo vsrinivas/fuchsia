@@ -22,11 +22,7 @@ mod stub;
 #[cfg(all(not(target_os = "fuchsia"), target_arch = "wasm32"))]
 use self::stub as implementation;
 
-pub use implementation::{
-    executor::{Executor, Time},
-    task::Task,
-    timer::Timer,
-};
+pub use implementation::{executor::Time, task::Task, timer::Timer};
 
 /// An alias for a single-threaded executor, will be its own type in a future change.
 pub type TestExecutor = LocalExecutor;
@@ -53,7 +49,7 @@ impl LocalExecutor {
 impl LocalExecutor {
     /// Construct a new single-threaded executor wrapping `Executor`.
     pub fn new_with_fake_time() -> Result<Self, Status> {
-        Ok(Self(Executor::new_with_fake_time()?))
+        Ok(Self(implementation::executor::Executor::new_with_fake_time()?))
     }
 
     /// Calls `now` on the inner executor.
@@ -286,13 +282,13 @@ where
 mod task_tests {
 
     use super::*;
-    use crate::runtime::Executor;
+    use crate::runtime::SendExecutor;
     use futures::channel::oneshot;
     use std::future::Future;
 
     fn run(f: impl Send + 'static + Future<Output = ()>) {
         const TEST_THREADS: usize = 2;
-        Executor::new().unwrap().run(f, TEST_THREADS)
+        SendExecutor::new().unwrap().run(f, TEST_THREADS)
     }
 
     #[test]
@@ -337,7 +333,7 @@ mod task_tests {
     #[test]
     fn can_join_local() {
         // can we spawn, then join a task locally
-        Executor::new().unwrap().run_singlethreaded(async move {
+        LocalExecutor::new().unwrap().run_singlethreaded(async move {
             assert_eq!(42, Task::local(async move { 42u8 }).await);
         })
     }
@@ -367,7 +363,7 @@ mod timer_tests {
     #[test]
     fn shorter_fires_first_instant() {
         use std::time::{Duration, Instant};
-        let mut exec = Executor::new().unwrap();
+        let mut exec = LocalExecutor::new().unwrap();
         let now = Instant::now();
         let shorter = Timer::new(now + Duration::from_millis(100));
         let longer = Timer::new(now + Duration::from_secs(1));
@@ -386,7 +382,7 @@ mod timer_tests {
         assert_eq!(
             {
                 let runs = runs.clone();
-                Executor::new().unwrap().run_singlethreaded(
+                LocalExecutor::new().unwrap().run_singlethreaded(
                     async move {
                         let mut sleep = Duration::from_millis(1);
                         loop {

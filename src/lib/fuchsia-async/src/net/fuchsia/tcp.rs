@@ -289,7 +289,7 @@ impl Future for TcpConnector {
 mod tests {
     use {
         super::{TcpListener, TcpStream},
-        crate::Executor,
+        crate::TestExecutor,
         futures::{
             io::{AsyncReadExt, AsyncWriteExt},
             stream::StreamExt,
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn choose_listen_port() {
-        let _exec = Executor::new().expect("could not create executor");
+        let _exec = TestExecutor::new().expect("could not create executor");
         let addr_request = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
         let listener = TcpListener::bind(&addr_request).expect("could not create listener");
         let actual_addr = listener.local_addr().expect("local_addr query to succeed");
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn choose_listen_port_from_std() {
-        let _exec = Executor::new().expect("could not create executor");
+        let _exec = TestExecutor::new().expect("could not create executor");
         let addr_request = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
         let inner = net::TcpListener::bind(&addr_request).expect("could not create inner listener");
         let listener = TcpListener::from_std(inner).expect("could not create listener");
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn connect_to_nonlistening_endpoint() {
-        let mut exec = Executor::new().expect("could not create executor");
+        let mut exec = TestExecutor::new().expect("could not create executor");
 
         // bind to a port to find an unused one, but don't start listening.
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0).into();
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn send_recv() {
-        let mut exec = Executor::new().expect("could not create executor");
+        let mut exec = TestExecutor::new().expect("could not create executor");
 
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
         let listener = TcpListener::bind(&addr).expect("could not create listener");
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn send_recv_large() {
-        let mut exec = Executor::new().expect("could not create executor");
+        let mut exec = TestExecutor::new().expect("could not create executor");
         let addr = "127.0.0.1:0".parse().unwrap();
 
         const BUF_SIZE: usize = 10 * 1024;

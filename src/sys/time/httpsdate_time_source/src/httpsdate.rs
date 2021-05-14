@@ -280,7 +280,7 @@ mod test {
         // as is done from PushSource. This verifies that each update is processed before another
         // is produced.
         // TODO(satsukiu) - use a generator instead and remove this test.
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (sampler, _response_complete_fut) =
             FakeSampler::with_responses(vec![Ok(TEST_SAMPLE_1.clone()), Ok(TEST_SAMPLE_2.clone())]);

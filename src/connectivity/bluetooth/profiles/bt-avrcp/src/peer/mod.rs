@@ -584,7 +584,7 @@ mod tests {
     // Check that the remote will attempt to connect to a peer if we have a profile.
     #[test]
     fn trigger_connection_test() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
 
         let id = PeerId(1);
@@ -630,7 +630,7 @@ mod tests {
     /// underlying channel, and spawns a new task to handle incoming requests.
     #[test]
     fn test_peer_reconnection() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
 
         let id = PeerId(123);
@@ -707,7 +707,7 @@ mod tests {
     /// time, AVRCP drops both, and attempts to reconnect.
     #[test]
     fn test_simultaneous_peer_connections() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
 
         let id = PeerId(123);
@@ -814,7 +814,7 @@ mod tests {
 
     #[test]
     fn outgoing_connection_error_updates_inspect() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(5_000000000));
 
         let id = PeerId(30789);
@@ -859,7 +859,7 @@ mod tests {
 
     #[test]
     fn successful_inbound_connection_updates_inspect_metrics() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(842);
         let (mut peer_handle, _target_delegate, _profile_requests) = setup_remote_peer(id)?;

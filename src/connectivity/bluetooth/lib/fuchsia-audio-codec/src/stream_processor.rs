@@ -822,7 +822,7 @@ mod tests {
 
     #[test]
     fn encode_sbc() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let pcm_format = PcmFormat {
             pcm_mode: AudioPcmMode::Linear,
@@ -938,7 +938,7 @@ mod tests {
 
     #[test]
     fn decode_sbc() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
         const SBC_FRAME_SIZE: usize = 72;
@@ -1018,7 +1018,7 @@ mod tests {
 
     #[test]
     fn decode_sbc_wakes_output_to_process_events() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
         const SBC_FRAME_SIZE: usize = 72;
@@ -1091,7 +1091,7 @@ mod tests {
 
     #[test]
     fn decode_sbc_wakes_input_to_process_events() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
         const SBC_FRAME_SIZE: usize = 72;

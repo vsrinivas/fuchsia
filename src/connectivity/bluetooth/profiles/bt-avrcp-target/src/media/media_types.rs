@@ -698,7 +698,7 @@ mod tests {
     /// Tests correctness of updating with duration, timeline_fn, and player_state from Media.
     /// Tests correctness of conversion to fidl_avrcp::PlayStatus.
     fn test_play_status() {
-        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         exec.set_fake_time(fasync::Time::from_nanos(900000000));
 
         let mut play_status: ValidPlayStatus = Default::default();

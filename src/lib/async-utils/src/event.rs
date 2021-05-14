@@ -265,7 +265,7 @@ mod tests {
 
     #[test]
     fn unsignaled_event_is_pending() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let mut wait = event.wait();
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn signaled_event_is_ready() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let mut wait = event.wait();
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn event_is_ready_and_wakes_after_stalled() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let mut wait = event.wait();
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn signaling_event_registers_and_wakes_multiple_waiters_properly() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let mut wait_1 = event.wait();
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn event_is_terminated_after_complete() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let mut wait = event.wait();
@@ -341,7 +341,7 @@ mod tests {
 
     #[test]
     fn waiter_drops_gracefully() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let mut wait = event.wait();
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn waiter_completes_after_all_events_drop() {
-        let mut ex = fasync::Executor::new().unwrap();
+        let mut ex = fasync::TestExecutor::new().unwrap();
 
         let event = Event::new();
         let event_clone = Event::new();

@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn test_list_phys() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_get_dev_path() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -117,7 +117,7 @@ mod tests {
 
     #[test]
     fn test_query_phy() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_watch_devices() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_get_country() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_set_country() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn test_clear_country() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_create_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);
@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_destroy_iface() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(test_values.req_stream);
         pin_mut!(service_fut);

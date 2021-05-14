@@ -233,7 +233,7 @@ struct Opt {
 
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     if opt.is_child {
         let child_opts = child::ChildOptions {
             endpoint: opt.ep_name.unwrap(),

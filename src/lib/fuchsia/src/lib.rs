@@ -96,7 +96,7 @@ fn init_logging_with_threads(tag: Option<&'static str>) -> impl Drop {
 
     let (send, recv) = std::sync::mpsc::channel();
     let bg_thread = std::thread::spawn(move || {
-        let mut exec = fuchsia_async::Executor::new().expect("Failed to create executor");
+        let mut exec = fuchsia_async::LocalExecutor::new().expect("Failed to create executor");
         let on_interest_changes = diagnostics_log::init_publishing(tag).unwrap();
         let (on_interest_changes, cancel_interest) =
             futures::future::abortable(on_interest_changes);
@@ -128,7 +128,7 @@ where
     F: FnOnce() -> Fut,
     Fut: Future<Output = R> + 'static,
 {
-    fuchsia_async::Executor::new().expect("Failed to create executor").run_singlethreaded(f())
+    fuchsia_async::LocalExecutor::new().expect("Failed to create executor").run_singlethreaded(f())
 }
 
 /// Run an async main function with a multi threaded executor (containing `num_threads`).
@@ -139,7 +139,7 @@ where
     Fut: Future<Output = R> + Send + 'static,
     R: Send + 'static,
 {
-    fuchsia_async::Executor::new().expect("Failed to create executor").run(f(), num_threads)
+    fuchsia_async::SendExecutor::new().expect("Failed to create executor").run(f(), num_threads)
 }
 
 //
@@ -187,7 +187,7 @@ where
     R: fuchsia_async::test_support::TestResult,
 {
     fuchsia_async::test_support::run_until_stalled_test(
-        &mut fuchsia_async::Executor::new().expect("Failed to create executor"),
+        &mut fuchsia_async::TestExecutor::new().expect("Failed to create executor"),
         f,
     )
 }

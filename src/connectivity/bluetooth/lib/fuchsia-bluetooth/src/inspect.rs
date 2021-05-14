@@ -290,8 +290,8 @@ mod tests {
     /// Sets up an inspect test with an executor at timestamp `curr_time`.
     fn setup_inspect(
         curr_time: i64,
-    ) -> (fasync::Executor, fuchsia_inspect::Inspector, DataStreamInspect) {
-        let exec = fasync::Executor::new_with_fake_time().expect("creating an executor");
+    ) -> (fasync::TestExecutor, fuchsia_inspect::Inspector, DataStreamInspect) {
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("creating an executor");
         exec.set_fake_time(fasync::Time::from_nanos(curr_time));
         let inspector = fuchsia_inspect::Inspector::new();
         let d = DataStreamInspect::default()

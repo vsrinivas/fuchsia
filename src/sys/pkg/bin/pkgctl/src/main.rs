@@ -42,7 +42,7 @@ mod error;
 mod v1repoconf;
 
 pub fn main() -> Result<(), anyhow::Error> {
-    let mut executor = fasync::Executor::new()?;
+    let mut executor = fasync::LocalExecutor::new()?;
     let Args { command } = argh::from_env();
     exit(executor.run_singlethreaded(main_helper(command))?)
 }

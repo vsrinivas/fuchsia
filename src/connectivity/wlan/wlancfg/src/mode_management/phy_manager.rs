@@ -691,7 +691,7 @@ mod tests {
         super::*,
         fidl::endpoints,
         fidl_fuchsia_wlan_device as fidl_device, fidl_fuchsia_wlan_device_service as fidl_service,
-        fuchsia_async::{run_singlethreaded, Executor},
+        fuchsia_async::{run_singlethreaded, TestExecutor},
         fuchsia_inspect::{self as inspect, assert_data_tree},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
         futures::stream::StreamExt,
@@ -724,7 +724,7 @@ mod tests {
     /// Take in the service side of a DeviceService::QueryPhy request and respond with the given
     /// PhyInfo.
     fn send_query_phy_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut fidl_service::DeviceServiceRequestStream,
         phy_info: Option<fidl_device::PhyInfo>,
     ) {
@@ -752,7 +752,7 @@ mod tests {
     /// Create a PhyInfo object for unit testing.
     #[track_caller]
     fn send_query_iface_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut fidl_service::DeviceServiceRequestStream,
         iface_info: Option<&mut fidl_service::QueryIfaceResponse>,
     ) {
@@ -773,7 +773,7 @@ mod tests {
     /// provided optional iface ID.
     #[track_caller]
     fn send_create_iface_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut fidl_service::DeviceServiceRequestStream,
         iface_id: Option<u16>,
     ) {
@@ -802,7 +802,7 @@ mod tests {
     /// Handles the service side of a DeviceService::DestroyIface request by replying with the
     /// provided zx_status_t.
     fn send_destroy_iface_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut fidl_service::DeviceServiceRequestStream,
         return_status: fuchsia_zircon::zx_status_t,
     ) {
@@ -851,7 +851,7 @@ mod tests {
     /// PhyManager should have a new PhyContainer.
     #[test]
     fn add_valid_phy() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let fake_phy_id = 1;
@@ -881,7 +881,7 @@ mod tests {
     /// should not create and store a new PhyContainer.
     #[test]
     fn add_invalid_phy() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -902,7 +902,7 @@ mod tests {
     /// properties have changed.  The PhyManager in this case should update the associated PhyInfo.
     #[test]
     fn add_duplicate_phy() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -952,7 +952,7 @@ mod tests {
     /// case should remove the PhyContainer associated with the removed PHY ID.
     #[test]
     fn add_phy_after_create_all_client_ifaces() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1013,7 +1013,7 @@ mod tests {
     /// Tests the case where a new PHY is discovered after the country code has been set.
     #[test]
     fn test_add_phy_after_setting_country_code() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let fake_phy_id = 1;
@@ -1101,7 +1101,7 @@ mod tests {
     /// newly discovered iface to the existing PHY's list of client ifaces.
     #[test]
     fn on_iface_added() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1159,7 +1159,7 @@ mod tests {
     /// the PHY's list of client ifaces.
     #[test]
     fn on_iface_added_missing_phy() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1223,7 +1223,7 @@ mod tests {
     /// should simply ignore the duplicate iface ID and not append it to its list of clients.
     #[test]
     fn add_duplicate_iface() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1281,7 +1281,7 @@ mod tests {
     /// and not account for the iface ID.
     #[test]
     fn add_nonexistent_iface() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1482,7 +1482,7 @@ mod tests {
     #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
     #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
     fn get_configured_wpa3_client(wpa3_feature: fidl_common::DriverFeature) {
-        let _exec = Executor::new().expect("failed to create an executor");
+        let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1509,7 +1509,7 @@ mod tests {
     /// record of the iface ID in the PhyManager.
     #[test]
     fn destroy_all_client_ifaces() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1551,7 +1551,7 @@ mod tests {
     /// present but an AP iface is present.  The expectation is that the AP iface is left intact.
     #[test]
     fn destroy_all_client_ifaces_no_clients() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1589,7 +1589,7 @@ mod tests {
     /// expectation is that the PhyManager will return None in this case.
     #[test]
     fn get_ap_no_phys() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1604,7 +1604,7 @@ mod tests {
     /// a new AP iface and returns its ID to the caller.
     #[test]
     fn get_unconfigured_ap() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1640,7 +1640,7 @@ mod tests {
     /// iface ID of the existing AP iface.
     #[test]
     fn get_configured_ap() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1671,7 +1671,7 @@ mod tests {
     /// a client interface.  The PhyManager should return None.
     #[test]
     fn get_ap_no_compatible_phys() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1694,7 +1694,7 @@ mod tests {
     /// should retain the record of the PHY, but the AP iface ID should be removed.
     #[test]
     fn stop_valid_ap_iface() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1733,7 +1733,7 @@ mod tests {
     /// ID is unaffected.
     #[test]
     fn stop_invalid_ap_iface() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1773,7 +1773,7 @@ mod tests {
     /// the records of the iface IDs should be removed from the PhyContainer.
     #[test]
     fn stop_all_ap_ifaces() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1817,7 +1817,7 @@ mod tests {
     /// PhyManager
     #[test]
     fn stop_all_ap_ifaces_with_client() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1855,7 +1855,7 @@ mod tests {
     /// interface requests.
     #[test]
     fn test_suggest_ap_mac() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1907,7 +1907,7 @@ mod tests {
 
     #[test]
     fn test_suggested_mac_does_not_apply_to_client() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1978,7 +1978,7 @@ mod tests {
     /// return a single element `Vec`, with the appropriate ID.
     #[test]
     fn get_phy_ids_single_phy() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -1998,7 +1998,7 @@ mod tests {
     /// return a two-element `Vec`, containing the appropriate IDs. Ordering is not guaranteed.
     #[test]
     fn get_phy_ids_two_phys() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -2049,7 +2049,7 @@ mod tests {
     /// country code update.
     #[test]
     fn test_set_country_code() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -2134,7 +2134,7 @@ mod tests {
     // Tests the case where setting the country code is unsuccessful.
     #[test]
     fn test_setting_country_code_fails() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -2186,7 +2186,7 @@ mod tests {
     /// Tests the case where multiple client interfaces need to be recovered.
     #[test]
     fn test_recover_client_interfaces_succeeds() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
         let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
@@ -2275,7 +2275,7 @@ mod tests {
     /// Tests the case where a client interface needs to be recovered and recovery fails.
     #[test]
     fn test_recover_client_interfaces_fails() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
         let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
@@ -2377,7 +2377,7 @@ mod tests {
     /// caller requests attempts to recover client interfaces.
     #[test]
     fn test_recover_client_interfaces_while_disabled() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -2410,7 +2410,7 @@ mod tests {
     #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
     #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
     fn has_wpa3_client_iface(wpa3_feature: fidl_common::DriverFeature) {
-        let _exec = Executor::new().expect("failed to create an executor");
+        let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Create a phy with the feature that indicates WPA3 support.
@@ -2438,7 +2438,7 @@ mod tests {
 
     #[test]
     fn has_no_wpa3_capable_client_iface() {
-        let _exec = Executor::new().expect("failed to create an executor");
+        let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         // Create a phy with driver features, but not the one that indicates WPA3 support.
         let driver_features =
@@ -2457,7 +2457,7 @@ mod tests {
     /// Tests reporting of client connections status when client connections are enabled.
     #[test]
     fn test_client_connections_enabled_when_enabled() {
-        let _exec = Executor::new().expect("failed to create an executor");
+        let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
@@ -2468,7 +2468,7 @@ mod tests {
     /// Tests reporting of client connections status when client connections are disabled.
     #[test]
     fn test_client_connections_enabled_when_disabled() {
-        let _exec = Executor::new().expect("failed to create an executor");
+        let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 

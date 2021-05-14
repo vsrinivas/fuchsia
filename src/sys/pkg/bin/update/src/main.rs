@@ -38,7 +38,7 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
 }
 
 pub fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new()?;
+    let mut executor = fasync::LocalExecutor::new()?;
     let args::Update { cmd } = argh::from_env();
     executor.run_singlethreaded(handle_cmd(cmd))
 }

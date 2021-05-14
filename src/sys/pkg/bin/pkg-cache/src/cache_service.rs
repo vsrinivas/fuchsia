@@ -979,7 +979,7 @@ mod iter_tests {
     proptest! {
         #[test]
         fn blob_info_iterator_yields_expected_entries(items: Vec<BlobInfo>) {
-            let mut executor = fuchsia_async::Executor::new().unwrap();
+            let mut executor = fuchsia_async::TestExecutor::new().unwrap();
             executor.run_singlethreaded(async move {
                 let (proxy, stream) =
                     fidl::endpoints::create_proxy_and_stream::<BlobInfoIteratorMarker>().unwrap();
@@ -2576,7 +2576,7 @@ mod serve_write_blob_tests {
 
     #[test]
     fn close_closes_inner_blob_first() {
-        let mut executor = fuchsia_async::Executor::new().unwrap();
+        let mut executor = fuchsia_async::TestExecutor::new().unwrap();
 
         let (pkgfs_blob, mut pkgfs_blob_stream) = OpenBlob::new_test(BlobKind::Data);
 
@@ -2736,7 +2736,7 @@ mod serve_write_blob_tests {
 
         #[test]
         fn allows_close_in_any_state(initial_state: InitialState) {
-            let mut executor = fuchsia_async::Executor::new().unwrap();
+            let mut executor = fuchsia_async::TestExecutor::new().unwrap();
             let () = executor.run_singlethreaded(async move {
 
                 let res = do_serve_write_blob_with(|proxy, mut stream| async move {
@@ -2757,7 +2757,7 @@ mod serve_write_blob_tests {
             // Skip stub requests that are the expected request for this initial state.
             prop_assume!(initial_state.expected_method_name() != bad_request.method_name());
 
-            let mut executor = fuchsia_async::Executor::new().unwrap();
+            let mut executor = fuchsia_async::TestExecutor::new().unwrap();
             let () = executor.run_singlethreaded(async move {
 
                 let res = do_serve_write_blob_with(|proxy, mut stream| async move {

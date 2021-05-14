@@ -965,7 +965,7 @@ mod historical_max_cpu_temperature_tests {
     /// temperature at the end of each N samples.
     #[test]
     fn test_reset_max_temperature_after_sample_count() {
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let inspector = inspect::Inspector::new();
         let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 10);
 
@@ -997,7 +997,7 @@ mod historical_max_cpu_temperature_tests {
     /// temperature samples are observed.
     #[test]
     fn test_dispatch_reading_after_n_samples() {
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let inspector = inspect::Inspector::new();
         let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 10);
 
@@ -1040,7 +1040,7 @@ mod historical_max_cpu_temperature_tests {
     /// into Inspect.
     #[test]
     fn test_max_record_count() {
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let inspector = inspect::Inspector::new();
         let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 2);
 
@@ -1073,7 +1073,7 @@ mod historical_max_cpu_temperature_tests {
     /// Tests that the actual max value is recorded after varying temperature values were logged.
     #[test]
     fn test_max_temperature_selection() {
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let inspector = inspect::Inspector::new();
         let mut max_temperatures = HistoricalMaxCpuTemperature::new(inspector.root(), 3);
 
@@ -1632,7 +1632,7 @@ pub mod tests {
     /// temperature entries were made to the platform_metrics Inspect node.
     #[test]
     fn test_inspect_platform_metrics() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Seconds(0.0).into());
 
         let mut mock_maker = MockNodeMaker::new();
@@ -1731,7 +1731,7 @@ pub mod tests {
 
         // The executor's fake time must be set before node creation to ensure the periodic timer's
         // deadline is properly initialized.
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        let executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Seconds(0.0).into());
 
         let mock_metrics = MockCobaltMetrics::new();
@@ -1792,7 +1792,7 @@ pub mod tests {
         // 3. Iterate the ThermalPolicy.
         // 4. Verify metric expectations.
         struct TimeStepper<'a> {
-            executor: fasync::Executor,
+            executor: fasync::TestExecutor,
             node: Rc<ThermalPolicy>,
             node_futures: FuturesUnordered<LocalBoxFuture<'a, ()>>,
         }

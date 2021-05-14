@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn process_watch_requests_sends_first_none() {
-        let mut exec = fasync::Executor::new().expect("Failed to create executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create executor");
         let temp_dir = TempDir::new_in("/cache/").expect("failed to create temporary directory");
         let path = temp_dir.path().join("regulatory_region.json");
         let hub = PubSubHub::new(path);
@@ -176,7 +176,7 @@ mod tests {
 
     #[test]
     fn first_update_is_current_value() {
-        let mut exec = fasync::Executor::new().expect("Failed to create executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create executor");
         let temp_dir = TempDir::new_in("/cache/").expect("failed to create temporary directory");
         let path = temp_dir.path().join("regulatory_region.json");
         let hub = PubSubHub::new(path);

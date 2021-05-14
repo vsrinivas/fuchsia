@@ -817,14 +817,18 @@ mod tests {
             super::*,
             fidl::endpoints::create_proxy_and_stream,
             fidl_fuchsia_test::CaseListenerMarker,
-            fuchsia_async::{pin_mut, Executor},
+            fuchsia_async::{pin_mut, TestExecutor},
             fuchsia_zircon::DurationNum,
             matches::assert_matches,
             pretty_assertions::assert_eq,
             std::ops::Add,
         };
 
-        fn send_msg(executor: &mut fuchsia_async::Executor, log_buffer: &mut LogBuffer, msg: &str) {
+        fn send_msg(
+            executor: &mut fuchsia_async::TestExecutor,
+            log_buffer: &mut LogBuffer,
+            msg: &str,
+        ) {
             let f = async {
                 log_buffer.send_log(&msg).await.unwrap();
             };
@@ -833,7 +837,7 @@ mod tests {
         }
 
         fn recv_msg<T>(
-            executor: &mut fuchsia_async::Executor,
+            executor: &mut fuchsia_async::TestExecutor,
             recv: &mut mpsc::Receiver<T>,
         ) -> Poll<Option<T>> {
             let f = recv.next();
@@ -843,7 +847,7 @@ mod tests {
 
         #[test]
         fn log_buffer_without_timeout() {
-            let mut executor = Executor::new_with_fake_time().unwrap();
+            let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
             let mut log_buffer =
                 LogBuffer::new("my_test".into(), std::time::Duration::from_secs(5), sender, 100);
@@ -870,7 +874,7 @@ mod tests {
 
         #[test]
         fn log_buffer_with_timeout() {
-            let mut executor = Executor::new_with_fake_time().unwrap();
+            let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
             let mut log_buffer =
                 LogBuffer::new("my_test".into(), std::time::Duration::from_secs(5), sender, 100);
@@ -913,7 +917,7 @@ mod tests {
 
         #[test]
         fn log_buffer_capacity_reached() {
-            let mut executor = Executor::new_with_fake_time().unwrap();
+            let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sender, mut recv) = mpsc::channel(1);
             let mut log_buffer =
                 LogBuffer::new("my_test".into(), std::time::Duration::from_secs(5), sender, 10);
@@ -947,7 +951,7 @@ mod tests {
 
         #[test]
         fn collect_test_stdout_when_socket_closed() {
-            let mut executor = Executor::new_with_fake_time().unwrap();
+            let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sock_server, sock_client) = fidl::Socket::create(fidl::SocketOpts::STREAM)
                 .expect("Failed while creating socket");
 
@@ -981,7 +985,7 @@ mod tests {
 
         #[test]
         fn emit_excessive_runtime_event() {
-            let mut executor = Executor::new_with_fake_time().unwrap();
+            let mut executor = TestExecutor::new_with_fake_time().unwrap();
             let (sock_server, sock_client) = fidl::Socket::create(fidl::SocketOpts::STREAM)
                 .expect("Failed while creating socket");
             let (listener_proxy, listener_stream) =

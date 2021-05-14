@@ -270,7 +270,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn run_test() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let launcher = launcher().context("Error connecting to application launcher")?;
 
     let mut fs = ServiceFs::new_local();

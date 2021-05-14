@@ -15,7 +15,7 @@ use crate::policy::*;
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
 
     let fut = async {
         match opt {

@@ -253,13 +253,13 @@ mod tests {
 
     #[test]
     fn new_gain_control_succeeds() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
         GainControl::new().expect("a success value");
     }
 
     #[test]
     fn get_client_end_leaves_field_empty() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
 
         let mut control = GainControl::new().expect("a success value");
         assert!(control.client_end.is_some());
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn stream_returns_pending_without_client_interaction() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let mut ctrl = GainControl::new().unwrap();
         let result = exec.run_until_stalled(&mut ctrl.next());
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn speaker_hanging_get_produces_values() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let mut ctrl = GainControl::new().unwrap();
         let proxy = ctrl.get_client_end().unwrap().into_proxy().unwrap();
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn microphone_hanging_get_produces_values() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let mut ctrl = GainControl::new().unwrap();
         let proxy = ctrl.get_client_end().unwrap().into_proxy().unwrap();

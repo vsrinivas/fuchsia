@@ -560,7 +560,7 @@ mod tests {
     #[test]
     fn call_is_active() {
         // executor must be created before fidl endpoints can be created
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
         let (proxy, _) = fidl::endpoints::create_proxy::<CallMarker>().unwrap();
 
         let mut call = CallEntry::new(proxy, "1".into(), CallState::IncomingRinging);
@@ -595,7 +595,7 @@ mod tests {
 
     #[test]
     fn calls_should_ring_succeeds() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (mut calls, _peer_handler, mut call_stream, _idx, _num) = setup_ongoing_call();
         assert!(calls.should_ring());
@@ -691,7 +691,7 @@ mod tests {
     /// Make a new call, manually driving async execution.
     #[track_caller]
     fn new_call(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stream: &mut PeerHandlerRequestStream,
         num: &str,
         state: CallState,
@@ -710,7 +710,11 @@ mod tests {
     /// Update call state, manually driving async execution.
     /// Expects a watchstate call to be the next pending item on `stream`.
     #[track_caller]
-    fn update_call(exec: &mut fasync::Executor, stream: &mut CallRequestStream, state: CallState) {
+    fn update_call(
+        exec: &mut fasync::TestExecutor,
+        stream: &mut CallRequestStream,
+        state: CallState,
+    ) {
         // Get WatchState request for call
         let responder = match exec.run_until_stalled(&mut stream.next()) {
             Poll::Ready(Some(Ok(CallRequest::WatchState { responder, .. }))) => responder,
@@ -722,7 +726,7 @@ mod tests {
 
     /// Assert the Calls stream is pending, manually driving async execution.
     #[track_caller]
-    fn assert_calls_pending(exec: &mut fasync::Executor, calls: &mut Calls) {
+    fn assert_calls_pending(exec: &mut fasync::TestExecutor, calls: &mut Calls) {
         let result = exec.run_until_stalled(&mut calls.next());
         assert!(result.is_pending());
     }
@@ -731,7 +735,7 @@ mod tests {
     /// Panics if the stream does not produce some item.
     #[track_caller]
     fn assert_calls_indicators(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         calls: &mut Calls,
     ) -> CallIndicatorsUpdates {
         let result = exec.run_until_stalled(&mut calls.next());
@@ -745,7 +749,7 @@ mod tests {
     /// Pending.  Returns the most recent indicators if any were sent.
     #[track_caller]
     fn poll_calls_until_pending(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         calls: &mut Calls,
     ) -> Option<CallIndicatorsUpdates> {
         let mut indicators = None;
@@ -760,7 +764,7 @@ mod tests {
 
     #[test]
     fn calls_is_call_active() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (proxy, mut peer_stream) =
             fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
@@ -797,7 +801,7 @@ mod tests {
         // when the states of those calls are modified, and finally, when both calls have been
         // removed from the stream.
 
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (mut calls, mut handler_stream, mut call_1, _idx_1, _num_1) = setup_ongoing_call();
 

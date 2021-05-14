@@ -127,7 +127,7 @@ impl Stream for EncodedStream {
                 }
                 Some(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
                 Some(Ok(bytes)) => {
-                    trace::instant!( "bt-a2dp-source", "Media:PacketReceived", 
+                    trace::instant!( "bt-a2dp-source", "Media:PacketReceived",
                         trace::Scope::Thread, "bytes" => bytes.len() as u64);
                     self.encoder_input_buffers.push_back(bytes)
                 }
@@ -410,7 +410,7 @@ mod encoder_tests {
 
     #[test]
     fn test_sbc_encodes_correctly() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let sbc_capability = &avdtp::ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_SBC,
@@ -424,7 +424,7 @@ mod encoder_tests {
 
     #[test]
     fn test_aac_encodes_correctly() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let aac_capability = &avdtp::ServiceCapability::MediaCodec {
             media_type: avdtp::MediaType::Audio,
             codec_type: avdtp::MediaCodecType::AUDIO_AAC,

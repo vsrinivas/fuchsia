@@ -324,7 +324,7 @@ pub mod tests {
 
     #[test]
     fn test_caching() -> Result<(), Error> {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Seconds(0.0).into());
 
         let sensor_temperature = Rc::new(Cell::new(Celsius(0.0)));
@@ -333,7 +333,7 @@ pub mod tests {
         let get_temperature = move || sensor_temperature_clone.get();
         let node = setup_test_node(get_temperature, zx::Duration::from_millis(500));
 
-        let run = move |executor: &mut fasync::Executor, duration_ms: i64| {
+        let run = move |executor: &mut fasync::TestExecutor, duration_ms: i64| {
             executor.set_fake_time(executor.now() + zx::Duration::from_millis(duration_ms));
 
             let poll =

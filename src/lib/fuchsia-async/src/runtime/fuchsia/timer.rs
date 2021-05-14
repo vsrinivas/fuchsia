@@ -157,14 +157,14 @@ mod test {
     use super::*;
     use crate::{
         temp::{Either, TempFutureExt},
-        Executor, Timer,
+        LocalExecutor, SendExecutor, TestExecutor, Timer,
     };
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
 
     #[test]
     fn shorter_fires_first() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = LocalExecutor::new().unwrap();
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
         match exec.run_singlethreaded(shorter.select(longer)) {
@@ -175,7 +175,7 @@ mod test {
 
     #[test]
     fn shorter_fires_first_multithreaded() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = SendExecutor::new().unwrap();
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
         match exec.run(shorter.select(longer), 4) {
@@ -186,7 +186,7 @@ mod test {
 
     #[test]
     fn fires_after_timeout() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let deadline = Time::after(5.seconds());
         let mut future = Timer::new(deadline);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
@@ -196,7 +196,7 @@ mod test {
 
     #[test]
     fn interval() {
-        let mut exec = Executor::new().unwrap();
+        let mut exec = TestExecutor::new().unwrap();
         let start = Time::now();
 
         let counter = Arc::new(::std::sync::atomic::AtomicUsize::new(0));
@@ -233,7 +233,7 @@ mod test {
 
     #[test]
     fn timer_fake_time() {
-        let mut exec = Executor::new_with_fake_time().unwrap();
+        let mut exec = LocalExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(Time::from_nanos(0));
 
         let mut timer = Timer::new(Time::after(1.seconds()));

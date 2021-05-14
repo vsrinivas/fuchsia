@@ -281,7 +281,7 @@ async fn setup(
 /// Tests listening to all MediaSessions.
 /// Tests that passthrough commands are routed to the right MediaSession.
 fn test_listen_to_media_sessions() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+    let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
     exec.set_fake_time(fasync::Time::from_nanos(555555555));
 
     let test_fut = async {
@@ -350,7 +350,7 @@ fn test_listen_to_media_sessions() -> Result<(), Error> {
 /// This test simulates end-to-end behavior of the AVRCP Target component. It tests a
 /// fake client (usually AVRCP component) sending procedures and verifies the results.
 fn test_media_and_avrcp_listener() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+    let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
     exec.set_fake_time(fasync::Time::from_nanos(555555555));
 
     let test_fut = async {

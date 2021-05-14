@@ -33,8 +33,8 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new().read(true).write(true).open(path).map_err(Into::into)
 }
 
-fn get_proxy() -> Result<(fasync::Executor, wlan::PhyProxy), Error> {
-    let executor = fasync::Executor::new().context("error creating event loop")?;
+fn get_proxy() -> Result<(fasync::TestExecutor, wlan::PhyProxy), Error> {
+    let executor = fasync::TestExecutor::new().context("error creating event loop")?;
 
     let phy = wlan_dev::RealDeviceEnv::device_from_path(&dev_wlanphy())?;
     let proxy = wlan_dev::connect_wlan_phy(&phy)?;

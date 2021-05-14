@@ -541,7 +541,7 @@ mod tests {
     proptest! {
         #[test]
         fn updates(a in arb_network(), b in arb_network()) {
-            let mut exec = fasync::Executor::new().unwrap();
+            let mut exec = fasync::TestExecutor::new().unwrap();
             let mut task = setup_peer_task(None).0;
 
             task.network = a.clone();
@@ -631,7 +631,7 @@ mod tests {
     /// Expects a message to be received by the peer. This expectation does not validate the
     /// contents of the data received.
     #[track_caller]
-    fn expect_message_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
+    fn expect_message_received_by_peer(exec: &mut fasync::TestExecutor, remote: &mut Channel) {
         let mut vec = Vec::new();
         let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
         assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     fn peer_task_drives_procedure() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut peer, _sender, receiver, _profile) = setup_peer_task(None);
 
         // Set up the RFCOMM connection.
@@ -687,7 +687,7 @@ mod tests {
         };
 
         // Set up the executor, peer, and background call manager task
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let state = SlcState {
             ag_indicator_events_reporting: AgIndicatorsReporting::new_enabled(),
             ..SlcState::default()
@@ -753,7 +753,7 @@ mod tests {
 
     #[test]
     fn terminated_slc_ends_peer_task() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (connection, remote) = create_and_initialize_slc(SlcState::default());
         let (peer, _sender, receiver, _profile) = setup_peer_task(Some(connection));
 
@@ -774,7 +774,7 @@ mod tests {
 
     #[test]
     fn error_in_slc_ends_peer_task() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (connection, remote) = create_and_initialize_slc(SlcState::default());
         let (peer, _sender, receiver, _profile) = setup_peer_task(Some(connection));
 
@@ -851,7 +851,7 @@ mod tests {
     #[test]
     fn call_updates_update_ringer_state() {
         // Set up the executor, peer, and background call manager task
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Setup the peer task with the specified SlcState to enable indicator events.
         let state = SlcState {
@@ -904,7 +904,7 @@ mod tests {
     #[test]
     fn incoming_hf_indicator_battery_level_is_propagated_to_peer_handler_stream() {
         // Set up the executor, peer, and background call manager task
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Setup the peer task with the specified SlcState to enable the battery level HF indicator.
         let mut hf_indicators = HfIndicators::default();
@@ -977,7 +977,7 @@ mod tests {
     #[test]
     fn call_updates_produce_call_waiting() {
         // Set up the executor, peer, and background call manager task
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let raw_number = "1234567";
         let number = Number::from(raw_number);

@@ -664,7 +664,7 @@ pub mod tests {
         let trip_points_client2 = make_trip_points([(1, 1), (25, 25), (99, 99), (100, 100)]);
 
         // Set up the node and executor
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let node = setup_test_node();
 
         // Set up the Actor clients
@@ -739,7 +739,7 @@ pub mod tests {
         let trip_points = make_trip_points([(50, 50)]);
         let expected_thermal_state = 0;
 
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let node = setup_test_node();
 
         // Set up the actor stream with trip_points: [50]

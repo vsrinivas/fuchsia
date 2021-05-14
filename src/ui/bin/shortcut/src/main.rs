@@ -47,8 +47,8 @@ async fn run() -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["shortcut"]).expect("shortcut syslog init should not fail");
-    let mut executor =
-        fasync::Executor::new().context("Creating fuchsia_async executor for Shortcut failed")?;
+    let mut executor = fasync::SendExecutor::new()
+        .context("Creating fuchsia_async executor for Shortcut failed")?;
 
     executor.run(run(), SERVER_THREADS)
 }

@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init().expect("Can't init logger");
     info!("Starting omaha client...");
 
-    let mut executor = fuchsia_async::Executor::new().context("Error creating executor")?;
+    let mut executor = fuchsia_async::LocalExecutor::new().context("Error creating executor")?;
 
     executor.run_singlethreaded(main_inner()).map_err(|err| {
         // Use anyhow to print the error chain.

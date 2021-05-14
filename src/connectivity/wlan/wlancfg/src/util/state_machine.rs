@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn state_machine() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (sender, receiver) = mpsc::unbounded();
         let mut state_machine = sum_state(0, receiver).into_state_machine();
 

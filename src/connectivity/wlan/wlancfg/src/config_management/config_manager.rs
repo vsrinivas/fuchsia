@@ -972,7 +972,7 @@ mod tests {
     fn lookup_compatible_does_not_return_wpa3_psk(
         wpa3_detailed_security: types::SecurityTypeDetailed,
     ) {
-        let mut exec = fasync::Executor::new().expect("failed to create executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
@@ -1916,7 +1916,7 @@ mod tests {
 
     #[test]
     fn test_store_waits_for_stash() {
-        let mut exec = fasync::Executor::new().expect("failed to create executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join(rand_string());
         let tmp_path = temp_dir.path().join(rand_string());

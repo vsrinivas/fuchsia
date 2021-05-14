@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn rfcomm_task_finishes_when_peer_disconnects() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let server_channel = ServerChannelNumber(5);
         let state = Arc::new(RwLock::new(ProfileState::new()));
@@ -237,7 +237,7 @@ mod tests {
 
     #[test]
     fn rfcomm_task_finishes_when_tool_closes_channel() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let server_channel = ServerChannelNumber(5);
         let state = Arc::new(RwLock::new(ProfileState::new()));

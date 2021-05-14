@@ -22,7 +22,7 @@ const SERVER_PORT: &str = "80";
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["sl4f"]).expect("Can't init logger");
     fx_log_info!("Starting sl4f server");
-    let mut executor = fasync::Executor::new().expect("Failed to create an executor!");
+    let mut executor = fasync::LocalExecutor::new().expect("Failed to create an executor!");
 
     let address = format!("{}:{}", SERVER_IP, SERVER_PORT);
     fx_log_info!("Now listening on: {:?}", address);

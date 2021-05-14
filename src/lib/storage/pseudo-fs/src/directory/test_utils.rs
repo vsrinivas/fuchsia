@@ -26,7 +26,7 @@ use {
     byteorder::{LittleEndian, WriteBytesExt},
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_FILENAME},
-    fuchsia_async::Executor,
+    fuchsia_async::TestExecutor,
     futures::{channel::mpsc, future::FutureExt, select, StreamExt},
     std::{future::Future, io::Write, iter, task::Poll},
     void::unreachable,
@@ -62,7 +62,7 @@ pub fn run_server_client_with_mode<GetClientRes>(
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("Executor creation failed");
 
     run_server_client_with_mode_and_executor(
         flags,
@@ -80,7 +80,7 @@ pub fn run_server_client_with_mode<GetClientRes>(
 /// provided boolean.
 pub fn run_server_client_with_executor<GetClientRes>(
     flags: u32,
-    exec: Executor,
+    exec: TestExecutor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
     executor: impl FnOnce(&mut dyn FnMut(bool) -> ()),
@@ -95,7 +95,7 @@ pub fn run_server_client_with_executor<GetClientRes>(
 pub fn run_server_client_with_mode_and_executor<GetClientRes>(
     flags: u32,
     mode: u32,
-    exec: Executor,
+    exec: TestExecutor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
     executor: impl FnOnce(&mut dyn FnMut(bool)),
@@ -116,7 +116,7 @@ pub fn run_server_client_with_mode_and_executor<GetClientRes>(
 fn run_server_client_with_mode_and_executor_dyn<'a>(
     flags: u32,
     mode: u32,
-    mut exec: Executor,
+    mut exec: TestExecutor,
     mut server: Box<dyn DirectoryEntry + 'a>,
     get_client: AsyncFnOnce<'a, DirectoryProxy, ()>,
     executor: Box<dyn FnOnce(&mut dyn FnMut(bool)) + 'a>,
@@ -172,7 +172,7 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
 ) where
     GetClientRes: Future<Output = ()>,
 {
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("Executor creation failed");
 
     run_server_client_with_open_requests_channel_and_executor(
         exec,
@@ -196,7 +196,7 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
 /// For example, a client that wants to make sure that it receives a particular response from the
 /// server by certain point, in case the response is asynchronous.
 pub fn run_server_client_with_open_requests_channel_and_executor<'path, GetClientRes>(
-    exec: Executor,
+    exec: TestExecutor,
     server: impl DirectoryEntry,
     get_client: impl FnOnce(OpenRequestSender<'path>) -> GetClientRes,
     executor: impl FnOnce(&mut dyn FnMut(bool)),
@@ -213,7 +213,7 @@ pub fn run_server_client_with_open_requests_channel_and_executor<'path, GetClien
 
 // helper to prevent monomorphization
 fn run_server_client_with_open_requests_channel_and_executor_dyn<'a, 'path: 'a>(
-    mut exec: Executor,
+    mut exec: TestExecutor,
     mut server: Box<dyn DirectoryEntry + 'a>,
     get_client: AsyncFnOnce<'a, OpenRequestSender<'path>, ()>,
     executor: Box<dyn FnOnce(&mut dyn FnMut(bool)) + 'a>,

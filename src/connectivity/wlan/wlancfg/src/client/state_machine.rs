@@ -796,7 +796,7 @@ mod tests {
 
     /// Move stash requests forward so that a save request can progress.
     fn process_stash_write(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stash_server: &mut fidl_stash::StoreAccessorRequestStream,
     ) {
         assert_variant!(
@@ -817,7 +817,7 @@ mod tests {
 
     #[test]
     fn connecting_state_successfully_connects() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
         set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -982,7 +982,7 @@ mod tests {
 
     #[test]
     fn connecting_state_successfully_scans_and_connects() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
         set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -1172,7 +1172,7 @@ mod tests {
         wpa3_supported: bool,
         type_: types::SecurityType,
     ) {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
         set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -1288,7 +1288,7 @@ mod tests {
 
     #[test]
     fn connecting_state_fails_to_connect_and_retries() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = "bar";
@@ -1436,7 +1436,7 @@ mod tests {
 
     #[test]
     fn connecting_state_fails_to_scan_and_retries() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
         set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -1630,7 +1630,7 @@ mod tests {
 
     #[test]
     fn connecting_state_fails_to_connect_at_max_retries() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Don't use test_values() because of issue with KnownEssStore
         set_logger_for_test();
         let (update_sender, mut update_receiver) = mpsc::unbounded();
@@ -1771,7 +1771,7 @@ mod tests {
 
     #[test]
     fn connecting_state_fails_to_connect_with_bad_credentials() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Don't use test_values() because of issue with KnownEssStore
         set_logger_for_test();
         let (update_sender, mut update_receiver) = mpsc::unbounded();
@@ -1913,7 +1913,7 @@ mod tests {
 
     #[test]
     fn connecting_state_gets_duplicate_connect_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let next_network_ssid = "bar";
@@ -2047,7 +2047,7 @@ mod tests {
 
     #[test]
     fn connecting_state_gets_different_connect_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = "foo";
@@ -2247,7 +2247,7 @@ mod tests {
 
     #[test]
     fn connecting_state_gets_disconnect_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = "foo";
@@ -2366,7 +2366,7 @@ mod tests {
 
     #[test]
     fn connecting_state_has_broken_sme() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = "foo";
@@ -2407,7 +2407,7 @@ mod tests {
 
     #[test]
     fn connected_state_gets_disconnect_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "test";
@@ -2508,7 +2508,7 @@ mod tests {
 
     #[test]
     fn connected_state_gets_duplicate_connect_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "test";
@@ -2579,7 +2579,7 @@ mod tests {
 
     #[test]
     fn connected_state_gets_different_connect_request() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let first_network_ssid = "foo";
@@ -2760,7 +2760,7 @@ mod tests {
 
     #[test]
     fn connected_state_detects_network_disconnect() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
         set_logger_for_test();
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
@@ -2950,7 +2950,7 @@ mod tests {
 
     #[test]
     fn connected_state_detects_sme_reconnect() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let network_ssid = "foo";
@@ -3042,7 +3042,7 @@ mod tests {
 
     #[test]
     fn disconnecting_state_completes_and_exits() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let (sender, mut receiver) = oneshot::channel();
@@ -3085,7 +3085,7 @@ mod tests {
 
     #[test]
     fn disconnecting_state_completes_disconnect_to_connecting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let previous_network_ssid = "foo";
@@ -3196,7 +3196,7 @@ mod tests {
 
     #[test]
     fn disconnecting_state_has_broken_sme() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
 
         let (sender, mut receiver) = oneshot::channel();
@@ -3222,7 +3222,7 @@ mod tests {
 
     #[test]
     fn serve_loop_handles_startup() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
@@ -3282,7 +3282,7 @@ mod tests {
 
     #[test]
     fn serve_loop_handles_sme_disappearance() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
 
@@ -3348,7 +3348,7 @@ mod tests {
 
     #[test]
     fn serve_loop_handles_disconnect() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();
@@ -3478,7 +3478,7 @@ mod tests {
 
     #[test]
     fn serve_loop_handles_state_machine_error() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let sme_proxy = test_values.common_options.proxy;
         let sme_event_stream = sme_proxy.take_event_stream();

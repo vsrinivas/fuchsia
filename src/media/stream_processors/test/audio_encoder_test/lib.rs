@@ -70,7 +70,7 @@ fn sbc_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(sbc_tests.run())
+        fasync::TestExecutor::new().unwrap().run_singlethreaded(sbc_tests.run())
     })
 }
 
@@ -110,7 +110,7 @@ fn aac_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(aac_raw_tests.run())?;
+        fasync::TestExecutor::new().unwrap().run_singlethreaded(aac_raw_tests.run())?;
 
         // Test the MPEG4 AAC_LC variant. This affects encoder behavior but in this test case the
         // resulting bit streams are identical.
@@ -147,7 +147,7 @@ fn aac_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(aac_raw_tests.run())
+        fasync::TestExecutor::new().unwrap().run_singlethreaded(aac_raw_tests.run())
     })
 }
 
@@ -187,7 +187,7 @@ fn aac_adts_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(aac_adts_tests.run())
+        fasync::TestExecutor::new().unwrap().run_singlethreaded(aac_adts_tests.run())
     })
 }
 
@@ -227,7 +227,9 @@ fn aac_latm_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(aac_latm_with_mux_config_test.run())?;
+        fasync::TestExecutor::new()
+            .unwrap()
+            .run_singlethreaded(aac_latm_with_mux_config_test.run())?;
 
         let aac_latm_without_mux_config_test = AudioEncoderTestCase {
             input_framelength: 1024,
@@ -262,6 +264,8 @@ fn aac_latm_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(aac_latm_without_mux_config_test.run())
+        fasync::TestExecutor::new()
+            .unwrap()
+            .run_singlethreaded(aac_latm_without_mux_config_test.run())
     })
 }

@@ -297,7 +297,7 @@ mod tests {
         F::Output: std::fmt::Debug + PartialEq + Eq,
     {
         let mut future = future.boxed();
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         for _ in 0..pending_count {
             assert_eq!(executor.run_until_stalled(&mut future), Poll::Pending);

@@ -387,7 +387,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_rejects_unsupported_configurations() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut builder = TestMediaTaskBuilder::new_reconfigurable();
         let mut stream =
@@ -483,7 +483,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_reconfigure_runner_fails() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut builder = TestMediaTaskBuilder::new();
         let mut stream =
@@ -563,7 +563,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_suspend_stops_media_task() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut task_builder = TestMediaTaskBuilder::new();
         let mut stream = Stream::build(
@@ -620,7 +620,7 @@ pub(crate) mod tests {
 
     #[test]
     fn test_media_task_ending_ends_future() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         let mut task_builder = TestMediaTaskBuilder::new();
         let mut stream = Stream::build(

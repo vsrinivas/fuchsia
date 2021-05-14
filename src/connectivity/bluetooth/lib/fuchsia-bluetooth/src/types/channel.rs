@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn test_channel_create_and_write() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
         let (recv, send) = Channel::create();
 
         let mut vec = Vec::new();
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_channel_from_fidl() {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
         let empty = bredr::Channel::EMPTY;
         assert!(Channel::try_from(empty).is_err());
 
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_channel_closed() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (recv, send) = Channel::create();
 
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_direction_ext() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let no_ext = bredr::Channel {
@@ -436,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_flush_timeout() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let no_ext = bredr::Channel {

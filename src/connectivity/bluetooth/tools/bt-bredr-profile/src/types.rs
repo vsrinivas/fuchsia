@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn send_rfcomm_data_is_received_by_peer() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let mut state = ProfileState::new();
         assert!(state.rfcomm.active_channels.is_empty());

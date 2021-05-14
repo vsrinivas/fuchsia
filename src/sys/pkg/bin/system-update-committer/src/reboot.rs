@@ -41,7 +41,7 @@ mod tests {
 
     #[test]
     fn test_wait_and_reboot_success() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         // Create a mock reboot service.
         let (sender, recv) = oneshot::channel();

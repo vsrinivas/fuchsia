@@ -896,13 +896,13 @@ mod tests {
 
         const NON_ETHERNET_INTERFACE_NAME: &str = "test01";
 
-        let mut exec =
-            fasync::Executor::new_with_fake_time().expect("failed to create fake-time executor");
+        let mut exec = fasync::TestExecutor::new_with_fake_time()
+            .expect("failed to create fake-time executor");
         let time = fasync::Time::from_nanos(1_000_000_000);
         let () = exec.set_fake_time(time.into());
 
         fn run_compute_state(
-            exec: &mut fasync::Executor,
+            exec: &mut fasync::TestExecutor,
             properties: &fnet_interfaces_ext::Properties,
             routes: &[hal::Route],
             pinger: &mut dyn Pinger,

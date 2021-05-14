@@ -168,8 +168,9 @@ impl QmiClient {
             client_id: client_id,
             svc_id: svc_id,
             tx_id: tx_id,
-            transport: Some(self.inner.clone())
-        }.await?;
+            transport: Some(self.inner.clone()),
+        }
+        .await?;
 
         let buf = std::io::Cursor::new(resp.bytes());
         let decoded = D::from_bytes(buf);
@@ -209,7 +210,7 @@ mod tests {
     #[test]
     fn connect_transport_after_client_request() {
         use qmi_protocol::WDA;
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();
@@ -227,12 +228,12 @@ mod tests {
                     // don't care about result, timeout
                     let _: Result<WDA::SetDataFormatResp, QmiError> = client
                         .send_msg(WDA::SetDataFormatReq::new(None, Some(0x01)))
-                        .map_err(|e| io::Error::new(
-                            io::ErrorKind::Other,
-                            &*format!("fidl error: {:?}", e)
-                        ))
-                        .on_timeout(30.millis().after_now(), || Ok(Err(QmiError::Aborted))).await
-                    .unwrap();
+                        .map_err(|e| {
+                            io::Error::new(io::ErrorKind::Other, &*format!("fidl error: {:?}", e))
+                        })
+                        .on_timeout(30.millis().after_now(), || Ok(Err(QmiError::Aborted)))
+                        .await
+                        .unwrap();
                 }
                 return;
             }
@@ -256,7 +257,7 @@ mod tests {
         use qmi_protocol::CTL;
         const EXPECTED: &[u8] = &[1, 15, 0, 0, 0, 0, 0, 1, 34, 0, 4, 0, 1, 1, 0, 66];
 
-        let mut executor = fasync::Executor::new().unwrap();
+        let mut executor = fasync::TestExecutor::new().unwrap();
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = fasync::Channel::from_channel(client_end).unwrap();

@@ -75,7 +75,7 @@ fn sbc_decode() -> Result<()> {
         }],
     };
 
-    fasync::Executor::new().unwrap().run_singlethreaded(sbc_tests.run())
+    fasync::TestExecutor::new().unwrap().run_singlethreaded(sbc_tests.run())
 }
 
 #[test]
@@ -116,5 +116,5 @@ fn sbc_decode_large_input_chunk() -> Result<()> {
         }],
     };
 
-    fasync::Executor::new().unwrap().run_singlethreaded(sbc_tests.run())
+    fasync::TestExecutor::new().unwrap().run_singlethreaded(sbc_tests.run())
 }

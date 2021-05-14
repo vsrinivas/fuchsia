@@ -313,7 +313,7 @@ mod test {
     #[test]
     fn stalled_test() {
         // Checks that if a task doesn't complete, cancel stalls forever
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
+        let mut executor = fasync::TestExecutor::new().expect("Failed to create executor");
         let complete = |_cancel| future::ready(());
         let never_complete = |_cancel| future::pending();
         let tg = TaskGroup::new();

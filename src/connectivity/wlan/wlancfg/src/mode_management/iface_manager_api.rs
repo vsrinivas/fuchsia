@@ -245,14 +245,14 @@ mod tests {
     };
 
     struct TestValues {
-        exec: fasync::Executor,
+        exec: fasync::TestExecutor,
         iface_manager: IfaceManager,
         receiver: mpsc::Receiver<IfaceManagerRequest>,
     }
 
     fn test_setup() -> TestValues {
         set_logger_for_test();
-        let exec = fasync::Executor::new().expect("failed to create an executor");
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sender, receiver) = mpsc::channel(1);
         TestValues { exec, iface_manager: IfaceManager { sender }, receiver }
     }

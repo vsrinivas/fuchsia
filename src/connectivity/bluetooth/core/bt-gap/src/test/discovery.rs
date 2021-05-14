@@ -51,7 +51,7 @@ fn execution_sequences(max_num_clients: u64) -> impl Strategy<Value = Vec<Event>
 }
 
 fn run_access_and_host<F, T>(
-    executor: &mut fuchsia_async::Executor,
+    executor: &mut fuchsia_async::TestExecutor,
     access_sessions: &mut FuturesUnordered<T>,
     host_task: &mut Pin<Box<F>>,
     host: host_device::HostDevice,
@@ -87,7 +87,7 @@ proptest! {
 
     #[test]
     fn test_discovery_invariants(execution in execution_sequences(MAX_NUM_MOCK_CLIENTS)) {
-        let mut executor = fasync::Executor::new().expect("error creating executor");
+        let mut executor = fasync::TestExecutor::new().expect("error creating executor");
         let hd = host_dispatcher::test::make_simple_test_dispatcher();
 
         // Add mock host to dispatcher and make active

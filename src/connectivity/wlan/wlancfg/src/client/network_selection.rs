@@ -1786,7 +1786,7 @@ mod tests {
 
     #[test]
     fn perform_scan_cache_is_stale() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
         let test_start_time = zx::Time::get_monotonic();
@@ -1837,7 +1837,7 @@ mod tests {
 
     #[test]
     fn perform_scan_error_doesnt_use_stale_results() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
@@ -1887,7 +1887,7 @@ mod tests {
 
     #[test]
     fn augment_bss_with_active_scan_doesnt_run_on_actively_found_networks() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = exec.run_singlethreaded(test_setup());
 
         let test_id_1 = types::NetworkIdentifier {
@@ -1925,7 +1925,7 @@ mod tests {
 
     #[test]
     fn augment_bss_with_active_scan_runs_on_passively_found_networks() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
 
         let test_id_1 = types::NetworkIdentifier {
@@ -2019,7 +2019,7 @@ mod tests {
 
     #[test]
     fn find_best_connection_candidate_end_to_end() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
@@ -2277,7 +2277,7 @@ mod tests {
         // Check that if we see a WPA2 network and have WPA and WPA3 credentials saved for it, we
         // could choose the WPA credential but not the WPA3 credential. In other words we can
         // upgrade saved networks to higher security but not downgrade.
-        let mut exec = fasync::Executor::new().expect("failed to create executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
         let test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
@@ -2373,7 +2373,7 @@ mod tests {
 
     #[test]
     fn find_connection_candidate_for_network_end_to_end() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 
@@ -2471,7 +2471,7 @@ mod tests {
 
     #[test]
     fn find_connection_candidate_for_network_end_to_end_with_failure() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
 

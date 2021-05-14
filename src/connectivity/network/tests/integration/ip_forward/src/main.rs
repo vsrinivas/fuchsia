@@ -141,7 +141,7 @@ fn main() -> Result<(), Error> {
     let () = fuchsia_syslog::init().context("cannot init logger")?;
 
     let opt = Opt::from_args();
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     executor.run_singlethreaded(async {
         match opt {
             Opt::Server { listen_addr } => run_server(listen_addr).await,

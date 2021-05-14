@@ -288,7 +288,7 @@ async fn test_observe_addressable() {
 #[test]
 fn test_timeout() {
     let mut executor =
-        fuchsia_async::Executor::new_with_fake_time().expect("Failed to create executor");
+        fuchsia_async::TestExecutor::new_with_fake_time().expect("Failed to create executor");
     let timeout_ms = 1000;
 
     let fut = async move {

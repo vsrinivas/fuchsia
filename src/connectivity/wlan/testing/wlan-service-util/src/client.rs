@@ -263,7 +263,7 @@ mod tests {
             BssInfo, ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
             Protection,
         },
-        fuchsia_async::Executor,
+        fuchsia_async::TestExecutor,
         futures::stream::{StreamExt, StreamFuture},
         futures::task::Poll,
         pin_utils::pin_mut,
@@ -301,7 +301,7 @@ mod tests {
     }
 
     fn extract_sme_server_from_get_client_sme_req_and_respond(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
         status: zx::Status,
     ) -> fidl_sme::ClientSmeRequestStream {
@@ -322,7 +322,7 @@ mod tests {
     }
 
     fn respond_to_get_client_sme_request(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut DeviceServiceRequestStream,
         status: zx::Status,
     ) {
@@ -338,7 +338,7 @@ mod tests {
     }
 
     fn respond_to_client_sme_disconnect_request(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut ClientSmeRequestStream,
     ) {
         let req = exec.run_until_stalled(&mut req_stream.next());
@@ -358,7 +358,7 @@ mod tests {
     // Connected: connected is set and connecting is null (IF deleted failed)
     // Connecting: connected is null and connecting is set (IF delete failed)
     fn respond_to_client_sme_status_request(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         req_stream: &mut ClientSmeRequestStream,
         status: &StatusResponse,
     ) {
@@ -542,7 +542,7 @@ mod tests {
 
     #[test]
     fn list_ifaces_returns_iface_id_vector() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn list_ifaces_properly_handles_zero_ifaces() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
@@ -609,7 +609,7 @@ mod tests {
 
     #[test]
     fn list_phys_returns_iface_id_vector() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
@@ -644,7 +644,7 @@ mod tests {
 
     #[test]
     fn list_phys_properly_handles_zero_phys() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
@@ -675,7 +675,7 @@ mod tests {
     }
 
     fn poll_device_service_req(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         next_device_service_req: &mut StreamFuture<DeviceServiceRequestStream>,
     ) -> Poll<DeviceServiceRequest> {
         exec.run_until_stalled(next_device_service_req).map(|(req, stream)| {
@@ -686,7 +686,7 @@ mod tests {
     }
 
     fn send_iface_list_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
         iface_list_vec: Vec<IfaceListItem>,
     ) {
@@ -701,7 +701,7 @@ mod tests {
     }
 
     fn send_phy_list_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
         phy_list_vec: Vec<PhyListItem>,
     ) {
@@ -717,7 +717,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_valid_iface() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
@@ -735,7 +735,7 @@ mod tests {
     }
 
     fn send_sme_proxy_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
         status: zx::Status,
     ) {
@@ -751,7 +751,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_invalid_iface() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 
@@ -806,7 +806,7 @@ mod tests {
         connected_to: &str,
         result_code: ConnectResultCode,
     ) -> bool {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
@@ -856,7 +856,7 @@ mod tests {
 
     #[test]
     fn connect_properly_passes_network_info_with_password() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
@@ -885,7 +885,7 @@ mod tests {
 
     #[test]
     fn connect_properly_passes_network_info_open() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut next_client_sme_req = server.into_future();
 
@@ -913,7 +913,7 @@ mod tests {
     }
 
     fn verify_connect_request_info(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &[u8],
         expected_credential: fidl_sme::Credential,
@@ -930,7 +930,7 @@ mod tests {
     }
 
     fn send_connect_request_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
         expected_ssid: &[u8],
         expected_credential: fidl_sme::Credential,
@@ -955,7 +955,7 @@ mod tests {
     }
 
     fn poll_client_sme_request(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         next_client_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) -> Poll<ClientSmeRequest> {
         exec.run_until_stalled(next_client_sme_req).map(|(req, stream)| {
@@ -1010,7 +1010,7 @@ mod tests {
     }
 
     fn test_disconnect(status: StatusResponse) -> Poll<Result<(), Error>> {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
@@ -1038,7 +1038,7 @@ mod tests {
     }
 
     fn send_disconnect_request_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
         let rsp = match poll_client_sme_request(exec, server) {
@@ -1073,7 +1073,7 @@ mod tests {
     }
 
     fn send_status_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<ClientSmeRequestStream>,
         connected_to: Vec<u8>,
         connecting_to_ssid: Vec<u8>,
@@ -1152,7 +1152,7 @@ mod tests {
     }
 
     fn test_scan(mut scan_results: Vec<fidl_sme::BssInfo>) -> Vec<fidl_sme::BssInfo> {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
@@ -1173,7 +1173,7 @@ mod tests {
     }
 
     fn send_scan_result_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
         scan_results: &mut Vec<fidl_sme::BssInfo>,
     ) {
@@ -1195,7 +1195,7 @@ mod tests {
     }
 
     fn test_scan_error() -> Result<(), Error> {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (client_sme, server) = create_client_sme_proxy();
         let mut client_sme_req = server.into_future();
 
@@ -1209,7 +1209,7 @@ mod tests {
     }
 
     fn send_scan_error_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<fidl_sme::ClientSmeRequestStream>,
     ) {
         let transaction = match poll_client_sme_request(exec, server) {
@@ -1273,7 +1273,7 @@ mod tests {
     }
 
     fn send_destroy_iface_response(
-        exec: &mut Executor,
+        exec: &mut TestExecutor,
         server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
         status: zx::Status,
     ) {
@@ -1289,7 +1289,7 @@ mod tests {
 
     #[test]
     fn test_destroy_single_iface_ok() {
-        let mut exec = Executor::new().expect("failed to create an executor");
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
         let (wlan_service, server) = create_wlan_service_util();
         let mut next_device_service_req = server.into_future();
 

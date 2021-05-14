@@ -83,8 +83,9 @@ impl VolumeRelay {
     /// are propagated to the system Media volume.
     /// This starts the relay.  The relay can be stopped by dropping it.
     pub(crate) fn start() -> Result<Self, Error> {
-        let avrcp_svc = fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
-            .context("Failed to connect to Bluetooth AVRCP interface")?;
+        let avrcp_svc =
+            fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
+                .context("Failed to connect to Bluetooth AVRCP interface")?;
         let audio_settings_svc =
             fuchsia_component::client::connect_to_protocol::<settings::AudioMarker>()
                 .context("Failed to connect to Audio settings interface")?;
@@ -294,7 +295,7 @@ mod tests {
     /// Expects a Watch() call to the `audio_request_stream`.  Returns the handler to respond to
     /// the watch call, or panics if that doesn't happen.
     fn expect_audio_watch(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         audio_request_stream: &mut settings::AudioRequestStream,
     ) -> settings::AudioWatchResponder {
         let watch_request_fut = audio_request_stream.select_next_some();
@@ -327,7 +328,7 @@ mod tests {
     /// system.
     fn finish_relay_setup<T: Future>(
         mut relay_fut: &mut Pin<&mut T>,
-        mut exec: &mut fasync::Executor,
+        mut exec: &mut fasync::TestExecutor,
         mut avrcp_request_stream: avrcp::PeerManagerRequestStream,
         audio_request_stream: &mut settings::AudioRequestStream,
     ) -> (avrcp::AbsoluteVolumeHandlerProxy, settings::AudioWatchResponder)
@@ -368,7 +369,7 @@ mod tests {
     /// signal.
     #[test]
     fn test_relay_setup() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
         let (mut settings_requests, avrcp_requests, stop_sender, relay_fut) = setup_volume_relay()?;
 
         pin_mut!(relay_fut);
@@ -402,7 +403,7 @@ mod tests {
     /// appropriate amount of time.
     #[test]
     fn test_set_volume_command() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         let (mut settings_requests, avrcp_requests, _stop_sender, relay_fut) =
             setup_volume_relay()?;
 
@@ -500,7 +501,7 @@ mod tests {
     /// on_volume_changed request when the volume changes locally.
     #[test]
     fn test_volume_changes() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
         let (mut settings_requests, avrcp_requests, _stop_sender, relay_fut) =
             setup_volume_relay()?;
 
@@ -584,7 +585,7 @@ mod tests {
     // when OnVolumeChanged is called twice without a response.
     #[test]
     fn test_volume_changes_multiple_requests() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().expect("executor needed");
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
         let (mut settings_requests, avrcp_requests, _stop_sender, relay_fut) =
             setup_volume_relay()?;
 

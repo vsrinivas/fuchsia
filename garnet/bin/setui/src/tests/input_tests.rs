@@ -31,7 +31,7 @@ use {
         ToggleStateFlags,
     },
     fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fuchsia_async::Executor,
+    fuchsia_async::TestExecutor,
     fuchsia_zircon::Status,
     futures::lock::Mutex,
     futures::pin_mut,
@@ -158,8 +158,8 @@ fn create_env_and_executor_with_config(
     // The pre-populated data to insert into the store before spawning
     // the environment.
     initial_input_info: Option<InputInfoSources>,
-) -> (Executor, TestInputEnvironment) {
-    let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+) -> (TestExecutor, TestInputEnvironment) {
+    let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
     let env_future = if let Some(initial_info) = initial_input_info {
         TestInputEnvironmentBuilder::new()
             .set_input_device_config(config)
@@ -261,7 +261,10 @@ async fn get_and_check_camera_disable(
 }
 
 // Creates a broker to listen in on media buttons events.
-fn create_broker(executor: &mut Executor, delegate: Delegate) -> Receptor<Payload, Address, Role> {
+fn create_broker(
+    executor: &mut TestExecutor,
+    delegate: Delegate,
+) -> Receptor<Payload, Address, Role> {
     let message_hub_future = delegate.create(MessengerType::Broker(Some(filter::Builder::single(
         filter::Condition::Custom(Arc::new(move |message| {
             // Only catch changes to input info.

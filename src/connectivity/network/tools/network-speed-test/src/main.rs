@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
 }
 
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
 
     let http_svc = connect_to_protocol::<http::LoaderMarker>()
         .context("Unable to connect to fuchsia.net.http.Loader")?;

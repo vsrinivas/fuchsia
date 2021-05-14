@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn infinite_stream() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (sink, stream) = mpsc::unbounded();
 
@@ -83,7 +83,7 @@ mod tests {
 
     #[test]
     fn no_infinite_stream() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (sink, stream) = mpsc::unbounded();
         let fut = do_broken_work(stream);

@@ -208,7 +208,7 @@ impl Manager {
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["telephony"]).expect("Can't init logger");
     fx_log_info!("Starting telephony management service...");
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     // Creates a new inspector object. This will create the "root" node in the
     // inspect tree to which further children objects can be added.

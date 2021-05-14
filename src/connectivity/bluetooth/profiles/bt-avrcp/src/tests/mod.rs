@@ -58,7 +58,7 @@ fn spawn_peer_manager() -> Result<
 
 #[test]
 fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().expect("executor should create");
+    let mut exec = fasync::TestExecutor::new().expect("executor should create");
 
     let (mut peer_manager, _profile_requests, peer_manager_proxy, mut service_request_receiver) =
         spawn_peer_manager()?;
@@ -113,7 +113,7 @@ fn target_delegate_target_handler_already_bound_test() -> Result<(), Error> {
 
 #[test]
 fn target_delegate_volume_handler_already_bound_test() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().expect("executor should create");
+    let mut exec = fasync::TestExecutor::new().expect("executor should create");
 
     let (mut peer_manager, _profile_requests, peer_manager_proxy, mut service_request_receiver) =
         spawn_peer_manager()?;

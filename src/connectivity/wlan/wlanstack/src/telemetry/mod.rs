@@ -857,7 +857,7 @@ mod tests {
 
     #[test]
     fn test_report_telemetry_periodically() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (ifaces_map, stats_requests) = fake_iface_map();
         let (cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
@@ -949,7 +949,7 @@ mod tests {
 
     #[test]
     fn test_log_connect_stats_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1001,7 +1001,7 @@ mod tests {
 
     #[test]
     fn test_log_connect_stats_success_old_code_path_with_join_scan() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1254,7 +1254,7 @@ mod tests {
 
     #[test]
     fn test_log_disconnect_initiated_from_user() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1310,7 +1310,7 @@ mod tests {
 
     #[test]
     fn test_log_disconnect_initiated_from_ap() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1367,7 +1367,7 @@ mod tests {
 
     #[test]
     fn test_log_disconnect_initiated_from_mlme() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1427,7 +1427,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_connect_stats() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1464,7 +1464,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_disconnect_stats_disconnect_source_user() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1531,7 +1531,7 @@ mod tests {
     }
     #[test]
     fn test_inspect_log_disconnect_stats_disconnect_source_ap() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1595,7 +1595,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_disconnect_stats_disconnect_source_mlme() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -1764,7 +1764,7 @@ mod tests {
         expected_cobalt_1dot1_metrics: HashSet<u32>,
         unexpected_metrics: HashSet<u32>,
     ) {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
@@ -2047,7 +2047,7 @@ mod tests {
     // Continually execute the future and respond to any incoming Cobalt request with Ok.
     // Save the metric ID and event codes of each metric request into a vector and return it.
     fn drain_cobalt_events(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         fut: &mut (impl Future + Unpin),
         event_stream: &mut fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
     ) -> Vec<(u32, Vec<u32>)> {

@@ -185,7 +185,7 @@ fn send_handle_sync_helper<'a>(
     let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
     let server_end = transformable_channel.take_server_end();
     std::thread::spawn(|| {
-        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+        fasync::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             send_handle_receiver_thread(server_end, sender_fifo).await;
         });
     });
@@ -246,7 +246,7 @@ async fn send_handle_async_helper<'a>(
     let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
     let server_end = transformable_channel.take_server_end();
     std::thread::spawn(|| {
-        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+        fasync::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             send_handle_receiver_thread(server_end, sender_fifo).await;
         });
     });
@@ -346,7 +346,7 @@ fn echo_handle_sync_helper<'a>(
 ) {
     let server_end = transformable_channel.take_server_end();
     std::thread::spawn(|| {
-        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+        fasync::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             echo_handle_receiver_thread(server_end).await;
         });
     });
@@ -461,7 +461,7 @@ async fn echo_handle_async_helper(
 ) {
     let server_end = transformable_channel.take_server_end();
     std::thread::spawn(|| {
-        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+        fasync::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             echo_handle_receiver_thread(server_end).await;
         });
     });
@@ -573,7 +573,7 @@ async fn push_event_helper<'a>(
     let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
     let receiver_chan_end = transformable_channel.take_server_end();
     std::thread::spawn(|| {
-        fuchsia_async::Executor::new().unwrap().run_singlethreaded(async move {
+        fuchsia_async::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             push_event_receiver_thread(receiver_chan_end, sender_fifo).await;
         });
     });
@@ -653,7 +653,7 @@ async fn error_syntax_receiver_thread(server_end: Channel) {
 fn error_syntax_sync_end_to_end() {
     let (client_end, server_end) = Channel::create().unwrap();
     std::thread::spawn(|| {
-        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+        fasync::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             error_syntax_receiver_thread(server_end).await;
         });
     });
@@ -670,7 +670,7 @@ fn error_syntax_sync_end_to_end() {
 async fn error_syntax_async_end_to_end() {
     let (client_end, server_end) = Channel::create().unwrap();
     std::thread::spawn(|| {
-        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+        fasync::LocalExecutor::new().unwrap().run_singlethreaded(async move {
             error_syntax_receiver_thread(server_end).await;
         });
     });

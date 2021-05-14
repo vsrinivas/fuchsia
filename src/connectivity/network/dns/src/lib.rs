@@ -20,17 +20,17 @@ pub mod udp;
 /// Default DNS server port.
 pub const DEFAULT_PORT: u16 = 53;
 
-/// A Fuchsia Executor which implements the `trust_dns_proto::Executor` trait.
-pub struct FuchsiaExec(fasync::Executor);
+/// A Fuchsia LocalExecutor which implements the `trust_dns_proto::Executor` trait.
+pub struct FuchsiaExec(fasync::LocalExecutor);
 
 impl FuchsiaExec {
-    /// Constructs a Fuchsia Executor.
+    /// Constructs a Fuchsia LocalExecutor.
     pub fn new() -> Result<Self, zx::Status> {
-        fasync::Executor::new().map(|fexec| Self(fexec))
+        fasync::LocalExecutor::new().map(|fexec| Self(fexec))
     }
 
-    /// Gets a mutable reference to the internal `fuchsia_async::Executor`.
-    pub fn get(&mut self) -> &mut fasync::Executor {
+    /// Gets a mutable reference to the internal `fuchsia_async::LocalExecutor`.
+    pub fn get(&mut self) -> &mut fasync::LocalExecutor {
         &mut self.0
     }
 }

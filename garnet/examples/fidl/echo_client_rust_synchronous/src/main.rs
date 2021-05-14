@@ -12,7 +12,7 @@ use structopt::StructOpt;
 fn main() -> Result<(), Error> {
     // Needed only so that creation of async (never-queried) channels succeeds
     // in fuchsia_app
-    let _executor = fasync::Executor::new().context("Error creating executor")?;
+    let _executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     #[derive(StructOpt, Debug)]
     #[structopt(name = "echo_client_rust")]

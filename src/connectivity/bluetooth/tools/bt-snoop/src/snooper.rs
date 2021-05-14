@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn test_from_channel() {
-        let _exec = fasync::Executor::new();
+        let _exec = fasync::TestExecutor::new();
         let (channel, _) = Channel::create().unwrap();
         let snooper = Snooper::from_channel(channel, PathBuf::from("/a/b/c")).unwrap();
         assert_eq!(snooper.device_name, "c");
@@ -223,7 +223,7 @@ mod tests {
 
     #[test]
     fn test_snoop_stream() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (tx, rx) = Channel::create().unwrap();
         let mut snooper = Snooper::from_channel(rx, PathBuf::from("/a/b/c")).unwrap();
         let flags = HciFlags::IS_RECEIVED | HciFlags::PACKET_TYPE_EVENT;

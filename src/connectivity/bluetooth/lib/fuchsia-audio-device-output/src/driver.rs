@@ -484,7 +484,7 @@ mod tests {
             channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
         };
 
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let (client, frame_stream) = SoftPcmOutput::build(
             TEST_UNIQUE_ID,
             &"Google".to_string(),
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn soft_pcm_audio_out() {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let (stream_config, mut frame_stream) = setup();
 
         let result = exec.run_until_stalled(&mut stream_config.get_properties());
@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     fn send_positions() {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let (stream_config, mut frame_stream) = setup();
         let _stream_config_properties = exec.run_until_stalled(&mut stream_config.get_properties());
         let _formats = exec.run_until_stalled(&mut stream_config.get_supported_formats());

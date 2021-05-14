@@ -641,7 +641,7 @@ mod tests {
     /// Expects a ServiceFound call to the `stream`.
     /// Panics if the call doesn't happen.
     fn expect_search_service_found(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stream: &mut bredr::SearchResultsRequestStream,
     ) {
         let service_found_fut = stream.select_next_some();
@@ -658,7 +658,7 @@ mod tests {
     /// Expects a ServiceFound call to the observer `stream`.
     /// Panics if the call doesn't happen.
     fn expect_observer_service_found(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stream: &mut bredr::PeerObserverRequestStream,
     ) {
         let observer_fut = stream.select_next_some();
@@ -766,7 +766,7 @@ mod tests {
     /// client drops the ConnectionReceiver.
     #[test]
     fn registered_service_is_unregistered_when_receiver_disconnects() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(234);
         let (mut mock_peer, _observer_stream, _test_env) = create_mock_peer(id)?;
@@ -795,7 +795,7 @@ mod tests {
     /// over potentially registered PSMs.
     #[test]
     fn register_l2cap_service_with_connection_success() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(2392);
         let (mut mock_peer, mut observer_stream, _test_env) = create_mock_peer(id)?;
@@ -852,7 +852,7 @@ mod tests {
 
     #[test]
     fn register_rfcomm_service_with_connection_is_ok() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(2523);
         let (mut mock_peer, mut observer_stream, _env_vars) = create_mock_peer(id)?;
@@ -902,7 +902,7 @@ mod tests {
 
     #[test]
     fn incoming_rfcomm_connection_over_unregistered_channel_is_err() -> Result<(), Error> {
-        let _exec = fasync::Executor::new().unwrap();
+        let _exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(092);
         let (mock_peer, _observer_stream, _env_vars) = create_mock_peer(id)?;
@@ -922,7 +922,7 @@ mod tests {
     /// Tests notifying the outstanding searches with an advertised service.
     #[test]
     fn register_multiple_searches_success() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(2824);
         let (mut mock_peer, mut observer_stream, _test_env) = create_mock_peer(id)?;
@@ -985,7 +985,7 @@ mod tests {
     /// the ServerEnd of the SearchResults channel.
     #[test]
     fn service_search_terminates_when_client_disconnects() -> Result<(), Error> {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         let id = PeerId(5604);
         let (mut mock_peer, _observer_stream, _test_env) = create_mock_peer(id)?;

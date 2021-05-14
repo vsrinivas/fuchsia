@@ -190,7 +190,7 @@ impl App {
     /// be used to create new views when asked to do so by the Fuchsia view system.
     pub fn run(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
         let config = Self::load_config().context("loading config failed in run")?;
-        let mut executor = fasync::Executor::new().context("Error creating executor")?;
+        let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
@@ -297,7 +297,7 @@ impl App {
     /// result of the test, an Ok(()) result means the test passed.
     pub fn test(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
         let config = Self::load_config().context("loading config failed in test")?;
-        let mut executor = fasync::Executor::new().context("Error creating executor")?;
+        let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };

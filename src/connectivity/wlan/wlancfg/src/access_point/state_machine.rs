@@ -523,7 +523,7 @@ mod tests {
     }
 
     fn poll_sme_req(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         next_sme_req: &mut StreamFuture<fidl_sme::ApSmeRequestStream>,
     ) -> Poll<fidl_sme::ApSmeRequest> {
         exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn test_stop_during_started() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
@@ -610,7 +610,7 @@ mod tests {
 
     #[test]
     fn test_exit_during_started() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn test_start_during_started() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
@@ -751,7 +751,7 @@ mod tests {
 
     #[test]
     fn test_duplicate_status_during_started() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
@@ -808,7 +808,7 @@ mod tests {
 
     #[test]
     fn test_new_status_during_started() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let radio_config = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6);
@@ -866,7 +866,7 @@ mod tests {
 
     #[test]
     fn test_sme_failure_during_started() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         // Drop the serving side of the SME so that a status request will result in an error.
@@ -914,7 +914,7 @@ mod tests {
 
     #[test]
     fn test_stop_while_stopped() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Run the stopped state.
@@ -940,7 +940,7 @@ mod tests {
 
     #[test]
     fn test_exit_while_stopped() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Run the stopped state.
@@ -964,7 +964,7 @@ mod tests {
 
     #[test]
     fn test_start_while_stopped() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         // Run the stopped state.
@@ -1043,7 +1043,7 @@ mod tests {
 
     #[test]
     fn test_exit_while_stopping() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Run the stopping state.
@@ -1083,7 +1083,7 @@ mod tests {
 
     #[test]
     fn test_stop_while_stopping() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         // Run the stopping state.
@@ -1132,7 +1132,7 @@ mod tests {
 
     #[test]
     fn test_start_while_stopping() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Run the stopping state.
@@ -1207,7 +1207,7 @@ mod tests {
 
     #[test]
     fn test_sme_failure_while_stopping() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         // Drop the serving side of the SME so that the stop request will result in an error.
@@ -1238,7 +1238,7 @@ mod tests {
 
     #[test]
     fn test_failed_result_code_while_stopping() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         // Run the stopping state.
@@ -1281,7 +1281,7 @@ mod tests {
 
     #[test]
     fn test_stop_while_starting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
@@ -1366,7 +1366,7 @@ mod tests {
 
     #[test]
     fn test_start_while_starting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
@@ -1482,7 +1482,7 @@ mod tests {
 
     #[test]
     fn test_exit_while_starting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
@@ -1552,7 +1552,7 @@ mod tests {
 
     #[test]
     fn test_sme_breaks_while_starting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
         // Drop the serving side of the SME so that client requests fail.
@@ -1586,7 +1586,7 @@ mod tests {
 
     #[test]
     fn test_sme_fails_to_stop_while_starting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let (start_sender, _start_receiver) = oneshot::channel();
@@ -1641,7 +1641,7 @@ mod tests {
 
     #[test]
     fn test_sme_fails_to_start_while_starting() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
@@ -1741,7 +1741,7 @@ mod tests {
 
     #[test]
     fn test_stop_after_start_failure() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
@@ -1848,7 +1848,7 @@ mod tests {
 
     #[test]
     fn test_start_after_start_failure() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
@@ -1962,7 +1962,7 @@ mod tests {
 
     #[test]
     fn test_exit_after_start_failure() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         let (start_sender, _) = oneshot::channel();
@@ -2043,7 +2043,7 @@ mod tests {
 
     #[test]
     fn test_manual_start_causes_starting_notification() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
 
         // Create a start request and enter the state machine with a manual start request.
@@ -2101,7 +2101,7 @@ mod tests {
 
     #[test]
     fn test_serve_does_not_terminate_right_away() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let sme_event_stream = test_values.sme_proxy.take_event_stream();
         let sme_fut = test_values.sme_req_stream.into_future();

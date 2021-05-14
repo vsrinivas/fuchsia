@@ -310,7 +310,7 @@ mod tests {
     /// receives the expected reboot notification.
     #[test]
     fn test_add_reboot_watcher() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let node = ShutdownWatcherBuilder::new().build().unwrap();
 
         // Create the proxy/stream to register the watcher
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn test_watcher_response_delay() {
         let node = ShutdownWatcherBuilder::new().build().unwrap();
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
         // Register the reboot watcher

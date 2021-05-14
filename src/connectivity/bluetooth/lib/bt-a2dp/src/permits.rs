@@ -182,7 +182,7 @@ mod tests {
     }
 
     fn expect_reservation_status(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         reservation: &mut Reservation,
         done: bool,
     ) -> Option<Permit> {
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn permit_reservations() {
-        let mut exec = fasync::Executor::new().expect("executor should start");
+        let mut exec = fasync::TestExecutor::new().expect("executor should start");
 
         // Two permits allowed.
         let permits = Permits::new(2);

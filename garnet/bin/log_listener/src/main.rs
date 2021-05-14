@@ -837,7 +837,7 @@ fn new_listener(local_options: LocalOptions) -> Result<Listener<Box<dyn Write + 
 }
 
 fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let (filter_options, local_options, selectors) = options.map_or_else(
         || (None, LocalOptions::default(), None),
         |o| (Some(&mut o.filter), o.local.clone(), Some(&mut o.selectors)),
@@ -889,7 +889,8 @@ mod tests {
 
     #[test]
     fn test_log_fn() {
-        let _executor = fasync::Executor::new().expect("log_listener: unable to create executor");
+        let _executor =
+            fasync::TestExecutor::new().expect("log_listener: unable to create executor");
         let tmp_dir = TempDir::new().expect("log_listener: should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("log_listener: should have created file");
@@ -969,7 +970,7 @@ mod tests {
 
     #[test]
     fn test_only_and_suppress() {
-        let _executor = fasync::Executor::new().expect("unable to create executor");
+        let _executor = fasync::TestExecutor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new().expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
@@ -1013,7 +1014,7 @@ mod tests {
 
     #[test]
     fn test_begin_end() {
-        let _executor = fasync::Executor::new().expect("unable to create executor");
+        let _executor = fasync::TestExecutor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new().expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");
@@ -1066,7 +1067,7 @@ mod tests {
 
     #[test]
     fn test_since_now() {
-        let _executor = fasync::Executor::new().expect("unable to create executor");
+        let _executor = fasync::TestExecutor::new().expect("unable to create executor");
         let tmp_dir = TempDir::new().expect("should have created tempdir");
         let file_path = tmp_dir.path().join("tmp_file");
         let tmp_file = File::create(&file_path).expect("should have created file");

@@ -147,7 +147,7 @@ async fn do_run() -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     executor.run_singlethreaded(do_run())?;
     return Ok(());
 }

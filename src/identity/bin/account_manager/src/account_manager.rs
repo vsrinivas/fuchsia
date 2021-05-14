@@ -432,7 +432,7 @@ mod tests {
         TestFn: FnOnce(AccountManagerProxy, Arc<TestAccountManager>) -> Fut,
         Fut: Future<Output = Result<(), Error>>,
     {
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
+        let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
         let (server_chan, client_chan) = zx::Channel::create().expect("Failed to create channel");
         let proxy = AccountManagerProxy::new(fasync::Channel::from_channel(client_chan).unwrap());
         let request_stream = AccountManagerRequestStream::from_channel(
@@ -452,7 +452,7 @@ mod tests {
 
         executor
             .run_singlethreaded(test_fn(proxy, account_manager_arc))
-            .expect("Executor run failed.")
+            .expect("LocalExecutor run failed.")
     }
 
     // Construct an account manager initialized with the supplied set of accounts.

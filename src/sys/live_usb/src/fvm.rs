@@ -58,7 +58,8 @@ impl BlockWatcherPauser {
 impl Drop for BlockWatcherPauser {
     fn drop(&mut self) {
         if self.connection.is_some() {
-            let mut executor = fuchsia_async::Executor::new().expect("failed to create executor");
+            let mut executor =
+                fuchsia_async::LocalExecutor::new().expect("failed to create executor");
             executor
                 .run_singlethreaded(self.resume())
                 .map_err(|e| fx_log_err!("failed to resume block watcher: {:?}", e))

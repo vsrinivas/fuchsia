@@ -121,7 +121,7 @@ mod test {
 
     #[test]
     fn wait_for_event() -> Result<(), zx::Status> {
-        let mut exec = crate::Executor::new()?;
+        let mut exec = crate::TestExecutor::new()?;
         let mut deliver_events =
             || assert!(exec.run_until_stalled(&mut pending::<()>()).is_pending());
 

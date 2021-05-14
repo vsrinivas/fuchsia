@@ -136,7 +136,7 @@ fn main() -> Result<(), Error> {
     // control-c is called and it has been run via scp/ssh.
     wait_for_close();
 
-    let mut executor = fasync::Executor::new().context("Failed to create executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Failed to create executor")?;
 
     executor.run_singlethreaded(async {
         // create async channel sender/receiver pair to receive vsync messages

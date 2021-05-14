@@ -362,7 +362,7 @@ mod tests {
 
     #[test]
     fn sink_task_works_without_session() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (send, _recv) = fake_cobalt_sender();
         let (proxy, mut session_requests) =
             fidl::endpoints::create_proxy_and_stream::<PublisherMarker>().unwrap();
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     fn dropped_task_reports_metrics() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (send, mut recv) = fake_cobalt_sender();
         let (proxy, mut session_requests) =
             fidl::endpoints::create_proxy_and_stream::<PublisherMarker>().unwrap();
@@ -458,8 +458,8 @@ mod tests {
     }
 
     fn setup_media_stream_test(
-    ) -> (fasync::Executor, MediaCodecConfig, Arc<Mutex<DataStreamInspect>>) {
-        let exec = fasync::Executor::new().expect("executor should build");
+    ) -> (fasync::TestExecutor, MediaCodecConfig, Arc<Mutex<DataStreamInspect>>) {
+        let exec = fasync::TestExecutor::new().expect("executor should build");
         let sbc_config = MediaCodecConfig::min_sbc();
         let inspect = Arc::new(Mutex::new(DataStreamInspect::default()));
         (exec, sbc_config, inspect)
@@ -561,7 +561,7 @@ mod tests {
 
     #[test]
     fn decode_media_stream_stats() {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let sbc_config = MediaCodecConfig::min_sbc();
         let (player, mut sink_requests, _consumer_requests, _vmo) =
             player::tests::setup_player(&mut exec, sbc_config);
@@ -621,7 +621,7 @@ mod tests {
 
     #[test]
     fn media_stream_task_reopens_player() {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
 
         let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
             create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()

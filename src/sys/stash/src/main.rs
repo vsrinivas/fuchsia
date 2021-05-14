@@ -84,7 +84,7 @@ fn main() -> Result<(), Error> {
             process::exit(1);
         }
         Ok(opts) => {
-            let mut executor = fasync::Executor::new().context("Error creating executor")?;
+            let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
             let store_manager =
                 Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(&opts.backing_file))?));
 

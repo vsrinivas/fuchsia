@@ -545,7 +545,7 @@ mod tests {
 
     #[test]
     fn test_current_channel_notifier_retries() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let dir = tempfile::tempdir().unwrap();
         let current_channel_path = dir.path().join(CURRENT_CHANNEL);
@@ -721,7 +721,7 @@ mod tests {
 
     #[test]
     fn test_current_channel_manager_writes_channel() {
-        let mut exec = fasync::Executor::new().expect("Unable to create executor");
+        let mut exec = fasync::TestExecutor::new().expect("Unable to create executor");
 
         let dir = tempfile::tempdir().unwrap();
         let target_channel_path = dir.path().join(TARGET_CHANNEL);

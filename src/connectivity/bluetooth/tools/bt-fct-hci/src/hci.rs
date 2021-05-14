@@ -200,14 +200,14 @@ mod tests {
 
     #[test]
     fn test_from_channel() {
-        let _exec = fasync::Executor::new();
+        let _exec = fasync::TestExecutor::new();
         let (channel, _) = Channel::create().unwrap();
         let _command_channel = CommandChannel::from_channel(channel).unwrap();
     }
 
     #[test]
     fn test_command_channel() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let (remote, local) = Channel::create().unwrap();
         let command_channel = CommandChannel::from_channel(local).unwrap();
 

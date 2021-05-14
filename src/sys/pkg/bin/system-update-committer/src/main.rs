@@ -40,7 +40,7 @@ pub fn main() -> Result<(), Error> {
         .context("while initializing logger")?;
     fx_log_info!("starting system-update-committer");
 
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     let () = executor.run_singlethreaded(main_inner_async()).map_err(|err| {
         // Use anyhow to print the error chain.
         let err = anyhow!(err);

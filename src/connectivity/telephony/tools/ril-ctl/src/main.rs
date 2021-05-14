@@ -223,7 +223,7 @@ struct Opt {
 }
 
 pub fn main() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
     let args = Opt::from_args();
 
     let launcher = launcher().context("Failed to open launcher service")?;

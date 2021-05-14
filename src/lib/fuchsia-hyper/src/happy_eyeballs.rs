@@ -447,7 +447,7 @@ mod test {
     }
 
     fn next_event<F>(
-        executor: &mut fasync::Executor,
+        executor: &mut fasync::TestExecutor,
         fut: &mut F,
         duration: zx::Duration,
     ) -> Poll<F::Output>
@@ -474,7 +474,7 @@ mod test {
     // Ensure `happy_eyeballs` errors out if no addresses are passed in.
     #[test]
     fn test_no_addrs_error() {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let mut connector = TestEnvConnector::new(None);
 
         let mut fut = happy_eyeballs(
@@ -509,7 +509,7 @@ mod test {
         ; "v6 not listening"
     )]
     fn test_all_not_listening_eventually_fails(fail_addrs: Vec<SocketAddr>) {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let mut connector = TestEnvConnector::new(None)
             .add_classified_addrs(Class::NotListening, fail_addrs.clone());
@@ -565,7 +565,7 @@ mod test {
         ; "v6 blackholed"
     )]
     fn test_all_blackholed_never_succeeds(fail_addrs: Vec<SocketAddr>) {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let mut connector =
             TestEnvConnector::new(None).add_classified_addrs(Class::Blackholed, fail_addrs.clone());
@@ -599,7 +599,7 @@ mod test {
     #[test_case((Ipv4Addr::LOCALHOST, 8000).into(); "v4")]
     #[test_case((Ipv6Addr::LOCALHOST, 8000).into(); "v6")]
     fn test_single_valid_address(server_addr: SocketAddr) {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let mut connector = TestEnvConnector::new(Some(server_addr))
             .add_classified_addrs(Class::Connectable, vec![server_addr]);
@@ -627,7 +627,7 @@ mod test {
     #[test_case((Ipv4Addr::LOCALHOST, 8000).into(); "v4")]
     #[test_case((Ipv6Addr::LOCALHOST, 8000).into(); "v6")]
     fn test_address_works_in_bad_network(server_addr: SocketAddr) {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let nonlistening_addr = (Ipv4Addr::LOCALHOST, 8001).into();
         let blackhole_addr = (Ipv6Addr::LOCALHOST, 8002).into();
@@ -714,7 +714,7 @@ mod test {
         let server_addr = server_addr.into();
         let fail_addrs = fail_addrs.into_iter().map(|a| a.into()).collect::<Vec<_>>();
 
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let mut connector = TestEnvConnector::new(Some(server_addr))
             .add_classified_addrs(Class::Connectable, vec![server_addr])
@@ -769,7 +769,7 @@ mod test {
         ; "v6"
     )]
     fn test_fallback_blackholed(server_addr: SocketAddr, fail_addrs: Vec<SocketAddr>) {
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
         let mut connector = TestEnvConnector::new(Some(server_addr))
             .add_classified_addrs(Class::Connectable, vec![server_addr])
@@ -812,7 +812,7 @@ mod test {
         let bh_v4 = (Ipv4Addr::LOCALHOST, 8003).into();
         let bh_v6 = (Ipv6Addr::LOCALHOST, 8004).into();
 
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let () = executor.set_fake_time(Time::from_nanos(0));
 
         let mut connector = TestEnvConnector::new(Some(server_addr))
@@ -908,7 +908,7 @@ mod test {
             ];
         };
 
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let () = executor.set_fake_time(Time::from_nanos(0));
 
         // First, test that we'll try to connect to IPv4 first if it's first in the list.
@@ -947,7 +947,7 @@ mod test {
         let server_addr = (Ipv4Addr::LOCALHOST, 8000).into();
         let bh_addr = (Ipv4Addr::LOCALHOST, 8001).into();
 
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let () = executor.set_fake_time(Time::from_nanos(0));
 
         let delay = RECOMMENDED_CONN_ATT_DELAY + 5.millis();
@@ -996,7 +996,7 @@ mod test {
         let nl_addr = (Ipv4Addr::LOCALHOST, 8001).into();
         let bh_addr = (Ipv4Addr::LOCALHOST, 8002).into();
 
-        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
         let () = executor.set_fake_time(Time::from_nanos(0));
 
         let mut connector = TestEnvConnector::new(Some(server_addr))

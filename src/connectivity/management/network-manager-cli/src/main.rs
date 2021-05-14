@@ -79,7 +79,7 @@ async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["network_manager_cli"]).expect("initialising logging");
     let Opt { overnet, cmd } = Opt::from_args();
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
+    let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
     let fut = async {
         let (router_admin, router_state) = if overnet {
             connect_overnet()

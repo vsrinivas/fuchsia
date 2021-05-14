@@ -173,7 +173,7 @@ fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    let mut executor = fasync::Executor::new().context("error creating event loop")?;
+    let mut executor = fasync::LocalExecutor::new().context("error creating event loop")?;
     let central_svc = fuchsia_component::client::connect_to_protocol::<CentralMarker>()
         .context("Failed to connect to BLE Central service")?;
 

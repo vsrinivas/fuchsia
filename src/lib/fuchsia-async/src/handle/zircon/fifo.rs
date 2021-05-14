@@ -257,7 +257,7 @@ impl<'a, F: FifoReadable<R>, R: FifoEntry> Future for ReadEntry<'a, F, R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{DurationExt, Executor, TimeoutExt, Timer};
+    use crate::{DurationExt, TestExecutor, TimeoutExt, Timer};
     use fuchsia_zircon::prelude::*;
     use futures::future::try_join;
     use futures::prelude::*;
@@ -279,7 +279,7 @@ mod tests {
 
     #[test]
     fn can_read_write() {
-        let mut exec = Executor::new().expect("failed to create executor");
+        let mut exec = TestExecutor::new().expect("failed to create executor");
         let elements: &[entry; 1] = &[entry { a: 10, b: 20 }];
 
         let (tx, rx) =
@@ -305,7 +305,7 @@ mod tests {
 
     #[test]
     fn read_wrong_size() {
-        let mut exec = Executor::new().expect("failed to create executor");
+        let mut exec = TestExecutor::new().expect("failed to create executor");
         let elements: &[entry; 1] = &[entry { a: 10, b: 20 }];
 
         let (tx, rx) =
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn write_wrong_size() {
-        let mut exec = Executor::new().expect("failed to create executor");
+        let mut exec = TestExecutor::new().expect("failed to create executor");
         let elements: &[wrong_entry; 1] = &[wrong_entry { a: 10 }];
 
         let (tx, rx) =
@@ -356,7 +356,7 @@ mod tests {
     fn write_into_full() {
         use std::sync::atomic::{AtomicUsize, Ordering};
 
-        let mut exec = Executor::new().expect("failed to create executor");
+        let mut exec = TestExecutor::new().expect("failed to create executor");
         let elements: &[entry; 3] =
             &[entry { a: 10, b: 20 }, entry { a: 30, b: 40 }, entry { a: 50, b: 60 }];
 
@@ -404,7 +404,7 @@ mod tests {
 
     #[test]
     fn write_more_than_full() {
-        let mut exec = Executor::new().expect("failed to create executor");
+        let mut exec = TestExecutor::new().expect("failed to create executor");
         let elements: &[entry; 3] =
             &[entry { a: 10, b: 20 }, entry { a: 30, b: 40 }, entry { a: 50, b: 60 }];
 

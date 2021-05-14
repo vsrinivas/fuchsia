@@ -101,7 +101,7 @@ mod tests {
 
     #[test]
     fn watch_phys() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let phy_watcher =
             watch_phy_devices::<IsolatedDeviceEnv>().expect("Failed to create phy_watcher");
         pin_mut!(phy_watcher);

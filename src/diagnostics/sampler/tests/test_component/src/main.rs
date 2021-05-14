@@ -16,7 +16,7 @@ use std::{
 };
 
 fn main() {
-    let mut executor = fasync::Executor::new().context("Error creating executor").unwrap();
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor").unwrap();
 
     let mut fs = ServiceFs::new();
     let inspector = component::inspector();

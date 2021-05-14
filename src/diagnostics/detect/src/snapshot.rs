@@ -252,7 +252,7 @@ mod tests {
     /// Tests that the number of pending crash reports is correctly bounded.
     #[test]
     fn test_crash_report_pending_reports() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Set up the proxy/stream and node outside of the large future used below. This way we can
         // still poll the stream after the future completes.

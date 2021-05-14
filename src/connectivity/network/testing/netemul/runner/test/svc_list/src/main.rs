@@ -241,7 +241,7 @@ fn main() -> Result<(), Error> {
     // a flag is passed on the command line to change
     // the code path
     if opt.is_child {
-        let mut executor = fasync::Executor::new().context("Error creating executor")?;
+        let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         println!("Running as child");
         // check that the virtual ethernet device is there
         check_virtual_device(EP_MOUNT)?;
@@ -257,7 +257,7 @@ fn main() -> Result<(), Error> {
         check_service(FAKE_SVC_NAME)?;
         Ok(())
     } else {
-        let mut executor = fasync::Executor::new().context("Error creating executor")?;
+        let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         executor.run_singlethreaded(run_test())
     }
 }

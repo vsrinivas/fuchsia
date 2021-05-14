@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn single_block_blocks_barrier() {
-        let mut executor = fuchsia_async::Executor::new().unwrap();
+        let mut executor = fuchsia_async::TestExecutor::new().unwrap();
 
         let (mut barrier, block) = Barrier::new();
         assert_eq!(executor.run_until_stalled(&mut barrier), Poll::Pending);
@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn block_clone_blocks_barrier() {
-        let mut executor = fuchsia_async::Executor::new().unwrap();
+        let mut executor = fuchsia_async::TestExecutor::new().unwrap();
 
         let (mut barrier, block) = Barrier::new();
         let block_clone = block.clone();

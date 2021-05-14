@@ -419,7 +419,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
                 let collector = InspectDataCollector::new();
@@ -494,7 +494,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
                 let collector = InspectDataCollector::new();
@@ -574,7 +574,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
             executor.run_singlethreaded(async {
                 verify_reader(path).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
@@ -611,7 +611,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
             executor.run_singlethreaded(async {
                 verify_reader(path).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
@@ -646,7 +646,7 @@ mod tests {
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
             executor.run_singlethreaded(async {
                 verify_reader_with_mode(path, VerifyMode::ExpectComponentFailure).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
@@ -769,7 +769,7 @@ mod tests {
         // Use signalling on a zx::Channel to indicate that the test is done.
         std::thread::spawn(move || {
             let done = done1;
-            let mut executor = fasync::Executor::new().unwrap();
+            let mut executor = fasync::LocalExecutor::new().unwrap();
 
             executor.run_singlethreaded(async {
                 let id_and_directory_proxy =

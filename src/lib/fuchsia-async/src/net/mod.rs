@@ -18,12 +18,12 @@ pub use portable::*;
 #[cfg(test)]
 mod udp_tests {
     use super::UdpSocket;
-    use crate::Executor;
+    use crate::TestExecutor;
     use std::io::Error;
 
     #[test]
     fn send_recv() {
-        let mut exec = Executor::new().expect("could not create executor");
+        let mut exec = TestExecutor::new().expect("could not create executor");
 
         let addr = "127.0.0.1:29995".parse().expect("could not parse test address");
         let buf = b"hello world";
@@ -43,7 +43,7 @@ mod udp_tests {
 
     #[test]
     fn broadcast() {
-        let mut _exec = Executor::new().expect("could not create executor");
+        let mut _exec = TestExecutor::new().expect("could not create executor");
 
         let addr = "127.0.0.1:12345".parse().expect("could not parse test address");
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
@@ -56,7 +56,7 @@ mod udp_tests {
 
     #[test]
     fn test_local_addr() {
-        let mut _exec = Executor::new().expect("could not create executor");
+        let mut _exec = TestExecutor::new().expect("could not create executor");
         let addr = "127.0.0.1:5432".parse().expect("could not parse test address");
         let socket = UdpSocket::bind(&addr).expect("could not create socket");
         assert_eq!(socket.local_addr().expect("could not get local address"), addr);

@@ -11,7 +11,7 @@ use anyhow::{anyhow, format_err, Result};
 use ffx_config::sdk::{Sdk, SdkVersion};
 use ffx_core::ffx_bail;
 use ffx_emulator_args::StartCommand;
-use fuchsia_async::Executor;
+use fuchsia_async::LocalExecutor;
 use home::home_dir;
 use hyper::{StatusCode, Uri};
 use mockall::automock;
@@ -295,7 +295,7 @@ impl HostTools {
     /// * `label` - cipd label that specified a particular aemu version
     /// * `cipd_pkg` - this is appeneded to cipd url https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/.
     pub fn download_and_extract(&self, label: String, cipd_pkg: String) -> Result<PathBuf> {
-        let mut executor = Executor::new().unwrap();
+        let mut executor = LocalExecutor::new().unwrap();
         executor.run_singlethreaded(async move {
             let root_path = match read_env_path("FEMU_DOWNLOAD_DIR") {
                 Ok(path) => path,

@@ -25,7 +25,7 @@ use {
         FileEvent, FileMarker, NodeAttributes, NodeInfo, Service, CLONE_FLAG_SAME_RIGHTS,
         INO_UNKNOWN, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
     },
-    fuchsia_async::Executor,
+    fuchsia_async::TestExecutor,
     fuchsia_zircon::sys::ZX_OK,
     libc::{S_IRUSR, S_IWUSR},
 };
@@ -66,7 +66,7 @@ fn get_attr() {
 
 #[test]
 fn describe() {
-    let exec = Executor::new().expect("Executor creation failed");
+    let exec = TestExecutor::new().expect("TestExecutor creation failed");
 
     let server = endpoint(|_scope, _channel| ());
 

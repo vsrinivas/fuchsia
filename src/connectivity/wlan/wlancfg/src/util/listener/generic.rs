@@ -114,7 +114,7 @@ mod tests {
 
         /// Acknowledges a previously received update.
         pub fn ack_update<F>(
-            exec: &mut fasync::Executor,
+            exec: &mut fasync::TestExecutor,
             pending_ack: fidl_policy::ClientStateUpdatesOnClientStateUpdateResponder,
             serve_listeners: &mut F,
         ) where
@@ -126,7 +126,7 @@ mod tests {
 
         /// Broadcasts an update to all registered listeners.
         pub fn broadcast_update<F>(
-            exec: &mut fasync::Executor,
+            exec: &mut fasync::TestExecutor,
             sender: &mut ClientListenerMessageSender,
             update: ClientStateUpdate,
             serve_listeners: &mut F,
@@ -141,7 +141,7 @@ mod tests {
         /// Reads and expects a status update to be available. Once the update was read it'll also be
         /// acknowledged.
         pub fn ack_next_status_update<F>(
-            exec: &mut fasync::Executor,
+            exec: &mut fasync::TestExecutor,
             stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
             serve_listeners: &mut F,
         ) -> fidl_policy::ClientStateSummary
@@ -156,7 +156,7 @@ mod tests {
 
         /// Registers a new listener.
         pub fn register_listener<F>(
-            exec: &mut fasync::Executor,
+            exec: &mut fasync::TestExecutor,
             sender: &mut ClientListenerMessageSender,
             serve_listeners: &mut F,
         ) -> fidl_policy::ClientStateUpdatesRequestStream
@@ -174,7 +174,7 @@ mod tests {
 
         /// Tries to read a status update. Returns None if no update was received.
         pub fn try_next_status_update(
-            exec: &mut fasync::Executor,
+            exec: &mut fasync::TestExecutor,
             stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
         ) -> Option<(
             fidl_policy::ClientStateSummary,
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn initial_update() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
         let serve_listeners = serve::<
             fidl_policy::ClientStateUpdatesProxy,
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn multiple_listeners_broadcast() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
         let serve_listeners = serve::<
             fidl_policy::ClientStateUpdatesProxy,
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn multiple_listeners_unacked() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mut update_sender, listener_updates) = mpsc::unbounded::<ClientListenerMessage>();
         let serve_listeners = serve::<
             fidl_policy::ClientStateUpdatesProxy,

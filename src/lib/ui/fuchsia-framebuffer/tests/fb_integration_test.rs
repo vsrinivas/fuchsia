@@ -27,7 +27,7 @@ enum TestResult {
 fn test_main() -> Result<(), Error> {
     println!("fuchsia_framebuffer_integration_test");
 
-    let mut executor = fasync::Executor::new().context("Failed to create executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Failed to create executor")?;
 
     executor.run_singlethreaded(async {
         let (test_sender, mut test_receiver) = unbounded::<TestResult>();

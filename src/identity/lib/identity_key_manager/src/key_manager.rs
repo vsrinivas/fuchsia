@@ -95,7 +95,7 @@ mod test {
         F: FnOnce(KeyManagerProxy) -> Fut,
         Fut: Future<Output = Result<(), anyhow::Error>>,
     {
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
+        let mut executor = fasync::TestExecutor::new().expect("Failed to create executor");
         let (key_manager_proxy, manager_request_stream) =
             create_proxy_and_stream::<KeyManagerMarker>()
                 .expect("Failed to create proxy and stream");

@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn service_advertisement_and_ends_when_advertisement_ends() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, mut profile_stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
 
@@ -308,7 +308,7 @@ mod tests {
 
     #[test]
     fn connection_request_relayed_to_stream() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, mut profile_stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
 
@@ -364,7 +364,7 @@ mod tests {
     }
 
     fn expect_advertisement_registration(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         profile_stream: &mut bredr::ProfileRequestStream,
         expected_defs: Vec<bredr::ServiceDefinition>,
         expected_params: bredr::ChannelParameters,
@@ -385,7 +385,7 @@ mod tests {
     }
 
     fn expect_search_registration(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         profile_stream: &mut bredr::ProfileRequestStream,
         search_uuid: bredr::ServiceClassProfileIdentifier,
         search_attrs: &[u16],
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn responds_to_search_results() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, mut profile_stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
 
@@ -486,7 +486,7 @@ mod tests {
 
     #[test]
     fn waker_gets_awoken_when_search_added() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, mut profile_stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
             .expect("Profile proxy should be created");
 

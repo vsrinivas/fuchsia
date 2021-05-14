@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn query_serve_with_sme_channel() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mlme_proxy, _mlme_server) =
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
         let (iface_map, _iface_map_events) = IfaceMap::new();
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn sme_shutdown_signal() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mlme_proxy, _mlme_server) =
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
         let (iface_map, _iface_map_events) = IfaceMap::new();

@@ -275,7 +275,7 @@ mod tests {
             }
         }
 
-        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
         let mut test_logic = Box::pin(async {
             // Configure and start component
             let components = vec![

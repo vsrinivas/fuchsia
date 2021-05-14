@@ -10,7 +10,7 @@ use {
     async_utils::PollExt,
     fidl::{endpoints::RequestStream, Error as FidlError},
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopMarker, SnoopProxy, SnoopRequestStream},
-    fuchsia_async::{Channel, Executor},
+    fuchsia_async::{Channel, TestExecutor},
     fuchsia_inspect::{assert_data_tree, Inspector},
     fuchsia_zircon as zx,
     futures::pin_mut,
@@ -18,7 +18,7 @@ use {
 };
 
 fn setup() -> (
-    Executor,
+    TestExecutor,
     ConcurrentSnooperPacketFutures,
     PacketLogs,
     SubscriptionManager,
@@ -27,7 +27,7 @@ fn setup() -> (
 ) {
     let inspect = Inspector::new();
     (
-        fasync::Executor::new().unwrap(),
+        TestExecutor::new().unwrap(),
         ConcurrentSnooperPacketFutures::new(),
         PacketLogs::new(
             10,
@@ -210,7 +210,7 @@ fn test_snoop_config_inspect() {
 // Helper that pumps the request stream to get back a single request, panicking if the stream
 // stalls before a request is returned.
 fn pump_request_stream(
-    exec: &mut fasync::Executor,
+    exec: &mut TestExecutor,
     mut request_stream: SnoopRequestStream,
     id: ClientId,
 ) -> ClientRequest {
@@ -221,7 +221,7 @@ fn pump_request_stream(
 // Helper that pumps the the handle_client_request until stalled, panicking if the future
 // stalls in a pending state or returns an error.
 fn pump_handle_client_request(
-    exec: &mut fasync::Executor,
+    exec: &mut TestExecutor,
     request: ClientRequest,
     client_requests: &mut ConcurrentClientRequestFutures,
     subscribers: &mut SubscriptionManager,

@@ -15,7 +15,7 @@ use {
 
 #[track_caller]
 pub fn poll_sme_req(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     next_sme_req: &mut StreamFuture<fidl_fuchsia_wlan_sme::ClientSmeRequestStream>,
 ) -> Poll<fidl_fuchsia_wlan_sme::ClientSmeRequest> {
     exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
@@ -27,7 +27,7 @@ pub fn poll_sme_req(
 
 #[track_caller]
 pub fn validate_sme_scan_request_and_send_results(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     sme_stream: &mut fidl_sme::ClientSmeRequestStream,
     expected_scan_request: &fidl_sme::ScanRequest,
     mut scan_results: Vec<fidl_sme::BssInfo>,
@@ -60,7 +60,7 @@ pub fn validate_sme_scan_request_and_send_results(
 /// for the expected active scan).
 #[track_caller]
 pub fn poll_for_and_validate_sme_scan_request_and_send_results(
-    exec: &mut fasync::Executor,
+    exec: &mut fasync::TestExecutor,
     network_selection_fut: &mut Pin<&mut impl futures::Future>,
     sme_stream: &mut fidl_sme::ClientSmeRequestStream,
     expected_scan_request: &fidl_sme::ScanRequest,

@@ -11,7 +11,7 @@ use fidl::endpoints::{Request, ServiceMarker};
 use fidl_fuchsia_settings::{
     Error, PrivacyMarker, PrivacyProxy, PrivacyRequest, PrivacySetResult, PrivacySettings,
 };
-use fuchsia_async::{Executor, Task};
+use fuchsia_async::{Task, TestExecutor};
 use futures::task::Poll;
 use futures::{pin_mut, FutureExt};
 use matches::assert_matches;
@@ -213,7 +213,7 @@ async fn test_error_ends_processing() {
 fn test_exit_sender_ends_processing() {
     // We want to test that execution stalls since the fidl processor exited, so we use our own
     // executor.
-    let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+    let mut executor = TestExecutor::new_with_fake_time().expect("Failed to create executor");
 
     let mut expected_result: PrivacySetResult = Err(Error::Failed);
 

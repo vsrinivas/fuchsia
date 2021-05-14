@@ -662,7 +662,7 @@ mod tests {
         (CobaltSender::new(sender), receiver)
     }
 
-    fn run_to_stalled(exec: &mut fasync::Executor) {
+    fn run_to_stalled(exec: &mut fasync::TestExecutor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
@@ -682,7 +682,7 @@ mod tests {
 
     #[test]
     fn test_at_least_one_profile_enabled() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (sender, _) = fake_cobalt_sender();
         let config =
             A2dpConfiguration { enable_sink: false, enable_source: false, ..Default::default() };
@@ -700,7 +700,7 @@ mod tests {
     /// build_local_streams should fail because it can't start the SBC decoder, because
     /// MediaPlayer isn't available in the test environment.
     fn test_sbc_unavailable_error() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (sender, _) = fake_cobalt_sender();
         let config = A2dpConfiguration { source: AudioSourceType::BigBen, ..Default::default() };
         let mut streams_fut = Box::pin(StreamsBuilder::system_available(sender, &config));
@@ -714,7 +714,7 @@ mod tests {
     #[test]
     /// build local_streams should not include the AAC streams
     fn test_aac_switch() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (sender, _) = fake_cobalt_sender();
         let mut config = A2dpConfiguration {
             source: AudioSourceType::BigBen,
@@ -745,7 +745,7 @@ mod tests {
     /// Tests that A2DP sink assumes the initiator role when a peer is found, but
     /// not connected, and the timeout completes.
     fn wait_to_initiate_success_with_no_connected_peer() {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let (peers, mut prof_stream) = setup_connected_peers();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
@@ -806,7 +806,7 @@ mod tests {
     /// Tests that A2DP sink does not assume the initiator role when a peer connects
     /// before `INITIATOR_DELAY` timeout completes.
     fn wait_to_initiate_returns_early_with_connected_peer() {
-        let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let (peers, mut prof_stream) = setup_connected_peers();
         // Initialize context to a fixed point in time.
         exec.set_fake_time(fasync::Time::from_nanos(1000000000));
@@ -868,7 +868,7 @@ mod tests {
     #[cfg(not(feature = "test_encoding"))]
     #[test]
     fn test_encoding_fails_in_test_environment() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let result = exec.run_singlethreaded(test_encode_sbc());
 
         assert!(result.is_err());
@@ -876,7 +876,7 @@ mod tests {
 
     #[test]
     fn test_audio_mode_connection() {
-        let mut exec = fasync::Executor::new().expect("executor should build");
+        let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (peers, _profile_stream) = setup_connected_peers();
 
         let (proxy, stream) = create_proxy_and_stream::<a2dp::AudioModeMarker>()

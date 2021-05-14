@@ -30,7 +30,7 @@ fn main() -> Result<(), anyhow::Error> {
     syslog::init_with_tags(&["reachability"]).expect("failed to initialize logger");
 
     info!("Starting reachability monitor!");
-    let mut executor = fuchsia_async::Executor::new()?;
+    let mut executor = fuchsia_async::LocalExecutor::new()?;
 
     let (request_tx, request_rx) = futures::channel::mpsc::unbounded();
     let (response_tx, response_rx) = futures::channel::mpsc::unbounded();

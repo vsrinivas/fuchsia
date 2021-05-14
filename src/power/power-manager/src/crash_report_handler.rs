@@ -78,8 +78,9 @@ impl CrashReportHandlerBuilder {
 }
 
 pub fn default_get_proxy_fn() -> Result<fidl_feedback::CrashReporterProxy, anyhow::Error> {
-    let proxy = connect_proxy::<fidl_feedback::CrashReporterMarker>(&CRASH_REPORTER_SVC.to_string())
-        .map_err(|e| anyhow::format_err!("Failed to connect to crash reporter svc: {}", e))?;
+    let proxy =
+        connect_proxy::<fidl_feedback::CrashReporterMarker>(&CRASH_REPORTER_SVC.to_string())
+            .map_err(|e| anyhow::format_err!("Failed to connect to crash reporter svc: {}", e))?;
     Ok(proxy)
 }
 
@@ -164,7 +165,7 @@ impl Node for CrashReportHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{TryStreamExt, poll};
+    use futures::{poll, TryStreamExt};
     use matches::assert_matches;
     use std::task::Poll;
 
@@ -211,7 +212,7 @@ mod tests {
     /// Tests that the number of pending crash reports is correctly bounded.
     #[test]
     fn test_crash_report_pending_reports() {
-        let mut exec = fasync::Executor::new().unwrap();
+        let mut exec = fasync::TestExecutor::new().unwrap();
 
         // Set up the proxy/stream and node outside of the large future used below. This way we can
         // still poll the stream after the future completes.
@@ -312,7 +313,9 @@ mod tests {
 
         // File a crash report
         crash_report_handler
-            .handle_message(&Message::FileCrashReport("TestCrashReportSvcChannelClosure".to_string()))
+            .handle_message(&Message::FileCrashReport(
+                "TestCrashReportSvcChannelClosure".to_string(),
+            ))
             .await
             .unwrap();
 
@@ -336,7 +339,7 @@ mod tests {
         // verify channel is closed
         let poll_result = poll!(stream.next());
         match poll_result {
-            Poll::Ready(None) => {},
+            Poll::Ready(None) => {}
             Poll::Pending => panic!("channel expected to be closed"),
             Poll::Ready(_) => panic!("channel expected to be closed"),
         }

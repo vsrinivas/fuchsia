@@ -35,7 +35,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
 }
 
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().expect("error creating executor");
+    let mut executor = fasync::LocalExecutor::new().expect("error creating executor");
     let mut fs = ServiceFs::new_local();
 
     fs.dir("svc").add_fidl_service(move |stream| {

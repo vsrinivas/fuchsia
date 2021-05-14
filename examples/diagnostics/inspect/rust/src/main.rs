@@ -153,7 +153,7 @@ impl Employee {
 }
 
 fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
     let mut fs = ServiceFs::new();
 
     // Creates a new inspector object. This will create the "root" node in the

@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn reap_watchers() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
         assert_eq!(0, helper.service.inner.lock().watchers.len());
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn add_remove_phys() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
         let (proxy, server_end) =
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn add_remove_ifaces() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
         let (proxy, server_end) =
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn snapshot_phys() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
 
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn snapshot_ifaces() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
 
@@ -374,7 +374,7 @@ mod tests {
 
     #[test]
     fn two_watchers() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
 
@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     fn remove_watcher_on_send_error() {
-        let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
+        let exec = &mut fasync::TestExecutor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
 
@@ -453,7 +453,7 @@ mod tests {
     }
 
     fn fetch_events(
-        exec: &mut fasync::Executor,
+        exec: &mut fasync::TestExecutor,
         stream: fidl_svc::DeviceWatcherEventStream,
     ) -> Vec<DeviceWatcherEvent> {
         let events = Arc::new(Mutex::new(Some(Vec::new())));

@@ -76,7 +76,7 @@ fn main() -> Result<(), Error> {
     .expect("Can't init logger");
     info!("Starting account handler");
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let inspector = Inspector::new();
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;

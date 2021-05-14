@@ -494,7 +494,7 @@ mod tests {
 
     #[test]
     fn list_two_phys() {
-        let _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy_null, _phy_null_stream) = fake_phy("/dev/null");
@@ -514,7 +514,7 @@ mod tests {
 
     #[test]
     fn query_phy_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -549,7 +549,7 @@ mod tests {
 
     #[test]
     fn query_phy_not_found() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
@@ -560,7 +560,7 @@ mod tests {
 
     #[test]
     fn list_two_ifaces() {
-        let _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
         let iface_null = fake_client_iface();
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn query_iface_success() {
-        let _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
 
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn destroy_iface_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut phy_map, _phy_map_events) = PhyMap::new();
         let (mut iface_map, _iface_map_events) = IfaceMap::new();
         let mut phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
@@ -621,7 +621,7 @@ mod tests {
 
     #[test]
     fn destroy_iface_failure() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut phy_map, _phy_map_events) = PhyMap::new();
         let (mut iface_map, _iface_map_events) = IfaceMap::new();
         let mut phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
@@ -651,7 +651,7 @@ mod tests {
 
     #[test]
     fn destroy_iface_not_found() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (mut phy_map, _phy_map_events) = PhyMap::new();
         let (mut iface_map, _iface_map_events) = IfaceMap::new();
         let _phy_stream = fake_destroy_iface_env(&mut phy_map, &mut iface_map);
@@ -672,7 +672,7 @@ mod tests {
 
     #[test]
     fn create_iface_without_mac_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
@@ -729,7 +729,7 @@ mod tests {
 
     #[test]
     fn create_iface_with_mac_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
@@ -787,7 +787,7 @@ mod tests {
 
     #[test]
     fn create_iface_not_found() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
 
@@ -811,7 +811,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -843,7 +843,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_not_found() {
-        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -853,7 +853,7 @@ mod tests {
 
     #[test]
     fn get_client_sme_wrong_role() {
-        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -866,7 +866,7 @@ mod tests {
 
     #[test]
     fn get_ap_sme_success() {
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -902,7 +902,7 @@ mod tests {
 
     #[test]
     fn get_ap_sme_not_found() {
-        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -912,7 +912,7 @@ mod tests {
 
     #[test]
     fn get_ap_sme_wrong_role() {
-        let mut _exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut _exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -926,7 +926,7 @@ mod tests {
     #[test]
     fn test_set_country() {
         // Setup environment
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -958,7 +958,7 @@ mod tests {
     #[test]
     fn test_set_country_failure() {
         // Setup environment
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -992,7 +992,7 @@ mod tests {
     #[test]
     fn test_get_country() {
         // Setup environment
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -1025,7 +1025,7 @@ mod tests {
     #[test]
     fn test_get_country_failure() {
         // Setup environment
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -1054,7 +1054,7 @@ mod tests {
     #[test]
     fn test_clear_country() {
         // Setup environment
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -1084,7 +1084,7 @@ mod tests {
     #[test]
     fn test_clear_country_failure() {
         // Setup environment
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phy_map, _phy_map_events) = PhyMap::new();
         let phy_map = Arc::new(phy_map);
         let (phy, mut phy_stream) = fake_phy("/dev/null");
@@ -1114,14 +1114,14 @@ mod tests {
     }
 
     fn setup_create_iface_test() -> (
-        fasync::Executor,
+        fasync::TestExecutor,
         BoxFuture<'static, Result<(), anyhow::Error>>,
         BoxFuture<'static, Result<(i32, Option<Box<fidl_svc::CreateIfaceResponse>>), fidl::Error>>,
         impl Future<Output = Result<void::Void, anyhow::Error>>,
         fidl_wlan_dev::CreateIfaceRequest,
     ) {
         let fake_phy_id = 10;
-        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let (phys, phy_events) = device::PhyMap::new();
         let (ifaces, iface_events) = device::IfaceMap::new();
 

@@ -333,7 +333,7 @@ mod test {
         crate::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_posix_socket::ProviderRequest,
-        fuchsia_async::{self as fasync, net::TcpListener, Executor},
+        fuchsia_async::{self as fasync, net::TcpListener, LocalExecutor},
         futures::prelude::*,
         matches::assert_matches,
         std::cell::RefCell,
@@ -349,13 +349,13 @@ mod test {
 
     #[test]
     fn can_create_client() {
-        let _exec = Executor::new().unwrap();
+        let _exec = LocalExecutor::new().unwrap();
         let _client = new_client();
     }
 
     #[test]
     fn can_create_https_client() {
-        let _exec = Executor::new().unwrap();
+        let _exec = LocalExecutor::new().unwrap();
         let _client = new_https_client();
     }
 
