@@ -114,7 +114,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetOpacity(TransformId transform_id, float val) override;
   // |fuchsia::ui::scenic::internal::Flatland|
-  void SetContentOnTransform(TransformId transform_id, ContentId content_id) override;
+  void SetContent(TransformId transform_id, ContentId content_id) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(ContentId link_id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;

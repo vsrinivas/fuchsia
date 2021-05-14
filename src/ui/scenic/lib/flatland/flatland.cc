@@ -655,9 +655,9 @@ void Flatland::SetOpacity(TransformId transform_id, float val) {
   }
 }
 
-void Flatland::SetContentOnTransform(TransformId transform_id, ContentId content_id) {
+void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
   if (transform_id.value == kInvalidId) {
-    FX_LOGS(ERROR) << "SetContentOnTransform called with transform_id zero";
+    FX_LOGS(ERROR) << "SetContent called with transform_id zero";
     ReportError();
     return;
   }
@@ -665,8 +665,7 @@ void Flatland::SetContentOnTransform(TransformId transform_id, ContentId content
   auto transform_kv = transforms_.find(transform_id.value);
 
   if (transform_kv == transforms_.end()) {
-    FX_LOGS(ERROR) << "SetContentOnTransform failed, transform_id " << transform_id.value
-                   << " not found";
+    FX_LOGS(ERROR) << "SetContent failed, transform_id " << transform_id.value << " not found";
     ReportError();
     return;
   }
@@ -679,8 +678,7 @@ void Flatland::SetContentOnTransform(TransformId transform_id, ContentId content
   auto handle_kv = content_handles_.find(content_id.value);
 
   if (handle_kv == content_handles_.end()) {
-    FX_LOGS(ERROR) << "SetContentOnTransform failed, content_id " << content_id.value
-                   << " not found";
+    FX_LOGS(ERROR) << "SetContent failed, content_id " << content_id.value << " not found";
     ReportError();
     return;
   }

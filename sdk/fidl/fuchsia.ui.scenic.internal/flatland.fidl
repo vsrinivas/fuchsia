@@ -423,7 +423,7 @@ protocol Flatland {
     ///
     /// Calling this function with a Content id of 0 will remove any Content currently on the
     /// Transform.
-    SetContentOnTransform(TransformId transform_id, ContentId content_id);
+    SetContent(TransformId transform_id, ContentId content_id);
 
     // Content mutators
 
