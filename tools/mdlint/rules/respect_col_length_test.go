@@ -111,3 +111,25 @@ only` + backtick + ` exceeds the maximum if you count "only(backtick)".
 		},
 	}.runOverTokens(t, newRespectColLength)
 }
+
+func TestRespectColLength_longLinkDestination(t *testing.T) {
+	ruleTestCase{
+		files: map[string]string{
+			"example.md": `
+word word word word word word word word word word word word word word, [link
+link link](https://example.com/00000000000000000000000000000000000000000000000000000000000000000000000000000000000000)`,
+		},
+	}.runOverTokens(t, newRespectColLength)
+}
+
+func TestRespectColLength_longLinkReferenceDefinition(t *testing.T) {
+	ruleTestCase{
+		files: map[string]string{
+			"example.md": `
+See [foo] and [bar] for details.
+
+[foo]: https://example.com/00000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+[bar]: /docs/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/to/file.md`,
+		},
+	}.runOverTokens(t, newRespectColLength)
+}

@@ -22,7 +22,16 @@ type respectColLength struct {
 
 	countStartingAtCol int
 	lastReportedLine   int
+	linkDefState       linkDefState
 }
+
+type linkDefState int
+
+const (
+	linkDefNone linkDefState = iota
+	linkDefLabel
+	linkDefColon
+)
 
 var _ core.LintRuleOverTokens = (*respectColLength)(nil)
 
@@ -36,16 +45,42 @@ const colSizeLimit = 80
 func (rule *respectColLength) OnDocStart(_ *core.Doc) {
 	rule.countStartingAtCol = 1
 	rule.lastReportedLine = 0
+	rule.linkDefState = linkDefNone
 }
 
 func (rule *respectColLength) OnNext(tok core.Token) {
+	// TODO(fxbug.dev/76574): Remove this temporary heuristic.
+	switch rule.linkDefState {
+	case linkDefNone:
+		if tok.Col == 1 && tok.Kind == core.Link {
+			rule.linkDefState = linkDefLabel
+		}
+	case linkDefLabel:
+		if tok.Content == ":" {
+			rule.linkDefState = linkDefColon
+		} else {
+			rule.linkDefState = linkDefNone
+		}
+	case linkDefColon:
+		// We've passed `[label]:`, so ignore the rest of the line.
+		if tok.Kind != core.Newline {
+			return
+		}
+	}
+
 	switch tok.Kind {
+	case core.EOF:
+		// Do nothing.
 	case core.Newline:
 		rule.countStartingAtCol = 1
+		rule.linkDefState = linkDefNone
 	case core.Space, core.Header, core.List:
 		if tok.Col == rule.countStartingAtCol {
 			rule.countStartingAtCol += len(tok.Content)
 		}
+	// TODO(fxbug.dev/76574): Remove this temporary heuristic.
+	case core.URL:
+		// Do nothing.
 	default:
 		if tok.Ln == rule.lastReportedLine || tok.Col == rule.countStartingAtCol {
 			break
