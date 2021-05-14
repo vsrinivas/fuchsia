@@ -408,7 +408,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:138
+From //build/images/args.gni:137
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -1547,7 +1547,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:118
+From //build/images/args.gni:117
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -2765,10 +2765,13 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 From //build/persist_logs.gni:13
 
 ### pkgfs_packages_allowlist
+The allowlist file to load for /pkgfs/packages non-base packages
+ DEPRECATED:  Use a fuchsia_system_package() in `product_system_image_deps`
+              instead.
 
-**Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
+**Current value (from the default):** `""`
 
-From //build/images/args.gni:115
+From //build/images/args.gni:114
 
 ### platform_enable_user_pci
 
@@ -2865,7 +2868,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:127
+From //build/images/args.gni:126
 
 ### recovery_logo_path
 Path to file to use for recovery logo
