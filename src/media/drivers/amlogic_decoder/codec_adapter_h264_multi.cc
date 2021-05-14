@@ -560,10 +560,10 @@ CodecAdapterH264Multi::CoreCodecGetBufferCollectionConstraints(
     image_constraints.coded_width_divisor = 16;
     image_constraints.coded_height_divisor = 16;
     image_constraints.bytes_per_row_divisor = 32;
-    // TODO(dustingreen): Since this is a producer that will always produce at
-    // offset 0 of a physical page, we don't really care if this field is
-    // consistent with any constraints re. what the HW can do.
-    image_constraints.start_offset_divisor = 1;
+    // Even though we only ever output at offset 0, sysmem defaults start_offset_divisor to the
+    // image format alignment which is 2 for NV12. Since we are a producer, we should fully specify
+    // here so late attach clients don't have to specify it explicitly.
+    image_constraints.start_offset_divisor = 2;
     // Odd display dimensions are permitted, but these don't imply odd NV12
     // dimensions - those are constrainted by coded_width_divisor and
     // coded_height_divisor which are both 16.

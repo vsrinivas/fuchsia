@@ -348,10 +348,10 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     // Unclear how we'd deal with odd coded_height, even if we wanted to.
     image_constraints.coded_height_divisor = 2;
     image_constraints.bytes_per_row_divisor = 32;
-    // TODO(dustingreen): Since this is a producer that will always produce at
-    // offset 0 of a physical page, we don't really care if this field is
-    // consistent with any constraints re. what the HW can do.
-    image_constraints.start_offset_divisor = 1;
+    // Even though we only ever output at offset 0, sysmem defaults start_offset_divisor to the
+    // image format alignment which is 2 for NV12. Since we are a producer, we should fully specify
+    // here so late attach clients don't have to specify it explicitly.
+    image_constraints.start_offset_divisor = 2;
     // Odd display dimensions are permitted, but these don't necessarily imply
     // odd NV12 coded_width or coded_height dimensions - those are constrainted
     // above.
