@@ -67,6 +67,8 @@ class Channel extends StatelessWidget {
                     channels.add(model.channel.value);
                   }
                 }
+                channels.sort((a, b) =>
+                    model.channelValue(a).compareTo(model.channelValue(b)));
                 return AnimatedBuilder(
                   animation: model.channel,
                   builder: (context, _) => Row(
@@ -214,6 +216,23 @@ class ChannelModel {
         return 'stable';
       default:
         return '';
+    }
+  }
+
+  int channelValue(String channel) {
+    switch (channel) {
+      case 'stable':
+        return 0;
+      case 'beta':
+        return 1;
+      case 'dogfood':
+        return 2;
+      case 'test':
+        return 3;
+      case 'devhost':
+        return 4;
+      default:
+        return 99;
     }
   }
 }
