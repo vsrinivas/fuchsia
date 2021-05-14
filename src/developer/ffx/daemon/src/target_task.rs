@@ -9,5 +9,8 @@ use std::fmt::Debug;
 #[allow(dead_code)]
 pub enum TargetTaskType {
     HostPipe,
+    MdnsMonitor,
     ProactiveLog,
+    FastbootMonitor,
+    ZedbootMonitor,
 }

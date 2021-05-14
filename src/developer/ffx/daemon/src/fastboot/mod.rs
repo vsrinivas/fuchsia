@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::FASTBOOT_CHECK_INTERVAL,
+    crate::constants::FASTBOOT_CHECK_INTERVAL_SECS,
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::client::{FastbootImpl, InterfaceFactory},
     crate::target::Target,
@@ -379,7 +379,7 @@ pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
                     });
             }
             // Sleep
-            Timer::new(FASTBOOT_CHECK_INTERVAL).await;
+            Timer::new(std::time::Duration::from_secs(FASTBOOT_CHECK_INTERVAL_SECS)).await;
         }
     })
     .detach();

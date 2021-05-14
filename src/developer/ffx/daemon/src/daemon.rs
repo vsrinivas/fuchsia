@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, CURRENT_EXE_HASH, MDNS_BROADCAST_INTERVAL},
+    crate::constants::{get_socket, CURRENT_EXE_HASH, MDNS_BROADCAST_INTERVAL_SECS},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{spawn_fastboot_discovery, Fastboot},
@@ -43,7 +43,7 @@ use {
     std::convert::TryInto,
     std::net::SocketAddr,
     std::rc::{Rc, Weak},
-    std::time::{Duration, Instant},
+    std::time::Duration,
 };
 
 // Daemon
@@ -108,13 +108,15 @@ impl DaemonEventHandler {
                 }
             };
 
+            target.run_mdns_monitor();
+
             let _ = autoconnect_fut.await;
 
             // Updates state last so that if tasks are waiting on this state, everything is
             // already running and there aren't any races.
             target.update_connection_state(|s| match s {
                 ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
-                    ConnectionState::Mdns(Instant::now())
+                    ConnectionState::Mdns(Utc::now())
                 }
                 _ => s,
             });
@@ -151,10 +153,11 @@ impl DaemonEventHandler {
         let target = tc.merge_insert(Target::from_target_info(t.into()));
         target.update_connection_state(|s| match s {
             ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
-                ConnectionState::Fastboot(Instant::now())
+                ConnectionState::Fastboot(Utc::now())
             }
             _ => s,
         });
+        target.run_fastboot_monitor();
     }
 
     async fn handle_zedboot(&self, t: TargetInfo, tc: &TargetCollection) {
@@ -165,10 +168,11 @@ impl DaemonEventHandler {
         let target = tc.merge_insert(Target::from_netsvc_target_info(t.into()));
         target.update_connection_state(|s| match s {
             ConnectionState::Disconnected | ConnectionState::Zedboot(_) => {
-                ConnectionState::Zedboot(Instant::now())
+                ConnectionState::Zedboot(Utc::now())
             }
             _ => s,
         });
+        target.run_zedboot_monitor();
     }
 }
 
@@ -290,7 +294,6 @@ impl Daemon {
         self.load_manual_targets().await;
         self.start_discovery().await?;
         self.start_ascendd().await?;
-        self.start_target_expiry(Duration::from_secs(1));
         self.serve().await
     }
 
@@ -307,7 +310,7 @@ impl Daemon {
 
         let config = TargetFinderConfig {
             interface_discovery_interval: Duration::from_secs(1),
-            broadcast_interval: MDNS_BROADCAST_INTERVAL,
+            broadcast_interval: Duration::from_secs(MDNS_BROADCAST_INTERVAL_SECS),
             mdns_ttl: 255,
         };
         let mut mdns = MdnsTargetFinder::new(&config)?;
@@ -329,24 +332,6 @@ impl Daemon {
         self.ascendd.replace(Some(ascendd));
 
         Ok(())
-    }
-
-    fn start_target_expiry(&mut self, frequency: Duration) {
-        let target_collection = Rc::downgrade(&self.target_collection);
-        self.tasks.push(Rc::new(Task::local(async move {
-            loop {
-                Timer::new(frequency.clone()).await;
-
-                match target_collection.upgrade() {
-                    Some(target_collection) => {
-                        for target in target_collection.targets() {
-                            target.expire_state();
-                        }
-                    }
-                    None => return,
-                }
-            }
-        })))
     }
 
     async fn load_manual_targets(&self) {
@@ -971,7 +956,7 @@ mod test {
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Fastboot(t)) => {
                     let target = tc.merge_insert(Target::from_target_info(t.into()));
-                    target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
+                    target.update_connection_state(|_| ConnectionState::Fastboot(Utc::now()));
                 }
                 DaemonEvent::NewTarget(_) => {}
                 e => panic!("unexpected event: {:#?}", e),
@@ -1016,7 +1001,7 @@ mod test {
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Zedboot(t)) => {
                     let target = tc.merge_insert(Target::from_netsvc_target_info(t.into()));
-                    target.update_connection_state(|_| ConnectionState::Zedboot(Instant::now()))
+                    target.update_connection_state(|_| ConnectionState::Zedboot(Utc::now()))
                 }
                 DaemonEvent::NewTarget(_) => {}
                 e => panic!("unexpected event: {:#?}", e),
@@ -1575,20 +1560,5 @@ mod test {
         assert_eq!(0, daemon.target_collection.targets().len());
 
         assert_eq!(daemon.manual_targets.get_or_default().await, Vec::<String>::new());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_expiry() {
-        let mut daemon = Daemon::new();
-        let target = Target::new("goodbye-world");
-        let then = Instant::now() - Duration::from_secs(600);
-        target.update_connection_state(|_| ConnectionState::Mdns(then));
-        daemon.target_collection.merge_insert(target.clone());
-
-        daemon.start_target_expiry(Duration::from_millis(1));
-
-        Timer::new(Duration::from_millis(2)).await;
-
-        assert_eq!(ConnectionState::Disconnected, target.get_connection_state());
     }
 }

@@ -231,13 +231,13 @@ mod test {
     use {
         super::*,
         anyhow::anyhow,
+        chrono::Utc,
         fidl::endpoints::{create_proxy_and_stream, RequestStream},
         fidl_fuchsia_developer_bridge::{FastbootRequest, TargetControlMarker, TargetControlProxy},
         fidl_fuchsia_developer_remotecontrol::{
             RemoteControlMarker, RemoteControlRequest, ServiceMatch,
         },
         fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, AdminRequestStream},
-        std::time::Instant,
     };
 
     async fn setup_fastboot() -> FastbootProxy {
@@ -359,7 +359,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_product() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Instant::now()));
+        target.set_state(ConnectionState::Fastboot(Utc::now()));
         proxy
             .reboot(TargetRebootState::Product)
             .await?
@@ -369,7 +369,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_recovery() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Instant::now()));
+        target.set_state(ConnectionState::Fastboot(Utc::now()));
         assert!(proxy.reboot(TargetRebootState::Recovery).await?.is_err());
         Ok(())
     }
@@ -377,7 +377,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_bootloader() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Instant::now()));
+        target.set_state(ConnectionState::Fastboot(Utc::now()));
         proxy
             .reboot(TargetRebootState::Bootloader)
             .await?
@@ -387,7 +387,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_zedboot_reboot_bootloader() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Zedboot(Instant::now()));
+        target.set_state(ConnectionState::Zedboot(Utc::now()));
         assert!(proxy.reboot(TargetRebootState::Bootloader).await?.is_err());
         Ok(())
     }
@@ -395,7 +395,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_zedboot_reboot_recovery() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Zedboot(Instant::now()));
+        target.set_state(ConnectionState::Zedboot(Utc::now()));
         assert!(proxy.reboot(TargetRebootState::Recovery).await?.is_err());
         Ok(())
     }
