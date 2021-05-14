@@ -9,11 +9,13 @@
 
 LoaderImpl::~LoaderImpl() { app_->RemoveObserver(this); }
 
-// Adds a binding for fuchsia::vulkan::loader::Loader to |outgoing|
-void LoaderImpl::Add(const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
+// static
+void LoaderImpl::Add(LoaderApp* app, const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
   outgoing->AddPublicService(fidl::InterfaceRequestHandler<fuchsia::vulkan::loader::Loader>(
-      [this](fidl::InterfaceRequest<fuchsia::vulkan::loader::Loader> request) {
-        bindings_.AddBinding(this, std::move(request), nullptr);
+      [app](fidl::InterfaceRequest<fuchsia::vulkan::loader::Loader> request) {
+        auto impl = std::make_unique<LoaderImpl>(app);
+        LoaderImpl* impl_ptr = impl.get();
+        impl_ptr->bindings_.AddBinding(std::move(impl), std::move(request), nullptr);
       }));
 }
 

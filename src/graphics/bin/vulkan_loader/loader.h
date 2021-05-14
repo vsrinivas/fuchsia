@@ -19,8 +19,9 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader, public LoaderAp
   explicit LoaderImpl(LoaderApp* app) : app_(app) {}
   ~LoaderImpl() final;
 
-  // Adds a binding for fuchsia::vulkan::loader::Loader to |outgoing|
-  void Add(const std::shared_ptr<sys::OutgoingDirectory>& outgoing);
+  // Adds a binding for fuchsia::vulkan::loader::Loader to |outgoing|. Will create a new loader for
+  // every connection.
+  static void Add(LoaderApp* app, const std::shared_ptr<sys::OutgoingDirectory>& outgoing);
 
   // LoaderApp::Observer implementation.
   void OnIcdListChanged(LoaderApp* app) override;
@@ -34,7 +35,9 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader, public LoaderAp
 
   LoaderApp* app_;
 
-  fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
+  fidl::BindingSet<fuchsia::vulkan::loader::Loader,
+                   std::unique_ptr<fuchsia::vulkan::loader::Loader>>
+      bindings_;
 
   std::list<std::pair<std::string, fit::function<void(zx::vmo)>>> callbacks_;
 };

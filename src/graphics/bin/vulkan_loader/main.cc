@@ -74,8 +74,7 @@ int main(int argc, const char* const* argv) {
   IcdRunnerImpl component_runner;
   component_runner.Add(context->outgoing(), runner_loop.dispatcher());
 
-  LoaderImpl loader_impl(&app);
-  loader_impl.Add(context->outgoing());
+  LoaderImpl::Add(&app, context->outgoing());
 
   FX_LOGS(INFO) << "Vulkan loader initialized.";
   loop.Run();
