@@ -282,14 +282,7 @@ mod tests {
 
         load_hello_starnix(task).expect("failed to load executable");
 
-        let task_owner2 = Task::new(
-            &kernel,
-            &CString::new("another-task").unwrap(),
-            task.files.clone(),
-            task.fs.clone(),
-            task.creds.clone(),
-        )
-        .expect("failed to create second task");
+        let task_owner2 = create_task(&kernel, "another-task");
 
         let task2 = &task_owner2.task;
         task.mm.snapshot_to(&task2.mm).expect("failed to snapshot mm");

@@ -357,7 +357,6 @@ impl Task {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fuchsia_async as fasync;
 
     use crate::testing::*;
@@ -368,14 +367,7 @@ mod test {
 
         let task = &task_owner.task;
         assert_eq!(task.get_tid(), 1);
-        let another_task_owner = Task::new(
-            &kernel,
-            &CString::new("another-task").unwrap(),
-            FdTable::new(),
-            task.fs.clone(),
-            Credentials::default(),
-        )
-        .expect("failed to create second task");
+        let another_task_owner = create_task(&kernel, "another-task");
         let another_task = &another_task_owner.task;
         assert_eq!(another_task.get_tid(), 2);
 
