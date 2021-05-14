@@ -112,7 +112,7 @@ impl AgentType {
 }
 
 pub fn get_default_agent_types() -> HashSet<AgentType> {
-    return vec![AgentType::Restore].into_iter().collect();
+    [AgentType::Restore].iter().copied().collect()
 }
 
 impl From<AgentType> for BlueprintHandle {
