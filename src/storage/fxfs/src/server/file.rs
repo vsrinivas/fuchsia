@@ -4,10 +4,11 @@
 
 use {
     crate::{
-        object_handle::{ObjectHandle, ObjectHandleExt},
+        object_handle::ObjectHandle,
         object_store::{StoreObjectHandle, Timestamp},
         server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
     },
+    anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
@@ -42,8 +43,23 @@ impl FxFile {
     pub fn new(handle: StoreObjectHandle<FxVolume>) -> Self {
         Self { handle, open_count: AtomicUsize::new(0) }
     }
+
     pub fn open_count(&self) -> usize {
         self.open_count.load(Ordering::Relaxed)
+    }
+
+    async fn write_or_append(
+        &self,
+        offset: Option<u64>,
+        content: &[u8],
+    ) -> Result<(u64, u64), Error> {
+        let mut buf = self.handle.allocate_buffer(content.len());
+        let mut transaction = self.handle.new_transaction().await?;
+        buf.as_mut_slice().copy_from_slice(content);
+        let offset = offset.unwrap_or_else(|| self.handle.get_size());
+        self.handle.txn_write(&mut transaction, offset, buf.as_ref()).await?;
+        transaction.commit().await;
+        Ok((content.len() as u64, offset + content.len() as u64))
     }
 }
 
@@ -57,12 +73,15 @@ impl FxNode for FxFile {
     fn object_id(&self) -> u64 {
         self.handle.object_id()
     }
+
     fn parent(&self) -> Option<Arc<FxDirectory>> {
         unreachable!(); // Add a parent back-reference if needed.
     }
+
     fn set_parent(&self, _parent: Arc<FxDirectory>) {
         // NOP
     }
+
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self
     }
@@ -120,18 +139,14 @@ impl File for FxFile {
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        let mut buf = self.handle.allocate_buffer(content.len());
-        buf.as_mut_slice()[..content.len()].copy_from_slice(content);
-        self.handle.write(offset, buf.as_ref()).await.map_err(map_to_status)?;
-        Ok(content.len() as u64)
+        self.write_or_append(Some(offset), content)
+            .await
+            .map(|(done, _)| done)
+            .map_err(map_to_status)
     }
 
     async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
-        // TODO(jfsulliv): this needs to be made atomic. We already lock at the Device::write level
-        // but we need to lift a lock higher.
-        let offset = self.handle.get_size();
-        let bytes_written = self.write_at(offset, content).await?;
-        Ok((bytes_written, offset + bytes_written))
+        self.write_or_append(None, content).await.map_err(map_to_status)
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
