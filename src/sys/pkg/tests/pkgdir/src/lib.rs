@@ -547,8 +547,8 @@ fn generate_valid_paths(base: &str) -> Vec<String> {
 }
 
 async fn verify_directory_opened(node: NodeProxy, flag: u32) -> Result<(), Error> {
-    // If the OnOpen event isn't taken, calling describe fails with PEER_CLOSED.
-    // This is probably a bug, fxbug.dev/76172.
+    // If the OnOpen event isn't taken, calling describe sometimes fails with PEER_CLOSED.
+    // This is a bug, fxbug.dev/76172.
     if flag & OPEN_FLAG_DESCRIBE != 0 {
         let _ = node.take_event_stream().next().await.expect("get event");
     }
@@ -578,7 +578,12 @@ async fn verify_content_file_opened(node: NodeProxy, flag: u32) -> Result<(), Er
     }
 }
 
-async fn verify_meta_as_file_opened(node: NodeProxy, _flag: u32) -> Result<(), Error> {
+async fn verify_meta_as_file_opened(node: NodeProxy, flag: u32) -> Result<(), Error> {
+    // If the OnOpen event isn't taken, calling describe sometimes fails with PEER_CLOSED.
+    // This is a bug, fxbug.dev/76172.
+    if flag & OPEN_FLAG_DESCRIBE != 0 {
+        let _ = node.take_event_stream().next().await.expect("get event");
+    }
     match node.describe().await {
         Ok(NodeInfo::File(_)) => Ok(()),
         Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
