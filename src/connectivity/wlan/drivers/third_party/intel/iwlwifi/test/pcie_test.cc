@@ -486,9 +486,7 @@ class TxTest : public PcieTest {
     trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
   }
 
-  void TearDown() {
-    iwl_pcie_tx_free(trans_);
-  }
+  void TearDown() { iwl_pcie_tx_free(trans_); }
 
  protected:
   // The following class member variables will be set up after this call.
@@ -1084,6 +1082,21 @@ TEST_F(StuckTimerTest, StopRunningTimer) {
   // the handler was unblocked.)
   loop_->Quit();
   stop_thread.join();
+}
+
+TEST_F(StuckTimerTest, StopStoppedTimer) {
+  // Schedule a timer that will not fire.
+  iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
+  // timer->finished should be unset.
+  ASSERT_FALSE(sync_completion_signaled(&txq_.stuck_timer.finished));
+
+  iwlwifi_timer_stop(&txq_.stuck_timer);
+  // After the timer has been cancelled, the timer should be marked as finished so that the next
+  // stop call will not block.
+  ASSERT_TRUE(sync_completion_signaled(&txq_.stuck_timer.finished));
+
+  // Test that stop doesn't deadlock.
+  iwlwifi_timer_stop(&txq_.stuck_timer);
 }
 
 }  // namespace
