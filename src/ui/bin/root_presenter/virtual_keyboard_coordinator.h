@@ -65,13 +65,11 @@ class FidlBoundVirtualKeyboardCoordinator
                                 bool is_visible) override;
 
   void SetControllerForTest(std::unique_ptr<VirtualKeyboardController> controller) {
-    controller_binding_ = std::make_unique<ControllerBinding>(std::move(controller));
+    controller_bindings_.CloseAll();
+    controller_bindings_.AddBinding(std::move(controller));
   }
 
  private:
-  using ControllerBinding = fidl::Binding<fuchsia::input::virtualkeyboard::Controller,
-                                          std::unique_ptr<VirtualKeyboardController>>;
-
   // |fuchsia.input.virtualkeyboard.ControllerCreator|
   void Create(fuchsia::ui::views::ViewRef view_ref,
               fuchsia::input::virtualkeyboard::TextType text_type,
@@ -79,7 +77,9 @@ class FidlBoundVirtualKeyboardCoordinator
                   controller_request) override;
 
   fidl::BindingSet<fuchsia::input::virtualkeyboard::ControllerCreator> creator_bindings_;
-  std::unique_ptr<ControllerBinding> controller_binding_;
+  fidl::BindingSet<fuchsia::input::virtualkeyboard::Controller,
+                   std::unique_ptr<VirtualKeyboardController>>
+      controller_bindings_;
 
   std::optional<VirtualKeyboardManager> manager_;
 

@@ -31,10 +31,9 @@ void FidlBoundVirtualKeyboardCoordinator::Create(
     fuchsia::ui::views::ViewRef view_ref, fuchsia::input::virtualkeyboard::TextType text_type,
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Controller> controller_request) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
-  controller_binding_ =
-      std::make_unique<ControllerBinding>(std::make_unique<FidlBoundVirtualKeyboardController>(
-                                              GetWeakPtr(), std::move(view_ref), text_type),
-                                          std::move(controller_request));
+  controller_bindings_.AddBinding(std::make_unique<FidlBoundVirtualKeyboardController>(
+                                      GetWeakPtr(), std::move(view_ref), text_type),
+                                  std::move(controller_request));
 }
 
 void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
@@ -51,17 +50,12 @@ void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
   }
 
   FX_DCHECK(reason == fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION);
-  if (!controller_binding_) {
-    // Any user action before a `Controller` is bound does not affect whether
-    // or not the `Controller` wants to show the keyboard. So we don't need
-    // to buffer the notification.
-    return;
+  for (const auto& controller : controller_bindings_.bindings()) {
+    FX_DCHECK(controller->impl());
+    controller->impl()->OnUserAction(is_visible
+                                         ? VirtualKeyboardController::UserAction::SHOW_KEYBOARD
+                                         : VirtualKeyboardController::UserAction::HIDE_KEYBOARD);
   }
-
-  FX_DCHECK(controller_binding_->impl());
-  controller_binding_->impl()->OnUserAction(
-      is_visible ? VirtualKeyboardController::UserAction::SHOW_KEYBOARD
-                 : VirtualKeyboardController::UserAction::HIDE_KEYBOARD);
 }
 
 void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(

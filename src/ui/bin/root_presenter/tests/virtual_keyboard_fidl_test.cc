@@ -122,7 +122,7 @@ TEST_F(VirtualKeyboardFidlTest, ClosingCreatorDoesNotCloseController) {
   ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
 }
 
-TEST_F(VirtualKeyboardFidlTest, LastControllerHasPriority) {
+TEST_F(VirtualKeyboardFidlTest, MultipleControllersAreSupported) {
   // Create first controller.
   zx_status_t controller1_status = ZX_OK;
   auto [controller1, view_ref_control1] = CreateControllerClient();
@@ -137,16 +137,14 @@ TEST_F(VirtualKeyboardFidlTest, LastControllerHasPriority) {
       [&controller2_status](zx_status_t stat) { controller2_status = stat; });
   RunLoopUntilIdle();
 
-  // Both clients try to call `RequestShow()`.
+  // Verify that te first controller can invoke a method.
   controller1->RequestShow();
-  controller2->RequestShow();
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, controller1_status) << "status = " << zx_status_get_string(controller1_status);
 
-  // The request to the first controller should fail, since we only support a single
-  // controller at a time, and the second controller replaces the first one.
-  //
-  // Note: we'll need to update this test when we add support for multiple
-  // simultaneous controllers.
-  ASSERT_NE(ZX_OK, controller1_status) << "status = " << zx_status_get_string(controller1_status);
+  // Verify that the second controller can invoke a method.
+  controller2->RequestHide();
+  RunLoopUntilIdle();
   ASSERT_EQ(ZX_OK, controller2_status) << "status = " << zx_status_get_string(controller2_status);
 }
 }  // namespace fuchsia_input_virtualkeyboard_controller_connections
@@ -311,6 +309,34 @@ TEST_F(VirtualKeyboardFidlTest,
 
   // Verify that the watch completed.
   ASSERT_TRUE(got_watch_visibility_result);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchVisibility_AllControllersAreToldOfUserInteraction) {
+  // Create controller.
+  auto [controller1, view_ref_control1] = CreateControllerClient();
+  auto [controller2, view_ref_control2] = CreateControllerClient();
+
+  // Send first watch for each controller, which completes immediately.
+  controller1->WatchVisibility([](bool vis) {});
+  controller2->WatchVisibility([](bool vis) {});
+  RunLoopUntilIdle();
+
+  // Second second watch on each controller, and let them hang.
+  bool c1_got_watch_visibility_result = false;
+  bool c2_got_watch_visibility_result = false;
+  controller1->WatchVisibility([&](bool vis) { c1_got_watch_visibility_result = true; });
+  controller2->WatchVisibility([&](bool vis) { c2_got_watch_visibility_result = true; });
+  RunLoopUntilIdle();
+
+  // Create Manager, and call Notify().
+  auto manager = CreateManagerClient();
+  manager->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
+                  []() {});
+  RunLoopUntilIdle();
+
+  // Verify that the watch completed.
+  ASSERT_TRUE(c1_got_watch_visibility_result);
+  ASSERT_TRUE(c2_got_watch_visibility_result);
 }
 
 }  // namespace fuchsia_input_virtualkeyboard_controller_methods
