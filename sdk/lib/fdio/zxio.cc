@@ -120,7 +120,7 @@ zx_status_t zxio::unlink(const char* name, size_t len, int flags) {
   return zxio_unlink(&zxio_storage().io, name, flags);
 }
 
-zx_status_t zxio::truncate(off_t off) { return zxio_truncate(&zxio_storage().io, off); }
+zx_status_t zxio::truncate(uint64_t off) { return zxio_truncate(&zxio_storage().io, off); }
 
 zx_status_t zxio::rename(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
                          size_t dstlen) {

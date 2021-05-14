@@ -170,7 +170,7 @@ zx_status_t zxio_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector
 zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset);
 
 // Shrink the file size to |length| bytes.
-zx_status_t zxio_truncate(zxio_t* io, size_t length);
+zx_status_t zxio_truncate(zxio_t* io, uint64_t length);
 
 // Returns the flags associated with the file.
 //

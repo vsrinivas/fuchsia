@@ -113,7 +113,7 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t o
   return file->stream.seek(static_cast<zx_stream_seek_origin_t>(start), offset, out_offset);
 }
 
-zx_status_t zxio_vmo_truncate(zxio_t* io, size_t length) {
+zx_status_t zxio_vmo_truncate(zxio_t* io, uint64_t length) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
   return file->vmo.set_size(length);
 }

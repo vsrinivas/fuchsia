@@ -1008,7 +1008,10 @@ static int truncateat(int dirfd, const char* path, off_t len) {
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
-  return STATUS(io->truncate(len));
+  if (len < 0) {
+    return ERRNO(EINVAL);
+  }
+  return STATUS(io->truncate(static_cast<uint64_t>(len)));
 }
 
 __EXPORT
@@ -1020,8 +1023,10 @@ int ftruncate(int fd, off_t len) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-
-  return STATUS(io->truncate(len));
+  if (len < 0) {
+    return ERRNO(EINVAL);
+  }
+  return STATUS(io->truncate(static_cast<uint64_t>(len)));
 }
 
 // Filesystem operations (such as rename and link) which act on multiple paths

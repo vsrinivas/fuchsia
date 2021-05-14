@@ -694,7 +694,7 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_truncate(zxio_t* io, size_t length) {
+zx_status_t zxio_remote_truncate(zxio_t* io, uint64_t length) {
   Remote rio(io);
   auto result = fidl::WireCall<fio::File>(rio.control()).Truncate(length);
   return result.ok() ? result.Unwrap()->s : result.status();

@@ -55,7 +55,7 @@ void fdio::dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {}
 
 zx_status_t fdio::unlink(const char* name, size_t len, int flags) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t fdio::truncate(off_t off) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t fdio::truncate(uint64_t off) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio::rename(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
                          size_t dstlen) {

@@ -262,7 +262,7 @@ zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size
   return zio->ops->seek(io, start, offset, out_offset);
 }
 
-zx_status_t zxio_truncate(zxio_t* io, size_t length) {
+zx_status_t zxio_truncate(zxio_t* io, uint64_t length) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }

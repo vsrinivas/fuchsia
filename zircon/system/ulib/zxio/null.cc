@@ -59,7 +59,7 @@ zx_status_t zxio_default_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offs
   return ZX_ERR_WRONG_TYPE;
 }
 
-zx_status_t zxio_default_truncate(zxio_t* io, size_t length) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t zxio_default_truncate(zxio_t* io, uint64_t length) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t zxio_default_flags_get(zxio_t* io, uint32_t* out_flags) { return ZX_ERR_NOT_SUPPORTED; }
 
