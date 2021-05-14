@@ -151,7 +151,7 @@ void BaseCobaltLoggerImpl::OnTransitFail() {
 }
 
 void BaseCobaltLoggerImpl::OnConnectionError() {
-  FX_LOGS(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
+  FX_LOGS(WARNING) << "Connection to cobalt failed. Reconnecting after a delay.";
 
   OnTransitFail();
   logger_ready_ = false;
