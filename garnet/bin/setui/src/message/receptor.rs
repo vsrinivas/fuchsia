@@ -67,7 +67,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
             }
         }
 
-        return Err(format_err!("could not retrieve payload"));
+        Err(format_err!("could not retrieve payload"))
     }
 
     pub async fn next_of<T: TryFrom<P>>(&mut self) -> Result<(T, MessageClient<P, A, R>), Error>
@@ -101,7 +101,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Receptor<P, 
             }
         }
 
-        return Err(format_err!("did not encounter acknowledged status"));
+        Err(format_err!("did not encounter acknowledged status"))
     }
 
     // Used to consume receptor.

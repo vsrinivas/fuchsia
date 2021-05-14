@@ -143,11 +143,11 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Messenger<P,
         // Log info. transmit is called by forward. However, forward might fail if there is no next
         // Messenger exists.
         self.action_tx
-            .unbounded_send((self.fingerprint.clone(), action, beacon))
+            .unbounded_send((self.fingerprint, action, beacon))
             .unwrap_or_else(|_| fx_log_warn!("action_tx failed to send message"));
     }
 
     pub(super) fn get_signature(&self) -> Signature<A> {
-        self.fingerprint.signature.clone()
+        self.fingerprint.signature
     }
 }
