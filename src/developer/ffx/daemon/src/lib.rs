@@ -28,6 +28,7 @@ mod mdns;
 mod onet;
 mod ssh;
 mod target_control;
+mod util;
 mod zedboot;
 
 pub mod target;

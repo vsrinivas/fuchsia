@@ -42,6 +42,9 @@ use {
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 const DEFAULT_SSH_PORT: u16 = 22;
+pub trait ToFidlTarget {
+    fn to_fidl_target(self) -> bridge::Target;
+}
 
 #[derive(Debug, Clone)]
 pub struct RcsConnection {
