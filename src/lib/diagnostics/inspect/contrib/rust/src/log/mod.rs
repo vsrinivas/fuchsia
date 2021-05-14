@@ -71,8 +71,10 @@ macro_rules! inspect_log {
         // ```
         match $bounded_list_node.create_entry() {
             node => {
-                node.record_time("@time");
-                inspect_insert!(@internal_inspect_log node, $($args)+);
+                node.atomic_update(|this_node| {
+                    this_node.record_time("@time");
+                    inspect_insert!(@internal_inspect_log this_node, $($args)+);
+                });
             }
         }
     }};

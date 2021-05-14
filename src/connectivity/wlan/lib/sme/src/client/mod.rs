@@ -675,7 +675,7 @@ fn inspect_log_join_scan(
             bssid?: candidate_bssid.as_ref().map(|bssid| bssid.to_mac_string()),
             bssid_hash?: candidate_bssid.map(|bssid| hasher.hash_mac_addr(&bssid)),
         },
-        result?: result_msg,
+        result?: &result_msg,
     });
 }
 

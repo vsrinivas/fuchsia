@@ -322,7 +322,7 @@ pub async fn log_connect_stats(
     if let ConnectResult::Success = connect_stats.result {
         inspect_log!(inspect_tree.client_stats.connect.lock(), {
             attempts: connect_stats.attempts,
-            reconnect_info?: reconnect_info.map(|info| make_inspect_loggable!({
+            reconnect_info?: reconnect_info.as_ref().map(|info| make_inspect_loggable!({
                 gap_time: info.gap_time.into_nanos(),
                 same_ssid: info.same_ssid,
             })),
