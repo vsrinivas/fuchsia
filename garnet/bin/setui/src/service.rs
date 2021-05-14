@@ -138,10 +138,10 @@ macro_rules! payload_convert {
 
             use std::convert::TryFrom;
 
-            impl Into<service::Payload> for $payload_type {
-                fn into(self) -> service::Payload {
+            impl From<$payload_type> for service::Payload {
+                fn from(payload: $payload_type) -> service::Payload {
                     paste::paste! {
-                        service::Payload::[<$service_payload_type>](self)
+                        service::Payload::[<$service_payload_type>](payload)
                     }
                 }
             }

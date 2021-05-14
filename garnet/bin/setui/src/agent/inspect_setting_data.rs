@@ -213,7 +213,7 @@ impl InspectSettingAgent {
                 // Setting value not recorded yet, create a new inspect node.
                 let node = self.inspect_node.create_child(key);
                 let value_prop = node.create_string("value", value);
-                let timestamp_prop = node.create_string("timestamp", timestamp.clone());
+                let timestamp_prop = node.create_string("timestamp", timestamp);
                 self.setting_values.insert(
                     key,
                     InspectSettingInfo {

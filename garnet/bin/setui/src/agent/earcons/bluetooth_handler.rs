@@ -47,8 +47,8 @@ pub struct BluetoothHandler {
 
 /// The type of bluetooth earcons sound.
 enum BluetoothSoundType {
-    CONNECTED,
-    DISCONNECTED,
+    Connected,
+    Disconnected,
 }
 
 impl BluetoothHandler {
@@ -122,7 +122,7 @@ impl BluetoothHandler {
                             play_bluetooth_sound(
                                 common_earcons_params,
                                 publisher,
-                                BluetoothSoundType::CONNECTED,
+                                BluetoothSoundType::Connected,
                             )
                             .await;
                         })
@@ -151,7 +151,7 @@ impl BluetoothHandler {
                             play_bluetooth_sound(
                                 common_earcons_params,
                                 publisher,
-                                BluetoothSoundType::DISCONNECTED,
+                                BluetoothSoundType::Disconnected,
                             )
                             .await;
                         })
@@ -186,7 +186,7 @@ async fn play_bluetooth_sound(
 
     if let Some(sound_player_proxy) = sound_player_connection_lock.as_ref() {
         match sound_type {
-            BluetoothSoundType::CONNECTED => {
+            BluetoothSoundType::Connected => {
                 if play_sound(
                     &sound_player_proxy,
                     BLUETOOTH_CONNECTED_FILE_PATH,
@@ -199,7 +199,7 @@ async fn play_bluetooth_sound(
                     fx_log_err!("[bluetooth_earcons_handler] failed to play bluetooth earcon connection sound");
                 }
             }
-            BluetoothSoundType::DISCONNECTED => {
+            BluetoothSoundType::Disconnected => {
                 if play_sound(
                     &sound_player_proxy,
                     BLUETOOTH_DISCONNECTED_FILE_PATH,

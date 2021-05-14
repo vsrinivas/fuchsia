@@ -133,48 +133,44 @@ impl InspectConfigAgent {
         payload: event::Event,
         mut message_client: service::message::MessageClient,
     ) {
-        match payload {
-            event::Event::ConfigLoad(config::base::Event::Load(config::base::ConfigLoadInfo {
-                path,
-                status,
-            })) => {
-                let timestamp = clock::inspect_format_now();
-                match self.config_load_values.get_mut(&path) {
-                    Some(config_inspect_info) => {
-                        config_inspect_info.timestamp.set(&timestamp);
-                        config_inspect_info
-                            .value
-                            .set(&format!("{:#?}", config::base::ConfigLoadInfo { path, status }));
-                        config_inspect_info
-                            .count
-                            .set(config_inspect_info.count.get().unwrap_or(0) + 1);
-                    }
-                    None => {
-                        // Config file not loaded before, add new entry in table.
-                        let node = self.inspect_node.create_child(path.clone());
-                        let value_prop = node.create_string(
-                            "value",
-                            format!(
-                                "{:#?}",
-                                config::base::ConfigLoadInfo { path: path.clone(), status }
-                            ),
-                        );
-                        let timestamp_prop = node.create_string("timestamp", timestamp.clone());
-                        let count_prop = node.create_int("count", 1);
-                        self.config_load_values.insert(
-                            path,
-                            ConfigInspectInfo {
-                                _node: node,
-                                value: value_prop,
-                                timestamp: timestamp_prop,
-                                count: count_prop,
-                            },
-                        );
-                    }
+        if let event::Event::ConfigLoad(config::base::Event::Load(config::base::ConfigLoadInfo {
+            path,
+            status,
+        })) = payload
+        {
+            let timestamp = clock::inspect_format_now();
+            match self.config_load_values.get_mut(&path) {
+                Some(config_inspect_info) => {
+                    config_inspect_info.timestamp.set(&timestamp);
+                    config_inspect_info
+                        .value
+                        .set(&format!("{:#?}", config::base::ConfigLoadInfo { path, status }));
+                    config_inspect_info.count.set(config_inspect_info.count.get().unwrap_or(0) + 1);
                 }
-                message_client.acknowledge().await;
+                None => {
+                    // Config file not loaded before, add new entry in table.
+                    let node = self.inspect_node.create_child(path.clone());
+                    let value_prop = node.create_string(
+                        "value",
+                        format!(
+                            "{:#?}",
+                            config::base::ConfigLoadInfo { path: path.clone(), status }
+                        ),
+                    );
+                    let timestamp_prop = node.create_string("timestamp", timestamp.clone());
+                    let count_prop = node.create_int("count", 1);
+                    self.config_load_values.insert(
+                        path,
+                        ConfigInspectInfo {
+                            _node: node,
+                            value: value_prop,
+                            timestamp: timestamp_prop,
+                            count: count_prop,
+                        },
+                    );
+                }
             }
-            _ => {}
+            message_client.acknowledge().await;
         }
     }
 }

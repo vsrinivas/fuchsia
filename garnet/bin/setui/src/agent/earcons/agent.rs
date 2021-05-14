@@ -107,6 +107,6 @@ impl Agent {
             fx_log_err!("Could not set up BluetoothHandler");
         }
 
-        return Ok(());
+        Ok(())
     }
 }

@@ -42,14 +42,14 @@ impl Authority {
             .await
             .map_err(|_| anyhow::format_err!("could not create agent messenger for authority"))?;
 
-        return Ok(Authority {
+        Ok(Authority {
             agent_signatures: Vec::new(),
             delegate,
             messenger: client,
             available_components,
             available_policies,
             resource_monitor_actor,
-        });
+        })
     }
 
     pub async fn register(&mut self, blueprint: BlueprintHandle) {
@@ -95,7 +95,7 @@ impl Authority {
                 .messenger
                 .message(
                     Payload::Invocation(Invocation {
-                        lifespan: lifespan.clone(),
+                        lifespan,
                         service_context: Arc::clone(&service_context),
                     })
                     .into(),
