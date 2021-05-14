@@ -647,6 +647,8 @@ mod tests {
         Ok(())
     }
 
+    // TODO(fxb/73555) Mock download instead of downloading from cipd in this test.
+    #[ignore]
     #[test]
     #[serial]
     fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
@@ -668,6 +670,8 @@ mod tests {
         Ok(())
     }
 
+    // TODO(fxb/73555) Mock download instead of downloading from cipd in this test.
+    #[ignore]
     #[test]
     #[serial]
     fn test_choosing_prebuild_default() -> Result<()> {
