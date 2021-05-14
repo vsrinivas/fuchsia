@@ -1924,17 +1924,17 @@ std::unique_ptr<raw::TypeConstraints> Parser::ParseTypeConstraints() {
     constraints.emplace_back(ParseConstant());
     if (!Ok())
       return Fail();
+    if (!bracketed)
+      break;
     if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
       break;
   }
 
   if (bracketed) {
     ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
-    if (constraints.size() == 1) {
-      Fail(ErrUnnecessaryConstraintBrackets);
-    }
-  } else if (constraints.size() > 1) {
-    Fail(ErrMissingConstraintBrackets);
+  } else {
+    assert(constraints.size() == 1 &&
+           "Compiler bug: only parse one constraint when no brackets present");
   }
   return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(constraints));
 }

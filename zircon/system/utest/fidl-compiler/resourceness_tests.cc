@@ -491,9 +491,8 @@ TEST(ResourcenessTests, BadResourcesInNestedContainers) {
            "type Foo = struct { bad_member vector<vector<ResourceStruct>>; };",
            "type Foo = struct { bad_member vector<vector<ResourceTable>>; };",
            "type Foo = struct { bad_member vector<vector<ResourceUnion>>; };",
-           // TODO(fxbug.dev/76189): fix grammar ambiguity
-           //  "type Foo = struct { bad_member vector<array<vector<ResourceStruct>:optional,
-           //  2>>:optional; };",
+           "type Foo = struct { bad_member "
+           "vector<array<vector<ResourceStruct>:optional,2>>:optional; };",
        }) {
     std::string fidl_library = R"FIDL(
 library example;

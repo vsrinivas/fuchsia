@@ -40,10 +40,6 @@ constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
 constexpr ErrorDef ErrInvalidLayoutClass(
     "layouts must be of the class: bits, enum, struct, table, or union.");
 constexpr ErrorDef ErrInvalidWrappedType("wrapped type for bits/enum must be an identifier");
-constexpr ErrorDef ErrMissingConstraintBrackets(
-    "lists of constraints must be enclosed in brackets");
-constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
-    "single constraints must not be enclosed in brackets");
 constexpr ErrorDef ErrEmptyLayoutParameterList("no layout parameters specified");
 // end new_syntax
 

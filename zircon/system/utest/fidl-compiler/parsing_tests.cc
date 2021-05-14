@@ -880,4 +880,36 @@ struct Struct {
                                       fidl::ErrUnexpectedTokenOfKind);
 }
 
+TEST(ParsingTests, BadMissingConstraintBrackets) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+    bad_no_brackets vector<uint8>:10,optional;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(ParsingTests, GoodSingleConstraint) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+  with_brackets vector<int32>:<10>;
+  without_brackets vector<int32>:10;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
 }  // namespace
