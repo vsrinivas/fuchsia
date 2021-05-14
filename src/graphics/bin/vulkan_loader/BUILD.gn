@@ -22,6 +22,8 @@ source_set("app") {
     "icd_list.h",
     "icd_runner.cc",
     "icd_runner.h",
+    "loader.cc",
+    "loader.h",
     "magma_device.cc",
     "magma_device.h",
   ]

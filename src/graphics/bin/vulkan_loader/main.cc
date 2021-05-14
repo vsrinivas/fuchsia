@@ -22,82 +22,9 @@
 
 #include "src/graphics/bin/vulkan_loader/app.h"
 #include "src/graphics/bin/vulkan_loader/icd_runner.h"
+#include "src/graphics/bin/vulkan_loader/loader.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-
-// Implements the vulkan loader's Loader service which provides the client
-// driver portion to the loader as a VMO.
-class LoaderImpl final : public fuchsia::vulkan::loader::Loader, public LoaderApp::Observer {
- public:
-  explicit LoaderImpl(LoaderApp* app) : app_(app) {}
-  ~LoaderImpl() final { app_->RemoveObserver(this); }
-
-  // Adds a binding for fuchsia::vulkan::loader::Loader to |outgoing|
-  void Add(const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
-    outgoing->AddPublicService(fidl::InterfaceRequestHandler<fuchsia::vulkan::loader::Loader>(
-        [this](fidl::InterfaceRequest<fuchsia::vulkan::loader::Loader> request) {
-          bindings_.AddBinding(this, std::move(request), nullptr);
-        }));
-  }
-
-  // LoaderApp::Observer implementation.
-  void OnIcdListChanged(LoaderApp* app) override {
-    for (auto it = callbacks_.begin(); it != callbacks_.end();) {
-      std::optional<zx::vmo> vmo = app->GetMatchingIcd(it->first);
-      if (!vmo) {
-        ++it;
-      } else {
-        it->second(*std::move(vmo));
-        it = callbacks_.erase(it);
-      }
-    }
-    if (callbacks_.empty()) {
-      app_->RemoveObserver(this);
-    }
-  }
-
- private:
-  // fuchsia::vulkan::loader::Loader impl
-  void Get(std::string name, GetCallback callback) override {
-    // TODO(fxbug.dev/13078): Remove code to load from /system/lib.
-    std::string load_path = "/system/lib/" + name;
-    int fd;
-    zx_status_t status =
-        fdio_open_fd(load_path.c_str(),
-                     fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
-    if (status != ZX_OK) {
-      AddCallback(std::move(name), std::move(callback));
-      return;
-    }
-    zx::vmo vmo;
-    status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
-    close(fd);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Could not clone vmo exec: " << status;
-    }
-    callback(std::move(vmo));
-  }
-
-  void ConnectToDeviceFs(zx::channel channel) override { app_->ServeDeviceFs(std::move(channel)); }
-
-  void AddCallback(std::string name, fit::function<void(zx::vmo)> callback) {
-    std::optional<zx::vmo> vmo = app_->GetMatchingIcd(name);
-    if (vmo) {
-      callback(*std::move(vmo));
-      return;
-    }
-    callbacks_.emplace_back(std::make_pair(std::move(name), std::move(callback)));
-    if (callbacks_.size() == 1) {
-      app_->AddObserver(this);
-    }
-  }
-
-  LoaderApp* app_;
-
-  fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
-
-  std::list<std::pair<std::string, fit::function<void(zx::vmo)>>> callbacks_;
-};
 
 class LifecycleHandler : public fuchsia::process::lifecycle::Lifecycle {
  public:
