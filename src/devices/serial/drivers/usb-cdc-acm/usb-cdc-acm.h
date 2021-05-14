@@ -22,7 +22,7 @@
 namespace usb_cdc_acm_serial {
 
 class UsbCdcAcmDevice;
-using DeviceType = ddk::Device<UsbCdcAcmDevice, ddk::Unbindable, ddk::Readable, ddk::Writable>;
+using DeviceType = ddk::Device<UsbCdcAcmDevice, ddk::Unbindable>;
 class UsbCdcAcmDevice : public DeviceType,
                         public ddk::SerialImplProtocol<UsbCdcAcmDevice, ddk::base_protocol> {
  public:
@@ -34,9 +34,6 @@ class UsbCdcAcmDevice : public DeviceType,
   // |ddk::Device| mix-in implementations.
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
-  zx_status_t DdkRead(void* data, size_t len, zx_off_t off, size_t* actual);
-  zx_status_t DdkWrite(const void* buf, size_t length, zx_off_t off, size_t* actual);
-
   // ddk::SerialImpl implementations.
   zx_status_t SerialImplGetInfo(serial_port_info_t* info);
   zx_status_t SerialImplConfig(uint32_t baud_rate, uint32_t flags);

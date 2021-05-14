@@ -62,7 +62,37 @@ void UsbCdcAcmDevice::CheckStateLocked() {
   }
 }
 
-zx_status_t UsbCdcAcmDevice::DdkRead(void* data, size_t len, zx_off_t /*off*/, size_t* actual) {
+void UsbCdcAcmDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  cancel_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
+    usb_client_.CancelAll(bulk_in_addr_);
+    usb_client_.CancelAll(bulk_out_addr_);
+    unbind_txn.Reply();
+  });
+}
+
+void UsbCdcAcmDevice::DdkRelease() {
+  cancel_thread_.join();
+  delete this;
+}
+
+zx_status_t UsbCdcAcmDevice::SerialImplGetInfo(serial_port_info_t* info) {
+  memcpy(info, &serial_port_info_, sizeof(*info));
+  return ZX_OK;
+}
+
+zx_status_t UsbCdcAcmDevice::SerialImplConfig(uint32_t baud_rate, uint32_t flags) {
+  if (baud_rate_ != baud_rate || flags != config_flags_) {
+    return ConfigureDevice(baud_rate, flags);
+  }
+  return ZX_OK;
+}
+
+zx_status_t UsbCdcAcmDevice::SerialImplEnable(bool enable) {
+  enabled_ = enable;
+  return ZX_OK;
+}
+
+zx_status_t UsbCdcAcmDevice::SerialImplRead(uint8_t* data, size_t len, size_t* actual) {
   size_t bytes_copied = 0;
   size_t offset = read_offset_;
   auto* buffer = static_cast<uint8_t*>(data);
@@ -116,8 +146,7 @@ zx_status_t UsbCdcAcmDevice::DdkRead(void* data, size_t len, zx_off_t /*off*/, s
   return ZX_OK;
 }
 
-zx_status_t UsbCdcAcmDevice::DdkWrite(const void* buf, size_t length, zx_off_t /*off*/,
-                                      size_t* actual) {
+zx_status_t UsbCdcAcmDevice::SerialImplWrite(const uint8_t* buf, size_t length, size_t* actual) {
   fbl::AutoLock lock(&lock_);
 
   std::optional<usb::Request<>> req = free_write_queue_.pop();
@@ -136,48 +165,6 @@ zx_status_t UsbCdcAcmDevice::DdkWrite(const void* buf, size_t length, zx_off_t /
   NotifyCallback();
 
   return ZX_OK;
-}
-
-void UsbCdcAcmDevice::DdkUnbind(ddk::UnbindTxn txn) {
-  cancel_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
-    usb_client_.CancelAll(bulk_in_addr_);
-    usb_client_.CancelAll(bulk_out_addr_);
-    unbind_txn.Reply();
-  });
-}
-
-void UsbCdcAcmDevice::DdkRelease() {
-  cancel_thread_.join();
-  delete this;
-}
-
-zx_status_t UsbCdcAcmDevice::SerialImplGetInfo(serial_port_info_t* info) {
-  memcpy(info, &serial_port_info_, sizeof(*info));
-  return ZX_OK;
-}
-
-zx_status_t UsbCdcAcmDevice::SerialImplConfig(uint32_t baud_rate, uint32_t flags) {
-  if (baud_rate_ != baud_rate || flags != config_flags_) {
-    return ConfigureDevice(baud_rate, flags);
-  }
-  return ZX_OK;
-}
-
-zx_status_t UsbCdcAcmDevice::SerialImplEnable(bool enable) {
-  enabled_ = enable;
-  return ZX_OK;
-}
-
-zx_status_t UsbCdcAcmDevice::SerialImplRead(uint8_t* data, size_t len, size_t* actual) {
-  zx_status_t status = DdkRead(data, len, 0, actual);
-  if (status == ZX_OK && actual == nullptr) {
-    return ZX_ERR_SHOULD_WAIT;
-  }
-  return status;
-}
-
-zx_status_t UsbCdcAcmDevice::SerialImplWrite(const uint8_t* buf, size_t length, size_t* actual) {
-  return DdkWrite(buf, length, 0, actual);
 }
 
 zx_status_t UsbCdcAcmDevice::SerialImplSetNotifyCallback(const serial_notify_t* cb) {
