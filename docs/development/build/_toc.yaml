@@ -16,6 +16,8 @@ toc:
   section:
   - title: "Build Clang toolchain"
     path: /docs/development/build/toolchain.md
+  - title: "Build Rust toolchain"
+    path: /docs/development/build/rust_toolchain.md
   - title: "Run Clang static analysis"
     path: /docs/development/build/static_analysis.md
   - title: "Ninja no-op check"

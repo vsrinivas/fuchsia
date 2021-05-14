@@ -19,14 +19,7 @@ Note: The example [Rust BUILD.gn file](/examples/rust/BUILD.gn)
 contains the line `group("rust")`. In this instance, `rust` refers to the directory
 the `.gn` file is in, not the language.
 
-### Building with a custom toolchain
-
-If you want to test out Fuchsia with your own custom-built versions of rustc or
-cargo, you can set the `rustc_prefix` argument to `fx set`, like this:
-
-```
-fx set core.x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
-```
+See also: [Build Fuchsia with a custom Rust toolchain](../../build/rust_toolchain.md)
 
 ## Cargo.toml
 
