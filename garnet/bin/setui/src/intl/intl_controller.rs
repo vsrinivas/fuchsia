@@ -33,9 +33,9 @@ impl DeviceStorageCompatible for IntlInfo {
     }
 }
 
-impl Into<SettingInfo> for IntlInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Intl(self)
+impl From<IntlInfo> for SettingInfo {
+    fn from(info: IntlInfo) -> SettingInfo {
+        SettingInfo::Intl(info)
     }
 }
 
@@ -86,10 +86,8 @@ impl IntlController {
             }
         };
 
-        for time_zone_result in time_zone_list {
-            if let Ok(time_zone_id) = time_zone_result {
-                time_zone_set.insert(time_zone_id);
-            }
+        for time_zone_id in time_zone_list.flatten() {
+            time_zone_set.insert(time_zone_id);
         }
 
         time_zone_set

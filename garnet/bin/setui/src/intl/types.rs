@@ -29,27 +29,26 @@ impl Merge for IntlInfo {
 impl From<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
     fn from(src: IntlSettings) -> Self {
         IntlInfo {
-            locales: src.locales.map_or(None, |locales| {
-                Some(locales.into_iter().map(fidl_fuchsia_intl::LocaleId::into).collect())
+            locales: src.locales.map(|locales| {
+                locales.into_iter().map(fidl_fuchsia_intl::LocaleId::into).collect()
             }),
             temperature_unit: src.temperature_unit.map(fidl_fuchsia_intl::TemperatureUnit::into),
-            time_zone_id: src.time_zone_id.map_or(None, |tz| Some(tz.id)),
+            time_zone_id: src.time_zone_id.map(|tz| tz.id),
             hour_cycle: src.hour_cycle.map(fidl_fuchsia_settings::HourCycle::into),
         }
     }
 }
 
-impl Into<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
-    fn into(self) -> IntlSettings {
+impl From<IntlInfo> for fidl_fuchsia_settings::IntlSettings {
+    fn from(info: IntlInfo) -> IntlSettings {
         let mut intl_settings = IntlSettings::EMPTY;
 
-        intl_settings.locales = self
-            .locales
-            .map_or(None, |locales| Some(locales.into_iter().map(LocaleId::into).collect()));
-        intl_settings.temperature_unit = self.temperature_unit.map(TemperatureUnit::into);
+        intl_settings.locales =
+            info.locales.map(|locales| locales.into_iter().map(LocaleId::into).collect());
+        intl_settings.temperature_unit = info.temperature_unit.map(TemperatureUnit::into);
         intl_settings.time_zone_id =
-            self.time_zone_id.map_or(None, |tz| Some(fidl_fuchsia_intl::TimeZoneId { id: tz }));
-        intl_settings.hour_cycle = self.hour_cycle.map(HourCycle::into);
+            info.time_zone_id.map(|tz| fidl_fuchsia_intl::TimeZoneId { id: tz });
+        intl_settings.hour_cycle = info.hour_cycle.map(HourCycle::into);
 
         intl_settings
     }
