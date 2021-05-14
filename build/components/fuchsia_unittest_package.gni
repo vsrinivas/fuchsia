@@ -50,7 +50,7 @@ import("fuchsia_unittest_component.gni")
 #     Type: path
 #
 #   v2 (optional)
-#     If specified and set to true, will generate a CFv2 (.cml) manifest.
+#     If specified and set to false, will generate a CFv1 (.cmx) manifest.
 #     If `manifest` is specified then this is ignored.
 #     Type: boolean
 #
@@ -66,6 +66,11 @@ import("fuchsia_unittest_component.gni")
 #     See `test_spec.gni`.
 #     Type: scope
 #
+#   deprecated_legacy_test_execution (optional)
+#     If set for a v2 test, the test will be forced to use ELF runner,
+#     which sacrifices isolation for higher performance.
+#     Type: boolean
+#
 #   deps
 #   visibility
 template("fuchsia_unittest_package") {
@@ -77,6 +82,7 @@ template("fuchsia_unittest_package") {
                              "deps",
                              "manifest",
                              "unstable_features",
+                             "deprecated_legacy_test_execution",
                              "v2",
                            ])
     if (!defined(component_name)) {

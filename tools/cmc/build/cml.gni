@@ -25,6 +25,10 @@ import("//tools/cmc/build/expect_includes.gni")
 #     The set of features is allowlisted here: //tools/cmc/build/unstable_features/BUILD.gn
 #     where each feature name is represented by a group of the same name.
 #
+#   experimental_force_runner (optional)
+#     [string] Sets the --experimental-force-runner flag.
+#     This feature is experimental and may be removed without warning.
+#
 #   deps (optional)
 #   testonly (optional)
 #   visibility (optional)
@@ -109,6 +113,13 @@ template("cm") {
       foreach(feature, invoker.unstable_features) {
         deps += [ "//tools/cmc/build/unstable_features:" + feature ]
       }
+    }
+
+    if (defined(invoker.experimental_force_runner)) {
+      args += [
+        "--experimental-force-runner",
+        invoker.experimental_force_runner,
+      ]
     }
   }
 }

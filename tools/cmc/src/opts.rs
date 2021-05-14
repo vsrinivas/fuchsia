@@ -201,6 +201,13 @@ pub enum Commands {
         /// The set of non-standard features to compile with.
         /// Only applies to CML files.
         features: Vec<Feature>,
+
+        #[structopt(long = "experimental-force-runner")]
+        /// override runner to this value in resulting CML
+        ///
+        /// If specified, the program.runner field will be set to this value. This option is
+        /// EXPERIMENTAL and subject to removal without warning.
+        experimental_force_runner: Option<String>,
     },
 }
 

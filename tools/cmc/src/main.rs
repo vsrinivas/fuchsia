@@ -89,7 +89,15 @@ fn run_cmc() -> Result<(), Error> {
             }
             format::format(&file, pretty, cml, output)?;
         }
-        opts::Commands::Compile { file, output, depfile, includepath, includeroot, features } => {
+        opts::Commands::Compile {
+            file,
+            output,
+            depfile,
+            includepath,
+            includeroot,
+            features,
+            experimental_force_runner,
+        } => {
             path_exists(&file)?;
             compile::compile(
                 &file,
@@ -98,6 +106,7 @@ fn run_cmc() -> Result<(), Error> {
                 &includepath,
                 &includeroot.unwrap_or(includepath.clone()),
                 &features.into(),
+                &experimental_force_runner,
             )?
         }
     }

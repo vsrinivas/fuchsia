@@ -31,6 +31,7 @@ pub fn compile(
     includepath: &PathBuf,
     includeroot: &PathBuf,
     features: &FeatureSet,
+    experimental_force_runner: &Option<String>,
 ) -> Result<(), Error> {
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
@@ -52,6 +53,16 @@ pub fn compile(
     for include in &includes {
         let mut include_document = util::read_cml(&include)?;
         document.merge_from(&mut include_document, &include)?;
+    }
+    if let Some(ref force_runner) = experimental_force_runner.as_ref() {
+        if let Some(mut program) = document.program.as_mut() {
+            program.runner = Some(cm_types::Name::new(force_runner.to_string())?);
+        } else {
+            document.program = Some(cml::Program {
+                runner: Some(cm_types::Name::new(force_runner.to_string())?),
+                ..cml::Program::default()
+            });
+        }
     }
     validate::validate_cml(&document, &file, &features)?;
 
@@ -1161,6 +1172,33 @@ mod tests {
         }
     }
 
+    fn compile_test_with_forced_runner(
+        in_path: PathBuf,
+        out_path: PathBuf,
+        includepath: Option<PathBuf>,
+        input: serde_json::value::Value,
+        expected_output: fsys::ComponentDecl,
+        features: &FeatureSet,
+        experimental_force_runner: &Option<String>,
+    ) -> Result<(), Error> {
+        File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
+        let includepath = includepath.unwrap_or(PathBuf::new());
+        compile(
+            &in_path,
+            &out_path.clone(),
+            None,
+            &includepath,
+            &includepath,
+            features,
+            experimental_force_runner,
+        )?;
+        let mut buffer = Vec::new();
+        fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
+        let output: fsys::ComponentDecl = decode_persistent(&buffer).unwrap();
+        assert_eq!(output, expected_output);
+        Ok(())
+    }
+
     fn compile_test(
         in_path: PathBuf,
         out_path: PathBuf,
@@ -1169,14 +1207,15 @@ mod tests {
         expected_output: fsys::ComponentDecl,
         features: &FeatureSet,
     ) -> Result<(), Error> {
-        File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
-        let includepath = includepath.unwrap_or(PathBuf::new());
-        compile(&in_path, &out_path.clone(), None, &includepath, &includepath, features)?;
-        let mut buffer = Vec::new();
-        fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
-        let output: fsys::ComponentDecl = decode_persistent(&buffer).unwrap();
-        assert_eq!(output, expected_output);
-        Ok(())
+        compile_test_with_forced_runner(
+            in_path,
+            out_path,
+            includepath,
+            input,
+            expected_output,
+            features,
+            &None,
+        )
     }
 
     fn default_component_decl() -> fsys::ComponentDecl {
@@ -3257,6 +3296,7 @@ mod tests {
                 &PathBuf::new(),
                 &PathBuf::new(),
                 &FeatureSet::empty(),
+                &None,
             );
             assert_matches!(
                 result,
@@ -3325,6 +3365,47 @@ mod tests {
                 ..default_component_decl()
             },
             &FeatureSet::empty(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_good_include_with_force_runner() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        compile_test_with_forced_runner(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fsys::ComponentDecl {
+                program: Some(fsys::ProgramDecl {
+                    runner: Some("elf_test_runner".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fsys::ProgramDecl::EMPTY
+                }),
+                ..default_component_decl()
+            },
+            &FeatureSet::empty(),
+            &Some("elf_test_runner".to_string()),
         )
         .unwrap();
     }

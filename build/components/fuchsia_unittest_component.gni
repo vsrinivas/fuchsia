@@ -64,7 +64,7 @@ import("fuchsia_test_component_manifest.gni")
 #     Default: target_name
 #
 #   v2 (optional)
-#     If specified and set to true, will generate a CFv2 (.cml) manifest.
+#     If specified and set to false, will generate a CFv1 (.cmx) manifest.
 #     If `manifest` is specified then this is ignored.
 #     Type: boolean
 #
@@ -75,9 +75,19 @@ import("fuchsia_test_component_manifest.gni")
 #     Type: list of strings
 #     Default: []
 #
+#   deprecated_legacy_test_execution (optional)
+#     If set for a v2 test, the test will be forced to use ELF runner,
+#     which sacrifices isolation for higher performance.
+#     Type: boolean
+#
 #   deps
 #   visibility
 template("fuchsia_unittest_component") {
+  assert(
+      !(defined(invoker.deprecated_legacy_test_execution) &&
+            invoker.deprecated_legacy_test_execution &&
+            (defined(invoker.manifest) || (defined(invoker.v2) && !invoker.v2))),
+      "cannot specify both deprecated_legacy_test_execution with either v2 = false or an explicit manifest")
   if (!defined(invoker.manifest)) {
     generated_target = "${target_name}_generated_manifest"
     fuchsia_test_component_manifest(generated_target) {
@@ -100,6 +110,10 @@ template("fuchsia_unittest_component") {
                              "unstable_features",
                              "visibility",
                            ])
+    if (defined(invoker.deprecated_legacy_test_execution) &&
+        invoker.deprecated_legacy_test_execution) {
+      experimental_force_runner = "elf_test_runner"
+    }
     component_name = target_name
     if (defined(invoker.component_name)) {
       component_name = invoker.component_name

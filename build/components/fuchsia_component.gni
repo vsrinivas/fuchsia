@@ -85,6 +85,11 @@ import("//tools/cmc/build/cmx.gni")
 #     Type: list of strings
 #     Default: []
 #
+#   experimental_force_runner (optional)
+#     Set the --experimental-force-runner flag to the given value.
+#     This flag is experimental and may be removed without warning.
+#     Type: string
+#
 #   deps
 #   testonly
 #   visibility
@@ -133,6 +138,7 @@ template("fuchsia_component") {
                              "unstable_features",
                              "testonly",
                              "visibility",
+                             "experimental_force_runner",
                            ])
 
     if (!defined(deps)) {
