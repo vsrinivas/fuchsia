@@ -26,6 +26,7 @@ test("test") {
 # [START package]
 fuchsia_unittest_package("fidl-example-cpp-test") {
   deps = [ ":test" ]
+  deprecated_legacy_test_execution = true
 }
 
 # [END package]

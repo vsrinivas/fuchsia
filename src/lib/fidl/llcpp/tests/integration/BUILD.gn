@@ -40,6 +40,7 @@ test("fidl_llcpp_dispatcher_handle_ownership_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_dispatcher_handle_ownership_tests") {
   deps = [ ":fidl_llcpp_dispatcher_handle_ownership_tests_bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 test("fidl_llcpp_gen_api_tests_bin") {
@@ -92,6 +93,7 @@ test("fidl_llcpp_flexible_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_flexible_tests") {
   deps = [ ":fidl_llcpp_flexible_tests_bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fidl("llcpptest.handlerights.test") {
@@ -117,6 +119,7 @@ test("fidl_llcpp_handle_rights_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_handle_rights_tests") {
   deps = [ ":fidl_llcpp_handle_rights_tests_bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fidl("llcpptest.protocol.test") {
@@ -144,6 +147,7 @@ test("fidl_llcpp_protocol_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_protocol_tests") {
   deps = [ ":fidl_llcpp_protocol_tests_bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fidl("llcpptest.handleraii.test") {
@@ -168,6 +172,7 @@ test("fidl_llcpp_handle_raii_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_handle_raii_tests") {
   deps = [ ":fidl_llcpp_handle_raii_tests_bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fidl("llcpptest.transitional.test") {
@@ -191,4 +196,5 @@ test("fidl_llcpp_transitional_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_transitional_tests") {
   deps = [ ":fidl_llcpp_transitional_tests_bin" ]
+  deprecated_legacy_test_execution = true
 }

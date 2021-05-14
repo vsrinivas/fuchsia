@@ -6,14 +6,17 @@ import("//build/components.gni")
 
 fuchsia_unittest_component("coding_tables_tests") {
   deps = [ "coding_tables_tests:bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fuchsia_unittest_component("llcpp_interop_tests") {
   deps = [ "llcpp_interop_tests:bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fuchsia_unittest_component("simple_tests") {
   deps = [ "simple_tests:bin" ]
+  deprecated_legacy_test_execution = true
 }
 
 fuchsia_test_package("fidl_c_tests") {

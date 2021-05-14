@@ -75,6 +75,7 @@ if (is_fuchsia) {
 
   fuchsia_unittest_package("fidl-walker-tests") {
     deps = [ ":walker_tests_bin" ]
+    deprecated_legacy_test_execution = true
   }
 
   executable("c_conformance_tests_bin") {
@@ -90,6 +91,7 @@ if (is_fuchsia) {
 
   fuchsia_unittest_package("fidl-c-conformance-tests") {
     deps = [ ":c_conformance_tests_bin" ]
+    deprecated_legacy_test_execution = true
   }
 
   executable("tests_to_run_under_handle_policy") {
