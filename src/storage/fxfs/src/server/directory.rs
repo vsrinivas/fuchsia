@@ -84,6 +84,10 @@ impl FxDirectory {
         self.directory.store()
     }
 
+    pub fn is_deleted(&self) -> bool {
+        self.is_deleted.load(Ordering::Relaxed)
+    }
+
     /// Acquires a transaction with the appropriate locks to unlink |name|. Returns the transaction,
     /// as well as the ID and type of the child.
     ///
@@ -346,11 +350,14 @@ impl MutableDirectory for FxDirectory {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn unlink(&self, name: &str, _must_be_directory: bool) -> Result<(), Status> {
-        // TODO(csuter): do something with must_be_directory.
+    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let this = self.as_strong().await;
         let (mut transaction, object_id, object_descriptor) =
             this.acquire_transaction_for_unlink(&[], name).await.map_err(map_to_status)?;
+        if let ObjectDescriptor::Directory = object_descriptor {
+        } else if must_be_directory {
+            return Err(Status::NOT_DIR);
+        }
         // _dir must be held until after the transaction commits; see FxDirectory::replace_child.
         let _dir = this
             .replace_child(&mut transaction, name, object_id, object_descriptor, None)

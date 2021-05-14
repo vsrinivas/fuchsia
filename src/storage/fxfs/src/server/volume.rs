@@ -127,6 +127,10 @@ impl FilesystemRename for FxVolume {
             Err(e) => return Err(map_to_status(e)),
         };
 
+        if dst_dir.is_deleted() {
+            return Err(Status::NOT_FOUND);
+        }
+
         let (moved_id, moved_descriptor) = src_dir
             .directory()
             .lookup(src)
