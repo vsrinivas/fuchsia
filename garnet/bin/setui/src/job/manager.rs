@@ -7,7 +7,7 @@
 //! # Summary
 //!
 //! The manager mod defines entities for managing [Job] sources and controlling the execution of
-//! pending [workloads](crate::job::Workload) contained in those [Jobs](Job). [Manager] provides a
+//! pending [workloads](crate::job::work::Load) contained in those [Jobs](Job). [Manager] provides a
 //! concrete implementation of a [Job] processor. Outside clients send [Job] sources to the
 //! [Manager] over the [MessageHub](crate::message::message_hub::MessageHub). In turn, the [Manager]
 //! will process each received source for new [Jobs](Job) and provide the necessary backing, such as
@@ -54,8 +54,6 @@ pub struct Manager {
     /// A [delegate](message::Delegate) used to generate the necessary messaging components for
     /// [Jobs](Job) to use.
     message_hub_delegate: message::Delegate,
-    /// A flag tracking whether a [Job] is currently executing.
-    job_in_progress: bool,
 }
 
 impl Manager {
@@ -86,7 +84,6 @@ impl Manager {
             source_id_generator: source::IdGenerator::new(),
             execution_completion_sender,
             message_hub_delegate: message_hub_delegate.clone(),
-            job_in_progress: false,
         };
 
         // Spawn a task to run the main event loop, which handles the following events:
@@ -130,11 +127,8 @@ impl Manager {
     ) {
         // Fetch the source and inform it that its child Job has completed.
         let source_handler = &mut self.sources.get_mut(&source_id).expect("should find source");
-        source_handler.handle_job_completion(job_info.id);
+        source_handler.handle_job_completion(job_info);
         self.remove_source_if_necessary(&source_id);
-
-        // Clear job in progress flag.
-        self.job_in_progress = false;
 
         // Continue processing available jobs.
         self.process_next_job().await;
@@ -143,38 +137,19 @@ impl Manager {
     // Executes the next job if conditions to run another job are met. If so, the manager consults
     // available sources for a candidate job and then executes the first one found.
     async fn process_next_job(&mut self) {
-        // Do not try to process any other jobs if we are already processing a job. This method is
-        // called optimistically in places where we can consider attempting another job, such as
-        // completing or receiving a job. If the conditions aren't met, the job stays enqueued.
-        if self.job_in_progress {
-            return;
-        }
-
-        // Iterate through sources and see if any source has a pending job.
-        for (source_id, source_handler) in
-            &mut self.sources.iter_mut().filter(|(_, y)| (*y).has_jobs())
-        {
-            // Create a messenger for the workload to communicate with the rest of the setting
-            // service.
-            let messenger = self
-                .message_hub_delegate
-                .create(MessengerType::Unbound)
-                .await
-                .expect("messenger should be available")
-                .0;
-
+        // Iterate through sources and see if any source has a pending job
+        for (source_id, source_handler) in &mut self.sources.iter_mut() {
             let source_id = *source_id;
             let execution_tx = self.execution_completion_sender.clone();
 
-            if !source_handler.execute_next(messenger, move |job_info, details| {
-                if let Err(error) = execution_tx.unbounded_send((source_id, job_info, details)) {
-                    panic!("Failed to send message. error: {:?}", error);
-                };
-            }) {
-                // Mark job in progress to prevent other jobs from executing.
-                self.job_in_progress = true;
-                break;
-            }
+            source_handler
+                .execute_next(&mut self.message_hub_delegate, move |job_info, details| {
+                    if let Err(error) = execution_tx.unbounded_send((source_id, job_info, details))
+                    {
+                        panic!("Failed to send message. error: {:?}", error);
+                    };
+                })
+                .await;
         }
     }
 
@@ -213,7 +188,7 @@ impl Manager {
         if let Some(Ok(job)) = job {
             // When the stream produces a job, associate with the appropriate source. Then try see
             // if any job is available to run.
-            self.sources.get_mut(&source).expect("source should be present").add_job(job);
+            self.sources.get_mut(&source).expect("source should be present").add_pending_job(job);
             self.job_futures.push(source_stream.into_future());
             self.process_next_job().await;
         } else {
@@ -233,7 +208,7 @@ impl Manager {
     fn remove_source_if_necessary(&mut self, source_id: &source::Id) {
         let source_info = self.sources.get_mut(source_id).expect("should find source");
 
-        if source_info.is_completed() && !source_info.has_jobs() {
+        if source_info.is_completed() {
             self.sources.remove(source_id);
         }
     }
@@ -242,7 +217,7 @@ impl Manager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::job::{ExecutionType, Payload};
+    use crate::job::Payload;
     use crate::message::base::Audience;
     use crate::service::message;
     use crate::service::test;
@@ -282,10 +257,10 @@ mod tests {
             let result = *result;
             let signature = receptor.get_signature();
             job_futures.push(async move {
-                Ok(Job::new(
-                    Workload::new(test::Payload::Integer(result), signature),
-                    ExecutionType::Independent,
-                ))
+                Ok(Job::new(job::work::Load::Independent(Workload::new(
+                    test::Payload::Integer(result),
+                    signature,
+                ))))
             });
         }
 

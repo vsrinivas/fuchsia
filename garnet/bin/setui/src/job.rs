@@ -53,6 +53,55 @@ impl PartialEq for Payload {
     }
 }
 
+pub mod work {
+    use super::Signature;
+    use crate::service::message;
+    use async_trait::async_trait;
+
+    pub enum Load {
+        /// [Sequential] loads are run in order after [Loads](Load) from [Jobs](crate::job::Job)
+        /// of the same [Signature](crate::job::Signature) that preceded them. These [Loads](Load)
+        /// share a common data store, which can be used to share information.
+        Sequential(Box<dyn Sequential + Send + Sync>, Signature),
+        /// [Independent] loads are run as soon as there is availability to run as dictated by the
+        /// containing [Job's](crate::job::Job) handler.
+        Independent(Box<dyn Independent + Send + Sync>),
+    }
+
+    impl Load {
+        /// Executes the contained workload, providing the individualized parameters based on type.
+        /// This function is asynchronous and is meant to be waited upon for workload completion.
+        /// Workloads are expected to wait and complete all work within the scope of this execution.
+        /// Therefore, invoking code can safely presume all work has completed after this function
+        /// returns.
+        pub async fn execute(&mut self, messenger: message::Messenger) {
+            match self {
+                Load::Sequential(load, _) => {
+                    load.execute(messenger).await;
+                }
+                Load::Independent(load) => {
+                    load.execute(messenger).await;
+                }
+            }
+        }
+    }
+
+    #[async_trait]
+    pub trait Sequential {
+        // TODO(fxbug.dev/74552): Pass in shared data store.
+        /// Called when the [Job](super::Job) processing is ready for the encapsulated
+        /// [Workload](super::Workload) be executed.
+        async fn execute(&mut self, messenger: message::Messenger);
+    }
+
+    #[async_trait]
+    pub trait Independent {
+        /// Called when a [Workload](super::Workload) should run. All workload specific logic should
+        /// be encompassed in this method.
+        async fn execute(&mut self, messenger: message::Messenger);
+    }
+}
+
 /// A trait for creating work that can be executed as a job.
 #[async_trait]
 pub trait Workload {
@@ -64,42 +113,36 @@ pub trait Workload {
 /// An identifier specified by [Jobs](Job) to group related workflows. This is useful for
 /// [Workloads](Workload) that need to be run sequentially. The [Signature] is used by the job
 /// infrastructure to associate resources such as caches.
-#[derive(PartialEq, Clone, Debug, Eq, Hash)]
+#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub struct Signature {
-    key: String,
+    key: usize,
 }
 
 impl Signature {
     /// Constructs a new [Signature]. The key provided will group the associated [Job] with other
     /// [Jobs](Job) of the same key. The association is scoped to other [Jobs](Job) in the same
     /// parent source.
-    pub fn new(key: String) -> Self {
+    pub fn new(key: usize) -> Self {
         Self { key }
     }
 }
 
-/// The workload types of a [Job]. This enumeration is used to define how a [Job] will be treated in
-/// relation to other jobs from the same source.
-pub enum ExecutionType {
-    /// Independent jobs are executed in isolation from other [Jobs](Job). Some functionality is
-    /// unavailable for Independent jobs, such as caches.
-    Independent,
-    /// Sequential [Jobs](Job) wait until all pre-existing [Jobs](Job) of the same [Signature] are
-    /// completed.
-    Sequential(Signature),
-}
-
-/// A [Job] is a simple data container that associates a [Workload] with an [ExecutionType]
+/// A [Job] is a simple data container that associates a [Workload] with an [execution::Type]
 /// along with metadata, such as the creation time.
 pub struct Job {
     /// The [Workload] to be run.
-    pub workload: Box<dyn Workload + Send + Sync>,
-    /// The [ExecutionType] determining how the [Workload] will be run.
-    pub execution_type: ExecutionType,
+    pub workload: work::Load,
+    /// The [execution::Type] determining how the [Workload] will be run.
+    pub execution_type: execution::Type,
 }
 
 impl Job {
-    pub fn new(workload: Box<dyn Workload + Send + Sync>, execution_type: ExecutionType) -> Self {
+    pub fn new(workload: work::Load) -> Self {
+        let execution_type = match &workload {
+            work::Load::Sequential(_, signature) => execution::Type::Sequential(*signature),
+            _ => execution::Type::Independent,
+        };
+
         Self { workload, execution_type }
     }
 }
@@ -152,6 +195,11 @@ impl Info {
         Self { id, acceptance_time: now(), job }
     }
 
+    /// Retrieves the [execution::Type] of the underlying [Job].
+    pub fn get_execution_type(&self) -> &execution::Type {
+        &self.job.execution_type
+    }
+
     /// Returns a mutable reference to the contained [Job].
     pub fn get_job_mut(&mut self) -> &mut Job {
         return &mut self.job;
@@ -159,7 +207,82 @@ impl Info {
 }
 
 pub(super) mod execution {
+    use super::Signature;
+    use crate::job;
     use fuchsia_zircon as zx;
+    use std::collections::{HashSet, VecDeque};
+
+    /// The workload types of a [job::Job]. This enumeration is used to define how a [job::Job] will
+    /// be treated in relation to other jobs from the same source.
+    #[derive(PartialEq, Clone, Debug, Eq, Hash)]
+    pub enum Type {
+        /// Independent jobs are executed in isolation from other [Jobs](Job). Some functionality is
+        /// unavailable for Independent jobs, such as caches.
+        Independent,
+        /// Sequential [Jobs](job::Job) wait until all pre-existing [Jobs](job::Job) of the same
+        /// [Signature] are completed.
+        Sequential(Signature),
+    }
+
+    /// A collection of [Jobs](job::Job) which have matching execution types. [Groups](Group)
+    /// determine how similar [Jobs](job::Job) are executed.
+    pub(super) struct Group {
+        group_type: Type,
+        active: HashSet<job::Id>,
+        pending: VecDeque<job::Info>,
+    }
+
+    impl Group {
+        /// Creates a new [Group] based on the execution [Type].
+        pub fn new(group_type: Type) -> Self {
+            Self { group_type, active: HashSet::new(), pending: VecDeque::new() }
+        }
+
+        /// Returns whether any [Jobs](job::Job) are currently active. Pending [Jobs](job::Job) do
+        /// not count towards this total.
+        pub fn is_active(&self) -> bool {
+            !self.active.is_empty()
+        }
+
+        /// Returns whether there are any [Jobs](job::Job) waiting to be executed.
+        pub fn has_available_jobs(&self) -> bool {
+            if self.pending.is_empty() {
+                return false;
+            }
+
+            match self.group_type {
+                Type::Independent => true,
+                Type::Sequential(_) => self.active.is_empty(),
+            }
+        }
+
+        pub(super) fn add(&mut self, job_info: job::Info) {
+            self.pending.push_back(job_info);
+        }
+
+        /// Invoked by [Job](super::Job) processing code to retrieve the next [Job](super::Job) to
+        /// run from this group. If there are no [Jobs](super::Job) ready for execution, None is
+        /// return. Otherwise, the selected [Job](super::Job) is added to the list of active
+        /// [Jobs](super::Job) for the group and handed back to the caller.
+        pub fn promote_next_to_active(&mut self) -> Option<job::Info> {
+            if !self.has_available_jobs() {
+                return None;
+            }
+
+            let active_job = self.pending.pop_front();
+
+            if let Some(job) = &active_job {
+                self.active.insert(job.id);
+            }
+
+            return active_job;
+        }
+
+        pub fn complete(&mut self, job_info: job::Info) {
+            self.active.remove(&job_info.id);
+        }
+    }
+
     /// [Details] represent the final result of an execution.
     pub(super) struct Details {
         /// The time at which the job execution started.
@@ -210,10 +333,10 @@ mod tests {
         let val = rng.gen();
 
         // Create job from workload scaffolding.
-        let mut job = Job::new(
-            Workload::new(Payload::Integer(val), receptor.get_signature()),
-            ExecutionType::Independent,
-        );
+        let mut job = Job::new(work::Load::Independent(Workload::new(
+            Payload::Integer(val),
+            receptor.get_signature(),
+        )));
 
         job.workload.execute(messenger).await;
 
