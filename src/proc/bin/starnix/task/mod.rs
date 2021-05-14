@@ -5,9 +5,11 @@
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task as zxTask};
 use log::warn;
 use parking_lot::{Condvar, Mutex, RwLock};
+use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::ffi::CString;
+use std::fmt;
 use std::ops;
 use std::sync::{Arc, Weak};
 
@@ -15,7 +17,9 @@ pub mod syscalls;
 
 use crate::auth::Credentials;
 use crate::fs::{FdTable, FileSystem};
+use crate::logging::*;
 use crate::mm::MemoryManager;
+use crate::not_implemented;
 use crate::signals::types::*;
 use crate::types::*;
 
@@ -198,6 +202,7 @@ impl ThreadGroup {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub struct TaskOwner {
     pub task: Arc<Task>,
 }
@@ -234,8 +239,8 @@ pub struct Task {
     pub creds: Credentials,
 
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
-    pub set_child_tid: Mutex<UserAddress>,
-    pub clear_child_tid: Mutex<UserAddress>,
+    pub set_child_tid: Mutex<UserRef<pid_t>>,
+    pub clear_child_tid: Mutex<UserRef<pid_t>>,
 
     // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
     pub signal_stack: Mutex<Option<sigaltstack_t>>,
@@ -243,6 +248,9 @@ pub struct Task {
     /// The signal mask of the task.
     // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
     pub signal_mask: Mutex<sigset_t>,
+
+    /// The signal this task generates on exit.
+    pub exit_signal: Option<Signal>,
 }
 
 impl Task {
@@ -252,13 +260,20 @@ impl Task {
         files: Arc<FdTable>,
         fs: Arc<FileSystem>,
         creds: Credentials,
-    ) -> Result<TaskOwner, zx::Status> {
-        let (process, root_vmar) = kernel.job.create_child_process(name.as_bytes())?;
-        let thread = process.create_thread("initial-thread".as_bytes())?;
+        exit_signal: Option<Signal>,
+    ) -> Result<TaskOwner, Errno> {
+        let (process, root_vmar) = kernel
+            .job
+            .create_child_process(name.as_bytes())
+            .map_err(Errno::from_status_like_fdio)?;
+        let thread = process
+            .create_thread("initial-thread".as_bytes())
+            .map_err(Errno::from_status_like_fdio)?;
 
         // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
         // handle is not needed to implement read_memory or write_memory.
-        let duplicate_process = process.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let duplicate_process =
+            process.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
 
         let mut pids = kernel.pids.write();
         let id = pids.allocate_pid();
@@ -271,15 +286,77 @@ impl Task {
             mm: Arc::new(MemoryManager::new(duplicate_process, root_vmar)),
             fs,
             creds: creds,
-            set_child_tid: Mutex::new(UserAddress::default()),
-            clear_child_tid: Mutex::new(UserAddress::default()),
+            set_child_tid: Mutex::new(UserRef::default()),
+            clear_child_tid: Mutex::new(UserRef::default()),
             signal_stack: Mutex::new(None),
             signal_mask: Mutex::new(sigset_t::default()),
+            exit_signal,
         });
         pids.add_task(&task);
         pids.add_thread_group(&task.thread_group);
 
         Ok(TaskOwner { task })
+    }
+
+    pub fn clone_task(
+        &self,
+        flags: u64,
+        user_stack: UserAddress,
+        _user_parent_tid: UserRef<pid_t>,
+        user_child_tid: UserRef<pid_t>,
+        _user_tls: UserAddress,
+    ) -> Result<TaskOwner, Errno> {
+        // TODO: Implement more flags.
+        const IMPLEMENTED_FLAGS: u64 =
+            (CLONE_FS | CLONE_FILES | CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | CSIGNAL) as u64;
+
+        if flags & !IMPLEMENTED_FLAGS != 0 {
+            not_implemented!("clone does not implement flags: {}", flags & !IMPLEMENTED_FLAGS);
+            return Err(ENOSYS);
+        }
+
+        if !user_stack.is_null() {
+            not_implemented!("clone does not implement non-zero stack: {}", user_stack);
+            return Err(ENOSYS);
+        }
+
+        let raw_child_exist_signal = flags & (CSIGNAL as u64);
+        let child_exit_signal = if raw_child_exist_signal == 0 {
+            None
+        } else {
+            Some(Signal::try_from(UncheckedSignal::new(raw_child_exist_signal))?)
+        };
+
+        let fs = if flags & (CLONE_FS as u64) != 0 { self.fs.clone() } else { self.fs.fork() };
+
+        let files =
+            if flags & (CLONE_FILES as u64) != 0 { self.files.clone() } else { self.files.fork() };
+
+        let creds = self.creds.clone();
+
+        let child = Self::new(
+            &self.thread_group.kernel,
+            &CString::new("cloned-child").unwrap(),
+            files,
+            fs,
+            creds,
+            child_exit_signal,
+        )?;
+        self.mm.snapshot_to(&child.task.mm)?;
+
+        if flags & (CLONE_CHILD_CLEARTID as u64) != 0 {
+            *child.task.clear_child_tid.lock() = user_child_tid;
+            let zero: pid_t = 0;
+            child.task.mm.write_object(user_child_tid, &zero)?;
+            // TODO: Issue a FUTEX_WAKE at this address.
+        }
+
+        if flags & (CLONE_CHILD_SETTID as u64) != 0 {
+            *child.task.set_child_tid.lock() = user_child_tid;
+            child.task.mm.write_object(user_child_tid, &child.task.id)?;
+        }
+
+        Ok(child)
     }
 
     /// Called by the Drop trait on TaskOwner.
@@ -354,6 +431,22 @@ impl Task {
         Ok(())
     }
 }
+
+impl fmt::Debug for Task {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "task({})", self.id)
+    }
+}
+
+impl cmp::PartialEq for Task {
+    fn eq(&self, other: &Self) -> bool {
+        let ptr: *const Task = self;
+        let other_ptr: *const Task = other;
+        return ptr == other_ptr;
+    }
+}
+
+impl cmp::Eq for Task {}
 
 #[cfg(test)]
 mod test {

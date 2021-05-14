@@ -112,6 +112,7 @@ pub fn dispatch_syscall(
         arch_prctl[2],
         brk[1],
         clock_gettime[2],
+        clone[5],
         close[1],
         exit[1],
         exit_group[1],

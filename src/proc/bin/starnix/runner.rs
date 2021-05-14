@@ -14,9 +14,9 @@ use fidl_fuchsia_sys2 as fsys;
 use fuchsia_async as fasync;
 use fuchsia_component::client as fclient;
 use fuchsia_zircon::{
-    self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
-    sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
+    self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
+    sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
+    sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
 };
 use futures::TryStreamExt;
 use log::{error, info};
@@ -135,6 +135,33 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
     Ok(0)
 }
 
+pub fn spawn_task(task_owner: TaskOwner, registers: zx_thread_state_general_regs_t) {
+    std::thread::spawn(move || {
+        let result = (|| -> Result<(), Error> {
+            let exceptions = task_owner.task.thread.create_exception_channel()?;
+            let suspend_token = task_owner.task.thread.suspend()?;
+            task_owner.task.thread_group.process.start(
+                &task_owner.task.thread,
+                0,
+                0,
+                zx::Handle::invalid(),
+                0,
+            )?;
+            task_owner
+                .task
+                .thread
+                .wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
+            task_owner.task.thread.write_state_general_regs(registers)?;
+            mem::drop(suspend_token);
+            let _exit_code = run_task(task_owner, exceptions)?;
+            Ok(())
+        })();
+        if let Err(error) = result {
+            error!("Thread terminated with error: {}", error);
+        }
+    });
+}
+
 async fn start_component(
     kernel: Arc<Kernel>,
     start_info: ComponentStartInfo,
@@ -176,7 +203,7 @@ async fn start_component(
 
     let name = CString::new(binary_path.clone())?;
     let files = FdTable::new();
-    let fs = Arc::new(FileSystem::new(root));
+    let fs = FileSystem::new(root);
     let creds = Credentials::new(3);
 
     let stdio = SyslogFile::new();
@@ -184,7 +211,7 @@ async fn start_component(
     files.insert(FdNumber::from_raw(1), stdio.clone());
     files.insert(FdNumber::from_raw(2), stdio);
 
-    let task_owner = Task::new(&kernel, &name, files, fs, creds)?;
+    let task_owner = Task::new(&kernel, &name, files, fs, creds, None)?;
 
     let argv = vec![CString::new(binary_path.clone())?];
     let environ = vec![];

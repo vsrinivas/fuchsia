@@ -4,15 +4,12 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use lazy_static::lazy_static;
-use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
+use parking_lot::{Mutex, RwLock};
 use process_builder::elf_load;
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
-use std::mem;
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
-
-#[cfg(test)]
-use std::collections::HashMap;
 
 use crate::collections::*;
 use crate::logging::*;
@@ -100,6 +97,16 @@ pub enum DumpPolicy {
     USER,
 }
 
+struct MemoryManagerState {
+    /// State for the brk and sbrk syscalls.
+    brk: Option<ProgramBreak>,
+
+    /// The memory mappings currently used by this address space.
+    ///
+    /// The mappings record which VMO backs each address.
+    mappings: RangeMap<UserAddress, Mapping>,
+}
+
 pub struct MemoryManager {
     /// A handle to the underlying Zircon process object.
     // TODO: Remove this handle once we can read and write process memory directly.
@@ -115,13 +122,8 @@ pub struct MemoryManager {
     /// The base address of the root_vmar.
     pub vmar_base: UserAddress,
 
-    /// State for the brk and sbrk syscalls.
-    program_break: Mutex<Option<ProgramBreak>>,
-
-    /// The memory mappings currently used by this address space.
-    ///
-    /// The mappings record which VMO backs each address.
-    mappings: RwLock<RangeMap<UserAddress, Mapping>>,
+    /// Mutable state for the memory manager.
+    state: RwLock<MemoryManagerState>,
 
     /// Whether this address space is dumpable.
     pub dumpable: Mutex<DumpPolicy>,
@@ -134,33 +136,38 @@ impl MemoryManager {
             process,
             root_vmar,
             vmar_base,
-            program_break: Mutex::new(None),
-            mappings: RwLock::new(RangeMap::<UserAddress, Mapping>::new()),
+            state: RwLock::new(MemoryManagerState {
+                brk: None,
+                mappings: RangeMap::<UserAddress, Mapping>::new(),
+            }),
             dumpable: Mutex::new(DumpPolicy::DISABLE),
         }
     }
 
     pub fn set_brk(&self, addr: UserAddress) -> Result<UserAddress, Errno> {
-        let mut program_break = self.program_break.lock();
+        let mut state = self.state.write();
 
         // Ensure that a program break exists by mapping at least one page.
-        let mut brk = match *program_break {
+        let mut brk = match state.brk {
             None => {
                 let vmo = zx::Vmo::create(PROGRAM_BREAK_LIMIT).map_err(|_| ENOMEM)?;
                 vmo.set_name(CStr::from_bytes_with_nul(b"starnix-brk\0").unwrap())
                     .map_err(impossible_error)?;
                 let length = *PAGE_SIZE as usize;
-                let addr = self.map(
-                    UserAddress::default(),
-                    vmo,
-                    0,
-                    length,
-                    zx::VmarFlags::PERM_READ
-                        | zx::VmarFlags::PERM_WRITE
-                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
-                )?;
+                let addr = self
+                    .map_locked(
+                        &mut state,
+                        0,
+                        Arc::new(vmo),
+                        0,
+                        length,
+                        zx::VmarFlags::PERM_READ
+                            | zx::VmarFlags::PERM_WRITE
+                            | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+                    )
+                    .map_err(Self::get_errno_for_map_err)?;
                 let brk = ProgramBreak { base: addr, current: addr };
-                *program_break = Some(brk);
+                state.brk = Some(brk);
                 brk
             }
             Some(brk) => brk,
@@ -172,8 +179,7 @@ impl MemoryManager {
             return Ok(brk.current);
         }
 
-        let mappings = self.mappings.upgradable_read();
-        let (range, mapping) = mappings.get(&brk.current).ok_or(EFAULT)?;
+        let (range, mapping) = state.mappings.get(&brk.current).ok_or(EFAULT)?;
 
         brk.current = addr;
 
@@ -184,8 +190,7 @@ impl MemoryManager {
             // We've been asked to free memory.
             let delta = old_end - new_end;
             let vmo = mapping.vmo.clone();
-            mem::drop(mappings);
-            self.unmap(new_end, delta)?;
+            self.unmap_locked(&mut state, new_end, delta)?;
             let vmo_offset = new_end - brk.base;
             vmo.op_range(zx::VmoOp::DECOMMIT, vmo_offset as u64, delta as u64)
                 .map_err(|e| impossible_error(e))?;
@@ -196,8 +201,7 @@ impl MemoryManager {
             let range = range.clone();
             let mapping = mapping.clone();
 
-            let mut mappings = RwLockUpgradableReadGuard::upgrade(mappings);
-            mappings.remove(&range);
+            state.mappings.remove(&range);
             match self.root_vmar.map(
                 old_end - self.vmar_base,
                 &mapping.vmo,
@@ -209,30 +213,28 @@ impl MemoryManager {
                     | zx::VmarFlags::SPECIFIC,
             ) {
                 Ok(_) => {
-                    mappings.insert(brk.base..new_end, mapping);
+                    state.mappings.insert(brk.base..new_end, mapping);
                 }
                 Err(e) => {
                     // We failed to extend the mapping, which means we need to add
                     // back the old mapping.
-                    mappings.insert(brk.base..old_end, mapping);
+                    state.mappings.insert(brk.base..old_end, mapping);
                     return Err(Self::get_errno_for_map_err(e));
                 }
             }
         }
 
-        *program_break = Some(brk);
+        state.brk = Some(brk);
         return Ok(brk.current);
     }
 
-    #[cfg(test)]
     pub fn snapshot_to(&self, target: &MemoryManager) -> Result<(), Errno> {
-        // TODO: Snapshot program_break.
-        // TODO: Snapshot dumpable.
+        let state = self.state.read();
+        let mut target_state = target.state.write();
 
-        let mappings = self.mappings.read();
         let mut vmos = HashMap::<zx::Koid, Result<Arc<zx::Vmo>, zx::Status>>::new();
 
-        for (range, mapping) in mappings.iter() {
+        for (range, mapping) in state.mappings.iter() {
             let vmo_info = mapping.vmo.info().map_err(impossible_error)?;
             let entry = vmos.entry(vmo_info.koid).or_insert_with(|| {
                 if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED) {
@@ -249,7 +251,8 @@ impl MemoryManager {
                     let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
                     let length = range.end - range.start;
                     target
-                        .map_internal(
+                        .map_locked(
+                            &mut target_state,
                             range.start - target.vmar_base,
                             target_vmo.clone(),
                             vmo_offset,
@@ -264,18 +267,21 @@ impl MemoryManager {
             };
         }
 
+        target_state.brk = state.brk;
+        *target.dumpable.lock() = *self.dumpable.lock();
+
         Ok(())
     }
 
-    fn map_internal(
+    fn map_locked(
         &self,
+        state: &mut MemoryManagerState,
         vmar_offset: usize,
         vmo: Arc<zx::Vmo>,
         vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<UserAddress, zx::Status> {
-        let mut mappings = self.mappings.write();
         let addr = UserAddress::from_ptr(self.root_vmar.map(
             vmar_offset,
             &vmo,
@@ -285,7 +291,7 @@ impl MemoryManager {
         )?);
         let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
         let end = (addr + length).round_up(*PAGE_SIZE);
-        mappings.insert(addr..end, mapping);
+        state.mappings.insert(addr..end, mapping);
         Ok(addr)
     }
 
@@ -308,12 +314,23 @@ impl MemoryManager {
         flags: zx::VmarFlags,
     ) -> Result<UserAddress, Errno> {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.vmar_base };
-        self.map_internal(vmar_offset, Arc::new(vmo), vmo_offset, length, flags)
-            .map_err(Self::get_errno_for_map_err)
+        self.map_locked(
+            &mut self.state.write(),
+            vmar_offset,
+            Arc::new(vmo),
+            vmo_offset,
+            length,
+            flags,
+        )
+        .map_err(Self::get_errno_for_map_err)
     }
 
-    pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
-        let mut mappings = self.mappings.write();
+    fn unmap_locked(
+        &self,
+        state: &mut MemoryManagerState,
+        addr: UserAddress,
+        length: usize,
+    ) -> Result<(), Errno> {
         // This operation is safe because we're operating on another process.
         match unsafe { self.root_vmar.unmap(addr.ptr(), length) } {
             Ok(_) => Ok(()),
@@ -322,8 +339,12 @@ impl MemoryManager {
             Err(status) => Err(impossible_error(status)),
         }?;
         let end = (addr + length).round_up(*PAGE_SIZE);
-        mappings.remove(&(addr..end));
+        state.mappings.remove(&(addr..end));
         Ok(())
+    }
+
+    pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
+        self.unmap_locked(&mut self.state.write(), addr, length)
     }
 
     pub fn protect(
@@ -332,8 +353,8 @@ impl MemoryManager {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<(), Errno> {
-        let mut mappings = self.mappings.write();
-        let (_, mapping) = mappings.get(&addr).ok_or(EINVAL)?;
+        let mut state = self.state.write();
+        let (_, mapping) = state.mappings.get(&addr).ok_or(EINVAL)?;
         let mapping = mapping.with_flags(flags);
 
         // SAFETY: This is safe because the vmar belongs to a different process.
@@ -346,7 +367,7 @@ impl MemoryManager {
         })?;
 
         let end = (addr + length).round_up(*PAGE_SIZE);
-        mappings.insert(addr..end, mapping);
+        state.mappings.insert(addr..end, mapping);
         Ok(())
     }
 
@@ -356,8 +377,8 @@ impl MemoryManager {
         length: usize,
         name: CString,
     ) -> Result<(), Errno> {
-        let mut mappings = self.mappings.write();
-        let (range, mapping) = mappings.get_mut(&addr).ok_or(EINVAL)?;
+        let mut state = self.state.write();
+        let (range, mapping) = state.mappings.get_mut(&addr).ok_or(EINVAL)?;
         if range.end - addr < length {
             return Err(EINVAL);
         }
@@ -368,15 +389,15 @@ impl MemoryManager {
 
     #[cfg(test)]
     pub fn get_mapping_name(&self, addr: UserAddress) -> Result<CString, Errno> {
-        let mapping = self.mappings.read();
-        let (_, mapping) = mapping.get(&addr).ok_or(EFAULT)?;
+        let state = self.state.read();
+        let (_, mapping) = state.mappings.get(&addr).ok_or(EFAULT)?;
         Ok(mapping.name.clone())
     }
 
     #[cfg(test)]
     pub fn get_mapping_count(&self) -> usize {
-        let mapping = self.mappings.read();
-        mapping.iter().count()
+        let state = self.state.read();
+        state.mappings.iter().count()
     }
 
     pub fn get_random_base(&self, length: usize) -> UserAddress {
@@ -444,7 +465,8 @@ impl elf_load::Mapper for MemoryManager {
         flags: zx::VmarFlags,
     ) -> Result<usize, zx::Status> {
         let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
-        self.map_internal(vmar_offset, vmo, vmo_offset, length, flags).map(|addr| addr.ptr())
+        self.map_locked(&mut self.state.write(), vmar_offset, vmo, vmo_offset, length, flags)
+            .map(|addr| addr.ptr())
     }
 }
 
@@ -462,8 +484,8 @@ mod tests {
 
         // Look up the given addr in the mappings table.
         let get_range = |addr: &UserAddress| {
-            let mappings = mm.mappings.read();
-            let (range, _) = mappings.get(&addr).expect("failed to find mapping");
+            let state = mm.state.read();
+            let (range, _) = state.mappings.get(&addr).expect("failed to find mapping");
             range.clone()
         };
 

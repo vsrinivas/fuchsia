@@ -207,7 +207,6 @@ impl FdTable {
         Arc::new(FdTable { table: RwLock::new(HashMap::new()) })
     }
 
-    #[cfg(test)]
     pub fn fork(&self) -> Arc<FdTable> {
         Arc::new(FdTable { table: RwLock::new(self.table.read().clone()) })
     }

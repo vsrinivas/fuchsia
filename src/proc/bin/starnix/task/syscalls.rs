@@ -7,8 +7,28 @@ use std::ffi::CString;
 
 use crate::mm::*;
 use crate::not_implemented;
+use crate::runner::*;
 use crate::syscalls::*;
 use crate::types::*;
+
+pub fn sys_clone(
+    ctx: &SyscallContext<'_>,
+    flags: u64,
+    user_stack: UserAddress,
+    user_parent_tid: UserRef<pid_t>,
+    user_child_tid: UserRef<pid_t>,
+    user_tls: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let task_owner =
+        ctx.task.clone_task(flags, user_stack, user_parent_tid, user_child_tid, user_tls)?;
+    let tid = task_owner.task.id;
+
+    let mut registers = ctx.registers;
+    registers.rax = 0;
+    spawn_task(task_owner, registers);
+
+    Ok(tid.into())
+}
 
 pub fn sys_getpid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     let _pid = ctx.task.get_pid();
@@ -156,9 +176,9 @@ pub fn sys_arch_prctl(
 
 pub fn sys_set_tid_address(
     ctx: &SyscallContext<'_>,
-    tidptr: UserAddress,
+    user_tid: UserRef<pid_t>,
 ) -> Result<SyscallResult, Errno> {
-    *ctx.task.clear_child_tid.lock() = tidptr;
+    *ctx.task.clear_child_tid.lock() = user_tid;
     Ok(ctx.task.get_tid().into())
 }
 

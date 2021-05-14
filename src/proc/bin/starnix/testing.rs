@@ -23,9 +23,9 @@ fn create_test_file_system() -> Arc<FileSystem> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
-    return Arc::new(FileSystem::new(fio::DirectorySynchronousProxy::new(
+    return FileSystem::new(fio::DirectorySynchronousProxy::new(
         root.into_channel().unwrap().into_zx_channel(),
-    )));
+    ));
 }
 
 /// Creates a `Kernel` and `Task` for testing purposes.
@@ -41,6 +41,7 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
         FdTable::new(),
         create_test_file_system(),
         Credentials::default(),
+        None,
     )
     .expect("failed to create first task");
 
@@ -57,6 +58,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
         FdTable::new(),
         create_test_file_system(),
         Credentials::default(),
+        None,
     )
     .expect("failed to create second task")
 }

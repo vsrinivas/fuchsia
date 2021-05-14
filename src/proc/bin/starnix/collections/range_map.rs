@@ -259,7 +259,6 @@ where
     }
 
     /// Iterate over the ranges in the map.
-    #[cfg(test)]
     pub fn iter(&self) -> impl Iterator<Item = (&Range<K>, &V)> {
         self.map.iter().map(|(k, value)| (&k.range, value))
     }
