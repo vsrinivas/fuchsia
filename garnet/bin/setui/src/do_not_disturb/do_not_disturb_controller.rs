@@ -20,9 +20,9 @@ impl DeviceStorageCompatible for DoNotDisturbInfo {
     }
 }
 
-impl Into<SettingInfo> for DoNotDisturbInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::DoNotDisturb(self)
+impl From<DoNotDisturbInfo> for SettingInfo {
+    fn from(info: DoNotDisturbInfo) -> SettingInfo {
+        SettingInfo::DoNotDisturb(info)
     }
 }
 
