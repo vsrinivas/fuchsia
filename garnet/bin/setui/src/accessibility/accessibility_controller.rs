@@ -27,9 +27,9 @@ impl DeviceStorageCompatible for AccessibilityInfo {
     }
 }
 
-impl Into<SettingInfo> for AccessibilityInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Accessibility(self)
+impl From<AccessibilityInfo> for SettingInfo {
+    fn from(info: AccessibilityInfo) -> Self {
+        SettingInfo::Accessibility(info)
     }
 }
 

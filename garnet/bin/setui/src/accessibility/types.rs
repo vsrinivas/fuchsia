@@ -321,22 +321,17 @@ impl ColorRgba {
 
 impl From<fidl_fuchsia_ui_types::ColorRgba> for ColorRgba {
     fn from(src: fidl_fuchsia_ui_types::ColorRgba) -> Self {
-        ColorRgba {
-            red: src.red.into(),
-            green: src.green.into(),
-            blue: src.blue.into(),
-            alpha: src.alpha.into(),
-        }
+        ColorRgba { red: src.red, green: src.green, blue: src.blue, alpha: src.alpha }
     }
 }
 
 impl From<ColorRgba> for fidl_fuchsia_ui_types::ColorRgba {
     fn from(src: ColorRgba) -> Self {
         fidl_fuchsia_ui_types::ColorRgba {
-            red: src.red.into(),
-            green: src.green.into(),
-            blue: src.blue.into(),
-            alpha: src.alpha.into(),
+            red: src.red,
+            green: src.green,
+            blue: src.blue,
+            alpha: src.alpha,
         }
     }
 }
