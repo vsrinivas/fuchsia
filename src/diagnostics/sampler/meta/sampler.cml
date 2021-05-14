@@ -2,7 +2,7 @@
     include: [ "src/diagnostics/sampler/meta/common.shard.cml" ],
     program: {
         args: [
-            "lapis",
+            "sampler",
             "--minimum-sample-rate-sec",
             "10",
         ],

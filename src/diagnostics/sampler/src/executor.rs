@@ -684,7 +684,7 @@ fn process_sample_for_data_type(
             // This may be a case of using a single selector for two metrics, one event count
             // and one int.
             if previous_sample_opt.is_some() {
-                error!("Lapis has erroneously cached an Int type metric: {:?}", selector);
+                error!("Sampler has erroneously cached an Int type metric: {:?}", selector);
             }
             process_int(new_sample, selector)
         }

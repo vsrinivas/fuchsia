@@ -14,7 +14,7 @@ mod mocks;
 mod test_topology;
 mod utils;
 
-/// Runs the Lapis Sampler and a test component that can have its inspect properties
+/// Runs the Sampler and a test component that can have its inspect properties
 /// manipulated by the test via fidl, and uses cobalt mock and log querier to
 /// verify that the sampler observers changes as expected, and logs them to
 /// cobalt as expected.
@@ -91,8 +91,8 @@ async fn event_count_sampler_test() {
         utils::ExpectedEvent { metric_id: 2, value: 10 }
     ));
 
-    // trigger_reboot calls the on_reboot callback that drives lapis shutdown. this
-    // should await until lapis has finished its cleanup, which means we should have some events
+    // trigger_reboot calls the on_reboot callback that drives sampler shutdown. this
+    // should await until sampler has finished its cleanup, which means we should have some events
     // present when we're done, and the sampler task should be finished.
     reboot_controller.trigger_reboot().await.unwrap().unwrap();
 
@@ -115,9 +115,9 @@ async fn event_count_sampler_test() {
     ));
 }
 
-/// Runs the Lapis Sampler and a test component that can have its inspect properties
+/// Runs the Sampler and a test component that can have its inspect properties
 /// manipulated by the test via fidl, and uses mock services to determine that when
-/// the reboot server goes down, lapis continues to run as expected.
+/// the reboot server goes down, sampler continues to run as expected.
 #[fuchsia::test]
 async fn reboot_server_crashed_test() {
     let instance = test_topology::create().await.expect("initialized topology");
@@ -135,7 +135,7 @@ async fn reboot_server_crashed_test() {
     // TODO(fxb/45331): Remove sleep when race is resolved.
     fasync::Timer::new(fasync::Time::after(2.seconds())).await;
 
-    // Crash the reboot server to verify that lapis continues to sample.
+    // Crash the reboot server to verify that sampler continues to sample.
     reboot_controller.crash_reboot_channel().await.unwrap().unwrap();
 
     test_app_controller.increment_int(1).unwrap();
@@ -176,9 +176,9 @@ async fn reboot_server_crashed_test() {
     ));
 }
 
-/// Runs the Lapis Sampler and a test component that can have its inspect properties
+/// Runs the Sampler and a test component that can have its inspect properties
 /// manipulated by the test via fidl, and uses mock services to determine that when
-/// the reboot server goes down, lapis continues to run as expected.
+/// the reboot server goes down, sampler continues to run as expected.
 #[fuchsia::test]
 async fn sampler_inspect_test() {
     let instance = test_topology::create().await.expect("initialized topology");

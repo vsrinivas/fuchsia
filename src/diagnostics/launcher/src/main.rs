@@ -22,7 +22,7 @@ struct LauncherArgs {
 enum ChildArgs {
     Detect(detect::CommandLine),
     LogStats(log_stats::CommandLine),
-    Lapis(sampler::Args),
+    Sampler(sampler::Args),
     Persistence(persistence::CommandLine),
 }
 
@@ -43,6 +43,6 @@ async fn main() -> Result<(), Error> {
         ChildArgs::Detect(args) => detect::main(args).await,
         ChildArgs::Persistence(args) => persistence::main(args).await,
         ChildArgs::LogStats(_args) => log_stats::main().await,
-        ChildArgs::Lapis(args) => sampler::main(args).await,
+        ChildArgs::Sampler(args) => sampler::main(args).await,
     }
 }

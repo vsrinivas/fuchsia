@@ -61,7 +61,7 @@ rustc_library("lib") {
 }
 
 # Test package for the unit test from the
-# lapis library.
+# sampler library.
 fuchsia_unittest_package("sampler-tests") {
   deps = [ ":lib_test" ]
   manifest = "meta/sampler_lib_test.cml"
@@ -71,7 +71,7 @@ fuchsia_unittest_package("sampler-tests") {
 # default config-data the production Sampler service uses
 # as well as the resource rule used by the configuration
 # verification test.
-lapis_configuration("production_lapis") {
+sampler_configuration("production_sampler") {
   configs = [
     "config/archivist.json",
     "config/bthost.json",
@@ -87,7 +87,7 @@ lapis_configuration("production_lapis") {
 fuchsia_component("sampler-component") {
   component_name = "sampler"
   deps = [
-    ":production_lapis_config_data",
+    ":production_sampler_config_data",
     "//src/diagnostics/launcher:bin",
   ]
   manifest = "meta/sampler.cml"

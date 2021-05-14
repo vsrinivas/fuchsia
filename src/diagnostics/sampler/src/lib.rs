@@ -17,11 +17,11 @@ mod diagnostics;
 mod executor;
 
 /// The name of the subcommand and the logs-tag.
-pub const PROGRAM_NAME: &str = "lapis";
+pub const PROGRAM_NAME: &str = "sampler";
 
-/// args used to configure lapis.
+/// args used to configure sampler.
 #[derive(Debug, Default, FromArgs, PartialEq)]
-#[argh(subcommand, name = "lapis")]
+#[argh(subcommand, name = "sampler")]
 pub struct Args {
     /// required minimal sample rate.
     #[argh(option)]
@@ -63,7 +63,7 @@ pub async fn main(opt: Args) -> Result<(), Error> {
             let sampler_executor = executor::SamplerExecutor::new(sampler_config).await?;
 
             // Trigger the project samplers and returns a TaskCancellation struct used to trigger
-            // reboot shutdown of lapis.
+            // reboot shutdown of sampler.
             let task_canceller = sampler_executor.execute();
 
             inspect::component::health().set_ok();
@@ -83,7 +83,7 @@ async fn reboot_watcher(
 ) {
     if let Some(reboot::RebootMethodsWatcherRequest::OnReboot { reason: _, responder }) =
         stream.try_next().await.unwrap_or_else(|err| {
-            // If the channel closed for some reason, we can just let Lapis keep running
+            // If the channel closed for some reason, we can just let Sampler keep running
             // until component manager kills it.
             warn!("Reboot callback channel closed: {:?}", err);
             None
@@ -102,5 +102,5 @@ async fn reboot_watcher(
         task_canceller.run_without_cancellation().await;
     }
 
-    info!("Lapis has been halted due to reboot. Goodbye.");
+    info!("Sampler has been halted due to reboot. Goodbye.");
 }

@@ -8,7 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 # Test binary responsible for readings
 # and validating all client configurations
-# listed in the "production lapis" lapis_configuration.
+# listed in the "production sampler" sampler_configuration.
 rustc_test("config-validation") {
   testonly = true
   name = "config_validation_test"
@@ -27,11 +27,11 @@ fuchsia_unittest_component("config-validation-test") {
   v2 = true
   deps = [
     ":config-validation",
-    "//src/diagnostics/sampler:production_lapis_resources",
+    "//src/diagnostics/sampler:production_sampler_resources",
   ]
 }
 
-# Integration test binary for lapis service.
+# Integration test binary for sampler service.
 rustc_test("integration-bin") {
   testonly = true
   name = "sampler_integration_test"
@@ -79,7 +79,7 @@ fuchsia_unittest_component("sampler-integration-test") {
   deps = [ ":integration-bin" ]
 }
 
-# config-data lapis config that requires reboot
+# config-data sampler config that requires reboot
 # for the integration test.
 config_data("reboot-required-config") {
   for_pkg = "sampler-integration-tests"

@@ -4,7 +4,7 @@
 
 import("//build/config.gni")
 
-# Define the configurations for Lapis.
+# Define the configurations for Sampler.
 #
 # Parameters
 #
@@ -14,10 +14,10 @@ import("//build/config.gni")
 #
 #   configs
 #     Type: list of files
-#     Required: json configurations for lapis.
+#     Required: json configurations for sampler.
 #
-template("lapis_configuration") {
-  assert(defined(invoker.configs), "Must define lapis configurations.")
+template("sampler_configuration") {
+  assert(defined(invoker.configs), "Must define sampler configurations.")
 
   name = target_name
   if (defined(invoker.name)) {

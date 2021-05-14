@@ -6,7 +6,7 @@ use sampler::config::SamplerConfig;
 /// Parses every config file in the production config directory
 /// to make sure there are no malformed configurations being submitted.
 #[fuchsia::test]
-async fn validate_lapis_configs() {
+async fn validate_sampler_configs() {
     let config_directory = "/pkg/config/metrics";
     match SamplerConfig::from_directory(60, &config_directory) {
         Ok(config) => {
