@@ -21,7 +21,4 @@ executable("amlogic-decoder-unittest-bin") {
 
 fuchsia_unittest_package("amlogic-decoder-unittest") {
   deps = [ ":amlogic-decoder-unittest-bin" ]
-
-  # TODO(fxbug.dev/76529): Switch to v2 when this no longer depends on both gtest and zxtest.
-  v2 = false
 }
