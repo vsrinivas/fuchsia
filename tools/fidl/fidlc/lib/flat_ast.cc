@@ -513,13 +513,7 @@ bool TypeTemplate::ResolveOldSyntaxArgs(const LibraryMediator& lib,
   if (unresolved_args.handle_subtype_identifier || unresolved_args.handle_rights) {
     if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
       return false;
-    // TODO(fxbug.dev/74909): Once bare handles are disallowed we won't need to
-    // throw this error "at use time" anymore and can move it back into
-    // HandleTypeTemplate::GetResource. At that point, we can also add back some
-    // more helpful data to the error (like the offending type constructor's name
-    // and span) which we don't have access to here.
-    if (!handle_resource_decl)
-      return Fail(ErrHandleSubtypeNotResource);
+    assert(handle_resource_decl);
   }
 
   std::optional<uint32_t> obj_type = std::nullopt;
@@ -978,10 +972,7 @@ class HandleTypeTemplate final : public TypeTemplate {
                    Resource** out_resource) const override {
     Decl* handle_decl = lib.LookupDeclByName(name);
     if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-      // TODO(fxbug.dev/74909): We can't error yet, because this may be a bare
-      // `handle` with no constraints applied. Leave out_resource as a nullptr
-      // for the caller to handle and break out early.
-      return true;
+      return Fail(ErrHandleSubtypeNotResource, name);
     }
 
     auto* resource = static_cast<Resource*>(handle_decl);
@@ -1045,27 +1036,13 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
                                   const TypeConstraints& constraints, const TypeTemplate* layout,
                                   std::unique_ptr<Type>* out_type,
                                   LayoutInvocation* out_params) const {
+  assert(resource_decl);
+
   // We need to store this separately from out_params, because out_params doesn't
   // store the raw Constant that gets resolved to a nullability constraint.
   std::optional<SourceSpan> applied_nullability_span;
 
   size_t num_constraints = constraints.items.size();
-
-  // There's a bit of a chicken and egg problem here: we only want to error when the
-  // resource_decl is undefined while trying to resolve a subtype or handle rights
-  // constant, but we don't know if a constraint is a subtype or handle rights or
-  // something else (like optional) without the resource_decl.
-  // In practice, such an edge case is almost guaranteed not to happen, so just error
-  // if there is no resource_decl and there are any constraints at all.
-  if (num_constraints > 0 && !resource_decl) {
-    // TODO(fxbug.dev/74909): Once bare handles are disallowed we won't need to
-    // throw this error "at use time" anymore and can move it back into
-    // HandleTypeTemplate::GetResource. At that point, we can also add back some
-    // more helpful data to the error (like the offending type constructor's name
-    // and span) which we don't have access to here.
-    return lib.Fail(ErrHandleSubtypeNotResource, std::nullopt);
-  }
-
   if (num_constraints == 0) {
     // no constraints: set to default subtype below
   } else if (num_constraints == 1) {
@@ -4258,14 +4235,9 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
       switch (type->kind) {
         case Type::Kind::kHandle: {
           auto handle_type = static_cast<const HandleType*>(type);
-          // TODO(fxbug.dev/74909): the only case where resource_decl is nullptr
-          // is when the type constructor is referring to a bare, unconstrained
-          // `handle`, in which case there is no resource definition to depend
-          // on. Once this is disallowed, we can remove this check.
-          if (handle_type->resource_decl) {
-            auto decl = static_cast<const Decl*>(handle_type->resource_decl);
-            edges.insert(decl);
-          }
+          assert(handle_type->resource_decl);
+          auto decl = static_cast<const Decl*>(handle_type->resource_decl);
+          edges.insert(decl);
           return;
         }
         case Type::Kind::kPrimitive:

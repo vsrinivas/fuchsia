@@ -10,6 +10,7 @@
 library test.inspect.validate;
 
 using fuchsia.inspect as inspect;
+using zx;
 
 /// InitializationParams tells how to initialize the Inspect library.
 table InitializationParams {
@@ -246,7 +247,7 @@ flexible union LazyAction {
 [Discoverable]
 protocol Validate {
     /// Initializes the Inspect library being tested by the puppet.
-    Initialize(InitializationParams params) -> (handle? vmo, TestResult result);
+    Initialize(InitializationParams params) -> (zx.handle? vmo, TestResult result);
 
     /// Use instead of `Initialize` on puppets which support the Tree / Lazy method of getting VMOs.
     /// The root VMO can be obtained via the returned Tree protocol.

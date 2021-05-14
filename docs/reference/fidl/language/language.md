@@ -368,9 +368,9 @@ _T_ can be any FIDL type.
 
 Handles are denoted:
 
-*   **`handle`** : non-nullable Zircon handle of
+*   **`zx.handle`** : non-nullable Zircon handle of
     unspecified type
-*   **`handle?`** : nullable Zircon handle of
+*   **`zx.handle?`** : nullable Zircon handle of
     unspecified type
 *   **`zx.handle:H`** : non-nullable Zircon handle
     of type _H_
@@ -543,7 +543,7 @@ Value types must not contain resource types. For example, this is incorrect:
 
 ```fidl
 struct Foo { // ERROR: must be "resource struct Foo"
-    handle h;
+    zx.handle h;
 };
 ```
 

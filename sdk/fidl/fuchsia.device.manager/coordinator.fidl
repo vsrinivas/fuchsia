@@ -217,7 +217,7 @@ protocol DevhostController {
     ///
     /// `local_device_id` will be a unique value within the device's devhost
     CreateDevice(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc, string:DEVICE_PATH_MAX driver_path,
-                 zx.handle:VMO driver, handle? parent_proxy,
+                 zx.handle:VMO driver, zx.handle? parent_proxy,
                  string:DEVICE_ARGS_MAX? proxy_args, LocalDeviceId local_device_id);
 
     /// Introduce a composite device that has the given name and properties.

@@ -4,16 +4,18 @@
 
 library llcpptest.flexible.test;
 
+using zx;
+
 flexible resource union FlexibleXUnion {
     1: array<uint8>:30 want_more_than_30_bytes;
-    2: array<handle?>:4 want_more_than_4_handles;
+    2: array<zx.handle?>:4 want_more_than_4_handles;
 };
 
 /// Only one of the fields will be set by the server. This allows
 /// the transaction to infer which field is present. See flexible_test.cc.
 resource table FlexibleTable {
     1: array<uint8>:30 want_more_than_30_bytes_at_ordinal_3;
-    2: array<handle?>:4 want_more_than_4_handles_at_ordinal_4;
+    2: array<zx.handle?>:4 want_more_than_4_handles_at_ordinal_4;
 };
 
 /// The server will be implemented manually to purposefully return xunion/tables

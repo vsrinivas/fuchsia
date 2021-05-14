@@ -606,7 +606,7 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    GetToken() -> (zx.status s, handle? token);
+    GetToken() -> (zx.status s, zx.handle? token);
 
     /// Renames an object named src to the name dst, in a directory represented by token.
     ///

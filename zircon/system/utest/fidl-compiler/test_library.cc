@@ -4,6 +4,10 @@
 
 #include "test_library.h"
 
+TestLibrary WithLibraryZx(const std::string& source_code) {
+  return WithLibraryZx(source_code, fidl::ExperimentalFlags());
+}
+
 TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags) {
   TestLibrary main_lib(source_code, flags);
 

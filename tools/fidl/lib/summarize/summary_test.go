@@ -323,8 +323,7 @@ library l
 library l;
 using zx;
 resource struct Handles {
-    // TODO(fxbug.dev/51001): Remove built-in handles.
-    handle h;
+    zx.handle h;
     zx.handle:CHANNEL? c;
 };
 `,
@@ -1027,8 +1026,7 @@ struct Vectors {
 library l;
 using zx;
 resource struct Handles {
-    // TODO(fxbug.dev/51001): Remove built-in handles.
-    handle h;
+    zx.handle h;
     zx.handle:CHANNEL? c;
 };
 `,

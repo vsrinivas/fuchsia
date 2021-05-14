@@ -448,6 +448,7 @@ class TestLibrary final {
   bool compiled_ = false;
 };
 
+TestLibrary WithLibraryZx(const std::string& source_code);
 TestLibrary WithLibraryZx(const std::string& source_code, fidl::ExperimentalFlags flags);
 
 #endif  // ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_

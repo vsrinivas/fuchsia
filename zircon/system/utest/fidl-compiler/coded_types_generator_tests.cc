@@ -124,8 +124,10 @@ struct Vectors {
 }
 
 TEST(CodedTypesGeneratorTests, VectorEncodeMightMutate) {
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
+
+using zx;
 
 bits Bits : uint32 {
   A = 1;
@@ -163,7 +165,7 @@ resource struct Value {
   vector<PaddingStruct> maybe3;
   vector<vector<uint32>> maybe4;
   vector<string> maybe5;
-  vector<handle> maybe6;
+  vector<zx.handle> maybe6;
   vector<request<P>> maybe7;
   vector<P> maybe8;
   vector<Table> maybe9;
@@ -709,8 +711,10 @@ struct OuterStruct {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfOptionals) {
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
+
+using zx;
 
 struct InnerStruct{
   int8 a;
@@ -724,7 +728,7 @@ union SimpleUnion {
 
 resource struct OuterStruct {
   InnerStruct a;
-  handle? opt_handle;
+  zx.handle? opt_handle;
   SimpleUnion? opt_union;
   InnerStruct b;
 };

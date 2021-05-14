@@ -9,5 +9,8 @@ fidl("validate") {
 
   sources = [ "validate.test.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.inspect:fuchsia.inspect" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect",
+    "//zircon/vdso/zx",
+  ]
 }

@@ -15,17 +15,17 @@ protocol Handles {
 
     // Multiple handles!
     MultipleNonnullableHandles(uint32 data0, zx.handle h0, uint64 data1, zx.handle h1, zx.handle h2, uint64 data2);
-    MultipleNullableHandles(uint32 data0, handle? h0, uint64 data1, handle? h1, handle? h2, uint64 data2);
+    MultipleNullableHandles(uint32 data0, zx.handle? h0, uint64 data1, zx.handle? h1, zx.handle? h2, uint64 data2);
 };
 
 resource struct NonnullableHandleArray {
-    array<handle>:4 handles;
+    array<zx.handle>:4 handles;
 };
 
 protocol Arrays {
-    ArrayOfNonnullableHandles(array<handle>:4 handles);
-    ArrayOfNullableHandles(array<handle?>:4 handles);
-    ArrayOfArrayOfNonnullableHandles(array<array<handle>:3>:4 handles);
+    ArrayOfNonnullableHandles(array<zx.handle>:4 handles);
+    ArrayOfNullableHandles(array<zx.handle?>:4 handles);
+    ArrayOfArrayOfNonnullableHandles(array<array<zx.handle>:3>:4 handles);
     OutOfLineArrayOfNonnullableHandles(NonnullableHandleArray? handles);
 };
 
@@ -39,12 +39,12 @@ protocol Strings {
 };
 
 protocol Vectors {
-    UnboundedNonnullableVectorOfHandles(vector<handle> vh0);
-    UnboundedNullableVectorOfHandles(vector<handle>? vh0);
-    Bounded32NonnullableVectorOfHandles(vector<handle>:32 vh0);
-    Bounded32NullableVectorOfHandles(vector<handle>:32? vh0);
-    MultipleNonnullableVectorsOfHandles(vector<handle> vh0, vector<handle> vh1);
-    MultipleNullableVectorsOfHandles(vector<handle>? vh0, vector<handle>? vh1);
+    UnboundedNonnullableVectorOfHandles(vector<zx.handle> vh0);
+    UnboundedNullableVectorOfHandles(vector<zx.handle>? vh0);
+    Bounded32NonnullableVectorOfHandles(vector<zx.handle>:32 vh0);
+    Bounded32NullableVectorOfHandles(vector<zx.handle>:32? vh0);
+    MultipleNonnullableVectorsOfHandles(vector<zx.handle> vh0, vector<zx.handle> vh1);
+    MultipleNullableVectorsOfHandles(vector<zx.handle>? vh0, vector<zx.handle>? vh1);
     UnboundedNonnullableVectorOfUint32s(vector<uint32> vu0);
     UnboundedNullableVectorOfUint32s(vector<uint32>? vu0);
     Bounded32NonnullableVectorOfUint32s(vector<uint32>:32 vu0);
@@ -59,8 +59,8 @@ resource union SingleHandleUnion {
 
 resource union MultipleHandlesUnion {
     1: zx.handle h;
-    2: array<handle>:2 hs;
-    3: array<array<handle>:2>:2 hss;
+    2: array<zx.handle>:2 hs;
+    3: array<array<zx.handle>:2>:2 hss;
 };
 
 resource union MaybeRecurse {

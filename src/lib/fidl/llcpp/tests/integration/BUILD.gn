@@ -70,6 +70,7 @@ fidl("fidl.test.coding.fuchsia") {
 
 fidl("llcpptest.flexible.test") {
   sources = [ "flexible.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 test("fidl_llcpp_flexible_tests_bin") {

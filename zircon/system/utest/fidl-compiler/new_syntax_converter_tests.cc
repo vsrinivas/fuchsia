@@ -2286,7 +2286,6 @@ resource struct Foo {
   request<P> r1;
   request<P>? r2;
   zx.handle? h1;
-  handle h2;
 };
 )FIDL";
 
@@ -2324,7 +2323,6 @@ type Foo = resource struct {
   r1 server_end:P;
   r2 server_end:<P,optional>;
   h1 zx.handle:optional;
-  h2 handle;
 };
 )FIDL";
 
@@ -2358,21 +2356,17 @@ strict union uint8 {
 struct uint16 {};
 protocol uint32 {};
 alias int32 = zx.handle;
-alias int64 = handle;
 alias uint64 = bytes;
-alias handle = string;
 
 resource struct Foo {
   array<uint64>:4 a1;
   array<bool>:4 a2;
   array<uint16>:4 a3;
   uint64 b1;
-  handle? b2;
   vector<int8>:16 v1;
   vector<int16>:16 v2;
   vector<uint8>:16? v3;
   uint32 p1;
-  int64 h1;
 };
 )FIDL";
 
@@ -2396,21 +2390,17 @@ type uint8 = strict union {
 type uint16 = struct {};
 protocol uint32 {};
 alias int32 = zx.handle;
-alias int64 = handle;
 alias uint64 = bytes;
-alias handle = string;
 
 type Foo = resource struct {
   a1 array<uint64,4>;
   a2 array<bool,4>;
   a3 array<uint16,4>;
   b1 uint64;
-  b2 handle:optional;
   v1 vector<int8>:16;
   v2 vector<int16>:16;
   v3 vector<uint8>:<16,optional>;
   p1 client_end:uint32;
-  h1 int64;
 };
 )FIDL";
 
@@ -2446,7 +2436,6 @@ alias A = array<uint8>:4;
 alias B = BB;
 alias E = EE;
 alias H = zx.handle?;
-alias I = handle;
 alias P = PP;
 alias S = SS;
 alias T = TT;
@@ -2469,7 +2458,6 @@ resource struct Foo {
   request<P> r1;
   request<P>? r2;
   H h1;
-  I h2;
 };
 )FIDL";
 
@@ -2497,7 +2485,6 @@ alias A = array<uint8,4>;
 alias B = BB;
 alias E = EE;
 alias H = zx.handle:optional;
-alias I = handle;
 alias P = client_end:PP;
 alias S = SS;
 alias T = TT;
@@ -2520,7 +2507,6 @@ type Foo = resource struct {
   r1 server_end:P;
   r2 server_end:<P,optional>;
   h1 H;
-  h2 I;
 };
 )FIDL";
 
@@ -2556,7 +2542,6 @@ alias AA = array<uint8>:4;
 alias BB = BBB;
 alias EE = EEE;
 alias HH = zx.handle?;
-alias II = handle;
 alias PP = PPP;
 alias SS = SSS;
 alias TT = TTT;
@@ -2569,7 +2554,6 @@ alias A = AA;
 alias B = BB;
 alias E = EE;
 alias H = HH;
-alias I = II;
 alias P = PP;
 alias S = SS;
 alias T = TT;
@@ -2592,7 +2576,6 @@ resource struct Foo {
   request<P> r1;
   request<P>? r2;
   H h1;
-  I h2;
 };
 )FIDL";
 
@@ -2620,7 +2603,6 @@ alias AA = array<uint8,4>;
 alias BB = BBB;
 alias EE = EEE;
 alias HH = zx.handle:optional;
-alias II = handle;
 alias PP = client_end:PPP;
 alias SS = SSS;
 alias TT = TTT;
@@ -2633,7 +2615,6 @@ alias A = AA;
 alias B = BB;
 alias E = EE;
 alias H = HH;
-alias I = II;
 alias P = PP;
 alias S = SS;
 alias T = TT;
@@ -2656,7 +2637,6 @@ type Foo = resource struct {
   r1 server_end:P;
   r2 server_end:<P,optional>;
   h1 H;
-  h2 I;
 };
 )FIDL";
 
@@ -2690,7 +2670,6 @@ protocol P {};
 
 alias A = array<uint8>:4;
 alias H = zx.handle?;
-alias I = handle;
 alias V = vector<U>?;
 alias Y = bytes?;
 alias Z = string?;
@@ -2715,7 +2694,6 @@ resource struct Foo {
   request<dep1.P> r1;
   request<dep1.P>? r2;
   dep1.H h1;
-  dep1.I h2;
 };
 )FIDL";
 
@@ -2738,7 +2716,6 @@ type Foo = resource struct {
   r1 server_end:dep1.P;
   r2 server_end:<dep1.P,optional>;
   h1 dep1.H;
-  h2 dep1.I;
 };
 )FIDL";
   std::vector<std::string> deps;
@@ -2773,7 +2750,6 @@ protocol P {};
 
 alias A = array<uint8>:4;
 alias H = zx.handle?;
-alias I = handle;
 alias V = vector<U>?;
 alias Y = bytes?;
 alias Z = string?;
@@ -2788,7 +2764,6 @@ alias A = imported.A;
 alias B = imported.B;
 alias E = imported.E;
 alias H = imported.H;
-alias I = imported.I;
 alias P = imported.P;
 alias S = imported.S;
 alias T = imported.T;
@@ -2817,7 +2792,6 @@ resource struct Foo {
   request<dep2.P> r1;
   request<dep2.P>? r2;
   dep2.H h1;
-  dep2.I h2;
 };
 )FIDL";
 
@@ -2840,7 +2814,6 @@ type Foo = resource struct {
   r1 server_end:dep2.P;
   r2 server_end:<dep2.P,optional>;
   h1 dep2.H;
-  h2 dep2.I;
 };
 )FIDL";
   std::vector<std::string> deps;
@@ -2876,7 +2849,6 @@ protocol P {};
 
 alias A = array<uint8>:4;
 alias H = zx.handle?;
-alias I = handle;
 alias V = vector<U>?;
 alias Y = bytes?;
 alias Z = string?;
@@ -2891,7 +2863,6 @@ alias A = imported.A;
 alias B = imported.B;
 alias E = imported.E;
 alias H = imported.H;
-alias I = imported.I;
 alias P = imported.P;
 alias S = imported.S;
 alias T = imported.T;
@@ -2920,7 +2891,6 @@ resource struct Foo {
   request<d2.P> r1;
   request<d2.P>? r2;
   d2.H h1;
-  d2.I h2;
 };
 )FIDL";
 
@@ -2943,7 +2913,6 @@ type Foo = resource struct {
   r1 server_end:d2.P;
   r2 server_end:<d2.P,optional>;
   h1 d2.H;
-  h2 d2.I;
 };
 )FIDL";
   std::vector<std::string> deps;
@@ -2979,7 +2948,6 @@ protocol P {};
 
 alias A = array<uint8>:4;
 alias H = zx.handle?;
-alias I = handle;
 alias V = vector<U>?;
 alias Y = bytes?;
 alias Z = string?;
@@ -2994,7 +2962,6 @@ alias AA = dep1.A;
 alias BB = dep1.B;
 alias EE = dep1.E;
 alias HH = dep1.H;
-alias II = dep1.I;
 alias PP = dep1.P;
 alias SS = dep1.S;
 alias TT = dep1.T;
@@ -3017,7 +2984,6 @@ resource struct Foo {
   request<PP> r1;
   request<PP>? r2;
   HH h1;
-  II h2;
 };
 )FIDL";
 
@@ -3030,7 +2996,6 @@ alias AA = dep1.A;
 alias BB = dep1.B;
 alias EE = dep1.E;
 alias HH = dep1.H;
-alias II = dep1.I;
 alias PP = client_end:dep1.P;
 alias SS = dep1.S;
 alias TT = dep1.T;
@@ -3053,7 +3018,6 @@ type Foo = resource struct {
   r1 server_end:PP;
   r2 server_end:<PP,optional>;
   h1 HH;
-  h2 II;
 };
 )FIDL";
   std::vector<std::string> deps;

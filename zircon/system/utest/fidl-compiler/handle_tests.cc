@@ -427,8 +427,22 @@ resource struct MyStruct {
                                       fidl::ErrCouldNotResolveHandleSubtype);
 }
 
-// TODO(fxbug.dev/74909): turn this into a Bad test
-TEST(HandleTests, GoodBareHandleNoConstraints) {
+TEST(HandleTests, BadBareHandleNoConstraints) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type MyStruct = resource struct {
+    h handle;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
+}
+
+TEST(HandleTests, BadBareHandleNoConstraintsOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -436,7 +450,7 @@ resource struct MyStruct {
     handle h;
 };
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsOld) {
@@ -476,7 +490,8 @@ resource struct MyStruct {
 )FIDL");
   // NOTE(fxbug.dev/72924): The old syntax fails in a different way because of the way it parses
   // handles, assuming that it's a size bound since it doesn't match "handle" exactly.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound,
+                                      fidl::ErrHandleSubtypeNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAlias) {

@@ -15,9 +15,9 @@ resource struct FileDescriptor {
     int32 type2;
 
     /// The handles for the file descriptor (e.g., a channel).
-    handle? handle0;
-    handle? handle1;
-    handle? handle2;
+    zx.handle? handle0;
+    zx.handle? handle1;
+    zx.handle? handle2;
 };
 
 /// Information used to create an instance of a component and obtain

@@ -22,7 +22,7 @@ resource struct StructWithHandle {
 resource struct StructWithManyHandles {
     zx.handle h1;
     zx.handle h2;
-    vector<handle>:2 hs;
+    vector<zx.handle>:2 hs;
 };
 
 resource table TableOfStructWithHandle {

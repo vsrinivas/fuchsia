@@ -9,6 +9,7 @@
 #include <fidl/type_shape.h>
 #include <zxtest/zxtest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 namespace {
@@ -99,7 +100,7 @@ library example;
 struct Empty {};
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto empty = test_library.LookupStruct("Empty");
   ASSERT_NOT_NULL(empty);
@@ -148,7 +149,7 @@ struct EmptyWithOtherThings {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto empty_with_other_things = test_library.LookupStruct("EmptyWithOtherThings");
   ASSERT_NOT_NULL(empty_with_other_things);
@@ -212,7 +213,7 @@ struct BoolAndU64 {
   uint64 u;
 };
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupStruct("OneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -280,7 +281,7 @@ resource struct ThreeHandlesOneOptional {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_handle = test_library.LookupStruct("OneHandle");
   ASSERT_NOT_NULL(one_handle);
@@ -334,7 +335,7 @@ bits BitsImplicit {
     VALUE = 1;
 };
 )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto bits16 = test_library.LookupBits("Bits16");
   ASSERT_NOT_NULL(bits16);
@@ -378,7 +379,7 @@ table TableWithBoolAndU64 {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto no_members = test_library.LookupTable("TableWithNoMembers");
   ASSERT_NOT_NULL(no_members);
@@ -469,7 +470,7 @@ table OneReserved {
   1: reserved;
 };
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto some_reserved = test_library.LookupTable("SomeReserved");
   ASSERT_NOT_NULL(some_reserved);
@@ -528,15 +529,16 @@ table OneReserved {
 }
 
 TEST(TypeshapeTests, GoodSimpleTablesWithHandles) {
-  TestLibrary test_library(R"FIDL(
+  auto test_library = WithLibraryZx(R"FIDL(
 library example;
+using zx;
 
 resource table TableWithOneHandle {
-  1: handle h;
+  1: zx.handle h;
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_handle = test_library.LookupTable("TableWithOneHandle");
   ASSERT_NOT_NULL(one_handle);
@@ -591,7 +593,7 @@ struct OptionalBoolAndU64 {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupStruct("OptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -711,7 +713,7 @@ table TableWithOptionalTableWithBoolAndU64 {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupTable("TableWithOptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -837,7 +839,7 @@ table TableWithOptionalUnion {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto union_with_out_of_line = test_library.LookupUnion("UnionWithOutOfLine");
   ASSERT_NO_FAILURES(CheckTypeShape(union_with_out_of_line,
@@ -932,23 +934,24 @@ table TableWithOptionalUnion {
 }
 
 TEST(TypeshapeTests, GoodUnionsWithHandles) {
-  TestLibrary test_library(R"FIDL(
+  auto test_library = WithLibraryZx(R"FIDL(
 library example;
+using zx;
 
 resource union OneHandleUnion {
-  1: handle one_handle;
+  1: zx.handle one_handle;
   2: bool one_bool;
   3: uint32 one_int;
 };
 
 resource union ManyHandleUnion {
-  1: handle one_handle;
-  2: array<handle>:8 handle_array;
-  3: vector<handle>:8 handle_vector;
+  1: zx.handle one_handle;
+  2: array<zx.handle>:8 handle_array;
+  3: vector<zx.handle>:8 handle_vector;
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_handle_union = test_library.LookupUnion("OneHandleUnion");
   ASSERT_NOT_NULL(one_handle_union);
@@ -1082,7 +1085,7 @@ table TableWithUnboundedVectors {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto padded_vector = test_library.LookupStruct("PaddedVector");
   ASSERT_NOT_NULL(padded_vector);
@@ -1163,31 +1166,32 @@ table TableWithUnboundedVectors {
 }
 
 TEST(TypeshapeTests, GoodVectorsWithHandles) {
-  TestLibrary test_library(R"FIDL(
+  auto test_library = WithLibraryZx(R"FIDL(
 library example;
+using zx;
 
 resource struct HandleVector {
-  vector<handle>:8 hv;
+  vector<zx.handle>:8 hv;
 };
 
 resource struct HandleNullableVector {
-  vector<handle>:8? hv;
+  vector<zx.handle>:8? hv;
 };
 
 resource table TableWithHandleVector {
-  1: vector<handle>:8 hv;
+  1: vector<zx.handle>:8 hv;
 };
 
 resource struct UnboundedHandleVector {
-  vector<handle> hv;
+  vector<zx.handle> hv;
 };
 
 resource table TableWithUnboundedHandleVector {
-  1: vector<handle> hv;
+  1: vector<zx.handle> hv;
 };
 
 resource struct OneHandle {
-  handle h;
+  zx.handle h;
 };
 
 resource struct HandleStructVector {
@@ -1195,7 +1199,7 @@ resource struct HandleStructVector {
 };
 
 resource table TableWithOneHandle {
-  1: handle h;
+  1: zx.handle h;
 };
 
 resource struct HandleTableVector {
@@ -1207,7 +1211,7 @@ resource table TableWithHandleStructVector {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto handle_vector = test_library.LookupStruct("HandleVector");
   ASSERT_NOT_NULL(handle_vector);
@@ -1315,7 +1319,7 @@ table TableWithUnboundedString {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto short_string = test_library.LookupStruct("ShortString");
   ASSERT_NOT_NULL(short_string);
@@ -1383,7 +1387,7 @@ table TableWithAnInt32ArrayNoPadding {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto an_array = test_library.LookupStruct("AnArray");
   ASSERT_NOT_NULL(an_array);
@@ -1433,27 +1437,28 @@ table TableWithAnInt32ArrayNoPadding {
 }
 
 TEST(TypeshapeTests, GoodArraysWithHandles) {
-  TestLibrary test_library(R"FIDL(
+  auto test_library = WithLibraryZx(R"FIDL(
 library example;
+using zx;
 
 resource struct HandleArray {
-  array<handle>:8 ha;
+  array<zx.handle>:8 ha;
 };
 
 resource table TableWithHandleArray {
-  1: array<handle>:8 ha;
+  1: array<zx.handle>:8 ha;
 };
 
 resource struct NullableHandleArray {
-  array<handle?>:8 ha;
+  array<zx.handle?>:8 ha;
 };
 
 resource table TableWithNullableHandleArray {
-  1: array<handle?>:8 ha;
+  1: array<zx.handle?>:8 ha;
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto handle_array = test_library.LookupStruct("HandleArray");
   ASSERT_NOT_NULL(handle_array);
@@ -1542,7 +1547,7 @@ flexible union PaddingCheck {
   2: array<uint8>:5 five;
 };
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto one_bool = test_library.LookupUnion("XUnionWithOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -1712,7 +1717,7 @@ strict union StrictXUnionOfFlexibleTable {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto strict_xunion = test_library.LookupUnion("StrictLeafXUnion");
   ASSERT_NOT_NULL(strict_xunion);
@@ -1881,7 +1886,7 @@ resource struct UsingOptRequestSomeProtocol {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto using_some_protocol = test_library.LookupStruct("UsingSomeProtocol");
   ASSERT_NOT_NULL(using_some_protocol);
@@ -1917,9 +1922,10 @@ resource struct UsingOptRequestSomeProtocol {
 }
 
 TEST(TypeshapeTests, GoodExternalDefinitions) {
-  auto test_library = TestLibrary();
-  test_library.AddSource("main.fidl", R"FIDL(
+  auto test_library = WithLibraryZx(R"FIDL(
 library example;
+
+using zx;
 
 struct ExternalArrayStruct {
     array<ExternalSimpleStruct>:EXTERNAL_SIZE_DEF a;
@@ -1930,7 +1936,7 @@ struct ExternalStringSizeStruct {
 };
 
 resource struct ExternalVectorSizeStruct {
-    vector<handle>:EXTERNAL_SIZE_DEF a;
+    vector<zx.handle>:EXTERNAL_SIZE_DEF a;
 };
 
     )FIDL");
@@ -1945,7 +1951,7 @@ struct ExternalSimpleStruct {
 };
 
     )FIDL");
-  ASSERT_TRUE(test_library.Compile());
+  ASSERT_COMPILED(test_library);
 
   auto ext_struct = test_library.LookupStruct("ExternalSimpleStruct");
   ASSERT_NOT_NULL(ext_struct);
@@ -2311,16 +2317,17 @@ struct B {
 }
 
 TEST(TypeshapeTests, GoodCoRecursiveStructWithHandles) {
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
+using zx;
 
 resource struct A {
-    handle a;
+    zx.handle a;
     B? foo;
 };
 
 resource struct B {
-    handle b;
+    zx.handle b;
     A? bar;
 };
 )FIDL");
@@ -2741,15 +2748,16 @@ struct Sandwich {
 }
 
 TEST(TypeshapeTests, GoodZeroSizeVector) {
-  TestLibrary library(R"FIDL(
+  auto library = WithLibraryZx(R"FIDL(
 library example;
+using zx;
 
 resource struct A {
-    vector<handle>:0 zero_size;
+    vector<zx.handle>:0 zero_size;
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);

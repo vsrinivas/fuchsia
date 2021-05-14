@@ -14,8 +14,9 @@ import (
 
 func init() {
 	util.Register(config.FidlFile{
-		Filename: "handle_array_plain.gen.test.fidl",
-		Gen:      fidlGenHandleArrayPlain,
+		Filename:        "handle_array_plain.gen.test.fidl",
+		Gen:             fidlGenHandleArrayPlain,
+		ExtraDefinition: `using zx;`,
 		Definitions: []config.Definition{
 			{
 				Config: config.Config{
@@ -40,6 +41,6 @@ func fidlGenHandleArrayPlain(config config.Config) (string, error) {
 	size := config.GetInt("size")
 	return fmt.Sprintf(`
 resource struct HandleArrayPlain%[1]d {
-	array<handle>:%[1]d handles;
+	array<zx.handle>:%[1]d handles;
 };`, size), nil
 }

@@ -342,7 +342,8 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotConstrainTwice(
 constexpr ErrorDef<const flat::TypeTemplate *> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
 // other
-constexpr ErrorDef<> ErrHandleSubtypeNotResource("handle subtype is not a defined resource");
+constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
+    "handle subtype {} is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
 constexpr ErrorDef<flat::Name> ErrResourceMissingSubtypeProperty(
     "resource {} expected to have the subtype property, but it was missing");
