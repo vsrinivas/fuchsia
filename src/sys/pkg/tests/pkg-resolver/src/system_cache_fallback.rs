@@ -424,6 +424,7 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
         .start()
         .expect("started pkgfs");
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+    eprintln!("TestEnv realm name {:?}", env.apps.realm_instance.root.child_name());
 
     let small_pkg = test_package(pkg_name, "cache").await;
     let repo_with_small_package = Arc::new(
@@ -437,14 +438,19 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     // Resolving and caching a small package should work fine.
+    // TODO(fxbug.dev/76421): clean up verbose debug logging after flake is identified
+    eprintln!("resolving small package");
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
+    eprintln!("verifying contents");
     small_pkg.verify_contents(&package_dir).await.unwrap();
 
     // Stop the running repository, fire up a new one with a very large package in it,
     // which won't fit in blobfs.
+    eprintln!("stopping served repository with small package");
     let () = served_repository.stop().await;
 
     // A very large version of the same package, to put in the repo.
+    eprintln!("building large package");
     let mut rng = StdRng::from_seed([0u8; 32]);
     let rng = &mut rng as &mut dyn RngCore;
     let large_pkg = PackageBuilder::new(pkg_name)
@@ -453,6 +459,7 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
         .await
         .expect("build large package");
 
+    eprintln!("building repository with large package");
     let repo_with_large_package = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&large_pkg)
@@ -461,16 +468,20 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
             .unwrap(),
     );
 
+    eprintln!("serving repository with large package");
     let served_repository = repo_with_large_package.server().start().unwrap();
+    eprintln!("registering repository with large package");
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     // pkg-resolver should refuse to fall back to a previous version of the package, and fail
     // with NO_SPACE
+    eprintln!("resolving large package");
     assert_matches!(
         env.resolve_package(&pkg_url).await,
         Err(fidl_fuchsia_pkg::ResolveError::NoSpace)
     );
 
+    eprintln!("stopping TestEnv");
     env.stop().await;
 }
 
