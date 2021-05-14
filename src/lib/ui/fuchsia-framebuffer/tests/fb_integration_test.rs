@@ -35,7 +35,7 @@ fn test_main() -> Result<(), Error> {
 
         let (sender, mut receiver) = unbounded::<VSyncMessage>();
 
-        let mut fb = FrameBuffer::new(FrameUsage::Cpu, false, None, Some(sender))
+        let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None, Some(sender))
             .await
             .context("Failed to create framebuffer, perhaps a root presenter is already running")?;
 

@@ -143,7 +143,7 @@ fn main() -> Result<(), Error> {
         let (sender, mut receiver) = unbounded::<VSyncMessage>();
 
         // create a framebuffer
-        let mut fb = FrameBuffer::new(FrameUsage::Cpu, false, None, Some(sender)).await?;
+        let mut fb = FrameBuffer::new(FrameUsage::Cpu, None, None, Some(sender)).await?;
 
         fb.allocate_frames(BUFFER_COUNT, PixelFormat::Argb8888).await?;
 

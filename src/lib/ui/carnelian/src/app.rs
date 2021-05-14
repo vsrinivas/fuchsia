@@ -11,6 +11,7 @@ use crate::{
     view::{strategies::base::ViewStrategyParams, ViewAssistantPtr, ViewController, ViewKey},
 };
 use anyhow::{format_err, Context as _, Error};
+use fidl_fuchsia_hardware_display::VirtconMode;
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component};
@@ -37,12 +38,28 @@ pub struct RenderOptions {
     pub use_spinel: bool,
 }
 
+fn virtcon_mode_from_str(mode_str: &str) -> Result<Option<VirtconMode>, Error> {
+    match mode_str {
+        "forced" => Ok(Some(VirtconMode::Forced)),
+        "fallback" => Ok(Some(VirtconMode::Fallback)),
+        _ => Err(format_err!("Invalid VirtconMode {}", mode_str)),
+    }
+}
+
+fn deserialize_virtcon_mode<'de, D>(deserializer: D) -> Result<Option<VirtconMode>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let str = String::deserialize(deserializer)?;
+    virtcon_mode_from_str(&str).map_err(serde::de::Error::custom)
+}
+
 #[derive(Debug, Default, Deserialize)]
 pub struct Config {
     #[serde(default)]
     pub use_spinel: bool,
-    #[serde(default)]
-    pub virtcon: bool,
+    #[serde(deserialize_with = "deserialize_virtcon_mode")]
+    pub virtcon_mode: Option<VirtconMode>,
 }
 
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;

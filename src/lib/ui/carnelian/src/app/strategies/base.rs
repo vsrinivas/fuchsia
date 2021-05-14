@@ -99,7 +99,7 @@ pub(crate) async fn create_app_strategy(
     let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
 
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
-    let fb = FrameBuffer::new(usage, config.virtcon, None, Some(sender)).await;
+    let fb = FrameBuffer::new(usage, config.virtcon_mode, None, Some(sender)).await;
     if fb.is_err() {
         let scenic = connect_to_protocol::<ScenicMarker>()?;
         Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))

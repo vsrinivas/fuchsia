@@ -22,6 +22,7 @@ rustc_library("carnelian") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.hardware.input:fuchsia.hardware.input-rustc",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",

@@ -1,1 +1,1 @@
-virtcon = true
+virtcon_mode = "forced"

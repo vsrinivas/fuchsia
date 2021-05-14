@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{ensure, format_err, Context as _, Error};
 use fdio::watch_directory;
 use fidl::endpoints::{self, create_endpoints, ClientEnd, Proxy};
 use fidl_fuchsia_hardware_display::{
@@ -436,6 +436,7 @@ pub struct FrameBuffer {
     frames: BTreeMap<u64, Frame>,
     #[allow(unused)]
     pub usage: FrameUsage,
+    initial_virtcon_mode: Option<VirtconMode>,
 }
 
 impl FrameBuffer {
@@ -561,7 +562,7 @@ impl FrameBuffer {
 
     pub async fn new(
         usage: FrameUsage,
-        is_virtcon: bool,
+        virtcon_mode: Option<VirtconMode>,
         display_index: Option<usize>,
         vsync_sender: Option<futures::channel::mpsc::UnboundedSender<VSyncMessage>>,
     ) -> Result<FrameBuffer, Error> {
@@ -585,7 +586,7 @@ impl FrameBuffer {
 
         let (device_client, device_server) = zx::Channel::create()?;
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
-        let status = if is_virtcon {
+        let status = if virtcon_mode.is_some() {
             provider.open_virtcon_controller(device_server, dc_server, zx::Time::INFINITE)
         } else {
             provider.open_controller(device_server, dc_server, zx::Time::INFINITE)
@@ -595,13 +596,14 @@ impl FrameBuffer {
         }
 
         let proxy = dc_client.into_proxy()?;
-        if is_virtcon {
-            proxy.set_virtcon_mode(VirtconMode::Fallback as u8)?;
+        if let Some(virtcon_mode) = virtcon_mode {
+            proxy.set_virtcon_mode(virtcon_mode as u8)?;
         }
-        FrameBuffer::new_with_proxy(usage, proxy, device_client, vsync_sender).await
+        FrameBuffer::new_with_proxy(virtcon_mode, usage, proxy, device_client, vsync_sender).await
     }
 
     async fn new_with_proxy(
+        initial_virtcon_mode: Option<VirtconMode>,
         usage: FrameUsage,
         proxy: ControllerProxy,
         device_client: zx::Channel,
@@ -658,6 +660,7 @@ impl FrameBuffer {
         sysmem.allocate_shared_collection(local_token_request)?;
 
         let fb = FrameBuffer {
+            initial_virtcon_mode,
             display_controller: device_client,
             controller: proxy,
             sysmem,
@@ -735,6 +738,12 @@ impl FrameBuffer {
                 .context("new_with_vmo")?;
             self.frames.insert(frame.image_id, frame);
         }
+        Ok(())
+    }
+
+    pub fn set_virtcon_mode(&mut self, virtcon_mode: VirtconMode) -> Result<(), Error> {
+        ensure!(self.initial_virtcon_mode.is_some());
+        self.controller.set_virtcon_mode(virtcon_mode as u8)?;
         Ok(())
     }
 
@@ -858,7 +867,7 @@ mod test {
 
         let proxy = client.into_proxy()?;
         let (dummy, _) = zx::Channel::create()?;
-        let _fb = FrameBuffer::new_with_proxy(FrameUsage::Cpu, proxy, dummy, None);
+        let _fb = FrameBuffer::new_with_proxy(None, FrameUsage::Cpu, proxy, dummy, None);
         if vsync_enabled.get() {
             panic!("Vsync should be disabled");
         }
