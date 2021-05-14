@@ -61,9 +61,6 @@ test("fidl_llcpp_gen_api_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_gen_api_tests") {
   deps = [ ":fidl_llcpp_gen_api_tests_bin" ]
-
-  # TODO(fxbug.dev/76529): Switch to v2 when this test no longer depends both on zxtest and gtest (through types_test_utils).
-  v2 = false
 }
 
 fidl("fidl.test.coding.fuchsia") {
