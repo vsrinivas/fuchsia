@@ -1,6 +1,5 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 //! # Inspect Runtime
 //!
@@ -58,17 +57,14 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::format_err;
     use fdio;
-    use fidl_fuchsia_sys::ComponentControllerEvent;
-    use fuchsia_async as fasync;
-    use fuchsia_component::{client, server::ServiceObj};
+    use fuchsia_component::server::ServiceObj;
+    use fuchsia_component_test::ScopedInstance;
     use fuchsia_inspect::{assert_inspect_tree, reader, Inspector};
     use glob::glob;
 
-    const TEST_COMPONENT_CMX: &str = "inspect_test_component.cmx";
     const TEST_COMPONENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/fuchsia-inspect-tests#meta/inspect_test_component.cmx";
+        "fuchsia-pkg://fuchsia.com/inspect-runtime-tests#meta/inspect_test_component.cm";
 
     #[fuchsia::test]
     async fn new_no_op() -> Result<(), Error> {
@@ -83,52 +79,32 @@ mod tests {
 
     #[fuchsia::test]
     async fn connect_to_service() -> Result<(), anyhow::Error> {
-        let mut service_fs = ServiceFs::new();
-        let env = service_fs.create_nested_environment("test")?;
-        let mut app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
-
-        fasync::Task::spawn(service_fs.collect()).detach();
-
-        let mut component_stream = app.controller().take_event_stream();
-        match component_stream
-            .next()
+        let app = ScopedInstance::new("coll".to_string(), TEST_COMPONENT_URL.to_string())
             .await
-            .expect("component event stream ended before termination event")?
-        {
-            ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                return Err(format_err!(
-                    "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                    return_code,
-                    termination_reason
-                ));
-            }
-            ComponentControllerEvent::OnDirectoryReady {} => {
-                let pattern = format!(
-                    "/hub/r/test/*/c/{}/*/out/diagnostics/{}",
-                    TEST_COMPONENT_CMX,
-                    TreeMarker::SERVICE_NAME
-                );
-                let path = glob(&pattern)?.next().unwrap().expect("failed to parse glob");
-                let (tree, server_end) =
-                    fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
-                fdio::service_connect(
-                    &path.to_string_lossy().to_string(),
-                    server_end.into_channel(),
-                )
-                .expect("failed to connect to service");
+            .expect("failed to create test component");
 
-                let hierarchy = reader::read(&tree).await?;
-                assert_inspect_tree!(hierarchy, root: {
-                    int: 3i64,
-                    "lazy-node": {
-                        a: "test",
-                        child: {
-                            double: 3.14,
-                        },
-                    }
-                });
-                app.kill().map_err(|e| format_err!("failed to kill component: {}", e))
+        let pattern = format!(
+            "/hub/children/coll:{}/exec/out/diagnostics/{}",
+            app.child_name(),
+            TreeMarker::SERVICE_NAME
+        );
+        let path = glob(&pattern)?.next().unwrap().expect("failed to parse glob");
+        let (tree, server_end) =
+            fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
+        fdio::service_connect(&path.to_string_lossy().to_string(), server_end.into_channel())
+            .expect("failed to connect to service");
+
+        let hierarchy = reader::read(&tree).await?;
+        assert_inspect_tree!(hierarchy, root: {
+            int: 3i64,
+            "lazy-node": {
+                a: "test",
+                child: {
+                    double: 3.14,
+                },
             }
-        }
+        });
+
+        Ok(())
     }
 }

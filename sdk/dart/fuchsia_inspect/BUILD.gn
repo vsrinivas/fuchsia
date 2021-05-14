@@ -105,7 +105,8 @@ dart_test_component("dart-archive-reader-test-component") {
 fuchsia_test_package("dart-archive-reader-test") {
   package_name = "dart-archive-reader-test"
   test_components = [ ":dart-archive-reader-test-component" ]
-  deps = [ "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component" ]
+  deps =
+      [ "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component_v1" ]
 }
 
 group("tests") {

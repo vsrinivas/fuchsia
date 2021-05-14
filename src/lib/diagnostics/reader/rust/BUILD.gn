@@ -24,7 +24,6 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/fidl/rust/fidl",
@@ -41,11 +40,13 @@ rustc_library("lib") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/lib/fuchsia-component-test" ]
+
   sources = [ "src/lib.rs" ]
 }
 
 fuchsia_unittest_package("diagnostics-reader-tests") {
-  manifest = "meta/diagnostics-reader-unittest.cmx"
+  manifest = "meta/diagnostics-reader-unittest.cml"
   deps = [
     ":lib_test",
     "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component",

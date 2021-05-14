@@ -30,15 +30,13 @@ rustc_test("fuchsia_inspect_derive_import_tests") {
   sources = [ "src/import.rs" ]
 }
 
-fuchsia_component("fuchsia-inspect-derive-test") {
-  testonly = true
-  manifest = "meta/fuchsia-inspect-derive-test.cmx"
+fuchsia_unittest_component("fuchsia-inspect-derive-test") {
+  manifest = "meta/fuchsia-inspect-derive-test.cml"
   deps = [ ":fuchsia_inspect_derive_tests" ]
 }
 
-fuchsia_component("fuchsia-inspect-derive-import-test") {
-  testonly = true
-  manifest = "meta/fuchsia-inspect-derive-import-test.cmx"
+fuchsia_unittest_component("fuchsia-inspect-derive-import-test") {
+  manifest = "meta/fuchsia-inspect-derive-import-test.cml"
   deps = [ ":fuchsia_inspect_derive_import_tests" ]
 }
 

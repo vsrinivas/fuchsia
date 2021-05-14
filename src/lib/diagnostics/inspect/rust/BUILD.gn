@@ -58,11 +58,7 @@ rustc_library("fuchsia-inspect") {
 }
 
 fuchsia_unittest_package("fuchsia-inspect-tests") {
-  manifest = "meta/fuchsia_inspect_lib_test.cmx"
-  deps = [
-    ":fuchsia-inspect_test",
-    "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component",
-  ]
+  deps = [ ":fuchsia-inspect_test" ]
 }
 
 group("rust") {

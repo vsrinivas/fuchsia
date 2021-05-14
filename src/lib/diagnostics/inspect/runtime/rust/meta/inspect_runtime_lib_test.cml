@@ -1,0 +1,33 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/inspect_runtime_lib_test",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "connect" ],
+            path: "/hub",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#coll",
+        },
+    ],
+}

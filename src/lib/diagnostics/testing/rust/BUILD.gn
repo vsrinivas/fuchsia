@@ -50,7 +50,7 @@ fuchsia_component("emitter-for-test") {
   testonly = true
   deps = [
     ":emitter-bin",
-    "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component",
+    "//src/lib/diagnostics/inspect/runtime/rust:inspect_test_component_v1",
   ]
   manifest = "meta/emitter-for-test.cmx"
 }

@@ -69,7 +69,7 @@ impl ComponentSelector {
     /// Create a new component event selector.
     /// By default it will select the whole tree unless tree selectors are provided.
     /// `relative_moniker` is the realm path relative to the realm of the running component plus the
-    /// component name. For example: [a, b, component.cmx].
+    /// component name. For example: [a, b, component].
     pub fn new(relative_moniker: Vec<String>) -> Self {
         Self { relative_moniker, tree_selectors: Vec::new() }
     }
@@ -106,12 +106,9 @@ impl ToSelectorArguments for ComponentSelector {
         let relative_moniker = self.relative_moniker_str();
         // If not tree selectors were provided, select the full tree.
         if self.tree_selectors.is_empty() {
-            vec![format!("{}:root", relative_moniker.clone())]
+            vec![format!("{}:root", relative_moniker)]
         } else {
-            self.tree_selectors
-                .iter()
-                .map(|s| format!("{}:{}", relative_moniker.clone(), s.clone()))
-                .collect()
+            self.tree_selectors.iter().map(|s| format!("{}:{}", relative_moniker, s)).collect()
         }
     }
 }
@@ -453,60 +450,48 @@ where
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        anyhow::format_err,
-        diagnostics_data::{Data, LifecycleType},
-        diagnostics_hierarchy::assert_data_tree,
-        fidl_fuchsia_diagnostics as fdiagnostics,
-        fidl_fuchsia_sys::ComponentControllerEvent,
-        fuchsia_component::{
-            client::App,
-            server::{NestedEnvironment, ServiceFs},
-        },
-        fuchsia_zircon as zx,
-        futures::{StreamExt, TryStreamExt},
-    };
+    use super::*;
+    use diagnostics_data::{Data, LifecycleType};
+    use diagnostics_hierarchy::assert_data_tree;
+    use fidl_fuchsia_diagnostics as fdiagnostics;
+    use fuchsia_component_test::{builder::*, RealmInstance};
+    use fuchsia_zircon as zx;
+    use futures::TryStreamExt;
 
     const TEST_COMPONENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/diagnostics-reader-tests#meta/inspect_test_component.cmx";
+        "fuchsia-pkg://fuchsia.com/diagnostics-reader-tests#meta/inspect_test_component.cm";
 
-    async fn start_component(env_label: &str) -> Result<(NestedEnvironment, App), anyhow::Error> {
-        let mut service_fs = ServiceFs::new();
-        let env = service_fs.create_nested_environment(env_label)?;
-        let app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
-        fasync::Task::spawn(service_fs.collect()).detach();
-        let mut component_stream = app.controller().take_event_stream();
-        match component_stream
-            .next()
-            .await
-            .expect("component event stream ended before termination event")?
-        {
-            ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                return Err(format_err!(
-                    "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                    return_code,
-                    termination_reason
-                ));
-            }
-            ComponentControllerEvent::OnDirectoryReady {} => {}
-        }
-        Ok((env, app))
+    async fn start_component() -> Result<RealmInstance, anyhow::Error> {
+        let mut builder = RealmBuilder::new().await?;
+        builder
+            .add_eager_component("test_component", ComponentSource::url(TEST_COMPONENT_URL))
+            .await?
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::component("test_component")],
+            })?;
+        let instance = builder.build().create().await?;
+        Ok(instance)
     }
 
     #[fuchsia::test]
     async fn lifecycle_events_for_component() {
-        let (_env, _app) = start_component("test-lifecycle").await.unwrap();
+        let instance = start_component().await.expect("start component");
 
         // TODO(fxbug.dev/51165): use selectors for this filtering and remove the delayed retry
         // which would be taken care of by the ArchiveReader itself.
+        let moniker = format!(
+            "fuchsia_component_test_collection\\:{}/test_component",
+            instance.root.child_name()
+        );
         loop {
             let results = ArchiveReader::new()
                 .snapshot::<Lifecycle>()
                 .await
                 .unwrap()
                 .into_iter()
-                .filter(|e| e.moniker.starts_with("test-lifecycle"))
+                .filter(|e| e.moniker.starts_with(&moniker))
                 .collect::<Vec<_>>();
             // Note: the ArchiveReader retries when the response is empty. However, here the
             // response might not be empty (it can contain the archivist itself) but when we filter
@@ -520,7 +505,7 @@ mod tests {
             let started = &results[0];
             assert_eq!(started.metadata.lifecycle_event_type, LifecycleType::Started);
             assert_eq!(started.metadata.component_url, TEST_COMPONENT_URL);
-            assert_eq!(started.moniker, "test-lifecycle/inspect_test_component.cmx");
+            assert_eq!(started.moniker, moniker);
             assert_eq!(started.payload, None);
             break;
         }
@@ -528,10 +513,14 @@ mod tests {
 
     #[fuchsia::test]
     async fn inspect_data_for_component() -> Result<(), anyhow::Error> {
-        let (_env, _app) = start_component("test-ok").await?;
+        let instance = start_component().await?;
 
+        let moniker = format!(
+            "fuchsia_component_test_collection\\:{}/test_component",
+            instance.root.child_name()
+        );
         let results = ArchiveReader::new()
-            .add_selector("test-ok/inspect_test_component.cmx:root".to_string())
+            .add_selector(format!("{}:root", moniker))
             .snapshot::<Inspect>()
             .await?;
 
@@ -547,21 +536,15 @@ mod tests {
         });
 
         let response = ArchiveReader::new()
-            .add_selector(
-                ComponentSelector::new(vec![
-                    "test-ok".to_string(),
-                    "inspect_test_component.cmx".to_string(),
-                ])
-                .with_tree_selector("root:int")
-                .with_tree_selector("root/lazy-node:a"),
-            )
+            .add_selector(format!("{}:root:int", moniker))
+            .add_selector(format!("{}:root/lazy-node:a", moniker))
             .snapshot::<Inspect>()
             .await?;
 
         assert_eq!(response.len(), 1);
 
         assert_eq!(response[0].metadata.component_url, TEST_COMPONENT_URL);
-        assert_eq!(response[0].moniker, "test-ok/inspect_test_component.cmx");
+        assert_eq!(response[0].moniker, moniker);
 
         assert_data_tree!(response[0].payload.as_ref().unwrap(), root: {
             int: 3u64,
@@ -575,10 +558,13 @@ mod tests {
 
     #[fuchsia::test]
     async fn timeout() -> Result<(), anyhow::Error> {
-        let (_env, _app) = start_component("test-timeout").await?;
+        let instance = start_component().await?;
 
         let result = ArchiveReader::new()
-            .add_selector("test-timeout/inspect_test_component.cmx:root")
+            .add_selector(format!(
+                "fuchsia_component_test_collection\\:{}/test_component:root",
+                instance.root.child_name()
+            ))
             .with_timeout(0.nanos())
             .snapshot::<Inspect>()
             .await;
@@ -588,21 +574,18 @@ mod tests {
 
     #[fuchsia::test]
     async fn component_selector() {
-        let selector = ComponentSelector::new(vec!["a.cmx".to_string()]);
-        assert_eq!(selector.relative_moniker_str(), "a.cmx");
+        let selector = ComponentSelector::new(vec!["a".to_string()]);
+        assert_eq!(selector.relative_moniker_str(), "a");
         let arguments: Vec<String> = selector.to_selector_arguments();
-        assert_eq!(arguments, vec!["a.cmx:root".to_string()]);
+        assert_eq!(arguments, vec!["a:root".to_string()]);
 
         let selector =
-            ComponentSelector::new(vec!["b".to_string(), "c".to_string(), "a.cmx".to_string()]);
-        assert_eq!(selector.relative_moniker_str(), "b/c/a.cmx");
+            ComponentSelector::new(vec!["b".to_string(), "c".to_string(), "a".to_string()]);
+        assert_eq!(selector.relative_moniker_str(), "b/c/a");
 
         let selector = selector.with_tree_selector("root/b/c:d").with_tree_selector("root/e:f");
         let arguments: Vec<String> = selector.to_selector_arguments();
-        assert_eq!(
-            arguments,
-            vec!["b/c/a.cmx:root/b/c:d".to_string(), "b/c/a.cmx:root/e:f".to_string(),]
-        );
+        assert_eq!(arguments, vec!["b/c/a:root/b/c:d".to_string(), "b/c/a:root/e:f".to_string(),]);
     }
 
     #[fuchsia::test]

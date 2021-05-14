@@ -30,8 +30,8 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:glob",
   ]
 
@@ -42,7 +42,7 @@ rustc_library("lib") {
 }
 
 fuchsia_unittest_package("inspect-runtime-tests") {
-  manifest = "meta/inspect_runtime_lib_test.cmx"
+  manifest = "meta/inspect_runtime_lib_test.cml"
   deps = [
     ":inspect_test_component",
     ":lib_test",
@@ -67,6 +67,13 @@ rustc_binary("inspect_test_component_bin") {
 }
 
 fuchsia_component("inspect_test_component") {
+  testonly = true
+  deps = [ ":inspect_test_component_bin" ]
+  manifest = "meta/inspect_test_component.cml"
+}
+
+fuchsia_component("inspect_test_component_v1") {
+  component_name = "inspect_test_component"
   testonly = true
   deps = [ ":inspect_test_component_bin" ]
   manifest = "meta/inspect_test_component.cmx"
