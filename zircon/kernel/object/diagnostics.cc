@@ -177,7 +177,7 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd, char* buf, size_t
 }
 
 void DumpProcessList() {
-  printf("%7s  #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi #?? [name]\n", "id");
+  printf("%7s   #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi #?? [name]\n", "id");
 
   auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
     char handle_counts[(ZX_OBJ_TYPE_UPPER_BOUND * 4) + 1 + /*slop*/ 16];
@@ -185,7 +185,7 @@ void DumpProcessList() {
 
     char pname[ZX_MAX_NAME_LEN];
     process->get_name(pname);
-    printf("%7" PRIu64 "%s [%s]\n", process->get_koid(), handle_counts, pname);
+    printf("%7" PRIu64 " %s [%s]\n", process->get_koid(), handle_counts, pname);
   });
   GetRootJobDispatcher()->EnumerateChildren(&walker, /* recurse */ true);
 }
