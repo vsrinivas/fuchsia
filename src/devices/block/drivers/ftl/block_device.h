@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
+#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/ftl/volume.h>
@@ -48,11 +49,13 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::MessageableOld,
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_hardware_block::Ftl>::Mixin,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 // Exposes the FTL library as a Fuchsia BlockDevice protocol.
 class BlockDevice : public DeviceType,
+                    public fidl::WireServer<fuchsia_hardware_block::Ftl>,
                     public ddk::BlockImplProtocol<BlockDevice, ddk::base_protocol>,
                     public ddk::BlockPartitionProtocol<BlockDevice>,
                     public ftl::FtlInstance {
@@ -85,11 +88,19 @@ class BlockDevice : public DeviceType,
   zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
   zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
+  void Format(FormatRequestView request, FormatCompleter::Sync& completer) final {
+    completer.Reply(FormatInternal());
+  }
+
+  void GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) final {
+    completer.ReplySuccess(DuplicateInspectVmo());
+  }
+
   // FtlInstance interface.
   bool OnVolumeAdded(uint32_t page_size, uint32_t num_pages) final;
 
   // Issues a command to format the FTL (aka, delete all data).
-  zx_status_t Format();
+  zx_status_t FormatInternal();
 
   // Returns a read_only handle to the underlying Inspect VMO.
   zx::vmo DuplicateInspectVmo() const { return metrics_.DuplicateInspectVmo(); }

@@ -4,7 +4,6 @@
 
 #include "block_device.h"
 
-#include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -28,27 +27,7 @@
 
 namespace {
 
-namespace block_fidl = fuchsia_hardware_block;
-
 constexpr char kDeviceName[] = "ftl";
-
-class FidlService final : public fidl::WireServer<block_fidl::Ftl> {
- public:
-  FidlService() = delete;
-  constexpr explicit FidlService(ftl::BlockDevice* device) : device_(device) {}
-  ~FidlService() final = default;
-
-  void Format(FormatRequestView request, FormatCompleter::Sync& completer) final {
-    completer.Reply(device_->Format());
-  }
-
-  void GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) final {
-    completer.ReplySuccess(device_->DuplicateInspectVmo());
-  }
-
- private:
-  ftl::BlockDevice* device_ = nullptr;
-};
 
 // Encapsulates a block operation that is created by this device (so that it
 // goes through the worker thread).
@@ -169,14 +148,6 @@ zx_status_t BlockDevice::Init() {
   return ZX_OK;
 }
 
-zx_status_t BlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  FidlService service(this);
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<block_fidl::Ftl>(&service, msg, &transaction);
-
-  return transaction.Status();
-}
-
 zx_status_t BlockDevice::Suspend() {
   LocalOperation operation(BLOCK_OP_FLUSH);
   return operation.Execute(this);
@@ -276,7 +247,7 @@ bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {
   return true;
 }
 
-zx_status_t BlockDevice::Format() {
+zx_status_t BlockDevice::FormatInternal() {
   zx_status_t status = volume_->Format();
   if (status != ZX_OK) {
     zxlogf(ERROR, "FTL: format failed: %s", zx_status_get_string(status));

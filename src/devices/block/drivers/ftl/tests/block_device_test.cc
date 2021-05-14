@@ -566,7 +566,7 @@ TEST_F(BlockDeviceTest, Format) {
   ftl::BlockDevice* device = GetDevice();
   ASSERT_TRUE(device);
 
-  EXPECT_OK(device->Format());
+  EXPECT_OK(device->FormatInternal());
   EXPECT_TRUE(GetVolume()->formatted());
   EXPECT_FALSE(GetVolume()->leveled());
 }
