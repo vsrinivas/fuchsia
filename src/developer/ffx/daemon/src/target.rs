@@ -13,6 +13,7 @@ use {
     bridge::{DaemonError, TargetAddrInfo, TargetIpPort},
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
+    ffx_daemon_core::task::{SingleFlight, TaskSnapshot},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge::TargetState as FidlTargetState,
@@ -21,7 +22,7 @@ use {
     },
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::Task,
+    futures::prelude::*,
     hoist::OvernetInstance,
     netext::{scope_id_to_name, IsLocalAddr},
     rand::random,
@@ -39,6 +40,8 @@ use {
     timeout::{timeout, TimeoutError},
     usb_bulk::AsyncInterface as Interface,
 };
+
+pub use crate::target_task::*;
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 const DEFAULT_SSH_PORT: u16 = 22;
@@ -461,7 +464,13 @@ impl WeakTarget {
     pub fn upgrade(&self) -> Option<Target> {
         let inner = self.inner.upgrade()?;
         let events = self.events.clone();
-        Some(Target { inner, events, host_pipe: Default::default(), logger: Default::default() })
+        Some(Target {
+            inner,
+            events,
+            task_manager: Rc::new(SingleFlight::new(|_| {
+                futures::future::ready(Ok(())).boxed_local()
+            })),
+        })
     }
 }
 
@@ -469,8 +478,11 @@ impl WeakTarget {
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
-    host_pipe: Rc<RefCell<Option<Task<()>>>>,
-    logger: Rc<RefCell<Option<Task<()>>>>,
+    // TODO(awdavies): This shouldn't need to be behind an Rc<>, but for some
+    // reason (probably something to do with the merge_insert function in the
+    // TargetCollection struct?) this will drop all tasks immediately if this
+    // isn't an Rc<>.
+    pub task_manager: Rc<SingleFlight<TargetTaskType, Result<(), String>>>,
 
     inner: Rc<TargetInner>,
 }
@@ -486,7 +498,13 @@ impl Target {
 
     fn from_inner(inner: Rc<TargetInner>) -> Self {
         let events = events::Queue::new(&inner);
-        Self { inner, events, host_pipe: Default::default(), logger: Default::default() }
+        let weak_inner = Rc::downgrade(&inner);
+        let weak_target = WeakTarget { inner: weak_inner, events: events.clone() };
+        let task_manager = Rc::new(SingleFlight::new(move |t| match t {
+            TargetTaskType::HostPipe => HostPipeConnection::new(weak_target.clone()).boxed_local(),
+            TargetTaskType::ProactiveLog => Logger::new(weak_target.clone()).start().boxed_local(),
+        }));
+        Self { inner, events, task_manager }
     }
 
     pub fn new<S>(nodename: S) -> Self
@@ -621,8 +639,10 @@ impl Target {
     }
 
     fn rcs_state(&self) -> bridge::RemoteControlState {
+        let loop_running =
+            self.task_manager.task_snapshot(TargetTaskType::HostPipe) == TaskSnapshot::Running;
         let state = self.inner.state.borrow();
-        match (self.is_host_pipe_running(), &state.connection_state) {
+        match (loop_running, &state.connection_state) {
             (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
             (true, _) => bridge::RemoteControlState::Down,
             (_, _) => bridge::RemoteControlState::Unknown,
@@ -926,37 +946,11 @@ impl Target {
     }
 
     pub fn run_host_pipe(&self) {
-        if self.host_pipe.borrow().is_none() {
-            let host_pipe = Rc::downgrade(&self.host_pipe);
-            let weak_target = self.downgrade();
-            self.host_pipe.replace(Some(Task::local(async move {
-                let r = HostPipeConnection::new(weak_target).await;
-                // XXX(raggi): decide what to do with this log data:
-                log::info!("HostPipeConnection returned: {:?}", r);
-                host_pipe.upgrade().and_then(|host_pipe| host_pipe.replace(None));
-            })));
-        }
-    }
-
-    pub fn is_host_pipe_running(&self) -> bool {
-        self.host_pipe.borrow().is_some()
+        self.task_manager.spawn_detached(TargetTaskType::HostPipe);
     }
 
     pub fn run_logger(&self) {
-        if self.logger.borrow().is_none() {
-            let logger = Rc::downgrade(&self.logger);
-            let weak_target = self.downgrade();
-            self.logger.replace(Some(Task::local(async move {
-                let r = Logger::new(weak_target).start().await;
-                // XXX(raggi): decide what to do with this log data:
-                log::info!("Logger returned: {:?}", r);
-                logger.upgrade().and_then(|logger| logger.replace(None));
-            })));
-        }
-    }
-
-    pub fn is_logger_running(&self) -> bool {
-        self.logger.borrow().is_some()
+        self.task_manager.spawn_detached(TargetTaskType::ProactiveLog);
     }
 
     pub async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
@@ -1600,7 +1594,6 @@ mod test {
         bridge::TargetIp,
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
-        futures::prelude::*,
         std::net::{Ipv4Addr, Ipv6Addr},
     };
 

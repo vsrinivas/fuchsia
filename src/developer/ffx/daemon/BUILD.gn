@@ -93,6 +93,7 @@ if (is_host) {
       "src/ssh.rs",
       "src/target.rs",
       "src/target_control.rs",
+      "src/target_task.rs",
       "src/util.rs",
       "src/zedboot.rs",
     ]

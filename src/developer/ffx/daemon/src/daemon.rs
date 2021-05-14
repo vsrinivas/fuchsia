@@ -1376,7 +1376,10 @@ mod test {
             }
         });
 
-        assert!(!t.is_host_pipe_running());
+        assert_eq!(
+            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe),
+            ffx_daemon_core::task::TaskSnapshot::NotRunning
+        );
 
         // This handler will now return the value of the default target as
         // intended.
@@ -1395,9 +1398,9 @@ mod test {
             .await
             .unwrap());
 
-        while !t.is_host_pipe_running() {
-            Timer::new(Duration::from_millis(10)).await
-        }
+        while t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe)
+            != ffx_daemon_core::task::TaskSnapshot::Running
+        {}
 
         // TODO(awdavies): RCS, Fastboot, etc. events.
     }
