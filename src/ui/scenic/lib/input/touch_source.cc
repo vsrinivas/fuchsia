@@ -147,10 +147,15 @@ TouchSource::TouchSource(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSourc
 
 TouchSource::~TouchSource() {
   // Cancel ongoing streams
+  // Need to copy the ids from |ongoing_streams_|, since calling |respond_| might be re-entrant.
+  std::vector<StreamId> ongoing_contests;
   for (const auto& [id, data] : ongoing_streams_) {
     if (!data.was_won) {
-      respond_(id, {GestureResponse::kNo});
+      ongoing_contests.emplace_back(id);
     }
+  }
+  for (auto id : ongoing_contests) {
+    respond_(id, {GestureResponse::kNo});
   }
 }
 
@@ -267,12 +272,13 @@ void TouchSource::Watch(std::vector<fuchsia::ui::pointer::TouchResponse> respons
     }
 
     const auto [stream_id, expects_response] = return_tickets_.at(index++);
-    if (!expects_response) {
+    if (!expects_response || ongoing_streams_.count(stream_id) == 0) {
       continue;
     }
 
     const GestureResponse gd_response = ConvertToGestureResponse(response.response_type());
     responses_per_stream[stream_id].emplace_back(gd_response);
+
     auto& stream = ongoing_streams_[stream_id];
     stream.last_response = gd_response;
 
@@ -379,8 +385,9 @@ void TouchSource::SendPendingIfWaiting() {
 }
 
 void TouchSource::CloseChannel(zx_status_t epitaph) {
-  // NOTE: Triggers destruction of this object.
   binding_.Close(epitaph);
+  // NOTE: Triggers destruction of this object.
+  error_handler_();
 }
 
 }  // namespace scenic_impl::input

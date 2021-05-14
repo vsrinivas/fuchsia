@@ -148,7 +148,7 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       this->context()->app_context(),
       /*inject_touch_exclusive*/
       [this](const InternalPointerEvent& event, StreamId stream_id) {
-        InjectTouchEventExclusive(event);
+        InjectTouchEventExclusive(event, stream_id);
       },
       /*inject_touch_hit_tested*/
       [this](const InternalPointerEvent& event, StreamId stream_id) {
@@ -236,6 +236,31 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
       });
   contenders_.emplace(contender_id, &gfx_legacy_contenders_.at(contender_id));
   return contender_id;
+}
+
+void InputSystem::RegisterTouchSource(
+    fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source_request,
+    zx_koid_t client_view_ref_koid) {
+  FX_DCHECK(client_view_ref_koid != ZX_KOID_INVALID);
+  const ContenderId contender_id = next_contender_id_++;
+
+  // Note: These closure must'nt be called in the constructor, since they depend on the
+  // |contenders_| map, which isn't filled until after construction completes.
+  const auto [it, success1] = touch_contenders_.try_emplace(
+      client_view_ref_koid, contender_id, std::move(touch_source_request),
+      /*respond*/
+      [this, contender_id](StreamId stream_id, const std::vector<GestureResponse>& responses) {
+        RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
+      },
+      /*error_handler*/
+      [this, contender_id, client_view_ref_koid] {
+        // Erase from |contenders_| first to avoid re-entry.
+        contenders_.erase(contender_id);
+        touch_contenders_.erase(client_view_ref_koid);
+      });
+  FX_DCHECK(success1);
+  const auto [_, success2] = contenders_.emplace(contender_id, &it->second.touch_source);
+  FX_DCHECK(success2);
 }
 
 void InputSystem::RegisterListener(
@@ -393,9 +418,21 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   }
 }
 
-void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event) {
-  ReportPointerEventToGfxLegacyView(event, event.target,
-                                    fuchsia::ui::input::PointerEventType::TOUCH);
+void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id) {
+  auto it = touch_contenders_.find(event.target);
+  if (it != touch_contenders_.end()) {
+    auto& touch_source = it->second.touch_source;
+    // TODO(fxbug.dev/76233): This causes us to create a separate event to send the "win event",
+    // which also probably requires two Watch() calls from the client. Find a way to merge them into
+    // a single message.
+    touch_source.UpdateStream(
+        stream_id, event,
+        /*is_end_of_stream*/ event.phase == Phase::kRemove || event.phase == Phase::kCancel);
+    touch_source.EndContest(stream_id, /*awarded_win*/ true);
+  } else {
+    ReportPointerEventToGfxLegacyView(event, event.target,
+                                      fuchsia::ui::input::PointerEventType::TOUCH);
+  }
 }
 
 // The touch state machine comprises ADD/DOWN/MOVE*/UP/REMOVE. Some notes:
@@ -436,6 +473,29 @@ static bool IsRootOrDirectChildOfRoot(zx_koid_t koid, const view_tree::Snapshot&
   return snapshot.view_tree.at(koid).parent == snapshot.root;
 }
 
+std::vector<zx_koid_t> InputSystem::GetAncestorChainUpToButExcludingContext(
+    zx_koid_t target, zx_koid_t context) const {
+  // Get ancestors from closest to furthest.
+  std::vector<zx_koid_t> ancestors = view_tree_snapshot_->GetAncestorsOf(target);
+  FX_DCHECK(ancestors.empty() ||
+            std::any_of(ancestors.begin(), ancestors.end(),
+                        [context](const zx_koid_t koid) { return koid == context; }));
+
+  // Remove all ancestors from the context and up.
+  for (auto it = ancestors.begin(); it != ancestors.end(); ++it) {
+    if (*it == context) {
+      ancestors.erase(it, ancestors.end());
+      break;
+    }
+  }
+
+  // Reverse the list and add |target| to the end.
+  std::reverse(ancestors.begin(), ancestors.end());
+  ancestors.emplace_back(target);
+
+  return ancestors;
+}
+
 std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
                                                         const InternalPointerEvent& event) {
   FX_DCHECK(event.phase == Phase::kAdd);
@@ -447,17 +507,32 @@ std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
     contenders.push_back(a11y_contender_id_);
   }
 
-  {  // Add a GfxLegacyContender based on the closest hit.
-    // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
-    const std::vector<zx_koid_t> hits = HitTest(event, /*semantic_hit_test*/ false);
-    if (!hits.empty()) {
-      const zx_koid_t hit_view_koid = hits.front();
-      FX_VLOGS(1) << "View hit: [ViewRefKoid=" << hit_view_koid << "]";
+  const std::vector<zx_koid_t> hits = HitTest(event, /*semantic_hit_test*/ false);
+  if (!hits.empty()) {
+    const zx_koid_t top_koid = hits.front();
 
-      const ContenderId contender_id = AddGfxLegacyContender(stream_id, hit_view_koid);
+    // Find TouchSource contenders in priority order from furthest (valid) ancestor to top hit view.
+    std::vector<zx_koid_t> ancestors =
+        GetAncestorChainUpToButExcludingContext(top_koid, event.context);
+    for (auto koid : ancestors) {
+      const auto it = touch_contenders_.find(koid);
+      // If a touch contender doesn't exist it means the client didn't provide a TouchSource
+      // endpoint.
+      if (it != touch_contenders_.end()) {
+        contenders.push_back(it->second.contender_id);
+      }
+    }
+
+    // Add a GfxLegacyContender if we didn't find a corresponding TouchSource contender for the top
+    // hit view.
+    // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
+    if (top_koid != ZX_KOID_INVALID && touch_contenders_.count(top_koid) == 0) {
+      FX_VLOGS(1) << "View hit: [ViewRefKoid=" << top_koid << "]";
+      const ContenderId contender_id = AddGfxLegacyContender(stream_id, top_koid);
       contenders.push_back(contender_id);
     }
   }
+
   return contenders;
 }
 
@@ -474,10 +549,7 @@ void InputSystem::UpdateGestureContest(const InternalPointerEvent& event, Stream
   // Copy the vector to avoid problems if the arena is destroyed inside of UpdateStream().
   const std::vector<ContenderId> contenders = arena.contenders();
   for (const auto contender_id : contenders) {
-    auto contender_it = contenders_.find(contender_id);
-    if (contender_it != contenders_.end()) {
-      contender_it->second->UpdateStream(stream_id, event, is_end_of_stream);
-    }
+    contenders_.at(contender_id)->UpdateStream(stream_id, event, is_end_of_stream);
   }
 
   DestroyArenaIfComplete(stream_id);
@@ -487,7 +559,6 @@ void InputSystem::RecordGestureDisambiguationResponse(
     StreamId stream_id, ContenderId contender_id, const std::vector<GestureResponse>& responses) {
   auto arena_it = gesture_arenas_.find(stream_id);
   if (arena_it == gesture_arenas_.end() || !arena_it->second.contains(contender_id)) {
-    FX_LOGS(ERROR) << "Failed to record GestureResponse";
     return;
   }
   auto& arena = arena_it->second;
@@ -497,17 +568,16 @@ void InputSystem::RecordGestureDisambiguationResponse(
     // Update the arena.
     const ContestResults result = arena.RecordResponse(contender_id, responses);
     for (auto loser_id : result.losers) {
+      // Need to check for existence, since a loser could be the result of a NO response upon
+      // destruction.
       auto contender = contenders_.find(loser_id);
       if (contender != contenders_.end()) {
         contenders_.at(loser_id)->EndContest(stream_id, /*awarded_win*/ false);
       }
     }
     if (result.winner) {
-      auto contender_it = contenders_.find(result.winner.value());
-      if (contender_it != contenders_.end()) {
-        contender_it->second->EndContest(stream_id, /*awarded_win*/ true);
-      }
       FX_DCHECK(arena.contenders().size() == 1u);
+      contenders_.at(result.winner.value())->EndContest(stream_id, /*awarded_win*/ true);
     }
   }
 

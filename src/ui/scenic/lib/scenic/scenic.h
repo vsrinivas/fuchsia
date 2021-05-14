@@ -77,6 +77,12 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
     screenshot_delegate_ = delegate;
   }
 
+  void SetRegisterTouchSource(
+      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+          register_touch_source) {
+    register_touch_source_ = std::move(register_touch_source);
+  }
+
   // Create and register a new system of the specified type.  At most one System
   // with a given TypeId may be registered.
   template <typename SystemT, typename... Args>
@@ -142,6 +148,9 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry_;
   fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
       view_ref_focused_register_;
+
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource>, zx_koid_t)>
+      register_touch_source_;
 
  protected:
   std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot_;

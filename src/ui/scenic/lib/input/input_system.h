@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
 #include "src/ui/scenic/lib/input/pointerinjector_registry.h"
+#include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
@@ -60,6 +61,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
     view_tree_snapshot_ = std::move(snapshot);
   }
 
+  void RegisterTouchSource(
+      fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source_request,
+      zx_koid_t client_view_ref_koid);
+
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
       fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
@@ -85,17 +90,19 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
                                         std::move(callback));
   }
 
- private:
-  // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
-  // from closest to furthest.
-  std::vector<zx_koid_t> HitTest(const InternalPointerEvent& event, bool semantic_hit_test) const;
+  /// Public for testing ///
 
-  // Injects a touch event directly to the View with koid |target|.
-  void InjectTouchEventExclusive(const InternalPointerEvent& event);
+  // Injects a touch event directly to the View with koid |event.target|.
+  void InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id);
 
   // Injects a touch event by hit testing for appropriate targets.
   void InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id);
   void InjectMouseEventHitTested(const InternalPointerEvent& event);
+
+ private:
+  // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
+  // from geometrically closest to furthest from the |event|.
+  std::vector<zx_koid_t> HitTest(const InternalPointerEvent& event, bool semantic_hit_test) const;
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
@@ -137,6 +144,11 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
                                                                      zx_koid_t destination) const;
 
+  // For a view hierarchy where context is an ancestor of target, returns
+  // target's ancestor hierarchy below context: (context, target].
+  std::vector<zx_koid_t> GetAncestorChainUpToButExcludingContext(zx_koid_t target,
+                                                                 zx_koid_t context) const;
+
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
 
@@ -156,25 +168,56 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // triggered by other pointer events should *not* affect delivery of events to existing mice.
   std::unordered_map<uint32_t, std::vector</*view_ref_koids*/ zx_koid_t>> mouse_targets_;
 
-  // GestureContender for the accessibility. Defined while a11y is active, null otherwise.
-  std::unique_ptr<A11yLegacyContender> a11y_legacy_contender_;
-  ContenderId a11y_contender_id_ = 1;
-
-  // Mapping of {device_id, pointer_id} to stream id for gfx legacy injection.
-  std::map<std::pair<uint32_t, uint32_t>, StreamId> gfx_legacy_streams_;
-  std::unordered_map<ContenderId, GfxLegacyContender> gfx_legacy_contenders_;
-  ContenderId next_contender_id_ = 2;
-
-  // Map of all active contenders. If any contender is deleted, it must be removed from this map.
-  std::unordered_map<ContenderId, GestureContender*> contenders_;
-
-  std::unordered_map<StreamId, GestureArena> gesture_arenas_;
-
   // Snapshot of the ViewTree. Replaced with a new snapshot on call to OnNewViewTreeSnapshot(),
   // which happens once per rendered frame. This is the source of truth for the state of the
   // graphics system.
   std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_ =
       std::make_shared<const view_tree::Snapshot>();
+
+  //// Gesture disambiguation state
+  // Whenever a new touch event stream is started (by the injection of an ADD event) we create a
+  // GestureArena to track that stream, and select a number of contenders to participate in the
+  // contest. All contenders are tracked in the |contenders_| map for the duration of their
+  // lifetime. The |contenders_| map is relied upon by the |gesture_arenas_| to deliver events.
+
+  // Ties each TouchSource instance to its contender id.
+  struct TouchContender {
+    ContenderId contender_id;
+    TouchSource touch_source;
+    TouchContender(ContenderId id,
+                   fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> event_provider,
+                   fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond,
+                   fit::function<void()> error_handler)
+        : contender_id(id),
+          touch_source(std::move(event_provider), std::move(respond), std::move(error_handler)) {}
+  };
+
+  // Each gesture arena tracks one touch event stream and a set of contenders.
+  std::unordered_map<StreamId, GestureArena> gesture_arenas_;
+
+  // Map of all active contenders. If any contender is deleted, it must be removed from this map or
+  // we risk use-after-free errors.
+  std::unordered_map<ContenderId, GestureContender*> contenders_;
+
+  // Mapping of ViewRef koids to TouchContenders
+  // Invariant: |touch_contenders_| tracks regular GestureContenders.
+  // Note: Legacy GestureContenders are tracked in separate fields.
+  // Upon destruction, each member of |touch_contenders_| calls its |respond| closure, which calls
+  // back into InputSystem and relies upon the state of |gesture_arenas_| and |contenders_|.
+  // |touch_contenders_| must therefore be destroyed first. To guarantee that, it must be placed
+  // textually after these members.
+  std::unordered_map<zx_koid_t, TouchContender> touch_contenders_;
+
+  // GestureContender for the accessibility client. Valid while accessibility is connected, null
+  // otherwise.
+  std::unique_ptr<A11yLegacyContender> a11y_legacy_contender_;
+
+  // Mapping of {device_id, pointer_id} to stream id for gfx legacy injection.
+  std::map<std::pair<uint32_t, uint32_t>, StreamId> gfx_legacy_streams_;
+  std::unordered_map<ContenderId, GfxLegacyContender> gfx_legacy_contenders_;
+
+  const ContenderId a11y_contender_id_ = 1;
+  ContenderId next_contender_id_ = 2;
 };
 
 }  // namespace scenic_impl::input
