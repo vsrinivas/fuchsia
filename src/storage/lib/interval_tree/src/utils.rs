@@ -42,6 +42,12 @@ pub trait RangeOps<T> {
 
     /// Merges two ranges. Returning merged range.
     fn merge(&self, other: &Self) -> Self;
+
+    /// Returns a common/intersection of `self` and `other`.
+    /// Asserts that the ranges overlap.
+    fn intersect(&self, other: &Self) -> Option<Self>
+    where
+        Self: Sized;
 }
 
 impl<T: Copy + std::cmp::Ord + std::ops::Sub<Output = T>> RangeOps<T> for Range<T> {
@@ -78,6 +84,13 @@ impl<T: Copy + std::cmp::Ord + std::ops::Sub<Output = T>> RangeOps<T> for Range<
     fn merge(&self, other: &Self) -> Self {
         assert!(self.is_mergeable(&other));
         std::cmp::min(self.start, other.start)..std::cmp::max(self.end, other.end)
+    }
+
+    fn intersect(&self, other: &Self) -> Option<Self> {
+        if !self.overlaps(other) {
+            return None;
+        }
+        Some(std::cmp::max(self.start, other.start)..std::cmp::min(self.end, other.end))
     }
 }
 
@@ -218,5 +231,18 @@ mod test {
         // Invalid range length
         let r1: Range<u64> = 8..1;
         r1.length();
+    }
+
+    #[test]
+    fn test_intersect_non_overlapping_ranges() {
+        let r1: Range<u64> = 1..3;
+        assert_eq!(r1.intersect(&(4..7)), None);
+        assert_eq!(r1.intersect(&(3..7)), None);
+    }
+
+    #[test]
+    fn test_intersect() {
+        let r1: Range<u64> = 4..7;
+        assert_eq!(r1.intersect(&(1..6)), Some(4..6))
     }
 }

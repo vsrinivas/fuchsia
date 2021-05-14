@@ -11,6 +11,7 @@ fxfs_deps = [
   "//src/lib/async-utils",
   "//src/lib/fuchsia-async",
   "//src/lib/storage/storage_device",
+  "//src/storage/lib/interval_tree",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:bincode",

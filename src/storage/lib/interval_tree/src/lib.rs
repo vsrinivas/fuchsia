@@ -5,5 +5,5 @@
 pub mod error;
 pub mod interval;
 pub mod interval_tree;
-mod utils;
+pub mod utils;
 pub use error::Error;

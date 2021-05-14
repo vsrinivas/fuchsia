@@ -25,11 +25,13 @@ use {
     anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
+    interval_tree::utils::RangeOps,
     merge::merge,
     serde::{Deserialize, Serialize},
     std::{
         any::Any,
         cmp::min,
+        convert::TryInto,
         ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
     },
@@ -148,6 +150,7 @@ struct Inner {
     // array of dropped_allocations and update reserved_allocations the next time we try to
     // allocate.
     dropped_allocations: Vec<AllocatorItem>,
+    bytes_allocated: u64,
 }
 
 impl SimpleAllocator {
@@ -164,6 +167,7 @@ impl SimpleAllocator {
                 info: AllocatorInfo::default(),
                 opened: false,
                 dropped_allocations: Vec::new(),
+                bytes_allocated: 0,
             }),
             allocation_lock: futures::lock::Mutex::new(()),
         }
@@ -225,6 +229,10 @@ impl SimpleAllocator {
         }
 
         self.inner.lock().unwrap().opened = true;
+
+        // TODO(csuter): The bytes allocated can be persisted to disk on clean unmount and read
+        // on mount to avoid loading all of allocation tree during mount.
+        self.compute_allocated_bytes().await?;
         Ok(())
     }
 
@@ -233,6 +241,40 @@ impl SimpleAllocator {
         // The allocator tree needs to store a file for each of the layers in the tree, so we return
         // those, since nothing else references them.
         self.inner.lock().unwrap().info.layers.clone()
+    }
+
+    /// Updates number of allocated bytes available in the filesystem.
+    ///
+    /// This can be an expensive operation especially when filesystem is fragmented or needs a major
+    /// compaction.
+    async fn compute_allocated_bytes(&self) -> Result<(), Error> {
+        let mut layer_set = self.tree.empty_layer_set();
+        self.tree.add_all_layers_to_layer_set(&mut layer_set);
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await?;
+        let mut last_offset = 0;
+        let mut bytes_allocated = 0;
+        let device_size = self.device_size.try_into().unwrap();
+        while let Some(ItemRef { key: AllocatorKey { device_range, .. }, .. }) = iter.get() {
+            if last_offset >= device_size {
+                break;
+            }
+            bytes_allocated += device_range.length();
+            last_offset = device_range.end;
+            iter.advance().await?;
+        }
+
+        ensure!(last_offset <= device_size, FxfsError::Inconsistent);
+
+        self.inner.lock().unwrap().bytes_allocated = bytes_allocated;
+        Ok(())
+    }
+
+    /// Returns a number of allocated bytes. This can be used to return information needed by
+    /// caching subsystem and needed by df/du commands.
+    pub async fn get_bytes_allocated(&self) -> Result<u64, Error> {
+        self.ensure_open().await?;
+        Ok(self.inner.lock().unwrap().bytes_allocated)
     }
 }
 
@@ -259,6 +301,11 @@ impl Allocator for SimpleAllocator {
         for item in dropped_allocations {
             self.reserved_allocations.erase(item.as_item_ref()).await;
         }
+
+        // TODO(csuter): We can optimize performance of this section by
+        // - By extending compute_allocated_bytes to accept array dropped ranges so that it can
+        //   seek to a given range.
+        self.compute_allocated_bytes().await?;
 
         let result = {
             let tree = &self.tree;
@@ -287,6 +334,7 @@ impl Allocator for SimpleAllocator {
             }
         };
         log::debug!("allocate {:?}", result);
+        self.inner.lock().unwrap().bytes_allocated += result.length();
         self.reserve(transaction, result.clone()).await;
         Ok(result)
     }
@@ -302,10 +350,43 @@ impl Allocator for SimpleAllocator {
         transaction.add(
             self.object_id(),
             Mutation::allocation(Item::new(
-                AllocatorKey { device_range },
+                AllocatorKey { device_range: device_range.clone() },
                 AllocatorValue { delta: -1 },
             )),
         );
+
+        // Update number of allocated bytes available in the filesystem after cleaning up dropped
+        // allocations.
+        // We can avoid calling cleanup_dropped_allocation on every
+        // deallocate.  We need updated data either when we are running out of space or to provide
+        // current data about space utilization.
+        // TODO(csuter): This needs to be updated only when transaction succeeds.
+        let dealloc_range = device_range;
+        let mut layer_set = self.tree.empty_layer_set();
+        self.tree.add_all_layers_to_layer_set(&mut layer_set);
+        let mut merger = layer_set.merger();
+        let mut iter = merger
+            .seek(Bound::Included(&AllocatorKey { device_range: dealloc_range.clone() }))
+            .await
+            .unwrap();
+        let mut deallocated_bytes = 0;
+        while let Some(ItemRef {
+            key: AllocatorKey { device_range, .. },
+            value: AllocatorValue { delta, .. },
+        }) = iter.get()
+        {
+            if device_range.start >= dealloc_range.end {
+                break;
+            }
+            if *delta == 1 {
+                if let Some(overlap) = dealloc_range.intersect(&device_range) {
+                    deallocated_bytes += overlap.length();
+                }
+            }
+            iter.advance().await.unwrap();
+        }
+
+        self.inner.lock().unwrap().bytes_allocated -= deallocated_bytes;
     }
 
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
@@ -736,6 +817,62 @@ mod tests {
             allocator.allocate(&mut transaction, 512).await.expect("allocate failed"),
             allocated_range
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_allocated_bytes() {
+        const BLOCK_COUNT: u32 = 1024;
+        const BLOCK_SIZE: u32 = 512;
+        let device = DeviceHolder::new(FakeDevice::new(BLOCK_COUNT.into(), BLOCK_SIZE));
+        let fs = FakeFilesystem::new(device);
+        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
+        fs.object_manager().set_allocator(allocator.clone());
+        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().set_root_store_object_id(2);
+        let mut expected = 0;
+        assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
+
+        // Verify allocated_bytes reflects allocation changes.
+        const ALLOCATED_BYTES: u64 = 512;
+        let allocated_range = {
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+            let range = allocator
+                .allocate(&mut transaction, ALLOCATED_BYTES)
+                .await
+                .expect("allocate failed");
+            let allocated_state = allocator.get_bytes_allocated().await.unwrap();
+            expected += ALLOCATED_BYTES;
+            assert_eq!(expected, allocated_state);
+            range
+        };
+
+        // Verify allocated_bytes reflects dropped allocations and re-allocations.
+        {
+            assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
+            // After dropping the transaction and attempting to allocate again, we should end up
+            // with the same range because the reservation should have been released.
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+            assert_eq!(
+                allocator.allocate(&mut transaction, 512).await.expect("allocate failed"),
+                allocated_range
+            );
+            assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
+            transaction.commit().await;
+        }
+
+        // Verify allocated_bytes reflects deallocations.
+        {
+            // Deallocate a part of an allocation.
+            const DEALLOCATED_SIZE: u64 = ALLOCATED_BYTES - 40;
+            let deallocate_range = allocated_range.start + 20..allocated_range.end - 20;
+            let mut transaction = fs.clone().new_transaction(&[]).await.expect("new failed");
+            allocator.deallocate(&mut transaction, deallocate_range).await;
+            transaction.commit().await;
+            expected -= DEALLOCATED_SIZE;
+        }
+        assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
     }
 }
 
