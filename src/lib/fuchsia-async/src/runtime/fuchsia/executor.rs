@@ -286,17 +286,17 @@ where
     }
 }
 
-/// A port-based executor for Fuchsia OS.
+/// A single-threaded port-based executor for Fuchsia OS.
 ///
-/// Having an `Executor` in scope allows the creation and polling of zircon objects, such as
+/// Having a `LocalExecutor` in scope allows the creation and polling of zircon objects, such as
 /// [`fuchsia_async::Channel`].
 ///
 /// # Panics
 ///
-/// `Executor` will panic on drop if any zircon objects attached to it are still alive. In other
-/// words, zircon objects backed by an `Executor` must be dropped before it.
-// NOTE: intentionally does not implement `Clone`.
-pub struct Executor {
+/// `LocalExecutor` will panic on drop if any zircon objects attached to it are still alive. In
+/// other words, zircon objects backed by a `LocalExecutor` must be dropped before it.
+pub struct LocalExecutor {
+    /// The inner executor state.
     inner: Arc<Inner>,
     // A packet that has been dequeued but not processed. This is used by `run_one_step`.
     next_packet: Option<zx::Packet>,
@@ -306,9 +306,9 @@ pub struct Executor {
     main_waker: Waker,
 }
 
-impl fmt::Debug for Executor {
+impl fmt::Debug for LocalExecutor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Executor").field("port", &self.inner.port).finish()
+        f.debug_struct("LocalExecutor").field("port", &self.inner.port).finish()
     }
 }
 
@@ -331,62 +331,18 @@ where
     })
 }
 
-impl Executor {
-    fn new_with_time(time: ExecutorTime) -> Result<Self, zx::Status> {
-        let collector = Collector::new();
-        collector.task_created(MAIN_TASK_ID);
-        let inner = Arc::new(Inner {
-            port: zx::Port::create()?,
-            done: AtomicBool::new(false),
-            threadiness: Threadiness::default(),
-            threads: Mutex::new(Vec::new()),
-            receivers: Mutex::new(PacketReceiverMap::new()),
-            task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
-            active_tasks: Mutex::new(HashMap::new()),
-            ready_tasks: SegQueue::new(),
-            time: time,
-            collector,
-        });
+impl LocalExecutor {
+    /// Create a new single-threaded executor running with actual time.
+    pub fn new() -> Result<Self, zx::Status> {
+        let inner = Arc::new(Inner::new(ExecutorTime::RealTime)?);
+        inner.clone().set_local(TimerHeap::new());
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
-
         let main_waker = futures::task::waker(main_task.clone());
-        let executor = Executor { inner, next_packet: None, main_task, main_waker };
-
-        executor.ehandle().set_local(TimerHeap::new());
-
-        Ok(executor)
+        Ok(Self { inner, next_packet: None, main_task, main_waker })
     }
 
-    /// Create a new executor running with actual time.
-    pub fn new() -> Result<Self, zx::Status> {
-        Self::new_with_time(ExecutorTime::RealTime)
-    }
-
-    /// Create a new executor running with fake time.
-    pub fn new_with_fake_time() -> Result<Self, zx::Status> {
-        Self::new_with_time(ExecutorTime::FakeTime(AtomicI64::new(
-            Time::INFINITE_PAST.into_nanos(),
-        )))
-    }
-
-    /// Return the current time according to the executor.
-    pub fn now(&self) -> Time {
-        self.inner.now()
-    }
-
-    /// Set the fake time to a given value.
-    pub fn set_fake_time(&self, t: Time) {
-        self.inner.set_fake_time(t)
-    }
-
-    /// Return a handle to the executor.
-    pub fn ehandle(&self) -> EHandle {
-        EHandle { inner: self.inner.clone() }
-    }
-
-    /// Run a single future to completion on a single thread.
-    // Takes `&mut self` to ensure that only one thread-manager is running at a time.
+    /// Run a single future to completion on a single thread, also polling other active tasks.
     pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
     where
         F: Future,
@@ -452,6 +408,35 @@ impl Executor {
                 }
             }
         }
+    }
+}
+
+// TODO(fxbug.dev/76537) move this impl block to TestExecutor
+impl LocalExecutor {
+    /// Create a new single-threaded executor running with fake time.
+    pub fn new_with_fake_time() -> Result<Self, zx::Status> {
+        let inner = Arc::new(Inner::new(ExecutorTime::FakeTime(AtomicI64::new(
+            Time::INFINITE_PAST.into_nanos(),
+        )))?);
+        inner.clone().set_local(TimerHeap::new());
+        let main_task =
+            Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
+        let main_waker = futures::task::waker(main_task.clone());
+        Ok(Self { inner, next_packet: None, main_task, main_waker })
+    }
+
+    /// Return the current time according to the executor.
+    pub fn now(&self) -> Time {
+        self.inner.now()
+    }
+
+    /// Set the fake time to a given value.
+    ///
+    /// # Panics
+    ///
+    /// If the executor was not created with fake time
+    pub fn set_fake_time(&self, t: Time) {
+        self.inner.set_fake_time(t)
     }
 
     /// PollResult the future. If it is not ready, dispatch available packets and possibly try again.
@@ -655,9 +640,47 @@ impl Executor {
             deadline
         })
     }
+}
 
-    /// Run a single future to completion using multiple threads.
-    // Takes `&mut self` to ensure that only one thread-manager is running at a time.
+impl Drop for LocalExecutor {
+    fn drop(&mut self) {
+        self.inner.mark_done();
+        self.inner.on_parent_drop();
+    }
+}
+
+/// A multi-threaded port-based executor for Fuchsia OS. Requires that tasks scheduled on it
+/// implement `Send` so they can be load balanced between worker threads.
+///
+/// Having a `SendExecutor` in scope allows the creation and polling of zircon objects, such as
+/// [`fuchsia_async::Channel`].
+///
+/// # Panics
+///
+/// `SendExecutor` will panic on drop if any zircon objects attached to it are still alive. In other
+/// words, zircon objects backed by a `SendExecutor` must be dropped before it.
+pub struct SendExecutor {
+    /// The inner executor state.
+    inner: Arc<Inner>,
+}
+
+impl fmt::Debug for SendExecutor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LocalExecutor").field("port", &self.inner.port).finish()
+    }
+}
+
+impl SendExecutor {
+    /// Create a new multi-threaded executor.
+    // TODO(fxbug.dev/76550) move the number of threads here
+    pub fn new() -> Result<Self, zx::Status> {
+        let inner = Arc::new(Inner::new(ExecutorTime::RealTime)?);
+        inner.clone().set_local(TimerHeap::new());
+        Ok(Self { inner })
+    }
+
+    /// Run `future` to completion, using this thread and `num_threads - 1` workers in a pool to
+    /// poll active tasks.
     pub fn run<F>(&mut self, future: F, num_threads: usize) -> F::Output
     where
         F: Future + Send + 'static,
@@ -668,9 +691,6 @@ impl Executor {
             "Error: called `run` on executor after using `spawn_local`. \
              Use `run_singlethreaded` instead.",
         );
-        if let Some(_) = self.next_packet {
-            panic!("Error: called `run` on an executor with a packet waiting");
-        }
 
         let pair = Arc::new((Mutex::new(None), Condvar::new()));
         let pair2 = pair.clone();
@@ -738,8 +758,7 @@ impl Executor {
     }
 
     fn worker_lifecycle(inner: Arc<Inner>, timers: Option<TimerHeap>) {
-        let executor: EHandle = EHandle { inner: inner.clone() };
-        executor.set_local(timers.unwrap_or(TimerHeap::new()));
+        inner.clone().set_local(timers.unwrap_or(TimerHeap::new()));
         let mut local_collector = inner.collector.create_local_collector();
         loop {
             if inner.done.load(Ordering::SeqCst) {
@@ -812,95 +831,12 @@ fn is_defunct_timer(timer: Option<&TimeWaker>) -> bool {
     }
 }
 
-impl Drop for Executor {
+impl Drop for SendExecutor {
     fn drop(&mut self) {
-        // Notes about the lifecycle of an Executor.
-        //
-        // a) The Executor stands as the only way to run a reactor based on a Fuchsia port, but the
-        // lifecycle of the port itself is not currently tied to it. Executor vends clones of its
-        // inner Arc structure to all receivers, so we don't have a type-safe way of ensuring that
-        // the port is dropped alongside the Executor as it should.
-        // TODO(https://fxbug.dev/75075): Ensure the port goes away with the executor.
-        //
-        // b) The Executor's lifetime is also tied to the thread-local variable pointing to the
-        // "current" executor being set, and that's unset when the executor is dropped.
-        //
-        // Point (a) is related to "what happens if I use a receiver after the executor is dropped",
-        // and point (b) is related to "what happens when I try to create a new receiver when there
-        // is no executor".
-        //
-        // Tokio, for example, encodes the lifetime of the reactor separately from the thread-local
-        // storage [1]. And the reactor discourages usage of strong references to it by vending weak
-        // references to it [2] instead of strong.
-        //
-        // There are pros and cons to both strategies. For (a), tokio encourages (but doesn't
-        // enforce [3]) type-safety by vending weak pointers, but those add runtime overhead when
-        // upgrading pointers. For (b) the difference mostly stand for "when is it safe to use IO
-        // objects/receivers". Tokio says it's only safe to use them whenever a guard is in scope.
-        // Fuchsia-async says it's safe to use them when a fuchsia_async::Executor is still in scope
-        // in that thread.
-        //
-        // This acts as a prelude to the panic encoded in Executor::drop when receivers haven't
-        // unregistered themselves when the executor drops. The choice to panic was made based on
-        // patterns in fuchsia-async that may come to change:
-        //
-        // - Executor vends strong references to itself and those references are *stored* by most
-        // receiver implementations (as opposed to reached out on TLS every time).
-        // - Fuchsia-async objects return zx::Status on wait calls, there isn't an appropriate and
-        // easy to understand error to return when polling on an extinct executor.
-        // - All receivers are implemented in this crate and well-known.
-        //
-        // [1]: https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Runtime.html#method.enter
-        // [2]: https://github.com/tokio-rs/tokio/blob/b42f21ec3e212ace25331d0c13889a45769e6006/tokio/src/signal/unix/driver.rs#L35
-        // [3]: by returning an upgraded Arc, tokio trusts callers to not "use it for too long", an
-        // opaque non-clone-copy-or-send guard would be stronger than this. See:
-        // https://github.com/tokio-rs/tokio/blob/b42f21ec3e212ace25331d0c13889a45769e6006/tokio/src/io/driver/mod.rs#L297
-
-        // Done flag must be set before dropping packet receivers
-        // so that future receivers that attempt to deregister themselves
-        // know that it's okay if their entries are already missing.
-        self.inner.done.store(true, Ordering::SeqCst);
-
+        self.inner.mark_done();
         // Wake the threads so they can kill themselves.
         self.join_all();
-
-        // Drop all tasks
-        self.inner.active_tasks.lock().clear();
-
-        // Drop all of the uncompleted tasks
-        while let Some(_) = self.inner.ready_tasks.pop() {}
-
-        // Synthetic main task marked completed
-        self.inner.collector.task_completed(MAIN_TASK_ID);
-
-        // Do not allow any receivers to outlive the executor. That's very likely a bug waiting to
-        // happen. See discussion above.
-        //
-        // If you're here because you hit this panic check your code for:
-        //
-        // - A struct that contains a fuchsia_async::Executor NOT in the last position (last
-        // position gets dropped last: https://doc.rust-lang.org/reference/destructors.html).
-        //
-        // - A function scope that contains a fuchsia_async::Executor NOT in the first position
-        // (first position in function scope gets dropped last:
-        // https://doc.rust-lang.org/reference/destructors.html?highlight=scope#drop-scopes).
-        //
-        // - A function that holds a `fuchsia_async::Executor` in scope and whose last statement
-        // contains a temporary (temporaries are dropped after the function scope:
-        // https://doc.rust-lang.org/reference/destructors.html#temporary-scopes). This usually
-        // looks like a `match` statement at the end of the function without a semicolon.
-        //
-        // - Storing channel and FIDL objects in static variables.
-        //
-        // - fuchsia_async::Task::blocking calls that detach or move channels or FIDL objects to the
-        // main thread.
-        assert!(
-            self.inner.receivers.lock().mapping.is_empty(),
-            "receivers must not outlive their executor"
-        );
-
-        // Remove the thread-local executor set in `new`.
-        EHandle::rm_local();
+        self.inner.on_parent_drop();
     }
 }
 
@@ -924,15 +860,6 @@ impl EHandle {
             .expect("Fuchsia Executor must be created first");
 
         EHandle { inner }
-    }
-
-    fn set_local(self, timers: TimerHeap) {
-        let inner = self.inner.clone();
-        EXECUTOR.with(|e| {
-            let mut e = e.borrow_mut();
-            assert!(e.is_none(), "Cannot create multiple Fuchsia Executors");
-            *e = Some((inner, timers));
-        });
     }
 
     fn rm_local() {
@@ -1061,19 +988,6 @@ impl<T> PacketReceiverMap<T> {
     }
 }
 
-struct Inner {
-    port: zx::Port,
-    done: AtomicBool,
-    threadiness: Threadiness,
-    threads: Mutex<Vec<thread::JoinHandle<()>>>,
-    receivers: Mutex<PacketReceiverMap<Arc<dyn PacketReceiver>>>,
-    task_count: AtomicUsize,
-    active_tasks: Mutex<HashMap<usize, Arc<Task>>>,
-    ready_tasks: SegQueue<Arc<Task>>,
-    time: ExecutorTime,
-    collector: Collector,
-}
-
 struct TimeWaker {
     time: Time,
     waker_and_bool: Weak<(AtomicWaker, AtomicBool)>,
@@ -1110,7 +1024,45 @@ impl PartialEq for TimeWaker {
     }
 }
 
+struct Inner {
+    port: zx::Port,
+    done: AtomicBool,
+    threadiness: Threadiness,
+    threads: Mutex<Vec<thread::JoinHandle<()>>>,
+    receivers: Mutex<PacketReceiverMap<Arc<dyn PacketReceiver>>>,
+    task_count: AtomicUsize,
+    active_tasks: Mutex<HashMap<usize, Arc<Task>>>,
+    ready_tasks: SegQueue<Arc<Task>>,
+    time: ExecutorTime,
+    collector: Collector,
+}
+
 impl Inner {
+    fn new(time: ExecutorTime) -> Result<Self, zx::Status> {
+        let collector = Collector::new();
+        collector.task_created(MAIN_TASK_ID);
+        Ok(Inner {
+            port: zx::Port::create()?,
+            done: AtomicBool::new(false),
+            threadiness: Threadiness::default(),
+            threads: Mutex::new(Vec::new()),
+            receivers: Mutex::new(PacketReceiverMap::new()),
+            task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
+            active_tasks: Mutex::new(HashMap::new()),
+            ready_tasks: SegQueue::new(),
+            time,
+            collector,
+        })
+    }
+
+    fn set_local(self: Arc<Self>, timers: TimerHeap) {
+        EXECUTOR.with(|e| {
+            let mut e = e.borrow_mut();
+            assert!(e.is_none(), "Cannot create multiple Fuchsia Executors");
+            *e = Some((self, timers));
+        });
+    }
+
     fn poll_ready_tasks(&self, local_collector: &mut LocalCollector<'_>) {
         // TODO: loop but don't starve
         if let Some(task) = self.ready_tasks.pop() {
@@ -1202,6 +1154,96 @@ impl Inner {
             ExecutorTime::RealTime => Ok(()),
             ExecutorTime::FakeTime(_) => Err(()),
         }
+    }
+
+    /// Must be called before `on_parent_drop`.
+    ///
+    /// Done flag must be set before dropping packet receivers
+    /// so that future receivers that attempt to deregister themselves
+    /// know that it's okay if their entries are already missing.
+    fn mark_done(&self) {
+        self.done.store(true, Ordering::SeqCst);
+    }
+
+    /// Notes about the lifecycle of an Executor.
+    ///
+    /// a) The Executor stands as the only way to run a reactor based on a Fuchsia port, but the
+    /// lifecycle of the port itself is not currently tied to it. Executor vends clones of its
+    /// inner Arc structure to all receivers, so we don't have a type-safe way of ensuring that
+    /// the port is dropped alongside the Executor as it should.
+    /// TODO(https://fxbug.dev/75075): Ensure the port goes away with the executor.
+    ///
+    /// b) The Executor's lifetime is also tied to the thread-local variable pointing to the
+    /// "current" executor being set, and that's unset when the executor is dropped.
+    ///
+    /// Point (a) is related to "what happens if I use a receiver after the executor is dropped",
+    /// and point (b) is related to "what happens when I try to create a new receiver when there
+    /// is no executor".
+    ///
+    /// Tokio, for example, encodes the lifetime of the reactor separately from the thread-local
+    /// storage [1]. And the reactor discourages usage of strong references to it by vending weak
+    /// references to it [2] instead of strong.
+    ///
+    /// There are pros and cons to both strategies. For (a), tokio encourages (but doesn't
+    /// enforce [3]) type-safety by vending weak pointers, but those add runtime overhead when
+    /// upgrading pointers. For (b) the difference mostly stand for "when is it safe to use IO
+    /// objects/receivers". Tokio says it's only safe to use them whenever a guard is in scope.
+    /// Fuchsia-async says it's safe to use them when a fuchsia_async::Executor is still in scope
+    /// in that thread.
+    ///
+    /// This acts as a prelude to the panic encoded in Executor::drop when receivers haven't
+    /// unregistered themselves when the executor drops. The choice to panic was made based on
+    /// patterns in fuchsia-async that may come to change:
+    ///
+    /// - Executor vends strong references to itself and those references are *stored* by most
+    /// receiver implementations (as opposed to reached out on TLS every time).
+    /// - Fuchsia-async objects return zx::Status on wait calls, there isn't an appropriate and
+    /// easy to understand error to return when polling on an extinct executor.
+    /// - All receivers are implemented in this crate and well-known.
+    ///
+    /// [1]: https://docs.rs/tokio/1.5.0/tokio/runtime/struct.Runtime.html#method.enter
+    /// [2]: https://github.com/tokio-rs/tokio/blob/b42f21ec3e212ace25331d0c13889a45769e6006/tokio/src/signal/unix/driver.rs#L35
+    /// [3]: by returning an upgraded Arc, tokio trusts callers to not "use it for too long", an
+    /// opaque non-clone-copy-or-send guard would be stronger than this. See:
+    /// https://github.com/tokio-rs/tokio/blob/b42f21ec3e212ace25331d0c13889a45769e6006/tokio/src/io/driver/mod.rs#L297
+    fn on_parent_drop(&self) {
+        // Drop all tasks
+        self.active_tasks.lock().clear();
+
+        // Drop all of the uncompleted tasks
+        while let Some(_) = self.ready_tasks.pop() {}
+
+        // Synthetic main task marked completed
+        self.collector.task_completed(MAIN_TASK_ID);
+
+        // Do not allow any receivers to outlive the executor. That's very likely a bug waiting to
+        // happen. See discussion above.
+        //
+        // If you're here because you hit this panic check your code for:
+        //
+        // - A struct that contains a fuchsia_async::Executor NOT in the last position (last
+        // position gets dropped last: https://doc.rust-lang.org/reference/destructors.html).
+        //
+        // - A function scope that contains a fuchsia_async::Executor NOT in the first position
+        // (first position in function scope gets dropped last:
+        // https://doc.rust-lang.org/reference/destructors.html?highlight=scope#drop-scopes).
+        //
+        // - A function that holds a `fuchsia_async::Executor` in scope and whose last statement
+        // contains a temporary (temporaries are dropped after the function scope:
+        // https://doc.rust-lang.org/reference/destructors.html#temporary-scopes). This usually
+        // looks like a `match` statement at the end of the function without a semicolon.
+        //
+        // - Storing channel and FIDL objects in static variables.
+        //
+        // - fuchsia_async::Task::blocking calls that detach or move channels or FIDL objects to the
+        // main thread.
+        assert!(
+            self.receivers.lock().mapping.is_empty(),
+            "receivers must not outlive their executor"
+        );
+
+        // Remove the thread-local executor set in `new`.
+        EHandle::rm_local();
     }
 }
 
@@ -1348,7 +1390,7 @@ mod tests {
 
     #[test]
     fn time_now_real_time() {
-        let _executor = Executor::new().unwrap();
+        let _executor = LocalExecutor::new().unwrap();
         let t1 = zx::Time::after(0.seconds());
         let t2 = Time::now().into_zx();
         let t3 = zx::Time::after(0.seconds());
@@ -1358,7 +1400,7 @@ mod tests {
 
     #[test]
     fn time_now_fake_time() {
-        let executor = Executor::new_with_fake_time().unwrap();
+        let executor = LocalExecutor::new_with_fake_time().unwrap();
         let t1 = Time::from_zx(zx::Time::from_nanos(0));
         executor.set_fake_time(t1);
         assert_eq!(Time::now(), t1);
@@ -1370,7 +1412,7 @@ mod tests {
 
     #[test]
     fn time_after_overflow() {
-        let executor = Executor::new_with_fake_time().unwrap();
+        let executor = LocalExecutor::new_with_fake_time().unwrap();
 
         executor.set_fake_time(Time::INFINITE - 100.nanos());
         assert_eq!(Time::after(200.seconds()), Time::INFINITE);
@@ -1397,7 +1439,7 @@ mod tests {
         );
     }
 
-    fn run_until_stalled<F>(executor: &mut Executor, fut: &mut F)
+    fn run_until_stalled<F>(executor: &mut LocalExecutor, fut: &mut F)
     where
         F: Future + Unpin,
     {
@@ -1410,7 +1452,7 @@ mod tests {
         }
     }
 
-    fn run_until_done<F>(executor: &mut Executor, fut: &mut F) -> F::Output
+    fn run_until_done<F>(executor: &mut LocalExecutor, fut: &mut F) -> F::Output
     where
         F: Future + Unpin,
     {
@@ -1444,7 +1486,7 @@ mod tests {
         };
         let fut = future::poll_fn(fut_fn);
         pin_mut!(fut);
-        let mut executor = Executor::new_with_fake_time().unwrap();
+        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
         executor.wake_main_future();
         assert_eq!(executor.is_waiting(), WaitState::Ready);
         assert_eq!(fut_step.get(), 0);
@@ -1462,7 +1504,7 @@ mod tests {
     #[test]
     // Runs a future that waits on a timer.
     fn stepwise_timer() {
-        let mut executor = Executor::new_with_fake_time().unwrap();
+        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Time::from_nanos(0));
         let fut = Timer::new(Time::after(1000.nanos()));
         pin_mut!(fut);
@@ -1481,7 +1523,7 @@ mod tests {
     // Runs a future that waits on an event.
     #[test]
     fn stepwise_event() {
-        let mut executor = Executor::new_with_fake_time().unwrap();
+        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
         let event = zx::Event::create().unwrap();
         let fut = OnSignals::new(&event, zx::Signals::USER_0);
         pin_mut!(fut);
@@ -1498,7 +1540,7 @@ mod tests {
     // compared to normal execution.
     #[test]
     fn run_until_stalled_preserves_order() {
-        let mut executor = Executor::new_with_fake_time().unwrap();
+        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
         let spawned_fut_completed = Arc::new(AtomicBool::new(false));
         let spawned_fut_completed_writer = spawned_fut_completed.clone();
         let spawned_fut = Box::pin(async move {
@@ -1553,7 +1595,7 @@ mod tests {
         }
         let mut dropped = Arc::new(AtomicBool::new(false));
         let drop_spawner = DropSpawner { dropped: dropped.clone() };
-        let mut executor = Executor::new().unwrap();
+        let mut executor = LocalExecutor::new().unwrap();
         let main_fut = async move {
             spawn(async move {
                 // Take ownership of the drop spawner
@@ -1625,7 +1667,7 @@ mod tests {
 
     #[test]
     fn instrumentation_single_sanity_check() {
-        let mut executor = Executor::new().unwrap();
+        let mut executor = LocalExecutor::new().unwrap();
         executor.run_singlethreaded(simple_task());
         let snapshot = executor.inner.collector.snapshot();
         snapshot_sanity_check(&snapshot, 0);
@@ -1633,7 +1675,7 @@ mod tests {
 
     #[test]
     fn instrumentation_multi_sanity_check() {
-        let mut executor = Executor::new().unwrap();
+        let mut executor = SendExecutor::new().unwrap();
         executor.run(simple_task(), 2);
         let snapshot = executor.inner.collector.snapshot();
         snapshot_sanity_check(&snapshot, /* extra_tasks */ 1);
@@ -1641,7 +1683,7 @@ mod tests {
 
     #[test]
     fn instrumentation_stepwise_sanity_check() {
-        let mut executor = Executor::new().unwrap();
+        let mut executor = LocalExecutor::new().unwrap();
         let fut = simple_task();
         pin_mut!(fut);
         assert!(executor.run_until_stalled(&mut fut).is_pending());
@@ -1670,7 +1712,7 @@ mod tests {
     #[test]
     fn dedup_wakeups() {
         let run = |n| {
-            let mut executor = Executor::new().unwrap();
+            let mut executor = LocalExecutor::new().unwrap();
             executor.run_singlethreaded(multi_wake(n));
             let snapshot = executor.inner.collector.snapshot();
             snapshot.wakeups_notification
@@ -1682,7 +1724,7 @@ mod tests {
     // such as the zx port queue limit.
     #[test]
     fn many_wakeups() {
-        let mut executor = Executor::new().unwrap();
+        let mut executor = LocalExecutor::new().unwrap();
         executor.run_singlethreaded(multi_wake(4096 * 2));
     }
 }

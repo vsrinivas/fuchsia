@@ -3,11 +3,6 @@
 // found in the LICENSE file.
 
 #[cfg(target_os = "fuchsia")]
-use fuchsia_zircon::Status;
-#[cfg(not(target_os = "fuchsia"))]
-use fuchsia_zircon_status::Status;
-
-#[cfg(target_os = "fuchsia")]
 mod fuchsia;
 #[cfg(target_os = "fuchsia")]
 use self::fuchsia as implementation;
@@ -22,103 +17,14 @@ mod stub;
 #[cfg(all(not(target_os = "fuchsia"), target_arch = "wasm32"))]
 use self::stub as implementation;
 
-pub use implementation::{executor::Time, task::Task, timer::Timer};
-
 /// An alias for a single-threaded executor, will be its own type in a future change.
 pub type TestExecutor = LocalExecutor;
 
-/// Wrapper around `Executor`, restricted to running single threaded.
-pub struct LocalExecutor(implementation::executor::Executor);
-
-impl LocalExecutor {
-    /// Construct a new executor for running tasks on the current thread.
-    pub fn new() -> Result<Self, Status> {
-        Ok(Self(implementation::executor::Executor::new()?))
-    }
-
-    /// Run `main_future` to completion on the current thread, also polling other active tasks.
-    pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
-    where
-        F: Future,
-    {
-        self.0.run_singlethreaded(main_future)
-    }
-}
-
-#[cfg(target_os = "fuchsia")]
-impl LocalExecutor {
-    /// Construct a new single-threaded executor wrapping `Executor`.
-    pub fn new_with_fake_time() -> Result<Self, Status> {
-        Ok(Self(implementation::executor::Executor::new_with_fake_time()?))
-    }
-
-    /// Calls `now` on the inner executor.
-    pub fn now(&self) -> Time {
-        self.0.now()
-    }
-
-    /// Calls `set_fake_time` on the inner executor.
-    // TODO(fxbug.dev/76537) split the fake time executor into a separate type
-    pub fn set_fake_time(&self, t: Time) {
-        self.0.set_fake_time(t);
-    }
-
-    /// Calls `run_until_stalled` on the inner executor.
-    pub fn run_until_stalled<F>(&mut self, main_future: &mut F) -> Poll<F::Output>
-    where
-        F: Future + Unpin,
-    {
-        self.0.run_until_stalled(main_future)
-    }
-
-    /// Calls `run_one_step` on the inner executor.
-    pub fn run_one_step<F>(&mut self, main_future: &mut F) -> Option<Poll<F::Output>>
-    where
-        F: Future + Unpin,
-    {
-        self.0.run_one_step(main_future)
-    }
-
-    /// Calls `is_waiting` on the inner executor.
-    pub fn is_waiting(&mut self) -> WaitState {
-        self.0.is_waiting()
-    }
-
-    /// Calls `wake_main_future` on the inner executor.
-    pub fn wake_main_future(&mut self) {
-        self.0.wake_main_future()
-    }
-
-    /// Calls `wake_expired_timers` on the inner executor.
-    pub fn wake_expired_timers(&mut self) -> bool {
-        self.0.wake_expired_timers()
-    }
-
-    /// Calls `wake_next_timer` on the inner executor.
-    pub fn wake_next_timer(&mut self) -> Option<Time> {
-        self.0.wake_next_timer()
-    }
-}
-
-/// Wrapper around `Executor`, restricted to `Send` tasks.
-pub struct SendExecutor(implementation::executor::Executor);
-
-impl SendExecutor {
-    /// Construct a new multi-threaded executor.
-    pub fn new() -> Result<Self, Status> {
-        Ok(Self(implementation::executor::Executor::new()?))
-    }
-
-    /// Run `future` to completion, using this thread and `num_threads - 1` workers in a pool to
-    /// poll active tasks.
-    pub fn run<F>(&mut self, future: F, num_threads: usize) -> F::Output
-    where
-        F: Future + Send + 'static,
-        F::Output: Send + 'static,
-    {
-        self.0.run(future, num_threads)
-    }
-}
+pub use implementation::{
+    executor::{LocalExecutor, SendExecutor, Time},
+    task::Task,
+    timer::Timer,
+};
 
 // Fuchsia specific exports
 #[cfg(target_os = "fuchsia")]

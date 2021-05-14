@@ -107,22 +107,26 @@ pub mod executor {
 
     static GLOBAL: async_executor::Executor<'_> = async_executor::Executor::new();
 
-    /// An executor.
-    /// Mostly API-compatible with the Fuchsia variant (without the run_until_stalled or
-    /// fake time pieces).
+    /// A multi-threaded executor.
+    ///
+    /// API-compatible with the Fuchsia variant.
+    ///
     /// The current implementation of Executor does not isolate work
     /// (as the underlying executor is not yet capable of this).
-    pub struct Executor;
+    pub struct SendExecutor {}
 
-    impl Executor {
+    impl SendExecutor {
         /// Create a new executor running with actual time.
         pub fn new() -> Result<Self, zx_status::Status> {
             Ok(Self {})
         }
 
         /// Run a single future to completion using multiple threads.
-        // Takes `&mut self` to ensure that only one thread-manager is running at a time.
-        pub fn run<T>(&mut self, main_future: impl Future<Output = T>, num_threads: usize) -> T {
+        pub fn run<F>(&mut self, main_future: F, num_threads: usize) -> F::Output
+        where
+            F: Future + Send + 'static,
+            F::Output: Send + 'static,
+        {
             let (signal, shutdown) = async_channel::unbounded::<()>();
 
             let (_, res) = Parallel::new()
@@ -142,10 +146,27 @@ pub mod executor {
                 });
             res
         }
+    }
+
+    /// A single-threaded executor.
+    ///
+    /// API-compatible with the Fuchsia variant with the exception of testing APIs.
+    ///
+    /// The current implementation of Executor does not isolate work
+    /// (as the underlying executor is not yet capable of this).
+    pub struct LocalExecutor {}
+
+    impl LocalExecutor {
+        /// Create a new executor running with actual time.
+        pub fn new() -> Result<Self, zx_status::Status> {
+            Ok(Self {})
+        }
 
         /// Run a single future to completion on a single thread.
-        // Takes `&mut self` to ensure that only one thread-manager is running at a time.
-        pub fn run_singlethreaded<T>(&mut self, main_future: impl Future<Output = T>) -> T {
+        pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
+        where
+            F: Future,
+        {
             LOCAL.with(|local| async_io::block_on(GLOBAL.run(local.run(main_future))))
         }
     }

@@ -40,7 +40,7 @@ pub mod task {
 }
 
 pub mod executor {
-    use fuchsia_zircon_status as zx_status;
+    use fuchsia_zircon_status::Status;
 
     /// Stub spawn, panics if used.
     //pub fn spawn<T>(_: T) {
@@ -52,12 +52,12 @@ pub mod executor {
     //    unimplemented!()
     //}
 
-    /// Stub Executor.
-    pub struct Executor {}
+    /// A stub multi-threaded executor.
+    pub struct SendExecutor {}
 
-    impl Executor {
-        /// Stub run, panics if used.
-        pub fn new() -> Result<Self, zx_status::Status> {
+    impl SendExecutor {
+        /// Stub new, panics if used.
+        pub fn new() -> Result<Self, Status> {
             unimplemented!();
         }
 
@@ -67,6 +67,16 @@ pub mod executor {
             F: core::future::Future + Send + 'static,
             F::Output: Send + 'static,
         {
+            unimplemented!();
+        }
+    }
+
+    /// Wrapper around `Executor`, restricted to running single threaded.
+    pub struct LocalExecutor {}
+
+    impl LocalExecutor {
+        /// Construct a new executor for running tasks on the current thread.
+        pub fn new() -> Result<Self, Status> {
             unimplemented!();
         }
 

@@ -59,7 +59,7 @@ impl<T: Send> Task<T> {
     pub fn blocking(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
         let (future, remote_handle) = future.remote_handle();
         std::thread::spawn(move || {
-            super::executor::Executor::new().unwrap().run_singlethreaded(future)
+            super::executor::LocalExecutor::new().unwrap().run_singlethreaded(future)
         });
         Task { remote_handle }
     }
