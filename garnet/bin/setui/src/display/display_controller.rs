@@ -50,7 +50,7 @@ lazy_static! {
 /// [`DEFAULT_DISPLAY_INFO`] with any fields specified in the
 /// display configuration set.
 pub fn default_display_info() -> DisplayInfo {
-    let mut default_display_info = DEFAULT_DISPLAY_INFO.clone();
+    let mut default_display_info = *DEFAULT_DISPLAY_INFO;
 
     // TODO(fxbug.dev/76038): Clean up unwrap calls.
     if let Ok(Some(display_configuration)) =
@@ -88,9 +88,9 @@ impl DeviceStorageCompatible for DisplayInfo {
     }
 }
 
-impl Into<SettingInfo> for DisplayInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Brightness(self)
+impl From<DisplayInfo> for SettingInfo {
+    fn from(info: DisplayInfo) -> SettingInfo {
+        SettingInfo::Brightness(info)
     }
 }
 
@@ -130,7 +130,7 @@ impl BrightnessManager for () {
         info: DisplayInfo,
         client: &ClientProxy,
     ) -> SettingHandlerResult {
-        if (!info.is_finite()) {
+        if !info.is_finite() {
             return Err(ControllerError::InvalidArgument(
                 SettingType::Display,
                 "display_info".into(),
@@ -163,7 +163,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         info: DisplayInfo,
         client: &ClientProxy,
     ) -> SettingHandlerResult {
-        if (!info.is_finite()) {
+        if !info.is_finite() {
             return Err(ControllerError::InvalidArgument(
                 SettingType::Display,
                 "display_info".into(),
@@ -258,7 +258,7 @@ where
     fn build_theme(&self, incoming_theme: Theme, display_info: &DisplayInfo) -> Option<Theme> {
         let mut theme_builder = ThemeBuilder::new();
 
-        let existing_theme_type = display_info.theme.map_or(None, |theme| theme.theme_type);
+        let existing_theme_type = display_info.theme.and_then(|theme| theme.theme_type);
 
         let new_theme_type = incoming_theme.theme_type.or(existing_theme_type);
 

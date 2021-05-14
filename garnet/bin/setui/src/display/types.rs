@@ -90,9 +90,9 @@ pub struct LightData {
     pub color: fidl_fuchsia_ui_types::ColorRgb,
 }
 
-impl Into<SettingInfo> for LightData {
-    fn into(self) -> SettingInfo {
-        SettingInfo::LightSensor(self)
+impl From<LightData> for SettingInfo {
+    fn from(light: LightData) -> SettingInfo {
+        SettingInfo::LightSensor(light)
     }
 }
 

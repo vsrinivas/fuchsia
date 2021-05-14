@@ -78,7 +78,7 @@ impl controller::Handle for LightSensorController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Get => {
-                Some(Ok(Some(SettingInfo::LightSensor(self.current_value.lock().await.clone()))))
+                Some(Ok(Some(SettingInfo::LightSensor(*self.current_value.lock().await))))
             }
             _ => None,
         }
@@ -203,7 +203,7 @@ fn start_light_sensor_scanner(
                         if let Some(new_data) = stream.next().await {
                             if data != new_data {
                                 data = new_data;
-                                if sender.unbounded_send(data.clone()).is_err() {
+                                if sender.unbounded_send(data).is_err() {
                                     break;
                                 }
                             }

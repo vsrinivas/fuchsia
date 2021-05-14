@@ -77,7 +77,7 @@ impl From<FidlTheme> for Theme {
     fn from(fidl_theme: FidlTheme) -> Self {
         Self {
             theme_type: fidl_theme.theme_type.map(Into::into),
-            theme_mode: fidl_theme.theme_mode.map(Into::into).unwrap_or_else(|| ThemeMode::empty()),
+            theme_mode: fidl_theme.theme_mode.map(Into::into).unwrap_or_else(ThemeMode::empty),
         }
     }
 }
@@ -192,7 +192,7 @@ async fn process_request(
         }
     }
 
-    return Ok(None);
+    Ok(None)
 }
 
 async fn process_sensor_request(
@@ -221,5 +221,5 @@ async fn process_sensor_request(
         return Ok(Some(req));
     }
 
-    return Ok(None);
+    Ok(None)
 }
