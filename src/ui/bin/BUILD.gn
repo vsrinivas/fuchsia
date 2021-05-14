@@ -11,6 +11,7 @@ group("bin") {
     "input_pipeline",
     "root_presenter",
     "shortcut",
+    "text_input_cli:pkg",
   ]
 }
 
@@ -26,5 +27,6 @@ group("tests") {
     "input_pipeline:tests",
     "root_presenter:tests",
     "shortcut:tests",
+    "text_input_cli:tests",
   ]
 }

@@ -1,0 +1,14 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/ui/lib/input_pipeline/meta/input_keymap_configuration.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/text_input_cli"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.input.keymap.Configuration"
+        ]
+    }
+}
