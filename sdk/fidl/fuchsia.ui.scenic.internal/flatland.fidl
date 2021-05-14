@@ -479,3 +479,19 @@ protocol Flatland {
     /// construct a new Image).
     ReleaseImage(ContentId image_id);
 };
+
+/// This API connects to the singleton "primary display", and allows a tree of Flatland content to
+/// be attached underneath.  Only one FlatlandDisplay client connection is allowed at one time.
+// TODO(fxbug.dev/76643):  In the future this will be replaced with something
+// that allows control over which hardware display to use.  This API is sufficient for the purpose
+// of initial bringup of Flatland.
+[Discoverable]
+protocol FlatlandDisplay {
+    // TODO(fxbug.dev/76643): Consider whether this should be:
+    //   SetLink(ContentLinkToken token) -> (ContentLinkToken? previous_content_token);
+    // ... this way, whoever is using the display can keep track of multiple different pieces
+    // of content, and choose which to display.  OTOH, an argument could be made that this API
+    // should be kept as simple as possible, and if one wanted to do this sort of thing they should
+    // create their own Flatland instance and do the content management there.
+    SetContent(ContentLinkToken token, request<ContentLink> content_link);
+};
