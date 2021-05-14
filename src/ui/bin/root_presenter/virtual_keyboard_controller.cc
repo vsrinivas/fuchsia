@@ -50,13 +50,8 @@ void FidlBoundVirtualKeyboardController::WatchVisibility(WatchVisibilityCallback
     watch_callback_(want_visible_);
   }
 
-  if (last_sent_visible_.has_value()) {
-    watch_callback_ = std::move(callback);
-    MaybeNotifyWatcher();
-  } else {
-    callback(want_visible_);
-    last_sent_visible_ = want_visible_;
-  }
+  watch_callback_ = std::move(callback);
+  MaybeNotifyWatcher();
 }
 
 void FidlBoundVirtualKeyboardController::OnUserAction(UserAction action) {
