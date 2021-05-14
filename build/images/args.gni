@@ -108,11 +108,6 @@ declare_args() {
   # Build boot images that prefer Zedboot over local boot (only for EFI).
   always_zedboot = false
 
-  # The allowlist file to load for /pkgfs/packages non-base packages
-  #  DEPRECATED:  Use a fuchsia_system_package() in `product_system_image_deps`
-  #               instead.
-  pkgfs_packages_allowlist = ""
-
   # Include fvm.blob.sparse.blk image into the build if set to true
   include_fvm_blob_sparse = false
 
