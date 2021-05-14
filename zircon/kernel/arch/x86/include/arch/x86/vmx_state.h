@@ -35,7 +35,7 @@
 
 #include <zircon/types.h>
 
-/* Holds the register state used to restore a host. */
+// Holds the register state used to restore a host.
 struct HostState {
   // Host stack pointer.
   uint64_t rsp;
@@ -75,27 +75,27 @@ struct VmxState {
   GuestState guest_state;
 };
 
-static_assert(__offsetof(VmxState, resume) == VS_RESUME, "");
+static_assert(__offsetof(VmxState, resume) == VS_RESUME);
 
-static_assert(__offsetof(VmxState, host_state.rsp) == HS_RSP, "");
+static_assert(__offsetof(VmxState, host_state.rsp) == HS_RSP);
 static_assert(__offsetof(VmxState, host_state.xcr0) == HS_XCR0);
 
-static_assert(__offsetof(VmxState, guest_state.rax) == GS_RAX, "");
-static_assert(__offsetof(VmxState, guest_state.rbx) == GS_RBX, "");
-static_assert(__offsetof(VmxState, guest_state.rcx) == GS_RCX, "");
-static_assert(__offsetof(VmxState, guest_state.rdx) == GS_RDX, "");
-static_assert(__offsetof(VmxState, guest_state.rdi) == GS_RDI, "");
-static_assert(__offsetof(VmxState, guest_state.rsi) == GS_RSI, "");
-static_assert(__offsetof(VmxState, guest_state.rbp) == GS_RBP, "");
-static_assert(__offsetof(VmxState, guest_state.r8) == GS_R8, "");
-static_assert(__offsetof(VmxState, guest_state.r9) == GS_R9, "");
-static_assert(__offsetof(VmxState, guest_state.r10) == GS_R10, "");
-static_assert(__offsetof(VmxState, guest_state.r11) == GS_R11, "");
-static_assert(__offsetof(VmxState, guest_state.r12) == GS_R12, "");
-static_assert(__offsetof(VmxState, guest_state.r13) == GS_R13, "");
-static_assert(__offsetof(VmxState, guest_state.r14) == GS_R14, "");
-static_assert(__offsetof(VmxState, guest_state.r15) == GS_R15, "");
-static_assert(__offsetof(VmxState, guest_state.cr2) == GS_CR2, "");
+static_assert(__offsetof(VmxState, guest_state.rax) == GS_RAX);
+static_assert(__offsetof(VmxState, guest_state.rbx) == GS_RBX);
+static_assert(__offsetof(VmxState, guest_state.rcx) == GS_RCX);
+static_assert(__offsetof(VmxState, guest_state.rdx) == GS_RDX);
+static_assert(__offsetof(VmxState, guest_state.rdi) == GS_RDI);
+static_assert(__offsetof(VmxState, guest_state.rsi) == GS_RSI);
+static_assert(__offsetof(VmxState, guest_state.rbp) == GS_RBP);
+static_assert(__offsetof(VmxState, guest_state.r8) == GS_R8);
+static_assert(__offsetof(VmxState, guest_state.r9) == GS_R9);
+static_assert(__offsetof(VmxState, guest_state.r10) == GS_R10);
+static_assert(__offsetof(VmxState, guest_state.r11) == GS_R11);
+static_assert(__offsetof(VmxState, guest_state.r12) == GS_R12);
+static_assert(__offsetof(VmxState, guest_state.r13) == GS_R13);
+static_assert(__offsetof(VmxState, guest_state.r14) == GS_R14);
+static_assert(__offsetof(VmxState, guest_state.r15) == GS_R15);
+static_assert(__offsetof(VmxState, guest_state.cr2) == GS_CR2);
 
 // Launch/resume the guest, and return when the guest next exits.
 //
