@@ -5,20 +5,47 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
-
 #include "nelson.h"
+#include "src/devices/power/drivers/ti-ina231/ti-ina231-metadata.h"
 
 namespace nelson {
 
-constexpr uint32_t kShuntResistorMicroOhms = 10'000;
-constexpr device_metadata_t metadata[] = {
+constexpr power_sensor::Ina231Metadata kMlbSensorMetadata = {
+    .mode = power_sensor::Ina231Metadata::kModeShuntAndBusContinuous,
+    .shunt_voltage_conversion_time = power_sensor::Ina231Metadata::kConversionTime332us,
+    .bus_voltage_conversion_time = power_sensor::Ina231Metadata::kConversionTime332us,
+    .averages = power_sensor::Ina231Metadata::kAverages1024,
+    .shunt_resistance_microohm = 10'000,
+    .bus_voltage_limit_microvolt = 0,
+    .alert = power_sensor::Ina231Metadata::kAlertNone,
+};
+
+constexpr power_sensor::Ina231Metadata kAudioSensorMetadata = {
+    .mode = power_sensor::Ina231Metadata::kModeShuntAndBusContinuous,
+    .shunt_voltage_conversion_time = power_sensor::Ina231Metadata::kConversionTime332us,
+    .bus_voltage_conversion_time = power_sensor::Ina231Metadata::kConversionTime332us,
+    .averages = power_sensor::Ina231Metadata::kAverages1024,
+    .shunt_resistance_microohm = 10'000,
+    .bus_voltage_limit_microvolt = 11'000'000,
+    .alert = power_sensor::Ina231Metadata::kAlertBusUnderVoltage,
+};
+
+constexpr device_metadata_t kMlbMetadata[] = {
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data = &kShuntResistorMicroOhms,
-        .length = sizeof(kShuntResistorMicroOhms),
+        .data = &kMlbSensorMetadata,
+        .length = sizeof(kMlbSensorMetadata),
+    },
+};
+
+constexpr device_metadata_t kAudioMetadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data = &kAudioSensorMetadata,
+        .length = sizeof(kAudioSensorMetadata),
     },
 };
 
@@ -67,8 +94,8 @@ constexpr composite_device_desc_t mlb_power_sensor_dev = {
     .fragments = mlb_fragments,
     .fragments_count = countof(mlb_fragments),
     .coresident_device_index = 0,
-    .metadata_list = metadata,
-    .metadata_count = countof(metadata),
+    .metadata_list = kMlbMetadata,
+    .metadata_count = countof(kMlbMetadata),
 };
 
 constexpr composite_device_desc_t speakers_power_sensor_dev = {
@@ -77,8 +104,8 @@ constexpr composite_device_desc_t speakers_power_sensor_dev = {
     .fragments = speakers_fragments,
     .fragments_count = countof(speakers_fragments),
     .coresident_device_index = 0,
-    .metadata_list = metadata,
-    .metadata_count = countof(metadata),
+    .metadata_list = kAudioMetadata,
+    .metadata_count = countof(kAudioMetadata),
 };
 
 zx_status_t Nelson::PowerInit() {

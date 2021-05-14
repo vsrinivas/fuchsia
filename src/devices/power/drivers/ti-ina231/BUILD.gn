@@ -7,6 +7,10 @@ import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 
+source_set("metadata") {
+  public = [ "ti-ina231-metadata.h" ]
+}
+
 group("common") {
   public_deps = [
     ":bind",

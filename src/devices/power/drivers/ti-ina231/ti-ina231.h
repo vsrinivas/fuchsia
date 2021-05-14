@@ -12,6 +12,8 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
+#include "ti-ina231-metadata.h"
+
 namespace power_sensor {
 
 namespace power_sensor_fidl = fuchsia_hardware_power_sensor;
@@ -34,7 +36,7 @@ class Ina231Device : public DeviceType,
                      GetPowerWattsCompleter::Sync& completer) override;
 
   // Visible for testing.
-  zx_status_t Init();
+  zx_status_t Init(const Ina231Metadata& metadata);
 
  private:
   enum class Register : uint8_t;

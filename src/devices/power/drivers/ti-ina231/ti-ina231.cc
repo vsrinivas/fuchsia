@@ -14,9 +14,6 @@
 
 namespace {
 
-constexpr uint16_t kModeMask = 0b11;
-constexpr uint16_t kModeContinousShuntAndBus = 0b11;
-
 // Choose 2048 for the calibration value so that the current and shunt voltage registers are the
 // same. This results in a power resolution of 6.25 mW with a shunt resistance of 10 milli-ohms.
 constexpr uint16_t kCalibrationValue = 2048;
@@ -31,8 +28,11 @@ constexpr uint16_t kCalibrationValue = 2048;
 // kPowerResolution by the power register value, divide by the shunt resistance in micro-ohms, then
 // divide again by kFixedPointFactor.
 constexpr uint64_t kFixedPointFactor = 1'000;
-constexpr uint64_t kPowerResolution = (25 * 5'120 * kFixedPointFactor) / kCalibrationValue;
-static_assert((kPowerResolution * kCalibrationValue) == (25 * 5'120 * kFixedPointFactor));
+constexpr uint64_t kPowerResolution = (25ULL * 5'120 * kFixedPointFactor) / kCalibrationValue;
+static_assert((kPowerResolution * kCalibrationValue) == (25ULL * 5'120 * kFixedPointFactor));
+
+// Divide the bus voltage limit by this to get the alert limit register value.
+constexpr uint64_t kMicrovoltsPerBit = 1'250;
 
 }  // namespace
 
@@ -42,6 +42,8 @@ enum class Ina231Device::Register : uint8_t {
   kConfigurationReg = 0,
   kPowerReg = 3,
   kCalibrationReg = 5,
+  kMaskEnableReg = 6,
+  kAlertLimitReg = 7,
 };
 
 zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
@@ -51,25 +53,25 @@ zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  uint32_t shunt_resistor_uohms = 0;
+  Ina231Metadata metadata = {};
   size_t actual = 0;
-  zx_status_t status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &shunt_resistor_uohms,
-                                           sizeof(shunt_resistor_uohms), &actual);
+  zx_status_t status =
+      device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata), &actual);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to get metadata: %d", status);
     return status;
   }
-  if (actual != sizeof(shunt_resistor_uohms)) {
-    zxlogf(ERROR, "Expected %zu bytes of metadata, got %zu", sizeof(shunt_resistor_uohms), actual);
+  if (actual != sizeof(metadata)) {
+    zxlogf(ERROR, "Expected %zu bytes of metadata, got %zu", sizeof(metadata), actual);
     return ZX_ERR_NO_RESOURCES;
   }
-  if (shunt_resistor_uohms == 0) {
+  if (metadata.shunt_resistance_microohm == 0) {
     zxlogf(ERROR, "Shunt resistance cannot be zero");
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto dev = std::make_unique<Ina231Device>(parent, shunt_resistor_uohms, i2c);
-  if ((status = dev->Init()) != ZX_OK) {
+  auto dev = std::make_unique<Ina231Device>(parent, metadata.shunt_resistance_microohm, i2c);
+  if ((status = dev->Init(metadata)) != ZX_OK) {
     return status;
   }
 
@@ -94,20 +96,42 @@ void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
   completer.ReplySuccess(static_cast<float>(power) / kFixedPointFactor);
 }
 
-zx_status_t Ina231Device::Init() {
+zx_status_t Ina231Device::Init(const Ina231Metadata& metadata) {
+  // Keep only the bits that are not defined in the datasheet, and clear the reset bit.
+  constexpr uint16_t kConfigurationRegMask = 0x7000;
+
   auto status = Write16(Register::kCalibrationReg, kCalibrationValue);
   if (status.is_error()) {
     return status.error_value();
   }
 
-  auto value = Read16(Register::kConfigurationReg);
-  if (value.is_error()) {
-    return value.error_value();
+  if (metadata.alert == Ina231Metadata::kAlertBusUnderVoltage) {
+    const uint64_t alert_limit_reg_value = metadata.bus_voltage_limit_microvolt / kMicrovoltsPerBit;
+    if (alert_limit_reg_value > UINT16_MAX) {
+      zxlogf(ERROR, "Bus voltage limit is out of range");
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    if ((status = Write16(Register::kAlertLimitReg, alert_limit_reg_value)).is_error()) {
+      return status.error_value();
+    }
   }
 
-  const uint16_t new_config = (value.value() & ~kModeMask) | kModeContinousShuntAndBus;
-  if (value.value() != new_config &&
-      (status = Write16(Register::kConfigurationReg, new_config)).is_error()) {
+  if ((status = Write16(Register::kMaskEnableReg, metadata.alert)).is_error()) {
+    return status.error_value();
+  }
+
+  const zx::status<uint16_t> config_status = Read16(Register::kConfigurationReg);
+  if (config_status.is_error()) {
+    return config_status.error_value();
+  }
+
+  const uint16_t metadata_value = metadata.mode | (metadata.shunt_voltage_conversion_time << 3) |
+                                  (metadata.bus_voltage_conversion_time << 6) |
+                                  (metadata.averages << 9);
+  const uint16_t configuration_reg_value =
+      (config_status.value() & kConfigurationRegMask) | metadata_value;
+  if ((status = Write16(Register::kConfigurationReg, configuration_reg_value)).is_error()) {
     return status.error_value();
   }
 
