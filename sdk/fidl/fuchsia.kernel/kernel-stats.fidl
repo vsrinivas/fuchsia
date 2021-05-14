@@ -80,4 +80,11 @@ protocol Stats {
     GetMemoryStatsExtended() -> (MemoryStatsExtended stats);
 
     GetCpuStats() -> (CpuStats stats);
+
+    /// Gets the average load as a percentage (0.0 - 100.0) from each CPU over the specified
+    /// duration.
+    ///
+    /// Load is calculated as (100 - %idle), where %idle is the percentage value of idle_time (from
+    /// PerCpuStats) over a time duration.
+    GetCpuLoad(zx.duration duration) -> (vector<float32>:zx.MAX_CPUS per_cpu_load);
 };

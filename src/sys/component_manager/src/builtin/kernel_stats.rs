@@ -109,6 +109,9 @@ impl BuiltinCapability for KernelStats {
                     };
                     responder.send(&mut stats)?;
                 }
+                fkernel::StatsRequest::GetCpuLoad { .. } => {
+                    return Err(fuchsia_zircon::Status::NOT_SUPPORTED.into());
+                }
             }
         }
         Ok(())
