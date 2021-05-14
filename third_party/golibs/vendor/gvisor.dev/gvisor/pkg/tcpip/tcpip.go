@@ -37,9 +37,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
+	"gvisor.dev/gvisor/pkg/atomicbitops"
 	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/waiter"
 )
@@ -1220,7 +1220,7 @@ type NetworkProtocolNumber uint32
 
 // A StatCounter keeps track of a statistic.
 type StatCounter struct {
-	count uint64
+	count atomicbitops.AlignedAtomicUint64
 }
 
 // Increment adds one to the counter.
@@ -1235,12 +1235,12 @@ func (s *StatCounter) Decrement() {
 
 // Value returns the current value of the counter.
 func (s *StatCounter) Value(name ...string) uint64 {
-	return atomic.LoadUint64(&s.count)
+	return s.count.Load()
 }
 
 // IncrementBy increments the counter by v.
 func (s *StatCounter) IncrementBy(v uint64) {
-	atomic.AddUint64(&s.count, v)
+	s.count.Add(v)
 }
 
 func (s *StatCounter) String() string {
@@ -1530,9 +1530,10 @@ type IGMPStats struct {
 
 // IPForwardingStats collects stats related to IP forwarding (both v4 and v6).
 type IPForwardingStats struct {
+	// LINT.IfChange(IPForwardingStats)
+
 	// Unrouteable is the number of IP packets received which were dropped
-	// because the netstack could not construct a route to their
-	// destination.
+	// because a route to their destination could not be constructed.
 	Unrouteable *StatCounter
 
 	// ExhaustedTTL is the number of IP packets received which were dropped
@@ -1547,9 +1548,20 @@ type IPForwardingStats struct {
 	// because they contained a link-local destination address.
 	LinkLocalDestination *StatCounter
 
+	// PacketTooBig is the number of IP packets which were dropped because they
+	// were too big for the outgoing MTU.
+	PacketTooBig *StatCounter
+
+	// ExtensionHeaderProblem is the number of IP packets which were dropped
+	// because of a problem encountered when processing an IPv6 extension
+	// header.
+	ExtensionHeaderProblem *StatCounter
+
 	// Errors is the number of IP packets received which could not be
 	// successfully forwarded.
 	Errors *StatCounter
+
+	// LINT.ThenChange(network/internal/ip/stats.go:multiCounterIPForwardingStats)
 }
 
 // IPStats collects IP-specific stats (both v4 and v6).

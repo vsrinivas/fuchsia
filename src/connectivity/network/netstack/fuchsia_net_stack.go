@@ -472,7 +472,7 @@ func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {
 		ipv4.ProtocolNumber,
 		ipv6.ProtocolNumber,
 	} {
-		ni.ns.stack.SetForwarding(protocol, true)
+		ni.ns.stack.SetForwardingDefaultAndAllNICs(protocol, true)
 	}
 	return nil
 }
@@ -482,7 +482,7 @@ func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
 		ipv4.ProtocolNumber,
 		ipv6.ProtocolNumber,
 	} {
-		ni.ns.stack.SetForwarding(protocol, false)
+		ni.ns.stack.SetForwardingDefaultAndAllNICs(protocol, false)
 	}
 	return nil
 }

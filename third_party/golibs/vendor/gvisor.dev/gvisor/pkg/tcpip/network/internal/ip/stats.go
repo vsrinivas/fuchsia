@@ -16,7 +16,7 @@ package ip
 
 import "gvisor.dev/gvisor/pkg/tcpip"
 
-// LINT.IfChange(MultiCounterIPStats)
+// LINT.IfChange(MultiCounterIPForwardingStats)
 
 // MultiCounterIPForwardingStats holds IP forwarding statistics. Each counter
 // may have several versions.
@@ -38,10 +38,34 @@ type MultiCounterIPForwardingStats struct {
 	// because they contained a link-local destination address.
 	LinkLocalDestination tcpip.MultiCounterStat
 
+	// PacketTooBig is the number of IP packets which were dropped because they
+	// were too big for the outgoing MTU.
+	PacketTooBig tcpip.MultiCounterStat
+
+	// ExtensionHeaderProblem is the number of IP packets which were dropped
+	// because of a problem encountered when processing an IPv6 extension
+	// header.
+	ExtensionHeaderProblem tcpip.MultiCounterStat
+
 	// Errors is the number of IP packets received which could not be
 	// successfully forwarded.
 	Errors tcpip.MultiCounterStat
 }
+
+// Init sets internal counters to track a and b counters.
+func (m *MultiCounterIPForwardingStats) Init(a, b *tcpip.IPForwardingStats) {
+	m.Unrouteable.Init(a.Unrouteable, b.Unrouteable)
+	m.Errors.Init(a.Errors, b.Errors)
+	m.LinkLocalSource.Init(a.LinkLocalSource, b.LinkLocalSource)
+	m.LinkLocalDestination.Init(a.LinkLocalDestination, b.LinkLocalDestination)
+	m.ExtensionHeaderProblem.Init(a.ExtensionHeaderProblem, b.ExtensionHeaderProblem)
+	m.PacketTooBig.Init(a.PacketTooBig, b.PacketTooBig)
+	m.ExhaustedTTL.Init(a.ExhaustedTTL, b.ExhaustedTTL)
+}
+
+// LINT.ThenChange(:MultiCounterIPForwardingStats, ../../../tcpip.go:IPForwardingStats)
+
+// LINT.IfChange(MultiCounterIPStats)
 
 // MultiCounterIPStats holds IP statistics, each counter may have several
 // versions.
@@ -63,8 +87,8 @@ type MultiCounterIPStats struct {
 	// wire.
 	InvalidSourceAddressesReceived tcpip.MultiCounterStat
 
-	// PacketsDelivered is the number of incoming IP packets that are
-	// successfully delivered to the transport layer.
+	// PacketsDelivered is the number of incoming IP packets successfully
+	// delivered to the transport layer.
 	PacketsDelivered tcpip.MultiCounterStat
 
 	// PacketsSent is the number of IP packets sent via WritePacket.
@@ -117,15 +141,6 @@ type MultiCounterIPStats struct {
 
 	// Forwarding collects stats related to IP forwarding.
 	Forwarding MultiCounterIPForwardingStats
-}
-
-// Init sets internal counters to track a and b counters.
-func (m *MultiCounterIPForwardingStats) Init(a, b *tcpip.IPForwardingStats) {
-	m.Unrouteable.Init(a.Unrouteable, b.Unrouteable)
-	m.Errors.Init(a.Errors, b.Errors)
-	m.LinkLocalSource.Init(a.LinkLocalSource, b.LinkLocalSource)
-	m.LinkLocalDestination.Init(a.LinkLocalDestination, b.LinkLocalDestination)
-	m.ExhaustedTTL.Init(a.ExhaustedTTL, b.ExhaustedTTL)
 }
 
 // Init sets internal counters to track a and b counters.
