@@ -31,10 +31,7 @@ pub fn sys_clone(
 }
 
 pub fn sys_getpid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
-    let _pid = ctx.task.get_pid();
-    // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
-    // assumption that anything running after init will have access to /dev.
-    Ok(1.into())
+    Ok(ctx.task.get_pid().into())
 }
 
 pub fn sys_gettid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
