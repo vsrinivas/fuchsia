@@ -31,7 +31,7 @@ direction of the project.
 
 This section describes the design of the RFC process.
 
-### When to use the process
+### When to use the process {#when-to-use-the-process}
 
 The vast majority of changes to Fuchsia do not require an RFC. Instead, these
 changes can be made using the [code review
@@ -222,7 +222,7 @@ able to point you in a good direction.
 This step is meant to help the author crystalize the goal(s) and potential solutions.
 If they feel that this is accomplished, then they can proceed to the next step.
 
-#### Step 2: Draft
+#### Step 2: Draft {#draft}
 
 Once you have gathered all the background and context you can through
 socialization, you are ready to start the formal part of the RFC process. The
@@ -312,7 +312,7 @@ effectively in the CL.
 *Exit criteria:* All stakeholders identified and approved by Eng Council; feedback
 solicited and incorporated.
 
-#### Step 4: Last call
+#### Step 4: Last call {#last-call}
 
 Once the iterations on the RFC are converging, the author must email
 eng-council@fuchsia.dev requesting them to move the RFC's status to last call.
