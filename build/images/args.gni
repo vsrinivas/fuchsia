@@ -109,6 +109,8 @@ declare_args() {
   always_zedboot = false
 
   # The allowlist file to load for /pkgfs/packages non-base packages
+  #  DEPRECATED:  Use a fuchsia_system_package() in `product_system_image_deps`
+  #               instead.
   pkgfs_packages_allowlist =
       "//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"
 

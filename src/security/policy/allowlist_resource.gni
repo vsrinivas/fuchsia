@@ -1,0 +1,61 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_system_package.gni")
+import("//build/dist/resource.gni")
+
+######
+#
+# Templates for defining different fuchsia_system_package() entries for
+# allowlists, thus allowing different allowlists to be visible in the build
+# graph as targets.
+#
+######
+
+####
+# Defines a fuchsia_system_package() that provides a file to use as the allowlist at:
+#
+# data/pkgfs_packages_non_static_packages_allowlist.txt
+#
+# In the base (system_image) package
+#
+# Parameters:
+#
+#  file
+#     the path to the file to use as the allowlist
+#
+#   deps
+#   testonly
+#   visibility
+template("pkgfs_packages_non_static_packages_allowlist") {
+  assert(defined(invoker.file), "'file' parameter must be supplied")
+
+  resource_label = target_name + "_resource"
+
+  resource(resource_label) {
+    visibility = [ ":*" ]
+    sources = [ invoker.file ]
+    outputs = [ "data/pkgfs_packages_non_static_packages_allowlist.txt" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  fuchsia_system_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibilty",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$resource_label" ]
+  }
+}

@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/dist/resource.gni")
+import("allowlist_resource.gni")
 
 group("appmgr_policy_eng") {
   deps = [
@@ -170,4 +171,9 @@ config_data("appmgr_weave_signer_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "weave_signer_allowlist_eng.txt" ]
   outputs = [ "allowlist/weave_signer.txt" ]
+}
+
+pkgfs_packages_non_static_packages_allowlist(
+    "pkgfs_non_static_pkgs_allowlist_eng") {
+  file = "pkgfs_non_static_pkgs_allowlist_eng.txt"
 }
