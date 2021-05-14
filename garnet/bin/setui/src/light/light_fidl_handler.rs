@@ -130,7 +130,7 @@ async fn process_request(
         }
     }
 
-    return Ok(None);
+    Ok(None)
 }
 
 /// Processes a request to watch a single light group.
@@ -169,7 +169,7 @@ async fn process_watch_light_group_request(
         }
     }
 
-    return Ok(None);
+    Ok(None)
 }
 
 /// Returns true if the given string is the name of a known light group, else returns false.

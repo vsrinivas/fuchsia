@@ -24,10 +24,10 @@ use std::convert::TryInto;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that a LightError::INVALID_NAME should be returned to the client.
-pub const ARG_NAME: &'static str = "name";
+pub const ARG_NAME: &str = "name";
 
 /// Hardware path used to connect to light devices.
-pub const DEVICE_PATH: &'static str = "/dev/class/light/*";
+pub const DEVICE_PATH: &str = "/dev/class/light/*";
 
 impl DeviceStorageCompatible for LightInfo {
     fn default_value() -> Self {
@@ -37,9 +37,9 @@ impl DeviceStorageCompatible for LightInfo {
     const KEY: &'static str = "light_info";
 }
 
-impl Into<SettingInfo> for LightInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Light(self)
+impl From<LightInfo> for SettingInfo {
+    fn from(info: LightInfo) -> SettingInfo {
+        SettingInfo::Light(info)
     }
 }
 
@@ -123,11 +123,11 @@ impl LightController {
             .get_service_context()
             .connect_device_path::<LightMarker>(DEVICE_PATH)
             .await
-            .or_else(|e| {
-                Err(ControllerError::InitFailure(
+            .map_err(|e| {
+                ControllerError::InitFailure(
                     format!("failed to connect to fuchsia.hardware.light with error: {:?}", e)
                         .into(),
-                ))
+                )
             })?;
 
         Ok(LightController { client, light_proxy, light_hardware_config })
@@ -188,7 +188,7 @@ impl LightController {
     async fn write_light_group_to_hardware(
         &self,
         group: &mut LightGroup,
-        state: &Vec<LightState>,
+        state: &[LightState],
     ) -> ControllerStateResult {
         for (i, (light, hardware_index)) in
             state.iter().zip(group.hardware_index.iter()).enumerate()
@@ -204,12 +204,12 @@ impl LightController {
                     "set_brightness_value",
                 ),
                 Some(LightValue::Rgb(rgb)) => {
-                    let mut value = rgb.clone().try_into().or_else(|_| {
-                        Err(ControllerError::InvalidArgument(
+                    let mut value = rgb.clone().try_into().map_err(|_| {
+                        ControllerError::InvalidArgument(
                             SettingType::Light,
                             "value".into(),
                             format!("{:?}", rgb).into(),
-                        ))
+                        )
                     })?;
                     (
                         call_async!(self.light_proxy =>
@@ -223,12 +223,12 @@ impl LightController {
                     "set_simple_value",
                 ),
             };
-            set_result.map(|_| ()).or_else(|_| {
-                Err(ControllerError::ExternalFailure(
+            set_result.map(|_| ()).map_err(|_| {
+                ControllerError::ExternalFailure(
                     SettingType::Light,
                     "fuchsia.hardware.light".into(),
                     format!("{} for light {}", method_name, hardware_index).into(),
-                ))
+                )
             })?;
 
             // Set was successful, save this light value.
@@ -279,8 +279,7 @@ impl LightController {
             for light_index in group_config.hardware_index.iter() {
                 light_state.push(
                     self.light_state_from_hardware_index(*light_index, group_config.light_type)
-                        .await
-                        .or_else(|e| Err(e))?,
+                        .await?,
                 );
             }
 
@@ -316,12 +315,12 @@ impl LightController {
     /// [`LightGroup`]: ../../light/types/struct.LightGroup.html
     async fn restore_from_hardware(&self) -> SettingHandlerResult {
         let num_lights =
-            self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {
-                Err(ControllerError::ExternalFailure(
+            self.light_proxy.call_async(LightProxy::get_num_lights).await.map_err(|_| {
+                ControllerError::ExternalFailure(
                     SettingType::Light,
                     "fuchsia.hardware.light".into(),
                     "get_num_lights".into(),
-                ))
+                )
             })?;
 
         let mut current = self.client.read_setting::<LightInfo>().await;
@@ -336,7 +335,7 @@ impl LightController {
                     ));
                 }
             };
-            let (name, group) = self.light_info_to_group(i, info).await.or_else(|e| Err(e))?;
+            let (name, group) = self.light_info_to_group(i, info).await?;
             current.light_groups.insert(name, group);
         }
 

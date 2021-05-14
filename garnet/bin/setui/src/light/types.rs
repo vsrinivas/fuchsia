@@ -193,17 +193,13 @@ impl ColorRgb {
 
 impl From<fidl_fuchsia_ui_types::ColorRgb> for ColorRgb {
     fn from(src: fidl_fuchsia_ui_types::ColorRgb) -> Self {
-        ColorRgb { red: src.red.into(), green: src.green.into(), blue: src.blue.into() }
+        ColorRgb { red: src.red, green: src.green, blue: src.blue }
     }
 }
 
 impl From<ColorRgb> for fidl_fuchsia_ui_types::ColorRgb {
     fn from(src: ColorRgb) -> Self {
-        fidl_fuchsia_ui_types::ColorRgb {
-            red: src.red.into(),
-            green: src.green.into(),
-            blue: src.blue.into(),
-        }
+        fidl_fuchsia_ui_types::ColorRgb { red: src.red, green: src.green, blue: src.blue }
     }
 }
 
