@@ -542,7 +542,7 @@ static zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entr
   vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_EIP, 0);
   vmcs.Write(VmcsField32::HOST_IA32_SYSENTER_CS, 0);
   vmcs.Write(VmcsFieldXX::HOST_RSP, reinterpret_cast<uint64_t>(vmx_state));
-  vmcs.Write(VmcsFieldXX::HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_entry));
+  vmcs.Write(VmcsFieldXX::HOST_RIP, reinterpret_cast<uint64_t>(vmx_guest_exit));
 
   // Setup VMCS guest state.
   uint64_t cr0 = X86_CR0_PE |  // Enable protected mode
@@ -1035,7 +1035,11 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
   return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
-void vmx_exit(VmxState* vmx_state) {
+zx_status_t vmx_enter(VmxState* vmx_state) {
+  // Perform the low-level vmlaunch or vmresume, entering the guest,
+  // and returning when the guest exits.
+  zx_status_t status = vmx_enter_asm(vmx_state);
+
   DEBUG_ASSERT(arch_ints_disabled());
 
   // Reload the task segment in order to restore its limit. VMX always
@@ -1043,6 +1047,8 @@ void vmx_exit(VmxState* vmx_state) {
   seg_sel_t selector = TSS_SELECTOR(arch_curr_cpu_num());
   x86_clear_tss_busy(selector);
   x86_ltr(selector);
+
+  return status;
 }
 
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {

@@ -11,27 +11,21 @@
 
 .text
 
-/* zx_status_t vmx_enter(VmxState* vmx_state) */
-FUNCTION(vmx_enter)
-    // Store the return address.
-    // We do this first to adjust the RSP we store.
-    popq HS_RIP(%rdi)
+/* zx_status_t vmx_enter_asm(VmxState* vmx_state) */
+FUNCTION(vmx_enter_asm)
+    // Save callee-saved registers and flags to stack.
+    push %rbp
+    push %r15
+    push %r14
+    push %r13
+    push %r12
+    push %rbx
+    pushf
 
-    // Store the callee save registers.
-    mov %rbx, HS_RBX(%rdi)
+    // Store the host's stack pointer.
     mov %rsp, HS_RSP(%rdi)
-    mov %rbp, HS_RBP(%rdi)
-    mov %r12, HS_R12(%rdi)
-    mov %r13, HS_R13(%rdi)
-    mov %r14, HS_R14(%rdi)
-    mov %r15, HS_R15(%rdi)
 
-    // Store the processor flags.
-    pushfq
-    popq HS_RFLAGS(%rdi)
-
-    // We are going to trample RDI, so move it to RSP. This also conveniently
-    // mirrors the exit code.
+    // We are going to trample RDI, so move it to RSP.
     mov %rdi, %rsp
 
     // Load the guest CR2.
@@ -57,35 +51,37 @@ FUNCTION(vmx_enter)
 
     // If we are resuming, jump to resume.
     testb $1, VS_RESUME(%rsp)
-    jnz resume
+    jnz .Lresume
 
     // Launch the guest.
+    //
+    // Resumes at `vmx_exit_resume` on success, or drops through on error.
     vmlaunch
-    jmp failure
+    jmp .Lfailure
 
-resume:
+.Lresume:
     // Resume the guest.
+    //
+    // Resumes at `vmx_exit_resume` on success, or drops through on error.
     vmresume
 
-failure:
-    // We will only be here if vmlaunch or vmresume failed.
-    // Restore host RDI and RSP.
-    mov %rsp, %rdi
-    mov HS_RSP(%rdi), %rsp
+.Lfailure:
+    // If we reach this state, the `vmlaunch` or `vmresume` has failed.
+    //
+    // Set the error code (RAX) to ZX_ERR_INTERNAL, and restore the host state.
+    mov $ZX_ERR_INTERNAL, %rax
+    jmp .Lrestore_host_regs
 
-    // Set up the return address.
-    pushq HS_RIP(%rdi)
+    // Resume execution after a `vmlaunch` or `vmresume`.
+    //
+    // When we return from a VM exit, vmx_state argument is stored in RSP. We
+    // use this to restore the stack and registers to the state they were in
+    // when vmx_enter was called.
+.align 32
+.global vmx_guest_exit
+.hidden vmx_guest_exit
+vmx_guest_exit:
 
-    // Return ZX_ERR_INTERNAL.
-    mov $ZX_ERR_INTERNAL, %eax
-    ret
-END_FUNCTION(vmx_enter)
-
-/* This is effectively the second-half of vmx_enter. When we return from a
- * VM exit, vmx_state argument is stored in RSP. We use this to restore the
- * stack and registers to the state they were in when vmx_enter was called.
- */
-FUNCTION(vmx_exit_entry)
     // Store the guest registers not covered by the VMCS. At this point,
     // vmx_state is in RSP.
     mov %rax, GS_RAX(%rsp)
@@ -108,31 +104,28 @@ FUNCTION(vmx_exit_entry)
     mov %cr2, %rax
     mov %rax, GS_CR2(%rsp)
 
-    // Load vmx_state from RSP into RDI.
+    // Set function result to ZX_OK.
+    xor %rax, %rax  // RAX = ZX_OK
+
+.Lrestore_host_regs:
+    // Restore the host registers.
+    //
+    // At this point, RSP contains vmx_state, and RAX contains the zx_status_t
+    // error code.
+
+    // Load vmx_state from RSP into RDI, and restore our stack.
     mov %rsp, %rdi
-
-    // Load the host callee save registers.
-    mov HS_RBX(%rdi), %rbx
     mov HS_RSP(%rdi), %rsp
-    mov HS_RBP(%rdi), %rbp
-    mov HS_R12(%rdi), %r12
-    mov HS_R13(%rdi), %r13
-    mov HS_R14(%rdi), %r14
-    mov HS_R15(%rdi), %r15
 
-    // Load the host processor flags.
-    pushq HS_RFLAGS(%rdi)
-    popfq
+    // Restore callee-saved registers and flags from stack.
+    popf
+    pop %rbx
+    pop %r12
+    pop %r13
+    pop %r14
+    pop %r15
+    pop %rbp
 
-    // Set up the return address.
-    pushq HS_RIP(%rdi)
-
-    // Call vmx_exit(vmx_state).
-    sub $8, %rsp
-    call vmx_exit
-    add $8, %rsp
-
-    // Return ZX_OK, using the return address of vmx_enter pushed above.
-    mov $ZX_OK, %eax
     ret
-END_FUNCTION(vmx_exit_entry)
+
+END_FUNCTION(vmx_enter_asm)

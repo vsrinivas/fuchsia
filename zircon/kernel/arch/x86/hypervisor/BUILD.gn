@@ -14,10 +14,20 @@ source_set("hypervisor") {
     "vmx_cpu_state.cc",
   ]
   deps = [
+    ":tests",
     "//zircon/kernel/arch/x86:headers",
     "//zircon/kernel/hypervisor:headers",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/platform/pc",
     "//zircon/system/ulib/explicit-memory",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [ "vmx_test.cc" ]
+  deps = [
+    "//zircon/kernel/hypervisor:headers",
+    "//zircon/kernel/lib/unittest",
   ]
 }
