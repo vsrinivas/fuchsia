@@ -62,7 +62,8 @@ impl Actor {
 }
 
 /// `Builder` helps construct a monitoring environment in a step-wise fashion,
-/// reutrning an [`Actor`] to control the resulting environment.
+/// returning an [`Actor`] to control the resulting environment.
+#[derive(Default)]
 pub struct Builder {
     monitors: Vec<base_monitor::Generate>,
 }
