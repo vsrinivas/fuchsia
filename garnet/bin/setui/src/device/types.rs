@@ -16,8 +16,8 @@ impl DeviceInfo {
     }
 }
 
-impl Into<SettingInfo> for DeviceInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Device(self)
+impl From<DeviceInfo> for SettingInfo {
+    fn from(info: DeviceInfo) -> SettingInfo {
+        SettingInfo::Device(info)
     }
 }
