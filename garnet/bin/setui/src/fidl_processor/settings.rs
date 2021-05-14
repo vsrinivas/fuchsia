@@ -195,11 +195,11 @@ where
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext {
-            service_messenger: service_messenger.clone(),
+            service_messenger,
             hanging_get_handler: self.hanging_get_handler.clone(),
-            exit_tx: exit_tx.clone(),
+            exit_tx,
         };
 
-        return (self.callback)(context.clone(), request);
+        (self.callback)(context, request)
     }
 }

@@ -95,7 +95,6 @@ where
         _exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
         let context = RequestContext { service_messenger };
-
-        return (self.callback)(context, request);
+        (self.callback)(context, request)
     }
 }
