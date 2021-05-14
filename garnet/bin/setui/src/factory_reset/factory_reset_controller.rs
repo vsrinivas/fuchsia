@@ -27,9 +27,9 @@ impl DeviceStorageCompatible for FactoryResetInfo {
     }
 }
 
-impl Into<SettingInfo> for FactoryResetInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::FactoryReset(self)
+impl From<FactoryResetInfo> for SettingInfo {
+    fn from(info: FactoryResetInfo) -> SettingInfo {
+        SettingInfo::FactoryReset(info)
     }
 }
 
