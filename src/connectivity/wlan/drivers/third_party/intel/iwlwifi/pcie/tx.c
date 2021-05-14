@@ -214,6 +214,12 @@ void iwlwifi_timer_stop(struct iwlwifi_timer_info* timer) {
   // If the timer has not been set, or already finished then this will not block.
   if (status == ZX_ERR_NOT_FOUND) {
     sync_completion_wait(&timer->finished, ZX_TIME_INFINITE);
+  } else {
+    // The task had been cancelled successfully. Mark it finished so that if this function is called
+    // again, it can pass the sync_completion_wait() above.
+    mtx_lock(&timer->lock);
+    sync_completion_signal(&timer->finished);
+    mtx_unlock(&timer->lock);
   }
 }
 
