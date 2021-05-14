@@ -19,8 +19,9 @@ namespace media {
 namespace audio {
 
 // WavReader can read any WAV file encoded with 8-bit, 16-bit, or 32-bit LPCM or 32-bit IEEE Floats
-// (format codes 0x0001 and 0x0003, respectively). 32-bit LPCM will be read as 24-in-32-bit LPCM.
-// This covers all files produced by WavWriter.
+// (format codes 0x0001 and 0x0003, respectively). Packed-24 files will be expanded to padded-24
+// streams. 24-bit and 32-bit files are provided to clients as 24-in-32-bit LPCM streams.
+// This covers all common WAV file types, including any file produced by WavWriter.
 //
 // Not thread safe.
 class WavReader {
@@ -39,9 +40,9 @@ class WavReader {
   uint32_t length_in_bytes() const { return length_; }
   uint32_t length_in_frames() const { return length_ / (bits_per_sample_ / 8 * channel_count_); }
 
-  // Reads up to num_bytes of audio data into buffer, returning the number of bytes read,
-  // or an errno on failure.
+  // Read up to num_bytes of audio into buffer; return number of bytes read, or errno on failure.
   fit::result<size_t, int> Read(void* buffer, size_t num_bytes);
+  // Prepare to Read from the beginning of the data section (again).
   int Reset();
 
  private:
@@ -53,6 +54,13 @@ class WavReader {
   uint32_t bits_per_sample_ = 0;
   uint32_t length_ = 0;
   uint32_t header_size_ = 0;
+
+  // If the file is packed-24, we'll expand to padded-24, on-the-fly.
+  // This 12k intermediate buffer should provide good performance even at high bit rates.
+  static constexpr int64_t kPacked24BufferSize = 0x3000;
+  bool packed_24_ = false;
+  int32_t last_modulo_4_ = 0;
+  std::unique_ptr<uint8_t[]> packed_24_buffer_;  // only used for 'packed-24'
 
   fbl::unique_fd file_;
 };

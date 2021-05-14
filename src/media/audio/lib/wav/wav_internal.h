@@ -133,6 +133,7 @@ struct __PACKED WavHeader {
         return fuchsia::media::AudioSampleFormat::UNSIGNED_8;
       case 16:
         return fuchsia::media::AudioSampleFormat::SIGNED_16;
+      case 24:
       case 32:
         return fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
     }

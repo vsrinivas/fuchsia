@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls/clock.h>
 
+#include <iomanip>
 #include <iostream>
 
 #include <fbl/string_printf.h>
@@ -21,9 +22,9 @@ namespace media::tools {
 const char* SampleFormatToString(const fuchsia::media::AudioSampleFormat& format) {
   switch (format) {
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return "float";
+      return "float32";
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return "int24";
+      return "int24-in-32";
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
       return "int16";
     default:
@@ -509,8 +510,6 @@ fuchsia::media::StreamPacket WavPlayer::CreateAudioPacket(uint64_t packet_num) {
 
 uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& packet,
                                            uint64_t packet_num) {
-  auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
-
   if (looping_reached_end_of_file_) {
     auto reset_status = wav_reader_->Reset();
     CLI_CHECK_OK(reset_status, "Could not reset file read pointer to beginning of file");
@@ -518,27 +517,27 @@ uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& p
     looping_reached_end_of_file_ = false;
   }
 
+  auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
+  uint32_t bytes_added = 0;
+
   // WavReader copies audio samples from the WAV file directly into our payload buffer.
   auto status = wav_reader_->Read(audio_buff, packet.payload_size);
   CLI_CHECK(status.is_ok(), "Error from wav_reader::Read: " + std::to_string(status.error()));
 
-  // We track how much data was written into the our outgoing audio buffer
-  auto bytes_added = status.value();
+  // We track how much data was written into our outgoing audio buffer
+  bytes_added = status.value();
 
   if (bytes_added < packet.payload_size) {
-    if (options_.loop_playback) {
-      looping_reached_end_of_file_ = true;
-    }
-
     if (bytes_added == 0) {
       if (options_.loop_playback) {
+        looping_reached_end_of_file_ = true;
         bytes_added = RetrieveAudioForPacket(packet, packet_num);
       } else {
         stopping_ = true;
       }
     }
 
-    // This is extra-safe but unnecessary since we shorten the packet size based on bytes_added.
+    // Extra-safe but unnecessary, since we shorten the final packet based on bytes_added retval.
     std::memset(&audio_buff[bytes_added], 0, packet.payload_size - bytes_added);
   }
 

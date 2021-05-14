@@ -108,19 +108,6 @@ class WavPlayer {
   uint64_t num_frames_completed_ = 0u;
 
   Options options_;
-  // fit::closure quit_callback_;
-  // std::string file_name_;
-  // bool loop_playback_ = false;
-  // bool ultrasound_ = false;
-  // uint32_t frames_per_packet_;
-  // uint32_t frames_per_payload_buffer_;
-  // ClockType clock_type_ = ClockType::Default;
-  // fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
-  // std::optional<float> usage_gain_db_ = std::nullopt;
-  // std::optional<float> usage_volume_ = std::nullopt;
-  // std::optional<float> stream_gain_db_ = std::nullopt;
-  // std::optional<bool> stream_mute_ = std::nullopt;
-  // bool verbose_;
 
   bool started_ = false;
   bool stopping_ = false;

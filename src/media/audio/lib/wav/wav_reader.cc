@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <limits>
 #include <optional>
@@ -96,19 +97,40 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
     return fit::error(ZX_ERR_IO);
   }
   if (wav_header.bits_per_sample != 8 && wav_header.bits_per_sample != 16 &&
-      wav_header.bits_per_sample != 32) {
+      wav_header.bits_per_sample != 24 && wav_header.bits_per_sample != 32) {
     FX_LOGS(WARNING) << "read WAV header failed for " << std::quoted(file_name)
                      << ", unsupported bits_per_sample: " << wav_header.bits_per_sample;
     return fit::error(ZX_ERR_IO);
   }
-  header_size += sizeof(wav_header);
+  // In the WAV file definition, the format chunk is not constant-size; it specifies its own length.
+  // Valid WAV files might have a fmt_chunk_len of 14, 16, 18, 40, etc. (representing valid
+  // WAVEFORMAT, PCMWAVEFORMAT, WAVEFORMATEX, WAVEFORMATEXTENSIBLE file types). We can support them
+  // all, by reading the essential format info, then skipping the rest of the 'fmt ' chunk.
+  auto wav_header_size = offsetof(WavHeader, fmt_chunk_len) + sizeof(wav_header.fmt_chunk_len) +
+                         wav_header.fmt_chunk_len;
+  header_size += wav_header_size;
+  if (wav_header_size != sizeof(WavHeader)) {
+    FX_LOGS(INFO) << "'fmt ' chunk is not PCMWAVEFORMAT, adjusting read position by "
+                  << static_cast<int>(wav_header_size) - static_cast<int>(sizeof(WavHeader));
+
+    // File read position is at end of 'fmt ' chunkj (we assumed PCMWAVEFORMAT). If fmt_chunk_len
+    // is different than that size (could be more or theoretically less), then adjust accordingly.
+    // This keeps the file read position in sync with the header_size value.
+    off_t pos = lseek(fd.get(), header_size, SEEK_SET);
+    if (pos < 0) {
+      FX_LOGS(WARNING) << "read RIFF chunk failed for " << std::quoted(file_name)
+                       << ", could not seek past the wave header; errno " << errno;
+      return fit::error(ZX_ERR_IO);
+    }
+    FX_CHECK(pos == header_size);
+  }
   FX_LOGS(DEBUG) << "Successfully read '" << wav::internal::fourcc_to_string(FMT_FOUR_CC)
                  << "' header (data length " << wav_header.fmt_chunk_len << ")";
 
-  //
   // We find the actual audio samples in a 'data' chunk, usually immediately after the 'fmt ' chunk.
-  // However, other chunks can precede 'data' (such as a 'LIST' chunk containing a 'info' subchunk
-  // with file info). By RIFF 'WAVE' file definition, we can safely skip non-'data' chunks.
+  // Although 'fmt ' and 'data' are the only required chunks in a RIFF-WAV file, optional chunks are
+  // fairly common (for metadata like Artist Name, Song Title, etc). By definition, file readers can
+  // safely skip any optional chunks, so after the 'fmt ' chunk ends, we skip to the 'data' chunk.
   RiffChunkHeader data_header;
   if (read(fd.get(), &data_header, sizeof(data_header)) != sizeof(data_header)) {
     FX_LOGS(WARNING) << "read data header failed for " << std::quoted(file_name) << ", errno "
@@ -150,15 +172,51 @@ fit::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(const std::
   out->header_size_ = header_size;
   out->file_ = std::move(fd);
 
+  if (wav_header.bits_per_sample == 24) {
+    out->bits_per_sample_ = 32;
+    out->length_ = data_header.length * 4 / 3;
+
+    out->packed_24_ = true;
+    out->packed_24_buffer_ = std::make_unique<uint8_t[]>(kPacked24BufferSize);
+  }
+
   return fit::ok(std::move(out));
 }
 
-fit::result<size_t, int> WavReader::Read(void* buffer, size_t num_bytes) {
-  ssize_t n = read(file_.get(), buffer, num_bytes);
-  if (n < 0) {
+fit::result<size_t, int> WavReader::Read(void* buffer, size_t requested_bytes) {
+  // In the majority, non-packed-24 case, just read the bytes directly to the client buffer.
+  if (!packed_24_) {
+    int64_t file_bytes = read(file_.get(), buffer, requested_bytes);
+
+    if (file_bytes < 0) {
+      return fit::error(errno);
+    }
+    return fit::ok(file_bytes);
+  }
+
+  // If packed-24, read the file just once, to avoid potential performance problems, then
+  // decompress each sample (from 3 to 4 bytes) as we write sequentially into the client buffer.
+  int64_t file_bytes_needed = std::min(
+      kPacked24BufferSize, (static_cast<int64_t>(requested_bytes) + last_modulo_4_) * 3 / 4);
+  int64_t file_bytes = read(file_.get(), packed_24_buffer_.get(), file_bytes_needed);
+
+  if (file_bytes < 0) {
     return fit::error(static_cast<int>(errno));
   }
-  return fit::ok(static_cast<size_t>(n));
+
+  auto client_buffer = reinterpret_cast<uint8_t*>(buffer);
+  int64_t client_offset = 0, packed_offset = 0;
+  while (packed_offset < file_bytes) {
+    if ((last_modulo_4_ + client_offset) % 4 == 0) {
+      client_buffer[client_offset++] = 0;
+    } else {
+      client_buffer[client_offset++] = packed_24_buffer_[packed_offset++];
+    }
+  }
+  FX_CHECK(client_offset <= static_cast<int64_t>(requested_bytes));
+
+  last_modulo_4_ = (last_modulo_4_ + client_offset) % 4;
+  return fit::ok(static_cast<size_t>(client_offset));
 }
 
 int WavReader::Reset() {
