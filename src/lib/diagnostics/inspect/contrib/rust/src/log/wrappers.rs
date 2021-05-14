@@ -4,7 +4,7 @@
 
 use super::WriteInspect;
 
-use crate::nodes::NodeWriter;
+use fuchsia_inspect::Node;
 
 /// Wrapper to log bytes in an `inspect_log!` or `inspect_insert!` macro.
 ///
@@ -14,8 +14,8 @@ use crate::nodes::NodeWriter;
 pub struct InspectBytes<'a>(pub &'a [u8]);
 
 impl<'a> WriteInspect for InspectBytes<'a> {
-    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
-        writer.create_bytes(key, self.0);
+    fn write_inspect(&self, writer: &Node, key: &str) {
+        writer.record_bytes(key, self.0);
     }
 }
 
@@ -41,11 +41,13 @@ impl<'a, T> WriteInspect for InspectList<'a, T>
 where
     T: WriteInspect,
 {
-    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
-        let mut child = writer.create_child(key);
+    fn write_inspect(&self, writer: &Node, key: &str) {
+        let child = writer.create_child(key);
         for (i, val) in self.0.iter().enumerate() {
-            val.write_inspect(&mut child, &i.to_string());
+            val.write_inspect(&child, &i.to_string());
         }
+
+        writer.record(child);
     }
 }
 
@@ -55,7 +57,7 @@ where
 /// Example:
 /// ```
 /// let list = ["foo", "bar", "baz"]
-/// let list_mapped = InspectListClosure(&list, |mut node_writer, key, item| {
+/// let list_mapped = InspectListClosure(&list, |node_writer, key, item| {
 ///     let mapped_item = format!("super{}", item);
 ///     inspect_insert!(node_writer, var key: mapped_item);
 /// });
@@ -71,16 +73,18 @@ where
 /// ```
 pub struct InspectListClosure<'a, T, F>(pub &'a [T], pub F)
 where
-    F: Fn(&mut NodeWriter<'_>, &str, &T);
+    F: Fn(&Node, &str, &T);
 
 impl<'a, T, F> WriteInspect for InspectListClosure<'a, T, F>
 where
-    F: Fn(&mut NodeWriter<'_>, &str, &T),
+    F: Fn(&Node, &str, &T),
 {
-    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
-        let mut child = writer.create_child(key);
+    fn write_inspect(&self, writer: &Node, key: &str) {
+        let child = writer.create_child(key);
         for (i, val) in self.0.iter().enumerate() {
-            self.1(&mut child, &i.to_string(), val);
+            self.1(&child, &i.to_string(), val);
         }
+
+        writer.record(child);
     }
 }

@@ -4,8 +4,8 @@
 
 use {
     fuchsia_async as fasync,
-    fuchsia_inspect::{self as inspect, NumericProperty, Property},
-    fuchsia_inspect_contrib::nodes::{ManagedNode, NodeExt},
+    fuchsia_inspect::{self as inspect, Node, NumericProperty, Property},
+    fuchsia_inspect_contrib::nodes::NodeExt,
     fuchsia_inspect_derive::Inspect,
     fuchsia_zircon as zx,
     std::fmt,
@@ -130,21 +130,21 @@ impl<T: IsInspectable> std::ops::Deref for Inspectable<T> {
 /// object. This is because inspect handles for the data will never need to be accessed after
 /// creation.
 pub trait ImmutableDataInspect<T> {
-    fn new(data: &T, manager: ManagedNode) -> Self;
+    fn new(data: &T, manager: Node) -> Self;
 }
 
 /// "Fire and forget" representation of some inspect data that does not allow access inspect
 /// handles after they are created.
 pub struct ImmutableDataInspectManager {
-    pub(crate) _manager: ManagedNode,
+    pub(crate) _manager: Node,
 }
 
 impl<T, I: ImmutableDataInspect<T>> InspectData<T> for I {
     /// Create a new instance of some type `I` that represents the immutable inspect data for a type
-    /// `T`. This is done by handing `I` a `ManagedNode` instead of a `Node` and calling into the
+    /// `T`. This is done by handing `I` a `Node` and calling into the
     /// monomorphized version of ImmutableDataInspect<T> for I.
     fn new(data: &T, inspect: inspect::Node) -> I {
-        I::new(data, ManagedNode::new(inspect))
+        I::new(data, inspect)
     }
 }
 

@@ -24,7 +24,7 @@ mod wrappers;
 
 pub use wrappers::{InspectBytes, InspectList, InspectListClosure};
 
-use crate::nodes::NodeWriter;
+use fuchsia_inspect::Node;
 
 /// Trait for writing to a node in bounded lists.
 pub trait WriteInspect {
@@ -34,7 +34,7 @@ pub trait WriteInspect {
     ///
     /// If the same key is used to write values multiple times, then there will be multiple
     /// values with the same name in the underlying VMO.
-    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str);
+    fn write_inspect(&self, writer: &Node, key: &str);
 }
 
 /// Macro to log a new entry to a bounded list node with the specified key-value pairs. Each value
@@ -62,6 +62,7 @@ pub trait WriteInspect {
 macro_rules! inspect_log {
     ($bounded_list_node:expr, $($args:tt)+) => {{
         use $crate::inspect_insert;
+        use $crate::nodes::NodeExt;
         // Hack to allow the client to pass in a MutexGuard temporary for $bounded_list_node expr,
         // since the temporary lives until the end of the match expression. Example usage:
         // ```
@@ -69,23 +70,22 @@ macro_rules! inspect_log {
         // inspect_log!(list_node.lock(), ...);
         // ```
         match $bounded_list_node.create_entry() {
-            mut node_writer => {
-                node_writer.create_time("@time");
-                inspect_insert!(@internal_inspect_log node_writer, $($args)+);
+            node => {
+                node.record_time("@time");
+                inspect_insert!(@internal_inspect_log node, $($args)+);
             }
         }
     }};
 }
 
-/// Macro to insert items using a NodeWriter. Each value must be a type that implements
+/// Macro to insert items using a Node. Each value must be a type that implements
 /// `WriteInspect`.
 ///
 /// Example:
 ///
 /// ```
-/// let managed_node = ...;   // fuchsia-inspect-contrib::nodes::ManagedNode
-/// let node_writer = managed_node.writer();
-/// inspect_insert!(node_writer, k1: "1", k2: 2i64, k3: "3");
+/// let node = ...; // fuchsia_inspect::Node
+/// inspect_insert!(node, k1: "1", k2: 2i64, k3: "3");
 /// ```
 #[macro_export]
 macro_rules! inspect_insert {
@@ -93,9 +93,11 @@ macro_rules! inspect_insert {
 
     // Insert tree
     (@internal $node_writer:expr, var $key:ident: { $($sub:tt)+ }) => {{
-        let mut child_writer = $node_writer.create_child($key);
+        let child_writer = $node_writer.create_child($key);
         inspect_insert!(@internal child_writer, $($sub)+);
+        $node_writer.record(child_writer);
     }};
+
     (@internal $node_writer:expr, var $key:ident: { $($sub:tt)+ }, $($rest:tt)*) => {{
         inspect_insert!(@internal $node_writer, var $key: { $($sub)+ });
         inspect_insert!(@internal $node_writer, $($rest)*);
@@ -103,8 +105,9 @@ macro_rules! inspect_insert {
 
     // Insert properties and metrics
     (@internal $node_writer:expr, var $key:ident: $val:expr) => {{
-        $val.write_inspect(&mut $node_writer, $key);
+        $val.write_inspect(&$node_writer, $key);
     }};
+
     (@internal $node_writer:expr, var $key:ident: $val:expr, $($rest:tt)*) => {{
         inspect_insert!(@internal $node_writer, var $key: $val);
         inspect_insert!(@internal $node_writer, $($rest)*);
@@ -116,6 +119,7 @@ macro_rules! inspect_insert {
             inspect_insert!(@internal $node_writer, var $key: val);
         }
     }};
+
     (@internal $node_writer:expr, var $key:ident?: $val:expr, $($rest:tt)*) => {{
         inspect_insert!(@internal $node_writer, var $key?: $val);
         inspect_insert!(@internal $node_writer, $($rest)*);
@@ -126,6 +130,7 @@ macro_rules! inspect_insert {
         let key = stringify!($key);
         inspect_insert!(@internal $node_writer, var key: $($rest)+);
     }};
+
     (@internal $node_writer:expr, $key:ident?: $($rest:tt)+) => {{
         let key = stringify!($key);
         inspect_insert!(@internal $node_writer, var key?: $($rest)+);
@@ -139,6 +144,7 @@ macro_rules! inspect_insert {
         use $crate::log::WriteInspect;
         inspect_insert!(@internal $node_writer, $($args)*);
     }};
+
     (@internal_inspect_log $node_writer:expr, $($args:tt)+) => {{
         use $crate::log::WriteInspect;
         inspect_insert!(@internal $node_writer, $($args)+);
@@ -149,6 +155,7 @@ macro_rules! inspect_insert {
         use $crate::log::WriteInspect;
         inspect_insert!(@internal $node_writer, $($args)+);
     }};
+
     // Entry point: non-block syntax
     ($node_writer:expr, $($args:tt)+) => {{
         use $crate::log::WriteInspect;
@@ -183,16 +190,18 @@ macro_rules! inspect_insert {
 #[macro_export]
 macro_rules! make_inspect_loggable {
     ($($args:tt)+) => {{
-        use $crate::{inspect_insert, nodes::NodeWriter};
+        use $crate::inspect_insert;
+        use fuchsia_inspect::Node;
         struct WriteInspectClosure<F>(F);
-        impl<F> WriteInspect for WriteInspectClosure<F> where F: Fn(&mut NodeWriter<'_>, &str) {
-            fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
+        impl<F> WriteInspect for WriteInspectClosure<F> where F: Fn(&Node, &str) {
+            fn write_inspect(&self, writer: &Node, key: &str) {
                 self.0(writer, key);
             }
         }
-        let f = WriteInspectClosure(move |writer: &mut NodeWriter<'_>, key: &str| {
-            let mut child = writer.create_child(key);
+        let f = WriteInspectClosure(move |writer: &Node, key: &str| {
+            let child = writer.create_child(key);
             inspect_insert!(child, $($args)+);
+            writer.record(child);
         });
         f
     }};
@@ -382,7 +391,7 @@ mod tests {
     fn test_log_inspect_list_closure() {
         let (inspector, mut node) = inspector_and_list_node();
         let list = [13u32, 17, 29];
-        let list_mapped = InspectListClosure(&list, |mut node_writer, key, item| {
+        let list_mapped = InspectListClosure(&list, |node_writer, key, item| {
             inspect_insert!(node_writer, var key: item * 2);
         });
 
@@ -406,7 +415,7 @@ mod tests {
     fn test_inspect_insert_parsing() {
         // if this test compiles, it's considered as succeeded
         let (_inspector, mut node) = inspector_and_list_node();
-        let mut node_writer = node.create_entry();
+        let node_writer = node.create_entry();
 
         // Non-block version, no trailing comma
         inspect_insert!(node_writer, k1: "v1".to_string(), k2: if true { 10u64 } else { 20 });

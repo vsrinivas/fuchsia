@@ -22,7 +22,7 @@ use {
     fuchsia_inspect_contrib::{
         inspect_insert, inspect_log,
         log::{InspectList, WriteInspect},
-        nodes::{BoundedListNode as InspectBoundedListNode, NodeWriter},
+        nodes::BoundedListNode as InspectBoundedListNode,
     },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -169,7 +169,7 @@ impl InternalBss<'_> {
     }
 }
 impl<'a> WriteInspect for InternalBss<'a> {
-    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
+    fn write_inspect(&self, writer: &InspectNode, key: &str) {
         inspect_insert!(writer, var key: {
             ssid_hash: self.hasher.hash_ssid(&self.network_info.network_id.ssid),
             bssid_hash: self.hasher.hash_mac_addr(&self.bss_info.bssid),

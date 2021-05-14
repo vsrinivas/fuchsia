@@ -11,7 +11,7 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
-    fuchsia_inspect_contrib::nodes::ManagedNode,
+    fuchsia_inspect::Node,
     std::{convert::TryFrom, fmt, str::FromStr},
 };
 
@@ -60,23 +60,22 @@ pub struct Peer {
 }
 
 impl ImmutableDataInspect<Peer> for ImmutableDataInspectManager {
-    fn new(data: &Peer, mut manager: ManagedNode) -> ImmutableDataInspectManager {
-        let mut writer = manager.writer();
-        let _ = writer.create_string("technology", &data.technology.debug());
-        let _ = writer.create_string("appearance", &data.appearance.debug());
+    fn new(data: &Peer, manager: Node) -> ImmutableDataInspectManager {
+        manager.record_string("technology", &data.technology.debug());
+        manager.record_string("appearance", &data.appearance.debug());
         if let Some(rssi) = data.rssi {
-            let _ = writer.create_int("rssi", rssi as i64);
+            manager.record_int("rssi", rssi as i64);
         }
         if let Some(tx_power) = data.tx_power {
-            let _ = writer.create_int("tx_power", tx_power as i64);
+            manager.record_int("tx_power", tx_power as i64);
         }
-        let _ = writer.create_uint("connected", data.connected.to_property());
-        let _ = writer.create_uint("bonded", data.bonded.to_property());
+        manager.record_uint("connected", data.connected.to_property());
+        manager.record_uint("bonded", data.bonded.to_property());
         if !data.le_services.is_empty() {
-            let _ = writer.create_string("le_services", &data.le_services.to_property());
+            manager.record_string("le_services", &data.le_services.to_property());
         }
         if !data.bredr_services.is_empty() {
-            let _ = writer.create_string("bredr_services", &data.bredr_services.to_property());
+            manager.record_string("bredr_services", &data.bredr_services.to_property());
         }
         Self { _manager: manager }
     }

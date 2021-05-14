@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use super::WriteInspect;
-
-use crate::nodes::NodeWriter;
+use fuchsia_inspect::Node;
 
 // --- Utility macros to help with implementing WriteInspect ---
 
@@ -12,7 +11,7 @@ macro_rules! impl_write_inspect {
     ($inspect_value_type:ident, $_self:ident => $self_expr:expr, $($ty:ty),+) => {
         $(
             impl WriteInspect for $ty {
-                fn write_inspect(&$_self, writer: &mut NodeWriter<'_>, key: &str) {
+                fn write_inspect(&$_self, writer: &Node, key: &str) {
                     write_inspect_value!($inspect_value_type, writer, key, $self_expr);
                 }
             }
@@ -22,19 +21,19 @@ macro_rules! impl_write_inspect {
 
 macro_rules! write_inspect_value {
     (Str, $node_writer:expr, $key:expr, $expr:expr) => {
-        $node_writer.create_string($key, $expr);
+        $node_writer.record_string($key, $expr);
     };
     (Uint, $node_writer:expr, $key:expr, $expr:expr) => {
-        $node_writer.create_uint($key, $expr);
+        $node_writer.record_uint($key, $expr);
     };
     (Int, $node_writer:expr, $key:expr, $expr:expr) => {
-        $node_writer.create_int($key, $expr);
+        $node_writer.record_int($key, $expr);
     };
     (Double, $node_writer:expr, $key:expr, $expr:expr) => {
-        $node_writer.create_double($key, $expr);
+        $node_writer.record_double($key, $expr);
     };
     (Bool, $node_writer:expr, $key:expr, $expr:expr) => {
-        $node_writer.create_bool($key, $expr);
+        $node_writer.record_bool($key, $expr);
     };
 }
 
@@ -47,7 +46,7 @@ impl_write_inspect!(Double, self => (*self).into(), f32, f64);
 impl_write_inspect!(Bool, self => *self, bool);
 
 impl<V: WriteInspect + ?Sized> WriteInspect for &V {
-    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
+    fn write_inspect(&self, writer: &Node, key: &str) {
         (*self).write_inspect(writer, key)
     }
 }

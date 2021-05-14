@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{ManagedNode, NodeWriter};
-
 use fuchsia_inspect::Node;
 use std::collections::VecDeque;
 
@@ -18,7 +16,7 @@ pub struct BoundedListNode {
     node: Node,
     index: usize,
     capacity: usize,
-    items: VecDeque<ManagedNode>,
+    items: VecDeque<Node>,
 }
 
 impl BoundedListNode {
@@ -37,17 +35,16 @@ impl BoundedListNode {
     /// children to be maintained in the list.
     ///
     /// If creating new entry exceeds capacity of the list, the oldest entry is evicted.
-    pub fn create_entry(&mut self) -> NodeWriter<'_> {
+    pub fn create_entry(&mut self) -> &Node {
         if self.items.len() >= self.capacity {
             self.items.pop_front();
         }
 
-        let entry = self.node.create_child(&self.index.to_string());
-        let entry_node = ManagedNode::new(entry);
+        let entry_node = self.node.create_child(&self.index.to_string());
         self.items.push_back(entry_node);
 
         self.index += 1;
-        self.items.back_mut().unwrap().writer()
+        self.items.back().unwrap()
     }
 }
 
@@ -104,11 +101,9 @@ mod tests {
         let mut list_node = BoundedListNode::new(list_node, 3);
 
         {
-            let mut node_writer = list_node.create_entry();
-            node_writer
-                .create_string("str_key", "str_value")
-                .create_child("child")
-                .create_int("int_key", 2);
+            let node_writer = list_node.create_entry();
+            node_writer.record_string("str_key", "str_value");
+            node_writer.record_child("child", |child| child.record_int("int_key", 2));
         } // <-- node_writer is dropped
 
         // verify list node 0 is still in the tree

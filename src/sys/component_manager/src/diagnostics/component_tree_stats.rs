@@ -360,11 +360,10 @@ impl AggregatedStats {
     fn update(&mut self, measurement: Measurement) {
         // TODO(fxbug.dev/66596): use atomic updates here. We can't use inspect_log since it sets
         // automatically a timestamp for the entry.
-        let mut node_writer = self.node.create_entry();
-        node_writer
-            .create_int("timestamp", measurement.timestamp().into_nanos())
-            .create_int("cpu_time", measurement.cpu_time().into_nanos())
-            .create_int("queue_time", measurement.queue_time().into_nanos());
+        let child = self.node.create_entry();
+        child.record_int("timestamp", measurement.timestamp().into_nanos());
+        child.record_int("cpu_time", measurement.cpu_time().into_nanos());
+        child.record_int("queue_time", measurement.queue_time().into_nanos());
         self.previous_measurement = self.recent_measurement.take();
         self.recent_measurement = Some(measurement);
     }

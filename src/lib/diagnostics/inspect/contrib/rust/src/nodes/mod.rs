@@ -5,10 +5,8 @@
 //! Utilities and wrappers providing higher level functionality for Inspect Nodes and properties.
 
 mod list;
-mod managed;
 
 pub use list::BoundedListNode;
-pub use managed::{ManagedNode, NodeWriter};
 
 use fuchsia_inspect::Node;
 use fuchsia_inspect::{IntProperty, Property};
@@ -21,6 +19,9 @@ pub trait NodeExt {
 
     /// Creates a new property holding the given timestamp.
     fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty;
+
+    /// Records a new property holding the current monotonic timestamp.
+    fn record_time(&self, name: impl AsRef<str>);
 }
 
 impl NodeExt for Node {
@@ -31,6 +32,11 @@ impl NodeExt for Node {
 
     fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty {
         TimeProperty { inner: self.create_int(name, timestamp.into_nanos()) }
+    }
+
+    fn record_time(&self, name: impl AsRef<str>) {
+        let now = zx::Time::get_monotonic();
+        self.record_int(name, now.into_nanos());
     }
 }
 

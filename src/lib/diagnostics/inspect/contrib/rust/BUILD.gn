@@ -38,7 +38,6 @@ rustc_library("fuchsia-inspect-contrib") {
     "src/log/mod.rs",
     "src/log/wrappers.rs",
     "src/nodes/list.rs",
-    "src/nodes/managed.rs",
     "src/nodes/mod.rs",
   ]
 }
