@@ -30,6 +30,14 @@
                 "#fuchsia_component_test_framework_intermediary",
             ],
         },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#fuchsia_component_test_collection" ],
+        },
     ],
     environments: [
         {

@@ -7,11 +7,4 @@
     program: {
         binary: "bin/inspect_runner_integration_test",
     },
-    offer: [
-        {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
-        },
-    ],
 }
