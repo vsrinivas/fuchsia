@@ -74,7 +74,7 @@ Specifically, ..."
 
 ## Latest status
 
-Last updated: **April 2021**
+Last updated: **May 2021**
 
 A high-level diagram of the system's component topology is shown below:
 
@@ -102,6 +102,9 @@ including in no particular order:
     configurations service, the DHCP daemon, activity service, last reboot
     logger, etc'.
 
+In addition, all [unit tests with generated manifests][unit-tests-generated]
+are v2 components.
+
 ## Interoperability with v1 components
 
 Component manager launches `appmgr`, itself a v2 component, in order to manage
@@ -115,7 +118,7 @@ needs are routed to the `session_manager` from `appmgr`.
 
 ## Current areas of focus
 
-Last updated: **April 2021**
+Last updated: **May 2021**
 
 Components v2 migrations are happening throughout the system. However there is
 currently additional focus on:
@@ -130,6 +133,7 @@ currently additional focus on:
     tracked [here][label-cf-v2-migration].
 -   Scaling migrations by creating and expanding a
     [self-service guide][migrating-sys-components].
+-   Exploratory work with migrating wlan and Thread/Weave components.
 
 [appmgr]: /src/sys/appmgr
 [cfv1]: /docs/glossary.md#components-v1
@@ -147,3 +151,4 @@ currently additional focus on:
 [session-framework]: /docs/concepts/session/introduction.md
 [sfw]: /docs/concepts/session/introduction.md
 [sysmgr]: /docs/glossary.md#sysmgr
+[unit-tests-generated]: /docs/development/components/build.md#unit-tests
