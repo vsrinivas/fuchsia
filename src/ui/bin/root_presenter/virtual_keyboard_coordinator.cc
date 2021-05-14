@@ -67,6 +67,7 @@ void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
 void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(
     fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  manager_->OnTypeOrVisibilityChange(text_type, is_visible);
 }
 
 }  // namespace root_presenter

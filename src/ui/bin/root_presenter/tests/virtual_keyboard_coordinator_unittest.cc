@@ -94,6 +94,9 @@ TEST_F(VirtualKeyboardCoordinatorTest, NotifyVisibilityChangeDoesNotPropagatePro
   ASSERT_EQ(std::nullopt, controller_ptr->is_visible());
 }
 
+// For tests observing RequestTypeAndVisibility()'s side-effects over FIDL,
+// see virtual_keyboard_fidl_test.cc.
+
 TEST_F(VirtualKeyboardCoordinatorTest, RequestTypeAndVisibilityDoesNotCrash) {
   FidlBoundVirtualKeyboardCoordinator coordinator(context_provider()->context());
   coordinator.RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,

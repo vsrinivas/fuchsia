@@ -39,7 +39,8 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
   }
 
   std::tuple<fuchsia::input::virtualkeyboard::ControllerPtr, fuchsia::ui::views::ViewRefControl>
-  CreateControllerClient() {
+  CreateControllerClient(fuchsia::input::virtualkeyboard::TextType initial_text_type =
+                             fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC) {
     // Connect to `ControllerCreator` protocol.
     fuchsia::input::virtualkeyboard::ControllerCreatorPtr controller_creator;
     ConnectToPublicService(controller_creator.NewRequest());
@@ -47,8 +48,7 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
     // Create a `Controller`.
     fuchsia::input::virtualkeyboard::ControllerPtr controller;
     auto view_ref_pair = scenic::ViewRefPair::New();
-    controller_creator->Create(std::move(view_ref_pair.view_ref),
-                               fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+    controller_creator->Create(std::move(view_ref_pair.view_ref), initial_text_type,
                                controller.NewRequest());
 
     return {std::move(controller), std::move(view_ref_pair.control_ref)};
@@ -152,6 +152,13 @@ TEST_F(VirtualKeyboardFidlTest, LastControllerHasPriority) {
 }  // namespace fuchsia_input_virtualkeyboard_controller_connections
 
 // Tests that verify the behavior of the methods of `fuchsia.input.virtualkeyboard.Controller`.
+//
+// Note: these tests focus on the values/errors returned by Controller methods, _not_ how these
+// methods affect values returned to calls on other protocols.
+//
+// To see, for example, how Controller.RequestShow() resolves a hanging get call to
+// Manager.WatchtypeAndVisibility(), see the fuchsia_input_virtualkeyboard_manager_methods
+// tests.
 namespace fuchsia_input_virtualkeyboard_controller_methods {
 
 TEST_F(VirtualKeyboardFidlTest, SetTextTypeDoesNotError) {
@@ -413,18 +420,155 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstIsDisconnect
 // tests.
 namespace fuchsia_input_virtualkeyboard_manager_methods {
 
-// TODO: Add tests that verify that WatchTypeAndVisibility() is resolved by
-// RequestShow(), RequestHide(), and SetTextType(), after
-// VirtualKeyboardCoordinator propagates that information to VirtualKeyboardManager.
-
-TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibilityDoesNotError) {
-  zx_status_t status = ZX_OK;
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_FirstCallReturnsImmediately) {
   auto manager = CreateManagerClient();
-  manager.set_error_handler([&status](zx_status_t stat) { status = stat; });
+  bool was_called = false;
+  manager->WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType reason,
+                                      bool is_visible) { was_called = true; });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(was_called);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallHangs) {
+  // Create manager.
+  zx_status_t manager_status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&](zx_status_t stat) { manager_status = stat; });
+
+  // Send first watch, which completes immediately.
   manager->WatchTypeAndVisibility(
       [](fuchsia::input::virtualkeyboard::TextType reason, bool is_visible) {});
+
+  // Send second watch, which hangs.
+  bool was_called = false;
+  manager->WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType reason,
+                                      bool is_visible) { was_called = true; });
   RunLoopUntilIdle();
-  ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
+  ASSERT_FALSE(was_called);
+  ASSERT_EQ(ZX_OK, manager_status) << "status = " << zx_status_get_string(manager_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedByRequestShow) {
+  // Create manager.
+  auto manager = CreateManagerClient();
+
+  // Send first watch, which completes immediately.
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType reason, bool is_visible) {});
+
+  // Send second watch, which hangs.
+  bool was_called = false;
+  manager->WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType reason,
+                                      bool is_visible) { was_called = true; });
+  RunLoopUntilIdle();
+
+  // Create a Controller, and ask for the keyboard to be shown. This changes the state of
+  // the keyboard, since the default state is hidden.
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(was_called);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsNotResolvedByRequestHide) {
+  // Create manager.
+  zx_status_t manager_status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&](zx_status_t stat) { manager_status = stat; });
+
+  // Send first watch, which completes immediately.
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType reason, bool is_visible) {});
+
+  // Send second watch, which hangs.
+  bool was_called = false;
+  manager->WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType reason,
+                                      bool is_visible) { was_called = true; });
+  RunLoopUntilIdle();
+
+  // Create a Controller, and ask for the keyboard to be hidden. This does _not_ change the
+  // state of the keyboard, since the default state is also hidden.
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller->RequestHide();
+  RunLoopUntilIdle();
+
+  ASSERT_FALSE(was_called);
+  ASSERT_EQ(ZX_OK, manager_status) << "status = " << zx_status_get_string(manager_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedBySetTextType) {
+  // Create manager.
+  auto manager = CreateManagerClient();
+
+  // Send first watch, which completes immediately.
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType reason, bool is_visible) {});
+
+  // Send second watch, which hangs.
+  bool was_called = false;
+  manager->WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType reason,
+                                      bool is_visible) { was_called = true; });
+  RunLoopUntilIdle();
+
+  // Create a Controller, then change the text type.
+  auto [controller, view_ref_control] =
+      CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  controller->SetTextType(fuchsia::input::virtualkeyboard::TextType::PHONE);
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(was_called);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_ReceivesConfigSetBeforeManagerConnection) {
+  // Create a Controller, and request that the keyboard be shown.
+  auto [controller, view_ref_control] =
+      CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  // Create manager.
+  auto manager = CreateManagerClient();
+
+  // Try to get the visibility of the keyboard.
+  std::optional<bool> is_visible;
+  manager->WatchTypeAndVisibility(
+      [&](fuchsia::input::virtualkeyboard::TextType reason, bool is_vis) { is_visible = is_vis; });
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(true, is_visible);
+}
+
+TEST_F(VirtualKeyboardFidlTest,
+       WatchTypeAndVisibility_GetsCorrectVisibilityAfterRaceOnProgrammaticChangeNotification) {
+  // Create controller and manager.
+  auto [controller, view_ref_control] =
+      CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  auto manager = CreateManagerClient();
+
+  // Request the keyboard to be hidden.
+  controller->RequestHide();
+  RunLoopUntilIdle();
+
+  // Request the keyboard to be shown.
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  // Echo back the first request. We deliberately send this _after_ the RequestShow() above.
+  manager->Notify(false, fuchsia::input::virtualkeyboard::VisibilityChangeReason::PROGRAMMATIC,
+                  []() {});
+  RunLoopUntilIdle();
+
+  // Modify the text type.
+  controller->SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
+  RunLoopUntilIdle();
+
+  // Verify that the keyboard is still shown.
+  std::optional<bool> actual_visibility;
+  manager->WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType reason,
+                                      bool is_visible) { actual_visibility = is_visible; });
+  RunLoopUntilIdle();
+  ASSERT_EQ(true, actual_visibility);
 }
 
 TEST_F(VirtualKeyboardFidlTest, NotifyIsAcked) {
