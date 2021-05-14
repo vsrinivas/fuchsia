@@ -114,7 +114,8 @@ async fn process_request(
             policy_request_respond!(context, responder, PolicyType::Audio, policy_request);
         }
     };
-    return Ok(None);
+
+    Ok(None)
 }
 
 #[cfg(test)]

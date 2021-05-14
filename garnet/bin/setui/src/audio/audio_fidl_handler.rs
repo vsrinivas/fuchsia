@@ -27,8 +27,8 @@ impl From<SettingInfo> for AudioSettings {
     fn from(response: SettingInfo) -> Self {
         if let SettingInfo::Audio(info) = response {
             let mut streams = Vec::new();
-            for stream in info.streams.iter() {
-                streams.push(AudioStreamSettings::from(stream.clone()));
+            for stream in &info.streams {
+                streams.push(AudioStreamSettings::from(*stream));
             }
 
             let mut audio_input = AudioInput::EMPTY;
@@ -101,6 +101,8 @@ impl From<AudioSettingSource> for AudioStreamSettingSource {
     }
 }
 
+// Clippy warns about all variants starting with `No`.
+#[allow(clippy::enum_variant_names)]
 #[derive(thiserror::Error, Debug)]
 enum Error {
     #[error("missing user_volume at stream {0}")]
@@ -121,13 +123,11 @@ fn to_request(settings: AudioSettings) -> Option<Result<Request, Error>> {
             .into_iter()
             .enumerate()
             .map(|(i, stream)| {
-                let user_volume = stream.user_volume.ok_or_else(|| Error::NoUserVolume(i))?;
-                let user_volume_level =
-                    user_volume.level.ok_or_else(|| Error::NoUserVolumeLevel(i))?;
-                let user_volume_muted =
-                    user_volume.muted.ok_or_else(|| Error::NoUserVolumeMuted(i))?;
-                let stream_type = stream.stream.ok_or_else(|| Error::NoStreamType(i))?.into();
-                let source = stream.source.ok_or_else(|| Error::NoSource(i))?.into();
+                let user_volume = stream.user_volume.ok_or(Error::NoUserVolume(i))?;
+                let user_volume_level = user_volume.level.ok_or(Error::NoUserVolumeLevel(i))?;
+                let user_volume_muted = user_volume.muted.ok_or(Error::NoUserVolumeMuted(i))?;
+                let stream_type = stream.stream.ok_or(Error::NoStreamType(i))?.into();
+                let source = stream.source.ok_or(Error::NoSource(i))?.into();
                 Ok(AudioStream { stream_type, source, user_volume_level, user_volume_muted })
             })
             .collect::<Result<Vec<_>, _>>()
@@ -183,5 +183,6 @@ async fn process_request(
             return Ok(Some(req));
         }
     }
-    return Ok(None);
+
+    Ok(None)
 }

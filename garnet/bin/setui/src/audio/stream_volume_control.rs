@@ -90,31 +90,32 @@ impl StreamVolumeControl {
         }
 
         // Round volume level from user input.
-        let mut new_stream_value = stream.clone();
+        let mut new_stream_value = stream;
         new_stream_value.user_volume_level = round_volume_level(stream.user_volume_level);
 
         let proxy = self.proxy.as_ref().unwrap();
 
-        if self.stored_stream.user_volume_level != new_stream_value.user_volume_level {
-            if proxy.set_volume(new_stream_value.user_volume_level).is_err() {
-                self.stored_stream = new_stream_value;
-                return Err(ControllerError::ExternalFailure(
-                    SettingType::Audio,
-                    CONTROLLER_ERROR_DEPENDENCY.into(),
-                    "set volume".into(),
-                ));
-            }
+        if (self.stored_stream.user_volume_level - new_stream_value.user_volume_level).abs()
+            > f32::EPSILON
+            && proxy.set_volume(new_stream_value.user_volume_level).is_err()
+        {
+            self.stored_stream = new_stream_value;
+            return Err(ControllerError::ExternalFailure(
+                SettingType::Audio,
+                CONTROLLER_ERROR_DEPENDENCY.into(),
+                "set volume".into(),
+            ));
         }
 
-        if self.stored_stream.user_volume_muted != new_stream_value.user_volume_muted {
-            if proxy.set_mute(stream.user_volume_muted).is_err() {
-                self.stored_stream = new_stream_value;
-                return Err(ControllerError::ExternalFailure(
-                    SettingType::Audio,
-                    CONTROLLER_ERROR_DEPENDENCY.into(),
-                    "set mute".into(),
-                ));
-            }
+        if self.stored_stream.user_volume_muted != new_stream_value.user_volume_muted
+            && proxy.set_mute(stream.user_volume_muted).is_err()
+        {
+            self.stored_stream = new_stream_value;
+            return Err(ControllerError::ExternalFailure(
+                SettingType::Audio,
+                CONTROLLER_ERROR_DEPENDENCY.into(),
+                "set mute".into(),
+            ));
         }
 
         self.stored_stream = new_stream_value;
@@ -163,7 +164,7 @@ impl StreamVolumeControl {
         // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a notification
         // when we receive an update.
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
-        let publisher_clone = self.publisher.as_ref().map_or(None, |p| Some(p.clone()));
+        let publisher_clone = self.publisher.clone();
         let mut volume_events = vol_control_proxy.take_event_stream();
         let early_exit_action = self.early_exit_action.clone();
         fasync::Task::spawn(async move {

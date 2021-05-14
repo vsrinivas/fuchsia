@@ -122,7 +122,7 @@ impl State {
             .values()
             .filter_map(|property| property.highest_id())
             .max()
-            .unwrap_or(PolicyId::create(0));
+            .unwrap_or_else(|| PolicyId::create(0));
         PolicyId::create(highest_id + 1)
     }
 }
@@ -255,7 +255,8 @@ impl From<TransformFlags> for Vec<fidl_fuchsia_settings_policy::Transform> {
         if src.contains(TransformFlags::TRANSFORM_MIN) {
             transforms.push(fidl_fuchsia_settings_policy::Transform::Min);
         }
-        return transforms;
+
+        transforms
     }
 }
 
@@ -296,14 +297,14 @@ impl TryFrom<PolicyParameters> for Transform {
                 if volume.map_or(false, |val| !val.is_finite()) {
                     return Err("max volume is not a finite number");
                 } else {
-                    Transform::Max(volume.ok_or_else(|| "missing max volume")?)
+                    Transform::Max(volume.ok_or("missing max volume")?)
                 }
             }
             PolicyParameters::Min(Volume { volume, .. }) => {
                 if volume.map_or(false, |val| !val.is_finite()) {
                     return Err("min volume is not a finite number");
                 } else {
-                    Transform::Min(volume.ok_or_else(|| "missing min volume")?)
+                    Transform::Min(volume.ok_or("missing min volume")?)
                 }
             }
             _ => return Err("unknown policy parameter"),

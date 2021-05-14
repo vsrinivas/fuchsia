@@ -79,7 +79,7 @@ use fuchsia_syslog::fx_log_err;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that the policy ID was invalid.
-pub const ARG_POLICY_ID: &'static str = "policy_id";
+pub const ARG_POLICY_ID: &str = "policy_id";
 
 /// `AudioPolicyHandler` controls the persistence and enforcement of audio policies set by
 /// fuchsia.settings.policy.VolumePolicyController.
@@ -239,22 +239,20 @@ impl AudioPolicyHandler {
     ///
     /// Returns a struct containing the min and max volume limits.
     fn determine_volume_limits(&self, target: PropertyTarget) -> VolumeLimits {
+        // If the property doesn't have a state, there are no limits, so return the default min
+        // and max.
         let mut max_volume: f32 = MAX_VOLUME;
         let mut min_volume: f32 = MIN_VOLUME;
-        match self.state.properties.get(&target) {
-            Some(property) => {
-                for policy in property.active_policies.iter() {
-                    match policy.transform {
-                        // Only the lowest max volume applies.
-                        audio_policy::Transform::Max(max) => max_volume = max_volume.min(max),
-                        // Only the highest min volume applies
-                        audio_policy::Transform::Min(min) => min_volume = min_volume.max(min),
-                    }
+
+        if let Some(property) = self.state.properties.get(&target) {
+            for policy in property.active_policies.iter() {
+                match policy.transform {
+                    // Only the lowest max volume applies.
+                    audio_policy::Transform::Max(max) => max_volume = max_volume.min(max),
+                    // Only the highest min volume applies
+                    audio_policy::Transform::Min(min) => min_volume = min_volume.max(min),
                 }
             }
-            // If the property doesn't have a state, there are no limits, so return the default min
-            // and max.
-            _ => {}
         }
         VolumeLimits { min_volume, max_volume }
     }
@@ -316,17 +314,18 @@ impl AudioPolicyHandler {
             .streams
             .iter()
             .find(|stream| stream.stream_type == target)
-            .ok_or_else(|| policy_base::response::Error::Unexpected)?;
+            .ok_or(policy_base::response::Error::Unexpected)?;
         let external_volume = self.calculate_external_volume(target, stream.user_volume_level);
 
         // Add the transform the policy state.
         // TODO(fxbug.dev/60925): once policy targets are configurable, test this error case.
-        let policy_id =
-            self.state.add_transform(target, transform).ok_or(PolicyError::InvalidArgument(
+        let policy_id = self.state.add_transform(target, transform).ok_or_else(|| {
+            PolicyError::InvalidArgument(
                 PolicyType::Audio,
                 "target".into(),
                 format!("{:?}", target).into(),
-            ))?;
+            )
+        })?;
 
         // Persist the policy state.
         self.client_proxy.write_policy(self.state.clone().into(), false).await?;
@@ -343,12 +342,13 @@ impl AudioPolicyHandler {
         policy_id: PolicyId,
     ) -> policy_base::response::Response {
         // Find the target this policy ID is on.
-        let target =
-            self.state.find_policy_target(policy_id).ok_or(PolicyError::InvalidArgument(
+        let target = self.state.find_policy_target(policy_id).ok_or_else(|| {
+            PolicyError::InvalidArgument(
                 PolicyType::Audio,
                 ARG_POLICY_ID.into(),
                 format!("{:?}", policy_id).into(),
-            ))?;
+            )
+        })?;
 
         // Found a policy.
         let audio_info =
@@ -359,15 +359,17 @@ impl AudioPolicyHandler {
             .streams
             .iter()
             .find(|stream| stream.stream_type == target)
-            .ok_or_else(|| policy_base::response::Error::Unexpected)?;
+            .ok_or(policy_base::response::Error::Unexpected)?;
         let external_volume = self.calculate_external_volume(target, stream.user_volume_level);
 
         // Attempt to remove the policy.
-        self.state.remove_policy(policy_id).ok_or(PolicyError::InvalidArgument(
-            PolicyType::Audio,
-            ARG_POLICY_ID.into(),
-            format!("{:?}", policy_id).into(),
-        ))?;
+        self.state.remove_policy(policy_id).ok_or_else(|| {
+            PolicyError::InvalidArgument(
+                PolicyType::Audio,
+                ARG_POLICY_ID.into(),
+                format!("{:?}", policy_id).into(),
+            )
+        })?;
 
         // Persist the policy state.
         self.client_proxy.write_policy(self.state.clone().into(), false).await?;
@@ -391,15 +393,14 @@ impl AudioPolicyHandler {
         audio_info: AudioInfo,
         previous_external_volume: f32,
     ) -> Result<(), policy_base::response::Error> {
-        let original = audio_info
+        let original = *audio_info
             .streams
             .iter()
             .find(|stream| stream.stream_type == target)
-            .ok_or_else(|| policy_base::response::Error::Unexpected)?
-            .clone();
+            .ok_or(policy_base::response::Error::Unexpected)?;
 
         // Make a copy to apply policy transforms on.
-        let mut transformed = original.clone();
+        let mut transformed = original;
 
         transformed.user_volume_level =
             self.clamp_internal_volume(target, original.user_volume_level);
@@ -417,7 +418,7 @@ impl AudioPolicyHandler {
                 SettingType::Audio,
                 SettingRequest::SetVolume(vec![transformed]),
             );
-        } else if new_external_volume != previous_external_volume {
+        } else if (new_external_volume - previous_external_volume).abs() > f32::EPSILON {
             // In some cases, such as when a max volume limit is removed, the internal volume may
             // not change but the external volume should still be updated. We send a Rebroadcast
             // request to the setting proxy, triggering an update for external clients.

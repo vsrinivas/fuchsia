@@ -26,11 +26,12 @@ fn get_streams_array_from_map(
     stream_map: &HashMap<AudioStreamType, StreamVolumeControl>,
 ) -> [AudioStream; 5] {
     let mut streams: [AudioStream; 5] = default_audio_info().streams;
-    for i in 0..streams.len() {
-        if let Some(volume_control) = stream_map.get(&streams[i].stream_type) {
-            streams[i] = volume_control.stored_stream.clone();
+    for stream in &mut streams {
+        if let Some(volume_control) = stream_map.get(&stream.stream_type) {
+            *stream = volume_control.stored_stream;
         }
     }
+
     streams
 }
 
@@ -51,15 +52,13 @@ enum UpdateFrom<'a> {
 
 impl VolumeController {
     async fn create(client: ClientProxy) -> VolumeControllerHandle {
-        let handle = Arc::new(Mutex::new(Self {
+        Arc::new(Mutex::new(Self {
             client,
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
             mic_mute_state: None,
             modified_counters: create_default_modified_counters(),
-        }));
-
-        handle
+        }))
     }
 
     /// Restores the necessary dependencies' state on boot.
@@ -139,7 +138,7 @@ impl VolumeController {
                 if let Some(volume_control) =
                     self.stream_volume_controls.get_mut(&stream.stream_type)
                 {
-                    volume_control.set_volume(stream.clone()).await?;
+                    volume_control.set_volume(*stream).await?;
                 }
             }
         } else {
