@@ -29,6 +29,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
+#include <fs-management/fvm.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 
@@ -79,20 +80,8 @@ zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
     return ram_disk_or.take_error();
   }
 
-  // Create an FVM partition if requested.
-  std::string device_path;
-  if (options.use_fvm) {
-    auto fvm_partition_or =
-        storage::CreateFvmPartition(ram_disk_or.value().path(), options.fvm_slice_size);
-    if (fvm_partition_or.is_error()) {
-      return fvm_partition_or.take_error();
-    }
-    device_path = fvm_partition_or.value();
-  } else {
-    device_path = ram_disk_or.value().path();
-  }
-
-  return zx::ok(std::make_pair(std::move(ram_disk_or).value(), device_path));
+  std::string device_path = ram_disk_or.value().path();
+  return zx::ok(std::make_pair(std::move(ram_disk_or).value(), std::move(device_path)));
 }
 
 // Creates a ram-nand device.  It does not create an FVM partition; that is left to the caller.
@@ -152,7 +141,8 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
       .nand_info.num_blocks = block_count,
       .nand_info.ecc_bits = 8,
       .nand_info.oob_size = kOobSize,
-      .nand_info.nand_class = fuchsia_hardware_nand_Class_FTL};
+      .nand_info.nand_class = fuchsia_hardware_nand_Class_FTL,
+      .fail_after = options.fail_after};
   status = zx::make_status(ramdevice_client::RamNand::Create(&config, &ram_nand));
   if (status.is_error()) {
     std::cout << "RamNand::Create failed: " << status.status_string() << std::endl;
@@ -208,28 +198,59 @@ zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
 // Returns device and device path.
 zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
     const TestFilesystemOptions& options) {
+  RamDevice ram_device;
+  std::string device_path;
+
   if (options.use_ram_nand) {
     auto ram_nand_or = CreateRamNand(options);
     if (ram_nand_or.is_error()) {
       return ram_nand_or.take_error();
     }
     auto [ram_nand, nand_device_path] = std::move(ram_nand_or).value();
-
-    auto fvm_partition_or = storage::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
-    if (fvm_partition_or.is_error()) {
-      std::cout << "Failed to create FVM partition: " << fvm_partition_or.status_string()
-                << std::endl;
-      return fvm_partition_or.take_error();
-    }
-
-    return zx::ok(std::make_pair(std::move(ram_nand), std::move(fvm_partition_or).value()));
+    ram_device = RamDevice(std::move(ram_nand));
+    device_path = std::move(nand_device_path);
   } else {
     auto ram_disk_or = CreateRamDisk(options);
     if (ram_disk_or.is_error()) {
       return ram_disk_or.take_error();
     }
-    auto [device, device_path] = std::move(ram_disk_or).value();
-    return zx::ok(std::make_pair(std::move(device), std::move(device_path)));
+    auto [device, ram_disk_path] = std::move(ram_disk_or).value();
+    ram_device = RamDevice(std::move(device));
+    device_path = std::move(ram_disk_path);
+  }
+
+  // Create an FVM partition if requested.
+  if (options.use_fvm) {
+    auto fvm_partition_or = storage::CreateFvmPartition(device_path, options.fvm_slice_size);
+    if (fvm_partition_or.is_error()) {
+      return fvm_partition_or.take_error();
+    }
+
+    if (options.dummy_fvm_partition_size > 0) {
+      auto fvm_fd = fbl::unique_fd(open((device_path + "/fvm").c_str(), O_RDWR));
+      if (!fvm_fd) {
+        std::cout << "Could not open FVM driver: " << strerror(errno) << std::endl;
+        return zx::error(ZX_ERR_BAD_STATE);
+      }
+
+      alloc_req_t request = {
+          .slice_count = options.dummy_fvm_partition_size / options.fvm_slice_size,
+          .type = {0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01,
+                   0x02, 0x03, 0x04},
+          .guid = {0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0x01,
+                   0x02, 0x03, 0x04},
+          .name = "dummy",
+      };
+      fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
+      if (!fd) {
+        std::cout << "Could not allocate dummy FVM partition" << std::endl;
+        return zx::error(ZX_ERR_BAD_STATE);
+      }
+    }
+
+    return zx::ok(std::make_pair(std::move(ram_device), std::move(fvm_partition_or).value()));
+  } else {
+    return zx::ok(std::make_pair(std::move(ram_device), std::move(device_path)));
   }
 }
 
