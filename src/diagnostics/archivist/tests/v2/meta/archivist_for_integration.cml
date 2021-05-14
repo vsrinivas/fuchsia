@@ -7,6 +7,8 @@
         binary: "bin/archivist",
         args: [
             "--disable-klog",
+            "--disable-log-connector",
+            "--disable-component-event-provider",
             "--config-path",
             "/pkg/data/config/archivist_config.json",
         ],

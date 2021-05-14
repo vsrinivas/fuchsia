@@ -2,73 +2,18 @@
     include: [
         "sdk/lib/diagnostics/syslog/client.shard.cml",
         "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
     ],
-    children: [
-        {
-            name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist.cm",
-        },
-        {
-            name: "driver",
-            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/driver.cm",
-        },
-    ],
+    program: {
+        binary: "bin/archivist_integration_tests",
+    },
     offer: [
-        {
-            protocol: "fuchsia.boot.WriteOnlyLog",
-            from: "parent",
-            to: "#driver",
-        },
-        {
-            protocol: "fuchsia.diagnostics.ArchiveAccessor",
-            from: "#archivist",
-            to: "#driver",
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "#archivist",
-            to: "#driver",
-        },
-        {
-            protocol: "fuchsia.sys2.EventSource",
-            from: "parent",
-            to: "#archivist",
-        },
-        {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
-            from: "framework",
-            to: "#archivist",
-            modes: [ "async" ],
-        },
-        {
-            event: "capability_ready",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "diagnostics" },
-            modes: [ "async" ],
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
-        },
         {
             directory: "config-data",
             from: "parent",
-            as: "config-data",
-            to: "#archivist",
+            to: [ "#fuchsia_component_test_collection" ],
+            rights: [ "r*" ],
             subdir: "archivist",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#driver",
         },
     ],
 }
