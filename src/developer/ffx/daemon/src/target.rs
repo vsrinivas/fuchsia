@@ -3,11 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{
-        FASTBOOT_CHECK_INTERVAL_SECS, FASTBOOT_DROP_GRACE_PERIOD_SECS,
-        MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
-        ZEDBOOT_DROP_GRACE_PERIOD_SECS,
-    },
+    crate::constants::{FASTBOOT_MAX_AGE, MDNS_MAX_AGE, ZEDBOOT_MAX_AGE},
     crate::events::{DaemonEvent, TargetInfo},
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
@@ -26,7 +22,6 @@ use {
     },
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::Timer,
     futures::prelude::*,
     hoist::OvernetInstance,
     netext::{scope_id_to_name, IsLocalAddr},
@@ -41,7 +36,7 @@ use {
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     std::rc::{Rc, Weak},
     std::sync::Arc,
-    std::time::Duration,
+    std::time::{Duration, Instant},
     timeout::{timeout, TimeoutError},
     usb_bulk::AsyncInterface as Interface,
 };
@@ -145,16 +140,16 @@ pub enum ConnectionState {
     /// Default state: no connection.
     Disconnected,
     /// Contains the last known ping from mDNS.
-    Mdns(DateTime<Utc>),
+    Mdns(Instant),
     /// Contains an actual connection to RCS.
     Rcs(RcsConnection),
     /// Target was manually added. Same as `Disconnected` but indicates that the target's name is
     /// wrong as well.
     Manual,
     /// Contains the last known interface update with a Fastboot serial number.
-    Fastboot(DateTime<Utc>),
+    Fastboot(Instant),
     /// Contains the last known interface update with a Fastboot serial number.
-    Zedboot(DateTime<Utc>),
+    Zedboot(Instant),
 }
 
 impl Default for ConnectionState {
@@ -493,98 +488,8 @@ pub struct Target {
 }
 
 impl Target {
-    async fn mdns_monitor_loop(weak_target: WeakTarget, limit: Duration) -> Result<(), String> {
-        let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
-        loop {
-            if let Some(t) = weak_target.upgrade() {
-                let nodename = t.nodename_str();
-                t.update_connection_state(|s| match s {
-                    ConnectionState::Mdns(ref time) => {
-                        let now = Utc::now();
-                        if now.signed_duration_since(*time) > limit {
-                            log::debug!(
-                                "dropping target '{}'. MDNS response older than {}",
-                                nodename,
-                                limit,
-                            );
-                            ConnectionState::Disconnected
-                        } else {
-                            s
-                        }
-                    }
-                    _ => s,
-                });
-                Timer::new(Duration::from_secs(1)).await;
-            } else {
-                log::debug!("parent target dropped in mdns monitor loop. exiting");
-                break;
-            }
-        }
-        Ok(())
-    }
-
-    async fn fastboot_monitor_loop(weak_target: WeakTarget, limit: Duration) -> Result<(), String> {
-        let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
-        loop {
-            if let Some(t) = weak_target.upgrade() {
-                let nodename = t.nodename_str();
-                t.update_connection_state(|s| match s {
-                    ConnectionState::Fastboot(ref time) => {
-                        let now = Utc::now();
-                        if now.signed_duration_since(*time) > limit {
-                            log::debug!(
-                                "dropping target '{}'. fastboot state older than {}",
-                                nodename,
-                                limit
-                            );
-                            ConnectionState::Disconnected
-                        } else {
-                            s
-                        }
-                    }
-                    _ => s,
-                });
-                Timer::new(Duration::from_secs(1)).await;
-            } else {
-                log::debug!("parent target dropped in serial monitor loop. exiting");
-                break;
-            }
-        }
-        Ok(())
-    }
-
     pub fn is_connected(&self) -> bool {
         self.inner.state.borrow().connection_state.is_connected()
-    }
-
-    async fn zedboot_monitor_loop(weak_target: WeakTarget, limit: Duration) -> Result<(), String> {
-        let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
-        loop {
-            if let Some(t) = weak_target.upgrade() {
-                let nodename = t.nodename_str();
-                t.update_connection_state(|s| match s {
-                    ConnectionState::Zedboot(ref time) => {
-                        let now = Utc::now();
-                        if now.signed_duration_since(*time) > limit {
-                            log::debug!(
-                                "dropping target '{}'. zedboot state older than {}",
-                                nodename,
-                                limit
-                            );
-                            ConnectionState::Disconnected
-                        } else {
-                            s
-                        }
-                    }
-                    _ => s,
-                });
-                Timer::new(Duration::from_secs(1)).await;
-            } else {
-                log::debug!("parent target dropped in serial monitor loop. exiting");
-                break;
-            }
-        }
-        Ok(())
     }
 
     pub fn downgrade(&self) -> WeakTarget {
@@ -597,24 +502,7 @@ impl Target {
         let weak_target = WeakTarget { inner: weak_inner, events: events.clone() };
         let task_manager = Rc::new(SingleFlight::new(move |t| match t {
             TargetTaskType::HostPipe => HostPipeConnection::new(weak_target.clone()).boxed_local(),
-            TargetTaskType::MdnsMonitor => Target::mdns_monitor_loop(
-                weak_target.clone(),
-                Duration::from_secs(
-                    MDNS_BROADCAST_INTERVAL_SECS + MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
-                ),
-            )
-            .boxed_local(),
             TargetTaskType::ProactiveLog => Logger::new(weak_target.clone()).start().boxed_local(),
-            TargetTaskType::FastbootMonitor => Target::fastboot_monitor_loop(
-                weak_target.clone(),
-                Duration::from_secs(FASTBOOT_CHECK_INTERVAL_SECS + FASTBOOT_DROP_GRACE_PERIOD_SECS),
-            )
-            .boxed_local(),
-            TargetTaskType::ZedbootMonitor => Target::zedboot_monitor_loop(
-                weak_target.clone(),
-                Duration::from_secs(ZEDBOOT_DROP_GRACE_PERIOD_SECS),
-            )
-            .boxed_local(),
         }));
         Self { inner, events, task_manager }
     }
@@ -931,7 +819,7 @@ impl Target {
         let s = Self::new(n);
         s.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Utc::now())
+            ConnectionState::Mdns(Instant::now())
         });
         s
     }
@@ -1061,20 +949,8 @@ impl Target {
         self.task_manager.spawn_detached(TargetTaskType::HostPipe);
     }
 
-    pub fn run_mdns_monitor(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::MdnsMonitor);
-    }
-
-    pub fn run_fastboot_monitor(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::FastbootMonitor);
-    }
-
     pub fn run_logger(&self) {
         self.task_manager.spawn_detached(TargetTaskType::ProactiveLog);
-    }
-
-    pub fn run_zedboot_monitor(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::ZedbootMonitor);
     }
 
     pub async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
@@ -1088,6 +964,45 @@ impl Target {
             }
         }
         self.rcs().ok_or(anyhow!("rcs dropped after event fired")).map(|r| r.proxy)
+    }
+
+    /// Check the current target state, and if it is a state that expires (such
+    /// as mdns) perform the appropriate state transition. The daemon target
+    /// collection expiry loop calls this function regularly.
+    pub fn expire_state(&self) {
+        self.update_connection_state(|current_state| {
+            let expire_duration = match current_state {
+                ConnectionState::Mdns(_) => MDNS_MAX_AGE,
+                ConnectionState::Fastboot(_) => FASTBOOT_MAX_AGE,
+                ConnectionState::Zedboot(_) => ZEDBOOT_MAX_AGE,
+                _ => Duration::default(),
+            };
+
+            let new_state = match &current_state {
+                ConnectionState::Mdns(ref last_seen)
+                | ConnectionState::Fastboot(ref last_seen)
+                | ConnectionState::Zedboot(ref last_seen) => {
+                    if last_seen.elapsed() > expire_duration {
+                        Some(ConnectionState::Disconnected)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            };
+
+            if let Some(ref new_state) = new_state {
+                log::debug!(
+                    "Target {:?} state {:?} => {:?} due to expired state after {:?}.",
+                    self,
+                    &current_state,
+                    new_state,
+                    expire_duration
+                );
+            }
+
+            new_state.unwrap_or(current_state)
+        });
     }
 }
 
@@ -1739,7 +1654,7 @@ mod test {
             Some(_) => panic!("string lookup should return None"),
             _ => (),
         }
-        let now = Utc::now();
+        let now = Instant::now();
         other_target.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(now)
@@ -2067,7 +1982,7 @@ mod test {
         assert_eq!(vec.len(), 0);
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Utc::now())
+            ConnectionState::Mdns(Instant::now())
         });
         let vec = t.synthesize_events().await;
         assert_eq!(vec.len(), 1);
@@ -2237,34 +2152,28 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_update_connection_state() {
         let t = Target::new("have-you-seen-my-cat");
-        let fake_time = Utc.yo(2017, 12).and_hms(1, 2, 3);
-        let fake_time_clone = fake_time.clone();
+        let instant = Instant::now();
+        let instant_clone = instant.clone();
         t.update_connection_state(move |s| {
             assert_eq!(s, ConnectionState::Disconnected);
 
-            ConnectionState::Mdns(fake_time_clone)
+            ConnectionState::Mdns(instant_clone)
         });
-        assert_eq!(ConnectionState::Mdns(fake_time), t.inner.state.borrow_mut().connection_state);
+        assert_eq!(ConnectionState::Mdns(instant), t.inner.state.borrow_mut().connection_state);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_mdns_set_disconnected() {
+    async fn test_expire_state_mdns() {
         let t = Target::new("yo-yo-ma-plays-that-cello-ya-hear");
-        let now = Utc::now();
-        t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
-        });
-        let events = t.events.clone();
-        let _task = fuchsia_async::Task::local(async move {
-            Target::mdns_monitor_loop(t.downgrade(), Duration::from_secs(2))
-                .await
-                .expect("mdns monitor loop failed")
-        });
-        events
+        let then = Instant::now() - (MDNS_MAX_AGE + Duration::from_secs(1));
+        t.update_connection_state(|_| ConnectionState::Mdns(then));
+
+        t.expire_state();
+
+        t.events
             .wait_for(None, move |e| {
                 e == TargetEvent::ConnectionStateChanged(
-                    ConnectionState::Mdns(now),
+                    ConnectionState::Mdns(then),
                     ConnectionState::Disconnected,
                 )
             })
@@ -2273,23 +2182,36 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_fastboot_set_disconnected() {
+    async fn test_expire_state_fastboot() {
         let t = Target::new("platypodes-are-venomous");
-        let now = Utc::now();
-        t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Fastboot(now)
-        });
-        let events = t.events.clone();
-        let _task = fuchsia_async::Task::local(async move {
-            Target::fastboot_monitor_loop(t.downgrade(), Duration::from_secs(2))
-                .await
-                .expect("mdns monitor loop failed")
-        });
-        events
+        let then = Instant::now() - (FASTBOOT_MAX_AGE + Duration::from_secs(1));
+        t.update_connection_state(|_| ConnectionState::Fastboot(then));
+
+        t.expire_state();
+
+        t.events
             .wait_for(None, move |e| {
                 e == TargetEvent::ConnectionStateChanged(
-                    ConnectionState::Fastboot(now),
+                    ConnectionState::Fastboot(then),
+                    ConnectionState::Disconnected,
+                )
+            })
+            .await
+            .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_expire_state_zedboot() {
+        let t = Target::new("platypodes-are-venomous");
+        let then = Instant::now() - (ZEDBOOT_MAX_AGE + Duration::from_secs(1));
+        t.update_connection_state(|_| ConnectionState::Zedboot(then));
+
+        t.expire_state();
+
+        t.events
+            .wait_for(None, move |e| {
+                e == TargetEvent::ConnectionStateChanged(
+                    ConnectionState::Zedboot(then),
                     ConnectionState::Disconnected,
                 )
             })
