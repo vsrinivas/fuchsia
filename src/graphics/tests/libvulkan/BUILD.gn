@@ -1,0 +1,101 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+
+source_set("src") {
+  testonly = true
+
+  sources = [ "libvulkan_test.cc" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  public_deps += [ "//src/lib/vulkan" ]
+}
+
+executable("libvulkan_test_bin") {
+  testonly = true
+  output_name = "libvulkan_test"
+
+  deps = [ ":src" ]
+}
+
+executable("fake_vulkan_loader_bin") {
+  testonly = true
+  output_name = "fake_vulkan_loader"
+
+  sources = [ "fake_vulkan_loader.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+resource("icd-json") {
+  sources = [ "libvulkan_fake.json" ]
+  outputs = [ "data/libvulkan_fake.json" ]
+}
+
+shared_library("libvulkan_fake") {
+  sources = [ "libvulkan_fake.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//src/lib/vulkan",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_component("libvulkan_test_driver") {
+  testonly = true
+  component_name = "libvulkan_test_driver"
+  deps = [
+    ":icd-json",
+    ":libvulkan_test_bin",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
+  ]
+
+  manifest = "meta/libvulkan_test_driver.cml"
+}
+
+fuchsia_component("libvulkan_test_cmp") {
+  testonly = true
+  component_name = "libvulkan_test"
+
+  manifest = "meta/libvulkan_test.cml"
+}
+
+fuchsia_component("fake_vulkan_loader") {
+  testonly = true
+  component_name = "fake_vulkan_loader"
+  deps = [ ":fake_vulkan_loader_bin" ]
+
+  manifest = "meta/fake_vulkan_loader.cml"
+}
+
+fuchsia_test_package("libvulkan-test") {
+  package_name = "libvulkan_test"
+  test_components = [ ":libvulkan_test_cmp" ]
+  deps = [
+    ":fake_vulkan_loader",
+    ":libvulkan_fake",
+    ":libvulkan_test_driver",
+  ]
+}
+
+group("libvulkan") {
+  testonly = true
+  deps = [ ":libvulkan-test" ]
+}

@@ -40,6 +40,7 @@ group("vulkan-tests") {
   deps = [
     "common:vkcontext",
     "icd_load",
+    "libvulkan",
     "vk_timer_query",
     "vkext",
     "vkloop",

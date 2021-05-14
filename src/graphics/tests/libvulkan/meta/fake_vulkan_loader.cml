@@ -1,0 +1,18 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/fake_vulkan_loader",
+    },
+    capabilities: [
+        { protocol: "fuchsia.vulkan.loader.Loader" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "self",
+        },
+    ],
+}
