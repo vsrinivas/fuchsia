@@ -149,7 +149,7 @@ fuchsia_component("iquery-bin-test") {
   deps = [
     ":bin_test",
     "test/basic_component",
-    "test/test_component",
+    "test/test_component:test_component_v1",
   ]
 }
 

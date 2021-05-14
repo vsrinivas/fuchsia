@@ -9,7 +9,6 @@ group("tests") {
   testonly = true
   deps = [
     ":archivist-integration-tests",
-    "accessor_truncation:test-spec",
     "archive_path:test-spec",
     "feedback_reader:test-spec",
     "logs-basic-integration",
@@ -32,7 +31,6 @@ group("tests") {
 fuchsia_package("archivist-integration-tests") {
   testonly = true
   deps = [
-    "accessor_truncation:accessor-truncation-integration-test",
     "archive_path",
     "feedback_reader",
     "logs/cpp",

@@ -6,13 +6,8 @@ use cm_rust;
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component_test::{builder::*, error::Error};
 
-pub const INTEGRATION_ARCHIVIST_URL: &str =
+const INTEGRATION_ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist.cm";
-
-pub const TEST_COMPONENT_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
-pub const TEST_COMPONENT_WITH_CHILDREN_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/component_with_children.cm";
 
 /// Options for creating a test topology.
 pub struct Options {
@@ -86,18 +81,7 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
     Ok(builder)
 }
 
-pub async fn add_test_component(builder: &mut RealmBuilder, name: &str) -> Result<(), Error> {
-    add_component(builder, name, TEST_COMPONENT_URL).await
-}
-
-pub async fn add_test_component_with_children(
-    builder: &mut RealmBuilder,
-    name: &str,
-) -> Result<(), Error> {
-    add_component(builder, name, TEST_COMPONENT_WITH_CHILDREN_URL).await
-}
-
-async fn add_component(builder: &mut RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
+pub async fn add_component(builder: &mut RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
     let path = format!("test/{}", name);
     builder.add_eager_component(path.as_ref(), ComponentSource::url(url)).await?.add_route(
         CapabilityRoute {

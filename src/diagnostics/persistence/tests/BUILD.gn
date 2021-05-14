@@ -40,7 +40,7 @@ fuchsia_component("canonical-diagnostics-persistence-test") {
   manifest = "meta/canonical-diagnostics-persistence-test.cmx"
   deps = [
     ":test-bin",
-    "//src/diagnostics/iquery/test/test_component",
+    "//src/diagnostics/iquery/test/test_component:test_component_v1",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/persistence:diagnostics-persistence-v1",
   ]

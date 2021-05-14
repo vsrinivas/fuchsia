@@ -82,6 +82,7 @@ fuchsia_test_package("archivist-integration-tests-v2") {
     ":component_with_children",
     ":stub_inspect_component",
     ":testdata",
+    "//src/diagnostics/iquery/test/test_component",
   ]
 }
 

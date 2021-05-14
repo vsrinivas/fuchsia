@@ -47,7 +47,7 @@ fuchsia_component("feedback_reader") {
   deps = [
     ":bin",
     ":feedback_reader_test_archivist",
-    "//src/diagnostics/iquery/test/test_component",
+    "//src/diagnostics/iquery/test/test_component:test_component_v1",
   ]
 }
 

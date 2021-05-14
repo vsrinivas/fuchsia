@@ -45,7 +45,7 @@ fuchsia_component("unified_reader") {
   deps = [
     ":bin",
     ":unified_reader_test_archivist",
-    "//src/diagnostics/iquery/test/test_component",
+    "//src/diagnostics/iquery/test/test_component:test_component_v1",
   ]
 }
 
