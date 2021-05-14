@@ -3,22 +3,23 @@
 // found in the LICENSE file.
 
 use crate::config::{from_reader, BoardConfig, ProductConfig};
+use crate::vfs::RealFilesystemProvider;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use ffx_assembly_args::ImageArgs;
-use ffx_core::ffx_bail;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::PackageManifest;
 use std::fs::{File, OpenOptions};
 use std::io::BufReader;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use vbmeta::Salt;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
     let ImageArgs { product, board, outdir, gendir, full } = args;
 
-    let (product, _board) = read_configs(product, board)?;
+    let (product, board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
 
     let base_package = construct_base_package(&outdir, &gendir, &product)?;
@@ -31,7 +32,8 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         return Ok(());
     }
 
-    let _zbi = construct_zbi(&outdir, &gendir, &product, Some(base_merkle))?;
+    let zbi_path = construct_zbi(&outdir, &gendir, &product, Some(base_merkle))?;
+    let _vbmeta_path = construct_vbmeta(&outdir, &board, &zbi_path)?;
 
     Ok(())
 }
@@ -97,7 +99,7 @@ fn construct_zbi(
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
     base_merkle: Option<Hash>,
-) -> Result<File> {
+) -> Result<PathBuf> {
     let mut zbi_builder = ZbiBuilder::default();
 
     // Add the kernel image.
@@ -145,9 +147,27 @@ fn construct_zbi(
     // Build and return the ZBI.
     let zbi_path = outdir.as_ref().join("fuchsia.zbi");
     zbi_builder.build(gendir, zbi_path.as_path())?;
-    let zbi = OpenOptions::new()
-        .read(true)
-        .open(zbi_path)
-        .or_else(|e| ffx_bail!("Failed to open the zbi: {}", e))?;
-    Ok(zbi)
+    Ok(zbi_path)
+}
+
+fn construct_vbmeta(
+    outdir: impl AsRef<Path>,
+    board: &BoardConfig,
+    zbi: impl AsRef<Path>,
+) -> Result<PathBuf> {
+    // Sign the image and construct a VBMeta.
+    let (vbmeta, _salt) = crate::vbmeta::sign(
+        &board.vbmeta.kernel_partition,
+        zbi,
+        &board.vbmeta.key,
+        &board.vbmeta.key_metadata,
+        board.vbmeta.additional_descriptor.clone(),
+        Salt::random()?,
+        &RealFilesystemProvider {},
+    )?;
+
+    // Write VBMeta to a file and return the path.
+    let vbmeta_path = outdir.as_ref().join("fuchsia.vbmeta");
+    std::fs::write(&vbmeta_path, vbmeta.as_bytes())?;
+    Ok(vbmeta_path)
 }

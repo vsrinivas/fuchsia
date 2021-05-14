@@ -68,10 +68,15 @@ pub struct FileEntry {
 pub struct VBMetaConfig {
     /// The partition name to flash the VBMeta.
     pub partition: String,
+    /// The partition name of the kernel included as a VBMeta descriptor.
+    pub kernel_partition: String,
     /// The path on the host to the VBMeta key.
     pub key: PathBuf,
     /// The metadata used to verify the VBMeta key.
     pub key_metadata: PathBuf,
+    /// Paths to descriptors to add to the VBMeta.
+    #[serde(default)]
+    pub additional_descriptor: Vec<PathBuf>,
 }
 
 /// A bootloader to add to the update package and flash-files.
@@ -227,6 +232,7 @@ mod tests {
               board_name: "my-board",
               vbmeta: {
                 partition: "name",
+                kernel_partition: "zircon",
                 key: "path/to/key",
                 key_metadata: "path/to/metadata",
               },
@@ -281,6 +287,7 @@ mod tests {
               board_name: "my-board",
               vbmeta: {
                 partition: "name",
+                kernel_partition: "zircon",
                 key: "path/to/key",
                 key_metadata: "path/to/metadata",
               },

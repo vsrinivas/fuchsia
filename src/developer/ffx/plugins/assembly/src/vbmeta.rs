@@ -5,14 +5,14 @@
 use crate::extra_hash_descriptor::ExtraHashDescriptor;
 use crate::vfs::FilesystemProvider;
 use anyhow::Result;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use vbmeta::{HashDescriptor, Key, Salt, VBMeta};
 
 pub fn sign<FSP: FilesystemProvider>(
-    name: String,
-    image_path: PathBuf,
-    key: PathBuf,
-    key_metadata: PathBuf,
+    name: impl AsRef<str>,
+    image_path: impl AsRef<Path>,
+    key: impl AsRef<Path>,
+    key_metadata: impl AsRef<Path>,
     additional_descriptors: Vec<PathBuf>,
     salt: Salt,
     fs: &FSP,
@@ -37,7 +37,7 @@ pub fn sign<FSP: FilesystemProvider>(
     let image = fs.read(image_path)?;
 
     // Create the descriptor for the image.
-    let descriptor = HashDescriptor::new(&name, &image, salt.clone());
+    let descriptor = HashDescriptor::new(name.as_ref(), &image, salt.clone());
     descriptors.push(descriptor);
 
     // And do the signing operation itself.
