@@ -228,10 +228,7 @@ group("drivers-system") {
     "//src/media/drivers",
   ]
   if (target_cpu == "x64") {
-    public_deps += [
-      "//garnet/packages/prod:goldfish-vulkan-system",
-      "//garnet/packages/prod:magma-intel-gen-system",
-    ]
+    public_deps += [ "//garnet/packages/prod:magma-intel-gen-system" ]
   }
 }
 
@@ -241,11 +238,6 @@ group("far") {
     "//src/sys/pkg/bin/far",
     "//src/sys/pkg/bin/far:host",
   ]
-}
-
-group("goldfish-vulkan-system") {
-  public_deps =
-      [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-system" ]
 }
 
 group("goldfish-vulkan-config") {

@@ -14,8 +14,11 @@ declare_args() {
   }
 }
 
-have_libvulkan = build_libvulkan_goldfish != ""
-group("goldfish-vulkan-system") {
+# Loading ICDs from packages doesn't work on bootfs_only builds, so disable the
+# goldfish driver there. Bringup builds are intended to be minimal, so having a
+# bringup driver there doesn't make sense anyway.
+have_libvulkan = build_libvulkan_goldfish != "" && !bootfs_only
+group("goldfish-vulkan") {
   if (have_libvulkan) {
     public_deps = [ ":goldfish" ]
   }
@@ -36,10 +39,19 @@ if (have_libvulkan) {
     exclude_toolchain_tags = [ "instrumented" ]
   }
 
-  fuchsia_system_package("goldfish") {
-    package_name = "goldfish-system"
-    deps = [ ":libvulkan_goldfish" ]
-    allowed_in_extra_deps = true
+  resource("vulkan_metadata") {
+    sources = [ "metadata.json" ]
+    outputs = [ "data/metadata.json" ]
+  }
+
+  fuchsia_package_with_single_component("goldfish") {
+    package_name = "libvulkan_goldfish"
+    component_name = "vulkan"
+    deps = [
+      ":libvulkan_goldfish",
+      ":vulkan_metadata",
+    ]
+    manifest = "meta/vulkan.cml"
   }
 
   config_data("goldfish-config") {

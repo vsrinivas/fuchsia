@@ -70,6 +70,7 @@ board_package_labels = [
   "//garnet/packages/prod:drivers-support",
   "//src/hwinfo:default_board_config",
   "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen",
+  "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
 ]
 
 max_fuchsia_zbi_size = "16777216"  # 16 MiB
