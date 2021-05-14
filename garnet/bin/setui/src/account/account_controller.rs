@@ -61,14 +61,14 @@ async fn schedule_clear_accounts(service_context: &ServiceContext) -> Result<(),
 
     let device_settings_manager = connect_result.unwrap();
 
-    if let Err(_) = call_async!(device_settings_manager => set_integer(FACTORY_RESET_FLAG, 1)).await
-    {
-        return Err(ControllerError::ExternalFailure(
-            SettingType::Account,
-            "device_settings_manager".into(),
-            "set factory reset integer".into(),
-        ));
-    }
-
-    return Ok(());
+    call_async!(device_settings_manager => set_integer(FACTORY_RESET_FLAG, 1))
+        .await
+        .map(|_| ())
+        .map_err(|_| {
+            ControllerError::ExternalFailure(
+                SettingType::Account,
+                "device_settings_manager".into(),
+                "set factory reset integer".into(),
+            )
+        })
 }
