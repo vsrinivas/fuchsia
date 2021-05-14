@@ -18,7 +18,10 @@ FidlBoundVirtualKeyboardCoordinator::FidlBoundVirtualKeyboardCoordinator(
     : weak_ptr_factory_(this) {
   FX_DCHECK(component_context);
   component_context->outgoing()->AddPublicService(creator_bindings_.GetHandler(this));
-  manager_.emplace(GetWeakPtr(), component_context);
+  // Initialize the VirtualKeyboardManager, using the zero-value of the TextType enum
+  // for the initial TextType.
+  manager_.emplace(GetWeakPtr(), component_context,
+                   fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 }
 
 FidlBoundVirtualKeyboardCoordinator::~FidlBoundVirtualKeyboardCoordinator() {}

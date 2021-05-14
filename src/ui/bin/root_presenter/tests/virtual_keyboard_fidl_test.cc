@@ -7,6 +7,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -357,6 +358,48 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects)
     RunLoopUntilIdle();
     ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
   }
+}
+
+TEST_F(VirtualKeyboardFidlTest, ManagerDisconnectsOnConcurrentWatches) {
+  // Connect client.
+  zx_status_t status = ZX_OK;
+  auto client = CreateManagerClient();
+  client.set_error_handler([&status](zx_status_t stat) { status = stat; });
+
+  // Send first watch, which completes immediately.
+  client->WatchTypeAndVisibility([](fuchsia::input::virtualkeyboard::TextType, bool) {});
+  RunLoopUntilIdle();
+
+  // Now, set up two concurrent watches.
+  client->WatchTypeAndVisibility([](fuchsia::input::virtualkeyboard::TextType, bool) {});
+  client->WatchTypeAndVisibility([](fuchsia::input::virtualkeyboard::TextType, bool) {});
+  RunLoopUntilIdle();
+
+  // Verify that the channel was closed, with the expected epitaph.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, status) << "status = " << zx_status_get_string(status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstIsDisconnectedByError) {
+  // Connect client, and set up concurrent watches.
+  auto client1 = CreateManagerClient();
+
+  // Send first watch, which completes immediately.
+  client1->WatchTypeAndVisibility([](fuchsia::input::virtualkeyboard::TextType, bool) {});
+  RunLoopUntilIdle();
+
+  // Set up two concurrent watches, to force closure of client1.
+  client1->WatchTypeAndVisibility([](fuchsia::input::virtualkeyboard::TextType, bool) {});
+  client1->WatchTypeAndVisibility([](fuchsia::input::virtualkeyboard::TextType, bool) {});
+  RunLoopUntilIdle();
+
+  // Second client connects and calls Notify().
+  zx_status_t status = ZX_OK;
+  auto client2 = CreateManagerClient();
+  client2.set_error_handler([&status](zx_status_t stat) { status = stat; });
+  client2->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
+                  []() {});
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
 }
 }  // namespace fuchsia_input_virtualkeyboard_manager_connections
 
