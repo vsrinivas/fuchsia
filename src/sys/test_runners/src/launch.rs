@@ -72,6 +72,8 @@ pub struct LaunchProcessArgs<'a> {
     pub handle_infos: Option<Vec<fproc::HandleInfo>>,
     /// Handle to lib loader protocol client.
     pub loader_proxy_chan: Option<zx::Channel>,
+    /// VMO containing mapping to executable binary.
+    pub executable_vmo: Option<zx::Vmo>,
 }
 
 /// Launches process, assigns a logger as stdout/stderr to launched process.
@@ -126,6 +128,7 @@ async fn launch_process_impl(
             environs: args.environs,
             launcher: &launcher,
             loader_proxy_chan: args.loader_proxy_chan,
+            executable_vmo: args.executable_vmo,
         })
         .await
         .map_err(LaunchError::LoadInfo)?;
@@ -252,6 +255,7 @@ mod tests {
             .try_into()
             .unwrap(),
             loader_proxy_chan: None,
+            executable_vmo: None,
         };
         let (mock_proxy, mut mock_stream) = create_proxy_and_stream::<fproc::LauncherMarker>()
             .expect("failed to create mock handles");

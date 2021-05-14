@@ -161,6 +161,7 @@ impl ElfRunner {
                 environs: None,
                 launcher: &launcher,
                 loader_proxy_chan: None,
+                executable_vmo: None,
             })
             .await
             .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?;
