@@ -289,10 +289,14 @@ Result Walker<VisitorImpl>::WalkPrimitive(const FidlCodedPrimitive* fidl_coded_p
 }
 
 template <typename VisitorImpl>
-Result Walker<VisitorImpl>::WalkEnum(const FidlCodedEnum* fidl_coded_enum,
+Result Walker<VisitorImpl>::WalkEnum(const FidlCodedEnum* coded_enum,
                                      Walker<VisitorImpl>::Position position) {
+  if (coded_enum->strictness == kFidlStrictness_Flexible) {
+    return Result::kContinue;
+  }
+
   uint64_t value;
-  switch (fidl_coded_enum->underlying_type) {
+  switch (coded_enum->underlying_type) {
     case kFidlCodedPrimitiveSubtype_Uint8:
       value = *PtrTo<uint8_t>(position);
       break;
@@ -320,11 +324,9 @@ Result Walker<VisitorImpl>::WalkEnum(const FidlCodedEnum* fidl_coded_enum,
     default:
       __builtin_unreachable();
   }
-  if (fidl_coded_enum->strictness == kFidlStrictness_Strict) {
-    if (unlikely(!fidl_coded_enum->validate(value))) {
-      visitor_->OnError("not a valid enum member");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
+  if (unlikely(!coded_enum->validate(value))) {
+    visitor_->OnError("not a valid enum member");
+    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
   return Result::kContinue;
 }
@@ -332,6 +334,10 @@ Result Walker<VisitorImpl>::WalkEnum(const FidlCodedEnum* fidl_coded_enum,
 template <typename VisitorImpl>
 Result Walker<VisitorImpl>::WalkBits(const FidlCodedBits* coded_bits,
                                      Walker<VisitorImpl>::Position position) {
+  if (coded_bits->strictness == kFidlStrictness_Flexible) {
+    return Result::kContinue;
+  }
+
   uint64_t value;
   switch (coded_bits->underlying_type) {
     case kFidlCodedPrimitiveSubtype_Uint8:
@@ -349,11 +355,9 @@ Result Walker<VisitorImpl>::WalkBits(const FidlCodedBits* coded_bits,
     default:
       __builtin_unreachable();
   }
-  if (coded_bits->strictness == kFidlStrictness_Strict) {
-    if (unlikely(value & ~coded_bits->mask)) {
-      visitor_->OnError("not a valid bits member");
-      FIDL_STATUS_GUARD(Status::kConstraintViolationError);
-    }
+  if (unlikely(value & ~coded_bits->mask)) {
+    visitor_->OnError("not a valid bits member");
+    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
   return Result::kContinue;
 }
