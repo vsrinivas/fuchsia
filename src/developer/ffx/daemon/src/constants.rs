@@ -20,7 +20,6 @@ pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 
 // Config keys
 pub(crate) const SSH_PRIV: &str = "ssh.priv";
-pub(crate) const SSH_PORT: &str = "ssh.port";
 
 pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
 

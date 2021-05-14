@@ -20,7 +20,6 @@
         }
     },
     "ssh": {
-        "port": "$FUCHSIA_SSH_PORT",
         "priv": [
             "$FUCHSIA_SSH_KEY",
             "$HOME/.ssh/fuchsia_ed25519",
