@@ -234,7 +234,8 @@ action("kazoo-syscall-golden-test") {
     "--output-touch",
     rebase_path(outputs[0], root_build_dir),
     "--tmp-base",
-    rebase_path("${target_gen_dir}/__untraced_tmp__", root_build_dir),
+    rebase_path("${target_gen_dir}/__untraced_kazoo_test_dir__",
+                root_build_dir),
     "--depfile",
     rebase_path(depfile, root_build_dir),
   ]

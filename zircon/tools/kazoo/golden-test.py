@@ -3,7 +3,6 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """
 Compares previous output of all kazoo generation with current output.
 
@@ -161,14 +160,7 @@ def main():
         with open(args.depfile, 'w') as f:
             f.write(f'{args.output_touch}: {fidlc} {kazoo}\n')
 
-    # Remove all temporary files and directories, otherwise they will be
-    # considered as unexpected outputs.
-    #
-    # TODO(https://fxbug.dev/75057): Use shutil.rmtree(tmp_kazoo_dir) instead
-    # when the action tracer knows how to ignore spurious directory reads.
-    for f in files:
-        os.remove(f)
-    os.rmdir(tmp_kazoo_dir)
+    shutil.rmtree(tmp_kazoo_dir)
     os.remove(tmp_json)
     os.remove(tmp_golden)
 

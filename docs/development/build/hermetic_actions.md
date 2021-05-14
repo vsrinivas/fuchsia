@@ -289,21 +289,33 @@ directories. However, due to a limitation in our tracer, this would sometimes
 result in spurious unexpected reads. See also: [Issue 75057: Properly handle
 directory deletion from shutil.rmtree in action tracer][shutil_rmtree_bug].
 
-To get around this, you can create temporary directories and write temporary
-files into a special directory `__untraced_tmp__`. Accesses to files in this
-special directory will be ignored by the tracer. __Because of this, this feature
-should not be used lightly.__
+To get around this, you can create a special directory, for example
+`__untraced_foo_tmp_outputs__`, and write temporary files into this directory,
+and ignore accesses to this directory in the
+[action tracer][action_tracer_ignored_path_parts]. Accesses to files in
+this special directory will be ignored by the tracer. __Because of this, this
+feature should not be used lightly.__
 
 For example, assuming `bar.py` always deletes all files in the `--tmp-dir`
 passed to it, then re-populates:
 
-```
+```gn
 action(target_name) {
   script = "bar.py"
   args = [
     "--tmp-dir"
-    rebase_path("${target_gen_dir}/${target_name}/__untraced_tmp__", root_build_dir)
+    rebase_path("${target_gen_dir}/${target_name}/__untraced_bar_tmp_outputs__", root_build_dir)
   ]
+  ...
+}
+```
+
+Then in the action tracer, add an entry in `ignored_path_parts`:
+
+```py
+ignored_path_parts = {
+  # Comment with clear explanation on why this is necessary.
+  "__untraced_bar_tmp_outputs__",
   ...
 }
 ```
@@ -312,6 +324,7 @@ See also: [hermetic actions in open projects][hermetic-actions-bb]
 
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
 [action_foreach]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action_foreach
+[action_tracer_ignored_path_parts]: https://cs.opensource.google/fuchsia/fuchsia/+/main:build/tracer/action_tracer.py;l=873;drc=57a94b356da70385d8439b1dd3f355d9850c2db2
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
 [fromfile_prefix_chars]: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 [hermetic-actions-bb]: /docs/contribute/open_projects/build/hermetic_actions.md
