@@ -47,7 +47,8 @@ zx_status_t SimpleCodecServer::CreateInternal() {
     };
     return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str())
                       .set_props(props)
-                      .set_inspect_vmo(inspect_.DuplicateVmo()));
+                      .set_inspect_vmo(inspect_.DuplicateVmo())
+                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE));
   }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, driver_ids_.vendor_id},
@@ -55,7 +56,8 @@ zx_status_t SimpleCodecServer::CreateInternal() {
   };
   return DdkAdd(ddk::DeviceAddArgs(info.product_name.c_str())
                     .set_props(props)
-                    .set_inspect_vmo(inspect_.DuplicateVmo()));
+                    .set_inspect_vmo(inspect_.DuplicateVmo())
+                    .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE));
 }
 
 zx_status_t SimpleCodecServer::CodecConnect(zx::channel channel) {
