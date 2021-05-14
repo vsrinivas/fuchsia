@@ -13,7 +13,7 @@ use {
 };
 
 // TODO(reveman): Read from boot arguments.
-const DISPLAY_ROTATION: &'static str = "90";
+const DISPLAY_ROTATION: &'static str = "0";
 
 fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, Error> {
     match s {

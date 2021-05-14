@@ -36,6 +36,7 @@ rustc_library("lib") {
     "src/view.rs",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole-rustc",
     "//src/graphics/lib/compute/rive-rs",

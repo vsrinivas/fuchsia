@@ -13,6 +13,7 @@ use {
         },
         Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
     },
+    fidl_fuchsia_hardware_display::VirtconMode,
     fuchsia_zircon::{Event, Time},
     rive_rs::{self as rive},
     std::path::PathBuf,
@@ -89,7 +90,13 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
         scene.render(render_context, ready_event, context)?;
         self.scene = Some(scene);
 
-        if !self.animation.is_done() {
+        // Switch to fallback mode when animation ends so primary client can
+        // take over. Otherwise, request another frame.
+        if self.animation.is_done() {
+            if let Some(fb) = context.frame_buffer.as_ref() {
+                fb.borrow_mut().set_virtcon_mode(VirtconMode::Fallback)?;
+            }
+        } else {
             context.request_render();
         }
 
