@@ -54,8 +54,7 @@ Presentation::Presentation(
     SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
     fit::function<void()> on_client_death,
     fit::function<void(fuchsia::ui::views::ViewRef)> request_focus)
-    : component_context_(component_context),
-      inspect_node_(std::move(inspect_node)),
+    : inspect_node_(std::move(inspect_node)),
       input_report_inspector_(inspect_node_.CreateChild("input_reports")),
       input_event_inspector_(inspect_node_.CreateChild("input_events")),
       scenic_(scenic),
@@ -65,12 +64,14 @@ Presentation::Presentation(
       renderer_(session_),
       scene_(session_),
       camera_(scene_),
+      injector_session_(scenic),
       proxy_session_(scenic),
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       a11y_binding_(this),
       a11y_view_registry_binding_(this),
       safe_presenter_(safe_presenter),
+      safe_presenter_injector_(&injector_session_),
       safe_presenter_proxy_(&proxy_session_),
       weak_factory_(this) {
   FX_DCHECK(component_context);
@@ -111,7 +112,7 @@ Presentation::Presentation(
 
   SetScenicDisplayRotation();
   {
-    fuchsia::ui::views::ViewRef root_view_ref, proxy_view_ref;
+    fuchsia::ui::views::ViewRef root_view_ref, proxy_view_ref, injector_view_ref;
     {    // Set up views and view holders.
       {  // Set up the root view.
         auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
@@ -123,11 +124,21 @@ Presentation::Presentation(
                            std::move(view_ref), "Root View");
       }
 
+      {  // Set up the injector view.
+        auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
+        auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+        fidl::Clone(view_ref, &injector_view_ref);
+        injector_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+                                      "Injector View Holder");
+        injector_view_.emplace(&injector_session_, std::move(internal_view_token),
+                               std::move(control_ref), std::move(view_ref), "Injector View");
+      }
+
       {  // Set up the "proxy view"
         auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
         auto [control_ref, view_ref] = scenic::ViewRefPair::New();
         fidl::Clone(view_ref, &proxy_view_ref);
-        proxy_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+        proxy_view_holder_.emplace(&injector_session_, std::move(internal_view_holder_token),
                                    "Proxy View Holder");
         proxy_view_.emplace(&proxy_session_, std::move(internal_view_token), std::move(control_ref),
                             std::move(view_ref), "Proxy View");
@@ -138,12 +149,13 @@ Presentation::Presentation(
 
       // Connect it all up.
       scene_.AddChild(root_view_holder_.value());
-      root_view_->AddChild(proxy_view_holder_.value());
+      root_view_->AddChild(injector_view_holder_.value());
+      injector_view_->AddChild(proxy_view_holder_.value());
       proxy_view_->AddChild(client_view_holder_.value());
     }
 
     injector_.emplace(component_context, /*context*/ std::move(root_view_ref),
-                      /*target*/ std::move(proxy_view_ref));
+                      /*target*/ std::move(injector_view_ref));
   }
 
   // Link ourselves to the presentation interface once screen dimensions are
@@ -157,11 +169,14 @@ Presentation::Presentation(
           weak->InitializeDisplayModel(std::move(display_info));
           weak->safe_presenter_->QueuePresent([weak] {
             if (weak) {
-              // TODO(fxbug.dev/56345): Stop staggering presents.
-              weak->safe_presenter_proxy_.QueuePresent([weak] {
+              weak->safe_presenter_injector_.QueuePresent([weak] {
                 if (weak) {
-                  weak->scene_initialized_ = true;
-                  weak->injector_->MarkSceneReady();
+                  weak->safe_presenter_proxy_.QueuePresent([weak] {
+                    if (weak) {
+                      weak->scene_initialized_ = true;
+                      weak->injector_->MarkSceneReady();
+                    }
+                  });
                 }
               });
             }
@@ -171,6 +186,8 @@ Presentation::Presentation(
 
   FX_DCHECK(root_view_holder_);
   FX_DCHECK(root_view_);
+  FX_DCHECK(injector_view_holder_);
+  FX_DCHECK(injector_view_);
   FX_DCHECK(proxy_view_holder_);
   FX_DCHECK(proxy_view_);
   FX_DCHECK(client_view_holder_);
@@ -178,6 +195,10 @@ Presentation::Presentation(
 
   proxy_session_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Proxy session closed unexpectedly with status: "
+                   << zx_status_get_string(status);
+  });
+  injector_session_.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Injector session closed unexpectedly with status: "
                    << zx_status_get_string(status);
   });
 
@@ -239,12 +260,9 @@ bool Presentation::ApplyDisplayModelChanges(bool print_log, bool present_changes
   bool updated = ApplyDisplayModelChangesHelper(print_log);
 
   if (updated && present_changes) {
-    safe_presenter_->QueuePresent([weak = weak_factory_.GetWeakPtr()] {
-      if (weak) {
-        // TODO(fxbug.dev/56345): Stop staggering presents.
-        weak->safe_presenter_proxy_.QueuePresent([] {});
-      }
-    });
+    safe_presenter_->QueuePresent([] {});
+    safe_presenter_injector_.QueuePresent([] {});
+    safe_presenter_proxy_.QueuePresent([] {});
   }
   return updated;
 }
@@ -261,7 +279,12 @@ void Presentation::SetViewHolderProperties() {
       std::swap(metrics_width, metrics_height);
     }
 
-    // A11y, proxy, and client views should all have the same dimensions.
+    // Injector, a11y, proxy, and client views should all have the same dimensions.
+    if (injector_view_holder_) {
+      injector_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
+                                               metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    }
+
     if (a11y_view_holder_) {
       a11y_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
                                            metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
@@ -281,11 +304,8 @@ void Presentation::SetViewHolderProperties() {
   }
 
   // Remaining transformations are only applied to the root view's child and automatically
-  // propagated down to the client view through the scene graph. If the a11y view holder is
-  // non-null, then the a11y view holder is the root's child. Otherwise, the
-  // proxy view is the root's child.
-  auto& root_child_view_holder = a11y_view_holder_ ? a11y_view_holder_ : proxy_view_holder_;
-
+  // propagated down to the client view through the scene graph. The injector view holder is always
+  // the root's child.
   {  // Scale a11y view to full device size.
     float metrics_scale_x = display_metrics_.x_scale_in_px_per_pp();
     float metrics_scale_y = display_metrics_.y_scale_in_px_per_pp();
@@ -294,15 +314,15 @@ void Presentation::SetViewHolderProperties() {
       std::swap(metrics_scale_x, metrics_scale_y);
     }
 
-    root_child_view_holder->SetScale(metrics_scale_x, metrics_scale_y, 1.f);
+    injector_view_holder_->SetScale(metrics_scale_x, metrics_scale_y, 1.f);
     FX_VLOGS(2) << "DisplayModel pixel scale: " << metrics_scale_x << ", " << metrics_scale_y;
   }
 
   {  // Rotate root's child view to match desired display orientation.
     const glm::quat display_rotation =
         glm::quat(glm::vec3(0, 0, glm::radians<float>(display_startup_rotation_adjustment_)));
-    root_child_view_holder->SetRotation(display_rotation.x, display_rotation.y, display_rotation.z,
-                                        display_rotation.w);
+    injector_view_holder_->SetRotation(display_rotation.x, display_rotation.y, display_rotation.z,
+                                       display_rotation.w);
   }
 
   {  // Adjust a11y view position for rotation.
@@ -334,7 +354,7 @@ void Presentation::SetViewHolderProperties() {
         break;
     }
 
-    root_child_view_holder->SetTranslation(left_offset, top_offset, 0.f);
+    injector_view_holder_->SetTranslation(left_offset, top_offset, 0.f);
     FX_VLOGS(2) << "DisplayModel translation: " << left_offset << ", " << top_offset;
   }
 }
@@ -532,8 +552,8 @@ void Presentation::CreateAccessibilityViewHolder(
     fuchsia::ui::views::ViewRef a11y_view_ref,
     fuchsia::ui::views::ViewHolderToken a11y_view_holder_token,
     CreateAccessibilityViewHolderCallback callback) {
-  // Detach proxy view holder from root.
-  root_view_->DetachChild(proxy_view_holder_.value());
+  // Detach proxy view holder from injector view.
+  injector_view_->DetachChild(proxy_view_holder_.value());
 
   // Detach client view from proxy view, and delete proxy view and view holder objects (which
   // frees the scenic resources).
@@ -559,23 +579,16 @@ void Presentation::CreateAccessibilityViewHolder(
   // Construct the a11y view holder.
   a11y_view_holder_.emplace(session_, std::move(a11y_view_holder_token), "A11y View Holder");
 
-  // Add the a11y view holder as a child of the root view.
-  root_view_->AddChild(a11y_view_holder_.value());
+  // Add the a11y view holder as a child of the injector view.
+  injector_view_->AddChild(a11y_view_holder_.value());
 
   // Update view holder properties. Changes are presented below.
   SetViewHolderProperties();
 
-  // Route input through the a11y view.
-  injector_.emplace(component_context_, /*context*/ std::move(root_view_ref_),
-                    /*target*/ std::move(a11y_view_ref));
-
   // All three sessions have changes, so queue present calls for all three.
-  safe_presenter_->QueuePresent([weak = weak_factory_.GetWeakPtr()] {
-    if (weak) {
-      // TODO(fxbug.dev/56345): Stop staggering presents.
-      weak->safe_presenter_proxy_.QueuePresent([] {});
-    }
-  });
+  safe_presenter_->QueuePresent([] {});
+  safe_presenter_injector_.QueuePresent([] {});
+  safe_presenter_proxy_.QueuePresent([] {});
 
   // Send the client view holder token to the a11y manager.
   // The a11y manager will then create its view and the new proxy view holder,

@@ -99,6 +99,10 @@ class Presentation : fuchsia::ui::policy::Presentation,
   //       |
   // [1] root view
   //       |
+  // [1] injector view holder
+  //       |
+  // [1] injector view
+  //       |
   // [1] a11y view holder
   //       |
   // [3] a11y view
@@ -127,8 +131,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
 
-  sys::ComponentContext* component_context_;
-
   inspect::Node inspect_node_;
   InputReportInspector input_report_inspector_;
   InputEventInspector input_event_inspector_;
@@ -149,6 +151,10 @@ class Presentation : fuchsia::ui::policy::Presentation,
   //       |
   // [1] root view
   //       |
+  // [1] injector view holder
+  //       |
+  // [1] injector view view
+  //       |
   // [1] proxy view holder
   //       |
   // [1] proxy view
@@ -166,6 +172,13 @@ class Presentation : fuchsia::ui::policy::Presentation,
   std::optional<scenic::View> root_view_;
   std::optional<scenic::ViewHolder> root_view_holder_;
   fuchsia::ui::views::ViewRef root_view_ref_;
+
+  // The injector view is used as a constant target when injecting events through
+  // fuchsia::ui::pointerinjector. When a11y starts, it can insert its view between
+  // |injector_view_| and |proxy_view_holder_|.
+  scenic::Session injector_session_;
+  std::optional<scenic::View> injector_view_;
+  std::optional<scenic::ViewHolder> injector_view_holder_;
 
   // The a11y manager is responsible for hooking its own view up to the scene
   // graph, and attaching the client view below it. The proxy view is necessary
@@ -228,6 +241,9 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   // |safe_presenter_| is passed in at construction together with the root session.
   SafePresenter* safe_presenter_ = nullptr;
+
+  // |safe_presenter_injector_| is internal and created for |injector_session_|.
+  SafePresenter safe_presenter_injector_;
 
   // |safe_presenter_proxy_| is internal and created for |proxy_session_|.
   SafePresenter safe_presenter_proxy_;
