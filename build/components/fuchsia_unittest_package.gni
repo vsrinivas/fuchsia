@@ -38,7 +38,7 @@ import("fuchsia_unittest_component.gni")
 #   component_name (optional)
 #     The name of the component.
 #     Type: string
-#     Default: target_name
+#     Default: package_name if defined, else target_name
 #
 #   manifest (optional)
 #     Specify a component manifest for the test.
@@ -86,7 +86,11 @@ template("fuchsia_unittest_package") {
                              "v2",
                            ])
     if (!defined(component_name)) {
-      component_name = invoker.target_name
+      if (defined(invoker.package_name)) {
+        component_name = invoker.package_name
+      } else {
+        component_name = invoker.target_name
+      }
     }
     visibility = [ ":*" ]
   }
