@@ -1,8 +1,8 @@
 # Basic Components
 
 This directory contains simple examples of components in [Component
-Framework](docs/concepts/components/introduction.md)
-([Components v2](docs/glossary.md#components-v2)).
+Framework](/docs/concepts/components/introduction.md)
+([Components v2](/docs/glossary.md#components-v2)).
 
 ## Building
 
@@ -15,7 +15,7 @@ $ fx build
 ```
 
 (Disclaimer: if these build rules become out-of-date, please check the
-[Build documentation](docs/development/workflows) and update this README!)
+[Build documentation](/docs/development/workflows) and update this README!)
 
 ## Running
 
