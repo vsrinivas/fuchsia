@@ -25,6 +25,7 @@ use {
     },
     anyhow::{format_err, Context as _},
     async_trait::async_trait,
+    chrono::{DateTime, NaiveDateTime, Utc},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
@@ -32,9 +33,12 @@ use {
     },
     fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::LifecycleMarker,
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef, Clock, HandleBased, Job, ProcessInfo},
+    fuchsia_zircon::{
+        self as zx, AsHandleRef, Clock, Duration, HandleBased, Job, ProcessInfo, Signals, Status,
+        Time,
+    },
     futures::channel::oneshot,
     log::warn,
     runner::component::ChannelEpitaph,
@@ -48,15 +52,80 @@ use {
 // TODO(fxbug.dev/43934): For now, set the value to 50us to avoid delaying performance-critical
 // timers in Scenic and other system services.
 const TIMER_SLACK_DURATION: zx::Duration = zx::Duration::from_micros(50);
+/// [Clock transformations](https://fuchsia.dev/fuchsia-src/concepts/kernel/clock_transformations)
+/// can be applied to convert a time from a reference time to a synthetic time.
+pub trait TransformClock {
+    /// Apply the transformation from reference time to synthetic time.
+    fn apply(&self, monotonic_time: i64) -> i64;
+    /// Apply the inverse transformation from synthetic time to reference time.
+    fn apply_inverse(&self, synthetic_time: i64) -> i64;
+}
+
+/// Apply affine transformation to convert the reference time to the synthetic time.
+/// All values are widened to i128 before calculations and the end result is converted back to
+/// a i64. If "synthetic_time" is a larger number than would fit in an i64, the result saturates when cast to
+/// i64.
+fn transform_clock(
+    reference_time: i64,
+    reference_offset: i64,
+    synthetic_offset: i64,
+    reference_ticks: u32,
+    synthetic_ticks: u32,
+) -> i64 {
+    let reference_time = reference_time as i128;
+    let reference_offset = reference_offset as i128;
+    let synthetic_offset = synthetic_offset as i128;
+    let reference_ticks = reference_ticks as i128;
+    let synthetic_ticks = synthetic_ticks as i128;
+    let synthetic_time = (((reference_time - reference_offset) * synthetic_ticks)
+        / reference_ticks)
+        + synthetic_offset;
+    synthetic_time.try_into().unwrap_or_else(|_| {
+        if synthetic_time.is_positive() {
+            i64::MAX
+        } else {
+            i64::MIN
+        }
+    })
+}
+
+impl TransformClock for zx::ClockTransformation {
+    fn apply(&self, reference_time: i64) -> i64 {
+        transform_clock(
+            reference_time,
+            self.reference_offset,
+            self.synthetic_offset,
+            self.rate.reference_ticks,
+            self.rate.synthetic_ticks,
+        )
+    }
+
+    fn apply_inverse(&self, synthetic_time: i64) -> i64 {
+        transform_clock(
+            synthetic_time,
+            self.synthetic_offset,
+            self.reference_offset,
+            self.rate.synthetic_ticks,
+            self.rate.reference_ticks,
+        )
+    }
+}
 
 // Builds and serves the runtime directory
 /// Runs components with ELF binaries.
 pub struct ElfRunner {
     launcher_connector: ProcessLauncherConnector,
+    /// If `utc_clock` is populated then that Clock's handle will
+    /// be passed into the newly created process. Otherwise, the UTC
+    /// clock will be duplicated from current process' process table.
+    /// The latter is typically the case in unit tests and nested
+    /// component managers.
     utc_clock: Option<Arc<Clock>>,
 }
 
 struct ConfigureLauncherResult {
+    /// Populated if a UTC clock is available and has started.
+    utc_clock_xform: Option<zx::ClockTransformation>,
     launch_info: fidl_fuchsia_process::LaunchInfo,
     runtime_dir_builder: RuntimeDirBuilder,
     tasks: Vec<fasync::Task<()>>,
@@ -85,11 +154,35 @@ impl ElfRunner {
         let stdout_sink = elf_config.get_stdout_sink();
         let stderr_sink = elf_config.get_stderr_sink();
 
+        let clock_rights =
+            zx::Rights::READ | zx::Rights::WAIT | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
+        let utc_clock = if let Some(utc_clock) = &self.utc_clock {
+            utc_clock.duplicate_handle(clock_rights)
+        } else {
+            duplicate_utc_clock_handle(clock_rights)
+        }
+        .map_err(|s| {
+            RunnerError::component_launch_error(
+                "failed to duplicate UTC clock",
+                ElfRunnerError::DuplicateUtcClockError { url: resolved_url.clone(), status: s },
+            )
+        })?;
+
         // TODO(fxbug.dev/45586): runtime_dir may be unavailable in tests. We should fix tests so
         // that we don't have to have this check here.
         let runtime_dir_builder = match start_info.runtime_dir {
             Some(dir) => RuntimeDirBuilder::new(dir).args(args.clone()),
             None => return Ok(None),
+        };
+
+        let utc_clock_started = fasync::OnSignals::new(&utc_clock, Signals::CLOCK_STARTED)
+            .on_timeout(Time::after(Duration::default()), || Err(Status::TIMED_OUT))
+            .await
+            .is_ok();
+        let utc_clock_xform = if utc_clock_started {
+            utc_clock.get_details().map(|details| details.mono_to_synthetic).ok()
+        } else {
+            None
         };
 
         let name = Path::new(&resolved_url)
@@ -129,20 +222,6 @@ impl ElfRunner {
             })
         };
 
-        let clock_rights =
-            zx::Rights::READ | zx::Rights::WAIT | zx::Rights::DUPLICATE | zx::Rights::TRANSFER;
-        let utc_clock = if let Some(utc_clock) = &self.utc_clock {
-            utc_clock.duplicate_handle(clock_rights)
-        } else {
-            duplicate_utc_clock_handle(clock_rights)
-        }
-        .map_err(|s| {
-            RunnerError::component_launch_error(
-                "failed to duplicate UTC clock",
-                ElfRunnerError::DuplicateUtcClockError { url: resolved_url.clone(), status: s },
-            )
-        })?;
-
         handle_infos.push(fproc::HandleInfo {
             handle: utc_clock.into_handle(),
             id: HandleInfo::new(HandleType::ClockUtc, 0).as_raw(),
@@ -167,6 +246,7 @@ impl ElfRunner {
             .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?;
 
         Ok(Some(ConfigureLauncherResult {
+            utc_clock_xform,
             launch_info,
             runtime_dir_builder,
             tasks: stdout_and_stderr_tasks,
@@ -268,7 +348,7 @@ impl ElfRunner {
             ElfRunnerError::component_job_duplication_error(resolved_url.clone(), e)
         })?;
 
-        let (mut launch_info, runtime_dir_builder, tasks) = match self
+        let (utc_clock_xform, mut launch_info, runtime_dir_builder, tasks) = match self
             .configure_launcher(
                 &resolved_url,
                 start_info,
@@ -279,7 +359,12 @@ impl ElfRunner {
             )
             .await?
         {
-            Some(result) => (result.launch_info, result.runtime_dir_builder, result.tasks),
+            Some(result) => (
+                result.utc_clock_xform,
+                result.launch_info,
+                result.runtime_dir_builder,
+                result.tasks,
+            ),
             None => return Ok(None),
         };
 
@@ -325,11 +410,23 @@ impl ElfRunner {
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
             .start_time;
 
+        let process_start_time_utc_estimate = if let Some(utc_clock_xform) = utc_clock_xform {
+            let utc_timestamp = utc_clock_xform.apply(process_start_time);
+            let seconds = (utc_timestamp / 1_000_000_000) as i64;
+            let nanos = (utc_timestamp % 1_000_000_000) as u32;
+            let dt = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(seconds, nanos), Utc);
+            Some(dt.to_string())
+        } else {
+            None
+        };
+
         let runtime_dir = runtime_dir_builder
             .job_id(job_koid)
             .process_id(process_koid)
             .process_start_time(process_start_time)
+            .process_start_time_utc_estimate(process_start_time_utc_estimate)
             .serve();
+
         Ok(Some(ElfComponent::new(
             runtime_dir,
             Job::from(component_job),
@@ -695,6 +792,106 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn clock_identity_transformation_roundtrip() {
+        let t_0 = zx::Time::ZERO.into_nanos();
+        // Identity clock transformation
+        let xform = zx::ClockTransformation {
+            reference_offset: 0,
+            synthetic_offset: 0,
+            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1, reference_ticks: 1 },
+        };
+
+        let utc_time = xform.apply(t_0);
+        let monotonic_time = xform.apply_inverse(utc_time);
+
+        // Transformation roundtrip should be equivalent with the identity transformation.
+        assert_eq!(t_0, monotonic_time);
+    }
+
+    #[fuchsia::test]
+    fn clock_trivial_transformation() {
+        let t_0 = zx::Time::ZERO.into_nanos();
+        // Identity clock transformation
+        let xform = zx::ClockTransformation {
+            reference_offset: 3,
+            synthetic_offset: 2,
+            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 6, reference_ticks: 2 },
+        };
+
+        let utc_time = xform.apply(t_0);
+        let monotonic_time = xform.apply_inverse(utc_time);
+        // Verify that the math is correct.
+        assert_eq!(3 * (t_0 - 3) + 2, utc_time);
+
+        // Transformation roundtrip should be equivalent.
+        assert_eq!(t_0, monotonic_time);
+    }
+
+    #[test]
+    fn clock_transformation_roundtrip() {
+        let t_0 = zx::Time::ZERO.into_nanos();
+        // Arbitrary clock transformation
+        let xform = zx::ClockTransformation {
+            reference_offset: 196980085208,
+            synthetic_offset: 1616900096031887801,
+            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 999980, reference_ticks: 1000000 },
+        };
+
+        // Transformation roundtrip should be equivalent modulo rounding error.
+        let utc_time = xform.apply(t_0);
+        let monotonic_time = xform.apply_inverse(utc_time);
+
+        let roundtrip_diff = (t_0 - monotonic_time).abs();
+        assert!(roundtrip_diff <= 1);
+    }
+
+    #[test]
+    fn clock_trailing_transformation_roundtrip() {
+        let t_0 = zx::Time::ZERO.into_nanos();
+        // Arbitrary clock transformation where the synthetic clock is trailing behind the
+        // reference clock.
+        let xform = zx::ClockTransformation {
+            reference_offset: 1616900096031887801,
+            synthetic_offset: 196980085208,
+            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1000000, reference_ticks: 999980 },
+        };
+
+        // Transformation roundtrip should be equivalent modulo rounding error.
+        let utc_time = xform.apply(t_0);
+        let monotonic_time = xform.apply_inverse(utc_time);
+
+        let roundtrip_diff = (t_0 - monotonic_time).abs();
+        assert!(roundtrip_diff <= 1);
+    }
+
+    #[test]
+    fn clock_saturating_transformations() {
+        let t_0 = i64::MAX;
+        // Clock transformation which will positively overflow t_0
+        let xform = zx::ClockTransformation {
+            reference_offset: 0,
+            synthetic_offset: 1,
+            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1, reference_ticks: 1 },
+        };
+
+        // Applying the transformation will lead to saturation
+        let utc_time = xform.apply(t_0);
+        assert_eq!(utc_time, i64::MAX);
+
+        let t_0 = i64::MIN;
+        // Clock transformation which will negatively overflow t_0
+        let xform = zx::ClockTransformation {
+            reference_offset: 1,
+            synthetic_offset: 0,
+            rate: zx::sys::zx_clock_rate_t { synthetic_ticks: 1, reference_ticks: 1 },
+        };
+
+        // Applying the transformation will lead to saturation
+        let utc_time = xform.apply(t_0);
+        assert_eq!(utc_time, i64::MIN);
+    }
+
+    #[fuchsia::test]
     async fn args_test() -> Result<(), Error> {
         let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
         let start_info = lifecycle_startinfo(Some(ServerEnd::new(runtime_dir_server)));
@@ -728,9 +925,12 @@ mod tests {
         let process_id = read_file(&runtime_dir_proxy, "elf/process_id").await.parse::<u64>()?;
         let process_start_time =
             read_file(&runtime_dir_proxy, "elf/process_start_time").await.parse::<i64>()?;
+        let process_start_time_utc_estimate =
+            read_file(&runtime_dir_proxy, "elf/process_start_time_utc_estimate").await;
         let job_id = read_file(&runtime_dir_proxy, "elf/job_id").await.parse::<u64>()?;
         assert!(process_id > 0);
         assert!(process_start_time > 0);
+        assert!(process_start_time_utc_estimate.contains("UTC"));
         assert!(job_id > 0);
         assert_ne!(process_id, job_id);
 
