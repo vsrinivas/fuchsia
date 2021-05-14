@@ -51,7 +51,6 @@ test("fidl_llcpp_gen_api_tests_bin") {
   ]
   deps = [
     ":fidl.test.coding.fuchsia_llcpp",
-    "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
