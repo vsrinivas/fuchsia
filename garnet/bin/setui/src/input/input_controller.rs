@@ -63,21 +63,21 @@ impl From<InputInfoSourcesV2> for InputInfoSources {
     }
 }
 
-impl Into<SettingInfo> for InputInfoSources {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Input(self.into())
+impl From<InputInfoSources> for SettingInfo {
+    fn from(info: InputInfoSources) -> SettingInfo {
+        SettingInfo::Input(info.into())
     }
 }
 
-impl Into<InputInfo> for InputInfoSources {
-    fn into(self) -> InputInfo {
-        InputInfo { input_device_state: self.input_device_state }
+impl From<InputInfoSources> for InputInfo {
+    fn from(info: InputInfoSources) -> InputInfo {
+        InputInfo { input_device_state: info.input_device_state }
     }
 }
 
-impl Into<SettingInfo> for InputInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Input(self)
+impl From<InputInfo> for SettingInfo {
+    fn from(info: InputInfo) -> SettingInfo {
+        SettingInfo::Input(info)
     }
 }
 
@@ -249,7 +249,7 @@ impl InputControllerInner {
                 "Could not fetch current hw mute state".into(),
             ));
         }
-        let mut hw_state = hw_state_res.unwrap().clone();
+        let mut hw_state = hw_state_res.unwrap();
 
         if muted {
             // Unset available and set muted.

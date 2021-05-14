@@ -123,6 +123,7 @@ pub async fn monitor_media_buttons(
     fasync::Task::spawn(async move {
         while let Some(Ok(media_request)) = stream.next().await {
             // Support future expansion of FIDL
+            #[allow(clippy::single_match)]
             #[allow(unreachable_patterns)]
             match media_request {
                 MediaButtonsListenerRequest::OnMediaButtonsEvent { event, control_handle: _ } => {

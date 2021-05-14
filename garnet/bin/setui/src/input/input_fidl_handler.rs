@@ -33,7 +33,8 @@ impl From<SettingInfo> for InputDeviceSettings {
             let mic_state = info
                 .input_device_state
                 .get_state(InputDeviceType::MICROPHONE, DEFAULT_MIC_NAME.to_string());
-            let mic_muted = mic_state.unwrap_or(DeviceState::new()).has_state(DeviceState::MUTED);
+            let mic_muted =
+                mic_state.unwrap_or_else(|_| DeviceState::new()).has_state(DeviceState::MUTED);
 
             let microphone = Microphone { muted: Some(mic_muted), ..Microphone::EMPTY };
 
@@ -53,7 +54,7 @@ fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
         .collect();
 
     // If any devices were filtered out, the args were invalid, so exit.
-    if input_states_invalid_args.len() > 0 {
+    if !input_states_invalid_args.is_empty() {
         fx_log_err!("Failed to parse input request: missing args");
         return None;
     }
@@ -63,13 +64,11 @@ fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
         .map(|input_state| {
             let device_type: InputDeviceType = input_state.device_type.unwrap().into();
             let device_state = input_state.state.clone().unwrap().into();
-            let device_name = input_state.name.clone().unwrap_or(device_type.to_string());
+            let device_name = input_state.name.clone().unwrap_or_else(|| device_type.to_string());
             let mut source_states = HashMap::<DeviceStateSource, DeviceState>::new();
 
             source_states.insert(DeviceStateSource::SOFTWARE, device_state);
-            let input_device =
-                InputDevice { name: device_name, device_type, state: device_state, source_states };
-            return input_device;
+            InputDevice { name: device_name, device_type, state: device_state, source_states }
         })
         .collect();
 
@@ -131,7 +130,8 @@ async fn process_request_2(
             return Ok(Some(req));
         }
     }
-    return Ok(None);
+
+    Ok(None)
 }
 
 // TODO(fxbug.dev/65686): Remove when clients are ported over to new version
@@ -169,5 +169,6 @@ async fn process_request(
             return Ok(Some(req));
         }
     }
-    return Ok(None);
+
+    Ok(None)
 }

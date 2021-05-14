@@ -66,7 +66,7 @@ pub struct Microphone {
     pub muted: bool,
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Default, Clone, Serialize, Deserialize)]
 /// The top-level struct for the input state. It categorizes the input devices
 /// by their device type.
 pub struct InputState {
@@ -101,13 +101,13 @@ impl InputState {
         state: DeviceState,
     ) {
         // Ensure the category has an entry in the categories map.
-        let category = self.input_categories.entry(device_type).or_insert(InputCategory::new());
+        let category = self.input_categories.entry(device_type).or_insert_with(InputCategory::new);
 
         // Ensure the device has an entry in the devices map.
         let input_device = category
             .devices
             .entry(device_name.clone())
-            .or_insert(InputDevice::new(device_name.clone(), device_type));
+            .or_insert_with(|| InputDevice::new(device_name, device_type));
 
         // Replace or add the source state in the map.
         input_device.source_states.insert(source, state);
@@ -124,23 +124,24 @@ impl InputState {
         device_name: String,
         source: DeviceStateSource,
     ) -> Result<DeviceState, Error> {
-        return Ok(self
+        return Ok(*self
             .input_categories
             .get(&device_type)
-            .ok_or(ControllerError::UnexpectedError(
-                "Failed to get input category by input type".into(),
-            ))?
+            .ok_or_else(|| {
+                ControllerError::UnexpectedError(
+                    "Failed to get input category by input type".into(),
+                )
+            })?
             .devices
             .get(&device_name)
-            .ok_or(ControllerError::UnexpectedError(
-                "Failed to get input device by device name".into(),
-            ))?
+            .ok_or_else(|| {
+                ControllerError::UnexpectedError("Failed to get input device by device name".into())
+            })?
             .source_states
             .get(&source)
-            .ok_or(ControllerError::UnexpectedError(
-                "Failed to get state from source states".into(),
-            ))?
-            .clone());
+            .ok_or_else(|| {
+                ControllerError::UnexpectedError("Failed to get state from source states".into())
+            })?);
     }
 
     /// Retrieve the overall state of a given device.
@@ -155,16 +156,17 @@ impl InputState {
         return Ok(self
             .input_categories
             .get(&device_type)
-            .ok_or(ControllerError::UnexpectedError(
-                "Failed to get input category by input type".into(),
-            ))?
+            .ok_or_else(|| {
+                ControllerError::UnexpectedError(
+                    "Failed to get input category by input type".into(),
+                )
+            })?
             .devices
             .get(&device_name)
-            .ok_or(ControllerError::UnexpectedError(
-                "Failed to get input device by device name".into(),
-            ))?
-            .state
-            .clone());
+            .ok_or_else(|| {
+                ControllerError::UnexpectedError("Failed to get input device by device name".into())
+            })?
+            .state);
     }
 
     /// Returns true if the state map is empty.
@@ -187,19 +189,19 @@ impl From<InputConfiguration> for InputState {
         devices.iter().for_each(|device_config| {
             // Ensure the category has an entry in the categories map.
             let input_device_type = device_config.device_type;
-            let category = categories.entry(input_device_type).or_insert(InputCategory::new());
+            let category = categories.entry(input_device_type).or_insert_with(InputCategory::new);
 
             // Ensure the device has an entry in the devices map.
             let device_name = device_config.device_name.clone();
             let device = category
                 .devices
                 .entry(device_name.clone())
-                .or_insert(InputDevice::new(device_name.clone(), input_device_type));
+                .or_insert_with(|| InputDevice::new(device_name, input_device_type));
 
             // Set the entry on the source states map.
             device_config.source_states.iter().for_each(|source_state| {
                 let value =
-                    DeviceState::from_bits(source_state.state).unwrap_or(DeviceState::new());
+                    DeviceState::from_bits(source_state.state).unwrap_or_else(DeviceState::new);
                 device.source_states.insert(source_state.source, value);
             });
 
@@ -210,7 +212,7 @@ impl From<InputConfiguration> for InputState {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Default, Clone, Serialize, Deserialize)]
 pub struct InputCategory {
     // Map of input devices in this category, identified by names.
     // It is recommended that the name be the lower-case string
@@ -297,15 +299,12 @@ impl From<InputDevice> for FidlInputDevice {
                 .into_iter()
                 .map(|source| {
                     let mut source_state = FidlSourceState::EMPTY;
-                    source_state.source = Some(source.clone().into());
+                    source_state.source = Some((*source).into());
                     source_state.state = Some(
-                        source_state_map
-                            .get(&source)
-                            .expect("Source state map key missing")
-                            .clone()
+                        (*source_state_map.get(&source).expect("Source state map key missing"))
                             .into(),
                     );
-                    return source_state;
+                    source_state
                 })
                 .collect(),
         );
@@ -399,6 +398,12 @@ bitflags! {
     }
 }
 
+impl Default for DeviceState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DeviceState {
     pub fn new() -> Self {
         // Represents AVAILABLE as the default.
@@ -414,7 +419,7 @@ impl DeviceState {
     /// e.g. All the 1 bits in the given `state` are also 1s in the
     /// current state.
     pub fn has_state(&self, state: DeviceState) -> bool {
-        return *self & state == state;
+        *self & state == state
     }
 
     /// Returns true if the device's state has an error.
