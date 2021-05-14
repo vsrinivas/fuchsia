@@ -82,7 +82,7 @@ impl DeviceStorageCompatible for DisplayInfo {
         default_display_info()
     }
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV5::deserialize_from(&value)))
     }
@@ -358,7 +358,7 @@ impl DeviceStorageCompatible for DisplayInfoV2 {
         )
     }
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV1::deserialize_from(&value)))
     }
@@ -438,7 +438,7 @@ impl DeviceStorageCompatible for DisplayInfoV3 {
         )
     }
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV2::deserialize_from(&value)))
     }
@@ -511,7 +511,7 @@ impl DeviceStorageCompatible for DisplayInfoV4 {
         )
     }
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV3::deserialize_from(&value)))
     }
@@ -574,7 +574,7 @@ impl DeviceStorageCompatible for DisplayInfoV5 {
         )
     }
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value)
             .unwrap_or_else(|_| Self::from(DisplayInfoV4::deserialize_from(&value)))
     }

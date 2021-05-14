@@ -228,11 +228,11 @@ impl SettingProxy {
             delegate,
             messenger,
             signature: service_signature,
-            event_publisher: event_publisher,
+            event_publisher,
             proxy_request_sender,
             max_attempts,
             teardown_timeout,
-            request_timeout: request_timeout,
+            request_timeout,
             retry_on_timeout,
             teardown_cancellation: None,
         };
@@ -347,9 +347,9 @@ impl SettingProxy {
                 .handler_factory
                 .lock()
                 .await
-                .generate(self.setting_type, self.delegate.clone(), self.signature.clone())
+                .generate(self.setting_type, self.delegate.clone(), self.signature)
                 .await
-                .map_or(None, Some);
+                .ok();
         }
 
         self.client_signature

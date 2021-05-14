@@ -122,7 +122,7 @@ impl DeviceStorageCompatible for AudioInfo {
         default_audio_info()
     }
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value).unwrap_or_else(|_| Self::from(AudioInfoV1::deserialize_from(&value)))
     }
 }

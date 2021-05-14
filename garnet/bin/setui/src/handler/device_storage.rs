@@ -92,14 +92,14 @@ pub trait DeviceStorageCompatible:
 {
     fn default_value() -> Self;
 
-    fn deserialize_from(value: &String) -> Self {
+    fn deserialize_from(value: &str) -> Self {
         Self::extract(&value).unwrap_or_else(|error| {
             fx_log_err!("error occurred:{:?}", error);
             Self::default_value()
         })
     }
 
-    fn extract(value: &String) -> Result<Self, Error> {
+    fn extract(value: &str) -> Result<Self, Error> {
         serde_json::from_str(&value).map_err(|_| format_err!("could not deserialize"))
     }
 
@@ -398,7 +398,7 @@ impl DeviceStorage {
             .typed_storage_map
             .get(T::KEY)
             // TODO(fxbug.dev/67371) Replace this with an error result.
-            .expect(&format!("Invalid data keyed by {}", T::KEY));
+            .unwrap_or_else(|| panic!("Invalid data keyed by {}", T::KEY));
         let mut cached_storage = typed_storgae.cached_storage.lock().await;
         if cached_storage.current_data.is_none() || !self.caching_enabled {
             if let Some(stash_value) =
@@ -1221,7 +1221,7 @@ mod tests {
                 Self { value: DEFAULT_CURRENT_VALUE, value_2: DEFAULT_CURRENT_VALUE_2 }
             }
 
-            fn deserialize_from(value: &String) -> Self {
+            fn deserialize_from(value: &str) -> Self {
                 Self::extract(&value).unwrap_or_else(|_| {
                     V1::extract(&value).map_or(Self::default_value(), Self::from)
                 })

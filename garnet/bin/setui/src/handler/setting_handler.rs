@@ -172,7 +172,7 @@ impl ClientImpl {
         Self {
             messenger: context.messenger.clone(),
             setting_type: context.setting_type,
-            notifier_signature: context.notifier_signature.clone(),
+            notifier_signature: context.notifier_signature,
             notify: Mutex::new(false),
             service_context: Arc::clone(&context.environment.service_context),
         }
