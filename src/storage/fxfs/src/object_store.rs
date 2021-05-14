@@ -898,6 +898,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     ) -> Result<u64, Error> {
         assert_eq!(range.start % self.block_size as u64, 0);
         assert_eq!(range.end % self.block_size as u64, 0);
+        if range.start == range.end {
+            return Ok(0);
+        }
         let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let key = ExtentKey::new(range);
