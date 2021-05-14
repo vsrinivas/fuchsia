@@ -6,21 +6,21 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_repository_serve_args::ServeCommand,
-    log::info,
-    pkg::repository::{FileSystemRepository, RepositoryManager, RepositoryServer},
+    pkg::repository::{FileSystemRepository, Repository, RepositoryManager, RepositoryServer},
     std::sync::Arc,
 };
 
 #[ffx_plugin()]
 pub async fn serve(cmd: ServeCommand) -> Result<()> {
-    let repo = FileSystemRepository::new(cmd.name, cmd.repo_path);
+    let fs_repo = FileSystemRepository::new(cmd.repo_path);
+    let repo = Repository::new(&cmd.name, Box::new(fs_repo)).await.unwrap();
     let repo_manager = RepositoryManager::new();
     repo_manager.add(Arc::new(repo));
 
     let (task, server) =
         RepositoryServer::builder(cmd.listen_address, repo_manager).start().await?;
 
-    info!("starting server on {}", server.local_addr());
+    println!("starting server on {}", server.local_addr());
 
     let () = task.await;
 

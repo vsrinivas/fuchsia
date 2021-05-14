@@ -9,7 +9,9 @@ ffx_plugin("ffx_repository_list") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/developer/ffx/lib/pkg",
+    "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:async-trait",
   ]
 

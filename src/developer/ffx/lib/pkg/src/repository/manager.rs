@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{file_system::FileSystemRepository, Repository},
+    super::{file_system::FileSystemRepository, Error, Repository, RepositoryBackend},
     anyhow::Result,
     parking_lot::RwLock,
     serde::{Deserialize, Serialize},
@@ -11,7 +11,10 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
-type ArcRepository = Arc<dyn Repository + Send + Sync>;
+#[cfg(test)]
+use super::RepositoryMetadata;
+
+type ArcRepository = Arc<Repository>;
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -36,15 +39,28 @@ impl RepositoryManager {
         self.repositories.write().insert(repo.name().to_string(), repo);
     }
 
-    /// Use a configuration value to instantiate a [Repository] and add it to the [RepositoryManager].
-    pub fn add_from_config(&self, name: String, spec: Value) -> Result<()> {
-        let spec = serde_json::from_value(spec)?;
+    fn get_backend(&self, spec: Value) -> Result<Box<dyn RepositoryBackend + Send + Sync>, Error> {
+        let spec = serde_json::from_value(spec).map_err(|e| anyhow::anyhow!(e))?;
         match spec {
-            RepositorySpec::FileSystem { path } => {
-                self.add(Arc::new(FileSystemRepository::new(name, path)));
-                Ok(())
-            }
+            RepositorySpec::FileSystem { path } => Ok(Box::new(FileSystemRepository::new(path))),
         }
+    }
+
+    /// Use a configuration value to instantiate a [Repository] and add it to the [RepositoryManager].
+    pub async fn add_from_config(&self, name: String, spec: Value) -> Result<(), Error> {
+        self.add(Arc::new(Repository::new(&name, self.get_backend(spec)?).await?));
+        Ok(())
+    }
+
+    #[cfg(test)]
+    async fn add_from_config_with_metadata(
+        &self,
+        name: String,
+        spec: Value,
+        metadata: RepositoryMetadata,
+    ) -> Result<(), Error> {
+        self.add(Arc::new(Repository::new_with_metadata(&name, self.get_backend(spec)?, metadata)));
+        Ok(())
     }
 
     /// Get a [Repository].
@@ -66,10 +82,17 @@ mod test {
     use {fuchsia_async as fasync, serde_json::json};
 
     #[fasync::run_singlethreaded(test)]
-    async fn fs_from_config() {
+    async fn fs_backend_from_config() {
         let value = json!({ "type": "fs", "path": "/nowhere" });
         let manager = RepositoryManager::new();
-        manager.add_from_config("my_repo".to_owned(), value).expect("Error adding value");
+        manager
+            .add_from_config_with_metadata(
+                "my_repo".to_owned(),
+                value,
+                RepositoryMetadata::default(),
+            )
+            .await
+            .expect("Error adding value");
 
         assert_eq!(
             manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),

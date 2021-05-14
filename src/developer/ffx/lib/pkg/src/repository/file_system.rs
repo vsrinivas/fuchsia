@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, Repository, Resource},
+    super::{Error, RepositoryBackend, Resource},
+    anyhow::Result,
     bytes::{Bytes, BytesMut},
     futures::{ready, stream, AsyncRead, Stream},
     log::{error, warn},
@@ -14,31 +15,31 @@ use {
         pin::Pin,
         task::Poll,
     },
+    tuf::{
+        interchange::Json,
+        repository::{
+            FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder, RepositoryProvider,
+        },
+    },
 };
 
 /// Read files in chunks of this size off the local storage.
 const CHUNK_SIZE: usize = 8_192;
-
 /// Serve a repository from the file system.
 #[derive(Debug)]
 pub struct FileSystemRepository {
-    name: String,
     repo_path: PathBuf,
 }
 
 impl FileSystemRepository {
     /// Construct a [FileSystemRepository].
-    pub fn new(name: String, repo_path: PathBuf) -> Self {
-        Self { name, repo_path }
+    pub fn new(repo_path: PathBuf) -> Self {
+        Self { repo_path }
     }
 }
 
 #[async_trait::async_trait]
-impl Repository for FileSystemRepository {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
+impl RepositoryBackend for FileSystemRepository {
     async fn fetch(&self, resource_path: &str) -> Result<Resource, Error> {
         let file_path = sanitize_path(&self.repo_path, resource_path)?;
 
@@ -46,6 +47,13 @@ impl Repository for FileSystemRepository {
         let len = file.metadata().await?.len();
 
         Ok(Resource { len, stream: Box::pin(file_stream(file_path, len as usize, file)) })
+    }
+
+    fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
+        TufFileSystemRepositoryBuilder::<Json>::new(self.repo_path.clone())
+            .build()
+            .map(|r| Box::new(r) as Box<dyn RepositoryProvider<Json>>)
+            .map_err(|e| anyhow::anyhow!(e).into())
     }
 }
 
@@ -143,15 +151,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fetch_missing() {
         let d = tempfile::tempdir().unwrap();
-        let repo = FileSystemRepository::new("devhost".into(), d.path().to_path_buf());
-
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
         assert_matches!(repo.fetch("does-not-exist").await, Err(Error::NotFound));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fetch_empty() {
         let d = tempfile::tempdir().unwrap();
-        let repo = FileSystemRepository::new("devhost".into(), d.path().to_path_buf());
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
 
         let f = File::create(d.path().join("empty")).unwrap();
         drop(f);
@@ -162,8 +169,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fetch_small() {
         let d = tempfile::tempdir().unwrap();
-        let repo = FileSystemRepository::new("devhost".into(), d.path().to_path_buf());
-
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
         let body = b"hello world";
         let mut f = File::create(d.path().join("small")).unwrap();
         f.write(body).unwrap();
@@ -175,8 +181,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fetch_chunks() {
         let d = tempfile::tempdir().unwrap();
-        let repo = FileSystemRepository::new("devhost".into(), d.path().to_path_buf());
-
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
         let chunks = [0, 1, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1];
         for size in &chunks {
             let path = format!("{}", size);
@@ -193,8 +198,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reject_invalid_paths() {
         let d = tempfile::tempdir().unwrap();
-        let repo = FileSystemRepository::new("devhost".into(), d.path().to_path_buf());
-
+        let repo = FileSystemRepository::new(d.path().to_path_buf());
         std::fs::create_dir(d.path().join("subdir")).unwrap();
         let f = std::fs::File::create(d.path().join("empty")).unwrap();
         drop(f);

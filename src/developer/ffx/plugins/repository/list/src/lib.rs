@@ -29,32 +29,41 @@ mod test {
     use {
         async_trait::async_trait,
         fuchsia_async as fasync,
-        pkg::repository::{Error, Repository, Resource},
+        pkg::repository::{Error, Repository, RepositoryBackend, RepositoryMetadata, Resource},
         std::sync::Arc,
+        tuf::{interchange::Json, repository::RepositoryProvider},
     };
 
     #[derive(Debug)]
-    struct DummyRepository {
-        name: String,
-    }
+    struct DummyBackend {}
 
     #[async_trait]
-    impl Repository for DummyRepository {
-        fn name(&self) -> &str {
-            &self.name
-        }
-
+    impl RepositoryBackend for DummyBackend {
         async fn fetch(&self, _: &str) -> Result<Resource, Error> {
             unimplemented!()
+        }
+
+        fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error> {
+            unimplemented!();
         }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn list() {
+        let metadata = RepositoryMetadata::new(vec![], 1);
+
         let mut out = Vec::<u8>::new();
         let manager = RepositoryManager::new();
-        manager.add(Arc::new(DummyRepository { name: "Test1".to_owned() }));
-        manager.add(Arc::new(DummyRepository { name: "Test2".to_owned() }));
+        manager.add(Arc::new(Repository::new_with_metadata(
+            "Test1",
+            Box::new(DummyBackend {}),
+            metadata.clone(),
+        )));
+        manager.add(Arc::new(Repository::new_with_metadata(
+            "Test2",
+            Box::new(DummyBackend {}),
+            metadata,
+        )));
         list_impl(&manager, &mut out).await.unwrap();
 
         assert_eq!(&String::from_utf8_lossy(&out), "Test1\nTest2\n");

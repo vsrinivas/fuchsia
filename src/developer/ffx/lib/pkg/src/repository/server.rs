@@ -16,7 +16,7 @@ use {
     },
     log::{error, info, warn},
     std::{
-        convert::Infallible,
+        convert::{Infallible, TryInto},
         io,
         net::SocketAddr,
         pin::Pin,
@@ -89,7 +89,7 @@ impl RepositoryServerBuilder {
                     let method = req.method().to_string();
                     let path = req.uri().path().to_string();
 
-                    handle_request(Arc::clone(&repo_manager), req)
+                    handle_request(Arc::clone(&repo_manager), req, local_addr.clone())
                         .inspect(move |resp| {
                             info!(
                                 "{} [ffx] {} {} => {}",
@@ -127,6 +127,7 @@ impl RepositoryServerBuilder {
 async fn handle_request(
     repo_manager: Arc<RepositoryManager>,
     req: Request<Body>,
+    local_addr: SocketAddr,
 ) -> Response<Body> {
     let mut path = req.uri().path();
 
@@ -165,26 +166,44 @@ async fn handle_request(
         return status_response(StatusCode::NOT_FOUND);
     };
 
-    let file = match repo.fetch(resource_path).await {
-        Ok(file) => file,
-        Err(Error::NotFound) => {
-            warn!("could not find resource: {}", resource_path);
-            return status_response(StatusCode::NOT_FOUND);
+    let resource = match resource_path {
+        "repo.json" => {
+            let config = match repo.get_config(&local_addr.to_string()).await {
+                Ok(c) => c,
+                Err(e) => {
+                    error!("failed to generate config: {:?}", e);
+                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
+            match config.try_into() {
+                Ok(c) => c,
+                Err(e) => {
+                    error!("failed to generate config: {:?}", e);
+                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            }
         }
-        Err(Error::InvalidPath(path)) => {
-            warn!("invalid path: {}", path.display());
-            return status_response(StatusCode::BAD_REQUEST);
-        }
-        Err(err) => {
-            error!("error fetching file {}: {:?}", resource_path, err);
-            return status_response(StatusCode::INTERNAL_SERVER_ERROR);
-        }
+        _ => match repo.fetch(resource_path).await {
+            Ok(file) => file,
+            Err(Error::NotFound) => {
+                warn!("could not find resource: {}", resource_path);
+                return status_response(StatusCode::NOT_FOUND);
+            }
+            Err(Error::InvalidPath(path)) => {
+                warn!("invalid path: {}", path.display());
+                return status_response(StatusCode::BAD_REQUEST);
+            }
+            Err(err) => {
+                error!("error fetching file {}: {:?}", resource_path, err);
+                return status_response(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        },
     };
 
     Response::builder()
         .status(200)
-        .header("Content-Length", file.len)
-        .body(Body::wrap_stream(file.stream))
+        .header("Content-Length", resource.len)
+        .body(Body::wrap_stream(resource.stream))
         .unwrap()
 }
 
@@ -227,7 +246,10 @@ impl tokio::io::AsyncWrite for HyperStream {
 mod tests {
     use {
         super::*,
-        crate::repository::FileSystemRepository,
+        crate::repository::{
+            FileSystemRepository, MirrorConfig, Repository, RepositoryConfig, RepositoryKeyConfig,
+            RepositoryManager, RepositoryMetadata,
+        },
         anyhow::Result,
         bytes::Bytes,
         fuchsia_async as fasync,
@@ -256,6 +278,24 @@ mod tests {
     fn write_file(path: &Path, body: &[u8]) {
         let mut f = File::create(path).unwrap();
         f.write(body).unwrap();
+    }
+
+    async fn verify_repo_json(devhost: &str, server_url: &str, keys: Vec<RepositoryKeyConfig>) {
+        let url = format!("{}/{}/repo.json", server_url, devhost);
+        let json: RepositoryConfig =
+            serde_json::from_slice(&get_bytes(&url).await.unwrap()).unwrap();
+
+        let expected = RepositoryConfig {
+            repo_url: Some(format!("fuchsia-pkg://{}", devhost)),
+            root_keys: Some(keys),
+            root_version: Some(1),
+            mirrors: Some(vec![MirrorConfig {
+                mirror_url: Some(server_url.to_string()),
+                subscribe: Some(false),
+            }]),
+        };
+
+        assert_eq!(json, expected);
     }
 
     async fn run_test<F, R>(manager: Arc<RepositoryManager>, test: F)
@@ -313,9 +353,12 @@ mod tests {
 
         let d = tempfile::tempdir().unwrap();
 
-        let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
+        let test_cases = [
+            ("devhost-0", ["0-0", "0-1"], &vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])]),
+            ("devhost-1", ["1-0", "1-1"], &vec![RepositoryKeyConfig::Ed25519Key(vec![5, 6, 7, 8])]),
+        ];
 
-        for (devhost, bodies) in &test_cases {
+        for (devhost, bodies, keys) in &test_cases {
             let dir = d.path().join(devhost);
             create_dir(&dir).unwrap();
 
@@ -323,16 +366,21 @@ mod tests {
                 write_file(&dir.join(body), body.as_bytes());
             }
 
-            let repo = FileSystemRepository::new(devhost.to_string(), dir);
+            let repo = Repository::new_with_metadata(
+                devhost,
+                Box::new(FileSystemRepository::new(dir)),
+                RepositoryMetadata::new(keys.to_vec(), 1),
+            );
             manager.add(Arc::new(repo));
         }
 
         run_test(manager, |server_url| async move {
-            for (devhost, bodies) in &test_cases {
+            for (devhost, bodies, key_vec) in &test_cases {
                 for body in &bodies[..] {
                     let url = format!("{}/{}/{}", server_url, devhost, body);
                     assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == &body[..]);
                 }
+                verify_repo_json(devhost, &server_url, key_vec.to_vec()).await;
             }
         })
         .await
