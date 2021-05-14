@@ -600,9 +600,6 @@ _tests = [
 foreach(test_name, _tests) {
   fuchsia_unittest_component("${test_name}_component") {
     deps = [ ":${test_name}" ]
-
-    # TODO(fxbug.dev/76529) Switch to v2 when these tests no longer depend on zxtest (transitively through fake_ddk) and gtest.
-    v2 = false
   }
 }
 

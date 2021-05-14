@@ -70,7 +70,4 @@ test("driver-test") {
 
 fuchsia_unittest_package("network-device-test") {
   deps = [ ":driver-test" ]
-
-  # TODO(fxbug.dev/76529): Convert to v2 once this test no longer depends on zxtest (transitively through fake_ddk) and gtest.
-  v2 = false
 }

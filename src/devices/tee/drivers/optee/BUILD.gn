@@ -111,8 +111,8 @@ test("optee-client-test-bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
-    "//src/lib/testing/loop_fixture",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -130,9 +130,6 @@ test("optee-uuid-test-bin") {
 
 fuchsia_unittest_component("optee-client-test") {
   deps = [ ":optee-client-test-bin" ]
-
-  # TODO(fxbug.dev/76529): Switch to v2 when this no longer depends on both zxtest and gtest.
-  v2 = false
 }
 
 fuchsia_unittest_component("optee-controller-test") {
