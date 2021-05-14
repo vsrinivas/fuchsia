@@ -71,7 +71,7 @@ pub async fn main(opt: Args) -> Result<(), Error> {
             Ok(())
         }
         Err(e) => {
-            warn!("Failed to parse lapis configurations from /config/data/metric: {:?}", e);
+            warn!("Failed to parse sampler configurations from /config/data/metrics: {:?}", e);
             Ok(())
         }
     }

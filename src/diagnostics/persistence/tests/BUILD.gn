@@ -14,7 +14,7 @@ rustc_test("test-bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/persistence/fidl:persist-rustc",
-    "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
+    "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/testing/rust",

@@ -1,0 +1,47 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/launcher",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.logger.Log",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
+            from: "self",
+        },
+    ],
+}

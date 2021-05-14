@@ -79,6 +79,7 @@ pub fn parse_config(path: impl AsRef<Path>) -> Result<ProjectConfig, Error> {
 /// Includes:
 ///      - Project configurations.
 ///      - Minimum sample rate.
+#[derive(Debug)]
 pub struct SamplerConfig {
     pub project_configs: Vec<ProjectConfig>,
     pub minimum_sample_rate_sec: i64,

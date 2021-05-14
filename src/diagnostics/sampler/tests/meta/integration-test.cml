@@ -1,0 +1,24 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/sampler_integration_test",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#fuchsia_component_test_collection" ],
+            rights: [ "r*" ],
+            subdir: "sampler-integration-tests",
+        },
+    ],
+}

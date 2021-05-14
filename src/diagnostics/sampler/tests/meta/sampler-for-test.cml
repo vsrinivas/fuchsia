@@ -4,7 +4,7 @@
         args: [
             "lapis",
             "--minimum-sample-rate-sec",
-            "10",
+            "1",
         ],
     },
 }

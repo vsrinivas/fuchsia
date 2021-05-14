@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Context;
 use fidl_fuchsia_samplertestcontroller::*;
 use fuchsia_async::{
     self as fasync,
@@ -15,9 +14,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-fn main() {
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor").unwrap();
-
+#[fuchsia::component]
+async fn main() {
     let mut fs = ServiceFs::new();
     let inspector = component::inspector();
     inspect_runtime::serve(inspector, &mut fs).unwrap();
@@ -26,7 +24,7 @@ fn main() {
 
     fs.take_and_serve_directory_handle().unwrap();
 
-    executor.run_singlethreaded(fs.collect::<()>());
+    fs.collect::<()>().await;
 }
 
 struct TestState {

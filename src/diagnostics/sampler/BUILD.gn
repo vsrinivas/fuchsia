@@ -68,7 +68,7 @@ fuchsia_unittest_package("sampler-tests") {
 }
 
 # Custom build rule responsible for generating them
-# default config-data the production Lapis service uses
+# default config-data the production Sampler service uses
 # as well as the resource rule used by the configuration
 # verification test.
 lapis_configuration("production_lapis") {
@@ -83,7 +83,7 @@ lapis_configuration("production_lapis") {
   ]
 }
 
-# Rules defining the V1 and V2 Lapis components.
+# Rules defining the Sampler component.
 fuchsia_component("sampler-component") {
   component_name = "sampler"
   deps = [
@@ -97,15 +97,6 @@ variant_shared_library_redirect("sampler_lib") {
   library = ":lib"
 }
 
-fuchsia_component("sampler-v1") {
-  component_name = "sampler"
-  manifest = "meta/sampler.cmx"
-  deps = [
-    ":sampler_lib",
-    "//src/diagnostics/launcher:bin",
-  ]
-}
-
 fuchsia_package("sampler") {
   deps = [ ":sampler-component" ]
 }
@@ -114,6 +105,6 @@ group("tests") {
   testonly = true
   deps = [
     ":sampler-tests",
-    "tests:sampler-integration-tests",
+    "tests",
   ]
 }
