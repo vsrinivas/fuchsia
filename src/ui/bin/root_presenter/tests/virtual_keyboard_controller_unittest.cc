@@ -71,7 +71,7 @@ class VirtualKeyboardControllerTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(VirtualKeyboardControllerTest, FirstWatchReturnsImmediately) {
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   bool was_called = false;
   controller.WatchVisibility([&was_called](bool visibility) { was_called = true; });
@@ -79,7 +79,7 @@ TEST_F(VirtualKeyboardControllerTest, FirstWatchReturnsImmediately) {
 }
 
 TEST_F(VirtualKeyboardControllerTest, InitialVisibilityIsFalse) {
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   std::optional<bool> is_visible;
   controller.WatchVisibility([&is_visible](bool visibility) { is_visible = visibility; });
@@ -87,7 +87,7 @@ TEST_F(VirtualKeyboardControllerTest, InitialVisibilityIsFalse) {
 }
 
 TEST_F(VirtualKeyboardControllerTest, SecondWatchHangsUntilChange) {
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 
   // Make the initial call to WatchVisibility(), which invokes its callback immediately, so that
@@ -110,7 +110,7 @@ TEST_F(VirtualKeyboardControllerTest, SecondWatchHangsUntilChange) {
 }
 
 TEST_F(VirtualKeyboardControllerTest, SecondWatchReturnsImmediatelyIfAlreadyChanged) {
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 
   // Make the initial call to WatchVisibility(), which invokes its callback immediately, so that
@@ -129,7 +129,7 @@ TEST_F(VirtualKeyboardControllerTest, SecondWatchReturnsImmediatelyIfAlreadyChan
 
 TEST_F(VirtualKeyboardControllerTest, FirstWatchCallbackIsOnlyInvokedOnce) {
   // Make the initial call to WatchVisibility(), which invokes its callback immediately.
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   size_t n_callbacks = 0;
   controller.WatchVisibility([&n_callbacks](bool visibility) { ++n_callbacks; });
@@ -143,7 +143,7 @@ TEST_F(VirtualKeyboardControllerTest, FirstWatchCallbackIsOnlyInvokedOnce) {
 TEST_F(VirtualKeyboardControllerTest, SecondWatchCallbackIsOnlyInvokedOnce) {
   // Make the initial call to WatchVisibility(), which invokes its callback immediately, so that
   // we know we're exercise the second-and-later logic.
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   controller.WatchVisibility([](bool visibility) {});
 
@@ -159,7 +159,7 @@ TEST_F(VirtualKeyboardControllerTest, SecondWatchCallbackIsOnlyInvokedOnce) {
 }
 
 TEST_F(VirtualKeyboardControllerTest, ConcurrentCallsLastWatcherGetsNewValue) {
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 
   // Make the initial call to WatchVisibility(), which invokes its callback immediately, so that
@@ -177,7 +177,7 @@ TEST_F(VirtualKeyboardControllerTest, ConcurrentCallsLastWatcherGetsNewValue) {
 }
 
 TEST_F(VirtualKeyboardControllerTest, ConcurrentCallsFirstWatchersGetsOldValue) {
-  auto controller = VirtualKeyboardController(
+  auto controller = FidlBoundVirtualKeyboardController(
       coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 
   // Make the initial call to WatchVisibility(), which invokes its callback immediately, so that
@@ -195,38 +195,40 @@ TEST_F(VirtualKeyboardControllerTest, ConcurrentCallsFirstWatchersGetsOldValue) 
 }
 
 TEST_F(VirtualKeyboardControllerTest, RequestShowInformsCoordinatorOfVisibility) {
-  VirtualKeyboardController(coordinator(), view_ref(),
-                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  FidlBoundVirtualKeyboardController(coordinator(), view_ref(),
+                                     fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .RequestShow();
   ASSERT_EQ(true, coordinator()->want_visible());
 }
 
 TEST_F(VirtualKeyboardControllerTest, RequestHideInformsCoordinatorOfVisibility) {
-  VirtualKeyboardController(coordinator(), view_ref(),
-                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  FidlBoundVirtualKeyboardController(coordinator(), view_ref(),
+                                     fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .RequestHide();
   ASSERT_EQ(false, coordinator()->want_visible());
 }
 
 TEST_F(VirtualKeyboardControllerTest, RequestShowDoesNotCrashWhenCoordinatorIsNull) {
   std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
-  VirtualKeyboardController controller(coordinator->GetWeakPtr(), view_ref(),
-                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  FidlBoundVirtualKeyboardController controller(
+      coordinator->GetWeakPtr(), view_ref(),
+      fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   coordinator.reset();
   controller.RequestShow();
 }
 
 TEST_F(VirtualKeyboardControllerTest, RequestHideDoesNotCrashWhenCoordinatorIsNull) {
   std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
-  VirtualKeyboardController controller(coordinator->GetWeakPtr(), view_ref(),
-                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  FidlBoundVirtualKeyboardController controller(
+      coordinator->GetWeakPtr(), view_ref(),
+      fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   coordinator.reset();
   controller.RequestHide();
 }
 
 TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardShown) {
-  VirtualKeyboardController controller(coordinator(), view_ref(),
-                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  FidlBoundVirtualKeyboardController controller(
+      coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   controller.RequestShow();
   coordinator()->Reset();
   controller.SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
@@ -234,8 +236,8 @@ TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardShown) {
 }
 
 TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardHidden) {
-  VirtualKeyboardController controller(coordinator(), view_ref(),
-                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  FidlBoundVirtualKeyboardController controller(
+      coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   coordinator()->Reset();
   controller.SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
   ASSERT_EQ(false, coordinator()->want_visible());
@@ -243,8 +245,8 @@ TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardHidden) {
 
 TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotReopenKeyboardClosedByUser) {
   // Create controller, and request that the keyboard be shown.
-  VirtualKeyboardController controller(coordinator(), view_ref(),
-                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  FidlBoundVirtualKeyboardController controller(
+      coordinator(), view_ref(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   controller.RequestShow();
   ASSERT_EQ(true, coordinator()->want_visible());
 
@@ -265,14 +267,14 @@ class VirtualKeyboardControllerTextTypeParamFixture
 TEST_P(VirtualKeyboardControllerTextTypeParamFixture,
        RequestShowInformsCoordinatorOfInitialTextType) {
   auto expected_text_type = GetParam();
-  VirtualKeyboardController(coordinator(), view_ref(), expected_text_type).RequestShow();
+  FidlBoundVirtualKeyboardController(coordinator(), view_ref(), expected_text_type).RequestShow();
   ASSERT_EQ(expected_text_type, coordinator()->requested_text_type());
 }
 
 TEST_P(VirtualKeyboardControllerTextTypeParamFixture, SetTextTypeInformsCoordinator) {
   auto expected_text_type = GetParam();
-  VirtualKeyboardController(coordinator(), view_ref(),
-                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  FidlBoundVirtualKeyboardController(coordinator(), view_ref(),
+                                     fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .SetTextType(expected_text_type);
   ASSERT_EQ(expected_text_type, coordinator()->requested_text_type());
 }
@@ -285,8 +287,9 @@ INSTANTIATE_TEST_SUITE_P(VirtualKeyboardControllerTextTypeParameterizedTests,
 
 TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotCrashWhenCoordinatorIsNull) {
   std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
-  VirtualKeyboardController controller(coordinator->GetWeakPtr(), view_ref(),
-                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  FidlBoundVirtualKeyboardController controller(
+      coordinator->GetWeakPtr(), view_ref(),
+      fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   coordinator.reset();
   controller.SetTextType(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
 }

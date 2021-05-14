@@ -13,32 +13,35 @@
 
 namespace root_presenter {
 
-VirtualKeyboardController::VirtualKeyboardController(
+FidlBoundVirtualKeyboardController::FidlBoundVirtualKeyboardController(
     fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, fuchsia::ui::views::ViewRef view_ref,
     fuchsia::input::virtualkeyboard::TextType text_type)
     : coordinator_(std::move(coordinator)), text_type_(text_type), want_visible_(false) {}
 
-void VirtualKeyboardController::SetTextType(fuchsia::input::virtualkeyboard::TextType text_type) {
+FidlBoundVirtualKeyboardController::~FidlBoundVirtualKeyboardController() {}
+
+void FidlBoundVirtualKeyboardController::SetTextType(
+    fuchsia::input::virtualkeyboard::TextType text_type) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   text_type_ = text_type;
   NotifyCoordinator();
 }
 
-void VirtualKeyboardController::RequestShow() {
+void FidlBoundVirtualKeyboardController::RequestShow() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   want_visible_ = true;
   NotifyCoordinator();
   MaybeNotifyWatcher();
 }
 
-void VirtualKeyboardController::RequestHide() {
+void FidlBoundVirtualKeyboardController::RequestHide() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   want_visible_ = false;
   NotifyCoordinator();
   MaybeNotifyWatcher();
 }
 
-void VirtualKeyboardController::WatchVisibility(WatchVisibilityCallback callback) {
+void FidlBoundVirtualKeyboardController::WatchVisibility(WatchVisibilityCallback callback) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   if (watch_callback_) {
     // Called with a watch already active. Resend the current value, so that
@@ -56,7 +59,7 @@ void VirtualKeyboardController::WatchVisibility(WatchVisibilityCallback callback
   }
 }
 
-void VirtualKeyboardController::OnUserAction(UserAction action) {
+void FidlBoundVirtualKeyboardController::OnUserAction(UserAction action) {
   switch (action) {
     case UserAction::HIDE_KEYBOARD:
       want_visible_ = false;
@@ -68,7 +71,7 @@ void VirtualKeyboardController::OnUserAction(UserAction action) {
   MaybeNotifyWatcher();
 }
 
-void VirtualKeyboardController::MaybeNotifyWatcher() {
+void FidlBoundVirtualKeyboardController::MaybeNotifyWatcher() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   if (watch_callback_ && want_visible_ != last_sent_visible_) {
     watch_callback_(want_visible_);
@@ -77,7 +80,7 @@ void VirtualKeyboardController::MaybeNotifyWatcher() {
   }
 }
 
-void VirtualKeyboardController::NotifyCoordinator() {
+void FidlBoundVirtualKeyboardController::NotifyCoordinator() {
   if (coordinator_) {
     coordinator_->RequestTypeAndVisibility(text_type_, want_visible_);
   } else {

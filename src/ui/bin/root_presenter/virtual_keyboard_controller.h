@@ -9,6 +9,7 @@
 
 #include "fuchsia/ui/views/cpp/fidl.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 
 namespace root_presenter {
 
@@ -20,9 +21,18 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
  public:
   enum class UserAction { HIDE_KEYBOARD, SHOW_KEYBOARD };
 
-  VirtualKeyboardController(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
-                            fuchsia::ui::views::ViewRef view_ref,
-                            fuchsia::input::virtualkeyboard::TextType text_type);
+  virtual ~VirtualKeyboardController() = default;
+
+  // Called by VirtualKeyboardCoordinator.
+  virtual void OnUserAction(UserAction action) = 0;
+};
+
+class FidlBoundVirtualKeyboardController : public VirtualKeyboardController {
+ public:
+  FidlBoundVirtualKeyboardController(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
+                                     fuchsia::ui::views::ViewRef view_ref,
+                                     fuchsia::input::virtualkeyboard::TextType text_type);
+  ~FidlBoundVirtualKeyboardController() override;
 
   // |fuchsia.input.virtualkeyboard.Controller|
   // Called either via IPC, or from unit tests.
@@ -40,7 +50,7 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
   // the keyboard.
   //
   // Called by VirtualKeyboardCoordinator.
-  void OnUserAction(UserAction action);
+  void OnUserAction(UserAction action) override;
 
  private:
   void MaybeNotifyWatcher();

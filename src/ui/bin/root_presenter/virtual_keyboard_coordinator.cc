@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "fuchsia/input/virtualkeyboard/cpp/fidl.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_controller.h"
 
 namespace root_presenter {
@@ -27,14 +28,37 @@ void FidlBoundVirtualKeyboardCoordinator::Create(
     fuchsia::ui::views::ViewRef view_ref, fuchsia::input::virtualkeyboard::TextType text_type,
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Controller> controller_request) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
-  controller_binding_ = std::make_unique<ControllerBinding>(
-      std::make_unique<VirtualKeyboardController>(GetWeakPtr(), std::move(view_ref), text_type),
-      std::move(controller_request));
+  controller_binding_ =
+      std::make_unique<ControllerBinding>(std::make_unique<FidlBoundVirtualKeyboardController>(
+                                              GetWeakPtr(), std::move(view_ref), text_type),
+                                          std::move(controller_request));
 }
 
 void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
     bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  if (reason.IsUnknown()) {
+    FX_LOGS(WARNING) << "Ignorning visibility change with reason = " << reason;
+    return;
+  }
+
+  if (reason == fuchsia::input::virtualkeyboard::VisibilityChangeReason::PROGRAMMATIC) {
+    // `Controller` remembers its own changes, so no need to echo them back.
+    return;
+  }
+
+  FX_DCHECK(reason == fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION);
+  if (!controller_binding_) {
+    // Any user action before a `Controller` is bound does not affect whether
+    // or not the `Controller` wants to show the keyboard. So we don't need
+    // to buffer the notification.
+    return;
+  }
+
+  FX_DCHECK(controller_binding_->impl());
+  controller_binding_->impl()->OnUserAction(
+      is_visible ? VirtualKeyboardController::UserAction::SHOW_KEYBOARD
+                 : VirtualKeyboardController::UserAction::HIDE_KEYBOARD);
 }
 
 void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(

@@ -13,9 +13,12 @@
 
 #include <memory>
 
+#include "src/ui/bin/root_presenter/virtual_keyboard_controller.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
 
 namespace root_presenter {
+
+class VirtualKeyboardController;
 
 // Methods called by `VirtualKeyboardControllerCreator` and `VirtualKeyboardManager`.
 // Factored into a separate class to support unit testing.
@@ -61,10 +64,13 @@ class FidlBoundVirtualKeyboardCoordinator
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visible) override;
 
+  void SetControllerForTest(std::unique_ptr<VirtualKeyboardController> controller) {
+    controller_binding_ = std::make_unique<ControllerBinding>(std::move(controller));
+  }
+
  private:
-  using ControllerBinding =
-      fidl::Binding<fuchsia::input::virtualkeyboard::Controller,
-                    std::unique_ptr<fuchsia::input::virtualkeyboard::Controller>>;
+  using ControllerBinding = fidl::Binding<fuchsia::input::virtualkeyboard::Controller,
+                                          std::unique_ptr<VirtualKeyboardController>>;
 
   // |fuchsia.input.virtualkeyboard.ControllerCreator|
   void Create(fuchsia::ui::views::ViewRef view_ref,

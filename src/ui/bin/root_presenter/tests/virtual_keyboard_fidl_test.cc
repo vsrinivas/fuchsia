@@ -279,6 +279,32 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsNotResolvedByOwnRequ
   ASSERT_FALSE(got_watch_visibility_result);
   ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
 }
+
+TEST_F(VirtualKeyboardFidlTest,
+       WatchVisibility_SecondCallIsResolvedByManagerReportOfUserInteraction) {
+  // Create controller.
+  auto [controller, view_ref_control] = CreateControllerClient();
+
+  // Send first watch, which completes immediately.
+  controller->WatchVisibility([](bool vis) {});
+  RunLoopUntilIdle();
+
+  // Second second watch, and let it hang.
+  bool got_watch_visibility_result = false;
+  controller->WatchVisibility(
+      [&got_watch_visibility_result](bool vis) { got_watch_visibility_result = true; });
+  RunLoopUntilIdle();
+
+  // Create Manager, and call Notify().
+  auto manager = CreateManagerClient();
+  manager->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
+                  []() {});
+  RunLoopUntilIdle();
+
+  // Verify that the watch completed.
+  ASSERT_TRUE(got_watch_visibility_result);
+}
+
 }  // namespace fuchsia_input_virtualkeyboard_controller_methods
 
 // Tests which validate how connections to `fuchsia.input.virtualkeyboard.Manager` are handled.
@@ -335,6 +361,13 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects)
 }  // namespace fuchsia_input_virtualkeyboard_manager_connections
 
 // Tests that verify the behavior of the methods of `fuchsia.input.virtualkeyboard.Manager`.
+//
+// Note: these tests focus on the values/errors returned by Manager methods, _not_ how these
+// methods affect values returned to calls on other protocols.
+//
+// To see, for example, how Manager.Notify() resolves a hanging get call to
+// Controller.WatchVisibility(), see the fuchsia_input_virtualkeyboard_controller_methods
+// tests.
 namespace fuchsia_input_virtualkeyboard_manager_methods {
 
 // TODO: Add tests that verify that WatchTypeAndVisibility() is resolved by
