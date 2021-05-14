@@ -13,7 +13,6 @@ source_set("input") {
   ]
 
   public_deps = [
-    ":gesture",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
@@ -29,56 +28,4 @@ source_set("input") {
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-source_set("gesture") {
-  sources = [
-    "gesture.cc",
-    "gesture.h",
-    "gesture_detector.cc",
-    "gesture_detector.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//src/lib/fxl",
-    "//src/ui/lib/glm_workaround",
-  ]
-
-  deps = [ "//sdk/lib/syslog/cpp" ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
-
-executable("gesture_tests") {
-  testonly = true
-
-  sources = [
-    "gesture_detector_tests.cc",
-    "gesture_tests.cc",
-  ]
-
-  deps = [
-    ":gesture",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxb/62979): fix stack-use-after-return and delete
-  deps += [ "//build/config/sanitizers:suppress-asan-stack-use-after-return" ]
-}
-
-fuchsia_unittest_package("input_unit_tests") {
-  deps = [ ":gesture_tests" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":input_unit_tests" ]
 }

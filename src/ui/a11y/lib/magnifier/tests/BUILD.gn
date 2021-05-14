@@ -12,7 +12,6 @@ executable("magnifier_tests") {
 
   sources = [
     "magnifier2_unittest.cc",
-    "magnifier_unittest.cc",
     "magnifier_util_test.cc",
   ]
 

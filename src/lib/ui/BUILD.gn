@@ -18,7 +18,6 @@ group("tests") {
     ":rust-ui-crates-tests",
     "carnelian:carnelian-tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
-    "input:tests",
     "input-synthesis:tests",
   ]
 }

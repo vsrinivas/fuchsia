@@ -4,13 +4,11 @@
 
 source_set("magnifier") {
   public = [
-    "magnifier.h",
     "magnifier_2.h",
     "magnifier_util.h",
   ]
 
   sources = [
-    "magnifier.cc",
     "magnifier_2.cc",
     "magnifier_util.cc",
   ]
@@ -21,7 +19,6 @@ source_set("magnifier") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/callback",
     "//src/lib/fxl",
-    "//src/lib/ui/input:gesture",
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/gesture_util",
