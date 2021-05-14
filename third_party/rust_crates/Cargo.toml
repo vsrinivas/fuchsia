@@ -57,7 +57,7 @@ fatfs = { path = "tiny_mirrors/fatfs" }
 flate2 = { version = "1.0.14", default-features = false, features = ["rust_backend"] }
 futures = "=0.3.12"
 futures-channel = "=0.3.12"
-futures-core = "=0.3.12"
+futures-core = "=0.3.15"
 futures-executor = "=0.3.12"
 futures-io = "=0.3.12"
 futures-lite = "1.11.3"
@@ -207,6 +207,7 @@ void = "1.0.2"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
+async-broadcast = "0.2.0"
 async-executor = "1.4.1"
 async-fs = "1.5"
 async-io = "1.4.1"
@@ -340,6 +341,9 @@ rustflags = [
   # TODO(https://github.com/rust-lang/rust/issues/32976): AtomicU128 is unstable.
   # "--cfg=has_atomic_u128",
 ]
+
+[gn.package.futures-core."0.3.15"]
+env_vars = [ "CARGO_PKG_NAME=futures-core" ]
 
 [gn.package.getrandom."0.2.2"]
 rustflags = []
