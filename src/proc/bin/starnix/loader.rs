@@ -104,7 +104,7 @@ fn load_elf(vmo: &zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
     let base = mm.get_random_base(elf_info.high - elf_info.low).ptr();
     let bias = base.wrapping_sub(elf_info.low);
     let mapper = mm as &dyn elf_load::Mapper;
-    elf_load::map_elf_segments(&vmo, &headers, mapper, mm.vmar_base.ptr(), bias)
+    elf_load::map_elf_segments(&vmo, &headers, mapper, mm.base_addr.ptr(), bias)
         .map_err(elf_load_error_to_errno)?;
     Ok(LoadedElf { headers, base, bias })
 }

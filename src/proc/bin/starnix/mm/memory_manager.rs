@@ -98,6 +98,12 @@ pub enum DumpPolicy {
 }
 
 struct MemoryManagerState {
+    /// The VMAR in which userspace mappings occur.
+    ///
+    /// We map userspace memory in this child VMAR so that we can destroy the
+    /// entire VMAR during exec.
+    user_vmar: zx::Vmar,
+
     /// State for the brk and sbrk syscalls.
     brk: Option<ProgramBreak>,
 
@@ -107,20 +113,92 @@ struct MemoryManagerState {
     mappings: RangeMap<UserAddress, Mapping>,
 }
 
+impl MemoryManagerState {
+    fn map(
+        &mut self,
+        vmar_offset: usize,
+        vmo: Arc<zx::Vmo>,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<UserAddress, zx::Status> {
+        let addr = UserAddress::from_ptr(self.user_vmar.map(
+            vmar_offset,
+            &vmo,
+            vmo_offset,
+            length,
+            flags,
+        )?);
+        let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
+        let end = (addr + length).round_up(*PAGE_SIZE);
+        self.mappings.insert(addr..end, mapping);
+        Ok(addr)
+    }
+
+    fn unmap(&mut self, addr: UserAddress, length: usize) -> Result<(), Errno> {
+        // This operation is safe because we're operating on another process.
+        match unsafe { self.user_vmar.unmap(addr.ptr(), length) } {
+            Ok(_) => Ok(()),
+            Err(zx::Status::NOT_FOUND) => Ok(()),
+            Err(zx::Status::INVALID_ARGS) => Err(EINVAL),
+            Err(status) => Err(impossible_error(status)),
+        }?;
+        let end = (addr + length).round_up(*PAGE_SIZE);
+        self.mappings.remove(&(addr..end));
+        Ok(())
+    }
+
+    pub fn protect(
+        &mut self,
+        addr: UserAddress,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<(), Errno> {
+        let (_, mapping) = self.mappings.get(&addr).ok_or(EINVAL)?;
+        let mapping = mapping.with_flags(flags);
+
+        // SAFETY: This is safe because the vmar belongs to a different process.
+        unsafe { self.user_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
+            zx::Status::INVALID_ARGS => EINVAL,
+            // TODO: This should still succeed and change protection on whatever is mapped.
+            zx::Status::NOT_FOUND => EINVAL,
+            zx::Status::ACCESS_DENIED => EACCES,
+            _ => impossible_error(s),
+        })?;
+
+        let end = (addr + length).round_up(*PAGE_SIZE);
+        self.mappings.insert(addr..end, mapping);
+        Ok(())
+    }
+}
+
+fn create_user_vmar(vmar: &zx::Vmar, vmar_info: &zx::VmarInfo) -> Result<zx::Vmar, zx::Status> {
+    let (vmar, ptr) = vmar.allocate(
+        0,
+        vmar_info.len,
+        zx::VmarFlags::SPECIFIC
+            | zx::VmarFlags::CAN_MAP_SPECIFIC
+            | zx::VmarFlags::CAN_MAP_READ
+            | zx::VmarFlags::CAN_MAP_WRITE
+            | zx::VmarFlags::CAN_MAP_EXECUTE,
+    )?;
+    assert_eq!(ptr, vmar_info.base);
+    Ok(vmar)
+}
+
 pub struct MemoryManager {
     /// A handle to the underlying Zircon process object.
     // TODO: Remove this handle once we can read and write process memory directly.
     process: zx::Process,
 
-    /// The VMAR managed by this memory manager.
+    /// The root VMAR for the child process.
     ///
-    /// Use the map / unmap functions on the MemoryManager rather than directly
-    /// mapping/unmapping memory from the VMAR so that the mappings can be tracked
-    /// by the MemoryManager.
-    root_vmar: zx::Vmar,
+    /// Instead of mapping memory directly in this VMAR, we map the memory in
+    /// `state.user_vmar`.
+    _root_vmar: zx::Vmar,
 
     /// The base address of the root_vmar.
-    pub vmar_base: UserAddress,
+    pub base_addr: UserAddress,
 
     /// Mutable state for the memory manager.
     state: RwLock<MemoryManagerState>,
@@ -130,18 +208,20 @@ pub struct MemoryManager {
 }
 
 impl MemoryManager {
-    pub fn new(process: zx::Process, root_vmar: zx::Vmar) -> Self {
-        let vmar_base = UserAddress::from_ptr(root_vmar.info().unwrap().base);
-        MemoryManager {
+    pub fn new(process: zx::Process, root_vmar: zx::Vmar) -> Result<Self, zx::Status> {
+        let info = root_vmar.info()?;
+        let user_vmar = create_user_vmar(&root_vmar, &info)?;
+        Ok(MemoryManager {
             process,
-            root_vmar,
-            vmar_base,
+            _root_vmar: root_vmar,
+            base_addr: UserAddress::from_ptr(info.base),
             state: RwLock::new(MemoryManagerState {
+                user_vmar,
                 brk: None,
                 mappings: RangeMap::<UserAddress, Mapping>::new(),
             }),
             dumpable: Mutex::new(DumpPolicy::DISABLE),
-        }
+        })
     }
 
     pub fn set_brk(&self, addr: UserAddress) -> Result<UserAddress, Errno> {
@@ -154,9 +234,8 @@ impl MemoryManager {
                 vmo.set_name(CStr::from_bytes_with_nul(b"starnix-brk\0").unwrap())
                     .map_err(impossible_error)?;
                 let length = *PAGE_SIZE as usize;
-                let addr = self
-                    .map_locked(
-                        &mut state,
+                let addr = state
+                    .map(
                         0,
                         Arc::new(vmo),
                         0,
@@ -190,7 +269,7 @@ impl MemoryManager {
             // We've been asked to free memory.
             let delta = old_end - new_end;
             let vmo = mapping.vmo.clone();
-            self.unmap_locked(&mut state, new_end, delta)?;
+            state.unmap(new_end, delta)?;
             let vmo_offset = new_end - brk.base;
             vmo.op_range(zx::VmoOp::DECOMMIT, vmo_offset as u64, delta as u64)
                 .map_err(|e| impossible_error(e))?;
@@ -202,8 +281,8 @@ impl MemoryManager {
             let mapping = mapping.clone();
 
             state.mappings.remove(&range);
-            match self.root_vmar.map(
-                old_end - self.vmar_base,
+            match state.user_vmar.map(
+                old_end - self.base_addr,
                 &mapping.vmo,
                 vmo_offset as u64,
                 delta,
@@ -250,10 +329,9 @@ impl MemoryManager {
                 Ok(target_vmo) => {
                     let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
                     let length = range.end - range.start;
-                    target
-                        .map_locked(
-                            &mut target_state,
-                            range.start - target.vmar_base,
+                    target_state
+                        .map(
+                            range.start - target.base_addr,
                             target_vmo.clone(),
                             vmo_offset,
                             length,
@@ -271,28 +349,6 @@ impl MemoryManager {
         *target.dumpable.lock() = *self.dumpable.lock();
 
         Ok(())
-    }
-
-    fn map_locked(
-        &self,
-        state: &mut MemoryManagerState,
-        vmar_offset: usize,
-        vmo: Arc<zx::Vmo>,
-        vmo_offset: u64,
-        length: usize,
-        flags: zx::VmarFlags,
-    ) -> Result<UserAddress, zx::Status> {
-        let addr = UserAddress::from_ptr(self.root_vmar.map(
-            vmar_offset,
-            &vmo,
-            vmo_offset,
-            length,
-            flags,
-        )?);
-        let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
-        let end = (addr + length).round_up(*PAGE_SIZE);
-        state.mappings.insert(addr..end, mapping);
-        Ok(addr)
     }
 
     fn get_errno_for_map_err(status: zx::Status) -> Errno {
@@ -313,38 +369,16 @@ impl MemoryManager {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<UserAddress, Errno> {
-        let vmar_offset = if addr.is_null() { 0 } else { addr - self.vmar_base };
-        self.map_locked(
-            &mut self.state.write(),
-            vmar_offset,
-            Arc::new(vmo),
-            vmo_offset,
-            length,
-            flags,
-        )
-        .map_err(Self::get_errno_for_map_err)
-    }
-
-    fn unmap_locked(
-        &self,
-        state: &mut MemoryManagerState,
-        addr: UserAddress,
-        length: usize,
-    ) -> Result<(), Errno> {
-        // This operation is safe because we're operating on another process.
-        match unsafe { self.root_vmar.unmap(addr.ptr(), length) } {
-            Ok(_) => Ok(()),
-            Err(zx::Status::NOT_FOUND) => Ok(()),
-            Err(zx::Status::INVALID_ARGS) => Err(EINVAL),
-            Err(status) => Err(impossible_error(status)),
-        }?;
-        let end = (addr + length).round_up(*PAGE_SIZE);
-        state.mappings.remove(&(addr..end));
-        Ok(())
+        let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
+        let mut state = self.state.write();
+        state
+            .map(vmar_offset, Arc::new(vmo), vmo_offset, length, flags)
+            .map_err(Self::get_errno_for_map_err)
     }
 
     pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
-        self.unmap_locked(&mut self.state.write(), addr, length)
+        let mut state = self.state.write();
+        state.unmap(addr, length)
     }
 
     pub fn protect(
@@ -354,21 +388,7 @@ impl MemoryManager {
         flags: zx::VmarFlags,
     ) -> Result<(), Errno> {
         let mut state = self.state.write();
-        let (_, mapping) = state.mappings.get(&addr).ok_or(EINVAL)?;
-        let mapping = mapping.with_flags(flags);
-
-        // SAFETY: This is safe because the vmar belongs to a different process.
-        unsafe { self.root_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
-            zx::Status::INVALID_ARGS => EINVAL,
-            // TODO: This should still succeed and change protection on whatever is mapped.
-            zx::Status::NOT_FOUND => EINVAL,
-            zx::Status::ACCESS_DENIED => EACCES,
-            _ => impossible_error(s),
-        })?;
-
-        let end = (addr + length).round_up(*PAGE_SIZE);
-        state.mappings.insert(addr..end, mapping);
-        Ok(())
+        state.protect(addr, length, flags)
     }
 
     pub fn set_mapping_name(
@@ -401,11 +421,13 @@ impl MemoryManager {
     }
 
     pub fn get_random_base(&self, length: usize) -> UserAddress {
+        let state = self.state.read();
         // Allocate a vmar of the correct size, get the random location, then immediately destroy it.
         // This randomizes the load address without loading into a sub-vmar and breaking mprotect.
         // This is different from how Linux actually lays out the address space. We might need to
         // rewrite it eventually.
-        let (temp_vmar, base) = self.root_vmar.allocate(0, length, zx::VmarFlags::empty()).unwrap();
+        let (temp_vmar, base) =
+            state.user_vmar.allocate(0, length, zx::VmarFlags::empty()).unwrap();
         // SAFETY: This is safe because the vmar is not in the current process.
         unsafe { temp_vmar.destroy().unwrap() };
         UserAddress::from_ptr(base)
@@ -465,8 +487,8 @@ impl elf_load::Mapper for MemoryManager {
         flags: zx::VmarFlags,
     ) -> Result<usize, zx::Status> {
         let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
-        self.map_locked(&mut self.state.write(), vmar_offset, vmo, vmo_offset, length, flags)
-            .map(|addr| addr.ptr())
+        let mut state = self.state.write();
+        state.map(vmar_offset, vmo, vmo_offset, length, flags).map(|addr| addr.ptr())
     }
 }
 

@@ -283,7 +283,10 @@ impl Task {
             parent: 0,
             thread,
             files,
-            mm: Arc::new(MemoryManager::new(duplicate_process, root_vmar)),
+            mm: Arc::new(
+                MemoryManager::new(duplicate_process, root_vmar)
+                    .map_err(Errno::from_status_like_fdio)?,
+            ),
             fs,
             creds: creds,
             set_child_tid: Mutex::new(UserRef::default()),
