@@ -32,7 +32,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Delegate<P, 
         let (tx, rx) =
             futures::channel::oneshot::channel::<Result<role::Response<R>, role::Error>>();
 
-        self.role_action_tx.unbounded_send(role::Action::Create(tx)).ok();
+        self.role_action_tx
+            .unbounded_send(role::Action::Create(tx))
+            .map_err(|_| role::Error::CommunicationError)?;
 
         rx.await.unwrap_or(Err(role::Error::CommunicationError)).map(|result| match result {
             role::Response::Role(signature) => signature,

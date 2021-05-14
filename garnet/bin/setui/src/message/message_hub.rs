@@ -14,7 +14,7 @@ use crate::message::delegate::Delegate;
 use crate::message::messenger::{Messenger, MessengerClient};
 use anyhow::format_err;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::borrow::Cow;
@@ -161,7 +161,8 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
     fn check_exit(&self) {
         if self.messenger_channel_closed && self.beacons.is_empty() {
-            self.exit_tx.unbounded_send(()).ok();
+            // Panic if send failed, otherwise, spawn might not be ended.
+            self.exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
         }
     }
 
@@ -460,9 +461,15 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // Create fuse to delete Messenger.
                 let fuse = ActionFuseBuilder::new()
                     .add_action(Box::new(move || {
+                        // ActionFuse drop method might cause the send failed.
                         messenger_tx
                             .unbounded_send(MessengerAction::DeleteBySignature(signature))
-                            .ok();
+                            .unwrap_or_else(|_| {
+                                fx_log_warn!(
+                                    "messenger_tx failed to send delete action for signature: {:?}",
+                                    signature
+                                )
+                            });
                     }))
                     .build();
 

@@ -108,7 +108,10 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
             let abortable_timeout = Abortable::new(
                 async move {
                     fuchsia_async::Timer::new(duration.after_now()).await;
-                    event_tx.unbounded_send(MessageEvent::Status(Status::Timeout)).ok();
+                    // Panic if send failed, otherwise the client cannot abort processes.
+                    event_tx
+                        .unbounded_send(MessageEvent::Status(Status::Timeout))
+                        .expect("event_tx failed to send Timeout status message");
                 },
                 timeout_abort_server,
             );

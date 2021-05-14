@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_media::{AudioRenderUsage, Usage},
     fidl_fuchsia_media_audio::VolumeControlProxy,
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::UnboundedSender,
     futures::stream::StreamExt,
     futures::TryStreamExt,
@@ -43,7 +44,11 @@ pub struct StreamVolumeControl {
 impl Drop for StreamVolumeControl {
     fn drop(&mut self) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
-            exit_tx.unbounded_send(()).ok();
+            // Consider panic! is likely to be abort in the drop method, only log info for
+            // unbounded_send failure.
+            exit_tx
+                .unbounded_send(())
+                .unwrap_or_else(|_| fx_log_warn!("exit_tx failed to send exit signal"));
         }
     }
 }
@@ -151,7 +156,8 @@ impl StreamVolumeControl {
         }
 
         if let Some(exit_tx) = self.listen_exit_tx.take() {
-            exit_tx.unbounded_send(()).ok();
+            // exit_rx needs this signal to end leftover spawn.
+            exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
         }
 
         // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a notification

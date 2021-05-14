@@ -9,6 +9,7 @@ use {
     crate::service,
     crate::service::TryFromWithClient,
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::UnboundedSender,
     futures::lock::Mutex,
     futures::stream::StreamExt,
@@ -75,7 +76,8 @@ where
         while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
             responder.on_error(&error);
             if let Some(exit_tx) = optional_exit_tx {
-                exit_tx.unbounded_send(()).ok();
+                // Panic if send failed, otherwise, spawn might not be ended.
+                exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
             }
         }
     }
@@ -203,11 +205,17 @@ where
     }
 
     pub fn close(&mut self) {
+        // This method has been called in drop methods. Only log warn in case the receiving end has
+        // been dropped already.
         if let Some(exit_tx) = self.listen_exit_tx.take() {
-            exit_tx.unbounded_send(()).ok();
+            exit_tx
+                .unbounded_send(())
+                .unwrap_or_else(|_| fx_log_warn!("exit_tx failed to send exit signal"));
         }
 
-        self.command_tx.unbounded_send(ListenCommand::Exit).ok();
+        self.command_tx
+            .unbounded_send(ListenCommand::Exit)
+            .unwrap_or_else(|_| fx_log_warn!("command_tx failed to send Exit command"));
     }
 
     /// Park a new hanging get in the handler
@@ -320,7 +328,8 @@ where
 
     fn on_error(&mut self, error: &anyhow::Error) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
-            exit_tx.unbounded_send(()).ok();
+            // Panic if send failed, otherwise, spawn might not be ended.
+            exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
         }
 
         self.default_controller.on_error(&error);

@@ -11,6 +11,7 @@ use crate::message::base::{
 use crate::message::beacon::Beacon;
 use crate::message::message_builder::MessageBuilder;
 
+use fuchsia_syslog::fx_log_warn;
 use std::collections::HashSet;
 use std::convert::identity;
 
@@ -48,13 +49,14 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A
     pub async fn build(self) -> CreateMessengerResult<P, A, R> {
         let (tx, rx) = futures::channel::oneshot::channel::<CreateMessengerResult<P, A, R>>();
 
+        // Panic if send failed since a messenger cannot be created.
         self.messenger_action_tx
             .unbounded_send(MessengerAction::Create(
                 messenger::Descriptor { messenger_type: self.messenger_type, roles: self.roles },
                 tx,
                 self.messenger_action_tx.clone(),
             ))
-            .ok();
+            .expect("messenger_action_tx failed to send message");
 
         rx.await.map_err(|_| MessageError::Unexpected).and_then(identity)
     }
@@ -138,7 +140,11 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Messenger<P,
     /// method to be used for immediate actions (forwarding, observing) and
     /// deferred actions as well (sending, replying).
     pub(super) fn transmit(&self, action: MessageAction<P, A, R>, beacon: Option<Beacon<P, A, R>>) {
-        self.action_tx.unbounded_send((self.fingerprint.clone(), action, beacon)).ok();
+        // Log info. transmit is called by forward. However, forward might fail if there is no next
+        // Messenger exists.
+        self.action_tx
+            .unbounded_send((self.fingerprint.clone(), action, beacon))
+            .unwrap_or_else(|_| fx_log_warn!("action_tx failed to send message"));
     }
 
     pub(super) fn get_signature(&self) -> Signature<A> {

@@ -384,11 +384,11 @@ impl SettingProxy {
         // Clear the setting handler client signature
         self.client_signature = None;
 
-        // If there is an active request, process the error
+        // If there is an active request, process the error. Panic if we couldn't process it.
         if self.active_request.is_some() {
             self.proxy_request_sender
                 .unbounded_send(ProxyRequest::HandleResult(Err(ControllerError::ExitError)))
-                .ok();
+                .expect("proxy_request_sender failed to send ExitError proxy request");
         }
 
         // If there is an active listener, forefully refetch
@@ -435,7 +435,9 @@ impl SettingProxy {
     /// messages and marshalled onto a single event loop to ensure proper
     /// ordering.
     fn request(&self, request: ProxyRequest) {
-        self.proxy_request_sender.unbounded_send(request).ok();
+        self.proxy_request_sender
+            .unbounded_send(request)
+            .expect("proxy_request_sender cannot send requests anymore");
     }
 
     /// Sends an update to the controller about whether or not it should be
@@ -593,10 +595,14 @@ impl SettingProxy {
         if matches!(request, Request::Listen) {
             let info = active_request.get_info();
 
-            // Add a callback when the client side goes out of scope
+            // Add a callback when the client side goes out of scope. Panic if the unbounded_send
+            // failed, which indicates the channel got dropped and requests cannot be processed
+            // anymore.
             let proxy_request_sender = self.proxy_request_sender.clone();
             info.bind_to_scope(Box::new(move |request_info| {
-                proxy_request_sender.unbounded_send(ProxyRequest::EndListen(request_info)).ok();
+                proxy_request_sender.unbounded_send(ProxyRequest::EndListen(request_info)).expect(
+                    "proxy_request_sender failed to send EndListen proxy request with info",
+                );
             }))
             .await;
 
@@ -666,10 +672,12 @@ impl SettingProxy {
 
                 if let Some(result) = handler_result {
                     // Mark the request as having been handled after retries have been
-                    // attempted and the client has been notified.
+                    // attempted and the client has been notified. Panic if the unbounded_send
+                    // failed, which indicates the channel got dropped and requests cannot be
+                    // processed anymore.
                     proxy_request_sender_clone
-                        .unbounded_send(ProxyRequest::HandleResult(result))
-                        .ok();
+                        .unbounded_send(ProxyRequest::HandleResult(result.clone()))
+                        .expect("proxy_request_sender failed to send proxy request");
                     return;
                 }
             }
@@ -727,7 +735,11 @@ impl SettingProxy {
                 _ = timeout => {}, // no-op
             }
 
-            sender.unbounded_send(ProxyRequest::Teardown).ok();
+            // Panic if the unbounded_send failed, which indicates the channel got dropped and
+            // requests cannot be processed anymore.
+            sender
+                .unbounded_send(ProxyRequest::Teardown)
+                .expect("proxy_request_sender failed to send Teardown proxy request");
         })
         .detach();
     }

@@ -126,7 +126,9 @@ pub async fn monitor_media_buttons(
             #[allow(unreachable_patterns)]
             match media_request {
                 MediaButtonsListenerRequest::OnMediaButtonsEvent { event, control_handle: _ } => {
-                    sender.unbounded_send(event).ok();
+                    sender
+                        .unbounded_send(event)
+                        .expect("Media buttons sender failed to send event");
                 }
                 _ => {}
             }

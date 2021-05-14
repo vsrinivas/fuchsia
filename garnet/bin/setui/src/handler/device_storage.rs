@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::handler::setting_handler::persist::UpdateState;
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
 use fuchsia_async::{Task, Timer, WakeupTime};
@@ -356,7 +356,16 @@ impl DeviceStorage {
                 // Not debouncing writes for testing, just commit immediately.
                 DeviceStorage::stash_commit(&cached_storage.stash_proxy, flush).await;
             } else {
-                typed_storage.commit_sender.unbounded_send(CommitParams { flush }).ok();
+                typed_storage.commit_sender.unbounded_send(CommitParams { flush }).with_context(
+                    || {
+                        format!(
+                        "commit_sender failed to send commit message, associated key is {}, and\
+                         flush value is {}",
+                        T::KEY,
+                        flush
+                    )
+                    },
+                )?;
             }
             cached_storage.current_data =
                 Some(Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>);

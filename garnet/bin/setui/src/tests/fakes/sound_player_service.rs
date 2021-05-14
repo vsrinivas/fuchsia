@@ -88,7 +88,11 @@ impl Service for SoundPlayerService {
                     PlayerRequest::PlaySound { id, usage, responder } => {
                         play_counts_clone.lock().await.entry(id).and_modify(|count| *count += 1);
                         for listener in sound_played_listeners.lock().await.iter() {
-                            listener.unbounded_send((id, usage)).ok();
+                            // Panic if send failed, otherwise sound is played but cannot be
+                            // notified.
+                            listener
+                                .unbounded_send((id, usage))
+                                .expect("listener failed to send id and usage");
                         }
                         responder.send(&mut Ok(())).unwrap();
                     }

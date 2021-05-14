@@ -145,7 +145,10 @@ impl<C: Category + 'static> Client<C> {
         let task_id = self.id_generator.generate();
 
         // We report the creation before spawning in case spawning fails.
-        self.action_tx.unbounded_send((task_id, Action::Create(category.clone()), now())).ok();
+        // Panic if send failed since message is used to track task's lifetime.
+        self.action_tx
+            .unbounded_send((task_id, Action::Create(category.clone()), now()))
+            .expect("action_tx failed to send a spawn creation message");
 
         // Pass a clone of the action sender to the spawned task in order to
         // signal when the task completes.
@@ -154,7 +157,10 @@ impl<C: Category + 'static> Client<C> {
             future.await;
 
             // Report exit.
-            action_tx.unbounded_send((task_id, Action::Complete, now())).ok();
+            // Panic if send failed since message is used to track task's lifetime.
+            action_tx
+                .unbounded_send((task_id, Action::Complete, now()))
+                .expect("action_tx failed to send a spawn completed message");
         })
         .detach();
     }
