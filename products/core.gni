@@ -117,3 +117,8 @@ product_bootfs_labels += [
   # Core products have pkgfs, so include the base resolver.
   "//src/sys/base-resolver:bootfs",
 ]
+
+# Set the default pkgfs allowlist to use for all core-based products to the
+# "eng" allowlist.
+product_system_image_deps +=
+    [ "//src/security/policy:pkgfs_non_static_pkgs_allowlist_eng" ]
