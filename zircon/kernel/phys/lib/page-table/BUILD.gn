@@ -16,6 +16,7 @@ zx_library("page-table") {
   static = true
 
   sources = [
+    "arch/arm64/builder.cc",
     "arch/arm64/lookup.cc",
     "arch/arm64/mmu.cc",
     "arch/x86/builder.cc",
@@ -53,11 +54,13 @@ zx_library("page-table") {
 test("page-table-test") {
   include_dirs = [ "." ]
   sources = [
+    "arch/arm64/builder_test.cc",
     "arch/arm64/lookup_test.cc",
     "arch/arm64/mmu_test.cc",
     "arch/x86/builder_test.cc",
     "arch/x86/lookup_test.cc",
     "arch/x86/mmu_test.cc",
+    "bits_test.cc",
   ]
   deps = [
     ":page-table",

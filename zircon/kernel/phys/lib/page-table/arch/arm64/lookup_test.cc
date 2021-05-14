@@ -197,5 +197,84 @@ TEST(Arm64LookupPage, SmallRegionSize) {
   EXPECT_EQ(LookupPage(allocator, layout, root.ptr(), Vaddr(0x10000)), std::nullopt);
 }
 
+TEST(Arm64MapPage, SingleMapping) {
+  TestMemoryManager allocator;
+  PageTableNodeStorage<GranuleSize::k4KiB> root;
+
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1234'5678'9000),
+                    Paddr(0x1234'5678'9000),
+                    /*page_size=*/PageSize::k4KiB),
+            ZX_OK);
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1234'5678'9000)),
+              MapsToPaddr(0x1234'5678'9000u));
+}
+
+TEST(Arm64MapPage, ReplaceMapping) {
+  TestMemoryManager allocator;
+  PageTableNodeStorage<GranuleSize::k4KiB> root{};
+
+  // Attempt to map the same vaddr twice.
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0), Paddr(0xaaaa'0000),
+                    /*page_size=*/PageSize::k4KiB),
+            ZX_OK);
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0), Paddr(0xbbbb'0000),
+                    /*page_size=*/PageSize::k4KiB),
+            ZX_ERR_ALREADY_EXISTS);
+
+  // Should still have the original mapping.
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0)),
+              MapsToPaddr(0xaaaa'0000));
+}
+
+TEST(Arm64MapPage, MultipleMappings) {
+  TestMemoryManager allocator;
+  PageTableNodeStorage<GranuleSize::k4KiB> root{};
+
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000), Paddr(0xaaaa'0000),
+                    /*page_size=*/PageSize::k4KiB),
+            ZX_OK);
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1000), Paddr(0xbbbb'0000),
+                    /*page_size=*/PageSize::k4KiB),
+            ZX_OK);
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000)),
+              MapsToPaddr(0xaaaa'0000));
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1000)),
+              MapsToPaddr(0xbbbb'0000));
+}
+
+TEST(Arm64MapPage, LargePage) {
+  TestMemoryManager allocator;
+  PageTableNodeStorage<GranuleSize::k4KiB> root{};
+
+  // Map in a 2MiB page.
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000), Paddr(0xaaa0'0000),
+                    /*page_size=*/PageSize::k2MiB),
+            ZX_OK);
+
+  // We shouldn't be able to map in a smaller page in the middle.
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1000), Paddr(0xbbbb'0000),
+                    /*page_size=*/PageSize::k4KiB),
+            ZX_ERR_ALREADY_EXISTS);
+
+  // We should be able to lookup different parts of the page.
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000)),
+              MapsToPaddr(0xaaa0'0000u));
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1000)),
+              MapsToPaddr(0xaaa0'1000u));
+  EXPECT_THAT(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x1f'ffff)),
+              MapsToPaddr(0xaabf'ffffu));
+  EXPECT_EQ(LookupPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x20'0000)), std::nullopt);
+}
+
+TEST(Arm64MapPage, BadPageSize) {
+  TestMemoryManager allocator;
+  PageTableNodeStorage<GranuleSize::k4KiB> root{};
+
+  // Map in a 16 kiB page, which isn't valid with 4 kiB granules.
+  EXPECT_EQ(MapPage(allocator, kDefaultLayout, root.ptr(), Vaddr(0x0000), Paddr(0xaaa0'0000),
+                    /*page_size=*/PageSize::k16KiB),
+            ZX_ERR_INVALID_ARGS);
+}
+
 }  // namespace
 }  // namespace page_table::arm64

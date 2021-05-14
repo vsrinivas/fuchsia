@@ -15,6 +15,8 @@ namespace page_table::arm64 {
 
 namespace {
 
+using internal::IsAligned;
+
 // Return true if the given entry is a page (either standard or large page).
 bool IsPage(uint64_t level, PageTableEntry entry) {
   if (level == 0) {
@@ -33,6 +35,7 @@ std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageT
   }
 
   // Walk down the page table.
+  ZX_DEBUG_ASSERT(layout.NumLevels() >= 1);
   for (uint64_t level = layout.NumLevels() - 1;; level--) {
     // Get the page table entry for this level.
     const uint64_t pte_range_bits = layout.PageTableEntryRangeBits(level);
@@ -68,6 +71,82 @@ std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageT
         reinterpret_cast<PageTableEntry*>(allocator.PhysToPtr(Paddr(entry.as_table().address()))),
         layout.granule_size);
   }
+}
+
+zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, PageTableNode node,
+                    Vaddr virt_addr, Paddr phys_addr, PageSize page_size) {
+  ZX_ASSERT(phys_addr <= kMaxPhysAddress);
+  ZX_ASSERT(virt_addr.value() < layout.AddressSpaceSize());
+  ZX_ASSERT(IsAligned(virt_addr.value(), PageBytes(page_size)));
+  ZX_ASSERT(IsAligned(phys_addr.value(), PageBytes(page_size)));
+
+  // Ensure the page size is valid.
+  if (GranuleForPageSize(page_size) != layout.granule_size) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (PageBits(page_size) > layout.region_size_bits) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Walk down the page table.
+  ZX_DEBUG_ASSERT(layout.NumLevels() >= 1);
+  for (uint64_t level = layout.NumLevels() - 1;; level--) {
+    // Get the page table entry for this level.
+    const uint64_t pte_range_bits = layout.PageTableEntryRangeBits(level);
+    const uint64_t index =
+        (virt_addr.value() >> pte_range_bits) & internal::Mask(layout.TranslationBitsPerLevel());
+    PageTableEntry entry = node.at(index);
+
+    // If there is already a page here, abort.
+    if (entry.present() && IsPage(level, entry)) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    // If we've hit the final level, set up the page table entry.
+    if (level == 0) {
+      ZX_DEBUG_ASSERT(pte_range_bits == PageBits(page_size));
+      PageTableEntry new_entry = PageTableEntry::PageAtAddress(phys_addr);
+      new_entry.as_page().set_lower_attrs(
+          PteLowerAttrs{}
+              .set_sh(0)         // TODO(fxbug.dev/67632): Support caching.
+              .set_attr_indx(0)  // TODO(fxbug.dev/67632): Support non-0 attribute index.
+              .set_ap(PagePermissions::SupervisorReadWrite)
+              .set_af(1));
+      node.set(index, new_entry);
+      return ZX_OK;
+    }
+
+    // If we've hit the correct level for a large page, set it up.
+    if (pte_range_bits == PageBits(page_size)) {
+      PageTableEntry new_entry = PageTableEntry::BlockAtAddress(phys_addr);
+      new_entry.as_block().set_lower_attrs(
+          PteLowerAttrs{}.set_ap(PagePermissions::SupervisorReadWrite).set_af(1));
+      node.set(index, new_entry);
+      return ZX_OK;
+    }
+
+    // If present bit is off, allocate a new leaf node.
+    if (!entry.present()) {
+      auto new_node = reinterpret_cast<PageTableEntry*>(
+          allocator.Allocate(/*size=*/GranuleBytes(layout.granule_size),
+                             /*alignment=*/GranuleBytes(layout.granule_size)));
+      if (new_node == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      memset(new_node, 0, GranuleBytes(layout.granule_size));
+
+      entry = PageTableEntry::TableAtAddress(
+          allocator.PtrToPhys(reinterpret_cast<std::byte*>(new_node)));
+      node.set(index, entry);
+    }
+
+    // Move to the next level.
+    node = PageTableNode(
+        reinterpret_cast<PageTableEntry*>(allocator.PhysToPtr(Paddr(entry.as_table().address()))),
+        layout.granule_size);
+  }
+
+  ZX_PANIC("unreachable");
 }
 
 }  // namespace page_table::arm64

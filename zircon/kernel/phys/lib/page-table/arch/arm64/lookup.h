@@ -33,6 +33,20 @@ struct LookupPageResult {
 std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageTableLayout& layout,
                                            PageTableNode node, Vaddr virt_addr);
 
+// Map a single page from `virt_addr` to `phys_addr`, allocating nodes as
+// required.
+//
+// The page will be mapped as global with read/write/execute permissions.
+//
+// Returns ZX_ERR_NO_MEMORY on allocation failure.
+//
+// Returns ZX_ERR_ALREADY_EXISTS if part of the input range has already
+// been mapped.
+//
+// TODO(fxbug.dev/67632): Add support for permissions, page attributes.
+zx_status_t MapPage(MemoryManager& allocator, const PageTableLayout& layout, PageTableNode node,
+                    Vaddr virt_addr, Paddr phys_addr, PageSize page_size);
+
 }  // namespace page_table::arm64
 
 #endif  // ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_ARCH_ARM64_LOOKUP_H_

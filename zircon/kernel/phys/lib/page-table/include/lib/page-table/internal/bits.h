@@ -85,6 +85,32 @@ constexpr uint64_t SignExtend(uint64_t word, uint64_t n) {
   return static_cast<uint64_t>(static_cast<int64_t>(shifted) >> (64 - n));
 }
 
+// Get the maximum alignment of the given value, represented in bits.
+//
+// For example, MaxAlignmentBits(0x100) == 8.
+constexpr uint64_t MaxAlignmentBits(uint64_t value) {
+  if (value == 0) {
+    return 64;
+  }
+  return static_cast<uint64_t>(__builtin_ctzll(value));
+}
+
+// Determine if the given value if a power of two.
+//
+// `0` is not considered a power of two, but `1` is, as `2 ** 0 == 1`.
+constexpr bool IsPow2(uint64_t value) {
+  // Test if exactly 1 bit is set.
+  return value > 0 && (value & (value - 1)) == 0;
+}
+
+// Test if the given value `value` is aligned to `size`.
+//
+// `value` must be a power of two.
+constexpr bool IsAligned(uint64_t value, uint64_t size) {
+  ZX_DEBUG_ASSERT(IsPow2(value));
+  return (value & (size - 1)) == 0;
+}
+
 }  // namespace page_table::internal
 
 #endif  // ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_INTERNAL_BITS_H_
