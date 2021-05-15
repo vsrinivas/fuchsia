@@ -233,7 +233,7 @@ mod test {
 
     #[test]
     fn timer_fake_time() {
-        let mut exec = LocalExecutor::new_with_fake_time().unwrap();
+        let mut exec = TestExecutor::new_with_fake_time().unwrap();
         exec.set_fake_time(Time::from_nanos(0));
 
         let mut timer = Timer::new(Time::after(1.seconds()));

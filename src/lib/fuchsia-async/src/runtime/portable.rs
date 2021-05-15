@@ -157,7 +157,7 @@ pub mod executor {
     pub struct LocalExecutor {}
 
     impl LocalExecutor {
-        /// Create a new executor running with actual time.
+        /// Create a new executor.
         pub fn new() -> Result<Self, zx_status::Status> {
             Ok(Self {})
         }
@@ -168,6 +168,27 @@ pub mod executor {
             F: Future,
         {
             LOCAL.with(|local| async_io::block_on(GLOBAL.run(local.run(main_future))))
+        }
+    }
+
+    /// A single-threaded executor for testing.
+    ///
+    /// The current implementation of Executor does not isolate work
+    /// (as the underlying executor is not yet capable of this).
+    pub struct TestExecutor {}
+
+    impl TestExecutor {
+        /// Create a new executor for testing.
+        pub fn new() -> Result<Self, zx_status::Status> {
+            Ok(Self {})
+        }
+
+        /// Run a single future to completion on a single thread.
+        pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
+        where
+            F: Future,
+        {
+            LocalExecutor {}.run_singlethreaded(main_future)
         }
     }
 }

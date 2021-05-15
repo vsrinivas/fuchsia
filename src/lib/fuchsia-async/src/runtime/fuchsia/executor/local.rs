@@ -134,6 +134,35 @@ impl LocalExecutor {
     }
 }
 
+/// A single-threaded executor for testing. Exposes additional APIs for manipulating executor state
+/// and validating behavior of executed tasks.
+pub struct TestExecutor(LocalExecutor);
+
+impl TestExecutor {
+    /// Create a new executor for testing.
+    pub fn new() -> Result<Self, zx::Status> {
+        Ok(Self(LocalExecutor::new()?))
+    }
+
+    /// Create a new executor with fake time for testing.
+    pub fn new_with_fake_time() -> Result<Self, zx::Status> {
+        Ok(Self(LocalExecutor::new_with_fake_time()?))
+    }
+}
+
+// we implement Deref/DerefMut to smooth the migration
+impl std::ops::Deref for TestExecutor {
+    type Target = LocalExecutor;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for TestExecutor {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 // TODO(fxbug.dev/76537) move this impl block to TestExecutor
 impl LocalExecutor {
     /// Create a new single-threaded executor running with fake time.
@@ -478,7 +507,7 @@ mod tests {
         };
         let fut = future::poll_fn(fut_fn);
         pin_mut!(fut);
-        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.wake_main_future();
         assert_eq!(executor.is_waiting(), WaitState::Ready);
         assert_eq!(fut_step.get(), 0);
@@ -496,7 +525,7 @@ mod tests {
     #[test]
     // Runs a future that waits on a timer.
     fn stepwise_timer() {
-        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(Time::from_nanos(0));
         let fut = Timer::new(Time::after(1000.nanos()));
         pin_mut!(fut);
@@ -515,7 +544,7 @@ mod tests {
     // Runs a future that waits on an event.
     #[test]
     fn stepwise_event() {
-        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
         let event = zx::Event::create().unwrap();
         let fut = OnSignals::new(&event, zx::Signals::USER_0);
         pin_mut!(fut);
@@ -532,7 +561,7 @@ mod tests {
     // compared to normal execution.
     #[test]
     fn run_until_stalled_preserves_order() {
-        let mut executor = LocalExecutor::new_with_fake_time().unwrap();
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
         let spawned_fut_completed = Arc::new(AtomicBool::new(false));
         let spawned_fut_completed_writer = spawned_fut_completed.clone();
         let spawned_fut = Box::pin(async move {
@@ -611,7 +640,7 @@ mod tests {
 
     #[test]
     fn time_now_fake_time() {
-        let executor = LocalExecutor::new_with_fake_time().unwrap();
+        let executor = TestExecutor::new_with_fake_time().unwrap();
         let t1 = Time::from_zx(zx::Time::from_nanos(0));
         executor.set_fake_time(t1);
         assert_eq!(Time::now(), t1);
@@ -623,7 +652,7 @@ mod tests {
 
     #[test]
     fn time_after_overflow() {
-        let executor = LocalExecutor::new_with_fake_time().unwrap();
+        let executor = TestExecutor::new_with_fake_time().unwrap();
 
         executor.set_fake_time(Time::INFINITE - 100.nanos());
         assert_eq!(Time::after(200.seconds()), Time::INFINITE);

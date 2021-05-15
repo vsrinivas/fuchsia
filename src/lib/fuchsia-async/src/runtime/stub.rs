@@ -89,6 +89,24 @@ pub mod executor {
         }
     }
 
+    /// Stub testing executor. Panics if used.
+    pub struct TestExecutor {}
+
+    impl TestExecutor {
+        /// Construct a new stub executor, panics if used.
+        pub fn new() -> Result<Self, Status> {
+            unimplemented!();
+        }
+
+        /// Stub run_singlethreaded, panics if used.
+        pub fn run_singlethreaded<F>(&mut self, _: F) -> F::Output
+        where
+            F: core::future::Future,
+        {
+            unimplemented!();
+        }
+    }
+
     pub use std::time::Instant as Time;
 }
 

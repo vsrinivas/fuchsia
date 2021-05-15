@@ -17,11 +17,8 @@ mod stub;
 #[cfg(all(not(target_os = "fuchsia"), target_arch = "wasm32"))]
 use self::stub as implementation;
 
-/// An alias for a single-threaded executor, will be its own type in a future change.
-pub type TestExecutor = LocalExecutor;
-
 pub use implementation::{
-    executor::{LocalExecutor, SendExecutor, Time},
+    executor::{LocalExecutor, SendExecutor, TestExecutor, Time},
     task::Task,
     timer::Timer,
 };
