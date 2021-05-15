@@ -3,6 +3,5 @@
 // found in the LICENSE file.
 
 pub mod executor;
-mod instrumentation;
 pub mod task;
 pub mod timer;

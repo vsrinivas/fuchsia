@@ -173,7 +173,13 @@ pub struct Snapshot {
 
 #[cfg(test)]
 mod tests {
+    use fuchsia_zircon::{self as zx, DurationNum};
+    use futures::future;
+    use pin_utils::pin_mut;
+
     use super::*;
+    use crate::runtime::fuchsia::executor::{instrumentation::Snapshot, Time};
+    use crate::{handle::channel::Channel, LocalExecutor, SendExecutor, Timer};
 
     /// Helper which keeps track of last observed tick counts, and reports
     /// changes.
@@ -369,5 +375,75 @@ mod tests {
         assert_eq!(collector.wakeups_io.load(Ordering::Relaxed), 1);
         assert_eq!(collector.wakeups_deadline.load(Ordering::Relaxed), 1);
         assert_eq!(collector.wakeups_notification.load(Ordering::Relaxed), 0);
+    }
+
+    #[test]
+    fn instrumentation_single_smoke_test() {
+        let mut executor = LocalExecutor::new().unwrap();
+        executor.run_singlethreaded(simple_task_for_snapshot());
+        let snapshot = executor.snapshot();
+        snapshot_sanity_check(&snapshot, 0);
+    }
+
+    #[test]
+    fn instrumentation_stepwise_smoke_test() {
+        let mut executor = LocalExecutor::new().unwrap();
+        let fut = simple_task_for_snapshot();
+        pin_mut!(fut);
+        assert!(executor.run_until_stalled(&mut fut).is_pending());
+        executor.wake_expired_timers();
+        assert!(executor.run_until_stalled(&mut fut).is_ready());
+        let snapshot = executor.snapshot();
+        snapshot_sanity_check(&snapshot, 0);
+    }
+
+    #[test]
+    fn instrumentation_multi_smoke_test() {
+        let mut executor = SendExecutor::new().unwrap();
+        executor.run(simple_task_for_snapshot(), 2);
+        let snapshot = executor.snapshot();
+        snapshot_sanity_check(&snapshot, /* extra_tasks */ 1);
+    }
+
+    // This task spawns another tasks, which completes. It should wake up from IO, notification
+    // and deadline at least once each. Min polls is 4.
+    pub async fn simple_task_for_snapshot() {
+        let bytes = &[0, 1, 2, 3];
+        let (tx, rx) = zx::Channel::create().unwrap();
+        let f_rx = Channel::from_channel(rx).unwrap();
+        let mut buffer = zx::MessageBuf::new();
+        let read_fut = f_rx.recv_msg(&mut buffer);
+
+        // This extra poll ensures a happens-before relationship between the read and the write
+        // future in order to trigger an IO wakeup. This registers a waker with the executor
+        // which guarantees that the IO wakeup will be skipped by short circuiting.
+        let pending_read_fut = match future::select(read_fut, future::ready(())).await {
+            future::Either::Right((_, pending)) => pending,
+            _ => panic!("read future complete before write"),
+        };
+        let t = crate::Task::spawn(async move {
+            let mut handles = Vec::new();
+            tx.write(bytes, &mut handles).expect("failed to write message");
+            Timer::new(Time::after(0.nanos())).await;
+        });
+        pending_read_fut.await.expect("read future did not complete");
+        t.await;
+    }
+
+    // Sanity check for running simple_task on an executor. `extra_tasks` represents
+    // synthetic tasks that are added as an impl detail of the execution - e.g. a multithreaded
+    // execution run creates an extra synthetic task for the main future.
+    pub fn snapshot_sanity_check(snapshot: &Snapshot, extra_tasks: usize) {
+        assert!(snapshot.polls >= 4);
+        assert_eq!(snapshot.tasks_created - extra_tasks, 2);
+        assert_eq!(snapshot.tasks_completed - extra_tasks, 1);
+        assert!(snapshot.wakeups_io >= 1);
+        assert!(snapshot.wakeups_deadline >= 1);
+
+        // Future optimizations of the executor could theoretically lead to notifications
+        // being eliminated in some cases.
+        assert!(snapshot.wakeups_notification >= 1);
+        assert!(snapshot.ticks_awake >= 1);
+        assert!(snapshot.ticks_asleep >= 1);
     }
 }
