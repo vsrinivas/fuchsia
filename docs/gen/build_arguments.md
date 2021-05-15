@@ -341,7 +341,7 @@ From //boards/arm64.gni:30
 
 From //build/board.gni:15
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
 From //boards/common/x64-common.gni:67
 
@@ -408,7 +408,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:137
+From //build/images/args.gni:132
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -773,19 +773,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0ac2a18ece12451a3ebdc8db62f29135d788b732/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a6494f9df645b360b13b76fa2df32e38f0c6f8ac/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/0ac2a18ece12451a3ebdc8db62f29135d788b732/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/a6494f9df645b360b13b76fa2df32e38f0c6f8ac/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/0ac2a18ece12451a3ebdc8db62f29135d788b732/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a6494f9df645b360b13b76fa2df32e38f0c6f8ac/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -1523,16 +1523,16 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/7e7574bd479497a5f8aa99310e83511d08a8ceef/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
 need different configuration based on the library version. Currently this
 is only useful in Fuchsia.
 
-**Current value (from the default):** `"68"`
+**Current value (from the default):** `"69"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/7e7574bd479497a5f8aa99310e83511d08a8ceef/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1540,14 +1540,14 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/7e7574bd479497a5f8aa99310e83511d08a8ceef/config.gni#8)
 
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:117
+From //build/images/args.gni:112
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -2040,7 +2040,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/common/x64-common.gni:75
+From //boards/common/x64-common.gni:76
 
 **Overridden from the default:** `"0"`
 
@@ -2075,7 +2075,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/common/x64-common.gni:76
+From //boards/common/x64-common.gni:77
 
 **Overridden from the default:** `"0"`
 
@@ -2177,13 +2177,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/0ac2a18ece12451a3ebdc8db62f29135d788b732/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/a6494f9df645b360b13b76fa2df32e38f0c6f8ac/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/0ac2a18ece12451a3ebdc8db62f29135d788b732/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a6494f9df645b360b13b76fa2df32e38f0c6f8ac/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2764,15 +2764,6 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 From //build/persist_logs.gni:13
 
-### pkgfs_packages_allowlist
-The allowlist file to load for /pkgfs/packages non-base packages
- DEPRECATED:  Use a fuchsia_system_package() in `product_system_image_deps`
-              instead.
-
-**Current value (from the default):** `""`
-
-From //build/images/args.gni:114
-
 ### platform_enable_user_pci
 
 **Current value (from the default):** `false`
@@ -2868,7 +2859,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:126
+From //build/images/args.gni:121
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -3041,7 +3032,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"p02bf1j30gGAbq7fnn_Zg8v4YlyOtJe9UPobJa8PfE4C"`
+**Current value (from the default):** `"n23_1nBR51eafNT8NrJin16E40vBLNn08AzEqnCs0pQC"`
 
 From //build/rust/config.gni:32
 
