@@ -184,7 +184,7 @@ impl PolicyProxy {
             }
             // Don't do anything with the message, it'll continue onwards to the handler as
             // expected.
-            None => return,
+            None => {}
         }
     }
 
