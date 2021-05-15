@@ -9,11 +9,18 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 )
 
 const invalidPath = "/invalid/path"
+
+func expectPathAbsent(t *testing.T, path string) {
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected path %q to not exist, but it does", path)
+	}
+}
 
 func getTempdir(t *testing.T) string {
 	tmpDir, err := ioutil.TempDir("", "clusterfuchsia_test")

@@ -74,6 +74,8 @@ func TestQemuLauncherWithMissingDeps(t *testing.T) {
 		if _, err := launcher.Start(); err == nil {
 			t.Fatalf("Expected error launching with missing %q dep but succeeded", dep)
 		}
+
+		expectPathAbsent(t, launcher.TmpDir)
 	}
 }
 
@@ -89,6 +91,8 @@ func TestQemuLauncherWithQemuFailure(t *testing.T) {
 	if _, err := launcher.Start(); err == nil {
 		t.Fatalf("Expected error launching with failing qemu but succeeded")
 	}
+
+	expectPathAbsent(t, launcher.TmpDir)
 }
 
 func TestQemuLauncherWithQemuTimeout(t *testing.T) {
@@ -104,6 +108,12 @@ func TestQemuLauncherWithQemuTimeout(t *testing.T) {
 	if _, err := launcher.Start(); err == nil {
 		t.Fatalf("Expected error launching with slow qemu but succeeded")
 	}
+
+	if running, err := launcher.IsRunning(); err != nil || running {
+		t.Fatalf("expected qemu to be killed after timeout")
+	}
+
+	expectPathAbsent(t, launcher.TmpDir)
 }
 
 func TestQemuLauncher(t *testing.T) {
@@ -140,4 +150,6 @@ func TestQemuLauncher(t *testing.T) {
 	if alive {
 		t.Fatalf("instance alive when it shouldn't be")
 	}
+
+	expectPathAbsent(t, launcher.TmpDir)
 }

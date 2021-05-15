@@ -85,7 +85,7 @@ func TestInstanceStartWithLauncherFailure(t *testing.T) {
 	i := &BaseInstance{Build: build, Launcher: launcher}
 
 	if err := i.Start(); err == nil {
-		t.Fatalf("Expected launcher failure but succeeded")
+		t.Fatalf("expected launcher failure but succeeded")
 	}
 }
 
@@ -96,6 +96,10 @@ func TestInstanceStartWithConnectorFailure(t *testing.T) {
 
 	if err := i.Start(); err == nil {
 		t.Fatalf("Expected connector failure but succeeded")
+	}
+
+	if launcher.running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
 }
 
@@ -153,6 +157,10 @@ func TestInstance(t *testing.T) {
 	if err := i.Stop(); err != nil {
 		t.Fatalf("Error stopping instance: %s", err)
 	}
+
+	if launcher.running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
 }
 
 func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
@@ -183,5 +191,9 @@ func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 
 	if err := i.Stop(); err != nil {
 		t.Fatalf("Error stopping instance: %s", err)
+	}
+
+	if launcher.running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
 }

@@ -131,11 +131,18 @@ func fileExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-// Prepare files that are needed by QEMU, if they haven't already been prepared
-func (q *QemuLauncher) Prepare() error {
+// Prepare files that are needed by QEMU, if they haven't already been prepared.
+//
+// If Prepare succeeds, it is up to the caller to clean up by calling Kill later.
+// However, if it fails, any resources will have been automatically released.
+func (q *QemuLauncher) Prepare() (returnErr error) {
+	paths, err := q.build.Path("zbi", "fvm", "blk", "authkeys", "zbitool")
+	if err != nil {
+		return fmt.Errorf("Error resolving qemu dependencies: %s", err)
+	}
+	zbi, fvm, blk, authkeys, zbitool := paths[0], paths[1], paths[2], paths[3], paths[4]
+
 	// Create a tmpdir to store files we need
-	// TODO(fxbug.dev/45431): If we fail to boot and give the user a handle, tempdirs will
-	// get orphaned; be better about removing them on error
 	if q.TmpDir == "" {
 		tmpDir, err := ioutil.TempDir("", "clusterfuchsia-qemu-")
 		if err != nil {
@@ -144,11 +151,12 @@ func (q *QemuLauncher) Prepare() error {
 		q.TmpDir = tmpDir
 	}
 
-	paths, err := q.build.Path("zbi", "fvm", "blk", "authkeys", "zbitool")
-	if err != nil {
-		return fmt.Errorf("Error resolving qemu dependencies: %s", err)
-	}
-	zbi, fvm, blk, authkeys, zbitool := paths[0], paths[1], paths[2], paths[3], paths[4]
+	// If we fail after this point, we need to make sure to clean up
+	defer func() {
+		if returnErr != nil {
+			q.cleanup()
+		}
+	}()
 
 	// Stick our SSH key into the authorized_keys files
 	initrd := path.Join(q.TmpDir, "ssh-"+path.Base(zbi))
@@ -179,7 +187,10 @@ func (q *QemuLauncher) Prepare() error {
 
 // Start launches QEMU and waits for it to get through the basic boot sequence.
 // Note that networking will not necessarily be fully up by the time Start() returns
-func (q *QemuLauncher) Start() (Connector, error) {
+//
+// If Start succeeds, it is up to the caller to clean up by calling Kill later.
+// However, if it fails, any resources will have been automatically released.
+func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 	running, err := q.IsRunning()
 	if err != nil {
 		return nil, fmt.Errorf("Error checking run state: %s", err)
@@ -187,10 +198,6 @@ func (q *QemuLauncher) Start() (Connector, error) {
 
 	if running {
 		return nil, fmt.Errorf("Start called but already running")
-	}
-
-	if err := q.Prepare(); err != nil {
-		return nil, fmt.Errorf("Error while preparing to start: %s", err)
 	}
 
 	paths, err := q.build.Path("qemu", "kernel", "sshid")
@@ -203,6 +210,17 @@ func (q *QemuLauncher) Start() (Connector, error) {
 	if err != nil {
 		return nil, fmt.Errorf("couldn't get free port: %s", err)
 	}
+
+	if err := q.Prepare(); err != nil {
+		return nil, fmt.Errorf("error while preparing to start: %s", err)
+	}
+
+	// If we fail after this point, we need to make sure to clean up
+	defer func() {
+		if returnErr != nil {
+			q.cleanup()
+		}
+	}()
 
 	invocation, err := getQemuInvocation(binary, kernel, q.initrd, q.extendedBlk, port)
 	if err != nil {
@@ -219,11 +237,11 @@ func (q *QemuLauncher) Start() (Connector, error) {
 	}
 	cmd.Stderr = cmd.Stdout // capture stderr too
 
+	// Save early log in case of error
+	var log []string
+
 	errCh := make(chan error)
 	go func() {
-		// Save early log in case of error
-		var log []string
-
 		scanner := bufio.NewScanner(outPipe)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -240,11 +258,6 @@ func (q *QemuLauncher) Start() (Connector, error) {
 			return
 		}
 
-		// Dump the boot log
-		for _, s := range log {
-			glog.Errorf(s)
-		}
-
 		errCh <- fmt.Errorf("qemu exited early")
 	}()
 
@@ -259,10 +272,22 @@ func (q *QemuLauncher) Start() (Connector, error) {
 	select {
 	case err := <-errCh:
 		if err != nil {
+			// Kill the process, just in case this was an error other than EOF
+			cmd.Process.Kill()
+
+			// Dump the boot log
+			glog.Errorf(strings.Join(log, "\n"))
+
 			return nil, fmt.Errorf("error during boot: %s", err)
 		}
 	case <-time.After(q.timeout):
-		// TODO(fxbug.dev/45431): kill/cleanup?
+		// Kill the process, and wait for the goroutine above to terminate
+		cmd.Process.Kill()
+		<-errCh
+
+		// Dump the boot log
+		glog.Errorf(strings.Join(log, "\n"))
+
 		return nil, fmt.Errorf("timeout waiting for boot")
 	}
 
@@ -290,6 +315,16 @@ func (q *QemuLauncher) IsRunning() (bool, error) {
 	return true, nil
 }
 
+// Cleans up any temporary files used by the launcher
+func (q *QemuLauncher) cleanup() {
+	if q.TmpDir != "" {
+		if err := os.RemoveAll(q.TmpDir); err != nil {
+			glog.Warningf("failed to remove temp dir: %s", err)
+		}
+		q.TmpDir = ""
+	}
+}
+
 // Kill tells the QEMU process to terminate, and cleans up the TmpDir
 func (q *QemuLauncher) Kill() error {
 	if q.Pid != 0 {
@@ -303,9 +338,7 @@ func (q *QemuLauncher) Kill() error {
 		q.Pid = 0
 	}
 
-	if err := os.RemoveAll(q.TmpDir); err != nil {
-		glog.Warningf("failed to remove temp dir: %s", err)
-	}
+	q.cleanup()
 
 	return nil
 }

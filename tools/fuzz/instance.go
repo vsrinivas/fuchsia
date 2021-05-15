@@ -81,6 +81,9 @@ func (i *BaseInstance) Close() {
 }
 
 // Start boots up the instance and waits for connectivity to be established
+//
+// If Start succeeds, it is up to the caller to clean up by calling Stop later.
+// However, if it fails, any resources will have been automatically released.
 func (i *BaseInstance) Start() error {
 	conn, err := i.Launcher.Start()
 	if err != nil {
@@ -92,10 +95,11 @@ func (i *BaseInstance) Start() error {
 
 	sleep := 3 * time.Second
 	success := false
-	for i := 0; i < 3; i++ {
+	for j := 0; j < 3; j++ {
 		cmd := conn.Command("echo", "hello")
 		cmd.SetTimeout(5 * time.Second)
 		if err := cmd.Start(); err != nil {
+			i.Launcher.Kill()
 			return err
 		}
 
@@ -103,7 +107,7 @@ func (i *BaseInstance) Start() error {
 			// If you forgot to --with-base the devtools:
 			// error: 2 (/boot/bin/sh: 1: Cannot create child process: -1 (ZX_ERR_INTERNAL):
 			// failed to resolve fuchsia-pkg://fuchsia.com/ls#bin/ls
-			glog.Warningf("Got error during attempt %d: %s", i, err)
+			glog.Warningf("Got error during attempt %d: %s", j, err)
 			glog.Warningf("Retrying in %s...", sleep)
 			time.Sleep(sleep)
 		} else {
@@ -117,6 +121,7 @@ func (i *BaseInstance) Start() error {
 		}
 	}
 	if !success {
+		i.Launcher.Kill()
 		return fmt.Errorf("error establishing connectivity to instance")
 	}
 
