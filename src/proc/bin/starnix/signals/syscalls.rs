@@ -224,6 +224,31 @@ pub fn sys_kill(
     Ok(SUCCESS)
 }
 
+pub fn sys_tgkill(
+    ctx: &SyscallContext<'_>,
+    tgid: pid_t,
+    tid: pid_t,
+    unchecked_signal: UncheckedSignal,
+) -> Result<SyscallResult, Errno> {
+    // Linux returns EINVAL when the tgid or tid <= 0.
+    if tgid <= 0 || tid <= 0 {
+        return Err(EINVAL);
+    }
+
+    let target = ctx.task.get_task(tid).ok_or(ESRCH)?;
+    if target.get_pid() != tgid {
+        return Err(EINVAL);
+    }
+
+    if !ctx.task.can_signal(&target, &unchecked_signal) {
+        return Err(EPERM);
+    }
+
+    target.send_signal(&unchecked_signal)?;
+
+    Ok(SUCCESS)
+}
+
 /// Sends a signal to all thread groups in `thread_groups`.
 ///
 /// # Parameters
