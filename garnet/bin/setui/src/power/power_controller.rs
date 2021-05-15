@@ -21,12 +21,12 @@ async fn reboot(service_context_handle: &ServiceContext) -> Result<(), Controlle
     let hardware_power_statecontrol_admin = service_context_handle
         .connect::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()
         .await
-        .or_else(|_| {
-            Err(ControllerError::ExternalFailure(
+        .map_err(|_| {
+            ControllerError::ExternalFailure(
                 SettingType::Power,
                 "hardware_power_statecontrol_manager".into(),
                 "connect".into(),
-            ))
+            )
         })?;
 
     let build_err = || {
