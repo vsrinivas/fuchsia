@@ -532,12 +532,16 @@ impl Target {
         S: Into<String>,
     {
         let inner = Rc::new(TargetInner::new_with_netsvc_addrs(nodename.map(Into::into), addrs));
-        Self::from_inner(inner)
+        let target = Self::from_inner(inner);
+        target.update_connection_state(|_| ConnectionState::Zedboot(Instant::now()));
+        target
     }
 
     pub fn new_with_serial(serial: &str) -> Self {
         let inner = Rc::new(TargetInner::new_with_serial(serial));
-        Self::from_inner(inner)
+        let target = Self::from_inner(inner);
+        target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
+        target
     }
 
     pub fn from_target_info(mut t: TargetInfo) -> Self {

@@ -854,12 +854,11 @@ mod test {
     use {
         super::*,
         crate::target::TargetAddr,
-        anyhow::bail,
         bridge::DaemonProxy,
         bridge::TargetAddrInfo,
         bridge::TargetIpPort,
         fidl_fuchsia_developer_bridge as bridge,
-        fidl_fuchsia_developer_bridge::{DaemonMarker, FastbootMarker},
+        fidl_fuchsia_developer_bridge::DaemonMarker,
         fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
         fidl_fuchsia_net as fidl_net,
@@ -868,119 +867,41 @@ mod test {
         fidl_net::IpAddress,
         fidl_net::Ipv6Address,
         fuchsia_async::Task,
+        matches::assert_matches,
         std::collections::BTreeSet,
         std::iter::FromIterator,
         std::net::SocketAddr,
         timeout::timeout,
     };
 
-    struct TestHookFakeFastboot {
-        tc: Weak<TargetCollection>,
-    }
+    pub async fn send_mdns_discovery_event(daemon: &Daemon, t: Target) {
+        let nodename = t.nodename().expect("Should not send mDns discovery for unnamed node.");
 
-    struct TestHookFakeZedboot {
-        tc: Weak<TargetCollection>,
+        let nodename_clone = nodename.clone();
+
+        daemon
+            .event_queue
+            .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
+                nodename: Some(nodename.clone()),
+                addresses: t.addrs().iter().cloned().collect(),
+                ..Default::default()
+            })))
+            .unwrap();
+
+        daemon
+            .event_queue
+            .wait_for(None, move |e| match e {
+                DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
+                    nodename.map(|n| n == nodename_clone).unwrap_or(false)
+                }
+                _ => false,
+            })
+            .await
+            .unwrap();
     }
 
     struct TestHookFakeRcs {
         tc: Weak<TargetCollection>,
-    }
-
-    struct TargetControl {
-        event_queue: events::Queue<DaemonEvent>,
-        tc: Rc<TargetCollection>,
-        _task: Task<()>,
-    }
-
-    impl TargetControl {
-        pub async fn send_mdns_discovery_event(&mut self, t: Target) {
-            let nodename = t.nodename().expect("Should not send mDns discovery for unnamed node.");
-
-            let nodename_clone = nodename.clone();
-
-            self.event_queue
-                .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    addresses: t.addrs().iter().cloned().collect(),
-                    ..Default::default()
-                })))
-                .unwrap();
-
-            self.event_queue
-                .wait_for(None, move |e| match e {
-                    DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
-                        nodename.map(|n| n == nodename_clone).unwrap_or(false)
-                    }
-                    _ => false,
-                })
-                .await
-                .unwrap();
-
-            let target = self.tc.get(nodename).unwrap();
-            target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await.unwrap();
-        }
-
-        pub async fn send_fastboot_discovery_event(&mut self, t: Target) {
-            let this_serial = t.serial().expect("fastboot target must have serial.");
-            self.event_queue
-                .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
-                    serial: Some(this_serial.clone()),
-                    ..Default::default()
-                })))
-                .unwrap();
-            self.event_queue
-                .wait_for(None, move |e| match e {
-                    DaemonEvent::NewTarget(TargetInfo { serial, .. }) => {
-                        serial.map(|s| s == this_serial).unwrap_or(false)
-                    }
-                    _ => false,
-                })
-                .await
-                .unwrap();
-        }
-
-        pub async fn send_zedboot_discovery_event(&mut self, t: Target) {
-            let nodename =
-                t.nodename().expect("Should not send zedboot discovery for unnamed node.");
-
-            let nodename_clone = nodename.clone();
-            self.event_queue
-                .push(DaemonEvent::WireTraffic(WireTrafficType::Zedboot(TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    addresses: t.addrs().iter().cloned().collect(),
-                    ..Default::default()
-                })))
-                .unwrap();
-            self.event_queue
-                .wait_for(None, move |e| match e {
-                    DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
-                        nodename.map(|n| n == nodename_clone).unwrap_or(false)
-                    }
-                    _ => false,
-                })
-                .await
-                .unwrap();
-        }
-    }
-
-    #[async_trait(?Send)]
-    impl EventHandler<DaemonEvent> for TestHookFakeFastboot {
-        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
-            let tc = match self.tc.upgrade() {
-                Some(t) => t,
-                None => return Ok(true),
-            };
-            match event {
-                DaemonEvent::WireTraffic(WireTrafficType::Fastboot(t)) => {
-                    let target = tc.merge_insert(Target::from_target_info(t.into()));
-                    target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
-                }
-                DaemonEvent::NewTarget(_) => {}
-                e => panic!("unexpected event: {:#?}", e),
-            }
-
-            Ok(false)
-        }
     }
 
     #[async_trait(?Send)]
@@ -1011,27 +932,7 @@ mod test {
         }
     }
 
-    #[async_trait(?Send)]
-    impl EventHandler<DaemonEvent> for TestHookFakeZedboot {
-        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
-            let tc = match self.tc.upgrade() {
-                Some(t) => t,
-                None => return Ok(true),
-            };
-            match event {
-                DaemonEvent::WireTraffic(WireTrafficType::Zedboot(t)) => {
-                    let target = tc.merge_insert(Target::from_netsvc_target_info(t.into()));
-                    target.update_connection_state(|_| ConnectionState::Zedboot(Instant::now()))
-                }
-                DaemonEvent::NewTarget(_) => {}
-                e => panic!("unexpected event: {:#?}", e),
-            }
-
-            Ok(false)
-        }
-    }
-
-    async fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
+    fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
         let d = Daemon::new();
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
@@ -1042,101 +943,28 @@ mod test {
         (proxy, d, task)
     }
 
-    async fn spawn_daemon_server_with_target_ctrl_for_fastboot(
-        stream: DaemonRequestStream,
-    ) -> TargetControl {
-        let d = Daemon::new();
-        d.event_queue
-            .add_handler(TestHookFakeFastboot { tc: Rc::downgrade(&d.target_collection) })
+    async fn spawn_test_daemon_with_rcs_hook() -> (DaemonProxy, Daemon, Task<Result<()>>) {
+        let (proxy, daemon, task) = spawn_test_daemon();
+        daemon
+            .event_queue
+            .add_handler(TestHookFakeRcs { tc: Rc::downgrade(&daemon.target_collection) })
             .await;
-        let event_clone = d.event_queue.clone();
-        let res = TargetControl {
-            event_queue: event_clone,
-            tc: d.target_collection.clone(),
-            _task: Task::local(async move {
-                d.handle_requests_from_stream(stream)
-                    .await
-                    .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
-            }),
-        };
-        res
-    }
 
-    async fn spawn_daemon_server_with_target_ctrl_for_zedboot(
-        stream: DaemonRequestStream,
-    ) -> TargetControl {
-        let d = Daemon::new();
-        d.event_queue
-            .add_handler(TestHookFakeZedboot { tc: Rc::downgrade(&d.target_collection) })
-            .await;
-        let event_clone = d.event_queue.clone();
-        let res = TargetControl {
-            event_queue: event_clone,
-            tc: d.target_collection.clone(),
-            _task: Task::local(async move {
-                d.handle_requests_from_stream(stream)
-                    .await
-                    .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
-            }),
-        };
-        res
-    }
-
-    async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
-        let d = Daemon::new();
-        d.event_queue
-            .add_handler(TestHookFakeRcs { tc: Rc::downgrade(&d.target_collection) })
-            .await;
-        let event_clone = d.event_queue.clone();
-        let res = TargetControl {
-            event_queue: event_clone,
-            tc: d.target_collection.clone(),
-            _task: Task::local(async move {
-                d.handle_requests_from_stream(stream)
-                    .await
-                    .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
-            }),
-        };
-        res
+        (proxy, daemon, task)
     }
 
     async fn spawn_daemon_server_with_fake_target(
         nodename: &str,
-        stream: DaemonRequestStream,
-    ) -> TargetControl {
-        let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
+    ) -> (DaemonProxy, Daemon, Task<Result<()>>) {
+        let (proxy, daemon, task) = spawn_test_daemon_with_rcs_hook().await;
+
         let fake_target = Target::new_with_addrs(
             Some(nodename.to_string()),
-            BTreeSet::from_iter(
-                vec![TargetAddr::from("[fe80::1%1]:22".parse::<SocketAddr>().unwrap())].into_iter(),
-            ),
+            BTreeSet::from_iter(vec![TargetAddr::new("[fe80::1%1]:22").unwrap()].into_iter()),
         );
-        res.send_mdns_discovery_event(fake_target).await;
-        res
-    }
 
-    async fn spawn_daemon_server_with_fake_fastboot_target(
-        stream: DaemonRequestStream,
-    ) -> TargetControl {
-        let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
-        let fake_target = Target::new_with_serial("florp");
-        res.send_fastboot_discovery_event(fake_target).await;
-        res
-    }
-
-    async fn spawn_daemon_server_with_fake_zedboot_target(
-        nodename: &str,
-        stream: DaemonRequestStream,
-    ) -> TargetControl {
-        let mut res = spawn_daemon_server_with_target_ctrl_for_zedboot(stream).await;
-        let fake_target = Target::new_with_netsvc_addrs(
-            Some(nodename.to_string()),
-            BTreeSet::from_iter(
-                vec![TargetAddr::from("[fe80::1%1]:22".parse::<SocketAddr>().unwrap())].into_iter(),
-            ),
-        );
-        res.send_zedboot_discovery_event(fake_target).await;
-        res
+        send_mdns_discovery_event(&daemon, fake_target).await;
+        (proxy, daemon, task)
     }
 
     fn setup_fake_target_service(nodename: String, addrs: Vec<SocketAddr>) -> RemoteControlProxy {
@@ -1183,14 +1011,11 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
-    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_empty_selector_should_err() -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
+        let (daemon_proxy, daemon, _task) = spawn_daemon_server_with_fake_target("foobar").await;
+        send_mdns_discovery_event(&daemon, Target::new("bazmumble".to_string())).await;
+
         if let Ok(_) = daemon_proxy.get_remote_control(None, remote_server_end).await.unwrap() {
             panic!("failure expected for multiple targets");
         }
@@ -1198,32 +1023,26 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
-    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_empty_selector_should_return_ambiguous_target_error(
     ) -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
-        assert!(matches!(
+        let (daemon_proxy, daemon, _task) = spawn_daemon_server_with_fake_target("foobar").await;
+        send_mdns_discovery_event(&daemon, Target::new("bazmumble".to_string())).await;
+
+        assert_matches!(
             daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap(),
             Err(DaemonError::TargetAmbiguous)
-        ));
+        );
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
-    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_correct_selector_should_not_err(
     ) -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
+        let (daemon_proxy, daemon, _task) = spawn_daemon_server_with_fake_target("foobar").await;
+        send_mdns_discovery_event(&daemon, Target::new("bazmumble".to_string())).await;
+
         daemon_proxy
             .get_remote_control(Some("foobar"), remote_server_end)
             .await
@@ -1233,15 +1052,13 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
-    #[ignore]
     async fn test_getting_rcs_multiple_targets_mdns_with_incorrect_selector_should_err(
     ) -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
+
+        let (daemon_proxy, daemon, _task) = spawn_daemon_server_with_fake_target("foobar").await;
+        send_mdns_discovery_event(&daemon, Target::new("bazmumble".to_string())).await;
+
         if let Ok(_) = timeout(Duration::from_millis(10), async move {
             daemon_proxy.get_remote_control(Some("rando"), remote_server_end).await.unwrap()
         })
@@ -1253,15 +1070,11 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
-    #[ignore]
     async fn test_list_targets_mdns_discovery() -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let mut ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let (daemon_proxy, daemon, _task) = spawn_daemon_server_with_fake_target("foobar").await;
 
-        ctrl.send_mdns_discovery_event(Target::new("baz".to_string())).await;
-        ctrl.send_mdns_discovery_event(Target::new("quux".to_string())).await;
+        send_mdns_discovery_event(&daemon, Target::new("baz".to_string())).await;
+        send_mdns_discovery_event(&daemon, Target::new("quux".to_string())).await;
         let res = daemon_proxy.list_targets("").await.unwrap();
 
         // Daemon server contains one fake target plus these two.
@@ -1297,7 +1110,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_ssh_address() {
-        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let (proxy, daemon, _task) = spawn_test_daemon();
 
         let target = Target::new_autoconnected("foobar");
         target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
@@ -1321,7 +1134,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_ssh_address_target_ambiguous() {
-        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let (proxy, daemon, _task) = spawn_test_daemon();
 
         let target = Target::new_autoconnected("foobar");
         target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
@@ -1413,7 +1226,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_target() {
-        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let (proxy, daemon, _task) = spawn_test_daemon();
         let target_addr = TargetAddr::new("[::1]:0").unwrap();
         let event = daemon.event_queue.wait_for(None, |e| matches!(e, DaemonEvent::NewTarget(_)));
 
@@ -1427,7 +1240,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_target_with_port() {
-        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let (proxy, daemon, _task) = spawn_test_daemon();
         let target_addr = TargetAddr::new("[::1]:8022").unwrap();
         let event = daemon.event_queue.wait_for(None, |e| matches!(e, DaemonEvent::NewTarget(_)));
 
@@ -1471,44 +1284,32 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
-    #[ignore]
-    async fn test_fastboot_on_rcs_error_msg() -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, fastboot_server_end) = fidl::endpoints::create_proxy::<FastbootMarker>()?;
-        let mut _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        let got = daemon_proxy.get_fastboot(None, fastboot_server_end).await?;
-        match got {
-            Err(DaemonError::NonFastbootDevice) => Ok(()),
-            _ => bail!("Expecting non fastboot device error message."),
-        }
+    async fn test_rcs_on_fastboot_error_msg() {
+        let (proxy, daemon, _task) = spawn_test_daemon();
+        let target = Target::new_with_serial("abc");
+        daemon.target_collection.merge_insert(target);
+        let (_, remote_server_end) =
+            fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
+
+        let result = proxy.get_remote_control(None, remote_server_end).await.unwrap();
+
+        assert_matches!(result, Err(DaemonError::TargetInFastboot));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_rcs_on_fastboot_error_msg() -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let mut _ctrl = spawn_daemon_server_with_fake_fastboot_target(stream).await;
-        let got = daemon_proxy.get_remote_control(None, remote_server_end).await?;
-        match got {
-            Err(DaemonError::TargetInFastboot) => Ok(()),
-            _ => bail!("Expecting target in fastboot error message."),
-        }
-    }
+    async fn test_rcs_on_zedboot_error_msg() {
+        let (proxy, daemon, _task) = spawn_test_daemon();
+        let target = Target::new_with_netsvc_addrs(
+            Some("abc"),
+            BTreeSet::from_iter(vec![TargetAddr::new("[fe80::1%1]:22").unwrap()].into_iter()),
+        );
+        daemon.target_collection.merge_insert(target);
+        let (_, remote_server_end) =
+            fidl::endpoints::create_proxy::<RemoteControlMarker>().unwrap();
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_rcs_on_zedboot_error_msg() -> Result<()> {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let mut _ctrl = spawn_daemon_server_with_fake_zedboot_target("florp", stream).await;
-        let got = daemon_proxy.get_remote_control(None, remote_server_end).await?;
-        match got {
-            Err(DaemonError::TargetInZedboot) => Ok(()),
-            _ => bail!("Expecting target in zedboot error message."),
-        }
+        let result = proxy.get_remote_control(None, remote_server_end).await.unwrap();
+
+        assert_matches!(result, Err(DaemonError::TargetInZedboot));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1527,7 +1328,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_persisted_manual_target_add() {
-        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let (proxy, daemon, _task) = spawn_test_daemon();
         daemon.load_manual_targets().await;
 
         let r = proxy
@@ -1550,7 +1351,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_persisted_manual_target_remove() {
-        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let (proxy, daemon, _task) = spawn_test_daemon();
         daemon.manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
         daemon.load_manual_targets().await;
 
