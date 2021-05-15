@@ -14,6 +14,7 @@
 #include <glm/mat3x3.hpp>
 // clang-format on
 
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -35,6 +36,11 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
   explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
       : layout_helper_(dispatcher_holder), status_helper_(std::move(dispatcher_holder)) {}
 
+  void SetErrorCallback(std::function<void()> error_callback) {
+    FX_DCHECK(error_callback);
+    error_callback_ = std::move(error_callback);
+  }
+
   void UpdateLayoutInfo(fuchsia::ui::scenic::internal::LayoutInfo info) {
     layout_helper_.Update(std::move(info));
   }
@@ -45,8 +51,15 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
 
   // |fuchsia::ui::scenic::internal::GraphLink|
   void GetLayout(GetLayoutCallback callback) override {
-    // TODO(fxbug.dev/37750): Handle duplicate calls to a hanging get with an error, as the client
-    // is not assuming the appropriate flow control.
+    if (layout_helper_.HasPendingCallback()) {
+      FX_LOGS(ERROR)
+          << "GetLayout() called when there is a pending GetLayout() call. Flatland connection "
+             "will be closed because of broken flow control.";
+      FX_DCHECK(error_callback_);
+      error_callback_();
+      return;
+    }
+
     layout_helper_.SetCallback(
         [callback = std::move(callback)](fuchsia::ui::scenic::internal::LayoutInfo info) {
           callback(std::move(info));
@@ -55,12 +68,21 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
 
   // |fuchsia::ui::scenic::internal::GraphLink|
   void GetStatus(GetStatusCallback callback) override {
-    // TODO(fxbug.dev/37750): Handle duplicate calls to a hanging get with an error, as the client
-    // is not assuming the appropriate flow control.
+    if (status_helper_.HasPendingCallback()) {
+      FX_LOGS(ERROR)
+          << "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
+             "will be closed because of broken flow control.";
+      FX_DCHECK(error_callback_);
+      error_callback_();
+      return;
+    }
+
     status_helper_.SetCallback(std::move(callback));
   }
 
  private:
+  std::function<void()> error_callback_;
+
   HangingGetHelper<fuchsia::ui::scenic::internal::LayoutInfo> layout_helper_;
   HangingGetHelper<fuchsia::ui::scenic::internal::GraphLinkStatus> status_helper_;
 };
@@ -72,18 +94,32 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
   explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
       : status_helper_(std::move(dispatcher_holder)) {}
 
+  void SetErrorCallback(std::function<void()> error_callback) {
+    FX_DCHECK(error_callback);
+    error_callback_ = std::move(error_callback);
+  }
+
   void UpdateLinkStatus(fuchsia::ui::scenic::internal::ContentLinkStatus status) {
     status_helper_.Update(std::move(status));
   }
 
   // |fuchsia::ui::scenic::internal::ContentLink|
   void GetStatus(GetStatusCallback callback) override {
-    // TODO(fxbug.dev/37750): Handle duplicate calls to a hanging get with an error, as the client
-    // is not assuming the appropriate flow control.
+    if (status_helper_.HasPendingCallback()) {
+      FX_LOGS(ERROR)
+          << "GetStatus() called when there is a pending GetStatus() call. Flatland connection "
+             "will be closed because of broken flow control.";
+      FX_DCHECK(error_callback_);
+      error_callback_();
+      return;
+    }
+
     status_helper_.SetCallback(std::move(callback));
   }
 
  private:
+  std::function<void()> error_callback_;
+
   HangingGetHelper<fuchsia::ui::scenic::internal::ContentLinkStatus> status_helper_;
 };
 
@@ -115,13 +151,18 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   struct GraphLinkRequest {
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> interface;
     TransformHandle child_handle;
+    std::function<void()> error_callback;
+  };
+
+  struct ContentLinkRequest {
+    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> interface;
+    std::function<void()> error_callback;
   };
 
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly
   // sharing link requests is a clean way to implement that functionality. This will become more
   // complicated as the Flatland API evolves.
-  using ObjectLinker = scenic_impl::gfx::ObjectLinker<
-      GraphLinkRequest, fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink>>;
+  using ObjectLinker = scenic_impl::gfx::ObjectLinker<GraphLinkRequest, ContentLinkRequest>;
 
   // Destruction of a ChildLink object will trigger deregistration with the LinkSystem.
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
@@ -161,7 +202,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       fuchsia::ui::scenic::internal::ContentLinkToken token,
       fuchsia::ui::scenic::internal::LinkProperties initial_properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link,
-      TransformHandle graph_handle);
+      TransformHandle graph_handle, std::function<void()> error_callback);
 
   // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
   // will create a local topology that connects the internal Link to the ParentLink's |link_origin|.
@@ -172,7 +213,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::scenic::internal::GraphLinkToken token,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link,
-      TransformHandle link_origin);
+      TransformHandle link_origin, std::function<void()> error_callback);
 
   // Returns a snapshot of the current set of links, represented as a map from LinkSystem-owned
   // TransformHandles to TransformHandles in ParentLinks. The LinkSystem generates Keys for this

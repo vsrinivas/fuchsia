@@ -12,6 +12,7 @@ using zx;
 enum Error {
     BAD_OPERATION = 1;
     NO_PRESENTS_REMAINING = 2;
+    BAD_HANGING_GET = 3;
 };
 
 // TODO(fxbug.dev/36766): Unify with math types for other APIs.
@@ -65,6 +66,9 @@ protocol GraphLink {
     /// This hanging get will only fire when the LayoutInfo is different than the previously
     /// returned LayoutInfo. Note that, since LayoutInfo is a table, only some fields may have
     /// changed.
+    ///
+    /// It is invalid to call `GetLayout` while a previous call is still pending. Doing so will
+    /// cause both this channel and the Flatland channel to be closed.
     GetLayout() -> (LayoutInfo info);
 
     /// A hanging get for receiving the status of the Link. This provides global connectivity
@@ -72,6 +76,9 @@ protocol GraphLink {
     ///
     /// This hanging get will only fire when the GraphLinkStatus is different than the previously
     /// returned GraphLinkStatus.
+    ///
+    /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
+    /// cause both this channel and the Flatland channel to be closed.
     GetStatus() -> (GraphLinkStatus status);
 };
 
@@ -91,6 +98,9 @@ protocol ContentLink {
     ///
     /// This hanging get will only fire when the ContentLinkStatus is different than the previously
     /// returned ContentLinkStatus.
+    ///
+    /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
+    /// cause both this channel and the Flatland channel to be closed.
     GetStatus() -> (ContentLinkStatus status);
 };
 
@@ -267,6 +277,9 @@ protocol Flatland {
     /// their GraphLinkListener (e.g., LayoutInfo) immediately after calling this function, even if
     /// they have not called Present() or SetRoot(). This allows clients to wait for layout
     /// information from their parent before calling Present(), if they wish.
+    ///
+    /// Any illegal operations on GraphLink will cause both GraphLink channel and this Flatland
+    /// channel to be torn down.
     LinkToParent(GraphLinkToken token, request<GraphLink> graph_link);
 
     /// Disconnects this Graph from its parent Graph and returns the GraphLinkToken used to
@@ -383,6 +396,9 @@ protocol Flatland {
     /// A Link is a connection between the objects authored in this Graph, and the objects in
     /// another process. The parent process has control over how the linked Content is integrated
     /// into their Graph through this Link object, and the object's associated Link properties.
+    ///
+    /// Any illegal operations on ContentLink will cause both ContentLink channel and this Flatland
+    /// channel to be torn down.
     ///
     /// `LinkProperties` must have logical_size set. This is the initial size that will drive the
     /// layout of the child. The logical_size is also used as the default Content size, but

@@ -31,6 +31,19 @@ using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
+std::shared_ptr<Flatland> Flatland::New(
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+    scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+    std::shared_ptr<FlatlandPresenter> flatland_presenter, std::shared_ptr<LinkSystem> link_system,
+    std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+        buffer_collection_importers) {
+  return std::shared_ptr<Flatland>(new Flatland(
+      dispatcher_holder, std::move(request), session_id, std::move(destroy_instance_function),
+      flatland_presenter, link_system, uber_struct_queue, buffer_collection_importers));
+}
+
 Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
                    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
                    scheduling::SessionId session_id,
@@ -68,6 +81,13 @@ Flatland::~Flatland() {
 }
 
 void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentCallback callback) {
+  // Close any clients that had invalid operations on link protocols.
+  if (link_protocol_error_) {
+    callback(fit::error(Error::BAD_HANGING_GET));
+    CloseConnection();
+    return;
+  }
+
   // Close any clients that call Present() without any present tokens.
   if (present_tokens_remaining_ == 0) {
     callback(fit::error(Error::NO_PRESENTS_REMAINING));
@@ -224,8 +244,14 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
   auto link_origin = transform_graph_.CreateTransform();
-  LinkSystem::ParentLink link = link_system_->CreateParentLink(dispatcher_holder_, std::move(token),
-                                                               std::move(graph_link), link_origin);
+  LinkSystem::ParentLink link = link_system_->CreateParentLink(
+      dispatcher_holder_, std::move(token), std::move(graph_link), link_origin,
+      [ref = weak_from_this(), dispatcher_holder = dispatcher_holder_]() {
+        FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
+            << "Link protocol error reported on the wrong dispatcher.";
+        if (auto impl = ref.lock())
+          impl->ReportLinkProtocolError();
+      });
 
   // This portion of the method is feed-forward. The parent-child relationship between
   // |link_origin| and |local_root_| establishes the Transform hierarchy between the two instances,
@@ -517,9 +543,14 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   // the LinkSystem immediately, so the child can receive them as soon as possible.
   LinkProperties initial_properties;
   fidl::Clone(properties, &initial_properties);
-  LinkSystem::ChildLink link = link_system_->CreateChildLink(dispatcher_holder_, std::move(token),
-                                                             std::move(initial_properties),
-                                                             std::move(content_link), graph_handle);
+  LinkSystem::ChildLink link = link_system_->CreateChildLink(
+      dispatcher_holder_, std::move(token), std::move(initial_properties), std::move(content_link),
+      graph_handle, [ref = weak_from_this(), dispatcher_holder = dispatcher_holder_]() {
+        FX_CHECK(dispatcher_holder->dispatcher() == async_get_default_dispatcher())
+            << "Link protocol error reported on the wrong dispatcher.";
+        if (auto impl = ref.lock())
+          impl->ReportLinkProtocolError();
+      });
 
   if (link_id.value == kInvalidId) {
     FX_LOGS(ERROR) << "CreateLink called with ContentId zero";
@@ -905,6 +936,8 @@ std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) 
 }
 
 void Flatland::ReportError() { failure_since_previous_present_ = true; }
+
+void Flatland::ReportLinkProtocolError() { link_protocol_error_ = true; }
 
 void Flatland::CloseConnection() {
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.

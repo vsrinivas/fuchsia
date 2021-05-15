@@ -41,7 +41,9 @@ namespace flatland {
 
 // This is a WIP implementation of the 2D Layer API. It currently exists to run unit tests, and to
 // provide a platform for features to be iterated and implemented over time.
-class Flatland : public fuchsia::ui::scenic::internal::Flatland {
+// All methods following constructor run on |dispatcher_|.
+class Flatland : public fuchsia::ui::scenic::internal::Flatland,
+                 public std::enable_shared_from_this<Flatland> {
  public:
   using BufferCollectionId = uint64_t;
   using ContentId = fuchsia::ui::scenic::internal::ContentId;
@@ -56,15 +58,15 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |flatland_presenter|, |link_system|, |uber_struct_queue|, and |buffer_collection_importers|
   // allow this Flatland object to access resources shared by all Flatland instances for actions
   // like frame scheduling, linking, buffer allocation, and presentation to the global scene graph.
-  explicit Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
-                    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
-                    scheduling::SessionId session_id,
-                    std::function<void()> destroy_instance_function,
-                    std::shared_ptr<FlatlandPresenter> flatland_presenter,
-                    std::shared_ptr<LinkSystem> link_system,
-                    std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
-                    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
-                        buffer_collection_importers);
+  static std::shared_ptr<Flatland> New(
+      std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+      scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+      std::shared_ptr<FlatlandPresenter> flatland_presenter,
+      std::shared_ptr<LinkSystem> link_system,
+      std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+      const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+          buffer_collection_importers);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -147,7 +149,17 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
 
  private:
+  Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+           fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
+           scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+           std::shared_ptr<FlatlandPresenter> flatland_presenter,
+           std::shared_ptr<LinkSystem> link_system,
+           std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
+           const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+               buffer_collection_importers);
+
   void ReportError();
+  void ReportLinkProtocolError();
   void CloseConnection();
 
   // The dispatcher this Flatland instance is running on.
@@ -198,6 +210,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // True if any function has failed since the previous call to Present(), false otherwise.
   bool failure_since_previous_present_ = false;
+
+  // True if there was errors in GraphLink or ContentLink channel provided.
+  bool link_protocol_error_ = false;
 
   // The number of Present() calls remaining before the client runs out. Incremented when
   // OnPresentProcessed() is called, decremented by 1 for each Present() call.

@@ -25,6 +25,7 @@ TEST(HangingGetHelperTest, HangingGetProducesValidResponse) {
 
   std::optional<Vec2> data;
   helper.SetCallback([&](Vec2 d) { data = d; });
+  EXPECT_TRUE(helper.HasPendingCallback());
   EXPECT_FALSE(data);
 
   helper.Update(Vec2{1.0f, 2.0f});
@@ -33,6 +34,7 @@ TEST(HangingGetHelperTest, HangingGetProducesValidResponse) {
   EXPECT_FALSE(data);
   loop.RunUntilIdle();
 
+  EXPECT_FALSE(helper.HasPendingCallback());
   ASSERT_TRUE(data);
   EXPECT_TRUE(fidl::Equals(Vec2{1.0f, 2.0f}, data.value()));
 }

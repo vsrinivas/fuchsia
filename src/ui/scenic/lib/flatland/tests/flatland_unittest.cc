@@ -112,40 +112,41 @@ struct GlobalIdPair {
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandTest harness. |expect_success| should be false if the call to Present() is expected to
 // trigger an error.
-#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                          \
-  {                                                                                                \
-    bool had_acquire_fences = !args.acquire_fences.empty();                                        \
-    if (expect_success) {                                                                          \
-      EXPECT_CALL(*mock_flatland_presenter_,                                                       \
-                  RegisterPresent(flatland.GetRoot().GetInstanceId(), _));                         \
-    }                                                                                              \
-    bool processed_callback = false;                                                               \
-    fuchsia::ui::scenic::internal::PresentArgs present_args;                                       \
-    present_args.set_requested_presentation_time(args.requested_presentation_time.get());          \
-    present_args.set_acquire_fences(std::move(args.acquire_fences));                               \
-    present_args.set_release_fences(std::move(args.release_fences));                               \
-    present_args.set_squashable(args.squashable);                                                  \
-    flatland.Present(std::move(present_args), [&](Flatland_Present_Result result) {                \
-      EXPECT_EQ(!expect_success, result.is_err());                                                 \
-      if (!expect_success) {                                                                       \
-        EXPECT_EQ(args.expected_error, result.err());                                              \
-      }                                                                                            \
-      processed_callback = true;                                                                   \
-    });                                                                                            \
-    EXPECT_TRUE(processed_callback);                                                               \
-    if (expect_success) {                                                                          \
-      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */               \
-      if (!had_acquire_fences) {                                                                   \
-        EXPECT_CALL(                                                                               \
-            *mock_flatland_presenter_,                                                             \
-            ScheduleUpdateForSession(args.requested_presentation_time, _, args.squashable));       \
-      }                                                                                            \
-      RunLoopUntilIdle();                                                                          \
-      if (!args.skip_session_update_and_release_fences) {                                          \
-        ApplySessionUpdatesAndSignalFences();                                                      \
-      }                                                                                            \
-    }                                                                                              \
-    flatland.OnPresentProcessed(args.present_tokens_returned, std::move(args.presentation_infos)); \
+#define PRESENT_WITH_ARGS(flatland, args, expect_success)                                    \
+  {                                                                                          \
+    bool had_acquire_fences = !args.acquire_fences.empty();                                  \
+    if (expect_success) {                                                                    \
+      EXPECT_CALL(*mock_flatland_presenter_,                                                 \
+                  RegisterPresent(flatland->GetRoot().GetInstanceId(), _));                  \
+    }                                                                                        \
+    bool processed_callback = false;                                                         \
+    fuchsia::ui::scenic::internal::PresentArgs present_args;                                 \
+    present_args.set_requested_presentation_time(args.requested_presentation_time.get());    \
+    present_args.set_acquire_fences(std::move(args.acquire_fences));                         \
+    present_args.set_release_fences(std::move(args.release_fences));                         \
+    present_args.set_squashable(args.squashable);                                            \
+    flatland->Present(std::move(present_args), [&](Flatland_Present_Result result) {         \
+      EXPECT_EQ(!expect_success, result.is_err());                                           \
+      if (!expect_success) {                                                                 \
+        EXPECT_EQ(args.expected_error, result.err());                                        \
+      }                                                                                      \
+      processed_callback = true;                                                             \
+    });                                                                                      \
+    EXPECT_TRUE(processed_callback);                                                         \
+    if (expect_success) {                                                                    \
+      /* Even with no acquire_fences, UberStruct updates queue on the dispatcher. */         \
+      if (!had_acquire_fences) {                                                             \
+        EXPECT_CALL(                                                                         \
+            *mock_flatland_presenter_,                                                       \
+            ScheduleUpdateForSession(args.requested_presentation_time, _, args.squashable)); \
+      }                                                                                      \
+      RunLoopUntilIdle();                                                                    \
+      if (!args.skip_session_update_and_release_fences) {                                    \
+        ApplySessionUpdatesAndSignalFences();                                                \
+      }                                                                                      \
+    }                                                                                        \
+    flatland->OnPresentProcessed(args.present_tokens_returned,                               \
+                                 std::move(args.presentation_infos));                        \
   }
 
 // Identical to PRESENT_WITH_ARGS, but supplies an empty PresentArgs to the Present() call.
@@ -275,14 +276,16 @@ class FlatlandTest : public gtest::TestLoopFixture {
                                        utils::CreateSysmemAllocatorSyncPtr("-allocator"));
   }
 
-  Flatland CreateFlatland() {
+  std::shared_ptr<Flatland> CreateFlatland() {
     auto session_id = scheduling::GetNextSessionId();
     flatlands_.push_back({});
-    return Flatland(std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()),
-                    flatlands_.back().NewRequest(), session_id,
-                    /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
-                    uber_struct_system_->AllocateQueueForSession(session_id),
-                    {buffer_collection_importer_});
+    std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
+    importers.push_back(buffer_collection_importer_);
+    return Flatland::New(
+        std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()),
+        flatlands_.back().NewRequest(), session_id,
+        /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+        uber_struct_system_->AllocateQueueForSession(session_id), importers);
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
@@ -361,10 +364,10 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
   // Snapshots the UberStructSystem and fetches the UberStruct associated with |flatland|. If no
   // UberStruct exists for |flatland|, returns nullptr.
-  std::shared_ptr<UberStruct> GetUberStruct(const Flatland& flatland) {
+  std::shared_ptr<UberStruct> GetUberStruct(Flatland* flatland) {
     auto snapshot = uber_struct_system_->Snapshot();
 
-    auto root = flatland.GetRoot();
+    auto root = flatland->GetRoot();
     auto uber_struct_kv = snapshot.find(root.GetInstanceId());
     if (uber_struct_kv == snapshot.end()) {
       return nullptr;
@@ -412,8 +415,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
     parent->CreateLink(id, std::move(parent_token), std::move(properties),
                        content_link->NewRequest());
     child->LinkToParent(std::move(child_token), graph_link->NewRequest());
-    PRESENT((*parent), true);
-    PRESENT((*child), true);
+    PRESENT(parent, true);
+    PRESENT(child, true);
   }
 
   // Creates an image in |flatland| with the specified |image_id| and backing properties.
@@ -439,7 +442,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
     flatland->CreateImage(image_id, std::move(buffer_collection_import_export_tokens.import_token),
                           0, std::move(properties));
-    PRESENT((*flatland), true);
+    PRESENT(flatland, true);
     return {.collection_id = koid, .image_id = global_image_id};
   }
 
@@ -469,12 +472,12 @@ namespace flatland {
 namespace test {
 
 TEST_F(FlatlandTest, PresentShouldReturnSuccess) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
   PRESENT(flatland, true);
 }
 
 TEST_F(FlatlandTest, PresentErrorNoTokens) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Present, but return no tokens so the client has none left.
   {
@@ -492,10 +495,10 @@ TEST_F(FlatlandTest, PresentErrorNoTokens) {
 }
 
 TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Return one extra present token, meaning the instance now has two.
-  flatland.OnPresentProcessed(1, {});
+  flatland->OnPresentProcessed(1, {});
 
   // Present, but return no tokens so the client has only one left.
   {
@@ -521,15 +524,15 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
 }
 
 TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const bool kDefaultSquashable = true;
   const zx::time kDefaultRequestedPresentationTime = zx::time(0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(flatland.GetRoot().GetInstanceId(), _));
+  EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(flatland->GetRoot().GetInstanceId(), _));
   bool processed_callback = false;
   fuchsia::ui::scenic::internal::PresentArgs present_args;
-  flatland.Present(std::move(present_args), [&](Flatland_Present_Result result) {
+  flatland->Present(std::move(present_args), [&](Flatland_Present_Result result) {
     EXPECT_FALSE(result.is_err());
     processed_callback = true;
   });
@@ -540,7 +543,7 @@ TEST_F(FlatlandTest, PresentWithNoFieldsSet) {
 }
 
 TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create two events to serve as acquire fences.
   PresentArgs args;
@@ -557,10 +560,10 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   // updates shouldn't signal the release fence.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
-  EXPECT_EQ(GetUberStruct(flatland), nullptr);
+  EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
@@ -570,10 +573,10 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
   RunLoopUntilIdle();
   ApplySessionUpdatesAndSignalFences();
 
-  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
-  EXPECT_EQ(GetUberStruct(flatland), nullptr);
+  EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_FALSE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 
@@ -587,16 +590,16 @@ TEST_F(FlatlandTest, PresentWaitsForAcquireFences) {
 
   ApplySessionUpdatesAndSignalFences();
 
-  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_TRUE(registered_presents.empty());
 
-  EXPECT_NE(GetUberStruct(flatland), nullptr);
+  EXPECT_NE(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_TRUE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create an event to serve as an acquire fence.
   const zx::time requested_presentation_time = zx::time(123);
@@ -610,11 +613,11 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
   // FlatlandPresenter. There should be no requested presentation time.
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
   const auto id_pair = scheduling::SchedulingIdPair({
-      .session_id = flatland.GetRoot().GetInstanceId(),
+      .session_id = flatland->GetRoot().GetInstanceId(),
       .present_id = registered_presents[0],
   });
 
@@ -628,7 +631,7 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
   EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
   RunLoopUntilIdle();
 
-  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
   maybe_presentation_time = GetRequestedPresentationTime(id_pair);
@@ -637,7 +640,7 @@ TEST_F(FlatlandTest, PresentForwardsRequestedPresentationTime) {
 }
 
 TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create an event to serve as the acquire fence.
   PresentArgs args;
@@ -658,16 +661,16 @@ TEST_F(FlatlandTest, PresentWithSignaledFencesUpdatesImmediately) {
   EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
 
-  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_TRUE(registered_presents.empty());
 
-  EXPECT_NE(GetUberStruct(flatland), nullptr);
+  EXPECT_NE(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_TRUE(utils::IsEventSignalled(release_copy, ZX_EVENT_SIGNALED));
 }
 
 TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create an event to serve as the acquire fence for the first Present().
   PresentArgs args1;
@@ -682,18 +685,18 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // empty, and the release fence is unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args1), true);
 
-  auto registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  auto registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 1ul);
 
-  EXPECT_EQ(GetUberStruct(flatland), nullptr);
+  EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
 
   // Create a transform and make it the root.
   const TransformId kId = {1};
 
-  flatland.CreateTransform(kId);
-  flatland.SetRootTransform(kId);
+  flatland->CreateTransform(kId);
+  flatland->SetRootTransform(kId);
 
   // Create another event to serve as the acquire fence for the second Present().
   PresentArgs args2;
@@ -708,10 +711,10 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   // UberStructSystem is still empty and both release fences are unsignaled.
   PRESENT_WITH_ARGS(flatland, std::move(args2), true);
 
-  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 2ul);
 
-  EXPECT_EQ(GetUberStruct(flatland), nullptr);
+  EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
   EXPECT_FALSE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
@@ -723,10 +726,10 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
   RunLoopUntilIdle();
   ApplySessionUpdatesAndSignalFences();
 
-  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_EQ(registered_presents.size(), 2ul);
 
-  EXPECT_EQ(GetUberStruct(flatland), nullptr);
+  EXPECT_EQ(GetUberStruct(flatland.get()), nullptr);
 
   EXPECT_FALSE(utils::IsEventSignalled(release1_copy, ZX_EVENT_SIGNALED));
   EXPECT_FALSE(utils::IsEventSignalled(release2_copy, ZX_EVENT_SIGNALED));
@@ -740,10 +743,10 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 
   ApplySessionUpdatesAndSignalFences();
 
-  registered_presents = GetRegisteredPresents(flatland.GetRoot().GetInstanceId());
+  registered_presents = GetRegisteredPresents(flatland->GetRoot().GetInstanceId());
   EXPECT_TRUE(registered_presents.empty());
 
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   EXPECT_NE(uber_struct, nullptr);
   EXPECT_EQ(uber_struct->local_topology.size(), 2ul);
 
@@ -752,171 +755,171 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 }
 
 TEST_F(FlatlandTest, CreateAndReleaseTransformValidCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};
 
   // Create two transforms.
-  flatland.CreateTransform(kId1);
-  flatland.CreateTransform(kId2);
+  flatland->CreateTransform(kId1);
+  flatland->CreateTransform(kId2);
   PRESENT(flatland, true);
 
   // Clear, then create two transforms in the other order.
-  flatland.ClearGraph();
-  flatland.CreateTransform(kId2);
-  flatland.CreateTransform(kId1);
+  flatland->ClearGraph();
+  flatland->CreateTransform(kId2);
+  flatland->CreateTransform(kId1);
   PRESENT(flatland, true);
 
   // Clear, create and release transforms, non-overlapping.
-  flatland.ClearGraph();
-  flatland.CreateTransform(kId1);
-  flatland.ReleaseTransform(kId1);
-  flatland.CreateTransform(kId2);
-  flatland.ReleaseTransform(kId2);
+  flatland->ClearGraph();
+  flatland->CreateTransform(kId1);
+  flatland->ReleaseTransform(kId1);
+  flatland->CreateTransform(kId2);
+  flatland->ReleaseTransform(kId2);
   PRESENT(flatland, true);
 
   // Clear, create and release transforms, nested.
-  flatland.ClearGraph();
-  flatland.CreateTransform(kId2);
-  flatland.CreateTransform(kId1);
-  flatland.ReleaseTransform(kId1);
-  flatland.ReleaseTransform(kId2);
+  flatland->ClearGraph();
+  flatland->CreateTransform(kId2);
+  flatland->CreateTransform(kId1);
+  flatland->ReleaseTransform(kId1);
+  flatland->ReleaseTransform(kId2);
   PRESENT(flatland, true);
 
   // Reuse the same id, legally, in a single present call.
-  flatland.CreateTransform(kId1);
-  flatland.ReleaseTransform(kId1);
-  flatland.CreateTransform(kId1);
-  flatland.ClearGraph();
-  flatland.CreateTransform(kId1);
+  flatland->CreateTransform(kId1);
+  flatland->ReleaseTransform(kId1);
+  flatland->CreateTransform(kId1);
+  flatland->ClearGraph();
+  flatland->CreateTransform(kId1);
   PRESENT(flatland, true);
 
   // Create and clear, overlapping, with multiple present calls.
-  flatland.ClearGraph();
-  flatland.CreateTransform(kId2);
+  flatland->ClearGraph();
+  flatland->CreateTransform(kId2);
   PRESENT(flatland, true);
-  flatland.CreateTransform(kId1);
-  flatland.ReleaseTransform(kId2);
+  flatland->CreateTransform(kId1);
+  flatland->ReleaseTransform(kId2);
   PRESENT(flatland, true);
-  flatland.ReleaseTransform(kId1);
+  flatland->ReleaseTransform(kId1);
   PRESENT(flatland, true);
 }
 
 TEST_F(FlatlandTest, CreateAndReleaseTransformErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};
 
   // Zero is not a valid transform id.
-  flatland.CreateTransform({0});
+  flatland->CreateTransform({0});
   PRESENT(flatland, false);
-  flatland.ReleaseTransform({0});
+  flatland->ReleaseTransform({0});
   PRESENT(flatland, false);
 
   // Double creation is an error.
-  flatland.CreateTransform(kId1);
-  flatland.CreateTransform(kId1);
+  flatland->CreateTransform(kId1);
+  flatland->CreateTransform(kId1);
   PRESENT(flatland, false);
 
   // Releasing a non-existent transform is an error.
-  flatland.ReleaseTransform(kId2);
+  flatland->ReleaseTransform(kId2);
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, AddAndRemoveChildValidCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kIdParent = {1};
   const TransformId kIdChild1 = {2};
   const TransformId kIdChild2 = {3};
   const TransformId kIdGrandchild = {4};
 
-  flatland.CreateTransform(kIdParent);
-  flatland.CreateTransform(kIdChild1);
-  flatland.CreateTransform(kIdChild2);
-  flatland.CreateTransform(kIdGrandchild);
+  flatland->CreateTransform(kIdParent);
+  flatland->CreateTransform(kIdChild1);
+  flatland->CreateTransform(kIdChild2);
+  flatland->CreateTransform(kIdGrandchild);
   PRESENT(flatland, true);
 
   // Add and remove.
-  flatland.AddChild(kIdParent, kIdChild1);
-  flatland.RemoveChild(kIdParent, kIdChild1);
+  flatland->AddChild(kIdParent, kIdChild1);
+  flatland->RemoveChild(kIdParent, kIdChild1);
   PRESENT(flatland, true);
 
   // Add two children.
-  flatland.AddChild(kIdParent, kIdChild1);
-  flatland.AddChild(kIdParent, kIdChild2);
+  flatland->AddChild(kIdParent, kIdChild1);
+  flatland->AddChild(kIdParent, kIdChild2);
   PRESENT(flatland, true);
 
   // Remove two children.
-  flatland.RemoveChild(kIdParent, kIdChild1);
-  flatland.RemoveChild(kIdParent, kIdChild2);
+  flatland->RemoveChild(kIdParent, kIdChild1);
+  flatland->RemoveChild(kIdParent, kIdChild2);
   PRESENT(flatland, true);
 
   // Add two-deep hierarchy.
-  flatland.AddChild(kIdParent, kIdChild1);
-  flatland.AddChild(kIdChild1, kIdGrandchild);
+  flatland->AddChild(kIdParent, kIdChild1);
+  flatland->AddChild(kIdChild1, kIdGrandchild);
   PRESENT(flatland, true);
 
   // Add sibling.
-  flatland.AddChild(kIdParent, kIdChild2);
+  flatland->AddChild(kIdParent, kIdChild2);
   PRESENT(flatland, true);
 
   // Add shared grandchild (deadly diamond dependency).
-  flatland.AddChild(kIdChild2, kIdGrandchild);
+  flatland->AddChild(kIdChild2, kIdGrandchild);
   PRESENT(flatland, true);
 
   // Remove original deep-hierarchy.
-  flatland.RemoveChild(kIdChild1, kIdGrandchild);
+  flatland->RemoveChild(kIdChild1, kIdGrandchild);
   PRESENT(flatland, true);
 }
 
 TEST_F(FlatlandTest, AddAndRemoveChildErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kIdParent = {1};
   const TransformId kIdChild = {2};
   const TransformId kIdNotCreated = {3};
 
   // Setup.
-  flatland.CreateTransform(kIdParent);
-  flatland.CreateTransform(kIdChild);
-  flatland.AddChild(kIdParent, kIdChild);
+  flatland->CreateTransform(kIdParent);
+  flatland->CreateTransform(kIdChild);
+  flatland->AddChild(kIdParent, kIdChild);
   PRESENT(flatland, true);
 
   // Zero is not a valid transform id.
-  flatland.AddChild({0}, {0});
+  flatland->AddChild({0}, {0});
   PRESENT(flatland, false);
-  flatland.AddChild(kIdParent, {0});
+  flatland->AddChild(kIdParent, {0});
   PRESENT(flatland, false);
-  flatland.AddChild({0}, kIdChild);
+  flatland->AddChild({0}, kIdChild);
   PRESENT(flatland, false);
 
   // Child does not exist.
-  flatland.AddChild(kIdParent, kIdNotCreated);
+  flatland->AddChild(kIdParent, kIdNotCreated);
   PRESENT(flatland, false);
-  flatland.RemoveChild(kIdParent, kIdNotCreated);
+  flatland->RemoveChild(kIdParent, kIdNotCreated);
   PRESENT(flatland, false);
 
   // Parent does not exist.
-  flatland.AddChild(kIdNotCreated, kIdChild);
+  flatland->AddChild(kIdNotCreated, kIdChild);
   PRESENT(flatland, false);
-  flatland.RemoveChild(kIdNotCreated, kIdChild);
+  flatland->RemoveChild(kIdNotCreated, kIdChild);
   PRESENT(flatland, false);
 
-  // Child is already a child of parent.
-  flatland.AddChild(kIdParent, kIdChild);
+  // Child is already a child of parent->
+  flatland->AddChild(kIdParent, kIdChild);
   PRESENT(flatland, false);
 
   // Both nodes exist, but not in the correct relationship.
-  flatland.RemoveChild(kIdChild, kIdParent);
+  flatland->RemoveChild(kIdChild, kIdParent);
   PRESENT(flatland, false);
 }
 
 // Test that Transforms can be children to multiple different parents.
 TEST_F(FlatlandTest, MultichildUsecase) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kIdParent1 = {1};
   const TransformId kIdParent2 = {2};
@@ -925,29 +928,29 @@ TEST_F(FlatlandTest, MultichildUsecase) {
   const TransformId kIdChild3 = {5};
 
   // Setup
-  flatland.CreateTransform(kIdParent1);
-  flatland.CreateTransform(kIdParent2);
-  flatland.CreateTransform(kIdChild1);
-  flatland.CreateTransform(kIdChild2);
-  flatland.CreateTransform(kIdChild3);
+  flatland->CreateTransform(kIdParent1);
+  flatland->CreateTransform(kIdParent2);
+  flatland->CreateTransform(kIdChild1);
+  flatland->CreateTransform(kIdChild2);
+  flatland->CreateTransform(kIdChild3);
   PRESENT(flatland, true);
 
-  // Add all children to first parent.
-  flatland.AddChild(kIdParent1, kIdChild1);
-  flatland.AddChild(kIdParent1, kIdChild2);
-  flatland.AddChild(kIdParent1, kIdChild3);
+  // Add all children to first parent->
+  flatland->AddChild(kIdParent1, kIdChild1);
+  flatland->AddChild(kIdParent1, kIdChild2);
+  flatland->AddChild(kIdParent1, kIdChild3);
   PRESENT(flatland, true);
 
-  // Add all children to second parent.
-  flatland.AddChild(kIdParent2, kIdChild1);
-  flatland.AddChild(kIdParent2, kIdChild2);
-  flatland.AddChild(kIdParent2, kIdChild3);
+  // Add all children to second parent->
+  flatland->AddChild(kIdParent2, kIdChild1);
+  flatland->AddChild(kIdParent2, kIdChild2);
+  flatland->AddChild(kIdParent2, kIdChild3);
   PRESENT(flatland, true);
 }
 
 // Test that Present() fails if it detects a graph cycle.
 TEST_F(FlatlandTest, CycleDetector) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};
@@ -956,206 +959,206 @@ TEST_F(FlatlandTest, CycleDetector) {
 
   // Create an immediate cycle.
   {
-    flatland.CreateTransform(kId1);
-    flatland.AddChild(kId1, kId1);
+    flatland->CreateTransform(kId1);
+    flatland->AddChild(kId1, kId1);
     PRESENT(flatland, false);
   }
 
   // Create a legal chain of depth one.
   // Then, create a cycle of length 2.
   {
-    flatland.ClearGraph();
-    flatland.CreateTransform(kId1);
-    flatland.CreateTransform(kId2);
-    flatland.AddChild(kId1, kId2);
+    flatland->ClearGraph();
+    flatland->CreateTransform(kId1);
+    flatland->CreateTransform(kId2);
+    flatland->AddChild(kId1, kId2);
     PRESENT(flatland, true);
 
-    flatland.AddChild(kId2, kId1);
+    flatland->AddChild(kId2, kId1);
     PRESENT(flatland, false);
   }
 
   // Create two legal chains of length one.
   // Then, connect each chain into a cycle of length four.
   {
-    flatland.ClearGraph();
-    flatland.CreateTransform(kId1);
-    flatland.CreateTransform(kId2);
-    flatland.CreateTransform(kId3);
-    flatland.CreateTransform(kId4);
-    flatland.AddChild(kId1, kId2);
-    flatland.AddChild(kId3, kId4);
+    flatland->ClearGraph();
+    flatland->CreateTransform(kId1);
+    flatland->CreateTransform(kId2);
+    flatland->CreateTransform(kId3);
+    flatland->CreateTransform(kId4);
+    flatland->AddChild(kId1, kId2);
+    flatland->AddChild(kId3, kId4);
     PRESENT(flatland, true);
 
-    flatland.AddChild(kId2, kId3);
-    flatland.AddChild(kId4, kId1);
+    flatland->AddChild(kId2, kId3);
+    flatland->AddChild(kId4, kId1);
     PRESENT(flatland, false);
   }
 
   // Create a cycle, where the root is not involved in the cycle.
   {
-    flatland.ClearGraph();
-    flatland.CreateTransform(kId1);
-    flatland.CreateTransform(kId2);
-    flatland.CreateTransform(kId3);
-    flatland.CreateTransform(kId4);
+    flatland->ClearGraph();
+    flatland->CreateTransform(kId1);
+    flatland->CreateTransform(kId2);
+    flatland->CreateTransform(kId3);
+    flatland->CreateTransform(kId4);
 
-    flatland.AddChild(kId1, kId2);
-    flatland.AddChild(kId2, kId3);
-    flatland.AddChild(kId3, kId2);
-    flatland.AddChild(kId3, kId4);
+    flatland->AddChild(kId1, kId2);
+    flatland->AddChild(kId2, kId3);
+    flatland->AddChild(kId3, kId2);
+    flatland->AddChild(kId3, kId4);
 
-    flatland.SetRootTransform(kId1);
-    flatland.ReleaseTransform(kId1);
-    flatland.ReleaseTransform(kId2);
-    flatland.ReleaseTransform(kId3);
-    flatland.ReleaseTransform(kId4);
+    flatland->SetRootTransform(kId1);
+    flatland->ReleaseTransform(kId1);
+    flatland->ReleaseTransform(kId2);
+    flatland->ReleaseTransform(kId3);
+    flatland->ReleaseTransform(kId4);
     PRESENT(flatland, false);
   }
 }
 
 TEST_F(FlatlandTest, SetRootTransform) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kId1 = {1};
   const TransformId kIdNotCreated = {2};
 
-  flatland.CreateTransform(kId1);
+  flatland->CreateTransform(kId1);
   PRESENT(flatland, true);
 
   // Even with no root transform, so clearing it is not an error.
-  flatland.SetRootTransform({0});
+  flatland->SetRootTransform({0});
   PRESENT(flatland, true);
 
   // Setting the root to an unknown transform is an error.
-  flatland.SetRootTransform(kIdNotCreated);
+  flatland->SetRootTransform(kIdNotCreated);
   PRESENT(flatland, false);
 
-  flatland.SetRootTransform(kId1);
+  flatland->SetRootTransform(kId1);
   PRESENT(flatland, true);
 
   // Setting the root to a non-existent transform does not clear the root, which means the local
   // topology will contain two handles: the "local root" and kId1.
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.size(), 2ul);
 
-  flatland.SetRootTransform(kIdNotCreated);
+  flatland->SetRootTransform(kIdNotCreated);
   PRESENT(flatland, false);
 
   // The previous Present() fails, so we Present() again to ensure the UberStruct is updated,
   // even though we expect no changes.
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.size(), 2ul);
 
   // Releasing the root is allowed, though it will remain in the hierarchy until reset.
-  flatland.ReleaseTransform(kId1);
+  flatland->ReleaseTransform(kId1);
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.size(), 2ul);
 
   // Clearing the root after release is also allowed.
-  flatland.SetRootTransform({0});
+  flatland->SetRootTransform({0});
   PRESENT(flatland, true);
 
   // Setting the root to a released transform is not allowed.
-  flatland.SetRootTransform(kId1);
+  flatland->SetRootTransform(kId1);
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, SetTranslationErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kIdNotCreated = {1};
 
   // Zero is not a valid transform ID.
-  flatland.SetTranslation({0}, {1.f, 2.f});
+  flatland->SetTranslation({0}, {1.f, 2.f});
   PRESENT(flatland, false);
 
   // Transform does not exist.
-  flatland.SetTranslation(kIdNotCreated, {1.f, 2.f});
+  flatland->SetTranslation(kIdNotCreated, {1.f, 2.f});
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, SetOrientationErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kIdNotCreated = {1};
 
   // Zero is not a valid transform ID.
-  flatland.SetOrientation({0}, Orientation::CCW_90_DEGREES);
+  flatland->SetOrientation({0}, Orientation::CCW_90_DEGREES);
   PRESENT(flatland, false);
 
   // Transform does not exist.
-  flatland.SetOrientation(kIdNotCreated, Orientation::CCW_90_DEGREES);
+  flatland->SetOrientation(kIdNotCreated, Orientation::CCW_90_DEGREES);
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, SetScaleErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const TransformId kIdNotCreated = {1};
 
   // Zero is not a valid transform ID.
-  flatland.SetScale({0}, {1.f, 2.f});
+  flatland->SetScale({0}, {1.f, 2.f});
   PRESENT(flatland, false);
 
   // Transform does not exist.
-  flatland.SetScale(kIdNotCreated, {1.f, 2.f});
+  flatland->SetScale(kIdNotCreated, {1.f, 2.f});
   PRESENT(flatland, false);
 }
 
 // Test that changing geometric transform properties affects the local matrix of Transforms.
 TEST_F(FlatlandTest, SetGeometricTransformProperties) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create two Transforms to ensure properties are local to individual Transforms.
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};
 
-  flatland.CreateTransform(kId1);
-  flatland.CreateTransform(kId2);
+  flatland->CreateTransform(kId1);
+  flatland->CreateTransform(kId2);
 
-  flatland.SetRootTransform(kId1);
-  flatland.AddChild(kId1, kId2);
+  flatland->SetRootTransform(kId1);
+  flatland->AddChild(kId1, kId2);
 
   PRESENT(flatland, true);
 
   // Get the TransformHandles for kId1 and kId2.
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   ASSERT_EQ(uber_struct->local_topology.size(), 3ul);
-  ASSERT_EQ(uber_struct->local_topology[0].handle, flatland.GetRoot());
+  ASSERT_EQ(uber_struct->local_topology[0].handle, flatland->GetRoot());
 
   const auto handle1 = uber_struct->local_topology[1].handle;
   const auto handle2 = uber_struct->local_topology[2].handle;
 
   // The local topology will always have 3 transforms: the local root, kId1, and kId2. With no
   // properties set, there will be no local matrices.
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_TRUE(uber_struct->local_matrices.empty());
 
   // Set up one property per transform.
-  flatland.SetTranslation(kId1, {1.f, 2.f});
-  flatland.SetScale(kId2, {2.f, 3.f});
+  flatland->SetTranslation(kId1, {1.f, 2.f});
+  flatland->SetScale(kId2, {2.f, 3.f});
   PRESENT(flatland, true);
 
   // The two handles should have the expected matrices.
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
   EXPECT_MATRIX(uber_struct, handle2, glm::scale(glm::mat3(), {2.f, 3.f}));
 
   // Fill out the remaining properties on both transforms.
-  flatland.SetOrientation(kId1, Orientation::CCW_90_DEGREES);
-  flatland.SetScale(kId1, {4.f, 5.f});
+  flatland->SetOrientation(kId1, Orientation::CCW_90_DEGREES);
+  flatland->SetScale(kId1, {4.f, 5.f});
 
-  flatland.SetTranslation(kId2, {6.f, 7.f});
-  flatland.SetOrientation(kId2, Orientation::CCW_270_DEGREES);
+  flatland->SetTranslation(kId2, {6.f, 7.f});
+  flatland->SetOrientation(kId2, Orientation::CCW_270_DEGREES);
 
   PRESENT(flatland, true);
 
   // Verify the new properties were applied in the correct orders.
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
 
   glm::mat3 matrix1 = glm::mat3();
   matrix1 = glm::translate(matrix1, {1.f, 2.f});
@@ -1171,62 +1174,62 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
 }
 
 // Ensure that local matrix data is only cleaned up when a Transform is completely unreferenced,
-// meaning no Transforms reference it as a child.
+// meaning no Transforms reference it as a child->
 TEST_F(FlatlandTest, MatrixReleasesWhenTransformNotReferenced) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Create two Transforms to ensure properties are local to individual Transforms.
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};
 
-  flatland.CreateTransform(kId1);
-  flatland.CreateTransform(kId2);
+  flatland->CreateTransform(kId1);
+  flatland->CreateTransform(kId2);
 
-  flatland.SetRootTransform(kId1);
-  flatland.AddChild(kId1, kId2);
+  flatland->SetRootTransform(kId1);
+  flatland->AddChild(kId1, kId2);
 
   PRESENT(flatland, true);
 
   // Get the TransformHandles for kId1 and kId2.
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   ASSERT_EQ(uber_struct->local_topology.size(), 3ul);
-  ASSERT_EQ(uber_struct->local_topology[0].handle, flatland.GetRoot());
+  ASSERT_EQ(uber_struct->local_topology[0].handle, flatland->GetRoot());
 
   const auto handle1 = uber_struct->local_topology[1].handle;
   const auto handle2 = uber_struct->local_topology[2].handle;
 
   // Set a geometric property on kId1.
-  flatland.SetTranslation(kId1, {1.f, 2.f});
+  flatland->SetTranslation(kId1, {1.f, 2.f});
   PRESENT(flatland, true);
 
   // Only handle1 should have a local matrix.
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
 
   // Release kId1, but ensure its matrix stays around.
-  flatland.ReleaseTransform(kId1);
+  flatland->ReleaseTransform(kId1);
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_MATRIX(uber_struct, handle1, glm::translate(glm::mat3(), {1.f, 2.f}));
 
   // Clear kId1 as the root transform, which should clear the matrix.
-  flatland.SetRootTransform({0});
+  flatland->SetRootTransform({0});
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_TRUE(uber_struct->local_matrices.empty());
 }
 
 TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
   PRESENT(flatland, true);
 
   ContentLinkToken parent_token2;
@@ -1234,7 +1237,7 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token2.value, &child_token2.value));
 
   fidl::InterfacePtr<GraphLink> graph_link2;
-  flatland.LinkToParent(std::move(child_token2), graph_link2.NewRequest());
+  flatland->LinkToParent(std::move(child_token2), graph_link2.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -1249,14 +1252,14 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
 }
 
 TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
 
   fidl::InterfacePtr<GraphLink> graph_link2;
 
@@ -1266,8 +1269,8 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
 
   // Creating the new GraphLink doesn't invalidate either of the old links until Present() is
-  // called on the child.
-  child.LinkToParent(std::move(child_token), graph_link2.NewRequest());
+  // called on the child->
+  child->LinkToParent(std::move(child_token), graph_link2.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -1285,14 +1288,14 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
 }
 
 TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
   PRESENT(flatland, true);
 
   parent_token.value.reset();
@@ -1302,12 +1305,12 @@ TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
 }
 
 TEST_F(FlatlandTest, GraphLinkUnbindsImmediatelyWithInvalidToken) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   GraphLinkToken child_token;
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
 
   // The link will be unbound even before Present() is called.
   RunLoopUntilIdle();
@@ -1317,22 +1320,22 @@ TEST_F(FlatlandTest, GraphLinkUnbindsImmediatelyWithInvalidToken) {
 }
 
 TEST_F(FlatlandTest, GraphUnlinkFailsWithoutLink) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
-  flatland.UnlinkFromParent([](GraphLinkToken token) { EXPECT_TRUE(false); });
+  flatland->UnlinkFromParent([](GraphLinkToken token) { EXPECT_TRUE(false); });
 
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from returning a valid token.
@@ -1340,7 +1343,7 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   RunLoopUntilIdle();
 
   GraphLinkToken graph_token;
-  flatland.UnlinkFromParent(
+  flatland->UnlinkFromParent(
       [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
   PRESENT(flatland, true);
 
@@ -1348,14 +1351,14 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
 
   // But trying to link with that token will immediately fail because it is already orphaned.
   fidl::InterfacePtr<GraphLink> graph_link2;
-  flatland.LinkToParent(std::move(graph_token), graph_link2.NewRequest());
+  flatland->LinkToParent(std::move(graph_token), graph_link2.NewRequest());
   PRESENT(flatland, true);
 
   EXPECT_FALSE(graph_link2.is_bound());
 }
 
 TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1364,11 +1367,11 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
   const zx_koid_t expected_koid = fsl::GetKoid(child_token.value.get());
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  flatland->LinkToParent(std::move(child_token), graph_link.NewRequest());
   PRESENT(flatland, true);
 
   GraphLinkToken graph_token;
-  flatland.UnlinkFromParent(
+  flatland->UnlinkFromParent(
       [&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
 
   RunLoopUntilIdle();
@@ -1399,7 +1402,7 @@ TEST_F(FlatlandTest, GraphUnlinkReturnsOriginalToken) {
 }
 
 TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1410,8 +1413,8 @@ TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, true);
 
   child_token.value.reset();
@@ -1421,14 +1424,14 @@ TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
 }
 
 TEST_F(FlatlandTest, ContentLinkUnbindsImmediatelyWithInvalidToken) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
-  flatland.CreateLink(kLinkId1, std::move(parent_token), {}, content_link.NewRequest());
+  flatland->CreateLink(kLinkId1, std::move(parent_token), {}, content_link.NewRequest());
 
   // The link will be unbound even before Present() is called.
   RunLoopUntilIdle();
@@ -1438,7 +1441,7 @@ TEST_F(FlatlandTest, ContentLinkUnbindsImmediatelyWithInvalidToken) {
 }
 
 TEST_F(FlatlandTest, ContentLinkFailsIdIsZero) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1447,13 +1450,13 @@ TEST_F(FlatlandTest, ContentLinkFailsIdIsZero) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink({0}, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ContentLinkFailsNoLogicalSize) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1461,13 +1464,13 @@ TEST_F(FlatlandTest, ContentLinkFailsNoLogicalSize) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
-  flatland.CreateLink({0}, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1478,8 +1481,8 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
   // The X value must be positive.
   LinkProperties properties;
   properties.set_logical_size({0.f, kDefaultSize});
-  flatland.CreateLink({0}, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink({0}, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, false);
 
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
@@ -1487,13 +1490,13 @@ TEST_F(FlatlandTest, ContentLinkFailsInvalidLogicalSize) {
   // The Y value must be positive.
   LinkProperties properties2;
   properties2.set_logical_size({kDefaultSize, 0.f});
-  flatland.CreateLink({0}, std::move(parent_token), std::move(properties2),
-                      content_link.NewRequest());
+  flatland->CreateLink({0}, std::move(parent_token), std::move(properties2),
+                       content_link.NewRequest());
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ContentLinkFailsIdCollision) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1504,35 +1507,35 @@ TEST_F(FlatlandTest, ContentLinkFailsIdCollision) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink(kId1, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kId1, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, true);
 
   ContentLinkToken parent_token2;
   GraphLinkToken child_token2;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token2.value, &child_token2.value));
 
-  flatland.CreateLink(kId1, std::move(parent_token2), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kId1, std::move(parent_token2), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
 
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
 
   // Clearing the parent graph should not unbind the interfaces until Present() is called and the
   // acquire fence is signaled.
-  parent.ClearGraph();
+  parent->ClearGraph();
   RunLoopUntilIdle();
 
   EXPECT_TRUE(content_link.is_bound());
@@ -1557,14 +1560,14 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
   EXPECT_FALSE(graph_link.is_bound());
 
   // Recreate the Link. The parent graph was cleared so we can reuse the LinkId.
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
 
   EXPECT_TRUE(content_link.is_bound());
   EXPECT_TRUE(graph_link.is_bound());
 
   // Clearing the child graph should not unbind the interfaces until Present() is called and the
   // acquire fence is signaled.
-  child.ClearGraph();
+  child->ClearGraph();
   RunLoopUntilIdle();
 
   EXPECT_TRUE(content_link.is_bound());
@@ -1592,8 +1595,8 @@ TEST_F(FlatlandTest, ClearGraphDelaysLinkDestructionUntilPresent) {
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link, but don't call Present() on either instance.
   ContentLinkToken parent_token;
@@ -1605,11 +1608,11 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({1.0f, 2.0f});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    content_link.NewRequest());
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     content_link.NewRequest());
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
 
   // Request a layout update.
   bool layout_updated = false;
@@ -1619,16 +1622,127 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
     layout_updated = true;
   });
 
-  // Without even presenting, the child is able to get the initial properties from the parent.
-  UpdateLinks(parent.GetRoot());
+  // Without even presenting, the child is able to get the initial properties from the parent->
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(layout_updated);
+}
+
+TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  // Set up a link, but don't call Present() on either instance.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const ContentId kLinkId = {1};
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size({1.0f, 2.0f});
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     content_link.NewRequest());
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  UpdateLinks(parent->GetRoot());
+
+  // First layout request should succeed immediately.
+  bool layout_updated = false;
+  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(layout_updated);
+
+  // Queue overwriting hanging gets.
+  layout_updated = false;
+  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  RunLoopUntilIdle();
+  EXPECT_FALSE(layout_updated);
+
+  // Present should fail on child because the client has broken flow control.
+  PresentArgs args;
+  args.expected_error = fuchsia::ui::scenic::internal::Error::BAD_HANGING_GET;
+  PRESENT_WITH_ARGS(child, std::move(args), false);
+}
+
+TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // Create the parent Flatland session using another loop.
+  async::TestLoop parent_loop;
+  auto session_id = scheduling::GetNextSessionId();
+  std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
+  importers.push_back(buffer_collection_importer_);
+  fuchsia::ui::scenic::internal::FlatlandPtr parent_ptr;
+  std::shared_ptr<Flatland> parent = Flatland::New(
+      std::make_shared<utils::UnownedDispatcherHolder>(parent_loop.dispatcher()),
+      parent_ptr.NewRequest(), session_id,
+      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+      uber_struct_system_->AllocateQueueForSession(session_id), importers);
+
+  // Create parent link.
+  const ContentId kLinkId = {1};
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size({1.0f, 2.0f});
+  parent_ptr->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                         content_link.NewRequest());
+  EXPECT_TRUE(parent_loop.RunUntilIdle());
+
+  // Create the child Flatland session using another loop.
+  async::TestLoop child_loop;
+  session_id = scheduling::GetNextSessionId();
+  fuchsia::ui::scenic::internal::FlatlandPtr child_ptr;
+  std::shared_ptr<Flatland> child = Flatland::New(
+      std::make_shared<utils::UnownedDispatcherHolder>(child_loop.dispatcher()),
+      child_ptr.NewRequest(), session_id,
+      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+      uber_struct_system_->AllocateQueueForSession(session_id), importers);
+
+  // Create child link.
+  fidl::InterfacePtr<GraphLink> graph_link;
+  child_ptr->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  EXPECT_TRUE(child_loop.RunUntilIdle());
+
+  // Complete linking sessions.
+  UpdateLinks(parent->GetRoot());
+
+  // Send the first GetLayout hanging get which should have an immediate answer.
+  bool layout_updated = false;
+  graph_link->GetLayout([&](auto) { layout_updated = true; });
+
+  // Process the request on child's loop.
+  EXPECT_TRUE(child_loop.RunUntilIdle());
+
+  // Process the response on parent's loop. Response should not run yet because it is posted on
+  // child's loop.
+  EXPECT_TRUE(parent_loop.RunUntilIdle());
+  EXPECT_FALSE(layout_updated);
+
+  // Run the response on child's loop.
+  EXPECT_TRUE(child_loop.RunUntilIdle());
+  EXPECT_TRUE(layout_updated);
+
+  // Send overwriting hanging gets that will cause an error.
+  layout_updated = false;
+  graph_link->GetLayout([&](auto) { layout_updated = true; });
+  graph_link->GetLayout([&](auto) { layout_updated = true; });
+
+  // Overwriting hanging gets should cause an error on child's loop as we process the request.
+  EXPECT_TRUE(child_loop.RunUntilIdle());
+  PresentArgs args;
+  args.expected_error = fuchsia::ui::scenic::internal::Error::BAD_HANGING_GET;
+  PRESENT_WITH_ARGS(child, std::move(args), false);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
   ContentLinkToken parent_token;
@@ -1637,20 +1751,20 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
 
   const TransformId kTransformId = {1};
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
 
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({1.0f, 2.0f});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    content_link.NewRequest());
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     content_link.NewRequest());
+  parent->SetContent(kTransformId, kLinkId);
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
 
   // Request a status update.
   bool status_updated = false;
@@ -1660,7 +1774,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
   });
 
   // The child begins disconnected from the display.
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 
   // The GraphLinkStatus will update when both the parent and child Present().
@@ -1672,20 +1786,20 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
 
   // The parent presents first, no update.
   PRESENT(parent, true);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_FALSE(status_updated);
 
   // The child presents second and the status updates.
   PRESENT(child, true);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
   ContentLinkToken parent_token;
@@ -1694,20 +1808,20 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
 
   const TransformId kTransformId = {1};
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
 
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({1.0f, 2.0f});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    content_link.NewRequest());
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     content_link.NewRequest());
+  parent->SetContent(kTransformId, kLinkId);
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
 
   // Request a status update.
   bool status_updated = false;
@@ -1717,7 +1831,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
   });
 
   // The child begins disconnected from the display.
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 
   // The GraphLinkStatus will update when both the parent and child Present().
@@ -1729,20 +1843,20 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
 
   // The child presents first, no update.
   PRESENT(child, true);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_FALSE(status_updated);
 
   // The parent presents second and the status updates.
   PRESENT(parent, true);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   // Set up a link and attach it to the parent's root, but don't call Present() on either instance.
   ContentLinkToken parent_token;
@@ -1751,20 +1865,20 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
 
   const TransformId kTransformId = {1};
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
 
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({1.0f, 2.0f});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    content_link.NewRequest());
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     content_link.NewRequest());
+  parent->SetContent(kTransformId, kLinkId);
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
 
   // The GraphLinkStatus will update when both the parent and child Present().
   bool status_updated = false;
@@ -1775,7 +1889,7 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
 
   PRESENT(child, true);
   PRESENT(parent, true);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 
   // The GraphLinkStatus will update again if the parent removes the child link from its topology.
@@ -1785,18 +1899,18 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
     status_updated = true;
   });
 
-  parent.SetContent(kTransformId, {0});
+  parent->SetContent(kTransformId, {0});
   PRESENT(parent, true);
 
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
 TEST_F(FlatlandTest, ValidChildToParentFlow) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -1807,11 +1921,11 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({1.0f, 2.0f});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    content_link.NewRequest());
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     content_link.NewRequest());
 
   fidl::InterfacePtr<GraphLink> graph_link;
-  child.LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), graph_link.NewRequest());
 
   bool status_updated = false;
   content_link->GetStatus([&](ContentLinkStatus status) {
@@ -1824,21 +1938,21 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   EXPECT_FALSE(status_updated);
 
   PRESENT(child, true);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_TRUE(status_updated);
 }
 
 TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
-  UpdateLinks(parent.GetRoot());
+  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
+  UpdateLinks(parent->GetRoot());
 
   // Confirm that the initial logical size is available immediately.
   {
@@ -1850,7 +1964,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1858,27 +1972,10 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   {
     LinkProperties properties;
     properties.set_logical_size({2.0f, 3.0f});
-    parent.SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetLinkProperties(kLinkId, std::move(properties));
     PRESENT(parent, true);
   }
 
-  // Confirm that no update is triggered since the child is not in the global topology.
-  {
-    bool layout_updated = false;
-    graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
-
-    EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
-    EXPECT_FALSE(layout_updated);
-  }
-
-  // Attach the child to the global topology.
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-  parent.SetContent(kTransformId, kLinkId);
-  PRESENT(parent, true);
-
-  // Confirm that the new logical size is accessible.
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
@@ -1887,29 +1984,41 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
       layout_updated = true;
     });
 
+    // Confirm that no update is triggered since the child is not in the global topology.
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
+    EXPECT_FALSE(layout_updated);
+
+    // Attach the child to the global topology.
+    parent->CreateTransform(kTransformId);
+    parent->SetRootTransform(kTransformId);
+    parent->SetContent(kTransformId, kLinkId);
+    PRESENT(parent, true);
+
+    // Confirm that the new logical size is accessible.
+    EXPECT_FALSE(layout_updated);
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
 
 TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
+  parent->SetContent(kTransformId, kLinkId);
   PRESENT(parent, true);
 
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
 
   // Confirm that the initial layout is the default.
   {
@@ -1921,7 +2030,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -1929,7 +2038,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   {
     LinkProperties properties;
     properties.set_logical_size({2.0f, 3.0f});
-    parent.SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetLinkProperties(kLinkId, std::move(properties));
     PRESENT(parent, true);
   }
 
@@ -1943,14 +2052,14 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
   // Set link properties using a properties object with an unset size field.
   {
     LinkProperties default_properties;
-    parent.SetLinkProperties(kLinkId, std::move(default_properties));
+    parent->SetLinkProperties(kLinkId, std::move(default_properties));
     PRESENT(parent, true);
   }
 
@@ -1960,21 +2069,21 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_FALSE(layout_updated);
   }
 }
 
 TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
 
   // Our initial layout (from link creation) should be the default size.
   {
@@ -1986,14 +2095,14 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     });
 
     EXPECT_EQ(0, num_updates);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_EQ(1, num_updates);
   }
 
   // Create a full chain of transforms from parent root to child root.
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
+  parent->SetContent(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   const float kInitialSize = 100.0f;
@@ -2002,10 +2111,10 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   for (int i = 10; i >= 0; --i) {
     LinkProperties properties;
     properties.set_logical_size({kInitialSize + i + 1.0f, kInitialSize + i + 1.0f});
-    parent.SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetLinkProperties(kLinkId, std::move(properties));
     LinkProperties properties2;
     properties2.set_logical_size({kInitialSize + i, kInitialSize + i});
-    parent.SetLinkProperties(kLinkId, std::move(properties2));
+    parent->SetLinkProperties(kLinkId, std::move(properties2));
     PRESENT(parent, true);
   }
 
@@ -2019,7 +2128,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     });
 
     EXPECT_EQ(0, num_updates);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_EQ(1, num_updates);
   }
 
@@ -2036,23 +2145,23 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   });
 
   EXPECT_EQ(0, num_updates);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_EQ(0, num_updates);
 
   // Update the properties twice, once with the old value, once with the new value.
   {
     LinkProperties properties;
     properties.set_logical_size({kInitialSize, kInitialSize});
-    parent.SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetLinkProperties(kLinkId, std::move(properties));
     LinkProperties properties2;
     properties2.set_logical_size({kNewSize, kNewSize});
-    parent.SetLinkProperties(kLinkId, std::move(properties2));
+    parent->SetLinkProperties(kLinkId, std::move(properties2));
     PRESENT(parent, true);
   }
 
   // Confirm that we receive the update.
   EXPECT_EQ(0, num_updates);
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
   EXPECT_EQ(1, num_updates);
 }
 
@@ -2062,21 +2171,22 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   const TransformId kTransformIds[kNumChildren] = {{2}, {3}, {4}};
   const ContentId kLinkIds[kNumChildren] = {{5}, {6}, {7}};
 
-  Flatland parent = CreateFlatland();
-  Flatland children[kNumChildren] = {CreateFlatland(), CreateFlatland(), CreateFlatland()};
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> children[kNumChildren] = {CreateFlatland(), CreateFlatland(),
+                                                      CreateFlatland()};
   fidl::InterfacePtr<ContentLink> content_link[kNumChildren];
   fidl::InterfacePtr<GraphLink> graph_link[kNumChildren];
 
-  parent.CreateTransform(kRootTransform);
-  parent.SetRootTransform(kRootTransform);
+  parent->CreateTransform(kRootTransform);
+  parent->SetRootTransform(kRootTransform);
 
   for (int i = 0; i < kNumChildren; ++i) {
-    parent.CreateTransform(kTransformIds[i]);
-    parent.AddChild(kRootTransform, kTransformIds[i]);
-    CreateLink(&parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
-    parent.SetContent(kTransformIds[i], kLinkIds[i]);
+    parent->CreateTransform(kTransformIds[i]);
+    parent->AddChild(kRootTransform, kTransformIds[i]);
+    CreateLink(parent.get(), children[i].get(), kLinkIds[i], &content_link[i], &graph_link[i]);
+    parent->SetContent(kTransformIds[i], kLinkIds[i]);
   }
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
 
   const float kDefaultSize = 1.0f;
 
@@ -2090,7 +2200,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -2098,7 +2208,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   for (auto id : kLinkIds) {
     LinkProperties properties;
     properties.set_logical_size({static_cast<float>(id.value), id.value * 2.0f});
-    parent.SetLinkProperties(id, std::move(properties));
+    parent->SetLinkProperties(id, std::move(properties));
   }
 
   PRESENT(parent, true);
@@ -2112,28 +2222,28 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
 
 TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
+  parent->SetContent(kTransformId, kLinkId);
   PRESENT(parent, true);
 
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
 
   // Change the display pixel scale.
   const glm::vec2 new_display_pixel_scale = {0.1f, 0.2f};
@@ -2152,38 +2262,38 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
 
 TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
+  parent->SetContent(kTransformId, kLinkId);
   PRESENT(parent, true);
 
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
 
   // Change the link size and logical size of the link.
   const Vec2 kNewLinkSize = {2.f, 3.f};
-  parent.SetLinkSize(kLinkId, kNewLinkSize);
+  parent->SetLinkSize(kLinkId, kNewLinkSize);
 
   const Vec2 kNewLogicalSize = {5.f, 7.f};
   {
     LinkProperties properties;
     properties.set_logical_size(kNewLogicalSize);
-    parent.SetLinkProperties(kLinkId, std::move(properties));
+    parent->SetLinkProperties(kLinkId, std::move(properties));
   }
 
   PRESENT(parent, true);
@@ -2201,32 +2311,32 @@ TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
 
 TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const TransformId kTransformId = {1};
   const ContentId kLinkId = {2};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId, &content_link, &graph_link);
 
-  parent.CreateTransform(kTransformId);
-  parent.SetRootTransform(kTransformId);
-  parent.SetContent(kTransformId, kLinkId);
+  parent->CreateTransform(kTransformId);
+  parent->SetRootTransform(kTransformId);
+  parent->SetContent(kTransformId, kLinkId);
   PRESENT(parent, true);
 
-  UpdateLinks(parent.GetRoot());
+  UpdateLinks(parent->GetRoot());
 
   // Set a scale on the parent transform.
   const Vec2 scale = {2.f, 3.f};
-  parent.SetScale(kTransformId, scale);
+  parent->SetScale(kTransformId, scale);
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
@@ -2242,12 +2352,12 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
   // Set a negative scale, but confirm that pixel scale is still positive.
-  parent.SetScale(kTransformId, {-scale.x, -scale.y});
+  parent->SetScale(kTransformId, {-scale.x, -scale.y});
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
@@ -2259,18 +2369,18 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
     graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
+    UpdateLinks(parent->GetRoot());
     EXPECT_FALSE(layout_updated);
   }
 
   // Set a rotation on the parent transform.
-  parent.SetOrientation(kTransformId, Orientation::CCW_90_DEGREES);
+  parent->SetOrientation(kTransformId, Orientation::CCW_90_DEGREES);
   PRESENT(parent, true);
 
   // Call and ignore GetLayout() to guarantee the next call hangs.
   graph_link->GetLayout([&](LayoutInfo info) {});
 
-  // Confirm that this flips the new pixel scale to (3, 2).
+  // This call hangs
   {
     bool layout_updated = false;
     graph_link->GetLayout([&](LayoutInfo info) {
@@ -2280,20 +2390,20 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
     });
 
     EXPECT_FALSE(layout_updated);
-    UpdateLinks(parent.GetRoot());
-    EXPECT_TRUE(layout_updated);
+    UpdateLinks(parent->GetRoot());
+    EXPECT_FALSE(layout_updated);
   }
 }
 
 TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup.
 
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};
 
-  flatland.CreateTransform(kId1);
+  flatland->CreateTransform(kId1);
 
   const ContentId kLinkId1 = {1};
   const ContentId kLinkId2 = {2};
@@ -2307,8 +2417,8 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
     GraphLinkToken child_token;
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
     LinkProperties empty_properties;
-    flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(empty_properties),
-                        content_link.NewRequest());
+    flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(empty_properties),
+                         content_link.NewRequest());
 
     PRESENT(flatland, false);
   }
@@ -2320,35 +2430,35 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
 
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
 
   PRESENT(flatland, true);
 
   // Zero is not a valid transform_id.
-  flatland.SetContent({0}, kLinkId1);
+  flatland->SetContent({0}, kLinkId1);
   PRESENT(flatland, false);
 
   // Setting a valid link on an ivnalid transform is not valid.
-  flatland.SetContent(kId2, kLinkId1);
+  flatland->SetContent(kId2, kLinkId1);
   PRESENT(flatland, false);
 
   // Setting an invalid link on a valid transform is not valid.
-  flatland.SetContent(kId1, kLinkId2);
+  flatland->SetContent(kId1, kLinkId2);
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Zero is not a valid link_id.
-  flatland.ReleaseLink({0}, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+  flatland->ReleaseLink({0}, [](ContentLinkToken token) { EXPECT_TRUE(false); });
   PRESENT(flatland, false);
 
   // Using a link_id that does not exist is not valid.
   const ContentId kLinkId1 = {1};
-  flatland.ReleaseLink(kLinkId1, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+  flatland->ReleaseLink(kLinkId1, [](ContentLinkToken token) { EXPECT_TRUE(false); });
   PRESENT(flatland, false);
 
   // ContentId is not a Link.
@@ -2359,14 +2469,15 @@ TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
   properties.set_width(100);
   properties.set_height(200);
 
-  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
+  CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+              std::move(properties));
 
-  flatland.ReleaseLink(kImageId, [](ContentLinkToken token) { EXPECT_TRUE(false); });
+  flatland->ReleaseLink(kImageId, [](ContentLinkToken token) { EXPECT_TRUE(false); });
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -2379,12 +2490,12 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, true);
 
   ContentLinkToken content_token;
-  flatland.ReleaseLink(
+  flatland->ReleaseLink(
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
 
   RunLoopUntilIdle();
@@ -2415,7 +2526,7 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOriginalToken) {
 }
 
 TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -2426,8 +2537,8 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from returning a valid token.
@@ -2435,7 +2546,7 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
   RunLoopUntilIdle();
 
   ContentLinkToken content_token;
-  flatland.ReleaseLink(
+  flatland->ReleaseLink(
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
   PRESENT(flatland, true);
 
@@ -2445,16 +2556,16 @@ TEST_F(FlatlandTest, ReleaseLinkReturnsOrphanedTokenOnChildDeath) {
   const ContentId kLinkId2 = {2};
 
   fidl::InterfacePtr<ContentLink> content_link2;
-  flatland.CreateLink(kLinkId2, std::move(content_token), std::move(properties),
-                      content_link2.NewRequest());
+  flatland->CreateLink(kLinkId2, std::move(content_token), std::move(properties),
+                       content_link2.NewRequest());
   PRESENT(flatland, true);
 
   EXPECT_FALSE(content_link2.is_bound());
 }
 
 TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -2462,35 +2573,35 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
   const TransformId kId1 = {1};
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
 
   const ContentId kLinkId = {1};
 
   fidl::InterfacePtr<ContentLink> parent_content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    parent_content_link.NewRequest());
-  parent.SetContent(kId1, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     parent_content_link.NewRequest());
+  parent->SetContent(kId1, kLinkId);
 
   PRESENT(parent, true);
 
-  // Link the child to the parent.
+  // Link the child to the parent->
   fidl::InterfacePtr<GraphLink> child_graph_link;
-  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
 
-  // The child should only be accessible from the parent when Present() is called on the child.
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  // The child should only be accessible from the parent when Present() is called on the child->
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   PRESENT(child, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
 TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -2498,14 +2609,14 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
 
   // Link the child to the parent
   fidl::InterfacePtr<GraphLink> child_graph_link;
-  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
 
   PRESENT(child, true);
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
   const TransformId kId1 = {1};
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
 
   // Present the parent once so that it has a topology or else IsDescendantOf() will crash.
   PRESENT(parent, true);
@@ -2515,21 +2626,21 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
   fidl::InterfacePtr<ContentLink> parent_content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    parent_content_link.NewRequest());
-  parent.SetContent(kId1, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     parent_content_link.NewRequest());
+  parent->SetContent(kId1, kLinkId);
 
-  // The child should only be accessible from the parent when Present() is called on the parent.
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  // The child should only be accessible from the parent when Present() is called on the parent->
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   PRESENT(parent, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
 TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -2537,8 +2648,8 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
 
   // Create a transform, add it to the parent, then create a link and assign to the transform.
   const TransformId kId1 = {1};
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
 
   // Present the parent once so that it has a topology or else IsDescendantOf() will crash.
   PRESENT(parent, true);
@@ -2548,30 +2659,30 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
   fidl::InterfacePtr<ContentLink> parent_content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    parent_content_link.NewRequest());
-  parent.SetContent(kId1, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     parent_content_link.NewRequest());
+  parent->SetContent(kId1, kLinkId);
 
-  // Link the child to the parent.
+  // Link the child to the parent->
   fidl::InterfacePtr<GraphLink> child_graph_link;
-  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
 
   // The child should only be accessible from the parent when Present() is called on both the parent
-  // and the child.
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  // and the child->
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   PRESENT(parent, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   PRESENT(child, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
 TEST_F(FlatlandTest, ClearChildLink) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -2579,143 +2690,143 @@ TEST_F(FlatlandTest, ClearChildLink) {
 
   // Create and link the two instances.
   const TransformId kId1 = {1};
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
 
   const ContentId kLinkId = {1};
 
   fidl::InterfacePtr<ContentLink> parent_content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                    parent_content_link.NewRequest());
-  parent.SetContent(kId1, kLinkId);
+  parent->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                     parent_content_link.NewRequest());
+  parent->SetContent(kId1, kLinkId);
 
   fidl::InterfacePtr<GraphLink> child_graph_link;
-  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+  child->LinkToParent(std::move(child_token), child_graph_link.NewRequest());
 
   PRESENT(parent, true);
   PRESENT(child, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // Reset the child link using zero as the link id.
-  parent.SetContent(kId1, {0});
+  parent->SetContent(kId1, {0});
 
   PRESENT(parent, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
 TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   const TransformId kId1 = {1};
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
-  parent.SetContent(kId1, kLinkId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
+  parent->SetContent(kId1, kLinkId1);
 
   PRESENT(parent, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   GraphLinkToken graph_token;
-  child.UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
+  child->UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
 
   PRESENT(child, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // The same token can be used to link a different instance.
-  Flatland child2 = CreateFlatland();
-  child2.LinkToParent(std::move(graph_token), graph_link.NewRequest());
+  std::shared_ptr<Flatland> child2 = CreateFlatland();
+  child2->LinkToParent(std::move(graph_token), graph_link.NewRequest());
 
   PRESENT(child2, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child2.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child2->GetRoot()));
 
   // The old instance is not re-linked.
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
 TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   const TransformId kId1 = {1};
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
-  parent.SetContent(kId1, kLinkId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
+  parent->SetContent(kId1, kLinkId1);
 
   PRESENT(parent, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   ContentLinkToken content_token;
-  parent.ReleaseLink(
+  parent->ReleaseLink(
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
 
   PRESENT(parent, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // The same token can be used to create a different link to the same child with a different
-  // parent.
-  Flatland parent2 = CreateFlatland();
+  // parent->
+  std::shared_ptr<Flatland> parent2 = CreateFlatland();
 
   const TransformId kId2 = {2};
-  parent2.CreateTransform(kId2);
-  parent2.SetRootTransform(kId2);
+  parent2->CreateTransform(kId2);
+  parent2->SetRootTransform(kId2);
 
   const ContentId kLinkId2 = {2};
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  parent2.CreateLink(kLinkId2, std::move(content_token), std::move(properties),
-                     content_link.NewRequest());
-  parent2.SetContent(kId2, kLinkId2);
+  parent2->CreateLink(kLinkId2, std::move(content_token), std::move(properties),
+                      content_link.NewRequest());
+  parent2->SetContent(kId2, kLinkId2);
 
   PRESENT(parent2, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent2.GetRoot(), child.GetRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent2->GetRoot(), child->GetRoot()));
 
   // The old instance is not re-linked.
-  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
 TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   const ContentId kIdNotCreated = {1};
 
   // Zero is not a valid transform ID.
-  flatland.SetLinkSize({0}, {1.f, 2.f});
+  flatland->SetLinkSize({0}, {1.f, 2.f});
   PRESENT(flatland, false);
 
   // Size contains non-positive components.
-  flatland.SetLinkSize({0}, {-1.f, 2.f});
+  flatland->SetLinkSize({0}, {-1.f, 2.f});
   PRESENT(flatland, false);
 
-  flatland.SetLinkSize({0}, {1.f, 0.f});
+  flatland->SetLinkSize({0}, {1.f, 0.f});
   PRESENT(flatland, false);
 
   // Link does not exist.
-  flatland.SetLinkSize(kIdNotCreated, {1.f, 2.f});
+  flatland->SetLinkSize(kIdNotCreated, {1.f, 2.f});
   PRESENT(flatland, false);
 
   // ContentId is not a Link.
@@ -2726,105 +2837,106 @@ TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
   properties.set_width(100);
   properties.set_height(200);
 
-  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
+  CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+              std::move(properties));
 
-  flatland.SetLinkSize(kImageId, {1.f, 2.f});
+  flatland->SetLinkSize(kImageId, {1.f, 2.f});
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, LinkSizeRatiosCreateScaleMatrix) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
 
   const TransformId kId1 = {1};
 
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
-  parent.SetContent(kId1, kLinkId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
+  parent->SetContent(kId1, kLinkId1);
 
   PRESENT(parent, true);
 
-  const auto maybe_link_handle = parent.GetContentHandle(kLinkId1);
+  const auto maybe_link_handle = parent->GetContentHandle(kLinkId1);
   ASSERT_TRUE(maybe_link_handle.has_value());
   const auto link_handle = maybe_link_handle.value();
 
   // The default size is the same as the logical size, so the link handle won't have a matrix.
-  auto uber_struct = GetUberStruct(parent);
+  auto uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, glm::mat3());
 
   // Change the link size to half the width and a quarter the height.
   const float kNewLinkWidth = 0.5f * kDefaultSize;
   const float kNewLinkHeight = 0.25f * kDefaultSize;
-  parent.SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
+  parent->SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
 
   PRESENT(parent, true);
 
   // This should change the expected matrix to apply the same scales.
   const glm::mat3 expected_scale_matrix = glm::scale(glm::mat3(), {kNewLinkWidth, kNewLinkHeight});
 
-  uber_struct = GetUberStruct(parent);
+  uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 
   // Changing the logical size to the same values returns the matrix to the identity matrix.
   LinkProperties properties;
   properties.set_logical_size({kNewLinkWidth, kNewLinkHeight});
-  parent.SetLinkProperties(kLinkId1, std::move(properties));
+  parent->SetLinkProperties(kLinkId1, std::move(properties));
 
   PRESENT(parent, true);
 
-  uber_struct = GetUberStruct(parent);
+  uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, glm::mat3());
 
   // Change the logical size back to the default size.
   LinkProperties properties2;
   properties2.set_logical_size({kDefaultSize, kDefaultSize});
-  parent.SetLinkProperties(kLinkId1, std::move(properties2));
+  parent->SetLinkProperties(kLinkId1, std::move(properties2));
 
   PRESENT(parent, true);
 
   // This should change the expected matrix back to applying the scales.
-  uber_struct = GetUberStruct(parent);
+  uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 }
 
 TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
-  Flatland parent = CreateFlatland();
-  Flatland child = CreateFlatland();
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
 
   const ContentId kLinkId1 = {1};
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
 
   const TransformId kId1 = {1};
 
-  parent.CreateTransform(kId1);
-  parent.SetRootTransform(kId1);
-  parent.SetContent(kId1, kLinkId1);
+  parent->CreateTransform(kId1);
+  parent->SetRootTransform(kId1);
+  parent->SetContent(kId1, kLinkId1);
 
   PRESENT(parent, true);
 
-  const auto maybe_link_handle = parent.GetContentHandle(kLinkId1);
+  const auto maybe_link_handle = parent->GetContentHandle(kLinkId1);
   ASSERT_TRUE(maybe_link_handle.has_value());
   const auto link_handle = maybe_link_handle.value();
 
   // Set the link size and logical size to new values
   const float kNewLinkWidth = 2.f * kDefaultSize;
   const float kNewLinkHeight = 3.f * kDefaultSize;
-  parent.SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
+  parent->SetLinkSize(kLinkId1, {kNewLinkWidth, kNewLinkHeight});
 
   const float kNewLinkLogicalWidth = 5.f * kDefaultSize;
   const float kNewLinkLogicalHeight = 7.f * kDefaultSize;
   LinkProperties properties;
   properties.set_logical_size({kNewLinkLogicalWidth, kNewLinkLogicalHeight});
-  parent.SetLinkProperties(kLinkId1, std::move(properties));
+  parent->SetLinkProperties(kLinkId1, std::move(properties));
 
   PRESENT(parent, true);
 
@@ -2832,23 +2944,23 @@ TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
   glm::mat3 expected_scale_matrix = glm::scale(
       glm::mat3(), {kNewLinkWidth / kNewLinkLogicalWidth, kNewLinkHeight / kNewLinkLogicalHeight});
 
-  auto uber_struct = GetUberStruct(parent);
+  auto uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 
   // Setting a new LinkProperties with no logical size shouldn't change the matrix.
   LinkProperties properties2;
-  parent.SetLinkProperties(kLinkId1, std::move(properties2));
+  parent->SetLinkProperties(kLinkId1, std::move(properties2));
 
   PRESENT(parent, true);
 
-  uber_struct = GetUberStruct(parent);
+  uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 
   // But it should still preserve the old logical size so that a subsequent link size update uses
   // the old logical size.
   const float kNewLinkWidth2 = 11.f * kDefaultSize;
   const float kNewLinkHeight2 = 13.f * kDefaultSize;
-  parent.SetLinkSize(kLinkId1, {kNewLinkWidth2, kNewLinkHeight2});
+  parent->SetLinkSize(kLinkId1, {kNewLinkWidth2, kNewLinkHeight2});
 
   PRESENT(parent, true);
 
@@ -2856,13 +2968,13 @@ TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
   expected_scale_matrix = glm::scale(glm::mat3(), {kNewLinkWidth2 / kNewLinkLogicalWidth,
                                                    kNewLinkHeight2 / kNewLinkLogicalHeight});
 
-  uber_struct = GetUberStruct(parent);
+  uber_struct = GetUberStruct(parent.get());
   EXPECT_MATRIX(uber_struct, link_handle, expected_scale_matrix);
 }
 
 TEST_F(FlatlandTest, CreateImageValidCase) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -2873,56 +2985,57 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
   properties.set_width(kWidth);
   properties.set_height(kHeight);
 
-  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
+  CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+              std::move(properties));
 }
 
 TEST_F(FlatlandTest, SetOpacityTestCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
   const TransformId kId = {1};
 
   // Zero is not a valid transform ID.
   {
-    flatland.SetOpacity({0}, 0.5);
+    flatland->SetOpacity({0}, 0.5);
     PRESENT(flatland, false);
   }
 
   // The transform id hasn't been imported yet.
   {
-    flatland.SetOpacity(kId, 0.5);
+    flatland->SetOpacity(kId, 0.5);
     PRESENT(flatland, false);
   }
 
   // Setup a valid transform.
-  flatland.CreateTransform(kId);
-  flatland.SetRootTransform(kId);
+  flatland->CreateTransform(kId);
+  flatland->SetRootTransform(kId);
 
   // The alpha values are out of range.
   {
-    flatland.SetOpacity(kId, -0.5);
+    flatland->SetOpacity(kId, -0.5);
     PRESENT(flatland, false);
 
-    flatland.SetOpacity(kId, 1.5);
+    flatland->SetOpacity(kId, 1.5);
     PRESENT(flatland, false);
   }
 
   // Testing now with good values should finally work.
   {
-    flatland.SetOpacity(kId, 0.5);
+    flatland->SetOpacity(kId, 0.5);
     PRESENT(flatland, true);
   }
 
   const TransformId kIdChild = {2};
-  flatland.CreateTransform(kIdChild);
+  flatland->CreateTransform(kIdChild);
 
   // Adding a child should fail because the alpha value is not 1.0
   {
-    flatland.AddChild(kId, kIdChild);
+    flatland->AddChild(kId, kIdChild);
     PRESENT(flatland, false);
   }
 
   // We should still be able to add an *image* to the transform though since that is
-  // content and is treated differently from a normal child.
+  // content and is treated differently from a normal child->
   {
     const ContentId kImageId = {5};
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -2930,37 +3043,38 @@ TEST_F(FlatlandTest, SetOpacityTestCases) {
     properties.set_width(150);
     properties.set_height(175);
     std::shared_ptr<Allocator> allocator = CreateAllocator();
-    CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
-    flatland.SetContent(kId, kImageId);
+    CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+                std::move(properties));
+    flatland->SetContent(kId, kImageId);
     PRESENT(flatland, true);
   }
 
   // We shold still be able to change the opacity to another value < 1 even with an image
   // on the transform.
   {
-    flatland.SetOpacity(kId, 0.3);
+    flatland->SetOpacity(kId, 0.3);
     PRESENT(flatland, true);
   }
 
   // If we set the alpha to 1.0 again and then add the child, now it
   // should work.
   {
-    flatland.SetOpacity(kId, 1.0);
-    flatland.AddChild(kId, kIdChild);
+    flatland->SetOpacity(kId, 1.0);
+    flatland->AddChild(kId, kIdChild);
     PRESENT(flatland, true);
   }
 
   // Now that a child is added, if we try to change the alpha again, it
   // should fail.
   {
-    flatland.SetOpacity(kId, 0.5);
+    flatland->SetOpacity(kId, 0.5);
     PRESENT(flatland, false);
   }
 }
 
 TEST_F(FlatlandTest, CreateImageErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Default image properties.
   const uint32_t kDefaultVmoIndex = 1;
@@ -2973,19 +3087,21 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
 
   // Zero is not a valid image ID.
   {
-    flatland.CreateImage({0}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex, ImageProperties());
+    flatland->CreateImage({0}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          ImageProperties());
     PRESENT(flatland, false);
   }
 
   // The import token must also be valid.
   {
-    flatland.CreateImage({1}, BufferCollectionImportToken(), kDefaultVmoIndex, ImageProperties());
+    flatland->CreateImage({1}, BufferCollectionImportToken(), kDefaultVmoIndex, ImageProperties());
     PRESENT(flatland, false);
   }
 
   // The buffer collection can fail to create an image.
   {
-    flatland.CreateImage({1}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex, ImageProperties());
+    flatland->CreateImage({1}, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          ImageProperties());
     PRESENT(flatland, false);
   }
 
@@ -2997,8 +3113,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     properties.set_width(kDefaultWidth);
     properties.set_height(kDefaultHeight);
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(false));
-    flatland.CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
-                         std::move(properties));
+    flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          std::move(properties));
     PRESENT(flatland, false);
   }
 
@@ -3014,8 +3130,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     // the test doesn't erroneously fail.
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
 
-    flatland.CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
-                         std::move(properties));
+    flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          std::move(properties));
     PRESENT(flatland, true);
   }
 
@@ -3027,8 +3143,8 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     // We shouldn't even make it to the BufferCollectionImporter here due to the duplicate
     // ID causing CreateImage() to return early.
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).Times(0);
-    flatland.CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
-                         std::move(properties));
+    flatland->CreateImage(kId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          std::move(properties));
     PRESENT(flatland, false);
   }
 
@@ -3042,23 +3158,23 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
     fidl::InterfacePtr<ContentLink> content_link;
     LinkProperties link_properties;
     link_properties.set_logical_size({kDefaultSize, kDefaultSize});
-    flatland.CreateLink(kLinkId, std::move(parent_token), std::move(link_properties),
-                        content_link.NewRequest());
+    flatland->CreateLink(kLinkId, std::move(parent_token), std::move(link_properties),
+                         content_link.NewRequest());
     PRESENT(flatland, true);
 
     ImageProperties image_properties;
     image_properties.set_width(kDefaultWidth);
     image_properties.set_height(kDefaultHeight);
 
-    flatland.CreateImage(kLinkId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
-                         std::move(image_properties));
+    flatland->CreateImage(kLinkId, ref_pair.DuplicateImportToken(), kDefaultVmoIndex,
+                          std::move(image_properties));
     PRESENT(flatland, false);
   }
 }
 
 TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
@@ -3072,16 +3188,16 @@ TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
     ImageProperties properties;
     properties.set_width(150);
     properties.set_height(175);
-    flatland.CreateImage(/*image_id*/ {i + 1}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ i,
-                         std::move(properties));
+    flatland->CreateImage(/*image_id*/ {i + 1}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ i,
+                          std::move(properties));
     PRESENT(flatland, true);
   }
 }
 
 TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland1 = CreateFlatland();
-  Flatland flatland2 = CreateFlatland();
+  std::shared_ptr<Flatland> flatland1 = CreateFlatland();
+  std::shared_ptr<Flatland> flatland2 = CreateFlatland();
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
@@ -3092,7 +3208,7 @@ TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
     ImageProperties properties;
     properties.set_width(150);
     properties.set_height(175);
-    flatland1.CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
+    flatland1->CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
     PRESENT(flatland1, true);
   }
   {
@@ -3100,21 +3216,21 @@ TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
     ImageProperties properties;
     properties.set_width(150);
     properties.set_height(175);
-    flatland2.CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
+    flatland2->CreateImage({1}, ref_pair.DuplicateImportToken(), 0, std::move(properties));
     PRESENT(flatland2, true);
   }
 
   // There are seperate ReleaseBufferImage calls to release them from importers.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(2);
-  flatland1.ClearGraph();
+  flatland1->ClearGraph();
   PRESENT(flatland1, true);
-  flatland2.ClearGraph();
+  flatland2->ClearGraph();
   PRESENT(flatland2, true);
 }
 
 TEST_F(FlatlandTest, SetContentErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3126,30 +3242,31 @@ TEST_F(FlatlandTest, SetContentErrorCases) {
   properties.set_width(kWidth);
   properties.set_height(kHeight);
 
-  CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
+  CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+              std::move(properties));
 
   // Create a transform.
   const TransformId kTransformId = {1};
 
-  flatland.CreateTransform(kTransformId);
+  flatland->CreateTransform(kTransformId);
   PRESENT(flatland, true);
 
   // Zero is not a valid transform.
-  flatland.SetContent({0}, kImageId);
+  flatland->SetContent({0}, kImageId);
   PRESENT(flatland, false);
 
   // The transform must exist.
-  flatland.SetContent({2}, kImageId);
+  flatland->SetContent({2}, kImageId);
   PRESENT(flatland, false);
 
   // The image must exist.
-  flatland.SetContent(kTransformId, {2});
+  flatland->SetContent(kTransformId, {2});
   PRESENT(flatland, false);
 }
 
 TEST_F(FlatlandTest, ClearContentOnTransform) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3160,25 +3277,25 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
   properties.set_height(200);
 
   auto import_token_dup = ref_pair.DuplicateImportToken();
-  auto global_collection_id =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties))
-          .collection_id;
+  auto global_collection_id = CreateImage(flatland.get(), allocator.get(), kImageId,
+                                          std::move(ref_pair), std::move(properties))
+                                  .collection_id;
 
-  const auto maybe_image_handle = flatland.GetContentHandle(kImageId);
+  const auto maybe_image_handle = flatland->GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle.has_value());
   const auto image_handle = maybe_image_handle.value();
 
   // Create a transform, make it the root transform, and attach the image.
   const TransformId kTransformId = {1};
 
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // The image handle should be the last handle in the local_topology, and the image should be in
   // the image map.
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.back().handle, image_handle);
 
   auto image_kv = uber_struct->images.find(image_handle);
@@ -3186,10 +3303,10 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
   EXPECT_EQ(image_kv->second.collection_id, global_collection_id);
 
   // An ContentId of 0 indicates to remove any content on the specified transform.
-  flatland.SetContent(kTransformId, {0});
+  flatland->SetContent(kTransformId, {0});
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   for (const auto& entry : uber_struct->local_topology) {
     EXPECT_NE(entry.handle, image_handle);
   }
@@ -3197,7 +3314,7 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
 
 TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup two valid images.
   const ContentId kImageId1 = {1};
@@ -3207,9 +3324,10 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   properties1.set_width(100);
   properties1.set_height(200);
 
-  CreateImage(&flatland, allocator.get(), kImageId1, std::move(ref_pair_1), std::move(properties1));
+  CreateImage(flatland.get(), allocator.get(), kImageId1, std::move(ref_pair_1),
+              std::move(properties1));
 
-  const auto maybe_image_handle1 = flatland.GetContentHandle(kImageId1);
+  const auto maybe_image_handle1 = flatland->GetContentHandle(kImageId1);
   ASSERT_TRUE(maybe_image_handle1.has_value());
   const auto image_handle1 = maybe_image_handle1.value();
 
@@ -3220,9 +3338,10 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   properties2.set_width(300);
   properties2.set_height(400);
 
-  CreateImage(&flatland, allocator.get(), kImageId2, std::move(ref_pair_2), std::move(properties2));
+  CreateImage(flatland.get(), allocator.get(), kImageId2, std::move(ref_pair_2),
+              std::move(properties2));
 
-  const auto maybe_image_handle2 = flatland.GetContentHandle(kImageId2);
+  const auto maybe_image_handle2 = flatland->GetContentHandle(kImageId2);
   ASSERT_TRUE(maybe_image_handle2.has_value());
   const auto image_handle2 = maybe_image_handle2.value();
 
@@ -3231,20 +3350,20 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   const TransformId kTransformId2 = {4};
   const TransformId kTransformId3 = {5};
 
-  flatland.CreateTransform(kTransformId1);
-  flatland.CreateTransform(kTransformId2);
-  flatland.CreateTransform(kTransformId3);
+  flatland->CreateTransform(kTransformId1);
+  flatland->CreateTransform(kTransformId2);
+  flatland->CreateTransform(kTransformId3);
 
-  flatland.AddChild(kTransformId1, kTransformId2);
-  flatland.AddChild(kTransformId1, kTransformId3);
+  flatland->AddChild(kTransformId1, kTransformId2);
+  flatland->AddChild(kTransformId1, kTransformId3);
 
-  flatland.SetRootTransform(kTransformId1);
+  flatland->SetRootTransform(kTransformId1);
   PRESENT(flatland, true);
 
-  // Attach image 1 to the root and the second child. Attach image 2 to the first child.
-  flatland.SetContent(kTransformId1, kImageId1);
-  flatland.SetContent(kTransformId2, kImageId2);
-  flatland.SetContent(kTransformId3, kImageId1);
+  // Attach image 1 to the root and the second child-> Attach image 2 to the first child->
+  flatland->SetContent(kTransformId1, kImageId1);
+  flatland->SetContent(kTransformId2, kImageId2);
+  flatland->SetContent(kTransformId3, kImageId1);
   PRESENT(flatland, true);
 
   // The images should appear pre-order toplogically sorted: 1, 2, 1 again. The same image is
@@ -3253,7 +3372,7 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   expected_handle_order.push(image_handle1);
   expected_handle_order.push(image_handle2);
   expected_handle_order.push(image_handle1);
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   for (const auto& entry : uber_struct->local_topology) {
     if (entry.handle == expected_handle_order.front()) {
       expected_handle_order.pop();
@@ -3263,13 +3382,13 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
 
   // Clearing the image from the parent removes the first entry of the list since images are
   // visited before children.
-  flatland.SetContent(kTransformId1, {0});
+  flatland->SetContent(kTransformId1, {0});
   PRESENT(flatland, true);
 
   // Meaning the new list of images should be: 2, 1.
   expected_handle_order.push(image_handle2);
   expected_handle_order.push(image_handle1);
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   for (const auto& entry : uber_struct->local_topology) {
     if (entry.handle == expected_handle_order.front()) {
       expected_handle_order.pop();
@@ -3282,7 +3401,7 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
 // tokens.
 TEST_F(FlatlandTest, ReleaseBufferCollectionHappensAfterCreateImage) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Register a valid buffer collection.
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -3298,7 +3417,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionHappensAfterCreateImage) {
   {
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
     EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_)).Times(1);
-    flatland.CreateImage(kImageId, std::move(ref_pair.import_token), 0, std::move(properties));
+    flatland->CreateImage(kImageId, std::move(ref_pair.import_token), 0, std::move(properties));
     RunLoopUntilIdle();
   }
 }
@@ -3308,7 +3427,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
   ContentId global_image_id;
   {
     std::shared_ptr<Allocator> allocator = CreateAllocator();
-    Flatland flatland = CreateFlatland();
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
 
     const ContentId kImageId = {3};
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -3316,13 +3435,13 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
     properties.set_width(200);
     properties.set_height(200);
     auto import_token_dup = ref_pair.DuplicateImportToken();
-    auto global_id_pair = CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair),
-                                      std::move(properties));
+    auto global_id_pair = CreateImage(flatland.get(), allocator.get(), kImageId,
+                                      std::move(ref_pair), std::move(properties));
     global_collection_id = global_id_pair.collection_id;
     global_image_id = {global_id_pair.image_id};
 
     // Release the image.
-    flatland.ReleaseImage(kImageId);
+    flatland->ReleaseImage(kImageId);
 
     // Release the buffer collection.
 
@@ -3357,7 +3476,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
 // fence is signaled.
 TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid buffer collection and Image.
   const ContentId kImageId = {1};
@@ -3368,15 +3487,15 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   properties.set_height(200);
 
   auto import_token_dup = ref_pair.DuplicateImportToken();
-  const auto global_id_pair =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
+  const auto global_id_pair = CreateImage(flatland.get(), allocator.get(), kImageId,
+                                          std::move(ref_pair), std::move(properties));
   auto& global_collection_id = global_id_pair.collection_id;
 
   // Attach the Image to a transform.
   const TransformId kTransformId = {3};
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // Release the buffer collection, but ensure that the ReleaseBufferImage call on the importer has
@@ -3390,14 +3509,14 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   // Release the Image that referenced the buffer collection. Because the Image is still attached
   // to a Transform, the deregestration call should still not happen.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
-  flatland.ReleaseImage(kImageId);
+  flatland->ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
   // Remove the Image from the transform. This triggers the creation of the release fence, but
   // still does not result in a deregestration call. Skip session updates to test that release
   // fences are what trigger the importer calls.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
-  flatland.SetContent(kTransformId, {0});
+  flatland->SetContent(kTransformId, {0});
 
   PresentArgs args;
   args.skip_session_update_and_release_fences = true;
@@ -3410,14 +3529,14 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
 }
 
 TEST_F(FlatlandTest, ReleaseImageErrorCases) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Zero is not a valid image ID.
-  flatland.ReleaseImage({0});
+  flatland->ReleaseImage({0});
   PRESENT(flatland, false);
 
   // The image must exist.
-  flatland.ReleaseImage({1});
+  flatland->ReleaseImage({1});
   PRESENT(flatland, false);
 
   // ContentId is not an Image.
@@ -3430,10 +3549,10 @@ TEST_F(FlatlandTest, ReleaseImageErrorCases) {
   fidl::InterfacePtr<ContentLink> content_link;
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
-  flatland.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
-                      content_link.NewRequest());
+  flatland->CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                       content_link.NewRequest());
 
-  flatland.ReleaseImage(kLinkId);
+  flatland->ReleaseImage(kLinkId);
   PRESENT(flatland, false);
 }
 
@@ -3454,7 +3573,7 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
       context_provider_.context(), importers, utils::CreateSysmemAllocatorSyncPtr());
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
-  auto flatland = Flatland(
+  auto flatland = Flatland::New(
       std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()), flatland_ptr.NewRequest(),
       session_id,
       /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
@@ -3474,15 +3593,15 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferImage(_)).WillOnce(Return(false));
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).WillOnce(Return());
-  flatland.CreateImage(/*image_id*/ {1}, std::move(ref_pair.import_token), /*vmo_idx*/ 0,
-                       std::move(properties));
+  flatland->CreateImage(/*image_id*/ {1}, std::move(ref_pair.import_token), /*vmo_idx*/ 0,
+                        std::move(properties));
 }
 
 // Test to make sure that if a buffer collection importer returns |false|
 // on |ImportBufferImage()| that this is caught when we try to present.
 TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
@@ -3496,8 +3615,8 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
 
   // We've imported a proper image and we have the importer returning true, so
   // PRESENT should return true.
-  flatland.CreateImage(/*image_id*/ {1}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
-                       std::move(properties));
+  flatland->CreateImage(/*image_id*/ {1}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
+                        std::move(properties));
   PRESENT(flatland, true);
 
   // We're using the same buffer collection so we don't need to validate, only import.
@@ -3507,8 +3626,8 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   // this and PRESENT should return false.
   properties.set_width(150);
   properties.set_height(175);
-  flatland.CreateImage(/*image_id*/ {2}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
-                       std::move(properties));
+  flatland->CreateImage(/*image_id*/ {2}, ref_pair.DuplicateImportToken(), /*vmo_idx*/ 0,
+                        std::move(properties));
   PRESENT(flatland, false);
 }
 
@@ -3516,7 +3635,7 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
 // to release the image.
 TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3527,24 +3646,25 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
   properties1.set_height(200);
 
   const allocation::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties1))
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+                  std::move(properties1))
           .collection_id;
 
   // Create a transform, make it the root transform, and attach the image.
   const TransformId kTransformId = {2};
 
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // Now release the image.
-  flatland.ReleaseImage(kImageId);
+  flatland->ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
   // Now remove the image from the transform, which should result in it being
   // garbage collected.
-  flatland.SetContent(kTransformId, {0});
+  flatland->SetContent(kTransformId, {0});
   PresentArgs args;
   args.skip_session_update_and_release_fences = true;
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
@@ -3556,7 +3676,7 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
 
 TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3567,24 +3687,25 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
   properties1.set_height(200);
 
   const allocation::GlobalBufferCollectionId global_collection_id =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties1))
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+                  std::move(properties1))
           .collection_id;
 
-  const auto maybe_image_handle = flatland.GetContentHandle(kImageId);
+  const auto maybe_image_handle = flatland->GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle.has_value());
   const auto image_handle = maybe_image_handle.value();
 
   // Create a transform, make it the root transform, and attach the image.
   const TransformId kTransformId = {2};
 
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // The image handle should be the last handle in the local_topology, and the image should be in
   // the image map.
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.back().handle, image_handle);
 
   auto image_kv = uber_struct->images.find(image_handle);
@@ -3592,10 +3713,10 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
   EXPECT_EQ(image_kv->second.collection_id, global_collection_id);
 
   // Releasing the image succeeds, but all data remains in the UberStruct.
-  flatland.ReleaseImage(kImageId);
+  flatland->ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.back().handle, image_handle);
 
   image_kv = uber_struct->images.find(image_handle);
@@ -3604,10 +3725,10 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
 
   // Clearing the Transform of its Image removes all references from the UberStruct.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(1);
-  flatland.SetContent(kTransformId, {0});
+  flatland->SetContent(kTransformId, {0});
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   for (const auto& entry : uber_struct->local_topology) {
     EXPECT_NE(entry.handle, image_handle);
   }
@@ -3617,7 +3738,7 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
 
 TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3628,21 +3749,21 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
   properties1.set_height(200);
 
   const allocation::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_1),
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_1),
                   std::move(properties1))
           .collection_id;
 
-  const auto maybe_image_handle1 = flatland.GetContentHandle(kImageId);
+  const auto maybe_image_handle1 = flatland->GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle1.has_value());
   const auto image_handle1 = maybe_image_handle1.value();
 
   // Create a transform, make it the root transform, attach the image, then release it.
   const TransformId kTransformId1 = {2};
 
-  flatland.CreateTransform(kTransformId1);
-  flatland.SetRootTransform(kTransformId1);
-  flatland.SetContent(kTransformId1, kImageId);
-  flatland.ReleaseImage(kImageId);
+  flatland->CreateTransform(kTransformId1);
+  flatland->SetRootTransform(kTransformId1);
+  flatland->SetContent(kTransformId1, kImageId);
+  flatland->ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
   // The ContentId can be re-used even though the old image is still present. Add a second
@@ -3653,23 +3774,23 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
   properties2.set_height(400);
 
   const allocation::GlobalBufferCollectionId global_collection_id2 =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_2),
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_2),
                   std::move(properties2))
           .collection_id;
 
   const TransformId kTransformId2 = {3};
 
-  flatland.CreateTransform(kTransformId2);
-  flatland.AddChild(kTransformId1, kTransformId2);
-  flatland.SetContent(kTransformId2, kImageId);
+  flatland->CreateTransform(kTransformId2);
+  flatland->AddChild(kTransformId1, kTransformId2);
+  flatland->SetContent(kTransformId2, kImageId);
   PRESENT(flatland, true);
 
-  const auto maybe_image_handle2 = flatland.GetContentHandle(kImageId);
+  const auto maybe_image_handle2 = flatland->GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle2.has_value());
   const auto image_handle2 = maybe_image_handle2.value();
 
   // Both images should appear in the image map.
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
 
   auto image_kv1 = uber_struct->images.find(image_handle1);
   EXPECT_NE(image_kv1, uber_struct->images.end());
@@ -3684,7 +3805,7 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
 // the Transform is not part of the most recently presented global topology.
 TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3695,37 +3816,38 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
   properties1.set_height(200);
 
   const allocation::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties1))
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+                  std::move(properties1))
           .collection_id;
 
-  const auto maybe_image_handle = flatland.GetContentHandle(kImageId);
+  const auto maybe_image_handle = flatland->GetContentHandle(kImageId);
   ASSERT_TRUE(maybe_image_handle.has_value());
   const auto image_handle = maybe_image_handle.value();
 
   // Create a transform, make it the root transform, attach the image, then release it.
   const TransformId kTransformId = {2};
 
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
-  flatland.ReleaseImage(kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
+  flatland->ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
   // Remove the entire hierarchy, then verify that the image is still present.
-  flatland.SetRootTransform({0});
+  flatland->SetRootTransform({0});
   PRESENT(flatland, true);
 
-  auto uber_struct = GetUberStruct(flatland);
+  auto uber_struct = GetUberStruct(flatland.get());
   auto image_kv = uber_struct->images.find(image_handle);
   EXPECT_NE(image_kv, uber_struct->images.end());
   EXPECT_EQ(image_kv->second.collection_id, global_collection_id1);
 
   // Reintroduce the hierarchy and confirm the Image is still present, even though it was
   // temporarily not reachable from the root transform.
-  flatland.SetRootTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
   PRESENT(flatland, true);
 
-  uber_struct = GetUberStruct(flatland);
+  uber_struct = GetUberStruct(flatland.get());
   EXPECT_EQ(uber_struct->local_topology.back().handle, image_handle);
 
   image_kv = uber_struct->images.find(image_handle);
@@ -3735,7 +3857,7 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
 
 TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = {1};
@@ -3747,20 +3869,20 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
 
   auto import_token_dup = ref_pair_1.DuplicateImportToken();
   const allocation::GlobalBufferCollectionId global_collection_id1 =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_1),
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_1),
                   std::move(properties1))
           .collection_id;
 
   // Create a transform, make it the root transform, and attach the Image.
   const TransformId kTransformId = {2};
 
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // Clear the graph, then signal the release fence and ensure the buffer collection is released.
-  flatland.ClearGraph();
+  flatland->ClearGraph();
   import_token_dup.value.reset();
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(global_collection_id1))
@@ -3775,21 +3897,21 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   properties2.set_height(800);
 
   const allocation::GlobalBufferCollectionId global_collection_id2 =
-      CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair_2),
+      CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair_2),
                   std::move(properties2))
           .collection_id;
 
   EXPECT_NE(global_collection_id1, global_collection_id2);
 
   // Verify that the Image is valid and can be attached to a transform.
-  flatland.CreateTransform(kTransformId);
-  flatland.SetRootTransform(kTransformId);
-  flatland.SetContent(kTransformId, kImageId);
+  flatland->CreateTransform(kTransformId);
+  flatland->SetRootTransform(kTransformId);
+  flatland->SetContent(kTransformId, kImageId);
   PRESENT(flatland, true);
 }
 
 TEST_F(FlatlandTest, UnsquashableUpdates_ShouldBeReflectedInScheduleUpdates) {
-  Flatland flatland = CreateFlatland();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
 
   // We call Present() twice, each time passing a different value as the squashable argument.
   // We EXPECT that the ensuing ScheduleUpdateForSession() call to the frame scheduler will reflect

@@ -57,6 +57,8 @@ class HangingGetHelper {
     SendIfReady();
   }
 
+  bool HasPendingCallback() { return static_cast<bool>(callback_); }
+
  private:
   void SendIfReady() {
     if (data_ && callback_) {

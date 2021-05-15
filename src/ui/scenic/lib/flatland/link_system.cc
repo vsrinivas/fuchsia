@@ -34,21 +34,30 @@ LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ContentLinkToken token,
     fuchsia::ui::scenic::internal::LinkProperties initial_properties,
-    fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle) {
+    fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle,
+    std::function<void()> error_callback) {
   FX_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<GraphLinkImpl>(std::move(dispatcher_holder));
   const TransformHandle link_handle = link_graph_.CreateTransform();
 
-  ObjectLinker::ImportLink importer =
-      linker_.CreateImport(std::move(content_link), std::move(token.value),
-                           /* error_reporter */ nullptr);
+  // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
+  // errors in the caller's Flatland session, which is the parent Flatland in this case. ContentLink
+  // errors should be handled by the parent and it will be set in the other endpoint after linking.
+  ObjectLinker::ImportLink importer = linker_.CreateImport(
+      {.interface = std::move(content_link), .error_callback = std::move(error_callback)},
+      std::move(token.value),
+      /* error_reporter */ nullptr);
 
   importer.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl = impl, graph_handle = graph_handle,
        link_handle = link_handle,
        initial_properties = std::move(initial_properties)](GraphLinkRequest request) {
+        // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
+        if (request.error_callback)
+          impl->SetErrorCallback(request.error_callback);
+
         // Immediately send out the initial properties over the channel. This callback is fired from
         // one of the Flatland instance threads, but since we haven't stored the Link impl anywhere
         // yet, we still have exclusive access and can safely call functions without
@@ -94,21 +103,31 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
 LinkSystem::ParentLink LinkSystem::CreateParentLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, GraphLinkToken token,
-    fidl::InterfaceRequest<GraphLink> graph_link, TransformHandle link_origin) {
+    fidl::InterfaceRequest<GraphLink> graph_link, TransformHandle link_origin,
+    std::function<void()> error_callback) {
   FX_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<ContentLinkImpl>(std::move(dispatcher_holder));
 
+  // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
+  // errors in the caller's Flatland session, which is the child Flatland in this case. GraphLink
+  // errors should be handled by the parent and it will be set in the other endpoint after linking.
   ObjectLinker::ExportLink exporter =
-      linker_.CreateExport({.interface = std::move(graph_link), .child_handle = link_origin},
+      linker_.CreateExport({.interface = std::move(graph_link),
+                            .child_handle = link_origin,
+                            .error_callback = std::move(error_callback)},
                            std::move(token.value), /* error_reporter */ nullptr);
 
   exporter.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl = impl,
-       link_origin = link_origin](fidl::InterfaceRequest<ContentLink> request) {
+       link_origin = link_origin](ContentLinkRequest request) {
+        // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
+        if (request.error_callback)
+          impl->SetErrorCallback(request.error_callback);
+
         std::scoped_lock lock(ref->map_mutex_);
-        ref->content_link_bindings_.AddBinding(impl, std::move(request));
+        ref->content_link_bindings_.AddBinding(impl, std::move(request.interface));
         ref->content_link_map_[link_origin] = impl;
       },
       /* link_invalidated = */

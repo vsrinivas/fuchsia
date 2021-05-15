@@ -47,7 +47,7 @@ void FlatlandManager::CreateFlatland(
   auto& instance = result.first->second;
   instance->loop =
       std::make_shared<utils::LoopDispatcherHolder>(&kAsyncLoopConfigNoAttachToCurrentThread);
-  instance->impl = std::make_shared<Flatland>(
+  instance->impl = Flatland::New(
       instance->loop, std::move(request), id,
       std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
       link_system_, uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_);
