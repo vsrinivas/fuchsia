@@ -53,6 +53,9 @@ uint64_t kernel_virtual_entry_ticks;
 KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
 KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
+KCOUNTER(platform_timer_set_counter, "platform.timer.set")
+KCOUNTER(platform_timer_cancel_counter, "platform.timer.cancel")
+
 // Current timer scheme:
 // The HPET is used to calibrate the local APIC timers and the TSC.  If the
 // HPET is not present, we will fallback to calibrating using the PIT.
@@ -604,6 +607,7 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     const uint64_t tsc_deadline = u64_mul_u64_fp32_64(deadline, tsc_per_ns);
     LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", tsc_deadline);
     apic_timer_set_tsc_deadline(tsc_deadline, false /* unmasked */);
+    kcounter_add(platform_timer_set_counter, 1);
     return ZX_OK;
   }
 
@@ -612,6 +616,7 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     // Deadline has already passed. We still need to schedule a timer so that
     // the interrupt fires.
     LTRACEF("Scheduling oneshot timer for min duration\n");
+    kcounter_add(platform_timer_set_counter, 1);
     return apic_timer_set_oneshot(1, 1, false /* unmasked */);
   }
   const zx_duration_t interval = zx_time_sub_time(deadline, now);
@@ -649,6 +654,7 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   }
 
   LTRACEF("Scheduling oneshot timer: %u count, %u div\n", count, divisor);
+  kcounter_add(platform_timer_set_counter, 1);
   return apic_timer_set_oneshot(count, static_cast<uint8_t>(divisor), false /* unmasked */);
 }
 
@@ -656,6 +662,7 @@ void platform_stop_timer(void) {
   /* Enable interrupt mode that will stop the decreasing counter of the PIT */
   // outp(I8253_CONTROL_REG, 0x30);
   apic_timer_stop();
+  kcounter_add(platform_timer_cancel_counter, 1);
 }
 
 void platform_shutdown_timer(void) {

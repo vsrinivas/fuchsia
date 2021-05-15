@@ -66,6 +66,9 @@ uint64_t kernel_virtual_entry_ticks[2];  // cntpct, cntvct
 KCOUNTER(timeline_zbi_entry, "boot.timeline.zbi")
 KCOUNTER(timeline_virtual_entry, "boot.timeline.virtual")
 
+KCOUNTER(platform_timer_set_counter, "platform.timer.set")
+KCOUNTER(platform_timer_cancel_counter, "platform.timer.cancel")
+
 namespace {
 
 // Global saved config state
@@ -273,11 +276,15 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   // interrupt.
   write_cval(cntpct_deadline);
   write_ctl(1);
+  kcounter_add(platform_timer_set_counter, 1);
 
   return 0;
 }
 
-void platform_stop_timer() { write_ctl(0); }
+void platform_stop_timer() {
+  write_ctl(0);
+  kcounter_add(platform_timer_cancel_counter, 1);
+}
 
 void platform_shutdown_timer() {
   DEBUG_ASSERT(arch_ints_disabled());
