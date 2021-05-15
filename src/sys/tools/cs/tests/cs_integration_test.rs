@@ -296,8 +296,10 @@ async fn echo_realm() {
                 }),
                 execution: Some(Execution {
                     elf_runtime: Some(ElfRuntime {
-                        job_id: 42,     // This number is irrelevant
-                        process_id: 42, // This number is irrelevant
+                        job_id: 42,                            // This number is irrelevant
+                        process_id: 42,                        // This number is irrelevant
+                        process_start_time: 1234,              // This number is irrelevant,
+                        process_start_time_utc_estimate: None, // This value is irrelevant.
                     }),
                     merkle_root: Some(
                         "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
@@ -327,8 +329,10 @@ async fn echo_realm() {
                 }),
                 execution: Some(Execution {
                     elf_runtime: Some(ElfRuntime {
-                        job_id: 42,     // This number is irrelevant
-                        process_id: 42, // This number is irrelevant
+                        job_id: 42,                            // This number is irrelevant
+                        process_id: 42,                        // This number is irrelevant
+                        process_start_time: 42,                // This number is irrelevant,
+                        process_start_time_utc_estimate: None, // This value is irrelevant,
                     }),
                     merkle_root: Some(
                         "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"

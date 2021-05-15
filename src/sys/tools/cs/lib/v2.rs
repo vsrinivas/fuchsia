@@ -79,6 +79,8 @@ fn explore(
 pub struct ElfRuntime {
     pub job_id: u32,
     pub process_id: u32,
+    pub process_start_time: i64,
+    pub process_start_time_utc_estimate: Option<String>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -99,9 +101,16 @@ impl Execution {
                 if let Ok(entries) = entries {
                     if entries.iter().any(|s| s == "elf") {
                         if let Ok(elf_runtime_dir) = runtime_dir.open_dir("elf") {
-                            let (job_id, process_id) = futures::join!(
+                            let (
+                                job_id,
+                                process_id,
+                                process_start_time,
+                                process_start_time_utc_estimate,
+                            ) = futures::join!(
                                 elf_runtime_dir.read_file("job_id"),
                                 elf_runtime_dir.read_file("process_id"),
+                                elf_runtime_dir.read_file("process_start_time"),
+                                elf_runtime_dir.read_file("process_start_time_utc_estimate"),
                             );
 
                             let job_id = job_id
@@ -114,7 +123,20 @@ impl Execution {
                                 .parse::<u32>()
                                 .expect("parse(`process_id`) failed!");
 
-                            Some(ElfRuntime { job_id, process_id })
+                            let process_start_time = process_start_time
+                                .expect("read_file(`process_start_time`) failed!")
+                                .parse::<i64>()
+                                .expect("parse(`process_start_time`) failed!");
+
+                            let process_start_time_utc_estimate =
+                                process_start_time_utc_estimate.ok();
+
+                            Some(ElfRuntime {
+                                job_id,
+                                process_id,
+                                process_start_time,
+                                process_start_time_utc_estimate,
+                            })
                         } else {
                             println!("WARNING: Could not open elf directory");
                             None
@@ -178,6 +200,15 @@ impl Execution {
         if let Some(runtime) = &self.elf_runtime {
             println!("Job ID: {}", runtime.job_id);
             println!("Process ID: {}", runtime.process_id);
+            println!("Process Start Time (ticks): {}", runtime.process_start_time);
+            let process_start_time_utc_estimate = if let Some(process_start_time_utc_estimate) =
+                runtime.process_start_time_utc_estimate.as_ref()
+            {
+                process_start_time_utc_estimate.clone()
+            } else {
+                "(not available)".to_string()
+            };
+            println!("Process Start Time (estimate): {}", process_start_time_utc_estimate);
         }
 
         if let Some(merkle_root) = &self.merkle_root {
@@ -527,12 +558,28 @@ mod tests {
             .unwrap()
             .write_all("67890".as_bytes())
             .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time_utc_estimate"))
+            .unwrap()
+            .write_all("who knows?".as_bytes())
+            .unwrap();
 
         let exec_dir = Directory::from_namespace(exec.to_path_buf())
             .expect("from_namespace() failed: failed to open `exec` directory!");
         let execution = Execution::new(exec_dir).await;
 
-        assert_eq!(execution.elf_runtime.unwrap(), ElfRuntime { job_id: 12345, process_id: 67890 });
+        assert_eq!(
+            execution.elf_runtime.unwrap(),
+            ElfRuntime {
+                job_id: 12345,
+                process_id: 67890,
+                process_start_time: 11121314,
+                process_start_time_utc_estimate: Some("who knows?".to_string())
+            }
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1077,6 +1124,14 @@ mod tests {
             .unwrap()
             .write_all("67890".as_bytes())
             .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time_utc_estimate"))
+            .unwrap()
+            .write_all("bleep".as_bytes())
+            .unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
             .unwrap()
@@ -1089,7 +1144,12 @@ mod tests {
 
         assert_eq!(
             v2_component.execution.unwrap().elf_runtime.unwrap(),
-            ElfRuntime { job_id: 12345, process_id: 67890 }
+            ElfRuntime {
+                job_id: 12345,
+                process_id: 67890,
+                process_start_time: 11121314,
+                process_start_time_utc_estimate: Some("bleep".to_string())
+            }
         );
     }
 
@@ -1127,6 +1187,10 @@ mod tests {
             .unwrap()
             .write_all("67890".as_bytes())
             .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
+            .unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
             .unwrap()
@@ -1139,7 +1203,12 @@ mod tests {
 
         assert_eq!(
             v2_component.execution.unwrap().elf_runtime.unwrap(),
-            ElfRuntime { job_id: 12345, process_id: 67890 }
+            ElfRuntime {
+                job_id: 12345,
+                process_id: 67890,
+                process_start_time: 11121314,
+                process_start_time_utc_estimate: None
+            }
         );
     }
 
@@ -1180,6 +1249,10 @@ mod tests {
         File::create(exec.join("runtime/elf/process_id"))
             .unwrap()
             .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
             .unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
@@ -1237,6 +1310,10 @@ mod tests {
         File::create(exec.join("runtime/elf/process_id"))
             .unwrap()
             .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
             .unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
@@ -1501,6 +1578,10 @@ mod tests {
             .unwrap()
             .write_all("67890".as_bytes())
             .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
+            .unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
             .unwrap()
@@ -1554,6 +1635,10 @@ mod tests {
         File::create(exec.join("runtime/elf/process_id"))
             .unwrap()
             .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_start_time"))
+            .unwrap()
+            .write_all("11121314".as_bytes())
             .unwrap();
         File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
         File::create(root.join("url"))
