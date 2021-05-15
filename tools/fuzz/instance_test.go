@@ -29,6 +29,13 @@ func TestInstanceHandle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating handle: %s", err)
 	}
+	defer handle.Release()
+
+	handle2, err := instance.Handle()
+	if handle.Serialize() != handle2.Serialize() {
+		handle2.Release()
+		t.Fatalf("same instance returned different handles: %q, %q", handle, handle2)
+	}
 
 	// Note: we don't serialize here because that is covered by handle tests
 
@@ -45,6 +52,16 @@ func TestInstanceHandle(t *testing.T) {
 	if diff := cmp.Diff(instance, got, cmpopts.IgnoreUnexported(BaseInstance{},
 		SSHConnector{}, QemuLauncher{}, mockBuild{})); diff != "" {
 		t.Fatalf("incorrect data in reloaded instance (-want +got):\n%s", diff)
+	}
+
+	// Ensure that handle is released and invalid upon stopping
+	if err := instance.Stop(); err != nil {
+		t.Fatalf("error stopping instance: %s", err)
+	}
+
+	reloadedInstance, err = loadInstanceFromHandle(handle)
+	if err == nil {
+		t.Fatalf("unexpected success reloading instance from released handle: %q", handle)
 	}
 }
 

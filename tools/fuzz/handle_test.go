@@ -5,29 +5,24 @@
 package fuzz
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-type handleTestObj struct {
-	StringParam string
-	IntParam    int
-
-	privateParam string
-}
-
-type handleTestObj2 struct {
-	OtherParam int
-}
-
 func TestHandleSerialize(t *testing.T) {
-	obj := &handleTestObj{StringParam: "フクシャ", IntParam: 2147483647, privateParam: "shhh"}
+	connector := &SSHConnector{Port: 1234}
+	launcher := NewQemuLauncher(nil)
+	launcher.TmpDir = "フクシャ"
 
-	handle, err := NewHandleFromObjects(obj)
+	data := HandleData{connector, launcher}
+	handle, err := NewHandleWithData(data)
 	if err != nil {
 		t.Fatalf("error creating handle: %s", err)
 	}
+	defer handle.Release()
 
 	s := handle.Serialize()
 	reloadedHandle, err := LoadHandleFromString(s)
@@ -35,41 +30,76 @@ func TestHandleSerialize(t *testing.T) {
 		t.Fatalf("error deserializing handle: %s", err)
 	}
 
-	var result handleTestObj
-	if err := reloadedHandle.PopulateObject(&result); err != nil {
-		t.Fatalf("error populating object: %s", err)
+	result, err := reloadedHandle.GetData()
+	if err != nil {
+		t.Fatalf("error getting handle data: %s", err)
 	}
 
-	want := &handleTestObj{StringParam: obj.StringParam, IntParam: obj.IntParam}
-	if diff := cmp.Diff(want, &result, cmp.AllowUnexported(handleTestObj{})); diff != "" {
+	if diff := cmp.Diff(&data, result, cmp.AllowUnexported(HandleData{},
+		SSHConnector{}, QemuLauncher{})); diff != "" {
 		t.Fatalf("incorrect reloaded handle (-want +got):\n%s", diff)
 	}
 }
 
-func TestHandleMerge(t *testing.T) {
-	obj := &handleTestObj{StringParam: "フクシャ", IntParam: 2147483647, privateParam: "shhh"}
-	obj2 := &handleTestObj2{OtherParam: 0x45}
-
-	handle, err := NewHandleFromObjects(obj, nil, obj2)
+func TestHandleRelease(t *testing.T) {
+	handle, err := NewHandleWithData(HandleData{})
 	if err != nil {
 		t.Fatalf("error creating handle: %s", err)
 	}
+	s := handle.Serialize()
 
-	var result handleTestObj
-	var result2 handleTestObj2
-	if err := handle.PopulateObject(&result); err != nil {
-		t.Fatalf("error populating obj: %s", err)
-	}
-	if err := handle.PopulateObject(&result2); err != nil {
-		t.Fatalf("error populating obj2: %s", err)
+	handle.Release()
+
+	if err := handle.SetData(HandleData{}); err == nil {
+		t.Fatalf("SetData unexpectedly succeeded on released handle %q", handle)
 	}
 
-	want := &handleTestObj{StringParam: obj.StringParam, IntParam: obj.IntParam}
-	if diff := cmp.Diff(want, &result, cmp.AllowUnexported(handleTestObj{})); diff != "" {
-		t.Fatalf("incorrect result in obj (-want +got):\n%s", diff)
+	if _, err := LoadHandleFromString(s); err == nil {
+		t.Fatalf("LoadHandleFromString unexpectedly succeeded on released handle %q", handle)
 	}
 
-	if diff := cmp.Diff(obj2, &result2); diff != "" {
-		t.Fatalf("incorrect result in obj2 (-want +got):\n%s", diff)
+	if _, err := handle.GetData(); err == nil {
+		t.Fatalf("GetData unexpectedly succeeded on released handle %q", handle)
+	}
+}
+
+func TestLoadInvalidHandle(t *testing.T) {
+	// Point to nonexistent file
+	invalidPath := filepath.Join(t.TempDir(), "invalid")
+	if _, err := LoadHandleFromString(invalidPath); err == nil {
+		t.Fatalf("expected error loading from invalid path, but succeeded")
+	}
+
+	// Point to file that exists, but does not contain JSON
+	nonJsonFile := createTempfileWithContents(t, "garbage", "json")
+	defer os.Remove(nonJsonFile)
+	if _, err := LoadHandleFromString(nonJsonFile); err == nil {
+		t.Fatalf("expected error loading from non-json file, but succeeded")
+	}
+}
+
+func TestHandleGetEmptyData(t *testing.T) {
+	// JSON with empty contents
+	emptyJsonFile := createTempfileWithContents(t, `{}`, "json")
+	defer os.Remove(emptyJsonFile)
+	handle, err := LoadHandleFromString(emptyJsonFile)
+	if err != nil {
+		t.Fatalf("error deserializing handle: %s", err)
+	}
+	if _, err := handle.GetData(); err != nil {
+		t.Fatalf("error loading from empty handle: %s", err)
+	}
+}
+
+func TestHandleGetInvalidData(t *testing.T) {
+	// JSON with unsupported type
+	badTypeFile := createTempfileWithContents(t, `{"ConnectorType": "UnsupportedConnector"}`, "json")
+	defer os.Remove(badTypeFile)
+	handle, err := LoadHandleFromString(badTypeFile)
+	if err != nil {
+		t.Fatalf("error deserializing handle: %s", err)
+	}
+	if data, err := handle.GetData(); err == nil {
+		t.Fatalf("expected error loading invalid type, but succeeded: %+v", data)
 	}
 }

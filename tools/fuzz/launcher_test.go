@@ -17,10 +17,11 @@ import (
 func TestQemuLauncherHandle(t *testing.T) {
 	launcher := &QemuLauncher{Pid: 4141, TmpDir: "/tmp/woof"}
 
-	handle, err := NewHandleFromObjects(launcher)
+	handle, err := NewHandleWithData(HandleData{launcher: launcher})
 	if err != nil {
 		t.Fatalf("error creating handle: %s", err)
 	}
+	defer handle.Release()
 
 	// Note: we don't serialize here because that is covered by handle tests
 
@@ -38,6 +39,21 @@ func TestQemuLauncherHandle(t *testing.T) {
 
 	if diff := cmp.Diff(launcher, ql, cmpopts.IgnoreUnexported(QemuLauncher{})); diff != "" {
 		t.Fatalf("incorrect data in reloaded launcher (-want +got):\n%s", diff)
+	}
+}
+
+func TestIncompleteQemuLauncherHandle(t *testing.T) {
+	// Construct an object that isn't fully initialized
+	launcher := &QemuLauncher{Pid: 4141}
+
+	handle, err := NewHandleWithData(HandleData{launcher: launcher})
+	if err != nil {
+		t.Fatalf("error creating handle: %s", err)
+	}
+	defer handle.Release()
+
+	if _, err := loadConnectorFromHandle(handle); err == nil {
+		t.Fatalf("expected error, but succeeded")
 	}
 }
 

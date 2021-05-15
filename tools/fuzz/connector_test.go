@@ -26,10 +26,11 @@ import (
 func TestSSHConnectorHandle(t *testing.T) {
 	c := &SSHConnector{Host: "somehost", Port: 123, Key: "keyfile"}
 
-	handle, err := NewHandleFromObjects(c)
+	handle, err := NewHandleWithData(HandleData{connector: c})
 	if err != nil {
 		t.Fatalf("error creating handle: %s", err)
 	}
+	defer handle.Release()
 
 	// Note: we don't serialize here because that is covered by handle tests
 	reloadedConn, err := loadConnectorFromHandle(handle)
@@ -44,6 +45,21 @@ func TestSSHConnectorHandle(t *testing.T) {
 
 	if diff := cmp.Diff(c, c2, cmpopts.IgnoreUnexported(SSHConnector{})); diff != "" {
 		t.Fatalf("incorrect data in reloaded connector (-want +got):\n%s", diff)
+	}
+}
+
+func TestIncompleteSSHConnectorHandle(t *testing.T) {
+	// Construct an object that isn't fully initialized
+	c := &SSHConnector{Port: 123}
+
+	handle, err := NewHandleWithData(HandleData{connector: c})
+	if err != nil {
+		t.Fatalf("error creating handle: %s", err)
+	}
+	defer handle.Release()
+
+	if _, err := loadConnectorFromHandle(handle); err == nil {
+		t.Fatalf("expected error, but succeeded")
 	}
 }
 

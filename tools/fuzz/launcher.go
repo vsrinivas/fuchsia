@@ -96,7 +96,7 @@ func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, 
 
 	network := qemu.Netdev{
 		ID:     "net0",
-		Device: qemu.Device{Model: qemu.DeviceModelVirtioBlkPCI},
+		Device: qemu.Device{Model: qemu.DeviceModelVirtioNetPCI},
 		User: &qemu.NetdevUser{
 			Network:   "192.168.3.0/24",
 			DHCPStart: "192.168.3.9",
@@ -311,20 +311,25 @@ func (q *QemuLauncher) Kill() error {
 }
 
 func loadLauncherFromHandle(build Build, handle Handle) (Launcher, error) {
-	// TODO(fxbug.dev/47479): detect launcher type
-	launcher := NewQemuLauncher(build)
-
-	if err := handle.PopulateObject(&launcher); err != nil {
+	handleData, err := handle.GetData()
+	if err != nil {
 		return nil, err
 	}
 
-	if launcher.Pid == 0 {
-		return nil, fmt.Errorf("pid not found in handle")
-	}
+	// Check that the Launcher is in a valid state
+	switch launcher := handleData.launcher.(type) {
+	case *QemuLauncher:
+		if launcher.Pid == 0 {
+			return nil, fmt.Errorf("pid not found in handle")
+		}
 
-	if launcher.TmpDir == "" {
-		return nil, fmt.Errorf("tmpdir not found in handle")
-	}
+		if launcher.TmpDir == "" {
+			return nil, fmt.Errorf("tmpdir not found in handle")
+		}
 
-	return launcher, nil
+		launcher.build = build
+		return launcher, nil
+	default:
+		return nil, fmt.Errorf("unknown launcher type: %T", handleData.launcher)
+	}
 }

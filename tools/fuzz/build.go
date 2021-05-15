@@ -211,10 +211,10 @@ func NewLocalFuchsiaBuild() (Build, error) {
 		Paths: map[string]string{
 			"zbi":             filepath.Join(buildDir, "fuchsia.zbi"),
 			"fvm":             filepath.Join(buildDir, hostDir, "fvm"),
-			"zbitool":         filepath.Join(zirconBuildDir, "tools", "zbi"),
+			"zbitool":         filepath.Join(buildDir, hostDir, "zbi"),
 			"blk":             filepath.Join(buildDir, "obj", "build", "images", "fvm.blk"),
 			"qemu":            filepath.Join(qemuDir, "bin", binary),
-			"kernel":          filepath.Join(zirconBuildDir, kernel),
+			"kernel":          filepath.Join(buildDir, kernel),
 			"symbolize":       filepath.Join(buildDir, hostDir, "symbolize"),
 			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
 			"fuzzers.json":    filepath.Join(buildDir, "fuzzers.json"),

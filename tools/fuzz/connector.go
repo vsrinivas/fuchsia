@@ -284,24 +284,27 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 }
 
 func loadConnectorFromHandle(handle Handle) (Connector, error) {
-	// TODO(fxbug.dev/47479): detect connector type
-	var conn SSHConnector
-
-	if err := handle.PopulateObject(&conn); err != nil {
+	handleData, err := handle.GetData()
+	if err != nil {
 		return nil, err
 	}
 
-	if conn.Host == "" {
-		return nil, fmt.Errorf("host not found in handle")
+	// Check that the Connector is in a valid state
+	switch conn := handleData.connector.(type) {
+	case *SSHConnector:
+		if conn.Host == "" {
+			return nil, fmt.Errorf("host not found in handle")
+		}
+		if conn.Port == 0 {
+			return nil, fmt.Errorf("port not found in handle")
+		}
+		if conn.Key == "" {
+			return nil, fmt.Errorf("key not found in handle")
+		}
+		return conn, nil
+	default:
+		return nil, fmt.Errorf("unknown connector type: %T", handleData.connector)
 	}
-	if conn.Port == 0 {
-		return nil, fmt.Errorf("port not found in handle")
-	}
-	if conn.Key == "" {
-		return nil, fmt.Errorf("key not found in handle")
-	}
-
-	return &conn, nil
 }
 
 // Generate a key to use for SSH

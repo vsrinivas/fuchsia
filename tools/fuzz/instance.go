@@ -31,6 +31,10 @@ type BaseInstance struct {
 	Build     Build
 	Connector Connector
 	Launcher  Launcher
+
+	// While we rewrite the handle data each time Handle() is called, we need to keep a
+	// reference around to avoid recreating new Handles each time
+	handle Handle
 }
 
 // NewInstance creates a fresh instance
@@ -48,7 +52,7 @@ func NewInstance() (Instance, error) {
 	launcher := NewQemuLauncher(build)
 
 	// Note: We can't get a Connector until the Launcher has started
-	return &BaseInstance{build, nil, launcher}, nil
+	return &BaseInstance{build, nil, launcher, ""}, nil
 }
 
 func loadInstanceFromHandle(handle Handle) (Instance, error) {
@@ -68,7 +72,7 @@ func loadInstanceFromHandle(handle Handle) (Instance, error) {
 		return nil, err
 	}
 
-	return &BaseInstance{build, connector, launcher}, nil
+	return &BaseInstance{build, connector, launcher, handle}, nil
 }
 
 // Close releases the Instance, but doesn't Stop it
@@ -166,17 +170,39 @@ func (i *BaseInstance) Put(fuzzerName, hostSrc, targetDst string) error {
 
 // Stop shuts down the Instance
 func (i *BaseInstance) Stop() error {
-	return i.Launcher.Kill()
+	if err := i.Launcher.Kill(); err != nil {
+		return err
+	}
+
+	if i.handle != "" {
+		i.handle.Release()
+	}
+
+	return nil
 }
 
 // Handle returns a Handle representing the Instance
 func (i *BaseInstance) Handle() (Handle, error) {
-	handle, err := NewHandleFromObjects(i.Connector, i.Launcher)
-	if err != nil {
-		return nil, fmt.Errorf("error constructing instance handle: %s", err)
+	data := HandleData{i.Connector, i.Launcher}
+
+	if i.handle == "" {
+		// Create a new handle from scratch
+		handle, err := NewHandleWithData(data)
+
+		if err != nil {
+			return "", fmt.Errorf("error constructing instance handle: %s", err)
+		}
+
+		i.handle = handle
+		return handle, nil
 	}
 
-	return handle, nil
+	// Update an existing handle, but don't release it even if we fail
+	if err := i.handle.SetData(data); err != nil {
+		return "", fmt.Errorf("error updating instance handle: %s", err)
+	}
+
+	return i.handle, nil
 }
 
 // ListFuzzers lists fuzzers available on the Instance
