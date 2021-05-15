@@ -20,9 +20,9 @@ impl DeviceStorageCompatible for SetupInfo {
     }
 }
 
-impl Into<SettingInfo> for SetupInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Setup(self)
+impl From<SetupInfo> for SettingInfo {
+    fn from(info: SetupInfo) -> SettingInfo {
+        SettingInfo::Setup(info)
     }
 }
 

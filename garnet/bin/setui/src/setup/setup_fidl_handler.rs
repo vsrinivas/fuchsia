@@ -41,14 +41,14 @@ impl From<fidl_fuchsia_settings::ConfigurationInterfaces> for ConfigurationInter
         let mut flags = ConfigurationInterfaceFlags::empty();
 
         if interfaces.intersects(fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet) {
-            flags = flags | ConfigurationInterfaceFlags::ETHERNET;
+            flags |= ConfigurationInterfaceFlags::ETHERNET;
         }
 
         if interfaces.intersects(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi) {
-            flags = flags | ConfigurationInterfaceFlags::WIFI;
+            flags |= ConfigurationInterfaceFlags::WIFI;
         }
 
-        return flags;
+        flags
     }
 }
 
@@ -57,14 +57,14 @@ impl From<ConfigurationInterfaceFlags> for fidl_fuchsia_settings::ConfigurationI
         let mut interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::empty();
 
         if flags.intersects(ConfigurationInterfaceFlags::ETHERNET) {
-            interfaces = interfaces | fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
+            interfaces |= fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
         }
 
         if flags.intersects(ConfigurationInterfaceFlags::WIFI) {
-            interfaces = interfaces | fidl_fuchsia_settings::ConfigurationInterfaces::Wifi;
+            interfaces |= fidl_fuchsia_settings::ConfigurationInterfaces::Wifi;
         }
 
-        return interfaces;
+        interfaces
     }
 }
 
@@ -78,16 +78,16 @@ impl From<SetupInfo> for SetupSettings {
             settings.enabled_configuration_interfaces = Some(interfaces);
         }
 
-        return settings;
+        settings
     }
 }
 
 async fn reboot(context: RequestContext<SetupSettings, SetupWatchResponder>) -> Result<(), Error> {
-    if let Ok(_) = context.request(SettingType::Power, Request::Reboot).await {
-        return Ok(());
-    }
-
-    return Err(fidl_fuchsia_settings::Error::Failed);
+    context
+        .request(SettingType::Power, Request::Reboot)
+        .await
+        .map(|_| ())
+        .map_err(|_| fidl_fuchsia_settings::Error::Failed)
 }
 
 async fn set(
@@ -95,18 +95,16 @@ async fn set(
     settings: SetupSettings,
     do_reboot: bool,
 ) -> Result<(), Error> {
-    if let Ok(request) = Request::try_from(settings) {
-        if let Ok(_) = context.request(SettingType::Setup, request).await {
-            if do_reboot {
-                return reboot(context).await;
-            }
-            return Ok(());
-        } else {
-            return Err(fidl_fuchsia_settings::Error::Failed);
-        }
+    let request = Request::try_from(settings).map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
+    context
+        .request(SettingType::Setup, request)
+        .await
+        .map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
+    if do_reboot {
+        reboot(context).await
+    } else {
+        Ok(())
     }
-
-    return Err(fidl_fuchsia_settings::Error::Failed);
 }
 
 async fn process_request(
@@ -134,7 +132,7 @@ async fn process_request(
         _ => return Ok(Some(req)),
     }
 
-    return Ok(None);
+    Ok(None)
 }
 
 fidl_process!(Setup, SettingType::Setup, process_request);
