@@ -179,7 +179,7 @@ mod tests {
 
     use super::*;
     use crate::runtime::fuchsia::executor::{instrumentation::Snapshot, Time};
-    use crate::{handle::channel::Channel, LocalExecutor, SendExecutor, Timer};
+    use crate::{handle::channel::Channel, LocalExecutor, SendExecutor, TestExecutor, Timer};
 
     /// Helper which keeps track of last observed tick counts, and reports
     /// changes.
@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn instrumentation_stepwise_smoke_test() {
-        let mut executor = LocalExecutor::new().unwrap();
+        let mut executor = TestExecutor::new().unwrap();
         let fut = simple_task_for_snapshot();
         pin_mut!(fut);
         assert!(executor.run_until_stalled(&mut fut).is_pending());

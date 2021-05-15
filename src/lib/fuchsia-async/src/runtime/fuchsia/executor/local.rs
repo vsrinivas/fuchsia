@@ -134,6 +134,13 @@ impl LocalExecutor {
     }
 }
 
+impl Drop for LocalExecutor {
+    fn drop(&mut self) {
+        self.inner.mark_done();
+        self.inner.on_parent_drop();
+    }
+}
+
 /// A single-threaded executor for testing. Exposes additional APIs for manipulating executor state
 /// and validating behavior of executed tasks.
 pub struct TestExecutor(LocalExecutor);
@@ -144,27 +151,6 @@ impl TestExecutor {
         Ok(Self(LocalExecutor::new()?))
     }
 
-    /// Create a new executor with fake time for testing.
-    pub fn new_with_fake_time() -> Result<Self, zx::Status> {
-        Ok(Self(LocalExecutor::new_with_fake_time()?))
-    }
-}
-
-// we implement Deref/DerefMut to smooth the migration
-impl std::ops::Deref for TestExecutor {
-    type Target = LocalExecutor;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for TestExecutor {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-// TODO(fxbug.dev/76537) move this impl block to TestExecutor
-impl LocalExecutor {
     /// Create a new single-threaded executor running with fake time.
     pub fn new_with_fake_time() -> Result<Self, zx::Status> {
         let inner = Arc::new(Inner::new(ExecutorTime::FakeTime(AtomicI64::new(
@@ -174,12 +160,12 @@ impl LocalExecutor {
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
         let main_waker = futures::task::waker(main_task.clone());
-        Ok(Self { inner, next_packet: None, main_task, main_waker })
+        Ok(Self(LocalExecutor { inner, next_packet: None, main_task, main_waker }))
     }
 
     /// Return the current time according to the executor.
     pub fn now(&self) -> Time {
-        self.inner.now()
+        self.0.inner.now()
     }
 
     /// Set the fake time to a given value.
@@ -188,7 +174,15 @@ impl LocalExecutor {
     ///
     /// If the executor was not created with fake time
     pub fn set_fake_time(&self, t: Time) {
-        self.inner.set_fake_time(t)
+        self.0.inner.set_fake_time(t)
+    }
+
+    /// Run a single future to completion on a single thread, also polling other active tasks.
+    pub fn run_singlethreaded<F>(&mut self, main_future: F) -> F::Output
+    where
+        F: Future,
+    {
+        self.0.run_singlethreaded(main_future)
     }
 
     /// PollResult the future. If it is not ready, dispatch available packets and possibly try again.
@@ -205,7 +199,7 @@ impl LocalExecutor {
     where
         F: Future + Unpin,
     {
-        let inner = self.inner.clone();
+        let inner = self.0.inner.clone();
         let mut local_collector = inner.collector.create_local_collector();
         self.wake_main_future();
         while let NextStep::NextPacket =
@@ -224,7 +218,7 @@ impl LocalExecutor {
     /// Schedule the main future for being woken up. This is useful in conjunction with
     /// `run_one_step`.
     pub fn wake_main_future(&mut self) {
-        ArcWake::wake_by_ref(&self.main_task);
+        ArcWake::wake_by_ref(&self.0.main_task);
     }
 
     /// Run one iteration of the loop: dispatch the first available packet or timer. Returns `None`
@@ -245,7 +239,7 @@ impl LocalExecutor {
     where
         F: Future + Unpin,
     {
-        let inner = self.inner.clone();
+        let inner = self.0.inner.clone();
         let mut local_collector = inner.collector.create_local_collector();
         match self.next_step(/*fire_timers:*/ true, &mut local_collector) {
             NextStep::WaitUntil(_) => None,
@@ -277,23 +271,23 @@ impl LocalExecutor {
         F: Future + Unpin,
     {
         let packet =
-            self.next_packet.take().expect("consume_packet called but no packet available");
+            self.0.next_packet.take().expect("consume_packet called but no packet available");
         match packet.key() {
             EMPTY_WAKEUP_ID => {
-                let res = self.main_task.poll(main_future, &self.main_waker);
+                let res = self.0.main_task.poll(main_future, &self.0.main_waker);
                 local_collector.task_polled(
                     MAIN_TASK_ID,
                     /* complete */ false,
-                    /* pending_tasks */ self.inner.ready_tasks.len(),
+                    /* pending_tasks */ self.0.inner.ready_tasks.len(),
                 );
                 res
             }
             TASK_READY_WAKEUP_ID => {
-                self.inner.poll_ready_tasks(&mut local_collector);
+                self.0.inner.poll_ready_tasks(&mut local_collector);
                 Poll::Pending
             }
             receiver_key => {
-                self.inner.deliver_packet(receiver_key as usize, packet);
+                self.0.inner.deliver_packet(receiver_key as usize, packet);
                 Poll::Pending
             }
         }
@@ -305,26 +299,26 @@ impl LocalExecutor {
         local_collector: &mut LocalCollector<'_>,
     ) -> NextStep {
         // If a packet is queued from a previous call to next_step, it must be executed first.
-        if let Some(_) = self.next_packet {
+        if let Some(_) = self.0.next_packet {
             return NextStep::NextPacket;
         }
         // If we are past a deadline, run the corresponding timer.
         let next_deadline = with_local_timer_heap(|timer_heap| {
             next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE)
         });
-        if fire_timers && next_deadline <= self.inner.now() {
+        if fire_timers && next_deadline <= self.0.inner.now() {
             NextStep::NextTimer
         } else {
             local_collector.will_wait();
             // Try to unqueue a packet from the port.
-            match self.inner.port.wait(zx::Time::INFINITE_PAST) {
+            match self.0.inner.port.wait(zx::Time::INFINITE_PAST) {
                 Ok(packet) => {
                     let reason = match packet.key() {
                         TASK_READY_WAKEUP_ID | EMPTY_WAKEUP_ID => WakeupReason::Notification,
                         _ => WakeupReason::Io,
                     };
                     local_collector.woke_up(reason);
-                    self.next_packet = Some(packet);
+                    self.0.next_packet = Some(packet);
                     NextStep::NextPacket
                 }
                 Err(zx::Status::TIMED_OUT) => {
@@ -344,7 +338,7 @@ impl LocalExecutor {
     /// If this returns `Ready`, `run_one_step` will return `Some(_)`. If there is no pending packet
     /// or timer, `Waiting(Time::INFINITE)` is returned.
     pub fn is_waiting(&mut self) -> WaitState {
-        let inner = self.inner.clone();
+        let inner = self.0.inner.clone();
         let mut local_collector = inner.collector.create_local_collector();
         match self.next_step(/*fire_timers:*/ true, &mut local_collector) {
             NextStep::NextPacket | NextStep::NextTimer => WaitState::Ready,
@@ -392,12 +386,10 @@ impl LocalExecutor {
             deadline
         })
     }
-}
 
-impl Drop for LocalExecutor {
-    fn drop(&mut self) {
-        self.inner.mark_done();
-        self.inner.on_parent_drop();
+    #[cfg(test)]
+    pub(crate) fn snapshot(&self) -> super::instrumentation::Snapshot {
+        self.0.inner.collector.snapshot()
     }
 }
 
@@ -460,7 +452,7 @@ mod tests {
         task::{Context, Poll, Waker},
     };
 
-    fn run_until_stalled<F>(executor: &mut LocalExecutor, fut: &mut F)
+    fn run_until_stalled<F>(executor: &mut TestExecutor, fut: &mut F)
     where
         F: Future + Unpin,
     {
@@ -473,7 +465,7 @@ mod tests {
         }
     }
 
-    fn run_until_done<F>(executor: &mut LocalExecutor, fut: &mut F) -> F::Output
+    fn run_until_done<F>(executor: &mut TestExecutor, fut: &mut F) -> F::Output
     where
         F: Future + Unpin,
     {
@@ -600,7 +592,7 @@ mod tests {
         }
         let mut dropped = Arc::new(AtomicBool::new(false));
         let drop_spawner = DropSpawner { dropped: dropped.clone() };
-        let mut executor = LocalExecutor::new().unwrap();
+        let mut executor = TestExecutor::new().unwrap();
         let main_fut = async move {
             spawn(async move {
                 // Take ownership of the drop spawner
