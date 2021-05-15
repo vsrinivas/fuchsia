@@ -3,7 +3,6 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.bluetooth.bredr.Profile": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-                "fuchsia.bluetooth.control.Control": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
                 "fuchsia.bluetooth.le.Central": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
                 "fuchsia.bluetooth.le.Peripheral": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
                 "fuchsia.bluetooth.sys.Access": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
@@ -28,7 +27,6 @@
         ],
         "services": [
             "fuchsia.bluetooth.bredr.Profile",
-            "fuchsia.bluetooth.control.Control",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.bluetooth.sys.Access",

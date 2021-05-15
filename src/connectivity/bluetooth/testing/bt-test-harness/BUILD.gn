@@ -10,7 +10,6 @@ rustc_library("bt-test-harness") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
@@ -36,8 +35,6 @@ rustc_library("bt-test-harness") {
   sources = [
     "src/access.rs",
     "src/bootstrap.rs",
-    "src/deprecated/control.rs",
-    "src/deprecated/mod.rs",
     "src/emulator.rs",
     "src/host_driver.rs",
     "src/host_watcher.rs",

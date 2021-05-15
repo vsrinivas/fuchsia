@@ -10,9 +10,6 @@ pub mod access;
 /// Tests for fuchsia.bluetooth.sys.bootstrap protocol
 pub mod bootstrap;
 
-/// Tests for the fuchsia.bluetooth.control.Control protocol
-pub mod control;
-
 /// Tests for bt-gap Inspect data
 pub mod inspect;
 

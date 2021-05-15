@@ -13,7 +13,7 @@ use {
     test_harness::TestHarness,
 };
 
-use crate::{deprecated::control::ActivatedFakeHost, emulator::EmulatorState};
+use crate::{emulator::EmulatorState, host_watcher::ActivatedFakeHost};
 
 #[derive(Clone, Debug, Default)]
 pub struct ProfileState {

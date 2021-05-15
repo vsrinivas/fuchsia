@@ -3,13 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{format_err, Context, Error},
     fidl_fuchsia_bluetooth_sys::{HostWatcherMarker, HostWatcherProxy},
+    fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_bluetooth::{
-        expectation::asynchronous::{expectable, Expectable, ExpectableExt, ExpectableState},
-        types::{HostId, HostInfo},
+        expectation::asynchronous::{
+            expectable, Expectable, ExpectableExt, ExpectableState, ExpectableStateExt,
+        },
+        expectation::Predicate,
+        hci_emulator::Emulator,
+        types::{Address, HostId, HostInfo},
     },
+    fuchsia_zircon as zx,
     futures::future::{self, BoxFuture, FutureExt, TryFutureExt},
+    log::error,
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -17,6 +24,8 @@ use {
     },
     test_harness::TestHarness,
 };
+
+use crate::timeout_duration;
 
 #[derive(Clone, Default)]
 pub struct HostWatcherState {
@@ -85,5 +94,126 @@ impl TestHarness for HostWatcherHarness {
     }
     fn terminate(_env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
         future::ok(()).boxed()
+    }
+}
+
+/// An activated fake host.
+/// Must be released with `host.release().await` before drop.
+pub struct ActivatedFakeHost {
+    host_watcher: HostWatcherHarness,
+    host: HostId,
+    hci: Option<Emulator>,
+}
+
+// All Fake HCI Devices have this address
+pub const FAKE_HCI_ADDRESS: Address = Address::Public([0, 0, 0, 0, 0, 0]);
+
+/// Create and publish an emulated HCI device, and wait until the host is bound and registered to
+/// bt-gap
+pub async fn activate_fake_host(
+    host_watcher: HostWatcherHarness,
+    name: &str,
+) -> Result<(HostId, Emulator), Error> {
+    let initial_hosts: Vec<HostId> = host_watcher.read().hosts.keys().cloned().collect();
+    let initial_hosts_ = initial_hosts.clone();
+
+    let hci = Emulator::create_and_publish(name).await?;
+
+    let host_watcher_state = host_watcher
+        .when_satisfied(
+            expectation::host_exists(Predicate::predicate(
+                move |host: &HostInfo| {
+                    host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(&host.id)
+                },
+                &format!("A fake host that is not in {:?}", initial_hosts),
+            )),
+            timeout_duration(),
+        )
+        .await?;
+
+    let host = host_watcher_state
+        .hosts
+        .iter()
+        .find(|(id, host)| host.address == FAKE_HCI_ADDRESS && !initial_hosts.contains(id))
+        .unwrap()
+        .1
+        .id; // We can safely unwrap here as this is guarded by the previous expectation
+
+    let fut = host_watcher.aux().set_active(&mut host.into());
+    fut.await?
+        .or_else(zx::Status::ok)
+        .map_err(|e| format_err!("failed to set active host to emulator: {}", e))?;
+
+    host_watcher
+        .when_satisfied(expectation::active_host_is(host.clone()), timeout_duration())
+        .await?;
+    Ok((host, hci))
+}
+
+impl ActivatedFakeHost {
+    pub async fn new(name: &str) -> Result<ActivatedFakeHost, Error> {
+        let host_watcher = new_host_watcher_harness().await?;
+        fuchsia_async::Task::spawn(
+            watch_hosts(host_watcher.clone())
+                .unwrap_or_else(|e| error!("Error watching hosts: {:?}", e)),
+        )
+        .detach();
+        let (host, hci) = activate_fake_host(host_watcher.clone(), name).await?;
+        Ok(ActivatedFakeHost { host_watcher, host, hci: Some(hci) })
+    }
+
+    pub async fn release(mut self) -> Result<(), Error> {
+        // Wait for the test device to be destroyed.
+        if let Some(hci) = &mut self.hci {
+            hci.destroy_and_wait().await?;
+        }
+        self.hci = None;
+
+        // Wait for BT-GAP to unregister the associated fake host
+        self.host_watcher
+            .when_satisfied(expectation::host_not_present(self.host.clone()), timeout_duration())
+            .await?;
+        Ok(())
+    }
+
+    pub fn emulator(&self) -> &HciEmulatorProxy {
+        self.hci.as_ref().expect("emulator proxy requested after shut down").emulator()
+    }
+}
+
+impl Drop for ActivatedFakeHost {
+    fn drop(&mut self) {
+        assert!(self.hci.is_none());
+    }
+}
+
+pub mod expectation {
+    use super::*;
+    use fuchsia_bluetooth::{
+        expectation::Predicate,
+        types::{HostId, HostInfo},
+    };
+
+    pub(crate) fn host_not_present(id: HostId) -> Predicate<HostWatcherState> {
+        let msg = format!("Host not present: {}", id);
+        Predicate::predicate(move |state: &HostWatcherState| !state.hosts.contains_key(&id), &msg)
+    }
+
+    pub(crate) fn host_exists(p: Predicate<HostInfo>) -> Predicate<HostWatcherState> {
+        let msg = format!("Host exists satisfying {:?}", p);
+        Predicate::predicate(
+            move |state: &HostWatcherState| state.hosts.iter().any(|(_, host)| p.satisfied(&host)),
+            &msg,
+        )
+    }
+
+    pub(crate) fn active_host_is(id: HostId) -> Predicate<HostWatcherState> {
+        let msg = format!("Active host is: {}", id);
+        Predicate::predicate(
+            move |state: &HostWatcherState| {
+                state.hosts.get(&id).and_then(|h| Some(h.active)) == Some(true)
+            },
+            &msg,
+        )
     }
 }

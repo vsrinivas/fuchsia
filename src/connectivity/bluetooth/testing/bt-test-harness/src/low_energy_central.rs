@@ -19,7 +19,7 @@ use {
     test_harness::TestHarness,
 };
 
-use crate::deprecated::control::ActivatedFakeHost;
+use crate::host_watcher::ActivatedFakeHost;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum ScanStateChange {

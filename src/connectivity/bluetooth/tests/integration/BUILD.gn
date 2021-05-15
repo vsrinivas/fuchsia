@@ -9,7 +9,6 @@ rustc_binary("integration_tests_bin") {
   source_root = "src/main.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
@@ -41,7 +40,6 @@ rustc_binary("integration_tests_bin") {
     "src/main.rs",
     "src/tests/access.rs",
     "src/tests/bootstrap.rs",
-    "src/tests/control.rs",
     "src/tests/inspect.rs",
     "src/tests/low_energy_central.rs",
     "src/tests/low_energy_peripheral.rs",

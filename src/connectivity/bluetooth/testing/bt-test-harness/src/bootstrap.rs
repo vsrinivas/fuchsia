@@ -11,7 +11,7 @@ use {
     test_harness::TestHarness,
 };
 
-use crate::deprecated::control::ActivatedFakeHost;
+use crate::host_watcher::ActivatedFakeHost;
 
 #[derive(Clone)]
 pub struct BootstrapHarness(Expectable<(), BootstrapProxy>);

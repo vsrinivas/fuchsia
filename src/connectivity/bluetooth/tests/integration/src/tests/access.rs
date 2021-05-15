@@ -6,17 +6,15 @@ use {
     anyhow::{format_err, Error},
     bt_test_harness::{
         access::{expectation, AccessHarness},
-        deprecated::control::{activate_fake_host, ControlHarness},
-        host_watcher::HostWatcherHarness,
+        host_watcher::{activate_fake_host, HostWatcherHarness},
     },
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters, PeerProxy},
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
         hci_emulator::Emulator,
-        types::{Address, HostId},
+        types::Address,
     },
-    std::str::FromStr,
     test_harness::run_suite,
 };
 
@@ -67,8 +65,10 @@ async fn make_discoverable(access: &AccessHarness) -> Result<ProcedureTokenProxy
 // Test that we can
 //  * Enable discovery via fuchsia.bluetooth.sys.Access.StartDiscovery()
 //  * Receive peer information via fuchsia.bluetooth.sys.Access.WatchPeers()
-async fn test_watch_peers((access, control): (AccessHarness, ControlHarness)) -> Result<(), Error> {
-    let (_host, mut hci) = activate_fake_host(control, "bt-hci-integration").await?;
+async fn test_watch_peers(
+    (access, host_watcher): (AccessHarness, HostWatcherHarness),
+) -> Result<(), Error> {
+    let (_host, mut hci) = activate_fake_host(host_watcher, "bt-hci-integration").await?;
 
     let first_address = Address::Random([1, 0, 0, 0, 0, 0]);
     let second_address = Address::Public([2, 0, 0, 0, 0, 0]);
@@ -94,8 +94,10 @@ async fn test_watch_peers((access, control): (AccessHarness, ControlHarness)) ->
     Ok(())
 }
 
-async fn test_disconnect((access, control): (AccessHarness, ControlHarness)) -> Result<(), Error> {
-    let (_host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
+async fn test_disconnect(
+    (access, host_watcher): (AccessHarness, HostWatcherHarness),
+) -> Result<(), Error> {
+    let (_host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
 
     let peer_address = Address::Random([6, 5, 0, 0, 0, 0]);
     let _peer = create_le_peer(&hci, peer_address).await?;
@@ -131,9 +133,9 @@ async fn test_disconnect((access, control): (AccessHarness, ControlHarness)) -> 
 //  * Set local name via fuchsia.bluetooth.sys.Access.SetLocalName()
 //  * Receive host information via fuchsia.bluetooth.sys.HostWatcher.Watch()
 async fn test_set_local_name(
-    (access, control, host_watcher): (AccessHarness, ControlHarness, HostWatcherHarness),
+    (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (_host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
+    let (_host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
 
     host_watcher.when_satisfied(expectation::host_with_name("fuchsia"), timeout_duration()).await?;
 
@@ -152,10 +154,9 @@ async fn test_set_local_name(
 //  * Enable discovery via fuchsia.bluetooth.sys.Access.StartDiscovery()
 //  * Disable discovery by dropping our token
 async fn test_discovery(
-    (access, control, host_watcher): (AccessHarness, ControlHarness, HostWatcherHarness),
+    (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
-    let host = HostId::from_str(&host)?;
+    let (host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
     let discovery_token = start_discovery(&access).await?;
 
     // We should now be discovering
@@ -179,10 +180,9 @@ async fn test_discovery(
 //  * Enable discoverable via fuchsia.bluetooth.sys.Access.StartDiscoverable()
 //  * Disable discoverable by dropping our token
 async fn test_discoverable(
-    (access, control, host_watcher): (AccessHarness, ControlHarness, HostWatcherHarness),
+    (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
-    let (host, mut hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
-    let host = HostId::from_str(&host)?;
+    let (host, mut hci) = activate_fake_host(host_watcher.clone(), "bt-hci-integration").await?;
     let discoverable_token = make_discoverable(&access).await?;
 
     // We should now be discoverable

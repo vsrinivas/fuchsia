@@ -5,7 +5,7 @@ This module defines integration tests for the Fuchsia Bluetooth stack. Tests are
 Functionality covered includes:
   * bt-host driver (directly via fuchsia.bluetooth.host)
   * Low energy (via fuchsia.bluetooth.le)
-  * GAP (bt-gap) (via fuchsia.bluetooth.control)
+  * GAP (bt-gap) (via fuchsia.bluetooth.sys)
 
 ## Requirements
 The tests use the HCI driver emulator, so no hardware is required, and they can be run on qemu (e.g. via `fx qemu`).

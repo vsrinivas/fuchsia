@@ -22,8 +22,8 @@ use {
 };
 
 use crate::{
-    deprecated::control::ActivatedFakeHost,
     emulator::{watch_advertising_states, EmulatorState},
+    host_watcher::ActivatedFakeHost,
 };
 
 /// A snapshot of the current LE peripheral procedure states of the controller.

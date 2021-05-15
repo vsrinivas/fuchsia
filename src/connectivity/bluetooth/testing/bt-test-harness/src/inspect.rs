@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     diagnostics_reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect},
-    fidl_fuchsia_bluetooth_control::{ControlMarker, ControlProxy},
+    fidl_fuchsia_bluetooth_sys::{AccessMarker, AccessProxy},
     fuchsia_async::DurationExt,
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
@@ -38,7 +38,7 @@ pub struct InspectState {
 }
 
 #[derive(Clone)]
-pub struct InspectHarness(Expectable<InspectState, ControlProxy>);
+pub struct InspectHarness(Expectable<InspectState, AccessProxy>);
 
 impl InspectHarness {
     // Check if there are at least `min_num` hierarchies in our Inspect State. If so, return the
@@ -56,7 +56,7 @@ impl InspectHarness {
 }
 
 impl Deref for InspectHarness {
-    type Target = Expectable<InspectState, ControlProxy>;
+    type Target = Expectable<InspectState, AccessProxy>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -91,8 +91,8 @@ pub async fn new_inspect_harness() -> Result<(InspectHarness, Emulator, PathBuf)
     let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
     let host_path = host_dev.path().to_path_buf();
 
-    let proxy = fuchsia_component::client::connect_to_protocol::<ControlMarker>()
-        .context("Failed to connect to Control service")?;
+    let proxy = fuchsia_component::client::connect_to_protocol::<AccessMarker>()
+        .context("Failed to connect to Access service")?;
 
     let inspect_harness = InspectHarness(expectable(Default::default(), proxy));
     Ok((inspect_harness, emulator, host_path))
