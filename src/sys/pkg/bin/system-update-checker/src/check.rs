@@ -11,7 +11,7 @@ use fidl_fuchsia_paver::{Asset, BootManagerMarker, DataSinkMarker, PaverMarker, 
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_hash::Hash;
-use fuchsia_syslog::fx_log_warn;
+use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use std::{cmp::min, convert::TryInto as _, io};
 use update_package::{ImageType, UpdatePackage};
@@ -79,6 +79,7 @@ async fn check_for_system_update_impl(
 
     if let Some(last_known_update_package) = last_known_update_package {
         if *last_known_update_package == latest_update_merkle {
+            fx_log_info!("Last known update package is latest, system is up to date");
             return up_to_date;
         }
     }
@@ -87,6 +88,7 @@ async fn check_for_system_update_impl(
         Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image });
 
     if current_system_image != latest_system_image {
+        fx_log_info!("Current system image is not latest, system is not up to date");
         return update_available;
     }
 
@@ -99,8 +101,14 @@ async fn check_for_system_update_impl(
     .iter()
     {
         match is_image_up_to_date(&update_pkg, paver, *image, *asset).await {
-            Ok(true) => return up_to_date,
-            Ok(false) => return update_available,
+            Ok(true) => {
+                fx_log_info!("Image {:?} is up to date, system is up to date", image);
+                return up_to_date;
+            }
+            Ok(false) => {
+                fx_log_info!("Image {:?} is not latest, system is not up to date", image);
+                return update_available;
+            }
             Err(err) => {
                 fx_log_warn!(
                     "Failed to check if {} is up to date: {:#}",
@@ -111,6 +119,7 @@ async fn check_for_system_update_impl(
         }
     }
 
+    fx_log_info!("Could not find any system differences, assuming system is up to date");
     up_to_date
 }
 
