@@ -9,6 +9,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -68,9 +70,13 @@ void VirtualKeyboardManager::OnTypeOrVisibilityChange(
 void VirtualKeyboardManager::MaybeBind(
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request) {
   if (manager_binding_.is_bound()) {
-    FX_LOGS(INFO) << "Ignoring interface request; already bound";
+    FX_LOGS(WARNING) << "Ignoring interface request; already bound";
   } else {
     manager_binding_.Bind(std::move(request));
+    manager_binding_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(WARNING) << "manager closed with status=" << status << " ("
+                       << zx_status_get_string(status) << ")";
+    });
   }
 }
 

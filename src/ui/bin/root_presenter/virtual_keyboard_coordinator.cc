@@ -5,6 +5,8 @@
 #include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -17,7 +19,15 @@ FidlBoundVirtualKeyboardCoordinator::FidlBoundVirtualKeyboardCoordinator(
     sys::ComponentContext* component_context)
     : weak_ptr_factory_(this) {
   FX_DCHECK(component_context);
-  component_context->outgoing()->AddPublicService(creator_bindings_.GetHandler(this));
+  component_context->outgoing()
+      ->AddPublicService<fuchsia::input::virtualkeyboard::ControllerCreator>(
+          [this](
+              fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::ControllerCreator> request) {
+            creator_bindings_.AddBinding(this, std::move(request), nullptr, [](zx_status_t status) {
+              FX_LOGS(INFO) << "controller_creator closed with status=" << status << "( "
+                            << zx_status_get_string(status) << ")";
+            });
+          });
   // Initialize the VirtualKeyboardManager, using the zero-value of the TextType enum
   // for the initial TextType.
   manager_.emplace(GetWeakPtr(), component_context,
@@ -33,7 +43,10 @@ void FidlBoundVirtualKeyboardCoordinator::Create(
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   controller_bindings_.AddBinding(std::make_unique<FidlBoundVirtualKeyboardController>(
                                       GetWeakPtr(), std::move(view_ref), text_type),
-                                  std::move(controller_request));
+                                  std::move(controller_request), nullptr, [](zx_status_t status) {
+                                    FX_LOGS(INFO) << "controller closed with status=" << status
+                                                  << " (" << zx_status_get_string(status) << ")";
+                                  });
 }
 
 void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
