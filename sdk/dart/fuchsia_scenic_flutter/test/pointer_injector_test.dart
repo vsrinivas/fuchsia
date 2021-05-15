@@ -24,8 +24,7 @@ void main() {
   test('PointerInjector register', () async {
     final device = _mockDevice();
     final registry = MockRegistry();
-    final viewRefInstalled = MockViewRefInstalled();
-    final injector = PointerInjector(registry, viewRefInstalled, device);
+    final injector = PointerInjector(registry, device);
 
     final hostViewRef = _mockViewRef();
     final viewRef = _mockViewRef();
@@ -33,7 +32,6 @@ void main() {
     await injector.register(
         hostViewRef: hostViewRef, viewRef: viewRef, viewport: rect);
 
-    verify(viewRefInstalled.watch(any));
     final config = verify(registry.register(captureAny, any)).captured.single;
     expect(
         config.viewport.extents,
@@ -48,8 +46,7 @@ void main() {
   test('PointerInjector dispatchEvent', () async {
     final device = _mockDevice();
     final registry = MockRegistry();
-    final viewRefInstalled = MockViewRefInstalled();
-    final injector = PointerInjector(registry, viewRefInstalled, device);
+    final injector = PointerInjector(registry, device);
 
     final rect = Rect.fromLTWH(0, 0, 100, 100);
     final pointer = PointerDownEvent(position: Offset(10, 10));
@@ -73,8 +70,7 @@ void main() {
   test('PointerInjector dispatchEvent logs exception', () async {
     MockDevice device = _mockDevice() as MockDevice;
     final registry = MockRegistry();
-    final viewRefInstalled = MockViewRefInstalled();
-    final injector = PointerInjector(registry, viewRefInstalled, device);
+    final injector = PointerInjector(registry, device);
 
     // Throw a FidlError when inject gets called. This should be logged.
     when(device.inject(any)).thenThrow(FidlError('Proxy<Device> is closed.'));
@@ -119,12 +115,6 @@ class MockRegistry extends Mock implements Registry {
   @override
   Future<void> register(Config? config, InterfaceRequest<Device>? injector) =>
       super.noSuchMethod(Invocation.method(#register, [config, injector]));
-}
-
-class MockViewRefInstalled extends Mock implements ViewRefInstalled {
-  @override
-  Future<void> watch(ViewRef? viewRef) =>
-      super.noSuchMethod(Invocation.method(#watch, [viewRef]));
 }
 
 class MockViewRef extends Mock implements ViewRef {

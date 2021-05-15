@@ -8,52 +8,43 @@
 import 'dart:typed_data';
 import 'dart:ui';
 
-import 'package:flutter/gestures.dart';
-import 'package:meta/meta.dart';
-
 import 'package:fidl_fuchsia_ui_pointerinjector/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:flutter/gestures.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:zircon/zircon.dart';
+import 'package:meta/meta.dart';
 
 /// Defines a class that uses the pointer injector service to inject pointer
 /// events into child views.
 ///
 /// Requires following services in the environment:
 ///    fuchsia.ui.pointerinjector.Registry
-///    fuchsia.ui.views.ViewRefInstalled
 class PointerInjector {
   final Registry _registry;
-  final ViewRefInstalled _viewRefInstalled;
   final DeviceProxy _device;
+
+  /// Returns [true] if the PointerInjector is successfully registered.
+  bool registered = false;
 
   /// Constructor used for injecting mocks during testing.
   @visibleForTesting
-  PointerInjector(
-      Registry registry, ViewRefInstalled viewRefInstalled, DeviceProxy device)
+  PointerInjector(Registry registry, DeviceProxy device)
       : _registry = registry,
-        _viewRefInstalled = viewRefInstalled,
         _device = device;
 
   /// Construct PointerInjector from [/svc].
   factory PointerInjector.fromSvcPath() {
     final registry = RegistryProxy();
-    final viewRefInstalled = ViewRefInstalledProxy();
     final device = DeviceProxy();
     Incoming.fromSvcPath().connectToService(registry);
-    Incoming.fromSvcPath().connectToService(viewRefInstalled);
-    return PointerInjector(registry, viewRefInstalled, device);
+    return PointerInjector(registry, device);
   }
 
   /// Closes connections to services.
   void dispose() {
     if (_registry is RegistryProxy) {
       RegistryProxy proxy = _registry as RegistryProxy;
-      proxy.ctrl.close();
-    }
-    if (_viewRefInstalled is ViewRefInstalledProxy) {
-      ViewRefInstalledProxy proxy = _viewRefInstalled as ViewRefInstalledProxy;
       proxy.ctrl.close();
     }
     _device.ctrl.close();
@@ -65,9 +56,6 @@ class PointerInjector {
     required ViewRef viewRef,
     required Rect viewport,
   }) async {
-    // Ensure view is attached to the view tree.
-    await _viewIsInstalled(viewRef);
-
     final config = Config(
       deviceId: 1,
       deviceType: DeviceType.touch,
@@ -79,7 +67,13 @@ class PointerInjector {
       ),
       dispatchPolicy: DispatchPolicy.exclusiveTarget,
     );
-    await _registry.register(config, _device.ctrl.request());
+
+    try {
+      await _registry.register(config, _device.ctrl.request());
+      registered = true;
+    } catch (e) {
+      log.warning('Failed to register pointer injector: $e');
+    }
   }
 
   /// Dispatch [PointerEvent] and [Rect] viewport event to embedded child.
@@ -142,18 +136,6 @@ class PointerInjector {
         (pointer is PointerDownEvent ||
             pointer is PointerUpEvent ||
             pointer is PointerMoveEvent);
-  }
-
-  // Wait for [viewRef] to be attached to the view tree.
-  Future<void> _viewIsInstalled(ViewRef viewRef) async {
-    final eventPair = viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS);
-    assert(eventPair.isValid);
-
-    try {
-      return _viewRefInstalled.watch(ViewRef(reference: eventPair));
-    } catch (e) {
-      log.warning('Failed to watch viewRefInstalled: $e');
-    }
   }
 
   List<Float32List> _extentFromRect(Rect rect) => [

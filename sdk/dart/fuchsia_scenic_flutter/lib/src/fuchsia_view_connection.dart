@@ -39,6 +39,9 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   /// Callback when the child's view is disconnected from view tree.
   final FuchsiaViewConnectionCallback? _onViewDisconnected;
 
+  /// Callback when the child's view render state changes.
+  final FuchsiaViewConnectionStateCallback? _onViewStateChanged;
+
   /// Set to true if pointer injection into child views should be enabled.
   /// This requires the view's [ViewRef] to be set during construction.
   final bool usePointerInjection;
@@ -57,11 +60,12 @@ class FuchsiaViewConnection extends FuchsiaViewController {
         assert(!usePointerInjection || viewRef?.reference != null),
         _onViewConnected = onViewConnected,
         _onViewDisconnected = onViewDisconnected,
+        _onViewStateChanged = onViewStateChanged,
         super(
           viewId: viewHolderToken.value.handle!.handle,
           onViewConnected: _handleViewConnected,
           onViewDisconnected: _handleViewDisconnected,
-          onViewStateChanged: onViewStateChanged,
+          onViewStateChanged: _handleViewStateChanged,
           onPointerEvent: _handlePointerEvent,
         );
 
@@ -73,11 +77,14 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     return super.requestFocus(viewRef!.reference.handle!.handle);
   }
 
-  static void _handleViewConnected(FuchsiaViewController controller) async {
+  static void _handleViewStateChanged(
+      FuchsiaViewController controller, bool? state) async {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
-    connection._onViewConnected?.call(controller);
+    connection._onViewStateChanged?.call(controller, state);
 
-    if (connection.usePointerInjection) {
+    if (connection.usePointerInjection &&
+        state == true &&
+        !connection.pointerInjector.registered) {
       final hostViewRef = ScenicContext.hostViewRef();
       final viewRefDup = ViewRef(
           reference:
@@ -91,6 +98,11 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     }
   }
 
+  static void _handleViewConnected(FuchsiaViewController controller) async {
+    FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
+    connection._onViewConnected?.call(controller);
+  }
+
   static void _handleViewDisconnected(FuchsiaViewController controller) {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
     connection._onViewDisconnected?.call(controller);
@@ -102,7 +114,8 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   static Future<void> _handlePointerEvent(
       FuchsiaViewController controller, PointerEvent pointer) async {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
-    if (connection.usePointerInjection) {
+    if (connection.usePointerInjection &&
+        connection.pointerInjector.registered) {
       return connection.pointerInjector.dispatchEvent(
         pointer: pointer,
         viewport: connection.viewport,
