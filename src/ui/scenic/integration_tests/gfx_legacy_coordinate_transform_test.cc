@@ -201,8 +201,7 @@ class GfxLegacyCoordinateTransformTest : public sys::testing::TestWithEnvironmen
 // UP     U     (6.5,2.5)   N/A         (2.5,-1.5)
 // REMOVE U     (6.5,2.5)   N/A         (2.5,-1.5)
 //
-// N.B. View 2 sits *above* View 1 in elevation; hence, only View 2 should receive touch and focus
-// events.
+// N.B. View 2 sits *above* View 1 in elevation; hence, only View 2 should receive touch events.
 //
 // N.B. This test is carefully constructed to avoid Vulkan functionality.
 TEST_F(GfxLegacyCoordinateTransformTest, Translated) {
@@ -234,7 +233,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, Translated) {
   child1_session->set_event_handler(
       [&child1_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child1_events.emplace_back(std::move(event.input()));
           }
         }
@@ -245,7 +244,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, Translated) {
   child2_session->set_event_handler(
       [&child2_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child2_events.emplace_back(std::move(event.input()));
           }
         }
@@ -265,23 +264,21 @@ TEST_F(GfxLegacyCoordinateTransformTest, Translated) {
     session->Enqueue(pointer.Up(6.5, 2.5));
     session->Enqueue(pointer.Remove(6.5, 2.5));
   }
-  RunLoopUntil([&child2_events] { return child2_events.size() == 6u; });  // Succeeds or times out.
+  RunLoopUntil([&child2_events] { return child2_events.size() == 5u; });  // Succeeds or times out.
 
   EXPECT_EQ(child1_events.size(), 0u);  // Occluded and thus excluded.
 
-  EXPECT_EQ(child2_events.size(), 6u);
+  EXPECT_EQ(child2_events.size(), 5u);
   ASSERT_TRUE(child2_events[0].is_pointer());
   EXPECT_TRUE(PointerMatches(child2_events[0].pointer(), 1u, PointerEventPhase::ADD, 0.5, 0.5));
-  ASSERT_TRUE(child2_events[1].is_focus());
-  EXPECT_TRUE(child2_events[1].focus().focused);
+  ASSERT_TRUE(child2_events[1].is_pointer());
+  EXPECT_TRUE(PointerMatches(child2_events[1].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
   ASSERT_TRUE(child2_events[2].is_pointer());
-  EXPECT_TRUE(PointerMatches(child2_events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
+  EXPECT_TRUE(PointerMatches(child2_events[2].pointer(), 1u, PointerEventPhase::MOVE, 1.5, -0.5));
   ASSERT_TRUE(child2_events[3].is_pointer());
-  EXPECT_TRUE(PointerMatches(child2_events[3].pointer(), 1u, PointerEventPhase::MOVE, 1.5, -0.5));
+  EXPECT_TRUE(PointerMatches(child2_events[3].pointer(), 1u, PointerEventPhase::UP, 2.5, -1.5));
   ASSERT_TRUE(child2_events[4].is_pointer());
-  EXPECT_TRUE(PointerMatches(child2_events[4].pointer(), 1u, PointerEventPhase::UP, 2.5, -1.5));
-  ASSERT_TRUE(child2_events[5].is_pointer());
-  EXPECT_TRUE(PointerMatches(child2_events[5].pointer(), 1u, PointerEventPhase::REMOVE, 2.5, -1.5));
+  EXPECT_TRUE(PointerMatches(child2_events[4].pointer(), 1u, PointerEventPhase::REMOVE, 2.5, -1.5));
 }
 
 // This test verifies scaling applied to a view subgraph behind another.
@@ -317,7 +314,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, ScaledBehind) {
   child1_session->set_event_handler(
       [&child1_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child1_events.emplace_back(std::move(event.input()));
           }
         }
@@ -328,7 +325,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, ScaledBehind) {
   child2_session->set_event_handler(
       [&child2_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child2_events.emplace_back(std::move(event.input()));
           }
         }
@@ -344,17 +341,15 @@ TEST_F(GfxLegacyCoordinateTransformTest, ScaledBehind) {
     session->Enqueue(pointer.Add(2.5, 2.5));
     session->Enqueue(pointer.Down(2.5, 2.5));
   }
-  RunLoopUntil([&child1_events] { return child1_events.size() == 3; });  // Succeeds or times out.
+  RunLoopUntil([&child1_events] { return child1_events.size() == 2; });  // Succeeds or times out.
 
   EXPECT_EQ(child2_events.size(), 0u);  // Occluded and thus excluded.
 
-  ASSERT_EQ(child1_events.size(), 3u);
+  ASSERT_EQ(child1_events.size(), 2u);
   ASSERT_TRUE(child1_events[0].is_pointer());
   EXPECT_TRUE(PointerMatches(child1_events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5, 1.5));
-  ASSERT_TRUE(child1_events[1].is_focus());
-  EXPECT_TRUE(child1_events[1].focus().focused);
-  ASSERT_TRUE(child1_events[2].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.5, 1.5));
+  ASSERT_TRUE(child1_events[1].is_pointer());
+  EXPECT_TRUE(PointerMatches(child1_events[1].pointer(), 1u, PointerEventPhase::DOWN, 1.5, 1.5));
 }
 
 // This test verifies scaling applied to a view subgraph in front of another.
@@ -390,7 +385,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, ScaledInFront) {
   child1_session->set_event_handler(
       [&child1_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child1_events.emplace_back(std::move(event.input()));
           }
         }
@@ -401,7 +396,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, ScaledInFront) {
   child2_session->set_event_handler(
       [&child2_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child2_events.emplace_back(std::move(event.input()));
           }
         }
@@ -417,19 +412,17 @@ TEST_F(GfxLegacyCoordinateTransformTest, ScaledInFront) {
     session->Enqueue(pointer.Add(2.5, 2.5));
     session->Enqueue(pointer.Down(2.5, 2.5));
   }
-  RunLoopUntil([&child1_events] { return child1_events.size() == 3u; });
+  RunLoopUntil([&child1_events] { return child1_events.size() == 2u; });
 
   EXPECT_EQ(child2_events.size(), 0u);  // Occluded and thus excluded.
 
-  ASSERT_EQ(child1_events.size(), 3u);
+  ASSERT_EQ(child1_events.size(), 2u);
   ASSERT_TRUE(child1_events[0].is_pointer());
   EXPECT_TRUE(
       PointerMatches(child1_events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5 / 4, 1.5 / 4));
-  ASSERT_TRUE(child1_events[1].is_focus());
-  EXPECT_TRUE(child1_events[1].focus().focused);
-  ASSERT_TRUE(child1_events[2].is_pointer());
+  ASSERT_TRUE(child1_events[1].is_pointer());
   EXPECT_TRUE(
-      PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.5 / 4, 1.5 / 4));
+      PointerMatches(child1_events[1].pointer(), 1u, PointerEventPhase::DOWN, 1.5 / 4, 1.5 / 4));
 }
 
 // This test verifies that rotation is handled correctly when events are delivered to clients.
@@ -501,7 +494,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, Rotated) {
   child1_session->set_event_handler(
       [&child1_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child1_events.emplace_back(std::move(event.input()));
           }
         }
@@ -519,17 +512,17 @@ TEST_F(GfxLegacyCoordinateTransformTest, Rotated) {
     session->Enqueue(pointer.Move(4.5, 4.5));
     session->Enqueue(pointer.Up(0.5, 4.5));
   }
-  RunLoopUntil([&child1_events] { return child1_events.size() == 5u; });  // Succeeds or times out.
+  RunLoopUntil([&child1_events] { return child1_events.size() == 4u; });  // Succeeds or times out.
 
-  EXPECT_EQ(child1_events.size(), 5u);
+  EXPECT_EQ(child1_events.size(), 4u);
   EXPECT_TRUE(child1_events[0].is_pointer());
   EXPECT_TRUE(PointerMatches(child1_events[0].pointer(), 1u, PointerEventPhase::ADD, 0.5, 4.5));
+  EXPECT_TRUE(child1_events[1].is_pointer());
+  EXPECT_TRUE(PointerMatches(child1_events[1].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
   EXPECT_TRUE(child1_events[2].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
+  EXPECT_TRUE(PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
   EXPECT_TRUE(child1_events[3].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[3].pointer(), 1u, PointerEventPhase::MOVE, 4.5, 0.5));
-  EXPECT_TRUE(child1_events[4].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[4].pointer(), 1u, PointerEventPhase::UP, 4.5, 4.5));
+  EXPECT_TRUE(PointerMatches(child1_events[3].pointer(), 1u, PointerEventPhase::UP, 4.5, 4.5));
 }
 
 // In this test we set up a view, apply a ClipSpaceTransform to it, and then send pointer events to
@@ -621,7 +614,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, ClipSpaceTransformed) {
   child1_session->set_event_handler(
       [&child1_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child1_events.emplace_back(std::move(event.input()));
           }
         }
@@ -639,17 +632,17 @@ TEST_F(GfxLegacyCoordinateTransformTest, ClipSpaceTransformed) {
     session->Enqueue(pointer.Move(4.5, 4.5));
     session->Enqueue(pointer.Up(0.5, 4.5));
   }
-  RunLoopUntil([&child1_events] { return child1_events.size() == 5u; });  // Succeeds or times out.
+  RunLoopUntil([&child1_events] { return child1_events.size() == 4u; });  // Succeeds or times out.
 
-  EXPECT_EQ(child1_events.size(), 5u);
+  EXPECT_EQ(child1_events.size(), 4u);
   EXPECT_TRUE(child1_events[0].is_pointer());
   EXPECT_TRUE(PointerMatches(child1_events[0].pointer(), 1u, PointerEventPhase::ADD, 0.25, 0.25));
+  EXPECT_TRUE(child1_events[1].is_pointer());
+  EXPECT_TRUE(PointerMatches(child1_events[1].pointer(), 1u, PointerEventPhase::DOWN, 2.25, 0.25));
   EXPECT_TRUE(child1_events[2].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::DOWN, 2.25, 0.25));
+  EXPECT_TRUE(PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::MOVE, 2.25, 2.25));
   EXPECT_TRUE(child1_events[3].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[3].pointer(), 1u, PointerEventPhase::MOVE, 2.25, 2.25));
-  EXPECT_TRUE(child1_events[4].is_pointer());
-  EXPECT_TRUE(PointerMatches(child1_events[4].pointer(), 1u, PointerEventPhase::UP, 0.25, 2.25));
+  EXPECT_TRUE(PointerMatches(child1_events[3].pointer(), 1u, PointerEventPhase::UP, 0.25, 2.25));
 }
 
 // In this test we set up a view, apply a ClipSpaceTransform scale to the camera as well as a
@@ -740,7 +733,7 @@ TEST_F(GfxLegacyCoordinateTransformTest, ClipSpaceAndNodeTransformed) {
   child1_session->set_event_handler(
       [&child1_events](std::vector<fuchsia::ui::scenic::Event> events) {
         for (auto& event : events) {
-          if (event.is_input()) {
+          if (event.is_input() && !event.input().is_focus()) {
             child1_events.emplace_back(std::move(event.input()));
           }
         }
@@ -758,21 +751,21 @@ TEST_F(GfxLegacyCoordinateTransformTest, ClipSpaceAndNodeTransformed) {
     session->Enqueue(pointer.Move(4.5, 4.5));
     session->Enqueue(pointer.Up(0.5, 4.5));
   }
-  RunLoopUntil([&child1_events] { return child1_events.size() == 5u; });  // Succeeds or times out.
+  RunLoopUntil([&child1_events] { return child1_events.size() == 4u; });  // Succeeds or times out.
 
-  EXPECT_EQ(child1_events.size(), 5u);
+  EXPECT_EQ(child1_events.size(), 4u);
   EXPECT_TRUE(child1_events[0].is_pointer());
   EXPECT_TRUE(
       PointerMatches(child1_events[0].pointer(), 1u, PointerEventPhase::ADD, 2.5 - 1, 2.5 - 1));
+  EXPECT_TRUE(child1_events[1].is_pointer());
+  EXPECT_TRUE(
+      PointerMatches(child1_events[1].pointer(), 1u, PointerEventPhase::DOWN, 4.5 - 1, 2.5 - 1));
   EXPECT_TRUE(child1_events[2].is_pointer());
   EXPECT_TRUE(
-      PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5 - 1, 2.5 - 1));
+      PointerMatches(child1_events[2].pointer(), 1u, PointerEventPhase::MOVE, 4.5 - 1, 4.5 - 1));
   EXPECT_TRUE(child1_events[3].is_pointer());
   EXPECT_TRUE(
-      PointerMatches(child1_events[3].pointer(), 1u, PointerEventPhase::MOVE, 4.5 - 1, 4.5 - 1));
-  EXPECT_TRUE(child1_events[4].is_pointer());
-  EXPECT_TRUE(
-      PointerMatches(child1_events[4].pointer(), 1u, PointerEventPhase::UP, 2.5 - 1, 4.5 - 1));
+      PointerMatches(child1_events[3].pointer(), 1u, PointerEventPhase::UP, 2.5 - 1, 4.5 - 1));
 }
 
 }  // namespace integration_tests
