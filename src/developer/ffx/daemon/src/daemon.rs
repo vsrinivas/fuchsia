@@ -40,7 +40,6 @@ use {
     hoist::{hoist, OvernetInstance},
     services::{DaemonServiceProvider, ServiceError, ServiceRegister},
     std::cell::Cell,
-    std::convert::TryInto,
     std::net::SocketAddr,
     std::rc::{Rc, Weak},
     std::time::{Duration, Instant},
@@ -230,6 +229,8 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                 return Ok(true); // We're done, as the parent has been dropped.
             }
         };
+
+        log::info!("! DaemonEvent::{:?}", event);
 
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
@@ -607,41 +608,42 @@ impl Daemon {
                 responder.send(true).context("error sending response")?;
             }
             DaemonRequest::GetSshAddress { responder, target, timeout } => {
-                let fut = async move {
-                    let poll_duration = std::time::Duration::from_millis(15);
-                    loop {
-                        if let Some(addr_info) = match self.get_target(target.clone()).await {
-                            Ok(t) => match t.get_connection_state() {
-                                ConnectionState::Zedboot(_) => {
-                                    return Err(DaemonError::TargetInZedboot);
-                                }
-                                ConnectionState::Fastboot(_) => {
-                                    return Err(DaemonError::TargetInFastboot);
-                                }
-                                _ => t.ssh_address_info(),
-                            },
-                            Err(DaemonError::TargetAmbiguous) => {
-                                return Err(DaemonError::TargetAmbiguous)
-                            }
-                            Err(_) => None,
-                        } {
-                            return Ok(addr_info);
-                        }
-                        Timer::new(poll_duration).await;
-                    }
-                };
+                use std::convert::TryInto;
+                let timeout_time = Instant::now()
+                    + Duration::from_nanos(timeout.try_into().context("invalid timeout")?);
 
-                return responder
-                    .send(&mut match timeout::timeout(
-                        Duration::from_nanos(timeout.try_into()?),
-                        fut,
-                    )
-                    .await
+                loop {
+                    match self
+                        .target_collection
+                        .wait_for_match(target.clone())
+                        .on_timeout(timeout_time, || Err(DaemonError::Timeout))
+                        .await
                     {
-                        Ok(mut r) => r,
-                        Err(_) => Err(DaemonError::Timeout),
-                    })
-                    .context("sending client response");
+                        Ok(t) => match t.get_connection_state() {
+                            ConnectionState::Zedboot(_) => {
+                                return responder
+                                    .send(&mut Err(DaemonError::TargetInZedboot))
+                                    .context("error sending response");
+                            }
+                            ConnectionState::Fastboot(_) => {
+                                return responder
+                                    .send(&mut Err(DaemonError::TargetInFastboot))
+                                    .context("error sending response");
+                            }
+                            _ => {
+                                if let Some(addr_info) = t.ssh_address_info() {
+                                    log::info!("Responding to {:?} with {:?}", target, t);
+                                    return responder
+                                        .send(&mut Ok(addr_info))
+                                        .context("error sending response");
+                                }
+                            }
+                        },
+                        Err(e) => {
+                            return responder.send(&mut Err(e)).context("error sending response");
+                        }
+                    }
+                }
             }
             DaemonRequest::GetVersionInfo { responder } => {
                 return responder.send(build_info()).context("sending GetVersionInfo response");
@@ -992,9 +994,12 @@ mod test {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
                     tc.merge_insert(Target::from_target_info(t));
                 }
-                DaemonEvent::NewTarget(TargetInfo { nodename: Some(n), addresses, .. }) => {
+                DaemonEvent::NewTarget(TargetInfo { nodename, addresses, .. }) => {
                     let rcs = RcsConnection::new_with_proxy(
-                        setup_fake_target_service(n, addresses.iter().map(Into::into).collect()),
+                        setup_fake_target_service(
+                            nodename.unwrap_or("<unknown>".to_string()),
+                            addresses.iter().map(Into::into).collect(),
+                        ),
                         &NodeId { id: 0u64 },
                     );
                     tc.merge_insert(Target::from_rcs_connection(rcs).await.unwrap());
@@ -1303,11 +1308,15 @@ mod test {
         assert_eq!(daemon.target_collection.targets().len(), 1);
         assert!(daemon.target_collection.get("foobar").is_some());
 
+        let start = Instant::now();
+
         let r = proxy.get_ssh_address(Some("foobar"), std::i64::MAX).await.unwrap();
         assert_eq!(r, Ok(addr_info));
 
         let r = proxy.get_ssh_address(Some("toothpaste"), 1).await.unwrap();
         assert_eq!(r, Err(DaemonError::Timeout));
+
+        assert!(start.elapsed().as_secs() < 1);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1404,48 +1413,30 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_target() {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
+        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let target_addr = TargetAddr::new("[::1]:0").unwrap();
+        let event = daemon.event_queue.wait_for(None, |e| matches!(e, DaemonEvent::NewTarget(_)));
 
-        let mut info = TargetAddrInfo::Ip(bridge::TargetIp {
-            ip: IpAddress::Ipv6(fidl_net::Ipv6Address {
-                addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            }),
-            scope_id: 0,
-        });
-        daemon_proxy.add_target(&mut info).await.unwrap().unwrap();
+        proxy.add_target(&mut target_addr.into()).await.unwrap().unwrap();
 
-        let mut got = daemon_proxy.list_targets("").await.unwrap().into_iter();
-        let target = got.next().expect("Got no targets after adding a target.");
-        assert!(got.next().is_none());
-        assert!(target.nodename.is_none());
-        assert_eq!(target.addresses.as_ref().unwrap().len(), 1);
-        assert_eq!(target.addresses.unwrap()[0], info);
-
-        let addrs = ctrl.tc.targets().iter().next().unwrap().manual_addrs();
-        assert_eq!(addrs[0], TargetAddr::from(info));
+        assert!(event.await.is_ok());
+        let target = daemon.target_collection.get(target_addr.to_string()).unwrap();
+        assert_eq!(target.addrs().len(), 1);
+        assert_eq!(target.addrs().into_iter().next(), Some(target_addr));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_target_with_port() {
-        let (daemon_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
+        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        let target_addr = TargetAddr::new("[::1]:8022").unwrap();
+        let event = daemon.event_queue.wait_for(None, |e| matches!(e, DaemonEvent::NewTarget(_)));
 
-        let mut info = bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
-            ip: IpAddress::Ipv6(fidl_net::Ipv6Address {
-                addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            }),
-            scope_id: 0,
-            port: 8022,
-        });
-        daemon_proxy.add_target(&mut info).await.unwrap().unwrap();
+        proxy.add_target(&mut target_addr.into()).await.unwrap().unwrap();
 
-        let addrs = ctrl.tc.targets().iter().next().unwrap().manual_addrs();
-        assert_eq!(addrs[0], TargetAddr::from(info));
-        let port = ctrl.tc.targets().iter().next().unwrap().ssh_port();
-        assert_eq!(port, Some(8022));
+        assert!(event.await.is_ok());
+        let target = daemon.target_collection.get(target_addr.to_string()).unwrap();
+        assert_eq!(target.addrs().len(), 1);
+        assert_eq!(target.addrs().into_iter().next(), Some(target_addr));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

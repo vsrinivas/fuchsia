@@ -1487,27 +1487,15 @@ impl TargetCollection {
             });
             to_update.clone()
         } else {
-            let result = new_target.clone();
+            self.targets.borrow_mut().insert(new_target.id(), new_target.clone());
 
-            let (new_target_name, new_target_serial) = (new_target.nodename(), new_target.serial());
-
-            self.targets.borrow_mut().insert(new_target.id(), new_target);
-
-            if new_target_name.is_some() || new_target_serial.is_some() {
-                let info = result.target_info();
-                if let Some(event_queue) = self.events.borrow().as_ref() {
-                    event_queue
-                        .push(DaemonEvent::NewTarget(info))
-                        .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
-                }
+            if let Some(event_queue) = self.events.borrow().as_ref() {
+                event_queue
+                    .push(DaemonEvent::NewTarget(new_target.target_info()))
+                    .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
             }
 
-            log::info!(
-                "New target ({}): {}",
-                result.id(),
-                result.nodename().unwrap_or("<unnamed>".to_string())
-            );
-            result
+            new_target
         }
     }
 
