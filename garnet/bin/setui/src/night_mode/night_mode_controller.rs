@@ -20,9 +20,9 @@ impl DeviceStorageCompatible for NightModeInfo {
     }
 }
 
-impl Into<SettingInfo> for NightModeInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::NightMode(self)
+impl From<NightModeInfo> for SettingInfo {
+    fn from(info: NightModeInfo) -> SettingInfo {
+        SettingInfo::NightMode(info)
     }
 }
 
