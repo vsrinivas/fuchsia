@@ -763,11 +763,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
         stream_mode: StreamMode,
         min_target_timestamp: Option<Timestamp>,
     ) -> Result<SessionStream> {
-        let ts = if stream_mode == StreamMode::SnapshotAll {
-            Some(self.read_most_recent_entry_timestamp().await?.unwrap_or(Timestamp::from(0)))
-        } else {
-            None
-        };
+        let ts = Some(self.read_most_recent_entry_timestamp().await?.unwrap_or(Timestamp::from(0)));
 
         let (output_dir, read_stream) = {
             let inner = self.inner.read().await;
@@ -873,7 +869,7 @@ mod test {
     const BOOT_TIME_NANOS: i64 = 123456789000000000;
     const BOOT_TIME_MILLIS: u64 = 123456789000;
     const TIMESTAMP: i64 = 987654321;
-    const READ_TIMEOUT_MILLIS: u64 = 100;
+    const READ_TIMEOUT_MILLIS: u64 = 500;
 
     async fn collect_logs(path: PathBuf) -> Result<HashMap<String, String>> {
         let mut result = HashMap::new();
