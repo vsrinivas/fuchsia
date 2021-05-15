@@ -20,9 +20,9 @@ impl DeviceStorageCompatible for PrivacyInfo {
     }
 }
 
-impl Into<SettingInfo> for PrivacyInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Privacy(self)
+impl From<PrivacyInfo> for SettingInfo {
+    fn from(info: PrivacyInfo) -> SettingInfo {
+        SettingInfo::Privacy(info)
     }
 }
 

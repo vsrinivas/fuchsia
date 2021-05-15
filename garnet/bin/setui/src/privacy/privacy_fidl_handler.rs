@@ -65,7 +65,7 @@ async fn process_request(
         }
     }
 
-    return Ok(None);
+    Ok(None)
 }
 
 #[cfg(test)]
