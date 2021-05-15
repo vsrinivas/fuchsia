@@ -22,27 +22,27 @@ FidlBoundVirtualKeyboardController::~FidlBoundVirtualKeyboardController() {}
 
 void FidlBoundVirtualKeyboardController::SetTextType(
     fuchsia::input::virtualkeyboard::TextType text_type) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   text_type_ = text_type;
   NotifyCoordinator();
 }
 
 void FidlBoundVirtualKeyboardController::RequestShow() {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   want_visible_ = true;
   NotifyCoordinator();
   MaybeNotifyWatcher();
 }
 
 void FidlBoundVirtualKeyboardController::RequestHide() {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   want_visible_ = false;
   NotifyCoordinator();
   MaybeNotifyWatcher();
 }
 
 void FidlBoundVirtualKeyboardController::WatchVisibility(WatchVisibilityCallback callback) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   if (watch_callback_) {
     // Called with a watch already active. Resend the current value, so that
     // the old call doesn't hang forever.
@@ -67,7 +67,7 @@ void FidlBoundVirtualKeyboardController::OnUserAction(UserAction action) {
 }
 
 void FidlBoundVirtualKeyboardController::MaybeNotifyWatcher() {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   if (watch_callback_ && want_visible_ != last_sent_visible_) {
     watch_callback_(want_visible_);
     watch_callback_ = {};

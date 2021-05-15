@@ -32,7 +32,7 @@ VirtualKeyboardManager::VirtualKeyboardManager(
 }
 
 void VirtualKeyboardManager::WatchTypeAndVisibility(WatchTypeAndVisibilityCallback callback) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   if (watch_callback_) {
     // The caller has violated the constraints of the protocol. Close the connection
     // to signal the error, and reset the callback, to ensure that other method calls
@@ -49,7 +49,7 @@ void VirtualKeyboardManager::WatchTypeAndVisibility(WatchTypeAndVisibilityCallba
 void VirtualKeyboardManager::Notify(bool is_visible,
                                     fuchsia::input::virtualkeyboard::VisibilityChangeReason reason,
                                     NotifyCallback callback) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   if (coordinator_) {
     coordinator_->NotifyVisibilityChange(is_visible, reason);
   } else {

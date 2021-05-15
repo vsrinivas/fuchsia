@@ -40,7 +40,7 @@ FidlBoundVirtualKeyboardCoordinator::~FidlBoundVirtualKeyboardCoordinator() {}
 void FidlBoundVirtualKeyboardCoordinator::Create(
     fuchsia::ui::views::ViewRef view_ref, fuchsia::input::virtualkeyboard::TextType text_type,
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Controller> controller_request) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   controller_bindings_.AddBinding(std::make_unique<FidlBoundVirtualKeyboardController>(
                                       GetWeakPtr(), std::move(view_ref), text_type),
                                   std::move(controller_request), nullptr, [](zx_status_t status) {
@@ -51,7 +51,7 @@ void FidlBoundVirtualKeyboardCoordinator::Create(
 
 void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
     bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   if (reason.IsUnknown()) {
     FX_LOGS(WARNING) << "Ignorning visibility change with reason = " << reason;
     return;
@@ -73,7 +73,7 @@ void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
 
 void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(
     fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {
-  FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__;
   manager_->OnTypeOrVisibilityChange(text_type, is_visible);
 }
 
