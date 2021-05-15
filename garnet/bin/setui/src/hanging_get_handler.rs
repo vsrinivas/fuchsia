@@ -47,15 +47,13 @@ where
     T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    fn new(change_function: ChangeFunction<T>) -> HangingGetController<T, ST> {
-        let controller = HangingGetController {
+    fn new(change_function: ChangeFunction<T>) -> Self {
+        Self {
             last_sent_value: None,
             change_function,
             should_send: true,
             pending_responders: Vec::new(),
-        };
-
-        controller
+        }
     }
 
     fn initialize(&mut self) {
@@ -174,13 +172,13 @@ where
         let (on_command_sender, mut on_command_receiver) =
             futures::channel::mpsc::unbounded::<ListenCommand>();
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST, K> {
-            messenger: messenger,
+            messenger,
             listen_exit_tx: None,
             data_type: PhantomData,
             setting_type,
             default_controller: HangingGetController::new(Box::new(|_old: &T, _new: &T| true)),
             controllers_by_key: Default::default(),
-            command_tx: on_command_sender.clone(),
+            command_tx: on_command_sender,
         }));
 
         {
@@ -246,7 +244,7 @@ where
             Some(key) => self
                 .controllers_by_key
                 .entry(key)
-                .or_insert(HangingGetController::new(change_function)),
+                .or_insert_with(|| HangingGetController::new(change_function)),
         };
 
         controller.add_pending_responder(responder, error_sender);
@@ -315,14 +313,15 @@ where
 
     /// Called when receiving a notification that value has changed.
     async fn on_change(&mut self, setting_info: SettingInfo) {
-        let response: SettingInfo = setting_info.into();
+        let value = T::from(setting_info.clone());
         for controller in self.controllers_by_key.values_mut() {
-            if controller.on_change(&T::from(response.clone())) {
-                controller.send_if_needed(response.clone()).await;
+            if controller.on_change(&value) {
+                controller.send_if_needed(setting_info.clone()).await;
             }
         }
-        if self.default_controller.on_change(&T::from(response.clone())) {
-            self.default_controller.send_if_needed(response).await;
+
+        if self.default_controller.on_change(&value) {
+            self.default_controller.send_if_needed(setting_info).await;
         }
     }
 

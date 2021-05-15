@@ -156,9 +156,9 @@ conversion_impls! {
     Setup(SetupInfo) => Setup,
 }
 
-impl Into<SettingType> for &SettingInfo {
-    fn into(self) -> SettingType {
-        match self {
+impl From<&SettingInfo> for SettingType {
+    fn from(info: &SettingInfo) -> SettingType {
+        match info {
             #[cfg(test)]
             SettingInfo::Unknown(_) => SettingType::Unknown,
             SettingInfo::Accessibility(_) => SettingType::Accessibility,
@@ -194,7 +194,7 @@ pub trait Merge<Other = Self> {
 /// Returns default setting types. These types should be product-agnostic,
 /// capable of operating with platform level support.
 pub fn get_default_setting_types() -> HashSet<SettingType> {
-    return array::IntoIter::new([
+    array::IntoIter::new([
         SettingType::Accessibility,
         SettingType::Device,
         SettingType::Intl,
@@ -202,13 +202,13 @@ pub fn get_default_setting_types() -> HashSet<SettingType> {
         SettingType::Privacy,
         SettingType::Setup,
     ])
-    .collect();
+    .collect()
 }
 
 /// Returns all known setting types. New additions to SettingType should also
 /// be inserted here.
 pub fn get_all_setting_types() -> HashSet<SettingType> {
-    return array::IntoIter::new([
+    array::IntoIter::new([
         SettingType::Accessibility,
         SettingType::Audio,
         SettingType::Device,
@@ -224,7 +224,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::Privacy,
         SettingType::Setup,
     ])
-    .collect();
+    .collect()
 }
 
 #[cfg(test)]

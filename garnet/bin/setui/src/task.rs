@@ -56,7 +56,7 @@ use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use futures::StreamExt;
-use itertools::{sorted, Itertools};
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -224,10 +224,10 @@ impl<C: Category + 'static> Summary<C> {
         for statistics in self.statistics.values() {
             for timestamp in statistics.active_tasks.values() {
                 return_val = Some(return_val.map_or_else(
-                    || (statistics.category.clone(), timestamp.clone()),
+                    || (statistics.category.clone(), *timestamp),
                     |x: (C, zx::Time)| {
                         if timestamp < &x.1 {
-                            (statistics.category.clone(), timestamp.clone())
+                            (statistics.category.clone(), *timestamp)
                         } else {
                             x
                         }
@@ -320,7 +320,7 @@ impl<C: Category + 'static> Statistics<C> {
 
     /// Returns the start time of the oldest actively running task.
     pub fn get_oldest_active_start_time(&self) -> Option<zx::Time> {
-        sorted(self.active_tasks.values().into_iter()).next().cloned()
+        self.active_tasks.values().sorted().next().cloned()
     }
 
     /// Returns the number of tasks actively running.
@@ -338,7 +338,7 @@ impl<C: Category + 'static> Statistics<C> {
         let start_time = self
             .active_tasks
             .remove(&id)
-            .expect(&format!("timestamp for {:?} should be present", id));
+            .unwrap_or_else(|| panic!("timestamp for {:?} should be present", id));
         let duration = end_time - start_time;
 
         self.lifetime_count += 1;
@@ -382,6 +382,7 @@ impl<C: Category + 'static> Debug for Statistics<C> {
 ///
 /// [`Manager`]: struct.Manager.html
 /// [`SinkHandle`]: type.SinkHandle.html
+#[derive(Default)]
 pub struct Builder<C: Category + 'static> {
     sinks: Vec<SinkHandle<C>>,
 }

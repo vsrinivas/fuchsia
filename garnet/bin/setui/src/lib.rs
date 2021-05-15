@@ -297,7 +297,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.configuration = Some(ServiceConfiguration::default());
         }
 
-        self.configuration.as_mut().map(|c| c.set_services(settings.iter().copied().collect()));
+        if let Some(c) = self.configuration.as_mut() {
+            c.set_services(settings.iter().copied().collect());
+        }
+
         self
     }
 
@@ -307,7 +310,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.configuration = Some(ServiceConfiguration::default());
         }
 
-        self.configuration.as_mut().map(|c| c.set_policies(policies.iter().copied().collect()));
+        if let Some(c) = self.configuration.as_mut() {
+            c.set_policies(policies.iter().copied().collect());
+        }
+
         self
     }
 
@@ -317,9 +323,10 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.configuration = Some(ServiceConfiguration::default());
         }
 
-        self.configuration
-            .as_mut()
-            .map(|c| c.set_controller_flags(controller_flags.iter().map(|f| *f).collect()));
+        if let Some(c) = self.configuration.as_mut() {
+            c.set_controller_flags(controller_flags.iter().copied().collect());
+        }
+
         self
     }
 
@@ -492,11 +499,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     ) -> Result<NestedEnvironment, Error> {
         let environment = self.spawn_nested(env_name).await?;
 
-        if let Some(env) = environment.nested_environment {
-            return Ok(env);
-        }
-
-        return Err(format_err!("nested environment not created"));
+        environment.nested_environment.ok_or_else(|| format_err!("nested environment not created"))
     }
 
     async fn get_configuration_handlers(
@@ -652,6 +655,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// This method generates the necessary infrastructure to support the settings
 /// service (handlers, agents, etc.) and brings up the components necessary to
 /// support the components specified in the components HashSet.
+#[allow(clippy::too_many_arguments)]
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     delegate: service::message::Delegate,
@@ -794,7 +798,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .ok();
 
-    return Ok(());
+    Ok(())
 }
 
 #[cfg(test)]

@@ -192,7 +192,9 @@ where
 
     fn inspect_result<T>(&self, result: &Result<T, fidl::Error>) {
         if let Err(fidl::Error::ClientChannelClosed { .. }) = result {
-            self.publisher.as_ref().map(|p| p.send_event(Event::Closed(P::Service::DEBUG_NAME)));
+            if let Some(p) = self.publisher.as_ref() {
+                p.send_event(Event::Closed(P::Service::DEBUG_NAME));
+            }
         }
     }
 
