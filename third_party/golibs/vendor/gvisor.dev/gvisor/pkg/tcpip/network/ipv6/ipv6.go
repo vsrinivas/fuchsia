@@ -941,8 +941,18 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 		return &ip.ErrTTLExceeded{}
 	}
 
+	stk := e.protocol.stack
+
 	// Check if the destination is owned by the stack.
 	if ep := e.protocol.findEndpointWithAddress(dstAddr); ep != nil {
+		inNicName := stk.FindNICNameFromID(e.nic.ID())
+		outNicName := stk.FindNICNameFromID(ep.nic.ID())
+		if ok := stk.IPTables().Check(stack.Forward, pkt, nil, "" /* preroutingAddr */, inNicName, outNicName); !ok {
+			// iptables is telling us to drop the packet.
+			e.stats.ip.IPTablesForwardDropped.Increment()
+			return nil
+		}
+
 		ep.handleValidatedPacket(h, pkt)
 		return nil
 	}
@@ -952,7 +962,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 		return &ip.ErrParameterProblem{}
 	}
 
-	r, err := e.protocol.stack.FindRoute(0, "", dstAddr, ProtocolNumber, false /* multicastLoop */)
+	r, err := stk.FindRoute(0, "", dstAddr, ProtocolNumber, false /* multicastLoop */)
 	switch err.(type) {
 	case nil:
 	case *tcpip.ErrNoRoute, *tcpip.ErrNetworkUnreachable:
@@ -964,6 +974,14 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 		return &ip.ErrOther{Err: err}
 	}
 	defer r.Release()
+
+	inNicName := stk.FindNICNameFromID(e.nic.ID())
+	outNicName := stk.FindNICNameFromID(r.NICID())
+	if ok := stk.IPTables().Check(stack.Forward, pkt, nil, "" /* preroutingAddr */, inNicName, outNicName); !ok {
+		// iptables is telling us to drop the packet.
+		e.stats.ip.IPTablesForwardDropped.Increment()
+		return nil
+	}
 
 	// We need to do a deep copy of the IP packet because
 	// WriteHeaderIncludedPacket takes ownership of the packet buffer, but we do
@@ -1073,6 +1091,8 @@ func (e *endpoint) handleLocalPacket(pkt *stack.PacketBuffer, canSkipRXChecksum 
 func (e *endpoint) handleValidatedPacket(h header.IPv6, pkt *stack.PacketBuffer) {
 	pkt.NICID = e.nic.ID()
 	stats := e.stats.ip
+	stats.ValidPacketsReceived.Increment()
+
 	srcAddr := h.SourceAddress()
 	dstAddr := h.DestinationAddress()
 
@@ -1472,13 +1492,19 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 			// If the last header in the payload isn't a known IPv6 extension header,
 			// handle it as if it is transport layer data.
 
+			// Calculate the number of octets parsed from data. We want to remove all
+			// the data except the unparsed portion located at the end, which its size
+			// is extHdr.Buf.Size().
+			trim := pkt.Data().Size() - extHdr.Buf.Size()
+
 			// For unfragmented packets, extHdr still contains the transport header.
 			// Get rid of it.
 			//
 			// For reassembled fragments, pkt.TransportHeader is unset, so this is a
 			// no-op and pkt.Data begins with the transport header.
-			extHdr.Buf.TrimFront(pkt.TransportHeader().View().Size())
-			pkt.Data().Replace(extHdr.Buf)
+			trim += pkt.TransportHeader().View().Size()
+
+			pkt.Data().DeleteFront(trim)
 
 			stats.PacketsDelivered.Increment()
 			if p := tcpip.TransportProtocolNumber(extHdr.Identifier); p == header.ICMPv6ProtocolNumber {

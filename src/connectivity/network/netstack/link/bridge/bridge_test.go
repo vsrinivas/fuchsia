@@ -227,7 +227,9 @@ func TestBridgeWithoutDispatcher(t *testing.T) {
 		},
 	}
 
-	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
+	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+		ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+	})
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -361,9 +363,6 @@ func TestBridgeRouting(t *testing.T) {
 	)
 
 	data := []byte{1, 2, 3, 4}
-	pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-		Data: buffer.View(data).ToVectorisedView(),
-	})
 
 	tests := []struct {
 		name               string
@@ -466,7 +465,10 @@ func TestBridgeRouting(t *testing.T) {
 						t.Fatalf("unrecognized rxEPKind = %d", subtest.rxEP)
 					}
 
-					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, pkt.Clone())
+					bridgeEP.DeliverNetworkPacketToBridge(rxEP, linkAddr3, test.dstAddr, 0, stack.NewPacketBuffer(stack.PacketBufferOptions{
+						ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+						Data:               buffer.View(data).ToVectorisedView(),
+					}))
 
 					if pkt := ep1.getPacket(); subtest.ep1ShouldGetPacket {
 						if pkt == nil {

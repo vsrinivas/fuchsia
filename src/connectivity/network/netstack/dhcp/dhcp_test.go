@@ -650,7 +650,8 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 						t.Errorf("failed to copy header bytes, want=%d got=%d", l, n)
 					}
 					b.setOptions(opts)
-					pkt.Data().Replace(buffer.NewViewFromBytes(b).ToVectorisedView())
+					pkt.Data().CapLength(0)
+					pkt.Data().AppendView(buffer.NewViewFromBytes(b))
 
 					// Rewrite all the headers and IP checksum. Yes, this is all
 					// required.
@@ -1056,7 +1057,8 @@ func mustCloneWithNewMsgType(t *testing.T, pkt *stack.PacketBuffer, msgType dhcp
 	// Disable checksum verification since we've surely invalidated it.
 	header.UDP(pkt.TransportHeader().View()).SetChecksum(0)
 
-	pkt.Data().Replace(buffer.NewViewFromBytes(h).ToVectorisedView())
+	pkt.Data().CapLength(0)
+	pkt.Data().AppendView(buffer.NewViewFromBytes(h))
 	return pkt
 }
 
