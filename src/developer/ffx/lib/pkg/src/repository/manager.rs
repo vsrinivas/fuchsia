@@ -25,13 +25,13 @@ enum RepositorySpec {
 
 /// RepositoryManager is responsible for managing all the repositories in use by ffx.
 pub struct RepositoryManager {
-    repositories: Arc<RwLock<HashMap<String, ArcRepository>>>,
+    repositories: RwLock<HashMap<String, ArcRepository>>,
 }
 
 impl RepositoryManager {
     /// Construct a new [RepositoryManager].
     pub fn new() -> Arc<Self> {
-        Arc::new(Self { repositories: Arc::new(RwLock::new(HashMap::new())) })
+        Arc::new(Self { repositories: RwLock::new(HashMap::new()) })
     }
 
     /// Add a [Repository] to the [RepositoryManager].
