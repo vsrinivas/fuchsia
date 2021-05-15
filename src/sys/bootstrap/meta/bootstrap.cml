@@ -14,6 +14,10 @@
             environment: "#driver_manager-env",
         },
         {
+            name: "driver_index",
+            url: "fuchsia-boot:///#meta/driver-index.cm",
+        },
+        {
             name: "fshost",
             url: "fuchsia-boot:///#meta/fshost.cm",
             environment: "#fshost-env",
@@ -209,6 +213,11 @@
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
+            to: "#driver_manager",
+        },
+        {
+            protocol: [ "fuchsia.driver.framework.DriverIndex" ],
+            from: "#driver_index",
             to: "#driver_manager",
         },
         {
@@ -686,6 +695,7 @@
                 "#decompressor",
                 "#device_name_provider",
                 "#driver_hosts",
+                "#driver_index",
                 "#driver_manager",
                 "#fshost",
                 "#live_usb",
