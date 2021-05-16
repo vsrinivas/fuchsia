@@ -306,7 +306,7 @@ zx::status<> PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload
   // the block server can deadlock due to a read fault, putting the device in an unrecoverable
   // state.
   //
-  // TODO(ZX-48145): If it's possible for payload_vmo to be a root pager-backed VMO, we will need to
+  // TODO(fxbug.dev/48145): If it's possible for payload_vmo to be a root pager-backed VMO, we will need to
   // lock it instead of simply committing its pages, to opt it out of eviction. The assert below
   // verifying that it's a pager-backed clone will need to be removed as well.
   zx_info_vmo_t info;

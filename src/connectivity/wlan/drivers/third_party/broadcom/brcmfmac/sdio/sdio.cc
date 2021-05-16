@@ -3048,7 +3048,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
 #if !defined(NDEBUG)
   /* Poll for console output periodically */
   // This was the original check. But for some reason sdiodev->state never gets set to
-  // BRCMF_SDIOD_DATA. Need to investiage TODO(WLAN-36618)
+  // BRCMF_SDIOD_DATA. Need to investiage TODO(fxbug.dev/36618)
   // (bus->sdiodev->state == BRCMF_SDIOD_DATA && BRCMF_IS_ON(FWCON) && bus->console_interval != 0)
   if (BRCMF_IS_ON(FWCON) && bus->console_interval != 0) {
     bus->console.count += BRCMF_WD_POLL_MSEC;

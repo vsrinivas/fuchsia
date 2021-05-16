@@ -129,7 +129,7 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
 
   // If we needed to upload any replacement images for protected memory, do that first,
   // and make the "downloading uploader" wait on this upload.
-  // TODO(before-41029): would be more efficient to just serialize fake data directly, but
+  // TODO(fxbug.dev/41029): would be more efficient to just serialize fake data directly, but
   // that would require significant changes to snapshotter.
   if (gpu_uploader_for_replacements_) {
     FX_DCHECK(gpu_uploader_for_replacements_->HasContentToUpload());
