@@ -6,7 +6,7 @@ For issues related to these FIDL protocols, use the
 
 For issues with specific implementations, use the implementation's
 bug tracker. For example, for issues specific to the Chromium WebEngine
-implementation, follow [this guidance](../../../chromium/README.md#bugs-and-feature-requests).
+implementation, follow [this guidance](../../../src/chromium/README.md#bugs-and-feature-requests).
 
 ## Making Changes
 When making changes to the required protocols, also update manifest shards as
