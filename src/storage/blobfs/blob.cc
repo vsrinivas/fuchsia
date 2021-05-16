@@ -406,7 +406,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len,
     // returned instead.  If this happens, the end-user will retry at which point it's helpful if we
     // return the same error rather than ZX_ERR_BAD_STATE (see above).
     write_info_->write_error = status;
-    set_state(BlobState::kError);
+    MarkError();
     return status;
   }
 
@@ -608,7 +608,7 @@ zx_status_t Blob::MarkReadable(CompressionAlgorithm compression_algorithm) {
   if (readable_event_.is_valid()) {
     zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
-      set_state(BlobState::kError);
+      MarkError();
       return status;
     }
   }
@@ -616,6 +616,15 @@ zx_status_t Blob::MarkReadable(CompressionAlgorithm compression_algorithm) {
   syncing_state_ = SyncingState::kSyncing;
   write_info_.reset();
   return ZX_OK;
+}
+
+void Blob::MarkError() {
+  if (state_ != BlobState::kError) {
+    if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to evict blob from cache";
+    }
+    set_state(BlobState::kError);
+  }
 }
 
 zx_status_t Blob::GetReadableEvent(zx::event* out) {
@@ -1323,8 +1332,12 @@ zx_status_t Blob::Purge() {
     transaction.Commit(*blobfs_->GetJournal());
   }
 
-  if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK)
-    return status;
+  // If the blob is in the error state, it should have already been evicted from
+  // the cache (see MarkError).
+  if (state_ != BlobState::kError) {
+    if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK)
+      return status;
+  }
 
   set_state(BlobState::kPurged);
   return ZX_OK;

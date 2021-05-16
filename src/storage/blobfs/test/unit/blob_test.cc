@@ -254,6 +254,11 @@ TEST_P(BlobTest, WriteErrorsAreFused) {
   EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_ERR_NO_SPACE);
   // Writing just 1 byte now should see the same error returned.
   EXPECT_EQ(file->Write(info->data.get(), 1, 0, &out_actual), ZX_ERR_NO_SPACE);
+
+  // Whilst we have the failed file still open, we should be able to try again immediately.
+  fbl::RefPtr<fs::Vnode> file2;
+  ASSERT_EQ(root->Create(info->path + 1, 0, &file2), ZX_OK);
+  ASSERT_EQ(file2->Truncate(info->size_data), ZX_OK);
 }
 
 TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {

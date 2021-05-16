@@ -200,6 +200,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   [[nodiscard]] zx_status_t MarkReadable(CompressionAlgorithm compression_algorithm)
       __TA_REQUIRES(mutex_);
 
+  // Puts a blob into an error state and removes it from the cache so that a client may immediately
+  // have another attempt if required.
+  void MarkError() __TA_REQUIRES(mutex_);
+
   // Returns a handle to an event which will be signalled when the blob is readable.
   //
   // Returns "ZX_OK" if successful, otherwise the error code will indicate the failure status.
