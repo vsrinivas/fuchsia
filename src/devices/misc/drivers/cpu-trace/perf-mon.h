@@ -118,7 +118,8 @@ struct PmuPerTraceState {
 
 // TODO(dje): add unbindable?
 class PerfmonDevice;
-using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable,
+                               ddk::Messageable<fidl_perfmon::Controller>::Mixin>;
 
 class PerfmonDevice : public DeviceType, public fidl::WireServer<fidl_perfmon::Controller> {
  public:
@@ -172,7 +173,6 @@ class PerfmonDevice : public DeviceType, public fidl::WireServer<fidl_perfmon::C
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   static void FreeBuffersForTrace(PmuPerTraceState* per_trace, uint32_t num_allocated);
@@ -202,8 +202,6 @@ class PerfmonDevice : public DeviceType, public fidl::WireServer<fidl_perfmon::C
   // The zx_mtrace_control() syscall to use. In the real device this is the syscall itself.
   // In tests it is replaced with something suitable for the test.
   mtrace_control_func_t* const mtrace_control_;
-
-  mtx_t lock_{};
 
   // Only one open of this device is supported at a time. KISS for now.
   bool opened_ = false;

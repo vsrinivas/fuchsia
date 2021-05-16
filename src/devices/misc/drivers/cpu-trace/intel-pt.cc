@@ -86,9 +86,10 @@ typedef struct ipt_per_trace_state {
 
 // TODO(dje): add unbindable?
 class InsntraceDevice;
-using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable,
+                               ddk::Messageable<fuchsia_insntrace::Controller>::Mixin>;
 
-class InsntraceDevice : public DeviceType, fidl::WireServer<fuchsia_insntrace::Controller> {
+class InsntraceDevice : public DeviceType, public fidl::WireServer<fuchsia_insntrace::Controller> {
  public:
   explicit InsntraceDevice(zx_device_t* parent, zx::bti bti)
       : DeviceType(parent), bti_(std::move(bti)) {}
@@ -135,7 +136,6 @@ class InsntraceDevice : public DeviceType, fidl::WireServer<fuchsia_insntrace::C
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   // Low level routines
@@ -151,8 +151,6 @@ class InsntraceDevice : public DeviceType, fidl::WireServer<fuchsia_insntrace::C
   zx_status_t X86PtFreeBuffer(BufferDescriptor descriptor);
   zx_status_t X86PtStageTraceData(zx_handle_t resource, BufferDescriptor descriptor);
   zx_status_t X86PtGetTraceData(zx_handle_t resource, BufferDescriptor descriptor);
-
-  mtx_t lock_{};
 
   // Only one open of this device is supported at a time. KISS for now.
   bool opened_ = false;
@@ -1110,14 +1108,6 @@ zx_status_t InsntraceDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
 zx_status_t InsntraceDevice::DdkClose(uint32_t flags) {
   opened_ = false;
   return ZX_OK;
-}
-
-zx_status_t InsntraceDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  mtx_lock(&lock_);
-  fidl::WireDispatch<fuchsia_insntrace::Controller>(this, msg, &transaction);
-  mtx_unlock(&lock_);
-  return transaction.Status();
 }
 
 void InsntraceDevice::DdkRelease() {
