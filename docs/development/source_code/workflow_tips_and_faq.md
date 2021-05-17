@@ -53,7 +53,7 @@ $ git commit
 # Upload your work to Gerrit for review
 $ jiri upload
 # OR
-$ git push origin HEAD:refs/for/master
+$ git push origin HEAD:refs/for/main
 ```
 
 Congratulations, you made your first Gerrit change!
@@ -82,7 +82,7 @@ $ git commit --amend
 # Now upload the new patchset to Gerrit:
 $ jiri upload
 # OR
-$ git push origin HEAD:refs/for/master
+$ git push origin HEAD:refs/for/main
 ```
 
 When you want to update your `myfeature` branch because you got some review
@@ -106,11 +106,11 @@ $ git reset HEAD
 # Now you can upload your modified changes to Gerrit:
 $ jiri upload
 # OR
-$ git push origin HEAD:refs/for/master
+$ git push origin HEAD:refs/for/main
 ```
 
 When you see "merge conflict" in Gerrit because your change can't cleanly be
-integrated with the `master` branch:
+integrated with the `main` branch:
 
 ```shell
 # Checkout the branch for the change you need to update (e.g. "myfeature"):
@@ -118,12 +118,12 @@ $ git checkout myfeature
 # Update your git repository:
 $ git fetch
 # Update your branch:
-$ git rebase origin/master
+$ git rebase origin/main
 # Fixup and continue the rebase as necessary, until you see "Successfully rebased ..."
 # Then upload your newly updated code:
 $ jiri upload
 # OR
-$ git push origin HEAD:refs/for/master
+$ git push origin HEAD:refs/for/main
 ```
 
 When you've been working for more than a day, and you need to "sync your
@@ -191,7 +191,7 @@ $ jiri upload
 Attempt a rebase:
 
 ```shell
-$ git fetch origin && git rebase origin/master
+$ git fetch origin && git rebase origin/main
 # Resolve conflicts as needed...
 $ jiri upload
 ```
@@ -223,7 +223,7 @@ convenience wrapper around many tools built in the Fuchsia tree, and helps
 with many daily workflow tasks, such as building, running tests, consuming
 logs, connecting to shells on devices, and many other operations.
 
-### Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
+### Q: Will a git rebase to origin/main mess up my jiri-updated (i.e. synchronized) view of the repository?
 
 A: Yes, unless jiri is configured to sync the rebased repository/petal to HEAD
 instead of the globally integrated version. This is not the case if you use the
@@ -232,14 +232,14 @@ repos, but may be the case if you set up your checkout in the past or used `fx
 set-petal X`.
 
 When working at petal X (accomplished with `fx set-petal X`), `jiri update` will
-rebase the local branches in repo X onto HEAD of origin/master. But other
+rebase the local branches in repo X onto HEAD of origin/main. But other
 petals' repos will be synced to specific revisions that may be behind HEAD of
-their origin/master.
+their origin/main.
 
 Fuchsia's continuous integration system (specifically rollers) makes a new revision
 of a petal available to other petals only after testing that the new revision
 doesn't break other petals. `jiri update` will always leave other petals synced
-to these successfully-tested revisions. But a git rebase to origin/master for a
+to these successfully-tested revisions. But a git rebase to origin/main for a
 petal may advance that repo beyond the tested revision, which has the potential
 to introduce breaking changes. The result may be that you can build for a
 certain petal, but not for other petals (e.g., correctly build garnet, but not
