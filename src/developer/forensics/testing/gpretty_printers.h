@@ -23,7 +23,7 @@ namespace fit {
 
 // Pretty-prints fit::result_state in gTest matchers instead of the default byte string in case of
 // failed expectations.
-void PrintTo(const fit::result_state& state, std::ostream* os) {
+inline void PrintTo(const fit::result_state& state, std::ostream* os) {
   std::string state_str;
   switch (state) {
     case fit::result_state::pending:
@@ -43,7 +43,7 @@ void PrintTo(const fit::result_state& state, std::ostream* os) {
 
 namespace forensics {
 
-void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
+inline void PrintTo(const Error error, std::ostream* os) { *os << ToString(error); }
 
 namespace feedback_data {
 
@@ -75,7 +75,7 @@ inline std::string Format(const std::string& input) {
 
 }  // namespace pretty
 
-void PrintTo(const AnnotationOr& value, std::ostream* os) {
+inline void PrintTo(const AnnotationOr& value, std::ostream* os) {
   *os << fostr::Indent;
   *os << "{ ";
   if (value.HasValue()) {
@@ -87,7 +87,7 @@ void PrintTo(const AnnotationOr& value, std::ostream* os) {
   *os << fostr::Outdent;
 }
 
-void PrintTo(const AttachmentValue& value, std::ostream* os) {
+inline void PrintTo(const AttachmentValue& value, std::ostream* os) {
   *os << fostr::Indent;
   *os << "{ ";
   switch (value.State()) {
@@ -114,7 +114,7 @@ namespace feedback {
 
 // Pretty-prints Attachment in gTest matchers instead of the default byte string in case of failed
 // expectations.
-void PrintTo(const Attachment& attachment, std::ostream* os) {
+inline void PrintTo(const Attachment& attachment, std::ostream* os) {
   *os << fostr::Indent;
   *os << fostr::NewLine << "key: " << attachment.key;
   *os << fostr::NewLine << "value: ";
@@ -133,7 +133,7 @@ void PrintTo(const Attachment& attachment, std::ostream* os) {
 
 // Pretty-prints Annotation in gTest matchers instead of the default byte string in case of failed
 // expectations.
-void PrintTo(const Annotation& annotation, std::ostream* os) {
+inline void PrintTo(const Annotation& annotation, std::ostream* os) {
   *os << fostr::Indent;
   *os << fostr::NewLine << "key: " << annotation.key;
   *os << fostr::NewLine << "value: ";
@@ -147,7 +147,7 @@ namespace mem {
 
 // Pretty-prints string VMOs in gTest matchers instead of the default byte string in case of failed
 // expectations.
-void PrintTo(const Buffer& vmo, std::ostream* os) {
+inline void PrintTo(const Buffer& vmo, std::ostream* os) {
   std::string value;
   FX_CHECK(fsl::StringFromVmo(vmo, &value));
   *os << "'" << value << "'";
