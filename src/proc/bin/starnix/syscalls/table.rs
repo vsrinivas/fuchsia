@@ -154,6 +154,7 @@ pub fn dispatch_syscall(
         set_tid_address[1],
         sigaltstack[2],
         tgkill[3],
+        umask[1],
         uname[1],
         write[3],
         writev[3],

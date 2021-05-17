@@ -136,7 +136,7 @@ fn open_internal(
     dir_fd: FdNumber,
     user_path: UserCString,
     fio_flags: u32,
-    mode: i32,
+    mode: mode_t,
 ) -> Result<FileHandle, Errno> {
     if dir_fd != FdNumber::AT_FDCWD {
         not_implemented!("dirfds are unimplemented");
@@ -144,7 +144,13 @@ fn open_internal(
     }
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    strace!("open_internal({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), fio_flags, mode);
+    strace!(
+        "open_internal({}, {}, {:#x}, {:#o})",
+        dir_fd,
+        String::from_utf8_lossy(path),
+        fio_flags,
+        mode
+    );
     if path[0] != b'/' {
         not_implemented!("non-absolute paths are unimplemented");
         return Err(ENOENT);
@@ -153,20 +159,16 @@ fn open_internal(
     // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
     let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
 
-    let description = syncio::directory_open(
-        &task.fs.root,
-        path,
-        fio_flags,
-        0,
-        zx::Time::INFINITE,
-    )
-    .map_err(|e| match e {
-        zx::Status::NOT_FOUND => ENOENT,
-        _ => {
-            warn!("open failed: {:?}", e);
-            EIO
-        }
-    })?;
+    // TODO: Check fio::OPEN_FLAG_CREATE and use task.fs.apply_umask().
+
+    let description = syncio::directory_open(&task.fs.root, path, fio_flags, 0, zx::Time::INFINITE)
+        .map_err(|e| match e {
+            zx::Status::NOT_FOUND => ENOENT,
+            _ => {
+                warn!("open failed: {:?}", e);
+                EIO
+            }
+        })?;
     Ok(RemoteFile::from_description(description))
 }
 
@@ -175,7 +177,7 @@ pub fn sys_openat(
     dir_fd: FdNumber,
     user_path: UserCString,
     flags: u32,
-    mode: i32,
+    mode: mode_t,
 ) -> Result<SyscallResult, Errno> {
     let fio_flags = get_fio_flags_from_open_flags(flags)?;
     let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, mode)?;
@@ -294,6 +296,10 @@ pub fn sys_getcwd(
     }
     ctx.task.mm.write_memory(buf, bytes)?;
     return Ok(bytes.len().into());
+}
+
+pub fn sys_umask(ctx: &SyscallContext<'_>, umask: mode_t) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.fs.set_umask(umask).into())
 }
 
 pub fn sys_ioctl(

@@ -19,7 +19,7 @@ use crate::types::*;
 /// Create a FileSystem for use in testing.
 ///
 /// Open "/pkg" and returns a FileSystem rooted in that directory.
-fn create_test_file_system() -> Arc<FileSystem> {
+pub fn create_test_file_system() -> Arc<FileSystem> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
