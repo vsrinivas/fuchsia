@@ -43,6 +43,7 @@ class PressureObserver {
   ~PressureObserver();
 
   Level GetCurrentLevel() const { return level_; }
+  Level GetCurrentLevelForWatcher() const;
 
  private:
   zx_status_t InitMemPressureEvents();

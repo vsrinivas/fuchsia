@@ -158,4 +158,11 @@ void PressureObserver::OnLevelChanged(zx_handle_t handle) {
   }
 }
 
+Level PressureObserver::GetCurrentLevelForWatcher() const {
+  Level current_level = level_;
+  // Watchers of the memory pressure service do not recognize the Imminent-OOM level, the highest
+  // level that they can receive is Critical.
+  return (current_level == Level::kImminentOOM) ? Level::kCritical : current_level;
+}
+
 }  // namespace monitor

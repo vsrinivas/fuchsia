@@ -13,7 +13,6 @@
 #include <lib/zx/clock.h>
 
 #include <gtest/gtest.h>
-#include "src/developer/memory/monitor/pressure_observer.h"
 
 namespace monitor {
 namespace test {
@@ -129,6 +128,7 @@ class PressureWatcherForTest : public fmp::Watcher {
 
   void OnLevelChanged(fmp::Level level, OnLevelChangedCallback cb) override {
     changes_++;
+    last_level_ = level;
     if (send_responses_) {
       cb();
     } else {
@@ -142,9 +142,12 @@ class PressureWatcherForTest : public fmp::Watcher {
 
   int NumChanges() const { return changes_; }
 
+  fmp::Level LastLevel() const { return last_level_; }
+
  private:
   fmp::WatcherPtr watcher_ptr_;
   fidl::Binding<Watcher> binding_;
+  fmp::Level last_level_;
   int changes_ = 0;
   bool send_responses_;
   OnLevelChangedCallback stashed_cb_;
@@ -367,6 +370,55 @@ TEST_F(PressureNotifierUnitTest, ReleaseWatcherPendingCallback) {
   RunLoopUntilIdle();
   // Verify that the watcher has been freed.
   ASSERT_EQ(GetWatcherCount(), 0);
+}
+
+TEST_F(PressureNotifierUnitTest, WatcherDoesNotSeeImminentOOM) {
+  PressureWatcherForTest watcher(true);
+
+  TriggerLevelChange(Level::kImminentOOM);
+  watcher.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 1);
+  ASSERT_EQ(watcher.NumChanges(), 1);
+  // Watcher sees the initial level as Critical even though it was Imminent-OOM.
+  ASSERT_EQ(watcher.LastLevel(), fmp::Level::CRITICAL);
+
+  TriggerLevelChange(Level::kWarning);
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher.NumChanges(), 2);
+  // Non Imminent-OOM levels come through as expected.
+  ASSERT_EQ(watcher.LastLevel(), fmp::Level::WARNING);
+
+  TriggerLevelChange(Level::kImminentOOM);
+  RunLoopUntilIdle();
+  // Watcher does not see this change as the PressureNotifier won't signal it.
+  ASSERT_EQ(watcher.NumChanges(), 2);
+  ASSERT_EQ(watcher.LastLevel(), fmp::Level::WARNING);
+}
+
+TEST_F(PressureNotifierUnitTest, DelayedWatcherDoesNotSeeImminentOOM) {
+  // Don't send responses right away, but wait for the delayed callback to come through.
+  PressureWatcherForTest watcher(false);
+
+  TriggerLevelChange(Level::kNormal);
+  watcher.Register(Provider());
+  RunLoopUntilIdle();
+  ASSERT_EQ(GetWatcherCount(), 1);
+  ASSERT_EQ(watcher.NumChanges(), 1);
+  ASSERT_EQ(watcher.LastLevel(), fmp::Level::NORMAL);
+
+  // This should not trigger a new notification as the watcher has not responded to the last one.
+  TriggerLevelChange(Level::kImminentOOM);
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher.NumChanges(), 1);
+  ASSERT_EQ(watcher.LastLevel(), fmp::Level::NORMAL);
+
+  // Respond to the last message. This should send a new notification to the watcher.
+  watcher.Respond();
+  RunLoopUntilIdle();
+  ASSERT_EQ(watcher.NumChanges(), 2);
+  // Watcher will see the delayed Imminent-OOM level as Critical.
+  ASSERT_EQ(watcher.LastLevel(), fmp::Level::CRITICAL);
 }
 
 TEST_F(PressureNotifierUnitTest, CrashReportOnCritical) {

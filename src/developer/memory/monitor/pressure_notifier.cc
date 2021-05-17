@@ -141,7 +141,7 @@ void PressureNotifier::OnLevelChangedCallback(WatcherState* watcher) {
     return;
   }
 
-  Level current_level = observer_.GetCurrentLevel();
+  Level current_level = observer_.GetCurrentLevelForWatcher();
   // The watcher might have missed a level change if it occurred before this callback. If the
   // level has changed, notify the watcher.
   if (watcher->level_sent != current_level) {
@@ -164,7 +164,7 @@ void PressureNotifier::RegisterWatcher(
   watcher_proxy.set_error_handler(
       [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
 
-  Level current_level = observer_.GetCurrentLevel();
+  Level current_level = observer_.GetCurrentLevelForWatcher();
   watchers_.emplace_back(std::make_unique<WatcherState>(
       WatcherState{std::move(watcher_proxy), current_level, false, false}));
 
