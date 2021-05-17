@@ -4,8 +4,8 @@
 
 use {
     anyhow::{anyhow, format_err, Context, Error},
+    ffx_component_test_args::TestCommand,
     ffx_core::ffx_plugin,
-    ffx_test_args::TestCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,

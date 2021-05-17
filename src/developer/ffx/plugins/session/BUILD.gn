@@ -13,7 +13,6 @@ ffx_plugin("ffx_session") {
     "launch:ffx_session_launch",
     "restart:ffx_session_restart",
     "show:ffx_session_show",
-    "//src/sys/run_test_suite/ffx:ffx_test",
   ]
   sources = [ "src/args.rs" ]
 }

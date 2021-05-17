@@ -13,7 +13,7 @@ ffx_plugin("ffx_component") {
     "run:ffx_component_run",
     "select:ffx_component_select",
     "show:ffx_component_show",
-    "//src/sys/run_test_suite/ffx:ffx_test",
+    "//src/sys/run_test_suite/ffx/component_test:ffx_component_test",
   ]
 
   sources = [ "src/args.rs" ]
