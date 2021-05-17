@@ -160,17 +160,6 @@ impl ConnectionState {
         }
     }
 
-    fn take_rcs(&mut self) -> Option<RcsConnection> {
-        if self.is_rcs() {
-            match std::mem::replace(self, ConnectionState::Disconnected) {
-                ConnectionState::Rcs(r) => Some(r),
-                _ => None,
-            }
-        } else {
-            None
-        }
-    }
-
     fn is_rcs(&self) -> bool {
         match self {
             ConnectionState::Rcs(_) => true,
@@ -704,6 +693,12 @@ impl Target {
         ));
         self.inner.state.borrow_mut().connection_state = update;
         if former_state != self.inner.state.borrow().connection_state {
+            if self.inner.state.borrow().connection_state.is_rcs() {
+                self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
+                    log::warn!("unable to enqueue RCS activation event: {:#}", err)
+                });
+            }
+
             self.events
                 .push(TargetEvent::ConnectionStateChanged(
                     former_state,
@@ -855,19 +850,6 @@ impl Target {
         let mut last_response = self.inner.last_response.borrow_mut();
         if *last_response < other {
             *last_response = other;
-        }
-    }
-
-    fn overwrite_state(&self, mut other: TargetState) {
-        if let Some(rcs) = other.connection_state.take_rcs() {
-            // Nots this so that we know to push an event.
-            let rcs_activated = !self.inner.state.borrow().connection_state.is_rcs();
-            self.inner.state.borrow_mut().connection_state = ConnectionState::Rcs(rcs);
-            if rcs_activated {
-                self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
-                    log::warn!("unable to enqueue RCS activation event: {:#}", err)
-                });
-            }
         }
     }
 
@@ -1475,12 +1457,11 @@ impl TargetCollection {
             to_update.addrs_extend(new_target.addrs());
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
-            // TODO(76632): The following overwrite could be dropping RcsConnections.
-            to_update.overwrite_state(TargetState {
-                connection_state: std::mem::replace(
+            to_update.update_connection_state(|_| {
+                std::mem::replace(
                     &mut new_target.inner.state.borrow_mut().connection_state,
                     ConnectionState::Disconnected,
-                ),
+                )
             });
 
             to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
@@ -2110,9 +2091,7 @@ mod test {
         );
 
         let fut = t.events.wait_for(None, |e| e == TargetEvent::RcsActivated);
-        let mut new_state = TargetState::default();
-        new_state.connection_state = ConnectionState::Rcs(conn);
-        t.overwrite_state(new_state);
+        t.update_connection_state(|_| ConnectionState::Rcs(conn));
         fut.await.unwrap();
     }
 
