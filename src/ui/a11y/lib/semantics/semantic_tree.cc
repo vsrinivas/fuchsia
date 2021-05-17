@@ -495,6 +495,9 @@ void SemanticTree::FillInspectTree(inspect::Node inspect_node,
     if (node->has_location()) {
       inspect_node.CreateString("location", locationToString(node->location()), inspector);
     }
+    if (node->has_container_id()) {
+      inspect_node.CreateUint("offset_container_id", node->container_id(), inspector);
+    }
     if (node->has_transform()) {
       inspect_node.CreateString("transform", mat4ToString(node->transform()), inspector);
     }
