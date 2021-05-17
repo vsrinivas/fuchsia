@@ -288,6 +288,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       }
       __builtin_unreachable();
     }
+    case flat::Type::Kind::kBox:
+      // this defers to the code path for a nullable struct identifier type.
+      return CompileType(static_cast<const flat::BoxType*>(type)->boxed_type, context, wire_format);
   }
 }
 

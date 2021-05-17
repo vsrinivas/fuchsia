@@ -15,6 +15,7 @@ namespace flat {
 struct CreateInvocation;
 struct Decl;
 struct TypeDecl;
+struct Struct;
 class LibraryMediator;
 struct LayoutInvocation;
 struct TypeConstraints;
@@ -26,6 +27,7 @@ struct Type : public Object {
 
   enum struct Kind {
     kArray,
+    kBox,
     kVector,
     kString,
     kHandle,
@@ -41,7 +43,10 @@ struct Type : public Object {
 
   const Name name;
   const Kind kind;
-  const types::Nullability nullability;
+  // TODO(fxbug.dev/70247): This is temporarily not-const so that we can modify
+  // any boxed structs' nullability to always be nullable, in order to share code
+  // paths between the old and new syntax.
+  types::Nullability nullability;
 
   // Returns the nominal resourceness of the type per the FTP-057 definition.
   // For IdentifierType, can only be called after the Decl has been compiled.
@@ -370,6 +375,30 @@ struct TransportSideType final : public Type {
         .Compare(name, o.name)
         .Compare(end, o.end)
         .Compare(protocol_decl, o.protocol_decl);
+  }
+
+  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
+                                               const CreateInvocation& create_invocation,
+                                               const flat::TypeTemplate* layout,
+                                               std::unique_ptr<Type>* out_type,
+                                               LayoutInvocation* out_params) const override;
+
+  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
+                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        LayoutInvocation* out_params) const override;
+};
+
+struct BoxType final : public Type {
+  BoxType(const Name& name, const Type* boxed_type)
+      : Type(name, Kind::kBox, types::Nullability::kNullable), boxed_type(boxed_type) {}
+
+  const Type* boxed_type;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  Comparison Compare(const Type& other) const override {
+    const auto& o = static_cast<const BoxType&>(other);
+    return Type::Compare(o).Compare(name, o.name).Compare(boxed_type, o.boxed_type);
   }
 
   bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,

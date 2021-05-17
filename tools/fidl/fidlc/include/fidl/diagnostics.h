@@ -304,6 +304,7 @@ constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
 // Type Templates
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
+constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
 // old style
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParameterizeAlias(
@@ -327,7 +328,6 @@ constexpr ErrorDef<flat::Name> ErrLayoutCannotBeParameterized("{} cannot be para
 constexpr ErrorDef<> ErrCannotConstrainInLayoutDecl(
     "cannot add constraints in this position; constraints must be added at the use-site");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
 // new style
 constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
@@ -341,6 +341,14 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotConstrainTwice(
     "{} cannot add additional constraint");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
+// The same error as ErrCannotBeNullable, but with a more specific message since the
+// optionality of boxes may be confusing
+constexpr ErrorDef<> ErrBoxCannotBeNullable(
+    "cannot specify optionality for box, boxes are optional by default");
+constexpr ErrorDef<> ErrBoxedTypeCannotBeNullable(
+    "no double optionality, boxes are already optional");
+constexpr ErrorDef<flat::Name> ErrCannotBeBoxed(
+    "type {} cannot be boxed, try using optional instead");
 // other
 constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
     "handle subtype {} is not a defined resource");

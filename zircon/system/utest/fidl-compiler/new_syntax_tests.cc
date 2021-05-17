@@ -1126,6 +1126,20 @@ type Foo = resource struct {
   ASSERT_COMPILED(library);
 }
 
+TEST(NewSyntaxTests, BadBoxInOldSyntax) {
+  TestLibrary library(R"FIDL(
+library test;
+
+struct Foo {};
+
+struct Bar {
+  box<Foo> foo;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+}
+
 TEST(NewSyntaxTests, BadTooManyLayoutParameters) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

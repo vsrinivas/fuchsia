@@ -353,7 +353,7 @@ struct MyStruct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
 }
 
-TEST(StructTests, BadMutuallyRecursive) {
+TEST(StructsTests, BadMutuallyRecursive) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -371,7 +371,7 @@ type Yang = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
-TEST(StructTests, BadMutuallyRecursiveOld) {
+TEST(StructsTests, BadMutuallyRecursiveOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -384,6 +384,58 @@ struct Yang {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+}
+
+TEST(StructsTests, BadBoxCannotBeNullable) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type BoxedStruct = struct {};
+
+type Foo = struct {
+  foo box<Foo>:optional;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxCannotBeNullable);
+}
+
+TEST(StructsTests, BadBoxedTypeCannotBeNullable) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type BoxedStruct = struct {};
+
+type Foo = struct {
+  foo box<Foo:optional>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxedTypeCannotBeNullable);
+}
+
+TEST(StructsTests, BadTypeCannotBeBoxed) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  for (const std::string& definition : {
+           "type Foo = struct { union_member box<union { 1: data uint8; }>; };",
+           "type Foo = struct { table_member box<table { 1: data uint8; }>; };",
+           "type Foo = struct { enum_member box<enum { DATA = 1; }>; };",
+           "type Foo = struct { bits_member box<bits { DATA = 1; }>; };",
+           "type Foo = struct { array_member box<array<uint8, 1>>; };",
+           "type Foo = struct { vector_member box<vector<uint8>>; };",
+           "type Foo = struct { string_member box<string>; };",
+           "type Foo = struct { prim_member box<int32>; };",
+           "type Foo = struct { resource_member box<zx.handle>; };",
+       }) {
+    std::string fidl_library = "library example;\nusing zx;\n\n" + definition + "\n";
+    auto library = WithLibraryZx(fidl_library, experimental_flags);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeBoxed);
+  }
 }
 
 }  // namespace

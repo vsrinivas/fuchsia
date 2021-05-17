@@ -39,6 +39,7 @@ class UnderlyingType {
         kind_ = Kind::kRequestHandle;
         break;
       case flat::Type::Kind::kTransportSide:
+      case flat::Type::Kind::kBox:
         assert(false && "should not be created in the old syntax");
         __builtin_unreachable();
       case flat::Type::Kind::kVector:

@@ -142,6 +142,8 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kProtocol:
           case flat::Decl::Kind::kService:
             return DataSize(kHandleSize);
+          // TODO(fxbug.dev/70247): this should be handled as a box and nullable structs should
+          // never be visited
           case flat::Decl::Kind::kStruct:
             return DataSize(8);
           case flat::Decl::Kind::kUnion:
@@ -160,6 +162,8 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
       }
     }
   }
+
+  std::any Visit(const flat::BoxType& object) override { return DataSize(8); }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(kHandleSize); }
   std::any Visit(const flat::TransportSideType& object) override { return DataSize(kHandleSize); }
@@ -247,6 +251,8 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kProtocol:
           case flat::Decl::Kind::kService:
             return DataSize(kHandleSize);
+          // TODO(fxbug.dev/70247): this should be handled as a box and nullable structs should
+          // never be visited
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:
             return DataSize(8);
@@ -263,6 +269,8 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
         return Alignment(object.type_decl);
     }
   }
+
+  std::any Visit(const flat::BoxType& object) override { return DataSize(8); }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(kHandleSize); }
   std::any Visit(const flat::TransportSideType& object) override { return DataSize(kHandleSize); }
@@ -400,6 +408,11 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
     }
   }
 
+  std::any Visit(const flat::BoxType& object) override {
+    // The nullable struct case will add one, no need to do it here.
+    return Depth(object.boxed_type);
+  }
+
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(0); }
   std::any Visit(const flat::TransportSideType& object) override { return DataSize(0); }
 
@@ -535,6 +548,8 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
     return MaxHandles(object.type_decl);
   }
 
+  std::any Visit(const flat::BoxType& object) override { return MaxHandles(object.boxed_type); }
+
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(1); }
   std::any Visit(const flat::TransportSideType& object) override { return DataSize(1); }
 
@@ -565,6 +580,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
           case flat::Type::Kind::kString:
           case flat::Type::Kind::kPrimitive:
           case flat::Type::Kind::kIdentifier:
+          case flat::Type::Kind::kBox:
             continue;
         }
       }
@@ -677,6 +693,8 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
         return MaxOutOfLine(object.type_decl);
     }
   }
+
+  std::any Visit(const flat::BoxType& object) override { return MaxOutOfLine(object.boxed_type); }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(0); }
   std::any Visit(const flat::TransportSideType& object) override { return DataSize(0); }
@@ -810,6 +828,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
           case flat::Decl::Kind::kProtocol:
           case flat::Decl::Kind::kService:
             return false;
+          // TODO(fxbug.dev/70247): this should be handled as a box and nullable structs should
+          // never be visited
           case flat::Decl::Kind::kStruct:
           case flat::Decl::Kind::kUnion:
             return Padding(UnalignedSize(object.type_decl, wire_format()), 8) > 0 ||
@@ -827,6 +847,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
         return HasPadding(object.type_decl);
     }
   }
+
+  std::any Visit(const flat::BoxType& object) override { return HasPadding(object.boxed_type); }
 
   std::any Visit(const flat::RequestHandleType& object) override { return false; }
   std::any Visit(const flat::TransportSideType& object) override { return false; }
@@ -926,6 +948,10 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
     }
 
     return HasFlexibleEnvelope(object.type_decl, wire_format());
+  }
+
+  std::any Visit(const flat::BoxType& object) override {
+    return HasFlexibleEnvelope(object.boxed_type, wire_format());
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return false; }

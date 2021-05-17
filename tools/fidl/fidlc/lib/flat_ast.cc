@@ -320,6 +320,7 @@ bool IsSimple(const Type* type, Reporter* reporter) {
         case Type::Kind::kVector:
         case Type::Kind::kString:
         case Type::Kind::kIdentifier:
+        case Type::Kind::kBox:
           return false;
       }
     }
@@ -345,6 +346,9 @@ bool IsSimple(const Type* type, Reporter* reporter) {
           return false;
         }
       }
+      // TODO(fxbug.dev/70247): This only applies to nullable structs, which goes
+      // through the kBox path in the new syntax. This can be removed along with
+      // old syntax support
       switch (identifier_type->nullability) {
         case types::Nullability::kNullable:
           // If the identifier is nullable, then we can handle a depth of 1
@@ -353,6 +357,10 @@ bool IsSimple(const Type* type, Reporter* reporter) {
         case types::Nullability::kNonnullable:
           return depth == 0u;
       }
+    }
+    case Type::Kind::kBox: {
+      // we can handle a depth of 1 because the secondary object is directly accessible.
+      return depth <= 1u;
     }
   }
 }
@@ -1599,6 +1607,85 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
   TypeAlias* decl_;
 };
 
+class BoxTypeTemplate final : public TypeTemplate {
+ public:
+  BoxTypeTemplate(Typespace* typespace, Reporter* reporter)
+      : TypeTemplate(Name::CreateIntrinsic("box"), typespace, reporter) {}
+
+  static bool IsStruct(const Type* boxed_type) {
+    if (!boxed_type || boxed_type->kind != Type::Kind::kIdentifier)
+      return false;
+
+    return static_cast<const IdentifierType*>(boxed_type)->type_decl->kind == Decl::Kind::kStruct;
+  }
+
+  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
+    size_t num_params = unresolved_args.parameters->items.size();
+    if (num_params != 1) {
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(1),
+                  num_params);
+    }
+
+    const Type* boxed_type = nullptr;
+    if (!lib.ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
+      return false;
+    if (!IsStruct(boxed_type))
+      return Fail(ErrCannotBeBoxed, boxed_type->name);
+    const auto* inner = static_cast<const IdentifierType*>(boxed_type);
+    if (inner->nullability == types::Nullability::kNullable) {
+      reporter_->Report(ErrBoxedTypeCannotBeNullable, unresolved_args.parameters->items[0]->span);
+      return false;
+    }
+    // We disallow specifying the boxed type as nullable in FIDL source but
+    // then mark the boxed type is nullable, so that internally it shares the
+    // same code path as its old syntax equivalent (a nullable struct). This
+    // allows us to call `f(type)` in the old code and `f(type->boxed_type)`
+    // in the new code.
+    // As a temporary workaround for piping unconst-ness everywhere or having
+    // box types own their own boxed types, we cast away the const to be able
+    // to change the boxed type to be mutable.
+    auto* mutable_inner = const_cast<IdentifierType*>(inner);
+    mutable_inner->nullability = types::Nullability::kNullable;
+
+    out_params->boxed_type_resolved = boxed_type;
+    out_params->boxed_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
+
+    BoxType type(name_, boxed_type);
+    return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  }
+
+  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
+              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
+    assert(false && "Compiler bug: this type template should only be used in the new syntax");
+    return false;
+  }
+};
+
+bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
+                               const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                               LayoutInvocation* out_params) const {
+  size_t num_constraints = constraints.items.size();
+  // assume that a lone constraint was an attempt at specifying `optional` and provide a more
+  // specific error
+  // TOOD(fxbug.dev/75112): actually try to compile the optional constraint
+  if (num_constraints == 1)
+    return lib.Fail(ErrBoxCannotBeNullable, constraints.items[0]->span);
+  if (num_constraints > 1)
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(0), num_constraints);
+  *out_type = std::make_unique<BoxType>(name, boxed_type);
+  return true;
+}
+
+bool BoxType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& lib,
+                                                      const CreateInvocation& create_invocation,
+                                                      const TypeTemplate* layout,
+                                                      std::unique_ptr<Type>* out_type,
+                                                      LayoutInvocation* out_params) const {
+  assert(false && "Compiler bug: this type should only be used in the new syntax");
+  return false;
+}
+
 Typespace Typespace::RootTypes(Reporter* reporter) {
   Typespace root_typespace(reporter);
 
@@ -1667,6 +1754,9 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   auto client_end = std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
                                                                 TransportSide::kClient);
   root_typespace.new_syntax_templates_.emplace(client_end->name(), std::move(client_end));
+
+  auto box = std::make_unique<BoxTypeTemplate>(&root_typespace, reporter);
+  root_typespace.new_syntax_templates_.emplace(box->name(), std::move(box));
   return root_typespace;
 }
 
@@ -2875,7 +2965,8 @@ void Library::ConsumeProtocolDeclaration(
     if (has_request) {
       bool result = std::visit(
           [this, method_name, &maybe_request](auto params) -> bool {
-            return ConsumeParameterList(method_name, std::nullopt, std::move(params), true, &maybe_request);
+            return ConsumeParameterList(method_name, std::nullopt, std::move(params), true,
+                                        &maybe_request);
           },
           std::move(method->maybe_request));
       if (!result)
@@ -2890,14 +2981,14 @@ void Library::ConsumeProtocolDeclaration(
       SourceSpan response_span = raw::GetSpan(method->maybe_response);
       auto method_response_name =
           StringJoin({protocol_name.decl_name(), method_name.data(), "Response"}, "_");
-      std::optional<Name> response_name =
-          !has_error ? std::nullopt
-                     : std::make_optional<Name>(
-              Name::CreateDerived(this, response_span, method_response_name));
+      std::optional<Name> response_name = !has_error
+                                              ? std::nullopt
+                                              : std::make_optional<Name>(Name::CreateDerived(
+                                                    this, response_span, method_response_name));
 
       bool result = std::visit(
           [this, method_name, response_name(std::move(response_name)), has_error,
-              &maybe_response](auto params) -> bool {
+           &maybe_response](auto params) -> bool {
             return ConsumeParameterList(method_name, response_name, std::move(params), !has_error,
                                         &maybe_response);
           },
@@ -2906,7 +2997,8 @@ void Library::ConsumeProtocolDeclaration(
         return;
 
       if (has_error) {
-        if (!CreateMethodResult(protocol_name, response_span, method.get(), maybe_response, &maybe_response))
+        if (!CreateMethodResult(protocol_name, response_span, method.get(), maybe_response,
+                                &maybe_response))
           return;
       }
     }
@@ -2941,8 +3033,8 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
   // If the name is unset, we need to generate an anonymous name for the struct
   // representing this parameter list.
   Name name = assigned_name.has_value()
-              ? assigned_name.value()
-              : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
+                  ? assigned_name.value()
+                  : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
 
   std::vector<Struct::Member> members;
   for (auto& parameter : parameters->parameter_list) {
@@ -2961,7 +3053,7 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
       return false;
     ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
     members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
-        /* maybe_default_value=*/nullptr, std::move(attributes));
+                         /* maybe_default_value=*/nullptr, std::move(attributes));
   }
 
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
@@ -2993,8 +3085,8 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
   // If the name is unset, we need to generate an anonymous name for the struct
   // representing this parameter list.
   Name name = assigned_name.has_value()
-              ? assigned_name.value()
-              : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
+                  ? assigned_name.value()
+                  : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
 
   // TODO(fxbug.dev/74955): Once full-fledged anonymous layout attributes are
   //  implemented, this error check can be removed.
@@ -3004,8 +3096,8 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
 
   std::unique_ptr<TypeConstructorNew> unused_type_ctor;
   if (!ConsumeTypeConstructorNew(std::move(parameters->type_ctor), name,
-      /*raw_attribute_list=*/nullptr, is_request_or_response,
-      /*out_type_=*/nullptr))
+                                 /*raw_attribute_list=*/nullptr, is_request_or_response,
+                                 /*out_type_=*/nullptr))
     return false;
 
   auto* decl = LookupDeclByName(name);
@@ -4244,6 +4336,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
         case Type::Kind::kString:
         case Type::Kind::kRequestHandle:
         case Type::Kind::kTransportSide:
+        case Type::Kind::kBox:
           return;
         case Type::Kind::kArray:
         case Type::Kind::kVector: {
@@ -4733,9 +4826,12 @@ types::Resourceness Type::Resourceness() const {
       return static_cast<const VectorType*>(this)->element_type->Resourceness();
     case Type::Kind::kIdentifier:
       break;
+    case Type::Kind::kBox:
+      return static_cast<const BoxType*>(this)->boxed_type->Resourceness();
   }
 
-  auto decl = static_cast<const IdentifierType*>(this)->type_decl;
+  const auto* decl = static_cast<const IdentifierType*>(this)->type_decl;
+
   switch (decl->kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:
@@ -4775,9 +4871,12 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       return EffectiveResourceness(static_cast<const VectorType*>(type)->element_type);
     case Type::Kind::kIdentifier:
       break;
+    case Type::Kind::kBox:
+      return EffectiveResourceness(static_cast<const BoxType*>(type)->boxed_type);
   }
 
-  auto decl = static_cast<const IdentifierType*>(type)->type_decl;
+  const auto* decl = static_cast<const IdentifierType*>(type)->type_decl;
+
   switch (decl->kind) {
     case Decl::Kind::kBits:
     case Decl::Kind::kEnum:

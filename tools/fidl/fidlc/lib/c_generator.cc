@@ -225,6 +225,9 @@ void EmitMemberDecl(std::ostream* file, const CGenerator::Member& member) {
 
 void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member) {
   switch (member.kind) {
+    case flat::Type::Kind::kBox:
+      assert(false && "no box types should appear at this point");
+      __builtin_unreachable();
     case flat::Type::Kind::kArray:
       *file << "const " << member.type << " " << member.name;
       for (uint32_t array_count : member.array_counts) {
@@ -277,6 +280,9 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
 
 void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member) {
   switch (member.kind) {
+    case flat::Type::Kind::kBox:
+      assert(false && "no box types should appear at this point");
+      __builtin_unreachable();
     case flat::Type::Kind::kArray:
       *file << member.type << " out_" << member.name;
       for (uint32_t array_count : member.array_counts) {
@@ -480,6 +486,9 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
   for (const auto& member : request) {
     const auto& name = member.name;
     switch (member.kind) {
+      case flat::Type::Kind::kBox:
+        assert(false && "no box types should appear at this point");
+        __builtin_unreachable();
       case flat::Type::Kind::kArray:
         *file << kIndent << "memcpy(" << receiver << "->" << name << ", " << name << ", ";
         EmitArraySizeOf(file, member);
@@ -692,6 +701,9 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
                                 bool* out_allowed = nullptr) {
   std::string name = NameIdentifier(decl.name);
   const flat::Type* type = flat::GetType(decl.type_ctor);
+  // treat box types like we do nullable structs
+  if (type->kind == flat::Type::Kind::kBox)
+    type = static_cast<const flat::BoxType*>(type)->boxed_type;
   auto decl_kind = GetDeclKind(library, type);
   auto type_name = NameFlatCType(type, decl_kind);
   std::string element_type_name;
@@ -702,6 +714,9 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
     *out_allowed = true;
   }
   switch (type->kind) {
+    case flat::Type::Kind::kBox:
+      assert(false && "no box types should appear at this point");
+      __builtin_unreachable();
     case flat::Type::Kind::kArray: {
       ArrayCountsAndElementTypeName(library, type, &array_counts, &element_type_name);
       break;
@@ -1348,6 +1363,9 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
       for (const auto& member : response) {
         const auto& name = member.name;
         switch (member.kind) {
+          case flat::Type::Kind::kBox:
+            assert(false && "no box types should appear at this point");
+            __builtin_unreachable();
           case flat::Type::Kind::kArray:
             file_ << kIndent << "memcpy(out_" << name << ", _response->" << name << ", ";
             EmitArraySizeOf(&file_, member);
@@ -1487,6 +1505,9 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
     file_ << kIndent << kIndent << "status = (*ops->" << method_info.identifier << ")(ctx";
     for (const auto& member : request) {
       switch (member.kind) {
+        case flat::Type::Kind::kBox:
+          assert(false && "no box types should appear at this point");
+          __builtin_unreachable();
         case flat::Type::Kind::kArray:
         case flat::Type::Kind::kHandle:
         case flat::Type::Kind::kRequestHandle:

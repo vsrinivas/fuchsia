@@ -295,9 +295,13 @@ struct LayoutInvocation {
   // This has no users, probably because it's missing in the JSON IR (it is not
   // yet generated for experimental_maybe_from_type_alias).
   const Protocol* protocol_decl = nullptr;
+  // This has no users, probably because it's missing in the JSON IR (it is not
+  // yet generated for experimental_maybe_from_type_alias).
+  const Type* boxed_type_resolved = nullptr;
 
   // raw form of this type constructor's arguments
   TypeConstructorPtr element_type_raw = {};
+  TypeConstructorPtr boxed_type_raw = {};
   const Constant* size_raw = nullptr;
   // This has no users, probably because it's missing in the JSON IR (it is not
   // yet generated for partial_type_ctors). Notably, this is probably because this
@@ -1450,7 +1454,7 @@ class Library {
   std::vector<const Decl*> declaration_order_;
 
  private:
-  // TODO(fxbug.dev/7724): Remove when canonicalizing types.
+  // TODO(fxbug.dev/76219): Remove when canonicalizing types.
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
 
@@ -1596,6 +1600,7 @@ struct Object::VisitorAny {
   virtual std::any Visit(const IdentifierType&) = 0;
   virtual std::any Visit(const RequestHandleType&) = 0;
   virtual std::any Visit(const TransportSideType&) = 0;
+  virtual std::any Visit(const BoxType&) = 0;
   virtual std::any Visit(const Enum&) = 0;
   virtual std::any Visit(const Bits&) = 0;
   virtual std::any Visit(const Service&) = 0;
@@ -1644,6 +1649,8 @@ inline std::any RequestHandleType::AcceptAny(VisitorAny* visitor) const {
 inline std::any TransportSideType::AcceptAny(VisitorAny* visitor) const {
   return visitor->Visit(*this);
 }
+
+inline std::any BoxType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 
 inline std::any Enum::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 

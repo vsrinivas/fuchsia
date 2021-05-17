@@ -5,6 +5,7 @@
 #include <fidl/tables_generator.h>
 #include <zxtest/zxtest.h>
 
+#include "error_test.h"
 #include "fidl/coded_ast.h"
 #include "fidl/coded_types_generator.h"
 #include "test_library.h"
@@ -30,7 +31,7 @@ struct Arrays {
   array<array<array<uint8>:7>:11>:13 next_next_prime;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -79,7 +80,7 @@ struct Vectors {
   vector<vector<SomeStruct>:10>:20 bytes12;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -172,7 +173,7 @@ resource struct Value {
   vector<Union> maybe10;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   auto decl = library.library()->LookupDeclByName(fidl::flat::Name::CreateSourced(
       library.library(), fidl::SourceSpan("Value", library.source_file())));
   ASSERT_NOT_NULL(decl);
@@ -206,7 +207,8 @@ protocol UseOfProtocol {
     Call(SomeProtocol arg);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  // TODO(fcz): re-enable in new syntax after fixing converter bug
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -246,7 +248,8 @@ protocol UseOfRequestOfProtocol {
     Call(request<SomeProtocol> arg);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  // TODO(fcz): re-enable in new syntax after fixing converter bug
+  ASSERT_COMPILED(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -287,7 +290,7 @@ union MyXUnion {
   2: int32 bar;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -357,7 +360,7 @@ struct Wrapper2 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -422,7 +425,7 @@ struct Wrapper2 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -461,7 +464,7 @@ resource struct MyStruct {
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -495,7 +498,7 @@ struct Complex {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -571,7 +574,7 @@ struct Level2 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -625,7 +628,7 @@ struct TwoLevelRecursiveOptionalStructB {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -684,7 +687,7 @@ struct OuterStruct {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -711,9 +714,9 @@ struct OuterStruct {
 }
 
 TEST(CodedTypesGeneratorTests, GoodCodedTypesOfOptionals) {
+  fidl::ExperimentalFlags experimental_flags;
   auto library = WithLibraryZx(R"FIDL(
 library example;
-
 using zx;
 
 struct InnerStruct{
@@ -733,8 +736,9 @@ resource struct OuterStruct {
   InnerStruct b;
 };
 
-)FIDL");
-  ASSERT_TRUE(library.Compile());
+)FIDL",
+                               experimental_flags);
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -778,7 +782,7 @@ struct badlookup {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -802,7 +806,7 @@ table MyTable {
   3: array<bool>:42 baz;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -870,7 +874,7 @@ flexible bits FlexibleBits : uint8 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -916,7 +920,7 @@ flexible enum FlexibleEnum : uint16 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -963,7 +967,7 @@ union MyUnion {
   1: First first;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -1012,7 +1016,7 @@ union U2 {
   1: array<array<string>:2>:2 hss;
 };
   )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
   check_duplicate_coded_type_names(gen);
@@ -1027,7 +1031,7 @@ union Union {
     2: array<array<string>:2>:2 hss;
 };
   )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
   check_duplicate_coded_type_names(gen);
@@ -1042,7 +1046,7 @@ union Union {
     2: vector<array<string>:2>:2 hss;
 };
   )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
   check_duplicate_coded_type_names(gen);
@@ -1057,7 +1061,7 @@ table Table {
     2: array<array<string>:2>:2 hss;
 };
   )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
   check_duplicate_coded_type_names(gen);
@@ -1076,7 +1080,7 @@ union NonResourceUnion {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -1114,7 +1118,7 @@ table NonResourceTable {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 

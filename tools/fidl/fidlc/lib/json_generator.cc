@@ -154,10 +154,16 @@ void JSONGenerator::Generate(const flat::Constant& value) {
 }
 
 void JSONGenerator::Generate(const flat::Type* value) {
+  if (value->kind == flat::Type::Kind::kBox)
+    return Generate(static_cast<const flat::BoxType*>(value)->boxed_type);
+
   GenerateObject([&]() {
     GenerateObjectMember("kind", NameFlatTypeKind(value), Position::kFirst);
 
     switch (value->kind) {
+      case flat::Type::Kind::kBox:
+        assert(false && "should be caught above");
+        __builtin_unreachable();
       case flat::Type::Kind::kVector: {
         // This code path should only be exercised if the type is "bytes." All
         // other handling of kVector is handled in GenerateParameterizedType.
@@ -502,6 +508,7 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
       case flat::Type::Kind::kIdentifier:
       case flat::Type::Kind::kString:
       case flat::Type::Kind::kPrimitive:
+      case flat::Type::Kind::kBox:
       case flat::Type::Kind::kHandle: {
         assert(false && "expected parameterized type (either array<T>, vector<T>, or request<P>)");
       }
@@ -732,9 +739,12 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
 void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
   GenerateObject([&]() {
     const auto* type = GetType(value);
-    // TODO(fxbug.dev/70186, fxbug.dev/70246): We need to coerce client and
-    // server ends from the new syntax into the same representation as P and
-    // request<P>, respectively, in the old syntax
+    // TODO(fxbug.dev/70186, fxbug.dev/70247): We need to coerce client/server
+    // ends into the same representation as P, request<P>; and box<S> into S?
+    // For box, we just need to access the inner IdentifierType and the rest
+    // mostly works (except for the correct value for nullability)
+    if (type && type->kind == flat::Type::Kind::kBox)
+      type = static_cast<const flat::BoxType*>(type)->boxed_type;
     const flat::TransportSideType* server_end = nullptr;
     if (type && type->kind == flat::Type::Kind::kTransportSide) {
       const auto* end_type = static_cast<const flat::TransportSideType*>(type);
@@ -783,7 +793,14 @@ void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
     }
     EmitArrayEnd();
 
-    GenerateObjectMember("nullable", invocation.nullability);
+    if (GetType(value) && GetType(value)->kind == flat::Type::Kind::kBox) {
+      // invocation.nullability will always be non nullable, because users can't
+      // specify optional on box. however, we need to output nullable in this case
+      // in order to match the behavior for Struct?
+      GenerateObjectMember("nullable", types::Nullability::kNullable);
+    } else {
+      GenerateObjectMember("nullable", invocation.nullability);
+    }
 
     if (invocation.size_raw)
       GenerateObjectMember("maybe_size", *invocation.size_raw);

@@ -174,6 +174,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
+    // TODO(fcz): re-enable in new syntax after fixing converter bug
     ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
@@ -217,6 +218,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
+    // TODO(fcz): re-enable in new syntax after fixing converter bug
     ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(3, decl_order.size());
@@ -247,6 +249,7 @@ struct #Payload# {
 
 )FIDL");
     TestLibrary library(source);
+    // TODO(fcz): re-enable in new syntax after fixing converter bug
     ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
@@ -278,6 +281,7 @@ struct #Payload# {
 
 )FIDL");
     TestLibrary library(source);
+    // TODO(fcz): re-enable in new syntax after fixing converter bug
     ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
@@ -401,7 +405,8 @@ struct ExampleDecl1 {};
 
 )FIDL",
                            &shared);
-    ASSERT_TRUE(dependency.Compile());
+    TestLibrary converted_dependency;
+    ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
 
     TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -418,7 +423,47 @@ protocol ExampleDecl1 {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_COMPILED(library);
+    ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, converted_dependency);
+
+    auto decl_order = library.declaration_order();
+    ASSERT_EQ(5, decl_order.size());
+    ASSERT_DECL_FQ_NAME(decl_order[0], "example/ExampleDecl2");
+    ASSERT_DECL_FQ_NAME(decl_order[1], "example/ExampleDecl0");
+    ASSERT_DECL_FQ_NAME(decl_order[2], "dependency/ExampleDecl1");
+    ASSERT_DECL_FQ_NAME(decl_order[3], "example/SomeLongAnonymousPrefix0");
+    ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
+  }
+}
+
+TEST(DeclarationOrderTest, GoodDeclsAcrossLibrariesWithOldDep) {
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("dependency.fidl", R"FIDL(
+library dependency;
+
+struct ExampleDecl1 {};
+
+)FIDL",
+                           &shared);
+    TestLibrary cloned_dependency;
+    ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
+
+    TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependency;
+
+struct ExampleDecl0 {};
+struct ExampleDecl2 {};
+
+protocol ExampleDecl1 {
+  Method(dependency.ExampleDecl1 arg);
+};
+
+)FIDL",
+                        &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_COMPILED_AND_CONVERT_WITH_DEP(library, cloned_dependency);
 
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());

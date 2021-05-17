@@ -240,6 +240,8 @@ std::string NameFlatTypeKind(const flat::Type* type) {
     }
     case flat::Type::Kind::kPrimitive:
       return "primitive";
+    // TODO(fxbug.dev/70186): transition the JSON and other backends to using box
+    case flat::Type::Kind::kBox:
     case flat::Type::Kind::kIdentifier:
       return "identifier";
   }
@@ -400,6 +402,13 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       buf << NameFlatName(transport_side->protocol_decl->name);
       break;
     }
+    case flat::Type::Kind::kBox: {
+      const auto* box_type = static_cast<const flat::BoxType*>(type);
+      buf << "<";
+      buf << NameFlatName(box_type->boxed_type->name);
+      buf << ">";
+      break;
+    }
     case flat::Type::Kind::kPrimitive:
     case flat::Type::Kind::kIdentifier:
       // Like Stars, they are known by name.
@@ -436,6 +445,11 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
 
       case flat::Type::Kind::kArray: {
         type = static_cast<const flat::ArrayType*>(type)->element_type;
+        continue;
+      }
+
+      case flat::Type::Kind::kBox: {
+        type = static_cast<const flat::BoxType*>(type)->boxed_type;
         continue;
       }
 

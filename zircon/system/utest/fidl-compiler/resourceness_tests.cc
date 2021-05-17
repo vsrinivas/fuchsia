@@ -692,8 +692,7 @@ struct Boros {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  // TODO(fxbug.dev/76192): support box
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ResourcenessTests, GoodRecursiveResourceTypes) {
@@ -710,8 +709,7 @@ resource struct Boros {
 )FIDL";
 
   TestLibrary library(fidl_library);
-  // TODO(fxbug.dev/76192): support box
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ResourcenessTests, BadRecursiveResourceTypes) {
