@@ -17,7 +17,7 @@ document describes best practices specific to Fuchsia Networking.
 
 ## Coding Guidelines
 
-### Philosohpy
+### Philosophy
 
 This section is inspired by [Flutter's style guide][flutter_philosophy], which
 contains many general principles that you should apply to all your programming
@@ -152,45 +152,45 @@ define the following test classes:
   APIs and bytes written to the network to perform behavior validation. Can be
   performed over a physical network or by virtualization of the DUT (`qemu`).
 
-Consider the following guidelines considering test-writing:
+Consider the following guidelines when writing tests:
 
-1. Always add tests for new features or bug fixes.
+1. **Always add tests** for new features or bug fixes.
 1. Consider the guidelines in [Error Messages](#Error-Messages) when writing
    test assertions.
-1. Tests must be deterministic. Threaded or time-dependent code, Random Number
-   Generators (RNGs), and cross-component communication are common sources of
-   nondeterminism.
-     + Don't use `sleep` in tests as a means of weak synchronization. Only
+1. Tests must be **deterministic**. Threaded or time-dependent code, Random
+   Number Generators (RNGs), and cross-component communication are common
+   sources of nondeterminism.
+     + **Don't use `sleep`** in tests as a means of weak synchronization. Only
        `sleep` when strictly necessary (e.g. when polling is required).
-     + Time-dependent tests can use fake or mocked clocks to provide
+     + Time-dependent tests can use **fake or mocked clocks** to provide
        determinism. See [`fuchsia_async::Executor::new_with_fake_time`] and
        [fake-clock].
      + Threaded code must always use the proper synchronization primitives to
        avoid flakes. Whenever possible, prefer single-threaded tests.
-     + Always provide a mechanism to inject seeds for RNGs and use them in
+     + Always provide a mechanism to **inject seeds for RNGs** and use them in
        tests.
      + Test for flakes locally whenever possible; use repeat flags in test
-       binaries ([`-count`][go_test_flags] in Go,
+       binaries ([`--test.count`][go_test_flags] in Go,
        [`--gtest_repeat`][gtest_test_flags] for googletest) and aim for at least
        100-1000 runs locally if your test is prone to flakes before merging.
          > Rust test binaries currently don't have an equivalent flag, you may
          need to resort to a bash loop or equivalent to get repeated runs. See
          [#65218][rust_65218].
-1. Avoid tests with hard-coded timeouts. Prefer relying on the framework/fixture
-   to time out tests.
-1. Prefer hermetic tests; test set-up routines should be explicit and
+1. **Avoid** tests with **hard-coded timeouts**. Prefer relying on the
+   framework/fixture to time out tests.
+1. Prefer **hermetic tests**; test set-up routines should be explicit and
    deterministic. Be mindful of test fixtures that run cases in parallel (such
-   as Rust's) when using "ambient" services. Prefer explicitly injecting
-   component dependencies that are vital to the test.
+   as Rust's) when using "ambient" services. Prefer to **explicitly inject
+   component dependencies** that are vital to the test.
 1. [Tests should always be components][tests_as_components].
-1. Prefer virtual devices and networks for non-end-to-end tests. See [netemul]
-   for guidance on virtual network environments.
+1. Prefer **virtual devices and networks** for non-end-to-end tests. See
+   [netemul] for guidance on virtual network environments.
 1. Avoid [change detector tests][change_detector_tests]; tests that are
    unnecessarily sensitive to changes, especially ones external to the code
    under test, can hamper feature development and refactoring.
 1. Do not encode implementation details in tests, prefer testing through a
    module's public API.
-1. Do not use Rust's support for [tests which return Result][rust_test_result];
+1. Do **not** use Rust's support for [**tests which return Result**][rust_test_result];
    such tests do not automatically emit backtraces, relying on the errors
    themselves to carry a backtrace. Test failures that don't emit backtraces
    are typically much harder to interpret. At the time of writing, the
@@ -199,6 +199,23 @@ Consider the following guidelines considering test-writing:
    but even if enabled this feature would only cause `anyhow::Error`s to carry
    backtraces; best to panic (via `Result::expect`) to avoid relying on external
    factors for backtraces.
+1. When unwrapping a `Result<_, fidl::Error>` returned from a FIDL method call,
+   restate the function being called in the panic message to make it easier to
+   track down the callsite. Don't repeat the type of the error, which is already
+   included in the panic output. For example:
+   ```rust
+   // Bad:
+   let foo_result = proxy
+       .foo() // `foo` returns a `Result<_, fidl::Error>`.
+       .await
+       .expect("FIDL error"); // Doesn't provide any new information.
+
+   // Good:
+   let foo_result = proxy
+       .foo() // `foo` returns a `Result<_, fidl::Error>`.
+       .await
+       .expect("calling foo"); // Restate the function being called.
+   ```
 
 ### Source Control Best Practices
 
