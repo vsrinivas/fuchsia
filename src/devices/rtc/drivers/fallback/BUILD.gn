@@ -26,8 +26,9 @@ driver_module("fallback") {
   sources = [ "rtc-impl.cc" ]
   deps = [
     ":fallback_rtc_bind",
-    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
-    "//src/devices/rtc/lib/rtc",
+    "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
+    "//src/devices/lib/driver",
+    "//src/devices/rtc/lib/rtc:rtc_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <librtc.h>
+#include <librtc_llcpp.h>
 #include <string.h>
 #include <zircon/compiler.h>
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
@@ -18,18 +18,17 @@
 
 namespace fallback_rtc {
 
-static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn);
-static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn);
-
 class FallbackRtc;
-using RtcDevice = ddk::Device<FallbackRtc, ddk::MessageableOld>;
+using RtcDevice = ddk::Device<FallbackRtc, ddk::Messageable<fuchsia_hardware_rtc::Device>::Mixin>;
 
 // The fallback RTC driver is a fake driver which avoids to special case
 // in the upper layers on boards which don't have an RTC chip (and battery).
 // it assumes that an external entity will set it to a approximately correct
 // time based on other sources, most likely the roughtime service which
 // runs at every boot.
-class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC> {
+class FallbackRtc : public RtcDevice,
+                    public fidl::WireServer<fuchsia_hardware_rtc::Device>,
+                    public ddk::EmptyProtocol<ZX_PROTOCOL_RTC> {
  public:
   FallbackRtc(zx_device_t* parent) : RtcDevice(parent), rtc_last_({}) {
     // We don't rely on the default value to be correct to any approximation
@@ -54,52 +53,27 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_rtc_Device_dispatch(this, txn, msg, &fidl_ops_);
-  }
-
  private:
-  zx_status_t Get(fuchsia_hardware_rtc_Time& rtc) {
+  void Get(GetRequestView request, GetCompleter::Sync& completer) {
     // TODO(cpu): Advance the clock. This is not strictly necessary at the
     // moment because this driver basically serves as a rendezvous between
     // a Internet time server and the rest of the system.
 
-    rtc = rtc_last_;
-    return ZX_OK;
+    completer.Reply(rtc_last_);
   }
 
-  zx_status_t Set(const fuchsia_hardware_rtc_Time& rtc) {
-    if (rtc_is_invalid(&rtc)) {
-      return ZX_ERR_OUT_OF_RANGE;
+  void Set(SetRequestView request, SetCompleter::Sync& completer) {
+    if (!rtc::IsRtcValid(request->rtc)) {
+      completer.Reply(ZX_ERR_OUT_OF_RANGE);
+      return;
     }
 
-    rtc_last_ = rtc;
-    return ZX_OK;
+    rtc_last_ = request->rtc;
+    completer.Reply(ZX_OK);
   }
 
-  friend zx_status_t fidl_Get(void*, fidl_txn_t*);
-  friend zx_status_t fidl_Set(void*, const fuchsia_hardware_rtc_Time*, fidl_txn_t*);
-
-  const fuchsia_hardware_rtc_Device_ops_t fidl_ops_ = {
-      .Get = fidl_Get,
-      .Set = fidl_Set,
-  };
-
-  fuchsia_hardware_rtc_Time rtc_last_;
+  fuchsia_hardware_rtc::wire::Time rtc_last_;
 };
-
-zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
-  auto dev = static_cast<FallbackRtc*>(ctx);
-  fuchsia_hardware_rtc_Time rtc;
-  dev->Get(rtc);
-  return fuchsia_hardware_rtc_DeviceGet_reply(txn, &rtc);
-}
-
-zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn) {
-  auto dev = static_cast<FallbackRtc*>(ctx);
-  auto status = dev->Set(*rtc);
-  return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
-}
 
 static zx_status_t fallback_rtc_bind(void* ctx, zx_device_t* parent) {
   auto dev = std::make_unique<FallbackRtc>(parent);
