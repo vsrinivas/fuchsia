@@ -222,16 +222,25 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   return zx::ok(std::move(endpoints->client));
 }
 
-Node::Node(std::vector<Node*> parents, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
-           std::string_view name)
-    : parents_(std::move(parents)),
+Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
+           async_dispatcher_t* dispatcher)
+    : name_(name),
+      parents_(std::move(parents)),
       driver_binder_(driver_binder),
-      dispatcher_(dispatcher),
-      name_(name) {}
+      dispatcher_(dispatcher) {
+  if (auto primary_parent = PrimaryParent(parents_)) {
+    // By default, we set `driver_host_` to match the primary parent's
+    // `driver_host_`. If the node is then subsequently bound to a driver in a
+    // different driver host, this value will be updated to match.
+    driver_host_ = primary_parent->driver_host_;
+  }
+}
 
 Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
+
+const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
 fidl::VectorView<fidl::StringView> Node::offers() {
   return fidl::VectorView<fidl::StringView>::FromExternal(offers_);
@@ -241,9 +250,7 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() {
   return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols_);
 }
 
-DriverHostComponent* Node::parent_driver_host() const {
-  return *PrimaryParent(parents_)->driver_host_;
-}
+DriverHostComponent* Node::driver_host() const { return *driver_host_; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
@@ -258,9 +265,6 @@ void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> contro
 void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
   node_ref_.emplace(std::move(node_ref));
 }
-
-const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
-
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
   for (auto node = this; node != nullptr; node = PrimaryParent(node->parents_)) {
@@ -292,12 +296,17 @@ void Node::Remove() {
   }
 
   // Remove this node from its parent.
-  std::shared_ptr<Node> this_node;
+  auto this_node = shared_from_this();
   if (!parents_.empty()) {
-    this_node = shared_from_this();
     for (auto parent : parents_) {
       auto& children = parent->children_;
       children.erase(std::find(children.begin(), children.end(), this_node));
+      // We are removing a composite node. This means its parent nodes only
+      // exist to form a composite node, and they are not directly owned by a
+      // driver. Therefore, we should remove the parent node as well.
+      if (parents_.size() > 1) {
+        parent->Remove();
+      }
     }
   }
 
@@ -337,6 +346,13 @@ void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) {
   UnbindAndReset(node_ref_);
 }
 
+void Node::AddToParents() {
+  auto this_node = shared_from_this();
+  for (auto parent : parents_) {
+    parent->children_.push_back(this_node);
+  }
+}
+
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
   if (driver_binder_ == nullptr) {
     LOGF(ERROR, "Failed to add Node, as this Node '%s' was removed", name_.data());
@@ -362,8 +378,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
       return;
     }
   };
-  std::vector<Node*> parents{this};
-  auto child = std::make_shared<Node>(std::move(parents), *driver_binder_, dispatcher_, name);
+  auto child = std::make_shared<Node>(name, std::vector<Node*>{this}, *driver_binder_, dispatcher_);
 
   if (request->args.has_offers()) {
     child->offers_.reserve(request->args.offers().count());
@@ -413,27 +428,18 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   auto bind_controller = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
       dispatcher_, std::move(request->controller), child.get());
   child->set_controller_ref(std::move(bind_controller));
-
   if (request->node.is_valid()) {
     auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
         dispatcher_, std::move(request->node), child.get(),
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     child->set_node_ref(std::move(bind_node));
-    children_.push_back(std::move(child));
-    completer.ReplySuccess();
   } else {
-    auto child_ptr = child.get();
-    auto callback = [this, child = std::move(child),
-                     completer = completer.ToAsync()](zx::status<> result) mutable {
-      if (result.is_error()) {
-        completer.Close(result.status_value());
-        return;
-      }
-      children_.push_back(std::move(child));
-      completer.ReplySuccess();
-    };
-    (*driver_binder_)->Bind(*child_ptr, std::move(request->args), std::move(callback));
+    (*driver_binder_)->Bind(*child, std::move(request->args));
   }
+  child->AddToParents();
+  // We do not block a driver from operation after it has added a child. If the
+  // child is waiting to be bound, it is owned by the driver runner.
+  completer.ReplySuccess();
 }
 
 DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
@@ -442,15 +448,15 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
     : realm_(std::move(realm), dispatcher),
       driver_index_(std::move(driver_index), dispatcher),
       dispatcher_(dispatcher),
-      root_node_({}, this, dispatcher, "root") {
+      root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)) {
   inspector.GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
 
 fit::promise<inspect::Inspector> DriverRunner::Inspect() {
   inspect::Inspector inspector;
-  auto root = inspector.GetRoot().CreateChild(root_node_.name());
-  InspectStack stack{{std::make_pair(&root, &root_node_)}};
+  auto root = inspector.GetRoot().CreateChild(root_node_->name());
+  InspectStack stack{{std::make_pair(&root, root_node_.get())}};
   InspectNode(inspector, stack);
   inspector.emplace(std::move(root));
   return fit::make_ok_promise(inspector);
@@ -471,7 +477,7 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
 }
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
-  return StartDriver(root_node_, url);
+  return StartDriver(*root_node_, url);
 }
 
 zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
@@ -479,7 +485,7 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   if (create_result.is_error()) {
     return create_result.take_error();
   }
-  driver_args_.emplace(url, DriverArgs{std::move(*create_result), node});
+  driver_args_.emplace(url, DriverArgs{node, std::move(*create_result)});
   return zx::ok();
 }
 
@@ -497,15 +503,13 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   auto symbols = driver_args.node.symbols();
 
   // Launch a driver host, or use an existing driver host.
-  DriverHostComponent* driver_host;
   if (start_args::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
-    if (&driver_args.node == &root_node_) {
+    if (&driver_args.node == root_node_.get()) {
       LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate", url.size(),
            url.data());
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
-    driver_host = driver_args.node.parent_driver_host();
   } else {
     // Do not pass symbols across driver hosts.
     symbols.set_count(0);
@@ -515,10 +519,9 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
       completer.Close(result.error_value());
       return;
     }
-    driver_host = result.value().get();
+    driver_args.node.set_driver_host(result.value().get());
     driver_hosts_.push_back(std::move(*result));
   }
-  driver_args.node.set_driver_host(driver_host);
 
   // Bind the Node associated with the driver.
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
@@ -532,7 +535,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   driver_args.node.set_node_ref(bind_node);
 
   // Start the driver within the driver host.
-  auto start = driver_host->Start(
+  auto start = driver_args.node.driver_host()->Start(
       std::move(endpoints->client), driver_args.node.offers(), std::move(symbols),
       std::move(request->start_info.resolved_url()), std::move(request->start_info.program()),
       std::move(request->start_info.ns()), std::move(request->start_info.outgoing_dir()),
@@ -575,37 +578,104 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   drivers_.push_back(std::move(driver));
 }
 
-void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args,
-                        fit::callback<void(zx::status<>)> callback) {
-  auto match_callback = [this, callback = callback.share(), &node](
-                            fidl::WireResponse<fdf::DriverIndex::MatchDriver>* response) mutable {
+void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
+  // TODO(fxbug.dev/76732): Handle nodes that are orphaned during binding.
+  auto match_callback = [this, &node](fidl::WireResponse<fdf::DriverIndex::MatchDriver>* response) {
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to match driver '%s': %s", node.name().data(),
+      LOGF(ERROR, "Failed to match Node '%s': %s", node.name().data(),
            zx_status_get_string(response->result.err()));
-      callback(zx::error(response->result.err()));
       return;
     }
     auto& matched_driver = response->result.response().driver;
     if (!matched_driver.has_url()) {
-      LOGF(ERROR, "Failed to match driver '%s', driver URL is missing", node.name().data());
-      callback(zx::error(ZX_ERR_INVALID_ARGS));
+      LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing", node.name().data());
       return;
     }
-    auto start_result = StartDriver(node, matched_driver.url().get());
+    auto driver_node = &node;
+
+    // This is a composite driver, create a composite node for it.
+    if (matched_driver.has_node_index() || matched_driver.has_num_nodes()) {
+      auto composite = CreateCompositeNode(node, matched_driver);
+      if (composite.is_error()) {
+        return;
+      }
+      driver_node = *composite;
+    }
+
+    auto start_result = StartDriver(*driver_node, matched_driver.url().get());
     if (start_result.is_error()) {
       LOGF(ERROR, "Failed to start driver '%s': %s", node.name().data(),
            zx_status_get_string(start_result.error_value()));
-      callback(start_result.take_error());
-      return;
     }
-    callback(zx::ok());
   };
   auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
   if (!match_result.ok()) {
-    LOGF(ERROR, "Failed to call match driver '%s': %s", node.name().data(),
+    LOGF(ERROR, "Failed to call match Node '%s': %s", node.name().data(),
          match_result.error_message());
-    callback(zx::error(match_result.status()));
   }
+}
+
+zx::status<Node*> DriverRunner::CreateCompositeNode(
+    Node& node, const fdf::wire::MatchedDriver& matched_driver) {
+  auto it = AddToCompositeArgs(node, matched_driver);
+  if (it.is_error()) {
+    return it.take_error();
+  }
+  auto& [_, nodes] = **it;
+
+  // Store the node arguments inside the composite arguments.
+  nodes[matched_driver.node_index()] = node.weak_from_this();
+  // Check if we have all the nodes for the composite driver.
+  std::vector<Node*> parents;
+  for (auto& node : nodes) {
+    if (auto parent = node.lock()) {
+      parents.push_back(parent.get());
+    } else {
+      // We are missing a node or it has been removed, continue to wait.
+      return zx::error(ZX_ERR_NEXT);
+    }
+  }
+  composite_args_.erase(*it);
+  // We have all the nodes, create a composite node for the composite driver.
+  auto composite = std::make_shared<Node>("composite", std::move(parents), this, dispatcher_);
+  composite->AddToParents();
+  // We can return a pointer, as the composite node is owned by its parents.
+  return zx::ok(composite.get());
+}
+
+zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs(
+    Node& node, const fdf::wire::MatchedDriver& matched_driver) {
+  if (!matched_driver.has_node_index() || !matched_driver.has_num_nodes()) {
+    LOGF(ERROR, "Failed to match Node '%s', missing fields for composite driver",
+         node.name().data());
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (matched_driver.node_index() >= matched_driver.num_nodes()) {
+    LOGF(ERROR, "Failed to match Node '%s', the node index is out of range", node.name().data());
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  // Check if there are existing composite arguments for the composite driver.
+  // We do this by checking if the node index within an existing set of
+  // composite arguments has not been set, or has become available.
+  auto [it, end] = composite_args_.equal_range(std::string(matched_driver.url().get()));
+  for (; it != end; ++it) {
+    auto& [_, nodes] = *it;
+    if (nodes.size() != matched_driver.num_nodes()) {
+      LOGF(ERROR, "Failed to match Node '%s', the number of nodes does not match",
+           node.name().data());
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    if (nodes[matched_driver.node_index()].expired()) {
+      break;
+    }
+  }
+  // No composite arguments exist for the composite driver, create a new set.
+  if (it == end) {
+    it = composite_args_.emplace(matched_driver.url().get(),
+                                 CompositeArgs{matched_driver.num_nodes()});
+  }
+  return zx::ok(it);
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {

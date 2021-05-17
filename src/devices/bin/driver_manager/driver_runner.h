@@ -71,35 +71,36 @@ class Node;
 class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
+
   // Attempt to bind `node` with given `args`.
-  // The lifetime of `node` must live until `callback` is called.
-  virtual void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args,
-                    fit::callback<void(zx::status<>)> callback) = 0;
+  virtual void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args) = 0;
 };
 
 class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public std::enable_shared_from_this<Node> {
  public:
-  Node(std::vector<Node*> parents, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
-       std::string_view name);
+  Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
+       async_dispatcher_t* dispatcher);
   ~Node() override;
 
   const std::string& name() const;
+  const std::vector<std::shared_ptr<Node>>& children() const;
   fidl::VectorView<fidl::StringView> offers();
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols();
-  DriverHostComponent* parent_driver_host() const;
+  DriverHostComponent* driver_host() const;
+
   void set_driver_host(DriverHostComponent* driver_host);
   void set_driver_ref(
       fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
   void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
-  const std::vector<std::shared_ptr<Node>>& children() const;
 
   std::string TopoName() const;
   bool Unbind(std::unique_ptr<AsyncRemove>& async_remove);
   void Remove();
+  void AddToParents();
 
  private:
   // fidl::WireServer<fuchsia_driver_framework::NodeController>
@@ -107,10 +108,11 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // fidl::WireServer<fuchsia_driver_framework::Node>
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
+  const std::string name_;
   const std::vector<Node*> parents_;
+  std::vector<std::shared_ptr<Node>> children_;
   fit::nullable<DriverBinder*> driver_binder_;
   async_dispatcher_t* const dispatcher_;
-  const std::string name_;
 
   fidl::FidlAllocator<128> allocator_;
   std::vector<fidl::StringView> offers_;
@@ -121,12 +123,6 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
   std::unique_ptr<AsyncRemove> async_remove_;
-  std::vector<std::shared_ptr<Node>> children_;
-};
-
-struct DriverArgs {
-  fidl::ClientEnd<fuchsia_io::Directory> exposed_dir;
-  Node& node;
 };
 
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
@@ -141,24 +137,42 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   zx::status<> StartRootDriver(std::string_view name);
 
  private:
+  struct DriverArgs {
+    Node& node;
+    fidl::ClientEnd<fuchsia_io::Directory> exposed_dir;
+  };
+  using CompositeArgs = std::vector<std::weak_ptr<Node>>;
+  using DriverUrl = std::string;
+  using CompositeArgsIterator = std::unordered_multimap<DriverUrl, CompositeArgs>::iterator;
+
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
   // DriverBinder
-  void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args,
-            fit::callback<void(zx::status<>)> callback) override;
+  void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args) override;
 
+  // Create a composite node. Returns a `Node` that is owned by its parents.
+  zx::status<Node*> CreateCompositeNode(
+      Node& node, const fuchsia_driver_framework::wire::MatchedDriver& matched_driver);
+  // Adds `matched_driver` to an existing set of composite arguments, or creates
+  // a new set of composite arguments. Returns an iterator to the set of
+  // composite arguments.
+  zx::status<CompositeArgsIterator> AddToCompositeArgs(
+      Node& node, const fuchsia_driver_framework::wire::MatchedDriver& matched_driver);
   zx::status<> StartDriver(Node& node, std::string_view url);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateComponent(std::string name,
                                                                      std::string url,
                                                                      std::string collection);
+
   uint64_t next_driver_host_id_ = 0;
   fidl::Client<fuchsia_sys2::Realm> realm_;
   fidl::Client<fuchsia_driver_framework::DriverIndex> driver_index_;
   async_dispatcher_t* dispatcher_;
-  Node root_node_;
-  std::unordered_map<std::string, DriverArgs> driver_args_;
+  std::shared_ptr<Node> root_node_;
+
+  std::unordered_map<DriverUrl, DriverArgs> driver_args_;
+  std::unordered_multimap<DriverUrl, CompositeArgs> composite_args_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverComponent>> drivers_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>> driver_hosts_;
 };

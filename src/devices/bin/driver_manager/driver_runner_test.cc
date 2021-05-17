@@ -218,6 +218,18 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
                                return zx::ok(FakeDriverIndex::MatchResult{
                                    .url = "fuchsia-boot:///#meta/second-driver.cm",
                                });
+                             } else if (name == "part-1") {
+                               return zx::ok(FakeDriverIndex::MatchResult{
+                                   .url = "fuchsia-boot:///#meta/composite-driver.cm",
+                                   .node_index = std::make_optional(0u),
+                                   .num_nodes = std::make_optional(2u),
+                               });
+                             } else if (name == "part-2") {
+                               return zx::ok(FakeDriverIndex::MatchResult{
+                                   .url = "fuchsia-boot:///#meta/composite-driver.cm",
+                                   .node_index = std::make_optional(1u),
+                                   .num_nodes = std::make_optional(2u),
+                               });
                              } else {
                                return zx::error(ZX_ERR_NOT_FOUND);
                              }
@@ -1175,6 +1187,50 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
   second_node.Unbind();
   loop().RunUntilIdle();
   EXPECT_THAT(indices, ElementsAre(1, 0));
+}
+
+TEST_F(DriverRunnerTest, StartCompositeDriver) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
+  DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
+                             loop().dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
+    realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
+    realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
+      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+    });
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("part-1");
+    fdf::NodeControllerPtr node_controller;
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
+                        [](auto result) { EXPECT_FALSE(result.is_err()); });
+    args.set_name("part-2");
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
+                        [](auto result) { EXPECT_FALSE(result.is_err()); });
+    BindDriver(std::move(request), std::move(root_node));
+  });
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
+
+  driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
+    auto& entries = start_args.program().entries();
+    EXPECT_EQ(2u, entries.size());
+    EXPECT_EQ("binary", entries[0].key);
+    EXPECT_EQ("driver/composite-driver.so", entries[0].value->str());
+    EXPECT_EQ("colocate", entries[1].key);
+    EXPECT_EQ("true", entries[1].value->str());
+  });
+  StartDriver(driver_runner, {
+                                 .url = "fuchsia-boot:///#meta/composite-driver.cm",
+                                 .binary = "driver/composite-driver.so",
+                                 .colocate = true,
+                             });
 }
 
 // Start a driver and inspect the driver runner.
