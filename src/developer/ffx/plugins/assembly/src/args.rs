@@ -111,4 +111,8 @@ pub struct ExtractArgs {
     /// the directory to write extracted artifacts to.
     #[argh(option)]
     pub outdir: PathBuf,
+
+    /// the zircon boot image in ZBI format, usually named fuchsia.zbi.
+    #[argh(option)]
+    pub zbi: PathBuf,
 }

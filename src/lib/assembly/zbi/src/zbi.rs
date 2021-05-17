@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
@@ -65,7 +65,7 @@ impl ZbiBuilder {
         let status = Command::new("host_x64/zbi")
             .args(&zbi_args)
             .status()
-            .expect("Failed to run the zbi tool");
+            .context("Failed to run the zbi tool")?;
         if !status.success() {
             anyhow::bail!("zbi exited with status: {}", status);
         }
