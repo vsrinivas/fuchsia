@@ -378,7 +378,7 @@ impl Journal {
             .context("create root directory")?;
         root_store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
 
-        self.commit(transaction).await;
+        transaction.commit().await;
 
         // Cache the super-block.
         self.inner.lock().unwrap().super_block = SuperBlock::new(
@@ -395,7 +395,7 @@ impl Journal {
     }
 
     /// Commits a transaction.
-    pub async fn commit(&self, mut transaction: Transaction<'_>) {
+    pub async fn commit(&self, transaction: &mut Transaction<'_>) {
         if transaction.is_empty() {
             return;
         }

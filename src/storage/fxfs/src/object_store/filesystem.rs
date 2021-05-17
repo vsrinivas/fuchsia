@@ -475,8 +475,8 @@ impl TransactionHandler for FxFilesystem {
         Ok(Transaction::new(self, &[LockKey::Filesystem], locks).await)
     }
 
-    async fn commit_transaction(self: Arc<Self>, transaction: Transaction<'_>) {
-        self.lock_manager.commit_prepare(&transaction).await;
+    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+        self.lock_manager.commit_prepare(transaction).await;
         self.journal.commit(transaction).await;
         let mut compaction = self.compaction.lock().unwrap();
         if let Compaction::Idle = *compaction {

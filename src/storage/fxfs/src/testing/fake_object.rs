@@ -66,7 +66,7 @@ impl TransactionHandler for FakeObject {
         Ok(Transaction::new(self, &[], locks).await)
     }
 
-    async fn commit_transaction(self: Arc<Self>, mut transaction: Transaction<'_>) {
+    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
         std::mem::take(&mut transaction.mutations);
     }
 

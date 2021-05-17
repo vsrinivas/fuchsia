@@ -88,6 +88,10 @@ impl FxDirectory {
         self.is_deleted.load(Ordering::Relaxed)
     }
 
+    pub fn set_deleted(&self, v: bool) {
+        self.is_deleted.store(v, Ordering::Relaxed);
+    }
+
     /// Acquires a transaction with the appropriate locks to unlink |name|. Returns the transaction,
     /// as well as the ID and type of the child.
     ///
@@ -246,44 +250,17 @@ impl FxDirectory {
     /// It is the caller's responsibility to make sure that |name|, |object_id|, and
     /// |object_descriptor| all refer to the same object.
     ///
-    /// If the child was a directory, returns the child node which MUST NOT be dropped until
-    /// |transaction| is committed. This is necessary to ensure that the node isn't evicted from the
-    /// cache before |transaction| finishes and actually unlinks the node.
-    ///
-    /// TODO(csuter): Separate out a commit_prepare which acquires the lock, so that we can handle
-    /// situations like this more gracefully. (Alternatively, add a callback to commit.)
+    /// If the child was a directory, returns the object ID which the caller can use to update
+    /// the in-memory cache to record the fact that it was deleted if the transaction succeeds.
     #[must_use]
     pub(super) async fn replace_child<'a>(
         self: &'a Arc<Self>,
         transaction: &mut Transaction<'a>,
         name: &str,
-        object_id: u64,
-        descriptor: ObjectDescriptor,
         replacement: Option<(&'a Arc<FxDirectory>, &str)>,
-    ) -> Result<Option<Arc<dyn FxNode>>, Error> {
-        let dir = if let ObjectDescriptor::File = descriptor {
-            // TODO(jfsulliv): We can immediately delete files if they have no open references, but
-            // we need appropriate locking in place to be able to check the file's open count.
-            None
-        } else {
-            // For directories, we need to set |is_deleted| on the in-memory node. If the node's
-            // absent from the cache, we *must* load the node into memory, and make sure the node
-            // stays in the cache until we commit the transaction, because otherwise another caller
-            // could load the node from disk before we commit the transaction and would not see that
-            // it's been unlinked.
-            // Holding a placeholder here could deadlock, since transaction.commit() will block
-            // until there are no readers, but a reader could be blocked on the cache by the
-            // placeholder.
-            let dir = self
-                .volume()
-                .get_or_load_node(object_id, descriptor, Some(self.clone()))
-                .await?
-                .into_any()
-                .downcast::<FxDirectory>()
-                .unwrap();
-            dir.is_deleted.store(true, Ordering::Relaxed);
-            Some(dir as Arc<dyn FxNode>)
-        };
+    ) -> Result<Option<u64>, Error> {
+        // TODO(jfsulliv): We can immediately delete files if they have no open references, but
+        // we need appropriate locking in place to be able to check the file's open count.
         // TODO(jfsulliv): This results in an unnecessary second lookup; we could pass in object_id
         // and descriptor here, since we've already resolved them.
         if let Some((existing_oid, descriptor)) = directory::replace_child(
@@ -302,9 +279,10 @@ impl FxDirectory {
                 );
             } else {
                 directory::remove(transaction, &store, existing_oid);
+                return Ok(Some(existing_oid));
             }
         }
-        Ok(dir)
+        Ok(None)
     }
 
     // TODO(jfsulliv): Change the VFS to send in &Arc<Self> so we don't need this.
@@ -352,18 +330,21 @@ impl MutableDirectory for FxDirectory {
 
     async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let this = self.as_strong().await;
-        let (mut transaction, object_id, object_descriptor) =
+        let (mut transaction, _object_id, object_descriptor) =
             this.acquire_transaction_for_unlink(&[], name).await.map_err(map_to_status)?;
         if let ObjectDescriptor::Directory = object_descriptor {
         } else if must_be_directory {
             return Err(Status::NOT_DIR);
         }
-        // _dir must be held until after the transaction commits; see FxDirectory::replace_child.
-        let _dir = this
-            .replace_child(&mut transaction, name, object_id, object_descriptor, None)
-            .await
-            .map_err(map_to_status)?;
-        transaction.commit().await;
+        let existing_dir_oid =
+            this.replace_child(&mut transaction, name, None).await.map_err(map_to_status)?;
+        if let Some(object_id) = existing_dir_oid {
+            transaction
+                .commit_with_callback(|| self.volume().mark_directory_deleted(object_id))
+                .await;
+        } else {
+            transaction.commit().await;
+        }
         Ok(())
     }
 

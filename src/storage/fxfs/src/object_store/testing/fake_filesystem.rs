@@ -67,8 +67,8 @@ impl TransactionHandler for FakeFilesystem {
         Ok(Transaction::new(self, &[], locks).await)
     }
 
-    async fn commit_transaction(self: Arc<Self>, mut transaction: Transaction<'_>) {
-        self.lock_manager.commit_prepare(&transaction).await;
+    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+        self.lock_manager.commit_prepare(transaction).await;
         for TxnMutation { object_id, mutation, associated_object } in
             std::mem::take(&mut transaction.mutations)
         {

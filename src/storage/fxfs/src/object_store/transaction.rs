@@ -42,7 +42,7 @@ pub trait TransactionHandler: Send + Sync {
     /// Implementations should perform any required journaling and then apply the mutations via
     /// ObjectManager's apply_mutation method.  Any mutations within the transaction should be
     /// removed so that drop_transaction can tell that the transaction was committed.
-    async fn commit_transaction(self: Arc<Self>, transaction: Transaction<'_>);
+    async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>);
 
     /// Drops a transaction (rolling back if not committed).  Committing a transaction should have
     /// removed the mutations.  This is called automatically when Transaction is dropped, which is
@@ -278,10 +278,10 @@ pub struct Transaction<'a> {
     /// The mutations that make up this transaction.
     pub mutations: BTreeSet<TxnMutation<'a>>,
 
-    /// The locks that this transaction currently holds.
+    // The locks that this transaction currently holds.
     txn_locks: Vec<LockKey>,
 
-    /// The read locks that this transaction currently holds.
+    // The read locks that this transaction currently holds.
     read_locks: Vec<LockKey>,
 }
 
@@ -367,9 +367,15 @@ impl<'a> Transaction<'a> {
     }
 
     /// Commits a transaction.
-    pub async fn commit(self) {
+    pub async fn commit(mut self) {
         log::debug!("Commit {:?}", &self);
-        self.handler.clone().commit_transaction(self).await;
+        self.handler.clone().commit_transaction(&mut self).await;
+    }
+
+    /// Commits and then runs the callback whilst locks are held.
+    pub async fn commit_with_callback<R>(mut self, f: impl FnOnce() -> R) -> R {
+        self.handler.clone().commit_transaction(&mut self).await;
+        f()
     }
 }
 

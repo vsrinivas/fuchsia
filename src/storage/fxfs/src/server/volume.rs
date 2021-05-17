@@ -81,6 +81,18 @@ impl FxVolume {
     pub fn into_store(self) -> Arc<ObjectStore> {
         self.store
     }
+
+    /// Marks the given directory deleted.
+    pub fn mark_directory_deleted(&self, object_id: u64) {
+        if let Some(node) = self.cache.get(object_id) {
+            // It's possible that node is a placeholder, in which case we don't need to wait for it
+            // to be resolved because it should be blocked behind the locks that are held by the
+            // caller, and once they're dropped, it'll be found to be deleted via the tree.
+            if let Ok(dir) = node.into_any().downcast::<FxDirectory>() {
+                dir.set_deleted(true);
+            }
+        }
+    }
 }
 
 impl AsRef<ObjectStore> for FxVolume {
@@ -179,11 +191,9 @@ impl FilesystemRename for FxVolume {
             }
         }
 
-        // _old_node MUST be held until after the transaction is committed. See
-        // FxDirectory::replace_child.
-        let _old_node = if let Some((dst_id, dst_descriptor)) = dst_id_and_descriptor {
+        let old_dir_oid = if dst_id_and_descriptor.is_some() {
             dst_dir
-                .replace_child(&mut transaction, dst, dst_id, dst_descriptor, Some((&src_dir, src)))
+                .replace_child(&mut transaction, dst, Some((&src_dir, src)))
                 .await
                 .map_err(map_to_status)?
         } else {
@@ -199,7 +209,11 @@ impl FilesystemRename for FxVolume {
 
         moved_node.set_parent(dst_dir.clone());
 
-        transaction.commit().await;
+        if let Some(object_id) = old_dir_oid {
+            transaction.commit_with_callback(|| self.mark_directory_deleted(object_id)).await;
+        } else {
+            transaction.commit().await;
+        }
         Ok(())
     }
 }

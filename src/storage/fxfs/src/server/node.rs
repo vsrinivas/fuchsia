@@ -144,6 +144,11 @@ impl NodeCache {
     pub fn remove(&self, object_id: u64) {
         self.0.lock().unwrap().map.remove(&object_id);
     }
+
+    /// Returns the given node if present in the cache.
+    pub fn get(&self, object_id: u64) -> Option<Arc<dyn FxNode>> {
+        self.0.lock().unwrap().map.get(&object_id).and_then(Weak::upgrade)
+    }
 }
 
 #[cfg(test)]
