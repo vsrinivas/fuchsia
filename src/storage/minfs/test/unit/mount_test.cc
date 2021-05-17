@@ -60,7 +60,7 @@ TEST(MountTest, VersionLoggedWithCobalt) {
                        zx::duration period_duration, int64_t count) override {
       MockCobaltLogger::LogEventCount(metric_id, event_code, component, period_duration, count);
       EXPECT_EQ(metric_id, static_cast<uint32_t>(fs_metrics::Event::kVersion));
-      EXPECT_EQ(event_code, static_cast<uint32_t>(fs_metrics::Component::kMinfs));
+      EXPECT_EQ(event_code, static_cast<uint32_t>(fs_metrics::Source::kMinfs));
       EXPECT_EQ(component, std::to_string(kMinfsCurrentFormatVersion) + "/" +
                                std::to_string(kMinfsCurrentRevision));
       EXPECT_EQ(period_duration, zx::duration());

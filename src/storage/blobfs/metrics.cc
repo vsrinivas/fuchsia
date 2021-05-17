@@ -54,7 +54,7 @@ BlobfsMetrics::BlobfsMetrics(
       cobalt_metrics_(collector_factory ? collector_factory()
                                         : std::make_unique<cobalt_client::Collector>(
                                               fs_metrics::kCobaltProjectId),
-                      fs_metrics::Component::kBlobfs, fs_metrics::CompressionSource::kBlobfs),
+                      fs_metrics::Source::kBlobfs, fs_metrics::CompressionSource::kBlobfs),
       cobalt_flush_time_(cobalt_flush_time) {
   // Add a node that allows querying the size of the Inspect VMO at runtime
   root_.CreateLazyNode(

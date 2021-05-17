@@ -2952,7 +2952,7 @@ class FakeFsMetrics : public fs::MetricsTrait {
     logger_ = logger.get();
     collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
     metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(),
-                                                             fs_metrics::Component::kUnknown);
+                                                             fs_metrics::Source::kUnknown);
     histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
   }
 
@@ -2966,8 +2966,8 @@ class FakeFsMetrics : public fs::MetricsTrait {
   uint32_t GetObservations(fs_metrics::Event event) const {
     cobalt_client::MetricOptions options = {};
     options.metric_id = static_cast<uint32_t>(event);
-    options.component = fs_metrics::ComponentName(fs_metrics::Component::kUnknown);
-    options.event_codes = {};
+    options.metric_dimensions = 1;
+    options.event_codes = {static_cast<uint32_t>(fs_metrics::Source::kUnknown)};
     auto entry = logger_->histograms().find(options);
     if (logger_->histograms().end() == entry) {
       return 0;

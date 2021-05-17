@@ -61,14 +61,14 @@ enum class Event : uint32_t {
   kInvalidEvent = 35,
 };
 
-enum class Component {
+enum class Source {
   kUnknown = 0,
   kFvm = 1,
   kBlobfs = 2,
   kMinfs = 3,
 };
 
-using CorruptionSource = Component;
+using CorruptionSource = Source;
 
 enum class CorruptionType { kUnknown = 0, kMetadata = 1, kData = 2 };
 

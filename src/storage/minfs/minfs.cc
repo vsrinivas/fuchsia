@@ -1398,7 +1398,7 @@ void Minfs::LogMountMetrics() {
   }
   cobalt_logger_->LogEventCount(
       static_cast<uint32_t>(fs_metrics::Event::kVersion),
-      static_cast<uint32_t>(fs_metrics::Component::kMinfs),
+      static_cast<uint32_t>(fs_metrics::Source::kMinfs),
       std::to_string(Info().format_version) + "/" + std::to_string(Info().oldest_revision), {}, 1);
 }
 

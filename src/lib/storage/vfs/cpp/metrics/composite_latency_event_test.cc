@@ -32,7 +32,7 @@ class CompositeLatencyEventTest : public zxtest::Test {
     logger_ = logger.get();
     collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
     metrics_ = std::make_unique<fs_metrics::FsCommonMetrics>(collector_.get(),
-                                                             fs_metrics::Component::kUnknown);
+                                                             fs_metrics::Source::kUnknown);
     histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
   }
 
@@ -95,7 +95,8 @@ TEST_F(CompositeLatencyEventTest, SelectAppropiateHistogram) {
   for (auto event : kVnodeEvents) {
     cobalt_client::MetricOptions options = {};
     options.metric_id = static_cast<uint32_t>(event);
-    options.component = ComponentName(Component::kUnknown);
+    options.metric_dimensions = 1;
+    options.event_codes = {static_cast<uint32_t>(Source::kUnknown)};
     auto entry = logger_->histograms().find(options);
     EXPECT_NE(logger_->histograms().end(), entry);
     // There should be one event per bucket, since we made a one to one mapping for each event.

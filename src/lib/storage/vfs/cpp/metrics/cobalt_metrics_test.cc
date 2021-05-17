@@ -33,7 +33,7 @@ std::unique_ptr<cobalt_client::Collector> MakeCollector(
 }
 
 TEST(CobaltMetricsTest, LogWhileEnabled) {
-  fs_metrics::Metrics metrics(MakeCollector(), fs_metrics::Component::kUnknown);
+  fs_metrics::Metrics metrics(MakeCollector(), Source::kUnknown);
   metrics.EnableMetrics(/*should_collect*/ true);
 
   fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
@@ -46,7 +46,7 @@ TEST(CobaltMetricsTest, LogWhileEnabled) {
 }
 
 TEST(CobaltMetricsTest, LogWhileNotEnabled) {
-  fs_metrics::Metrics metrics(MakeCollector(), fs_metrics::Component::kUnknown);
+  fs_metrics::Metrics metrics(MakeCollector(), Source::kUnknown);
   metrics.EnableMetrics(/*should_collect*/ false);
 
   fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
@@ -58,7 +58,7 @@ TEST(CobaltMetricsTest, LogWhileNotEnabled) {
 }
 
 TEST(CobaltMetricsTest, EnableMetricsEnabled) {
-  fs_metrics::Metrics metrics(MakeCollector(), fs_metrics::Component::kUnknown);
+  fs_metrics::Metrics metrics(MakeCollector(), Source::kUnknown);
   fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
   ASSERT_NOT_NULL(vnodes);
   ASSERT_EQ(vnodes->metrics_enabled, metrics.IsEnabled());
@@ -69,7 +69,7 @@ TEST(CobaltMetricsTest, EnableMetricsEnabled) {
 }
 
 TEST(CobaltMetricsTest, EnableMetricsDisabled) {
-  fs_metrics::Metrics metrics(MakeCollector(), fs_metrics::Component::kUnknown);
+  fs_metrics::Metrics metrics(MakeCollector(), Source::kUnknown);
   metrics.EnableMetrics(/*should_collect*/ true);
   fs_metrics::FsCommonMetrics* vnodes = metrics.mutable_fs_common_metrics();
 
@@ -81,17 +81,28 @@ TEST(CobaltMetricsTest, EnableMetricsDisabled) {
   EXPECT_FALSE(vnodes->metrics_enabled);
 }
 
+TEST(CobaltMetricsTest, EventSourceSetInMetricOptions) {
+  constexpr Source source = Source::kBlobfs;
+  constexpr uint32_t source_event_code = static_cast<uint32_t>(source);
+  fs_metrics::Metrics metrics(MakeCollector(), source);
+
+  const auto& fs_common_metrics = metrics.fs_common_metrics();
+  EXPECT_EQ(fs_common_metrics.vnode.close.GetOptions().event_codes[0], source_event_code);
+  EXPECT_EQ(fs_common_metrics.journal.write_data.GetOptions().event_codes[0], source_event_code);
+  EXPECT_EQ(fs_common_metrics.fragmentation_metrics.total_nodes.GetOptions().event_codes[0],
+            source_event_code);
+}
+
 TEST(CobaltMetricsTest, CreateCompressionFormatMetrics) {
   cobalt_client::InMemoryLogger* logger;
 
-  fs_metrics::Metrics metrics_unknownfs(MakeCollector(&logger), fs_metrics::Component::kUnknown);
+  fs_metrics::Metrics metrics_unknownfs(MakeCollector(&logger), Source::kUnknown);
   ASSERT_EQ(metrics_unknownfs.compression_format_metrics().source,
             fs_metrics::CompressionSource::kUnknown);
   // No compression format counters for an unknown fs.
   ASSERT_TRUE(metrics_unknownfs.compression_format_metrics().counters.empty());
 
-  fs_metrics::Metrics metrics(MakeCollector(&logger), fs_metrics::Component::kBlobfs,
-                              CompressionSource::kBlobfs);
+  fs_metrics::Metrics metrics(MakeCollector(&logger), Source::kBlobfs, CompressionSource::kBlobfs);
   metrics.EnableMetrics(/*should_collect*/ true);
   // Compression format counters created for blobfs.
   ASSERT_EQ(metrics.compression_format_metrics().counters.size(),
@@ -130,8 +141,7 @@ TEST(CobaltMetricsTest, CreateCompressionFormatMetrics) {
 
 TEST(CobaltMetricsTest, IncrementCompressionFormatMetrics) {
   cobalt_client::InMemoryLogger* logger;
-  fs_metrics::Metrics metrics(MakeCollector(&logger), fs_metrics::Component::kBlobfs,
-                              CompressionSource::kBlobfs);
+  fs_metrics::Metrics metrics(MakeCollector(&logger), Source::kBlobfs, CompressionSource::kBlobfs);
   metrics.EnableMetrics(/*should_collect*/ true);
 
   auto source = fs_metrics::CompressionSource::kBlobfs;
@@ -203,15 +213,14 @@ TEST(CobaltMetricsTest, IncrementCompressionFormatMetrics) {
 
 TEST(CobaltMetricsTest, RecordOldestVersionMountedReportsCorrectly) {
   cobalt_client::InMemoryLogger* logger;
-  fs_metrics::Metrics metrics(MakeCollector(&logger), Component::kBlobfs,
-                              CompressionSource::kBlobfs);
+  fs_metrics::Metrics metrics(MakeCollector(&logger), Source::kBlobfs, CompressionSource::kBlobfs);
   metrics.RecordOldestVersionMounted("5/5");
   EXPECT_TRUE(metrics.Flush());
   cobalt_client::MetricOptions expected_options = {
       .component = "5/5",
       .metric_id = static_cast<uint32_t>(Event::kVersion),
       .metric_dimensions = 1,
-      .event_codes = {static_cast<uint32_t>(Component::kBlobfs)}};
+      .event_codes = {static_cast<uint32_t>(Source::kBlobfs)}};
   auto iter = logger->counters().find(expected_options);
   ASSERT_NE(iter, logger->counters().end());
   EXPECT_EQ(iter->second, 1);

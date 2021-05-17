@@ -34,7 +34,7 @@ struct FsCommonMetrics {
   // Number of buckets used for the these metrics.
   static constexpr uint32_t kHistogramBuckets = 10;
 
-  FsCommonMetrics(cobalt_client::Collector* collector, Component component);
+  FsCommonMetrics(cobalt_client::Collector* collector, Source source);
 
   struct VnodeMetrics {
     cobalt_client::Histogram<kHistogramBuckets> close;
@@ -128,8 +128,8 @@ struct CompressionFormatMetrics {
 class Metrics {
  public:
   Metrics() = delete;
-  Metrics(std::unique_ptr<cobalt_client::Collector> collector, Component component,
-          fs_metrics::CompressionSource source = fs_metrics::CompressionSource::kUnknown);
+  Metrics(std::unique_ptr<cobalt_client::Collector> collector, Source source,
+          CompressionSource compression_source = CompressionSource::kUnknown);
   Metrics(const Metrics&) = delete;
   Metrics(Metrics&&) = delete;
   Metrics& operator=(const Metrics&) = delete;
@@ -178,7 +178,7 @@ class Metrics {
   };
 
   std::mutex mutex_;
-  Component component_;
+  Source source_;
   std::unique_ptr<cobalt_client::Collector> collector_ FXL_GUARDED_BY(mutex_);
 
   FsCommonMetrics fs_common_metrics_;
@@ -192,9 +192,6 @@ class Metrics {
 
   bool is_enabled_ = false;
 };
-
-// Returns the component name for the given component.
-std::string_view ComponentName(Component component);
 
 }  // namespace fs_metrics
 
