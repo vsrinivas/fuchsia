@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -51,8 +52,10 @@ type QemuLauncher struct {
 	build Build
 
 	// Paths to files that are created by Prepare():
-	initrd      string
-	extendedBlk string
+	initrd       string
+	extendedBlk  string
+	sshKey       string
+	sshPublicKey string
 
 	// Overridable for testing
 	timeout time.Duration
@@ -136,11 +139,11 @@ func fileExists(path string) bool {
 // If Prepare succeeds, it is up to the caller to clean up by calling Kill later.
 // However, if it fails, any resources will have been automatically released.
 func (q *QemuLauncher) Prepare() (returnErr error) {
-	paths, err := q.build.Path("zbi", "fvm", "blk", "authkeys", "zbitool")
+	paths, err := q.build.Path("zbi", "fvm", "blk", "zbitool")
 	if err != nil {
 		return fmt.Errorf("Error resolving qemu dependencies: %s", err)
 	}
-	zbi, fvm, blk, authkeys, zbitool := paths[0], paths[1], paths[2], paths[3], paths[4]
+	zbi, fvm, blk, zbitool := paths[0], paths[1], paths[2], paths[3]
 
 	// Create a tmpdir to store files we need
 	if q.TmpDir == "" {
@@ -158,11 +161,32 @@ func (q *QemuLauncher) Prepare() (returnErr error) {
 		}
 	}()
 
+	sshKey := filepath.Join(q.TmpDir, "sshid")
+	sshPublicKey := filepath.Join(q.TmpDir, "sshid.pub")
+	initrd := filepath.Join(q.TmpDir, "ssh-"+path.Base(zbi))
+	if !fileExists(sshKey) || !fileExists(sshPublicKey) {
+		// Generate SSH key pair
+		key, err := createSSHKey()
+		if err != nil {
+			return fmt.Errorf("error generating ssh key: %s", err)
+		}
+		if err := writeSSHPrivateKeyFile(key, sshKey); err != nil {
+			return fmt.Errorf("error writing ssh key: %s", err)
+		}
+		if err := writeSSHPublicKeyFile(key, sshPublicKey); err != nil {
+			return fmt.Errorf("error writing ssh public key: %s", err)
+		}
+		// Force rebuild of any existing ZBI in the next step, to reflect the new key
+		if err := os.RemoveAll(initrd); err != nil {
+			return fmt.Errorf("error removing zbi: %s", err)
+		}
+	}
+	q.sshKey = sshKey
+	q.sshPublicKey = sshPublicKey
+
 	// Stick our SSH key into the authorized_keys files
-	initrd := path.Join(q.TmpDir, "ssh-"+path.Base(zbi))
 	if !fileExists(initrd) {
-		// TODO(fxbug.dev/45424): generate ssh key per-instance
-		entry := "data/ssh/authorized_keys=" + authkeys
+		entry := "data/ssh/authorized_keys=" + q.sshPublicKey
 		if err := CreateProcessForeground(zbitool, "-o", initrd, zbi, "-e", entry); err != nil {
 			return fmt.Errorf("adding ssh key failed: %s", err)
 		}
@@ -200,11 +224,11 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 		return nil, fmt.Errorf("Start called but already running")
 	}
 
-	paths, err := q.build.Path("qemu", "kernel", "sshid")
+	paths, err := q.build.Path("qemu", "kernel")
 	if err != nil {
 		return nil, fmt.Errorf("Error resolving qemu dependencies: %s", err)
 	}
-	binary, kernel, sshid := paths[0], paths[1], paths[2]
+	binary, kernel := paths[0], paths[1]
 
 	port, err := getFreePort()
 	if err != nil {
@@ -296,7 +320,7 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 	// Detach from the child, since we will never wait on it
 	cmd.Process.Release()
 
-	return &SSHConnector{Host: "localhost", Port: port, Key: sshid}, nil
+	return &SSHConnector{Host: "localhost", Port: port, Key: q.sshKey}, nil
 }
 
 // IsRunning checks if the qemu process is alive

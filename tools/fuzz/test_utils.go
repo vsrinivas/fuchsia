@@ -6,9 +6,11 @@ package fuzz
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -56,4 +58,31 @@ func fakeSymbolize(in io.Reader, out io.Writer) error {
 		return fmt.Errorf("failed during scan: %s", err)
 	}
 	return nil
+}
+
+func getFileHash(t *testing.T, path string) []byte {
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("error opening file: %s", err)
+	}
+	defer f.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, f); err != nil {
+		t.Fatalf("error while hashing file %q: %s", path, err)
+	}
+
+	return hash.Sum(nil)
+}
+
+// Create a file, with random contents to allow for simple change detection
+// Note: CPRNG seeds need to be propagated to subprocesses to avoid collisions
+func touchRandomFile(t *testing.T, path string) {
+	contents := make([]byte, 16)
+	if _, err := rand.Read(contents); err != nil {
+		t.Fatalf("Error getting random contents: %s", err)
+	}
+	if err := ioutil.WriteFile(path, contents, 0600); err != nil {
+		t.Fatalf("Error touching file %q: %s", path, err)
+	}
 }

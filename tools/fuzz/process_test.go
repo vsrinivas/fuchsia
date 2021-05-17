@@ -7,6 +7,7 @@ package fuzz
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,6 +36,8 @@ func mockCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(os.Args[0], argv...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "MOCK_PROCESS=yes")
+	// Ensure the subprocess CPRNG is seeded uniquely (but deterministically)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("RAND_SEED=%d", rand.Int63()))
 	return cmd
 }
 
@@ -44,6 +47,11 @@ func TestDoProcessMock(t *testing.T) {
 	if os.Getenv("MOCK_PROCESS") != "yes" {
 		t.Skip("Not in a subprocess")
 	}
+	seed, err := strconv.ParseInt(os.Getenv("RAND_SEED"), 10, 64)
+	if err != nil {
+		t.Fatalf("Invalid CPRNG seed: %s", err)
+	}
+	rand.Seed(seed)
 
 	cmd, args := flag.Arg(0), flag.Args()[1:]
 
@@ -69,9 +77,26 @@ func TestDoProcessMock(t *testing.T) {
 		stayAlive = true
 		out = "welcome to qemu for turtles 🐢"
 		exitCode = 0
-	case "cp", "fvm", "zbi":
-		// These utilities already had their args checked for invalid paths
-		// above, so at this point it's a no-op
+	// The following utilities already had their args checked for invalid paths
+	// above, so at this point we just need to touch an expected output file.
+	// The contents are randomized to allow for simple change detection.
+	case "cp":
+		touchRandomFile(t, args[len(args)-1])
+		exitCode = 0
+	case "fvm":
+		touchRandomFile(t, args[0])
+		exitCode = 0
+	case "zbi":
+		found := false
+		for j, arg := range args[:len(args)-1] {
+			if arg == "-o" {
+				touchRandomFile(t, args[j+1])
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("No output specified in zbi command args: %s", args)
+		}
 		exitCode = 0
 	case "qemu-system-x86_64", "qemu-system-aarch64":
 		stayAlive = true

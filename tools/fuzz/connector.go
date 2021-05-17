@@ -308,7 +308,6 @@ func loadConnectorFromHandle(handle Handle) (Connector, error) {
 }
 
 // Generate a key to use for SSH
-// TODO(fxbug.dev/45424): Also return public key
 func createSSHKey() (*rsa.PrivateKey, error) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -327,6 +326,20 @@ func writeSSHPrivateKeyFile(key *rsa.PrivateKey, path string) error {
 
 	if err := ioutil.WriteFile(path, pemData, 0600); err != nil {
 		return fmt.Errorf("error writing private key file: %s", err)
+	}
+
+	return nil
+}
+
+// Writes public key to given path in format usable by SSH
+func writeSSHPublicKeyFile(key *rsa.PrivateKey, path string) error {
+	pubKey, err := ssh.NewPublicKey(key.Public())
+	if err != nil {
+		return fmt.Errorf("error generating public key: %s", err)
+	}
+	pubKeyData := ssh.MarshalAuthorizedKey(pubKey)
+	if err := ioutil.WriteFile(path, pubKeyData, 0644); err != nil {
+		return fmt.Errorf("error writing public key: %s", err)
 	}
 
 	return nil
