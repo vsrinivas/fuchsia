@@ -12,7 +12,8 @@ use {
         RepositoryManagerRequestStream,
     },
     fidl_fuchsia_pkg_ext::{
-        MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
+        MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder,
+        RepositoryKey, RepositoryStorageType,
     },
     fidl_fuchsia_pkg_rewrite::{
         EditTransactionRequest, EngineRequest, EngineRequestStream, RuleIteratorMarker,
@@ -493,7 +494,11 @@ fn make_test_repo_config() -> RepositoryConfig {
 
 // This builds a v2 RepositoryConfig that is expected to be in the repository manager add request
 // when pkgctl is provided with the V1_LEGACY_TEST_REPO_JSON structure below as input.
-fn make_v1_legacy_expected_test_repo_config() -> RepositoryConfig {
+fn make_v1_legacy_expected_test_repo_config(persist: bool) -> RepositoryConfig {
+    let storage_type = match persist {
+        true => RepositoryStorageType::Persistent,
+        false => RepositoryStorageType::Ephemeral,
+    };
     RepositoryConfigBuilder::new(RepoUrl::new("legacy-repo".to_string()).expect("valid url"))
         .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
         .add_mirror(
@@ -502,6 +507,7 @@ fn make_v1_legacy_expected_test_repo_config() -> RepositoryConfig {
                 .subscribe(true)
                 .build(),
         )
+        .repo_storage_type(storage_type)
         .build()
 }
 
@@ -622,7 +628,7 @@ macro_rules! repo_add_tests {
                 let env = TestEnv::new();
 
                 let repo_config = match $version {
-                    "1" =>  make_v1_legacy_expected_test_repo_config(),
+                    "1" =>  make_v1_legacy_expected_test_repo_config(false),
                     _ => make_test_repo_config(),
                 };
 
@@ -677,6 +683,23 @@ repo_add_tests! {
     test_repo_add_v1_url_with_name: "url", "1", "legacy-repo",
     test_repo_add_v2_url: "url", "2", "",
     test_repo_add_v2_url_with_name: "url", "2", "fuchsia.com",
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_repo_add_persistent_v1_url() {
+    let env = TestEnv::new();
+
+    let repo_config = make_v1_legacy_expected_test_repo_config(true);
+    let response = StaticResponse::ok_body(V1_LEGACY_TEST_REPO_JSON);
+    let server = TestServer::builder().handler(response).start();
+    let local_url = server.local_url_for_path("some/path").to_owned();
+    let args = vec!["repo", "add", "url", "-p", "-f", "1", &local_url];
+    let output = env.run_pkgctl(args).await;
+
+    assert_stdout(&output, "");
+    env.assert_only_repository_manager_called_with(vec![CapturedRepositoryManagerRequest::Add {
+        repo: repo_config,
+    }]);
 }
 
 #[fasync::run_singlethreaded(test)]

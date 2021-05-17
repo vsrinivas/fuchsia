@@ -18,7 +18,7 @@ use {
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker, PackageUrl,
         RepositoryManagerMarker, RepositoryManagerProxy,
     },
-    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig},
+    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryStorageType},
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
     fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
@@ -175,7 +175,12 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 }
                 Some(RepoSubCommand::Add(RepoAddCommand { subcommand })) => {
                     match subcommand {
-                        RepoAddSubCommand::File(RepoAddFileCommand { format, name, file }) => {
+                        RepoAddSubCommand::File(RepoAddFileCommand {
+                            persist,
+                            format,
+                            name,
+                            file,
+                        }) => {
                             let res = match format {
                                 RepoConfigFormat::Version1 => {
                                     let mut repo: SourceConfig = serde_json::from_reader(
@@ -186,6 +191,11 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     if let Some(n) = name {
                                         repo.set_id(&n);
                                         validate_host(&repo.get_id())?;
+                                    }
+                                    if persist {
+                                        repo.set_repo_storage_type(
+                                            RepositoryStorageType::Persistent,
+                                        );
                                     }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r
@@ -201,7 +211,12 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
 
                             let () = res.map_err(zx::Status::from_raw)?;
                         }
-                        RepoAddSubCommand::Url(RepoAddUrlCommand { format, name, repo_url }) => {
+                        RepoAddSubCommand::Url(RepoAddUrlCommand {
+                            persist,
+                            format,
+                            name,
+                            repo_url,
+                        }) => {
                             let res = fetch_url(repo_url).await?;
                             let res = match format {
                                 RepoConfigFormat::Version1 => {
@@ -211,6 +226,11 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     if let Some(n) = name {
                                         repo.set_id(&n);
                                         validate_host(&repo.get_id())?;
+                                    }
+                                    if persist {
+                                        repo.set_repo_storage_type(
+                                            RepositoryStorageType::Persistent,
+                                        );
                                     }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r

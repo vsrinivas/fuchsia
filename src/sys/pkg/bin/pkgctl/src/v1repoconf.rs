@@ -8,6 +8,7 @@
 use {
     anyhow::bail,
     fidl_fuchsia_pkg as fidl,
+    fidl_fuchsia_pkg_ext::RepositoryStorageType,
     serde::{Deserialize, Serialize},
     std::borrow::Cow,
 };
@@ -48,6 +49,8 @@ pub struct SourceConfig {
     StatusConfig: StatusConfig,
     Auto: bool,
     BlobKey: Option<BlobEncryptionKey>,
+    #[serde(default = "default_repo_storage_type")]
+    RepoStorageType: RepositoryStorageType,
 }
 
 impl SourceConfig {
@@ -56,6 +59,9 @@ impl SourceConfig {
     }
     pub fn set_id(&mut self, id: &str) {
         self.ID = id.to_string();
+    }
+    pub fn set_repo_storage_type(&mut self, t: RepositoryStorageType) {
+        self.RepoStorageType = t;
     }
 }
 
@@ -74,6 +80,7 @@ impl From<SourceConfig> for fidl::RepositoryConfig {
                 }]
                 .to_vec()
             }),
+            storage_type: Some(config.RepoStorageType.into()),
             ..fidl::RepositoryConfig::EMPTY
         }
     }
@@ -94,6 +101,10 @@ fn default_root_version() -> u32 {
 
 fn default_root_threshold() -> u32 {
     1
+}
+
+fn default_repo_storage_type() -> RepositoryStorageType {
+    RepositoryStorageType::Ephemeral
 }
 
 fn format_repo_url<'a>(url: &'a str) -> String {
