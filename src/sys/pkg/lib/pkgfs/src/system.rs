@@ -8,6 +8,7 @@ use {
     anyhow::anyhow,
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, FileProxy},
+    fuchsia_hash::{Hash, ParseHashError},
     std::fs,
     thiserror::Error,
 };
@@ -35,6 +36,9 @@ pub enum SystemImageFileHashError {
 
     #[error("while reading the file: {0}")]
     Read(#[from] io_util::file::ReadError),
+
+    #[error("while parsing the hash: {0}")]
+    Parse(#[from] ParseHashError),
 }
 
 /// An open handle to /pkgfs/system.
@@ -81,9 +85,11 @@ impl Client {
     }
 
     /// Returns the system image hash.
-    pub async fn hash(&self) -> Result<String, SystemImageFileHashError> {
+    pub async fn hash(&self) -> Result<Hash, SystemImageFileHashError> {
         let file_proxy = self.open_file_as_proxy("meta").await?;
-        let hash = io_util::file::read_to_string(&file_proxy).await?;
+        let hashstr = io_util::file::read_to_string(&file_proxy).await?;
+        let hash: Hash = hashstr.parse()?;
+
         Ok(hash)
     }
 
@@ -160,6 +166,8 @@ mod tests {
         assert_eq!(
             client.hash().await.unwrap(),
             "ac005270136ee566e3a908267e0eb1076fd777430cb0216bb1e96fc866fad6ed"
+                .parse::<Hash>()
+                .unwrap()
         );
     }
 }

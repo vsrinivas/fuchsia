@@ -15,8 +15,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
-    futures::prelude::*,
-    parking_lot::Mutex,
+    futures::{lock::Mutex, prelude::*},
     std::sync::Arc,
     system_image::StaticPackages,
 };
@@ -105,9 +104,11 @@ async fn main_inner() -> Result<(), Error> {
     };
 
     let mut _blob_location = None;
+    let mut system_image_blobs = None;
 
     if !ignore_system_image {
         _blob_location = Some(blob_location?);
+        system_image_blobs = Some(_blob_location.as_ref().unwrap().list_blobs().clone());
     }
 
     let commit_status_provider =
@@ -127,6 +128,7 @@ async fn main_inner() -> Result<(), Error> {
         .add_fidl_service(IncomingService::SpaceManager);
 
     let dynamic_index = Arc::new(Mutex::new(dynamic_index));
+    let system_image_blobs = Arc::new(system_image_blobs);
 
     let () = fs
         .for_each_concurrent(None, move |svc| {
@@ -146,8 +148,14 @@ async fn main_inner() -> Result<(), Error> {
                     .map(|res| res.context("while serving fuchsia.pkg.PackageCache")),
                 ),
                 IncomingService::SpaceManager(stream) => Task::spawn(
-                    gc_service::serve(pkgfs_ctl.clone(), commit_status_provider.clone(), stream)
-                        .map(|res| res.context("while serving fuchsia.space.Manager")),
+                    gc_service::serve(
+                        blobfs.clone(),
+                        Arc::clone(&system_image_blobs),
+                        Arc::clone(&dynamic_index),
+                        commit_status_provider.clone(),
+                        stream,
+                    )
+                    .map(|res| res.context("while serving fuchsia.space.Manager")),
                 ),
             }
             .unwrap_or_else(|e| {

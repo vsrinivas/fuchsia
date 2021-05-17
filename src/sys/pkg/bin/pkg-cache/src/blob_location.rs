@@ -46,6 +46,10 @@ impl BlobLocation {
         }
     }
 
+    pub fn list_blobs(&self) -> &HashSet<Hash> {
+        &self.base_blobs.blobs
+    }
+
     async fn load_base_blobs(
         system_image: &SystemImage,
         versions: &Versions,

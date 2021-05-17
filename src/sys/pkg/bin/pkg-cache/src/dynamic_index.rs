@@ -10,8 +10,7 @@ use {
     fuchsia_merkle::Hash,
     fuchsia_pkg::{MetaContents, MetaPackage, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
-    futures::{stream, StreamExt},
-    parking_lot::Mutex,
+    futures::{lock::Mutex, stream, StreamExt},
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
     std::{
         collections::{HashMap, HashSet},
@@ -175,7 +174,7 @@ pub async fn fulfill_meta_far_blob(
     blobfs: &blobfs::Client,
     blob_hash: Hash,
 ) -> Result<(), DynamicIndexError> {
-    if index.lock().packages.get(&blob_hash) != Some(&Package::Pending) {
+    if index.lock().await.packages.get(&blob_hash) != Some(&Package::Pending) {
         return Err(DynamicIndexError::FulfillNotNeededBlob(blob_hash));
     }
 
@@ -220,6 +219,7 @@ pub async fn fulfill_meta_far_blob(
 
     index
         .lock()
+        .await
         .add_package(blob_hash, Package::WithMetaFar { path, missing_blobs, required_blobs });
 
     Ok(())
@@ -607,7 +607,7 @@ mod tests {
 
         fulfill_meta_far_blob(&dynamic_index, &blobfs, hash).await.unwrap();
 
-        let dynamic_index = dynamic_index.lock();
+        let dynamic_index = dynamic_index.lock().await;
         assert_eq!(
             dynamic_index.packages,
             hashmap! {
@@ -656,7 +656,7 @@ mod tests {
         )
         .await;
 
-        let dynamic_index = dynamic_index.lock();
+        let dynamic_index = dynamic_index.lock().await;
         let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
         assert_eq!(
             dynamic_index.packages,

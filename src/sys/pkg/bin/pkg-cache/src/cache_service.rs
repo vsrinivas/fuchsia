@@ -24,8 +24,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
     fuchsia_zircon::{sys::ZX_CHANNEL_MAX_MSG_BYTES, Status},
-    futures::{prelude::*, select_biased, stream::FuturesUnordered},
-    parking_lot::Mutex,
+    futures::{lock::Mutex, prelude::*, select_biased, stream::FuturesUnordered},
     std::{collections::HashSet, sync::Arc},
     system_image::StaticPackages,
 };
@@ -352,9 +351,9 @@ async fn serve_needed_blobs(
     .await;
 
     if res.is_ok() {
-        dynamic_index.lock().complete_install(meta_far_info.blob_id.into())?;
+        dynamic_index.lock().await.complete_install(meta_far_info.blob_id.into())?;
     } else {
-        dynamic_index.lock().cancel_install(&meta_far_info.blob_id.into());
+        dynamic_index.lock().await.cancel_install(&meta_far_info.blob_id.into());
     }
 
     // TODO in the Err(_) case, a responder was likely dropped, which would have already shutdown
@@ -378,7 +377,7 @@ async fn handle_open_meta_blob(
     blobfs: &blobfs::Client,
 ) -> Result<(), ServeNeededBlobsError> {
     let hash = meta_far_info.blob_id.into();
-    dynamic_index.lock().start_install(hash);
+    dynamic_index.lock().await.start_install(hash);
 
     loop {
         let (file, responder) =

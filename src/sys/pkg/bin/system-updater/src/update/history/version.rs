@@ -210,7 +210,7 @@ async fn get_system_image_hash_from_pkgfs_system(
     pkgfs_system: &Option<pkgfs::system::Client>,
 ) -> Result<String, Error> {
     match pkgfs_system.as_ref() {
-        Some(pkgfs_system) => Ok(pkgfs_system.hash().await?),
+        Some(pkgfs_system) => Ok(pkgfs_system.hash().await?.to_string()),
         None => Err(anyhow!("pkgfs/system not available")),
     }
 }

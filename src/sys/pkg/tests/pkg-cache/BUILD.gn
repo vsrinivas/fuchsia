@@ -35,6 +35,7 @@ rustc_test("driver") {
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
+    "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/system-image",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-paver",
