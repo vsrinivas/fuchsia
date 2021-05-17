@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/format"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -31,6 +32,8 @@ func (w withGoFmt) Execute(wr io.Writer, data interface{}) error {
 	}
 	formatted, err := format.Source(b.Bytes())
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "gofmt failed: %s\n", err)
+		_, err = wr.Write(b.Bytes())
 		return err
 	}
 	_, err = wr.Write(formatted)

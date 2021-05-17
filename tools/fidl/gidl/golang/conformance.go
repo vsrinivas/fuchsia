@@ -65,7 +65,15 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 	{{- if .HandleDefs }}
 		handleDefs := {{ .HandleDefs }}
 		handles := createHandlesFromHandleDef(handleDefs)
-	{{- end }}
+		var {{ .EqualityCheckKoidArrayVar }} []uint64
+		for _, h := range handles {
+			info, err := handleGetBasicInfo(&h)
+			if err != nil {
+				t.Fatal(err)
+			}
+			{{ .EqualityCheckKoidArrayVar }} = append({{ .EqualityCheckKoidArrayVar }}, info.Koid)
+		}
+		{{- end }}
 		decodeSuccessCase{
 			name: {{ .Name }},
 			context: {{ .Context }},
@@ -74,6 +82,11 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 	{{- if .HandleDefs }}
 			handleInfos: {{ .Handles }},
 	{{- end }}
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				{{ .EqualityCheckInputVar }} := input.(*{{ .Type }})
+				{{ .EqualityCheck }}
+			},
 		}.check(t)
 	}
 {{ end }}
@@ -138,7 +151,8 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, Context, Value, Bytes, HandleDefs, Handles string
+	Name, Context, Type, Value, Bytes, HandleDefs, Handles          string
+	EqualityCheck, EqualityCheckInputVar, EqualityCheckKoidArrayVar string
 }
 
 type encodeFailureCase struct {
@@ -222,17 +236,24 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
 		value := visit(decodeSuccess.Value, decl)
+		equalityCheckInputVar := "val"
+		equalityCheckKoidArrayVar := "koidArray"
+		equalityCheck := BuildEqualityCheck(equalityCheckInputVar, decodeSuccess.Value, decl, equalityCheckKoidArrayVar)
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				Context:    marshalerContext(encoding.WireFormat),
-				Value:      value,
-				Bytes:      buildBytes(encoding.Bytes),
-				HandleDefs: buildHandleDefs(decodeSuccess.HandleDefs),
-				Handles:    buildHandleInfos(encoding.Handles),
+				Name:                      testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Context:                   marshalerContext(encoding.WireFormat),
+				Value:                     value,
+				Bytes:                     buildBytes(encoding.Bytes),
+				Type:                      declName(decl),
+				HandleDefs:                buildHandleDefs(decodeSuccess.HandleDefs),
+				Handles:                   buildHandleInfos(encoding.Handles),
+				EqualityCheck:             equalityCheck,
+				EqualityCheckInputVar:     equalityCheckInputVar,
+				EqualityCheckKoidArrayVar: equalityCheckKoidArrayVar,
 			})
 		}
 	}

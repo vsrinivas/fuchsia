@@ -492,6 +492,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			bytes: []byte{
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenBoolStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != true {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "true")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -504,6 +514,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenIntStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "1")
+				}
+
 			},
 		}.check(t)
 	}
@@ -518,6 +538,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			bytes: []byte{
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenUintStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "1")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -531,6 +561,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenFloatStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != 0 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "0")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -543,6 +583,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenDoubleStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != 0 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "0")
+				}
+
 			},
 		}.check(t)
 	}
@@ -559,6 +609,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenStringStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != "abcd" {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "\"abcd\"")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -574,6 +634,18 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x61, 0x62, 0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableStringStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := *(f1.V)
+				ignore_unused_warning(f2)
+				if f2 != "abcd" {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2", "\"abcd\"")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -588,6 +660,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableStringStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != nil {
+					t.Errorf("expected nil but was non-nil: %s", "f1.V")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -601,6 +683,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			bytes: []byte{
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenEnumStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "1")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -613,6 +705,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenBitsStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "1")
+				}
+
 			},
 		}.check(t)
 	}
@@ -634,6 +736,18 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenTableStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if f2.HasV() {
+					t.Errorf("expected false but was true: %s", "f2.HasV()")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -652,6 +766,23 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenUnionStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if f2.Which() != conformance.GoldenUnionV {
+					t.Fatalf("unexpectedly unequal: %s and %s", "f2.Which()", "conformance.GoldenUnionV")
+				}
+				f3 := f2.V
+				ignore_unused_warning(f3)
+				if f3 != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3", "1")
+				}
+
 			},
 		}.check(t)
 	}
@@ -672,6 +803,23 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableUnionStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if f2.Which() != conformance.GoldenUnionV {
+					t.Fatalf("unexpectedly unequal: %s and %s", "f2.Which()", "conformance.GoldenUnionV")
+				}
+				f3 := f2.V
+				ignore_unused_warning(f3)
+				if f3 != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3", "1")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -686,6 +834,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableUnionStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != nil {
+					t.Errorf("expected nil but was non-nil: %s", "f1.V")
+				}
+
 			},
 		}.check(t)
 	}
@@ -704,6 +862,27 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenByteArrayStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if f2[0] != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[0]", "1")
+				}
+				if f2[1] != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[1]", "2")
+				}
+				if f2[2] != 3 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[2]", "3")
+				}
+				if f2[3] != 4 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[3]", "4")
+				}
+
 			},
 		}.check(t)
 	}
@@ -724,6 +903,25 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenStructArrayStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				f3 := f2[0]
+				ignore_unused_warning(f3)
+				if f3.V != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3.V", "1")
+				}
+				f4 := f2[1]
+				ignore_unused_warning(f4)
+				if f4.V != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f4.V", "2")
+				}
+
 			},
 		}.check(t)
 	}
@@ -754,6 +952,54 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04,
 				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenByteVectorStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if len(f2) != 12 {
+					t.Fatalf("unexpectedly unequal: %s and %s", "len(f2)", "12")
+				}
+				if f2[0] != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[0]", "1")
+				}
+				if f2[1] != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[1]", "2")
+				}
+				if f2[2] != 3 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[2]", "3")
+				}
+				if f2[3] != 4 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[3]", "4")
+				}
+				if f2[4] != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[4]", "1")
+				}
+				if f2[5] != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[5]", "2")
+				}
+				if f2[6] != 3 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[6]", "3")
+				}
+				if f2[7] != 4 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[7]", "4")
+				}
+				if f2[8] != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[8]", "1")
+				}
+				if f2[9] != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[9]", "2")
+				}
+				if f2[10] != 3 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[10]", "3")
+				}
+				if f2[11] != 4 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[11]", "4")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -774,6 +1020,30 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableByteVectorStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := *(f1.V)
+				ignore_unused_warning(f2)
+				if len(f2) != 4 {
+					t.Fatalf("unexpectedly unequal: %s and %s", "len(f2)", "4")
+				}
+				if f2[0] != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[0]", "1")
+				}
+				if f2[1] != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[1]", "2")
+				}
+				if f2[2] != 3 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[2]", "3")
+				}
+				if f2[3] != 4 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2[3]", "4")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -787,6 +1057,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableByteVectorStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != nil {
+					t.Errorf("expected nil but was non-nil: %s", "f1.V")
+				}
+
 			},
 		}.check(t)
 	}
@@ -810,6 +1090,28 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenStructVectorStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				if len(f2) != 2 {
+					t.Fatalf("unexpectedly unequal: %s and %s", "len(f2)", "2")
+				}
+				f3 := f2[0]
+				ignore_unused_warning(f3)
+				if f3.V != 1 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3.V", "1")
+				}
+				f4 := f2[1]
+				ignore_unused_warning(f4)
+				if f4.V != 2 {
+					t.Errorf("unexpectedly unequal: %s and %s", "f4.V", "2")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -826,6 +1128,20 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 				0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := *(f1.V)
+				ignore_unused_warning(f2)
+				f3 := f2
+				ignore_unused_warning(f3)
+				if f3.V != true {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3.V", "true")
+				}
+
+			},
 		}.check(t)
 	}
 
@@ -838,6 +1154,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != nil {
+					t.Errorf("expected nil but was non-nil: %s", "f1.V")
+				}
+
 			},
 		}.check(t)
 	}
@@ -852,6 +1178,14 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 		}
 		handles := createHandlesFromHandleDef(handleDefs)
+		var koidArray []uint64
+		for _, h := range handles {
+			info, err := handleGetBasicInfo(&h)
+			if err != nil {
+				t.Fatal(err)
+			}
+			koidArray = append(koidArray, info.Koid)
+		}
 		decodeSuccessCase{
 			name:    "GoldenHandleBasicRightsStruct_v1",
 			context: fidl.MarshalerContext{},
@@ -863,6 +1197,26 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			handleInfos: []zx.HandleInfo{
 				{Handle: handles[0], Type: handleDefs[0].subtype, Rights: handleDefs[0].rights},
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenHandleBasicRightsStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2, err := handleGetBasicInfo(f1.V.Handle())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if f2.Koid != koidArray[0] {
+					t.Errorf("unexpectedly unequal: %s and %s", "f2.Koid", "koidArray[0]")
+				}
+				if !(f2.Type == 0 || 0 == zx.ObjectTypeNone) {
+					t.Errorf("expected true but was false: %s", "f2.Type == 0 || 0 == zx.ObjectTypeNone")
+				}
+				if !(f2.Rights == 49155 || 49155 == zx.RightSameRights) {
+					t.Errorf("expected true but was false: %s", "f2.Rights == 49155 || 49155 == zx.RightSameRights")
+				}
+
 			},
 		}.check(t)
 	}
@@ -877,6 +1231,14 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 		}
 		handles := createHandlesFromHandleDef(handleDefs)
+		var koidArray []uint64
+		for _, h := range handles {
+			info, err := handleGetBasicInfo(&h)
+			if err != nil {
+				t.Fatal(err)
+			}
+			koidArray = append(koidArray, info.Koid)
+		}
 		decodeSuccessCase{
 			name:    "GoldenNullableHandleStructNonNull_v1",
 			context: fidl.MarshalerContext{},
@@ -888,6 +1250,28 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			handleInfos: []zx.HandleInfo{
 				{Handle: handles[0], Type: handleDefs[0].subtype, Rights: handleDefs[0].rights},
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableHandleStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				f2 := f1.V
+				ignore_unused_warning(f2)
+				f3, err := handleGetBasicInfo(&f2)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if f3.Koid != koidArray[0] {
+					t.Errorf("unexpectedly unequal: %s and %s", "f3.Koid", "koidArray[0]")
+				}
+				if !(f3.Type == 0 || 0 == zx.ObjectTypeNone) {
+					t.Errorf("expected true but was false: %s", "f3.Type == 0 || 0 == zx.ObjectTypeNone")
+				}
+				if !(f3.Rights == 2147483648 || 2147483648 == zx.RightSameRights) {
+					t.Errorf("expected true but was false: %s", "f3.Rights == 2147483648 || 2147483648 == zx.RightSameRights")
+				}
+
 			},
 		}.check(t)
 	}
@@ -901,6 +1285,16 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 			},
 			bytes: []byte{
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			equalsExpected: func(t *testing.T, input interface{}) {
+				ignore_unused_warning := func(interface{}) {}
+				val := input.(*conformance.GoldenNullableHandleStruct)
+				f1 := val
+				ignore_unused_warning(f1)
+				if f1.V != zx.HandleInvalid {
+					t.Errorf("unexpectedly unequal: %s and %s", "f1.V", "zx.HandleInvalid")
+				}
+
 			},
 		}.check(t)
 	}

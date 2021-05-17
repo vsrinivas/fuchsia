@@ -26,6 +26,7 @@ if (is_host) {
       "golang/benchmarks.go",
       "golang/common.go",
       "golang/conformance.go",
+      "golang/equality_builder.go",
       "golang/golang_test.go",
       "hlcpp/benchmarks.go",
       "hlcpp/builder.go",
