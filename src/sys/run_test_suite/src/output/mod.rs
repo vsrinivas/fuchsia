@@ -9,7 +9,7 @@ use std::sync::Arc;
 mod directory;
 mod line;
 mod noop;
-pub use line::{AnsiFilterWriter, WriteLine};
+pub use line::{AnsiFilterWriter, MultiplexedWriter, WriteLine};
 
 use directory::DirectoryReporter;
 use noop::NoopReporter;
@@ -61,13 +61,18 @@ impl RunReporter {
     }
 
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
-    /// Any stdout and syslog artifacts are filtered for ANSI escape sequences before saving.
+    /// Any stdout artifacts are filtered for ANSI escape sequences before saving.
     pub fn new_ansi_filtered(root: PathBuf) -> Result<Self, Error> {
         let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root)?);
         let reporter_dyn = reporter.clone() as Arc<DynReporter>;
         let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
             let unfiltered = reporter.new_artifact(entity, artifact_type)?;
-            Ok(Box::new(AnsiFilterWriter::new(unfiltered)) as Box<DynArtifact>)
+            Ok(match artifact_type {
+                ArtifactType::Stdout => {
+                    Box::new(AnsiFilterWriter::new(unfiltered)) as Box<DynArtifact>
+                }
+                ArtifactType::Syslog => Box::new(unfiltered) as Box<DynArtifact>,
+            })
         });
         Ok(Self { reporter: reporter_dyn, artifact_fn })
     }
@@ -150,6 +155,7 @@ impl<'a> CaseReporter<'a> {
 /// An enumeration of different known artifact types.
 pub enum ArtifactType {
     Stdout,
+    Syslog,
 }
 
 /// Common outcome type for test results, suites, and test cases.

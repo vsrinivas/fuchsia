@@ -33,10 +33,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:vte",
   ]
   if (!is_host) {

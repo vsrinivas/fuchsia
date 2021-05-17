@@ -5,8 +5,9 @@
 use crate::{
     Outcome, SuiteEntryV0, SuiteResult, TestCaseResultV0, TestRunResult, RUN_SUMMARY_NAME,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
 /// Parse the json files in a directory. Returns the parsed test run document and a list of
@@ -96,32 +97,37 @@ fn assert_case_result(
 fn assert_artifacts(
     root: &Path,
     actual_artifact_list: &Vec<PathBuf>,
-    expected_artifact_contents: &HashMap<String, String>,
+    expected_artifact_contents: &HashMap<String, Box<dyn Fn(&str)>>,
 ) {
-    assert_eq!(actual_artifact_list.len(), expected_artifact_contents.len());
+    let actual_artifact_names: HashSet<String> = HashSet::from_iter(
+        actual_artifact_list.iter().map(|p| p.file_name().unwrap().to_str().unwrap().to_string()),
+    );
+    let expected_artifact_names: HashSet<String> =
+        HashSet::from_iter(expected_artifact_contents.keys().map(|s| s.to_string()));
+    assert_eq!(expected_artifact_names, actual_artifact_names);
+
     for artifact_path in actual_artifact_list.iter() {
         let absolute_artifact_path = root.join(artifact_path);
         let artifact_name = absolute_artifact_path.file_name().unwrap().to_str().unwrap();
         let artifact_contents =
             std::fs::read_to_string(&absolute_artifact_path).expect("read artifact file");
-        assert_eq!(
-            artifact_contents,
-            *expected_artifact_contents.get(artifact_name).expect("unexpected artifact")
-        );
+        let assertion_fn = expected_artifact_contents.get(artifact_name).unwrap();
+
+        (assertion_fn)(&artifact_contents);
     }
 }
 
 /// A version of a test run result that contains all output in memory. This should only be used
 /// for making assertions in a test.
 pub struct ExpectedTestRun {
-    artifacts: HashMap<String, String>,
+    artifacts: HashMap<String, Box<dyn Fn(&str)>>,
     outcome: Outcome,
 }
 
 /// A version of a suite run result that contains all output in memory. This should only be used
 /// for making assertions in a test.
 pub struct ExpectedSuite {
-    artifacts: HashMap<String, String>,
+    artifacts: HashMap<String, Box<dyn Fn(&str)>>,
     name: String,
     outcome: Outcome,
     cases: HashMap<String, ExpectedTestCase>,
@@ -130,7 +136,7 @@ pub struct ExpectedSuite {
 /// A version of a test case result that contains all output in memory. This should only be used
 /// for making assertions in a test.
 pub struct ExpectedTestCase {
-    artifacts: HashMap<String, String>,
+    artifacts: HashMap<String, Box<dyn Fn(&str)>>,
     name: String,
     outcome: Outcome,
 }
@@ -142,8 +148,26 @@ impl ExpectedTestRun {
     }
 
     /// Add an artifact scoped to the test run.
-    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
-        self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
+    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
+        let owned_expected = contents.as_ref().to_string();
+        let owned_name = name.as_ref().to_string();
+        self.with_matching_artifact(name, move |actual| {
+            assert_eq!(
+                &owned_expected, actual,
+                "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
+                owned_name, &owned_expected, actual
+            )
+        })
+    }
+
+    /// Add an artifact scoped to the test run. `matcher` will be run against the contents of
+    /// the actual artifact and may contain assertions.
+    pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
+        mut self,
+        name: S,
+        matcher: F,
+    ) -> Self {
+        self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
         self
     }
 }
@@ -165,9 +189,27 @@ impl ExpectedSuite {
         self
     }
 
-    /// Add an artifact scoped to the suite.
-    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
-        self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
+    /// Add an artifact scoped to the test suite.
+    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
+        let owned_expected = contents.as_ref().to_string();
+        let owned_name = name.as_ref().to_string();
+        self.with_matching_artifact(name, move |actual| {
+            assert_eq!(
+                &owned_expected, actual,
+                "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
+                owned_name, &owned_expected, actual
+            )
+        })
+    }
+
+    /// Add an artifact scoped to the test suite. `matcher` will be run against the contents of
+    /// the actual artifact and may contain assertions.
+    pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
+        mut self,
+        name: S,
+        matcher: F,
+    ) -> Self {
+        self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
         self
     }
 }
@@ -179,8 +221,26 @@ impl ExpectedTestCase {
     }
 
     /// Add an artifact scoped to the test case.
-    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
-        self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
+    pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
+        let owned_expected = contents.as_ref().to_string();
+        let owned_name = name.as_ref().to_string();
+        self.with_matching_artifact(name, move |actual| {
+            assert_eq!(
+                &owned_expected, actual,
+                "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
+                owned_name, &owned_expected, actual
+            )
+        })
+    }
+
+    /// Add an artifact scoped to the test case. `matcher` will be run against the contents of
+    /// the actual artifact and may contain assertions.
+    pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
+        mut self,
+        name: S,
+        matcher: F,
+    ) -> Self {
+        self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
         self
     }
 }

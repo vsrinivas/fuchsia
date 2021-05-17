@@ -27,7 +27,10 @@ pub mod output;
 
 pub use test_executor::DisabledTestHandling;
 
-use output::{AnsiFilterWriter, ArtifactType, CaseReporter, RunReporter, SuiteReporter, WriteLine};
+use output::{
+    AnsiFilterWriter, ArtifactType, CaseReporter, MultiplexedWriter, RunReporter, SuiteReporter,
+    WriteLine,
+};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Outcome {
@@ -466,6 +469,13 @@ pub async fn run_tests_and_get_outcome(
             return Outcome::Error;
         }
     };
+    let mut syslog_writer = match reporter.new_artifact(&ArtifactType::Syslog) {
+        Ok(reporter_syslog) => MultiplexedWriter::new(reporter_syslog, io::stdout()),
+        Err(e) => {
+            println!("Test suite encountered error trying to run tests: {:?}", e);
+            return Outcome::Error;
+        }
+    };
 
     let streams =
         match run_test(test_params, count.get(), &mut stdout_for_results, &mut reporter).await {
@@ -477,8 +487,7 @@ pub async fn run_tests_and_get_outcome(
         };
 
     let (log_stream, result_stream) = streams.into_log_and_result();
-    let mut stdout_for_logs = io::stdout();
-    let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs, log_opts);
+    let log_collection_fut = diagnostics::collect_logs(log_stream, &mut syslog_writer, log_opts);
     let results_collection_fut = collect_results(&test_url, count, result_stream);
 
     let (log_collection_result, mut test_outcome) =

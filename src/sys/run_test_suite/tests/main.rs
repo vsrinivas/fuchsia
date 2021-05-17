@@ -866,15 +866,68 @@ async fn test_stdout_to_directory() {
 
     assert_eq!(outcome, Outcome::Passed);
 
-    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
+    let expected_test_run =
+        ExpectedTestRun::new(directory::Outcome::Passed).with_artifact("syslog.txt", "");
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
     )
     .with_case(
         ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
-            .with_artifact("stdout", "\u{1b}[31mred stdout\u{1b}[0m\n"),
+            .with_artifact("stdout.txt", "\u{1b}[31mred stdout\u{1b}[0m\n"),
     )];
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &expected_test_suites,
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_syslog_to_directory() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
+        .expect("connecting to HarnessProxy");
+
+    let mut test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
+        harness,
+    );
+    test_params.timeout = std::num::NonZeroU32::new(600);
+    let log_opts = diagnostics::LogCollectionOptions {
+        max_severity: Some(Severity::Warn),
+        ..diagnostics::LogCollectionOptions::default()
+    };
+
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        test_params,
+        log_opts,
+        std::num::NonZeroU16::new(1).unwrap(),
+        false,
+        Some(output_dir.path().to_path_buf()),
+    )
+    .await;
+
+    assert_eq!(outcome, Outcome::Failed);
+
+    const EXPECTED_SYSLOG: &str =  "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message \n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message \n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message \n\
+";
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed)
+        .with_matching_artifact("syslog.txt", |actual| {
+            assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
+        });
+    let expected_test_suites = vec![ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
+        directory::Outcome::Passed,
+    )
+    .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed))];
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 

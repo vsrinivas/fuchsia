@@ -31,6 +31,25 @@ impl WriteLine for Box<dyn WriteLine + Send + Sync> {
     }
 }
 
+/// A writer that writes to two writers.
+pub struct MultiplexedWriter<A: WriteLine, B: WriteLine> {
+    a: A,
+    b: B,
+}
+
+impl<A: WriteLine, B: WriteLine> WriteLine for MultiplexedWriter<A, B> {
+    fn write_line_segments(&mut self, segments: &[&str]) -> Result<(), Error> {
+        self.a.write_line_segments(segments)?;
+        self.b.write_line_segments(segments)
+    }
+}
+
+impl<A: WriteLine, B: WriteLine> MultiplexedWriter<A, B> {
+    pub fn new(a: A, b: B) -> Self {
+        Self { a, b }
+    }
+}
+
 /// A wrapper around a `Write` that filters out ANSI escape sequences before writing to the
 /// wrapped object.
 pub struct AnsiFilterWriter<W: WriteLine> {
@@ -126,6 +145,20 @@ impl<'a> Perform for PrintableBytes<'a> {
 mod test {
     use super::*;
     use ansi_term::{Color, Style};
+
+    #[test]
+    fn multiplexed_writer() {
+        const WRITTEN: &str = "test output";
+        const EXPECTED: &str = "test output\n";
+
+        let mut buf_1: Vec<u8> = vec![];
+        let mut buf_2: Vec<u8> = vec![];
+        let mut multiplexed_writer = MultiplexedWriter::new(&mut buf_1, &mut buf_2);
+
+        multiplexed_writer.write_line(WRITTEN).expect("write_line failed");
+        assert_eq!(std::str::from_utf8(&buf_1).unwrap(), EXPECTED);
+        assert_eq!(std::str::from_utf8(&buf_2).unwrap(), EXPECTED);
+    }
 
     #[test]
     fn no_ansi_unaffected() {

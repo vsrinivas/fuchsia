@@ -14,7 +14,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use test_output_directory as directory;
 
 const TEST_RUN_ID: u64 = 0;
-const STDOUT_FILE: &str = "stdout";
+const STDOUT_FILE: &str = "stdout.txt";
+const SYSLOG_FILE: &str = "syslog.txt";
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
 pub(super) struct DirectoryReporter {
@@ -197,6 +198,7 @@ fn suite_json_name(suite_id: u64) -> String {
 fn filename_for_type(artifact_type: &ArtifactType) -> &'static str {
     match artifact_type {
         ArtifactType::Stdout => STDOUT_FILE,
+        ArtifactType::Syslog => SYSLOG_FILE,
     }
 }
 
