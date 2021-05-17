@@ -108,17 +108,13 @@ TEST_P(OverflowTest, OutOfRangeTruncateAndSeekFails) {
   ASSERT_EQ(read(fd, buf, SIZE_MAX), -1);
   */
 
-  ASSERT_EQ(ftruncate(fd, INT_MIN), -1);
-  ASSERT_EQ(ftruncate(fd, -1), -1);
-  ASSERT_EQ(ftruncate(fd, SIZE_MAX - 1), -1);
-  ASSERT_EQ(ftruncate(fd, SIZE_MAX), -1);
+  EXPECT_EQ(ftruncate(fd, std::numeric_limits<off_t>::min()), -1);
+  EXPECT_EQ(ftruncate(fd, -1), -1);
 
-  ASSERT_EQ(lseek(fd, INT_MIN, SEEK_SET), -1);
-  ASSERT_EQ(lseek(fd, -1, SEEK_SET), -1);
-  ASSERT_EQ(lseek(fd, SIZE_MAX - 1, SEEK_SET), -1);
-  ASSERT_EQ(lseek(fd, SIZE_MAX, SEEK_SET), -1);
-  ASSERT_EQ(close(fd), 0);
-  ASSERT_EQ(unlink(filename.c_str()), 0);
+  EXPECT_EQ(lseek(fd, std::numeric_limits<off_t>::min(), SEEK_SET), -1);
+  EXPECT_EQ(lseek(fd, -1, SEEK_SET), -1);
+  EXPECT_EQ(close(fd), 0);
+  EXPECT_EQ(unlink(filename.c_str()), 0);
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, OverflowTest, testing::ValuesIn(AllTestFilesystems()),

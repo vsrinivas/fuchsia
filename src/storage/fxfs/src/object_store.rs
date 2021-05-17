@@ -702,7 +702,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'a>,
         device_range: Range<u64>,
     ) -> Result<(), Error> {
-        let old_end = round_up(self.txn_get_size(transaction), self.block_size);
+        let old_end =
+            round_up(self.txn_get_size(transaction), self.block_size).ok_or(FxfsError::TooBig)?;
         let new_size = old_end + device_range.end - device_range.start;
         self.store().allocator().reserve(transaction, device_range.clone()).await;
         transaction.add_with_object(
@@ -730,7 +731,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         buf: BufferRef<'_>,
     ) -> Result<(), Error> {
         let mut aligned = round_down(offset, self.block_size)
-            ..round_up(offset + buf.len() as u64, self.block_size);
+            ..round_up(offset + buf.len() as u64, self.block_size).ok_or(FxfsError::TooBig)?;
         let mut buf_offset = 0;
         if offset + buf.len() as u64 > self.txn_get_size(transaction) {
             transaction.add_with_object(
@@ -1058,9 +1059,9 @@ fn round_down<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
     offset - offset % block_size.into()
 }
 
-fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
+fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> Option<u64> {
     let block_size = block_size.into();
-    round_down(offset + block_size - 1, block_size)
+    Some(round_down(offset.checked_add(block_size - 1)?, block_size))
 }
 
 #[async_trait]
@@ -1216,12 +1217,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     ) -> Result<(), Error> {
         let old_size = self.txn_get_size(transaction);
         if size < old_size {
+            let aligned_size = round_up(size, self.block_size).ok_or(FxfsError::TooBig)?;
             self.zero(
                 transaction,
-                round_up(size, self.block_size)..round_up(old_size, self.block_size),
+                aligned_size..round_up(old_size, self.block_size).ok_or(FxfsError::Inconsistent)?,
             )
             .await?;
-            let to_zero = round_up(size, self.block_size) - size;
+            let to_zero = aligned_size - size;
             if to_zero > 0 {
                 assert!(to_zero < self.block_size);
                 // We intentionally use the COW write path even if we're in overwrite mode. There's
@@ -1663,7 +1665,7 @@ mod tests {
         buf.as_mut_slice().fill(47);
         object.write(0, buf.subslice(..TEST_DATA_OFFSET as usize)).await.expect("write failed");
         buf.as_mut_slice().fill(95);
-        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE);
+        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE).unwrap();
         object.write(offset, buf.as_ref()).await.expect("write failed");
 
         // Make sure there were no more allocations.
@@ -1723,7 +1725,7 @@ mod tests {
         .expect("open_object failed");
         let mut buf = object.allocate_buffer(2048);
         buf.as_mut_slice().fill(95);
-        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE);
+        let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE).unwrap();
         object.write(offset, buf.as_ref()).await.expect_err("write suceceded");
     }
 

@@ -28,6 +28,8 @@ pub enum FxfsError {
     Deleted,
     #[error("Invalid arguments")]
     InvalidArgs,
+    #[error("Too big")]
+    TooBig,
 }
 
 impl FxfsError {

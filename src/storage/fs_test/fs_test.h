@@ -116,7 +116,7 @@ class Filesystem {
     bool supports_hard_links = true;
     bool supports_mmap = false;
     bool supports_resize = false;
-    uint64_t max_file_size = std::numeric_limits<uint64_t>::max();
+    off_t max_file_size = std::numeric_limits<off_t>::max();
     bool in_memory = false;
     bool is_case_sensitive = true;
     bool supports_sparse_files = true;

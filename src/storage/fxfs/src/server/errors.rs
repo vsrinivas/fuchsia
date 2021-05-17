@@ -18,6 +18,7 @@ impl From<FxfsError> for Status {
             FxfsError::NoSpace => Status::NO_SPACE,
             FxfsError::Deleted => Status::ACCESS_DENIED,
             FxfsError::InvalidArgs => Status::INVALID_ARGS,
+            FxfsError::TooBig => Status::FILE_BIG,
         }
     }
 }

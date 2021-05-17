@@ -19,7 +19,9 @@ class FxfsFilesystem : public FilesystemImplWithDefaultMake<FxfsFilesystem> {
         .supports_hard_links = false,
         .supports_mmap = false,
         .supports_resize = true,
-        .max_file_size = std::numeric_limits<uint64_t>::max(),
+        // Technically, Fxfs's maximum file size is higher than this, but POSIX APIs take off_t, so
+        // we limit it to that, which is plenty.
+        .max_file_size = std::numeric_limits<off_t>::max(),
         .in_memory = false,
         .is_case_sensitive = true,
         .supports_sparse_files = true,

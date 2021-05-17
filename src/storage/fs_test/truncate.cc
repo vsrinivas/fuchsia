@@ -147,8 +147,12 @@ TEST_P(TruncateTest, Errno) {
   ASSERT_EQ(ftruncate(fd.get(), -1), -1);
   ASSERT_EQ(errno, EINVAL);
   errno = 0;
-  ASSERT_EQ(ftruncate(fd.get(), 1UL << 60), -1);
-  ASSERT_EQ(errno, EINVAL);
+
+  const off_t max_file_size = fs().GetTraits().max_file_size;
+  if (max_file_size < std::numeric_limits<off_t>::max()) {
+    ASSERT_EQ(ftruncate(fd.get(), max_file_size + 1), -1);
+    ASSERT_EQ(errno, EINVAL);
+  }
 
   ASSERT_EQ(unlink(GetPath("truncate_errno").c_str()), 0);
   ASSERT_EQ(close(fd.release()), 0);
