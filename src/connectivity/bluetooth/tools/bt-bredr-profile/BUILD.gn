@@ -39,7 +39,7 @@ fuchsia_shell_package("bt-bredr-profile") {
 }
 
 fuchsia_unittest_package("bt-bredr-profile-unittests") {
-  manifest = "meta/bt-bredr-profile-unittests.cmx"
+  v2 = true
   deps = [ ":bin_test" ]
 }
 

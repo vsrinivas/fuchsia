@@ -40,7 +40,7 @@ fuchsia_shell_package("bt-avdtp-tool") {
 }
 
 fuchsia_unittest_package("bt-avdtp-tool-unittests") {
-  manifest = "meta/bt-avdtp-tool-unittests.cmx"
+  v2 = true
   deps = [ ":bin_test" ]
 }
 

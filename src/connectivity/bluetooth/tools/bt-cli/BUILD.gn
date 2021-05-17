@@ -40,7 +40,7 @@ fuchsia_shell_package("bt-cli") {
 }
 
 fuchsia_unittest_package("bt-cli-unittests") {
-  manifest = "meta/bt-cli-unittests.cmx"
+  v2 = true
   deps = [ ":bin_test" ]
 }
 

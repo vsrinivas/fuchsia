@@ -43,7 +43,7 @@ fuchsia_shell_package("bt-le-central") {
 }
 
 fuchsia_unittest_package("bt-le-central-unittests") {
-  manifest = "meta/bt-le-central-unittests.cmx"
+  v2 = true
   deps = [ ":bin_test" ]
 }
 

@@ -40,12 +40,12 @@ fuchsia_shell_package("bt-fct-hci") {
   manifest = "meta/bt-fct-hci.cmx"
 }
 
-fuchsia_unittest_package("bt-fci-hci-unittests") {
-  manifest = "meta/bt-fct-hci-unittests.cmx"
+fuchsia_unittest_package("bt-fct-hci-unittests") {
+  v2 = true
   deps = [ ":bin_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":bt-fci-hci-unittests" ]
+  deps = [ ":bt-fct-hci-unittests" ]
 }

@@ -1,8 +1,0 @@
-{
-    "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/bt_avdtp_tool_bin_test"
-    }
-}

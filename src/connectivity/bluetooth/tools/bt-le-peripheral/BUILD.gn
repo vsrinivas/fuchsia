@@ -32,7 +32,7 @@ fuchsia_shell_package("bt-le-peripheral") {
 }
 
 fuchsia_unittest_package("bt-le-peripheral-unittests") {
-  manifest = "meta/bt-le-peripheral-unittests.cmx"
+  v2 = true
   deps = [ ":bin_test" ]
 }
 
