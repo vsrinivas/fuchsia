@@ -68,17 +68,19 @@ zx_status_t IntelHDAStream::Initialize() {
   // BDL entries should be 16 bytes long, meaning that we should be able to
   // fit 256 of them perfectly into a single 4k page.
   constexpr size_t MAX_BDL_BYTES = sizeof(IntelHDABDLEntry) * MAX_BDL_LENGTH;
-  static_assert(MAX_BDL_BYTES <= PAGE_SIZE, "A max length BDL must fit inside a single page!");
+  ZX_ASSERT_MSG(MAX_BDL_BYTES <= zx_system_get_page_size(),
+                "A max length BDL must fit inside a single page!");
 
   // Create a VMO made of a single page and map it for read/write so the CPU
   // has access to it.
   constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   zx::vmo bdl_vmo;
   zx_status_t res;
-  res = bdl_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, vmar_manager_, &bdl_vmo,
+  res = bdl_cpu_mem_.CreateAndMap(zx_system_get_page_size(), CPU_MAP_FLAGS, vmar_manager_, &bdl_vmo,
                                   ZX_RIGHT_SAME_RIGHTS, ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (res != ZX_OK) {
-    LOG(ERROR, "Failed to create and map %u bytes for stream BDL! (res %d)", PAGE_SIZE, res);
+    LOG(ERROR, "Failed to create and map %u bytes for stream BDL! (res %d)",
+        zx_system_get_page_size(), res);
     return res;
   }
 

@@ -627,9 +627,9 @@ zx_status_t IntelDsp::LoadFirmware() {
   }
 
   // The max length of the firmware is 256 pages, assuming a fully distinguous VMO.
-  constexpr size_t MAX_FW_BYTES = PAGE_SIZE * IntelDspCodeLoader::MAX_BDL_LENGTH;
-  if (fw_size > MAX_FW_BYTES) {
-    LOG(ERROR, "DSP firmware is too big (0x%zx bytes > 0x%zx bytes)", fw_size, MAX_FW_BYTES);
+  const size_t max_fw_bytes = zx_system_get_page_size() * IntelDspCodeLoader::MAX_BDL_LENGTH;
+  if (fw_size > max_fw_bytes) {
+    LOG(ERROR, "DSP firmware is too big (0x%zx bytes > 0x%zx bytes)", fw_size, max_fw_bytes);
     return ZX_ERR_INVALID_ARGS;
   }
 

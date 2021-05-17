@@ -6,13 +6,13 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/clock.h>
 
 #include <optional>
 #include <utility>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
@@ -24,8 +24,7 @@ namespace {
 // Expects L+R.
 constexpr size_t kNumberOfChannels = 2;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
-constexpr size_t kRingBufferSize =
-    fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels, PAGE_SIZE);
+constexpr size_t kRingBufferSize = 48000 * 2 * kNumberOfChannels;
 }  // namespace
 
 namespace audio {
@@ -83,7 +82,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
   }
 
   // Initialize the ring buffer
-  InitBuffer(kRingBufferSize);
+  InitBuffer(fbl::round_up<size_t, size_t>(kRingBufferSize, zx_system_get_page_size()));
 
   mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
 

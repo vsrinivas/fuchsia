@@ -24,8 +24,7 @@ constexpr size_t kNumberOfChannels = 2;
 constexpr size_t kMinSampleRate = 8000;
 constexpr size_t kMaxSampleRate = 192000;
 // Calculate ring buffer size for 1 second of 16-bit.
-constexpr size_t kRingBufferSize =
-    fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, PAGE_SIZE);
+constexpr size_t kRingBufferSize = kMaxSampleRate * 2 * kNumberOfChannels;
 
 Mt8167AudioStreamIn::Mt8167AudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {}
@@ -119,7 +118,7 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
   codec_->Init();
 
   // Initialize the ring buffer
-  InitBuffer(kRingBufferSize);
+  InitBuffer(fbl::round_up<size_t, size_t>(kRingBufferSize, zx_system_get_page_size()));
 
   mt_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
 

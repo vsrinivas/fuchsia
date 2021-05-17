@@ -455,8 +455,8 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   num_ring_buffer_frames_ = std::max(
       min_buffer_frames_,
       fbl::round_up<uint32_t, uint32_t>(req.min_ring_buffer_frames, modulo_buffer_frames_));
-  uint32_t ring_buffer_size =
-      fbl::round_up<size_t, size_t>(num_ring_buffer_frames_ * frame_size_, ZX_PAGE_SIZE);
+  uint32_t ring_buffer_size = fbl::round_up<size_t, size_t>(num_ring_buffer_frames_ * frame_size_,
+                                                            zx_system_get_page_size());
 
   if (ring_buffer_mapper_.start() != nullptr) {
     ring_buffer_mapper_.Unmap();

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/device-protocol/pci.h>
 #include <lib/ddk/hw/arch_ops.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -326,14 +326,15 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
   // Even the largest buffers permissible should fit within a single 4k page.
   zx::vmo cmd_buf_vmo;
   constexpr uint32_t CPU_MAP_FLAGS = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  static_assert(PAGE_SIZE >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES),
-                "PAGE_SIZE to small to hold CORB and RIRB buffers!");
-  res = cmd_buf_cpu_mem_.CreateAndMap(PAGE_SIZE, CPU_MAP_FLAGS, vmar_manager_, &cmd_buf_vmo,
-                                      ZX_RIGHT_SAME_RIGHTS, ZX_CACHE_POLICY_UNCACHED_DEVICE);
+  ZX_ASSERT_MSG(zx_system_get_page_size() >= (HDA_CORB_MAX_BYTES + HDA_RIRB_MAX_BYTES),
+                "System page size to small to hold CORB and RIRB buffers!");
+  res = cmd_buf_cpu_mem_.CreateAndMap(zx_system_get_page_size(), CPU_MAP_FLAGS, vmar_manager_,
+                                      &cmd_buf_vmo, ZX_RIGHT_SAME_RIGHTS,
+                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to create and map %u bytes for CORB/RIRB command buffers! (res %d)",
-        PAGE_SIZE, res);
+        zx_system_get_page_size(), res);
     return res;
   }
 

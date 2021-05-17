@@ -161,7 +161,7 @@ zx_status_t AudioStreamIn::InitPDev() {
   }
 
   // Initial setup of one page of buffer, just to be safe.
-  status = InitBuffer(PAGE_SIZE);
+  status = InitBuffer(zx_system_get_page_size());
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to init buffer %d", status);
     return status;
@@ -219,7 +219,7 @@ zx_status_t AudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t vmo_size = fbl::round_up<size_t, size_t>(ring_buffer_size, PAGE_SIZE);
+  size_t vmo_size = fbl::round_up<size_t, size_t>(ring_buffer_size, zx_system_get_page_size());
   auto status = InitBuffer(vmo_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to init buffer %d", status);

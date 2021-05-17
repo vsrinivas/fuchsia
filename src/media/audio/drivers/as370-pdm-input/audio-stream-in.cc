@@ -105,7 +105,7 @@ zx_status_t As370AudioStreamIn::InitPDev() {
 
   // Calculate ring buffer size for 1 second of 16-bit at kMaxRate.
   const size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
-      kMaxRate * sizeof(uint16_t) * SynAudioInDevice::kNumberOfChannels, ZX_PAGE_SIZE);
+      kMaxRate * sizeof(uint16_t) * SynAudioInDevice::kNumberOfChannels, zx_system_get_page_size());
   status = lib_->GetBuffer(kRingBufferSize, &ring_buffer_vmo_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to Init buffer %d", status);

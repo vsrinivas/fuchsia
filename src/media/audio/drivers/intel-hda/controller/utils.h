@@ -24,12 +24,11 @@ namespace intel_hda {
 
 // HDA controllers can have at most 30 stream contexts.
 constexpr size_t MAX_STREAMS_PER_CONTROLLER = 30;
-
-// CORB/RIRB should take no more than a page
-constexpr size_t MAPPED_CORB_RIRB_SIZE = PAGE_SIZE;
-
-// Individual BDLs should be 1 page each
-constexpr size_t MAPPED_BDL_SIZE = PAGE_SIZE;
+// We potentially need 1 kiB for the CORB and 2 kiB for the RIRB, each 128 byte
+// aligned.
+constexpr size_t MAPPED_CORB_RIRB_SIZE = 3072;
+// Each BDL can be up to 4096 bytes long (256 entries * 16 bytes).
+constexpr size_t MAPPED_BDL_SIZE = 4096;
 
 template <typename T>
 static inline constexpr T OR(T x, T y) {
