@@ -21,6 +21,7 @@ use {
             Arc,
         },
     },
+    storage_device::buffer::MutableBufferRef,
     vfs::{
         common::send_on_open_with_error,
         directory::entry::{DirectoryEntry, EntryInfo},
@@ -29,6 +30,7 @@ use {
             connection::{self, io1::FileConnection},
             File, SharingMode,
         },
+        filesystem::Filesystem,
         path::Path,
     },
 };
@@ -131,10 +133,8 @@ impl File for FxFile {
         Ok(())
     }
 
-    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
-        let mut buf = self.handle.allocate_buffer(buffer.len() as usize);
-        let bytes_read = self.handle.read(offset, buf.as_mut()).await.map_err(map_to_status)?;
-        &mut buffer[..bytes_read].copy_from_slice(&buf.as_slice()[..bytes_read]);
+    async fn read_at(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<u64, Status> {
+        let bytes_read = self.handle.read(offset, buffer).await.map_err(map_to_status)?;
         Ok(bytes_read as u64)
     }
 
@@ -223,6 +223,10 @@ impl File for FxFile {
         // TODO(csuter): at the moment, this doesn't send a flush to the device, which doesn't
         // match minfs.
         self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
+    }
+
+    fn get_filesystem(&self) -> &dyn Filesystem {
+        self.handle.owner().as_ref()
     }
 }
 

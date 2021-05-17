@@ -108,6 +108,10 @@ impl ObjectHandle for FakeObjectHandle {
         self.allocator.allocate_buffer(size)
     }
 
+    fn block_size(&self) -> u32 {
+        self.allocator.block_size() as u32
+    }
+
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         self.object.read(offset, buf)
     }

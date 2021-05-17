@@ -158,8 +158,12 @@ impl ObjectStore {
         )
     }
 
-    pub fn device(&self) -> Arc<dyn Device> {
-        self.device.clone()
+    pub fn device(&self) -> &Arc<dyn Device> {
+        &self.device
+    }
+
+    pub fn block_size(&self) -> u32 {
+        self.device.block_size()
     }
 
     pub fn filesystem(&self) -> Arc<dyn Filesystem> {
@@ -1074,9 +1078,16 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         self.store().device.allocate_buffer(size)
     }
 
+    fn block_size(&self) -> u32 {
+        self.store().block_size()
+    }
+
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         if buf.len() == 0 {
             return Ok(0);
+        }
+        if offset % self.block_size != 0 || buf.range().start as u64 % self.block_size != 0 {
+            panic!("Misaligned read off: {} buf_range: {:?}", offset, buf.range());
         }
         let fs = self.store().filesystem();
         let _guard = fs
@@ -1102,7 +1113,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
             .await?;
         let to_do = min(buf.len() as u64, size - offset) as usize;
         buf = buf.subslice_mut(0..to_do);
-        let mut start_align = (offset % self.block_size) as usize;
         let end_align = ((offset + to_do as u64) % self.block_size) as usize;
         let trace = self.trace.load(atomic::Ordering::Relaxed);
         while let Some((object_id, attribute_id, extent_key, extent_value)) =
@@ -1122,39 +1132,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                     break;
                 }
                 offset += to_zero as u64;
-                start_align = 0;
             }
 
             if let ExtentValue { device_offset: Some(device_offset) } = extent_value {
-                let mut device_offset =
-                    device_offset + (offset - start_align as u64 - extent_key.range.start);
-
-                // Deal with starting alignment by reading the existing contents into an alignment
-                // buffer.
-                if start_align > 0 {
-                    let mut align_buf =
-                        self.store().device.allocate_buffer(self.block_size as usize);
-                    if trace {
-                        log::info!(
-                            "{}.{} RH {:?}",
-                            self.store().store_object_id(),
-                            self.object_id,
-                            device_offset..device_offset + align_buf.len() as u64
-                        );
-                    }
-                    self.store().device.read(device_offset, align_buf.as_mut()).await?;
-                    let to_copy = min(self.block_size as usize - start_align, buf.len());
-                    buf.as_mut_slice()[..to_copy].copy_from_slice(
-                        &align_buf.as_slice()[start_align..(start_align + to_copy)],
-                    );
-                    buf = buf.subslice_mut(to_copy..);
-                    if buf.is_empty() {
-                        break;
-                    }
-                    offset += to_copy as u64;
-                    device_offset += self.block_size;
-                    start_align = 0;
-                }
+                let mut device_offset = device_offset + (offset - extent_key.range.start);
 
                 let to_copy = min(buf.len() - end_align, (extent_key.range.end - offset) as usize);
                 if to_copy > 0 {
@@ -1249,7 +1230,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 // changes, which we don't currently have a way to do.
                 // TODO(csuter): This is allocating a small buffer that we'll just end up copying.
                 // Is there a better way?
-                let mut buf = self.allocate_buffer(to_zero as usize);
+                let mut buf = self.store().device.allocate_buffer(to_zero as usize);
                 buf.as_mut_slice().fill(0);
                 self.write_cow(transaction, size, buf.as_ref()).await?;
             }
@@ -1507,10 +1488,11 @@ mod tests {
             .await
             .expect("create_object failed");
         {
-            let mut buf = object.allocate_buffer(TEST_DATA.len());
-            buf.as_mut_slice().copy_from_slice(TEST_DATA);
+            let align = TEST_DATA_OFFSET as usize % TEST_DEVICE_BLOCK_SIZE as usize;
+            let mut buf = object.allocate_buffer(align + TEST_DATA.len());
+            buf.as_mut_slice()[align..].copy_from_slice(TEST_DATA);
             object
-                .txn_write(&mut transaction, TEST_DATA_OFFSET, buf.as_ref())
+                .txn_write(&mut transaction, TEST_DATA_OFFSET, buf.subslice(align..))
                 .await
                 .expect("write failed");
         }
@@ -1529,23 +1511,29 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_beyond_eof_read() {
         let (_fs, _, object) = test_filesystem_and_object().await;
-        let mut buf = object.allocate_buffer(TEST_DATA.len() * 2);
+        let offset = TEST_OBJECT_SIZE as usize - 2;
+        let align = offset % TEST_DEVICE_BLOCK_SIZE as usize;
+        let len: usize = 2;
+        let mut buf = object.allocate_buffer(align + len + 1);
         buf.as_mut_slice().fill(123u8);
-        assert_eq!(object.read(TEST_OBJECT_SIZE, buf.as_mut()).await.expect("read failed"), 0);
-        assert_eq!(object.read(TEST_OBJECT_SIZE - 2, buf.as_mut()).await.expect("read failed"), 2);
-        assert_eq!(&buf.as_slice()[0..2], &[0, 0]);
+        assert_eq!(
+            object.read((offset - align) as u64, buf.as_mut()).await.expect("read failed"),
+            align + len
+        );
+        assert_eq!(&buf.as_slice()[align..align + len], &vec![0u8; len]);
+        assert_eq!(&buf.as_slice()[align + len..], &vec![123u8; buf.len() - align - len]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sparse() {
         let (_fs, _, object) = test_filesystem_and_object().await;
-        // Deliberately read 1 byte into the object and not right to eof.
-        let len = TEST_OBJECT_SIZE as usize - 2;
+        // Deliberately read not right to eof.
+        let len = TEST_OBJECT_SIZE as usize - 1;
         let mut buf = object.allocate_buffer(len);
         buf.as_mut_slice().fill(123u8);
-        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), len);
+        assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), len);
         let mut expected = vec![0; len];
-        let offset = TEST_DATA_OFFSET as usize - 1;
+        let offset = TEST_DATA_OFFSET as usize;
         &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
         assert_eq!(buf.as_slice()[..len], expected[..]);
     }
@@ -1561,16 +1549,16 @@ mod tests {
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
         object.write(0u64, buf.as_ref()).await.expect("write failed");
 
-        let len = TEST_OBJECT_SIZE as usize - 2;
+        let len = TEST_OBJECT_SIZE as usize - 1;
         let mut buf = object.allocate_buffer(len);
         buf.as_mut_slice().fill(123u8);
-        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), len);
+        assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), len);
 
         let mut expected = vec![0u8; len];
-        let offset = TEST_DATA_OFFSET as usize - 1;
+        let offset = TEST_DATA_OFFSET as usize;
         &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
-        &mut expected[..TEST_DATA.len() - 1].copy_from_slice(&TEST_DATA[1..]);
-        assert_eq!(buf.as_slice()[..len], expected[..]);
+        &mut expected[..TEST_DATA.len()].copy_from_slice(TEST_DATA);
+        assert_eq!(buf.as_slice(), &expected);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1590,20 +1578,20 @@ mod tests {
         buf.as_mut_slice().copy_from_slice(data);
         object.write(1500, buf.as_ref()).await.expect("write failed"); // This adds 1024..1536.
 
-        const LEN1: usize = 1501;
+        const LEN1: usize = 1503;
         let mut buf = object.allocate_buffer(LEN1);
         buf.as_mut_slice().fill(123u8);
-        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), LEN1);
+        assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), LEN1);
         let mut expected = [0; LEN1];
-        &mut expected[0..2].copy_from_slice(&TEST_DATA[1..3]);
-        &mut expected[1499..].copy_from_slice(b"fo");
-        assert_eq!(buf.as_slice(), expected);
+        &mut expected[..3].copy_from_slice(&TEST_DATA[..3]);
+        &mut expected[1500..].copy_from_slice(b"foo");
+        assert_eq!(buf.as_slice(), &expected);
 
         // Also test a read that ends midway through the deleted extent.
-        const LEN2: usize = 600;
+        const LEN2: usize = 601;
         let mut buf = object.allocate_buffer(LEN2);
         buf.as_mut_slice().fill(123u8);
-        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), LEN2);
+        assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), LEN2);
         assert_eq!(buf.as_slice(), &expected[..LEN2]);
     }
 
@@ -1851,12 +1839,15 @@ mod tests {
             async {
                 recv1.await.unwrap();
                 // Reads should not block.
-                let mut buf = object.allocate_buffer(TEST_DATA.len());
+                let offset = TEST_DATA_OFFSET as usize;
+                let align = offset % TEST_DEVICE_BLOCK_SIZE as usize;
+                let len = TEST_DATA.len();
+                let mut buf = object.allocate_buffer(align + len);
                 assert_eq!(
-                    object.read(TEST_DATA_OFFSET, buf.as_mut()).await.expect("read failed"),
-                    TEST_DATA.len()
+                    object.read((offset - align) as u64, buf.as_mut()).await.expect("read failed"),
+                    align + TEST_DATA.len()
                 );
-                assert_eq!(buf.as_slice(), TEST_DATA);
+                assert_eq!(&buf.as_slice()[align..], TEST_DATA);
                 // Tell the first future to continue.
                 send2.send(()).unwrap();
             },

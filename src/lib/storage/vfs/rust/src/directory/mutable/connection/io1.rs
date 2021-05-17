@@ -32,7 +32,7 @@ use {
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
-    fuchsia_zircon::{Status},
+    fuchsia_zircon::Status,
     futures::future::BoxFuture,
     std::sync::Arc,
 };
@@ -371,6 +371,10 @@ mod tests {
             any::Any,
             sync::{Arc, Mutex, Weak},
         },
+        storage_device::{
+            buffer::Buffer,
+            buffer_allocator::{BufferAllocator, MemBufferSource},
+        },
     };
 
     #[derive(Debug, PartialEq)]
@@ -502,13 +506,21 @@ mod tests {
         cur_id: Mutex<u32>,
         scope: ExecutionScope,
         events: Weak<Events>,
+        buffer_allocator: BufferAllocator,
     }
 
     impl MockFilesystem {
         pub fn new(events: &Arc<Events>) -> Self {
             let token_registry = token_registry::Simple::new();
             let scope = ExecutionScope::build().token_registry(token_registry).new();
-            MockFilesystem { cur_id: Mutex::new(0), scope, events: Arc::downgrade(events) }
+            let buffer_allocator =
+                BufferAllocator::new(512, Box::new(MemBufferSource::new(1024 * 1024)));
+            MockFilesystem {
+                cur_id: Mutex::new(0),
+                scope,
+                events: Arc::downgrade(events),
+                buffer_allocator,
+            }
         }
 
         pub fn handle_event(&self, event: MutableDirectoryAction) -> Result<(), Status> {
@@ -555,7 +567,14 @@ mod tests {
         }
     }
 
-    impl Filesystem for MockFilesystem {}
+    impl Filesystem for MockFilesystem {
+        fn block_size(&self) -> u32 {
+            self.buffer_allocator.block_size() as u32
+        }
+        fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+            self.buffer_allocator.allocate_buffer(size)
+        }
+    }
 
     impl std::fmt::Debug for MockFilesystem {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

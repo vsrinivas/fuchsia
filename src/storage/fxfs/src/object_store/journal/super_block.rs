@@ -110,6 +110,10 @@ impl ObjectHandle for SuperBlockHandle {
         self.device.allocate_buffer(size)
     }
 
+    fn block_size(&self) -> u32 {
+        self.device.block_size()
+    }
+
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         let len = buf.len();
         let mut buf_offset = 0;

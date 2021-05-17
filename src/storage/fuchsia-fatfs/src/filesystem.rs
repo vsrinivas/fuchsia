@@ -21,6 +21,10 @@ use {
         pin::Pin,
         sync::{Arc, LockResult, Mutex, MutexGuard},
     },
+    storage_device::{
+        buffer::Buffer,
+        buffer_allocator::{BufferAllocator, MemBufferSource},
+    },
     vfs::{
         filesystem::{Filesystem, FilesystemRename},
         path::Path,
@@ -89,6 +93,16 @@ impl FatFilesystemInner {
 pub struct FatFilesystem {
     inner: Mutex<FatFilesystemInner>,
     dirty_task: Mutex<Option<Task<()>>>,
+    buffer_allocator: BufferAllocator,
+}
+
+// The buffer allocator will draw from a heap buffer, which means that we can't do direct I/O from
+// these buffers; they will need to be bounced. We could plumb through the underlying block device
+// connection and draw VMO-backed buffers (see storage_device::block_device::BlockDevice) to improve
+// performance as needed.
+fn create_buffer_allocator(block_size: usize) -> BufferAllocator {
+    let buffer_source = Box::new(MemBufferSource::new(4 * 1024 * 1024));
+    BufferAllocator::new(block_size, buffer_source)
 }
 
 impl FatFilesystem {
@@ -101,7 +115,12 @@ impl FatFilesystem {
             filesystem: Some(fatfs::FileSystem::new(disk, options)?),
             _pinned: PhantomPinned,
         });
-        let result = Arc::pin(FatFilesystem { inner, dirty_task: Mutex::new(None) });
+        let bs = inner.lock().unwrap().cluster_size() as usize;
+        let result = Arc::pin(FatFilesystem {
+            inner,
+            dirty_task: Mutex::new(None),
+            buffer_allocator: create_buffer_allocator(bs),
+        });
         Ok((result.clone(), result.root_dir()))
     }
 
@@ -109,7 +128,12 @@ impl FatFilesystem {
     pub fn from_filesystem(filesystem: FileSystem) -> (Pin<Arc<Self>>, Arc<FatDirectory>) {
         let inner =
             Mutex::new(FatFilesystemInner { filesystem: Some(filesystem), _pinned: PhantomPinned });
-        let result = Arc::pin(FatFilesystem { inner, dirty_task: Mutex::new(None) });
+        let bs = inner.lock().unwrap().cluster_size() as usize;
+        let result = Arc::pin(FatFilesystem {
+            inner,
+            dirty_task: Mutex::new(None),
+            buffer_allocator: create_buffer_allocator(bs),
+        });
         (result.clone(), result.root_dir())
     }
 
@@ -348,7 +372,14 @@ impl FilesystemRename for FatFilesystem {
     }
 }
 
-impl Filesystem for FatFilesystem {}
+impl Filesystem for FatFilesystem {
+    fn block_size(&self) -> u32 {
+        self.buffer_allocator.block_size() as u32
+    }
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        self.buffer_allocator.allocate_buffer(size)
+    }
+}
 
 pub(crate) enum ExistingRef<'a, 'b> {
     None,

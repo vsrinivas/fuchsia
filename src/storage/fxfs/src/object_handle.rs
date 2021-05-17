@@ -35,13 +35,13 @@ pub trait ObjectHandle: Send + Sync + 'static {
     /// object is contained in, but not necessarily unique within the entire system.
     fn object_id(&self) -> u64;
 
+    fn block_size(&self) -> u32;
+
     /// Allocates a buffer for doing I/O (read and write) for the object.
     fn allocate_buffer(&self, size: usize) -> Buffer<'_>;
 
-    /// Fills |buf| with |len| bytes read from |offset| on the underlying device.
-    /// The remainder of |buf| will be zeroed (so it is prudent to make |buf| as close in size to
-    /// |len| as possible, for example by taking a buf.subslice().)
-    /// |buf.size()| must be at least |len| bytes.
+    /// Fills |buf| with up to |buf.len()| bytes read from |offset| on the underlying device.
+    /// |offset| and |buf| must both be block-aligned.
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
 
     /// Writes |buf| to the device at |offset|.

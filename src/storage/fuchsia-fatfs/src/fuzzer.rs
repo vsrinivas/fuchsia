@@ -21,6 +21,7 @@ use {
             traversal_position::TraversalPosition,
         },
         file::File,
+        filesystem::Filesystem,
     },
 };
 
@@ -32,8 +33,8 @@ fn fuzz_node(fs: &FatFs, node: FatNode, depth: u32) -> BoxFuture<'_, Result<(), 
         }
         match node {
             FatNode::File(file) => {
-                let mut buffer = vec![0; 2084];
-                let _ = file.read_at(0, &mut buffer).await;
+                let mut buffer = fs.filesystem().allocate_buffer(2084);
+                let _ = file.read_at(0, buffer.as_mut()).await;
                 let _ = file.write_at(256, "qwerty".as_bytes()).await;
                 let _ = file.get_size().await;
             }

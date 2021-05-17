@@ -7,6 +7,7 @@ use {
     async_trait::async_trait,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
+    storage_device::buffer::Buffer,
 };
 
 pub(crate) mod simple;
@@ -25,5 +26,12 @@ pub trait FilesystemRename: Sync + Send {
 }
 
 /// A Filesystem provides operations which might require synchronisation across an entire
-/// filesystem. Currently it only provides `rename()`.
-pub trait Filesystem: FilesystemRename {}
+/// filesystem, or which are naturally filesystem-level operations.
+pub trait Filesystem: FilesystemRename {
+    /// Returns the size of the Filesystem's block device.  This is the granularity at which I/O is
+    /// performed.
+    fn block_size(&self) -> u32;
+    /// Allocates a buffer with capacity for at least |size| bytes which can be used for I/O.
+    /// The actual size of the buffer is rounded up to |Self::block_size()|.
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_>;
+}

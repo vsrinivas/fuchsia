@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    common::{
-        current_time, inherit_rights_for_clone, node_attributes, send_on_open_with_error,
-        GET_FLAGS_VISIBLE,
-    },
-    directory::entry::DirectoryEntry,
-    execution_scope::ExecutionScope,
-    file::{
-        common::{
-            new_connection_validate_flags, POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
-            POSIX_READ_WRITE_PROTECTION_ATTRIBUTES, POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
-        },
-        connection::util::OpenFile,
-        File, SharingMode,
-    },
-    path::Path,
-};
-
 use {
+    crate::{
+        common::{
+            current_time, inherit_rights_for_clone, node_attributes, send_on_open_with_error,
+            GET_FLAGS_VISIBLE,
+        },
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        file::{
+            common::{
+                new_connection_validate_flags, POSIX_READ_ONLY_PROTECTION_ATTRIBUTES,
+                POSIX_READ_WRITE_PROTECTION_ATTRIBUTES, POSIX_WRITE_ONLY_PROTECTION_ATTRIBUTES,
+            },
+            connection::util::OpenFile,
+            File, SharingMode,
+        },
+        path::Path,
+    },
     anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -29,12 +28,18 @@ use {
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::{sys::ZX_ERR_NOT_SUPPORTED, sys::ZX_OK, Status},
+    fuchsia_zircon::{self as zx, sys::ZX_ERR_NOT_SUPPORTED, sys::ZX_OK, Status},
     futures::stream::StreamExt,
+    lazy_static::lazy_static,
     static_assertions::assert_eq_size,
+    std::ops::Range,
     std::sync::Arc,
+    storage_device::buffer::Buffer,
 };
+
+lazy_static! {
+    pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
+}
 
 /// Represents a FIDL connection to a file.
 pub struct FileConnection<T: 'static + File> {
@@ -72,6 +77,15 @@ pub struct FileConnection<T: 'static + File> {
     // Should we need to port to a 128 bit platform, there are static assertions in the code that
     // would fail.
     seek: u64,
+}
+
+fn round_down<T: Into<usize>>(offset: usize, block_size: T) -> usize {
+    offset - offset % block_size.into()
+}
+
+fn round_up<T: Into<usize>>(offset: usize, block_size: T) -> Option<usize> {
+    let block_size = block_size.into();
+    Some(round_down(offset.checked_add(block_size - 1)?, block_size))
 }
 
 /// Return type for [`handle_request()`] functions.
@@ -255,12 +269,25 @@ impl<T: 'static + File> FileConnection<T> {
                 responder.send(status.into_raw())?;
             }
             FileRequest::Read { count, responder } => {
-                let (status, content) = self.handle_read(count).await;
-                responder.send(status.into_raw(), &content)?;
+                let advance = match self.handle_read_at(self.seek, count).await {
+                    Ok((buffer, range)) => {
+                        responder.send(Status::OK.into_raw(), &buffer.as_slice()[range.clone()])?;
+                        (range.end - range.start) as u64
+                    }
+                    Err(status) => {
+                        responder.send(status.into_raw(), &[0u8; 0])?;
+                        0u64
+                    }
+                };
+                self.seek += advance;
             }
             FileRequest::ReadAt { offset, count, responder } => {
-                let (status, content) = self.handle_read_at(offset, count).await;
-                responder.send(status.into_raw(), &content)?;
+                match self.handle_read_at(offset, count).await {
+                    Ok((buffer, range)) => {
+                        responder.send(Status::OK.into_raw(), &buffer.as_slice()[range])?
+                    }
+                    Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
+                }
             }
             FileRequest::Write { data, responder } => {
                 let (status, actual) = self.handle_write(&data).await;
@@ -339,28 +366,25 @@ impl<T: 'static + File> FileConnection<T> {
         (Status::OK, attributes)
     }
 
-    async fn handle_read(&mut self, count: u64) -> (Status, Vec<u8>) {
-        let (status, content) = self.handle_read_at(self.seek, count).await;
-        assert_eq_size!(usize, u64);
-        self.seek += content.len() as u64;
-        (status, content)
-    }
-
-    async fn handle_read_at(&mut self, offset: u64, count: u64) -> (Status, Vec<u8>) {
+    async fn handle_read_at(
+        &mut self,
+        offset: u64,
+        count: u64,
+    ) -> Result<(Buffer<'_>, Range<usize>), Status> {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            return (Status::BAD_HANDLE, vec![]);
+            return Err(Status::BAD_HANDLE);
         }
 
-        // TODO(auradkar): We can optimize this by no initializing the vector here. Seems like a
-        // good candidate for MaybeUninit.
-        let mut buffer = vec![0; count as usize];
-        match self.file.read_at(offset, &mut buffer).await {
-            Ok(size) => {
-                buffer.truncate(size as usize);
-                (Status::OK, buffer)
-            }
-            Err(e) => (e, vec![]),
-        }
+        let fs = self.file.get_filesystem();
+        let bs = std::cmp::max(fs.block_size() as usize, *PAGE_SIZE as usize);
+        let start = round_down(offset as usize, bs);
+        let align = offset as usize - start;
+        let end = round_up((offset + count) as usize, bs).ok_or(Status::INVALID_ARGS)?;
+        let mut buffer = fs.allocate_buffer(end - start);
+        self.file.read_at(start as u64, buffer.as_mut()).await.map(|size| {
+            let count = std::cmp::min(count as usize, (size as usize).saturating_sub(align));
+            (buffer, align..align + count)
+        })
     }
 
     async fn handle_write(&mut self, content: &[u8]) -> (Status, u64) {
@@ -467,7 +491,10 @@ impl<T: 'static + File> FileConnection<T> {
         }
     }
 
-    async fn handle_get_buffer(&mut self, flags: u32) -> (Status, Option<Buffer>) {
+    async fn handle_get_buffer(
+        &mut self,
+        flags: u32,
+    ) -> (Status, Option<fidl_fuchsia_mem::Buffer>) {
         let mode = match Self::get_buffer_validate_flags(flags, self.flags) {
             Err(status) => return (status, None),
             Ok(mode) => mode,
@@ -536,8 +563,15 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         futures::prelude::*,
+        lazy_static::lazy_static,
         matches::assert_matches,
+        std::any::Any,
         std::sync::Mutex,
+        storage_device::{
+            buffer::{Buffer, MutableBufferRef},
+            buffer_allocator::{BufferAllocator, MemBufferSource},
+        },
+        vfs::filesystem::{Filesystem, FilesystemRename},
     };
 
     #[derive(Debug, PartialEq)]
@@ -555,9 +589,39 @@ mod tests {
         Sync,
     }
 
+    struct MockFilesystem(BufferAllocator);
+
+    impl MockFilesystem {
+        fn new() -> Self {
+            Self(BufferAllocator::new(512, Box::new(MemBufferSource::new(1024 * 1024))))
+        }
+    }
+
+    #[async_trait]
+    impl FilesystemRename for MockFilesystem {
+        async fn rename(
+            &self,
+            _src_dir: Arc<Any + Sync + Send + 'static>,
+            _src_name: Path,
+            _dst_dir: Arc<Any + Sync + Send + 'static>,
+            _dst_name: Path,
+        ) -> Result<(), Status> {
+            unreachable!();
+        }
+    }
+    impl Filesystem for MockFilesystem {
+        fn block_size(&self) -> u32 {
+            self.0.block_size() as u32
+        }
+        fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+            self.0.allocate_buffer(size)
+        }
+    }
+
     type MockCallbackType = Box<Fn(&FileOperation) -> Status + Sync + Send>;
     /// A fake file that just tracks what calls `FileConnection` makes on it.
     struct MockFile {
+        fs: Arc<MockFilesystem>,
         /// The list of operations that have been called.
         operations: Mutex<Vec<FileOperation>>,
         /// Callback used to determine how to respond to given operation.
@@ -568,17 +632,20 @@ mod tests {
         pending_setattr: Mutex<Option<FileOperation>>,
     }
 
-    const MOCK_FILE_SIZE: u64 = 256;
+    lazy_static! {
+        pub static ref MOCK_FILE_SIZE: u64 = *PAGE_SIZE + 256;
+    }
     const MOCK_FILE_ID: u64 = 10;
     const MOCK_FILE_LINKS: u64 = 2;
     const MOCK_FILE_CREATION_TIME: u64 = 10;
     const MOCK_FILE_MODIFICATION_TIME: u64 = 100;
     impl MockFile {
-        pub fn new(callback: MockCallbackType) -> Arc<Self> {
+        pub fn new(fs: Arc<MockFilesystem>, callback: MockCallbackType) -> Arc<Self> {
             Arc::new(MockFile {
+                fs,
                 operations: Mutex::new(Vec::new()),
                 callback,
-                file_size: MOCK_FILE_SIZE,
+                file_size: *MOCK_FILE_SIZE,
                 pending_setattr: Mutex::new(None),
             })
         }
@@ -600,14 +667,22 @@ mod tests {
             Ok(())
         }
 
-        async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
+        async fn read_at(
+            &self,
+            offset: u64,
+            mut buffer: MutableBufferRef<'_>,
+        ) -> Result<u64, Status> {
+            assert_eq!(offset % *PAGE_SIZE, 0);
             let count = buffer.len() as u64;
             self.handle_operation(FileOperation::ReadAt { offset, count })?;
 
             // Return data as if we were a file with 0..255 repeated endlessly.
-            for i in 0..count as usize {
-                buffer[i] = ((offset as usize + i) % 256) as u8;
-            }
+            let mut i = offset;
+            buffer.as_mut_slice().fill_with(|| {
+                let v = (i % 256) as u8;
+                i += 1;
+                v
+            });
             Ok(count)
         }
 
@@ -640,7 +715,7 @@ mod tests {
             &self,
             mode: SharingMode,
             flags: u32,
-        ) -> Result<Option<Buffer>, Status> {
+        ) -> Result<Option<fidl_fuchsia_mem::Buffer>, Status> {
             self.handle_operation(FileOperation::GetBuffer { mode, flags })?;
             Ok(None)
         }
@@ -685,6 +760,10 @@ mod tests {
 
         async fn sync(&self) -> Result<(), Status> {
             self.handle_operation(FileOperation::Sync)
+        }
+
+        fn get_filesystem(&self) -> &dyn Filesystem {
+            self.fs.as_ref()
         }
     }
 
@@ -733,13 +812,15 @@ mod tests {
     }
 
     struct TestEnv {
+        pub fs: Arc<MockFilesystem>,
         pub file: Arc<MockFile>,
         pub proxy: FileProxy,
         pub scope: ExecutionScope,
     }
 
     fn init_mock_file(callback: MockCallbackType, flags: u32) -> TestEnv {
-        let file = MockFile::new(callback);
+        let fs = Arc::new(MockFilesystem::new());
+        let file = MockFile::new(fs.clone(), callback);
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<FileMarker>().expect("Create proxy to succeed");
 
@@ -754,7 +835,7 @@ mod tests {
             true,
         );
 
-        TestEnv { file, proxy, scope }
+        TestEnv { fs, file, proxy, scope }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -786,7 +867,9 @@ mod tests {
         assert_eq!(Status::from_raw(status), Status::OK);
         let (clone_proxy, remote) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
         env.proxy.clone(CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
-        // Read from clone_proxy.
+        // Seek and read from clone_proxy.
+        let (status, _) = clone_proxy.seek(*PAGE_SIZE as i64, SeekOrigin::Start).await.unwrap();
+        assert_eq!(Status::from_raw(status), Status::OK);
         let (status, _) = clone_proxy.read(5).await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
@@ -800,10 +883,10 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },
-                FileOperation::ReadAt { offset: 0, count: 6 },
+                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE },
-                FileOperation::ReadAt { offset: 0, count: 5 },
-                FileOperation::ReadAt { offset: 6, count: 5 },
+                FileOperation::ReadAt { offset: *PAGE_SIZE, count: *PAGE_SIZE },
+                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
             ]
         );
     }
@@ -872,8 +955,8 @@ mod tests {
             NodeAttributes {
                 mode: MODE_TYPE_FILE | POSIX_READ_WRITE_PROTECTION_ATTRIBUTES,
                 id: MOCK_FILE_ID,
-                content_size: MOCK_FILE_SIZE,
-                storage_size: 2 * MOCK_FILE_SIZE,
+                content_size: *MOCK_FILE_SIZE,
+                storage_size: 2 * *MOCK_FILE_SIZE,
                 link_count: MOCK_FILE_LINKS,
                 creation_time: MOCK_FILE_CREATION_TIME,
                 modification_time: MOCK_FILE_MODIFICATION_TIME,
@@ -966,7 +1049,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 0, count: 10 },
+                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
             ]
         );
     }
@@ -990,7 +1073,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 10, count: 5 },
+                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
             ]
         );
     }
@@ -1010,7 +1093,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 10, count: 1 },
+                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
             ]
         );
     }
@@ -1034,7 +1117,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::ReadAt { offset: 8, count: 1 },
+                FileOperation::ReadAt { offset: 0, count: *PAGE_SIZE },
             ]
         );
     }
@@ -1052,18 +1135,18 @@ mod tests {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, offset) = env.proxy.seek(-4, SeekOrigin::End).await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        assert_eq!(offset, MOCK_FILE_SIZE - 4);
+        assert_eq!(offset, *MOCK_FILE_SIZE - 4);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        assert_eq!(data, vec![((MOCK_FILE_SIZE - 4) % 255) as u8]);
+        assert_eq!(data, vec![(offset % 256) as u8]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
                 FileOperation::GetSize, // for the seek
-                FileOperation::ReadAt { offset: MOCK_FILE_SIZE - 4, count: 1 },
+                FileOperation::ReadAt { offset: *PAGE_SIZE, count: *PAGE_SIZE },
             ]
         );
     }
@@ -1224,7 +1307,7 @@ mod tests {
         assert_eq!(count, data.len() as u64);
         let (status, offset) = env.proxy.seek(0, SeekOrigin::Current).await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
-        assert_eq!(offset, MOCK_FILE_SIZE + data.len() as u64);
+        assert_eq!(offset, *MOCK_FILE_SIZE + data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         const INIT_FLAGS: u32 = OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND;
         assert_matches!(

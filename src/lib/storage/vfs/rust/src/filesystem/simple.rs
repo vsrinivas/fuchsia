@@ -8,6 +8,7 @@ use {
     async_trait::async_trait,
     fuchsia_zircon::Status,
     std::{any::Any, marker::PhantomData, sync::Arc},
+    storage_device::buffer::Buffer,
 };
 
 pub struct SimpleFilesystem<T: DirectlyMutable + 'static> {
@@ -74,4 +75,18 @@ where
     }
 }
 
-impl<T> Filesystem for SimpleFilesystem<T> where T: DirectlyMutable + 'static {}
+impl<T> Filesystem for SimpleFilesystem<T>
+where
+    T: DirectlyMutable + 'static,
+{
+    /// Returns the size of the Filesystem's block device.  This is the granularity at which I/O is
+    /// performed.
+    fn block_size(&self) -> u32 {
+        unreachable!()
+    }
+    /// Allocates a buffer with capacity for at least |size| bytes which can be used for I/O.
+    /// The actual size of the buffer is rounded up to |Self::block_size()|.
+    fn allocate_buffer(&self, _size: usize) -> Buffer<'_> {
+        unreachable!()
+    }
+}
