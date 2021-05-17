@@ -27,7 +27,7 @@ driver_module("nand-broker") {
     ":nand-broker-bind",
     "//sdk/banjo/fuchsia.hardware.nand:fuchsia.hardware.nand_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-    "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
+    "//sdk/fidl/fuchsia.nand:fuchsia.nand_llcpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/nand",
     "//src/lib/ddk",

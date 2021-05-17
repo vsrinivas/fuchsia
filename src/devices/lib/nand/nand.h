@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_LIB_NAND_NAND_H_
 #define SRC_DEVICES_LIB_NAND_NAND_H_
 
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/hardware/nand/llcpp/fidl.h>
 #include <fuchsia/hardware/nandinfo/c/banjo.h>
 
@@ -22,14 +21,15 @@ void nand_banjo_from_fidl(const fuchsia_hardware_nand::wire::Info& source,
   memcpy(&destination->partition_guid, source.partition_guid.data(), NAND_GUID_LEN);
 }
 
-void nand_fidl_from_banjo(const nand_info_t source, fuchsia_hardware_nand_Info* destination) {
+void nand_fidl_from_banjo(const nand_info_t& source,
+                          fuchsia_hardware_nand::wire::Info* destination) {
   destination->page_size = source.page_size;
   destination->pages_per_block = source.pages_per_block;
   destination->num_blocks = source.num_blocks;
   destination->ecc_bits = source.ecc_bits;
   destination->oob_size = source.oob_size;
-  destination->nand_class = source.nand_class;
-  memcpy(&destination->partition_guid, &source.partition_guid, NAND_GUID_LEN);
+  destination->nand_class = static_cast<fuchsia_hardware_nand::wire::Class>(source.nand_class);
+  memcpy(destination->partition_guid.data(), &source.partition_guid, NAND_GUID_LEN);
 }
 
 }  // namespace nand

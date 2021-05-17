@@ -4,7 +4,7 @@
 
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-#include <fuchsia/nand/c/fidl.h>
+#include <fuchsia/nand/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
@@ -58,10 +58,11 @@ class Operation {
 };
 
 class Broker;
-using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<Broker, ddk::Unbindable, ddk::Messageable<fuchsia_nand::Broker>::Mixin>;
 
 // Exposes a control device (nand-broker) for a nand protocol device.
-class Broker : public DeviceType {
+class Broker : public DeviceType, public fidl::WireServer<fuchsia_nand::Broker> {
  public:
   explicit Broker(zx_device_t* parent) : DeviceType(parent), nand_(parent) {}
   ~Broker() {}
@@ -71,63 +72,32 @@ class Broker : public DeviceType {
 
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // fidl interface.
-  zx_status_t GetInfo(fuchsia_hardware_nand_Info* info) { return Query(info); }
-  zx_status_t Read(const fuchsia_nand_BrokerRequest& request, uint32_t* corrected_bits) {
-    return Queue(NAND_OP_READ, request, corrected_bits);
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+    fidl::FidlAllocator allocator;
+    fidl::ObjectView<fuchsia_hardware_nand::wire::Info> info(allocator);
+    completer.Reply(Query(info.get()), info);
   }
-  zx_status_t Write(const fuchsia_nand_BrokerRequest& request) {
-    return Queue(NAND_OP_WRITE, request, nullptr);
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+    uint32_t corrected_bits;
+    completer.Reply(Queue(NAND_OP_READ, request->request, &corrected_bits), corrected_bits);
   }
-  zx_status_t Erase(const fuchsia_nand_BrokerRequest& request) {
-    return Queue(NAND_OP_ERASE, request, nullptr);
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+    completer.Reply(Queue(NAND_OP_WRITE, request->request, nullptr));
+  }
+  void Erase(EraseRequestView request, EraseCompleter::Sync& completer) {
+    completer.Reply(Queue(NAND_OP_ERASE, request->request, nullptr));
   }
 
  private:
-  zx_status_t Query(fuchsia_hardware_nand_Info* info);
-  zx_status_t Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
+  zx_status_t Query(fuchsia_hardware_nand::wire::Info* info);
+  zx_status_t Queue(uint32_t command, fuchsia_nand::wire::BrokerRequest& request,
                     uint32_t* corrected_bits);
 
   ddk::NandProtocolClient nand_;
   size_t op_size_ = 0;
 };
-
-zx_status_t GetInfo(void* ctx, fidl_txn_t* txn) {
-  Broker* device = reinterpret_cast<Broker*>(ctx);
-  fuchsia_hardware_nand_Info info;
-  zx_status_t status = device->GetInfo(&info);
-  return fuchsia_nand_BrokerGetInfo_reply(txn, status, &info);
-}
-
-zx_status_t Read(void* ctx, const fuchsia_nand_BrokerRequest* request, fidl_txn_t* txn) {
-  Broker* device = reinterpret_cast<Broker*>(ctx);
-  uint32_t corrected_bits = 0;
-  zx_status_t status = device->Read(*request, &corrected_bits);
-  return fuchsia_nand_BrokerRead_reply(txn, status, corrected_bits);
-}
-
-zx_status_t Write(void* ctx, const fuchsia_nand_BrokerRequest* request, fidl_txn_t* txn) {
-  Broker* device = reinterpret_cast<Broker*>(ctx);
-  zx_status_t status = device->Write(*request);
-  return fuchsia_nand_BrokerWrite_reply(txn, status);
-}
-
-zx_status_t Erase(void* ctx, const fuchsia_nand_BrokerRequest* request, fidl_txn_t* txn) {
-  Broker* device = reinterpret_cast<Broker*>(ctx);
-  zx_status_t status = device->Erase(*request);
-  return fuchsia_nand_BrokerErase_reply(txn, status);
-}
-
-// clang-format off
-fuchsia_nand_Broker_ops_t fidl_ops = {
-    .GetInfo = GetInfo,
-    .Read = Read,
-    .Write = Write,
-    .Erase = Erase
-};
-// clang-format on
 
 zx_status_t Broker::Bind() {
   if (!nand_.is_valid()) {
@@ -136,7 +106,7 @@ zx_status_t Broker::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fuchsia_hardware_nand_Info info;
+  fuchsia_hardware_nand::wire::Info info;
   Query(&info);
   if (!op_size_) {
     zxlogf(ERROR, "nand-broker: unable to query the nand driver");
@@ -148,18 +118,14 @@ zx_status_t Broker::Bind() {
   return DdkAdd("broker");
 }
 
-zx_status_t Broker::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_nand_Broker_dispatch(this, txn, msg, &fidl_ops);
-}
-
-zx_status_t Broker::Query(fuchsia_hardware_nand_Info* info) {
+zx_status_t Broker::Query(fuchsia_hardware_nand::wire::Info* info) {
   nand_info_t temp_info;
   nand_.Query(&temp_info, &op_size_);
   nand::nand_fidl_from_banjo(temp_info, info);
   return ZX_OK;
 }
 
-zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& request,
+zx_status_t Broker::Queue(uint32_t command, fuchsia_nand::wire::BrokerRequest& request,
                           uint32_t* corrected_bits) {
   Operation operation(op_size_);
   nand_operation_t* op = operation.GetOperation();
@@ -172,8 +138,8 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
       op->rw.offset_nand = request.offset_nand;
       op->rw.offset_data_vmo = request.offset_data_vmo;
       op->rw.offset_oob_vmo = request.offset_oob_vmo;
-      op->rw.data_vmo = request.data_vmo ? request.vmo : ZX_HANDLE_INVALID;
-      op->rw.oob_vmo = request.oob_vmo ? request.vmo : ZX_HANDLE_INVALID;
+      op->rw.data_vmo = request.data_vmo ? request.vmo.get() : ZX_HANDLE_INVALID;
+      op->rw.oob_vmo = request.oob_vmo ? request.vmo.get() : ZX_HANDLE_INVALID;
       break;
     case NAND_OP_ERASE:
       op->erase.first_block = request.offset_nand;
@@ -187,10 +153,6 @@ zx_status_t Broker::Queue(uint32_t command, const fuchsia_nand_BrokerRequest& re
 
   if (command == NAND_OP_READ) {
     *corrected_bits = op->rw.corrected_bit_flips;
-  }
-
-  if ((command == NAND_OP_READ || command == NAND_OP_WRITE) && request.vmo != ZX_HANDLE_INVALID) {
-    zx_handle_close(request.vmo);
   }
 
   return status;
