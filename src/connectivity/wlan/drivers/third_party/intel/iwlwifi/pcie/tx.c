@@ -686,7 +686,9 @@ static void iwl_pcie_txq_free(struct iwl_trans* trans, int txq_id) {
   if (txq_id == trans_pcie->cmd_queue) {
     for (i = 0; i < txq->n_window; i++) {
       io_buffer_release(&txq->entries[i].cmd);
-      io_buffer_release(&txq->entries[i].dup_io_buf);
+      if (io_buffer_is_valid(&txq->entries[i].dup_io_buf)) {
+        io_buffer_release(&txq->entries[i].dup_io_buf);
+      }
     }
   }
 
@@ -1081,8 +1083,9 @@ void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn) {
 
     ZX_ASSERT(io_buffer_is_valid(&txq->entries[read_ptr].cmd));
     io_buffer_release(&txq->entries[read_ptr].cmd);
-    ZX_ASSERT(io_buffer_is_valid(&txq->entries[read_ptr].dup_io_buf));
-    io_buffer_release(&txq->entries[read_ptr].dup_io_buf);
+    if (io_buffer_is_valid(&txq->entries[read_ptr].dup_io_buf)) {
+      io_buffer_release(&txq->entries[read_ptr].dup_io_buf);
+    }
 
     iwl_pcie_txq_free_tfd(trans, txq);
   }
