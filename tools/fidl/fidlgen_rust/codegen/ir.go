@@ -30,7 +30,7 @@ type BitsMember struct {
 }
 
 type Const struct {
-	fidlgen.Attributes
+	fidlgen.Const
 	Name  string
 	Type  string
 	Value string
@@ -58,7 +58,7 @@ type Union struct {
 }
 
 type UnionMember struct {
-	fidlgen.Attributes
+	fidlgen.UnionMember
 	Type              string
 	OGType            fidlgen.Type
 	Name              string
@@ -88,26 +88,22 @@ type Result struct {
 }
 
 type Struct struct {
-	fidlgen.Attributes
+	fidlgen.Struct
 	ECI                     EncodedCompoundIdentifier
 	Derives                 derives
 	Name                    string
 	Members                 []StructMember
 	PaddingMarkers          []PaddingMarker
 	FlattenedPaddingMarkers []PaddingMarker
-	// Store size and alignment for Old and V1 versions of the wire format. The
-	// numbers will be different if the struct contains a union within it. Only
-	// structs have this information because fidl::encoding only uses these
-	// precalculated numbers for structs and unions.
-	Size       int
-	Alignment  int
-	HasPadding bool
+	Size                    int
+	Alignment               int
+	HasPadding              bool
 	// True iff the fidl_struct_copy! macro should be used instead of fidl_struct!.
 	UseFidlStructCopy bool
 }
 
 type StructMember struct {
-	fidlgen.Attributes
+	fidlgen.StructMember
 	OGType            fidlgen.Type
 	Type              string
 	Name              string
@@ -135,7 +131,7 @@ type Table struct {
 }
 
 type TableMember struct {
-	fidlgen.Attributes
+	fidlgen.TableMember
 	OGType            fidlgen.Type
 	Type              string
 	Name              string
@@ -146,7 +142,7 @@ type TableMember struct {
 }
 
 type Protocol struct {
-	fidlgen.Attributes
+	fidlgen.Protocol
 	ECI         EncodedCompoundIdentifier
 	Name        string
 	Methods     []Method
@@ -154,7 +150,7 @@ type Protocol struct {
 }
 
 type Method struct {
-	fidlgen.Attributes
+	fidlgen.Method
 	Ordinal        uint64
 	Name           string
 	CamelName      string
@@ -182,14 +178,14 @@ type HandleMetadataWrapper struct {
 }
 
 type Service struct {
-	fidlgen.Attributes
+	fidlgen.Service
 	Name        string
 	Members     []ServiceMember
 	ServiceName string
 }
 
 type ServiceMember struct {
-	fidlgen.Attributes
+	fidlgen.ServiceMember
 	ProtocolType string
 	Name         string
 	CamelName    string
@@ -565,7 +561,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, typ fidlgen.Type) strin
 	case fidlgen.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	case fidlgen.BinaryOperator:
-		decl := c.compileType(typ, false)
+		decl := c.compileType(typ)
 		// from_bits isn't a const function, so from_bits_truncate must be used.
 		return fmt.Sprintf("%s::from_bits_truncate(%s)", decl, val.Value)
 	default:
@@ -578,17 +574,17 @@ func (c *compiler) compileConst(val fidlgen.Const) Const {
 	var r Const
 	if val.Type.Kind == fidlgen.StringType {
 		r = Const{
-			Attributes: val.Attributes,
-			Type:       "&str",
-			Name:       name,
-			Value:      c.compileConstant(val.Value, val.Type),
+			Const: val,
+			Type:  "&str",
+			Name:  name,
+			Value: c.compileConstant(val.Value, val.Type),
 		}
 	} else {
 		r = Const{
-			Attributes: val.Attributes,
-			Type:       c.compileType(val.Type, false),
-			Name:       name,
-			Value:      c.compileConstant(val.Value, val.Type),
+			Const: val,
+			Type:  c.compileType(val.Type),
+			Name:  name,
+			Value: c.compileConstant(val.Value, val.Type),
 		}
 	}
 	return r
@@ -666,117 +662,91 @@ func (c *compiler) fieldHandleInformation(val *fidlgen.Type) FieldHandleInformat
 	}
 }
 
-func (c *compiler) compileType(val fidlgen.Type, borrowed bool) string {
-	var r string
+func (c *compiler) compileType(val fidlgen.Type) string {
+	var t string
 	switch val.Kind {
 	case fidlgen.ArrayType:
-		t := c.compileType(*val.ElementType, borrowed)
-		r = fmt.Sprintf("[%s; %v]", t, *val.ElementCount)
-		if borrowed {
-			r = fmt.Sprintf("&mut %s", r)
-		}
+		t = fmt.Sprintf("[%s; %v]", c.compileType(*val.ElementType), *val.ElementCount)
 	case fidlgen.VectorType:
-		t := c.compileType(*val.ElementType, borrowed)
-		var inner string
-		if borrowed {
-			// We use slices for primitive numeric types so that
-			// encoding becomes a memcpy. Rust does not guarantee
-			// the bit patterns for bool values, so we omit them
-			// from the optimization.
-			if val.ElementType.Kind == fidlgen.PrimitiveType && val.ElementType.PrimitiveSubtype != fidlgen.Bool {
-				inner = fmt.Sprintf("&[%s]", t)
-			} else {
-				inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t)
-			}
-		} else {
-			inner = fmt.Sprintf("Vec<%s>", t)
-		}
-		if val.Nullable {
-			r = fmt.Sprintf("Option<%s>", inner)
-		} else {
-			r = inner
-		}
+		t = fmt.Sprintf("Vec<%s>", c.compileType(*val.ElementType))
 	case fidlgen.StringType:
-		if borrowed {
-			if val.Nullable {
-				r = "Option<&str>"
-			} else {
-				r = "&str"
-			}
-		} else {
-			if val.Nullable {
-				r = "Option<String>"
-			} else {
-				r = "String"
-			}
-		}
+		t = "String"
 	case fidlgen.HandleType:
-		r = fmt.Sprintf("fidl::%s", compileHandleSubtype(val.HandleSubtype))
-		if val.Nullable {
-			r = fmt.Sprintf("Option<%s>", r)
-		}
+		t = fmt.Sprintf("fidl::%s", compileHandleSubtype(val.HandleSubtype))
 	case fidlgen.RequestType:
-		r = c.compileCamelCompoundIdentifier(val.RequestSubtype)
-		r = fmt.Sprintf("fidl::endpoints::ServerEnd<%sMarker>", r)
-		if val.Nullable {
-			r = fmt.Sprintf("Option<%s>", r)
-		}
+		t = fmt.Sprintf("fidl::endpoints::ServerEnd<%sMarker>", c.compileCamelCompoundIdentifier(val.RequestSubtype))
 	case fidlgen.PrimitiveType:
-		// Primitive types are small, simple, and never contain handles,
-		// so there's no need to borrow them
-		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
+		t = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case fidlgen.IdentifierType:
-		t := c.compileCamelCompoundIdentifier(val.Identifier)
+		t = c.compileCamelCompoundIdentifier(val.Identifier)
 		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		switch declInfo.Type {
-		case fidlgen.BitsDeclType, fidlgen.EnumDeclType:
-			// Bits and enums are small, simple, and never contain handles,
-			// so no need to borrow
-			borrowed = false
-			fallthrough
-		case fidlgen.ConstDeclType, fidlgen.StructDeclType, fidlgen.UnionDeclType:
+		case fidlgen.StructDeclType, fidlgen.UnionDeclType:
 			if val.Nullable {
-				if borrowed {
-					r = fmt.Sprintf("Option<&mut %s>", t)
-				} else {
-					r = fmt.Sprintf("Option<Box<%s>>", t)
-				}
-			} else {
-				if borrowed {
-					r = fmt.Sprintf("&mut %s", t)
-				} else {
-					r = t
-				}
+				t = fmt.Sprintf("Box<%s>", t)
 			}
-		case fidlgen.TableDeclType:
-			if val.Nullable {
-				panic("tables cannot be nullable")
-			}
-			// TODO(fxbug.dev/42304): Replace with "&mut %s".
-			r = t
 		case fidlgen.ProtocolDeclType:
-			r = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
-			if val.Nullable {
-				r = fmt.Sprintf("Option<%s>", r)
-			}
-		default:
-			panic(fmt.Sprintf("unknown declaration type: %v", declInfo.Type))
+			t = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
 		}
 	default:
 		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
 	}
 
-	return r
+	if val.Nullable {
+		return fmt.Sprintf("Option<%s>", t)
+	}
+	return t
+}
+
+func (c *compiler) compileBorrowedType(val fidlgen.Type) string {
+	var t string
+	switch val.Kind {
+	case fidlgen.PrimitiveType, fidlgen.HandleType, fidlgen.RequestType:
+		return c.compileType(val)
+	case fidlgen.ArrayType:
+		t = fmt.Sprintf("&mut [%s; %v]", c.compileBorrowedType(*val.ElementType), *val.ElementCount)
+	case fidlgen.VectorType:
+		t = c.compileBorrowedType(*val.ElementType)
+		// We use slices for primitive numeric types so that encoding becomes a
+		// memcpy. Rust does not guarantee the bit patterns for bool values, so
+		// we omit them from the optimization.
+		if val.ElementType.Kind == fidlgen.PrimitiveType && val.ElementType.PrimitiveSubtype != fidlgen.Bool {
+			t = fmt.Sprintf("&[%s]", t)
+		} else {
+			t = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t)
+		}
+	case fidlgen.StringType:
+		t = "&str"
+	case fidlgen.IdentifierType:
+		t = c.compileCamelCompoundIdentifier(val.Identifier)
+		declInfo, ok := c.decls[val.Identifier]
+		if !ok {
+			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
+		}
+		switch declInfo.Type {
+		case fidlgen.StructDeclType, fidlgen.UnionDeclType:
+			t = fmt.Sprintf("&mut %s", t)
+		case fidlgen.ProtocolDeclType:
+			t = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
+		}
+	default:
+		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
+	}
+
+	if val.Nullable {
+		return fmt.Sprintf("Option<%s>", t)
+	}
+	return t
 }
 
 func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	e := Bits{
 		Bits:    val,
 		Name:    c.compileCamelCompoundIdentifier(val.Name),
-		Type:    c.compileType(val.Type, false),
+		Type:    c.compileType(val.Type),
 		Members: []BitsMember{},
 	}
 	for _, v := range val.Members {
@@ -839,8 +809,8 @@ func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifi
 		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&v.Type)
 		parameters = append(parameters, Parameter{
 			OGType:            v.Type,
-			Type:              c.compileType(v.Type, false),
-			BorrowedType:      c.compileType(v.Type, true),
+			Type:              c.compileType(v.Type),
+			BorrowedType:      c.compileBorrowedType(v.Type),
 			Name:              compileSnakeIdentifier(v.Name),
 			HandleWrapperName: wrapperName,
 			HasHandleMetadata: hasHandleMetadata,
@@ -851,7 +821,7 @@ func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifi
 
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	r := Protocol{
-		Attributes:  val.Attributes,
+		Protocol:    val,
 		ECI:         val.Name,
 		Name:        c.compileCamelCompoundIdentifier(val.Name),
 		Methods:     []Method{},
@@ -869,7 +839,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 			}
 		}
 		m := Method{
-			Attributes:     v.Attributes,
+			Method:         v,
 			Ordinal:        v.Ordinal,
 			Name:           name,
 			CamelName:      camelName,
@@ -892,7 +862,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 
 func (c *compiler) compileService(val fidlgen.Service) Service {
 	r := Service{
-		Attributes:  val.Attributes,
+		Service:     val,
 		Name:        c.compileCamelCompoundIdentifier(val.Name),
 		Members:     []ServiceMember{},
 		ServiceName: val.GetServiceName(),
@@ -900,11 +870,11 @@ func (c *compiler) compileService(val fidlgen.Service) Service {
 
 	for _, v := range val.Members {
 		m := ServiceMember{
-			Attributes:   v.Attributes,
-			Name:         string(v.Name),
-			CamelName:    compileCamelIdentifier(v.Name),
-			SnakeName:    compileSnakeIdentifier(v.Name),
-			ProtocolType: c.compileCamelCompoundIdentifier(v.Type.Identifier),
+			ServiceMember: v,
+			Name:          string(v.Name),
+			CamelName:     compileCamelIdentifier(v.Name),
+			SnakeName:     compileSnakeIdentifier(v.Name),
+			ProtocolType:  c.compileCamelCompoundIdentifier(v.Type.Identifier),
 		}
 		r.Members = append(r.Members, m)
 	}
@@ -915,8 +885,8 @@ func (c *compiler) compileService(val fidlgen.Service) Service {
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	hi := c.fieldHandleInformation(&val.Type)
 	return StructMember{
-		Attributes:        val.Attributes,
-		Type:              c.compileType(val.Type, false),
+		StructMember:      val,
+		Type:              c.compileType(val.Type),
 		OGType:            val.Type,
 		Name:              compileSnakeIdentifier(val.Name),
 		Offset:            val.FieldShapeV1.Offset,
@@ -1045,13 +1015,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 	switch typ.Kind {
 	case fidlgen.ArrayType:
 		return c.computeUseFidlStructCopy(typ.ElementType)
-	case fidlgen.VectorType:
-		return false
-	case fidlgen.StringType:
-		return false
-	case fidlgen.HandleType:
-		return false
-	case fidlgen.RequestType:
+	case fidlgen.VectorType, fidlgen.StringType, fidlgen.HandleType, fidlgen.RequestType:
 		return false
 	case fidlgen.PrimitiveType:
 		switch typ.PrimitiveSubtype {
@@ -1065,11 +1029,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 		}
 		declType := c.decls[typ.Identifier].Type
 		switch declType {
-		case fidlgen.BitsDeclType:
-			return false
-		case fidlgen.EnumDeclType:
-			return false
-		case fidlgen.ProtocolDeclType:
+		case fidlgen.BitsDeclType, fidlgen.EnumDeclType, fidlgen.TableDeclType, fidlgen.UnionDeclType, fidlgen.ProtocolDeclType:
 			return false
 		case fidlgen.StructDeclType:
 			st, ok := c.structs[typ.Identifier]
@@ -1077,10 +1037,6 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
 			}
 			return c.computeUseFidlStructCopyForStruct(st)
-		case fidlgen.UnionDeclType:
-			return false
-		case fidlgen.TableDeclType:
-			return false
 		default:
 			panic(fmt.Sprintf("unknown declaration type: %v", declType))
 		}
@@ -1092,7 +1048,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
-		Attributes:              val.Attributes,
+		Struct:                  val,
 		ECI:                     val.Name,
 		Name:                    name,
 		Members:                 []StructMember{},
@@ -1116,8 +1072,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 func (c *compiler) compileUnionMember(val fidlgen.UnionMember) UnionMember {
 	hi := c.fieldHandleInformation(&val.Type)
 	return UnionMember{
-		Attributes:        val.Attributes,
-		Type:              c.compileType(val.Type, false),
+		UnionMember:       val,
+		Type:              c.compileType(val.Type),
 		OGType:            val.Type,
 		Name:              compileCamelIdentifier(val.Name),
 		Ordinal:           val.Ordinal,
@@ -1177,9 +1133,9 @@ func (c *compiler) compileTable(table fidlgen.Table) Table {
 	for _, member := range table.SortedMembersNoReserved() {
 		hi := c.fieldHandleInformation(&member.Type)
 		members = append(members, TableMember{
-			Attributes:        member.Attributes,
+			TableMember:       member,
 			OGType:            member.Type,
-			Type:              c.compileType(member.Type, false),
+			Type:              c.compileType(member.Type),
 			Name:              compileSnakeIdentifier(member.Name),
 			Ordinal:           member.Ordinal,
 			HasHandleMetadata: hi.hasHandleMetadata,
