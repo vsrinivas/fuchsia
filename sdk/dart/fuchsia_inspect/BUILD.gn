@@ -56,16 +56,11 @@ dart_library("fuchsia_inspect") {
 #   fx run-host-tests fuchsia_inspect_package_unittests
 
 dart_test("fuchsia_inspect_package_unittests") {
-  # TODO(jayzhuang): This test accesses test/integration/pubspec.yaml, figure
-  # out why and remove this suppression.
-  hermetic_deps = false
-
   sources = [
     "inspect/inspect_test.dart",
     "inspect/internal/inspect_impl_test.dart",
     "inspect/node_test.dart",
     "inspect/property_test.dart",
-    "integration/lib/writer.dart",
     "util.dart",
     "vmo/bitfield64_test.dart",
     "vmo/block_test.dart",
@@ -90,7 +85,6 @@ dart_test_component("dart-archive-reader-test-component") {
   sources = [ "reader/reader_test.dart" ]
   deps = [
     ":fuchsia_inspect",
-    "//sdk/dart/fuchsia_inspect",
     "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.sys",
