@@ -1,30 +1,15 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.ui.input.ImeService": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx",
-                "fuchsia.ui.input3.KeyEventInjector": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx",
-                "fuchsia.ui.input3.Keyboard": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx",
-                "fuchsia.ui.keyboard.focus.Controller": "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx"
-            }
-        }
-    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "args": [
-            "--test-threads=1"
-        ],
         "binary": "bin/keyboard3_integration_test"
     },
     "sandbox": {
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.input3.KeyEventInjector",
-            "fuchsia.ui.input3.Keyboard",
-            "fuchsia.ui.keyboard.focus.Controller"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

@@ -96,8 +96,11 @@ struct KeyListenerStore {
     /// Currently focused View.
     focused_view: Option<ViewRef>,
 
-    /// Currently pressed keys.
-    keys_pressed: HashSet<input::Key>,
+    /// Currently pressed keys (with key meanings, when provided in the same events).
+    keys_pressed: HashMap<input::Key, Option<ui_input3::KeyMeaning>>,
+
+    /// Currently pressed key meanings (in cases without accompanying keys).
+    key_meanings_pressed: HashSet<ui_input3::KeyMeaning>,
 }
 
 /// A client of fuchsia.ui.input3.Keyboard.SetListener()
@@ -114,7 +117,7 @@ impl KeyboardService {
 
     /// Dispatches key event to clients.
     pub async fn handle_key_event(&mut self, event: ui_input3::KeyEvent) -> Result<bool, Error> {
-        self.update_keys_pressed(&event).await;
+        self.update_keys_pressed(&event).await?;
         Ok(self.store.lock().await.dispatch_key(event).await?)
     }
 
@@ -123,7 +126,7 @@ impl KeyboardService {
     }
 
     /// Handles event of current subscriber losing focus.
-    /// Will lock KeyListenerStore and current subscriber.
+    /// Will lock `KeyListenerStore` and current subscriber.
     async fn handle_focus_lost(&self) {
         let mut store = self.store.lock().await;
         let focused_view = match &store.focused_view {
@@ -135,11 +138,15 @@ impl KeyboardService {
             let subscriber = subscriber.lock().await;
 
             // Create CANCEL events for keys are currently pressed.
-            let cancel_events = store.keys_pressed.iter().map(|key| ui_input3::KeyEvent {
-                key: Some(*key),
-                type_: Some(ui_input3::KeyEventType::Cancel),
-                ..ui_input3::KeyEvent::EMPTY
-            });
+            let cancel_events =
+                Self::get_pressed_key_meaning_pairs(&store).map(|(key, key_meaning)| {
+                    ui_input3::KeyEvent {
+                        key,
+                        key_meaning,
+                        type_: Some(ui_input3::KeyEventType::Cancel),
+                        ..ui_input3::KeyEvent::EMPTY
+                    }
+                });
 
             // Send the CANCEL events to the client that's about to lose focus.
             let dispatches = cancel_events.map(|event| subscriber.listener.on_key_event(event));
@@ -151,8 +158,8 @@ impl KeyboardService {
         store.focused_view = None;
     }
 
-    /// New client was focused, send SYNC/CANCEL events if necessary.
-    /// Will lock KeyListenerStore and current subscriber.
+    /// New client was focused, send SYNC events if necessary.
+    /// Will lock `KeyListenerStore` and current subscriber.
     async fn handle_client_focused(&self, focused_view: ViewRef) {
         let store = self.store.lock().await;
         let subscriber = match store.subscribers.get(&focused_view) {
@@ -162,10 +169,13 @@ impl KeyboardService {
         let subscriber = subscriber.lock().await;
 
         // Create SYNC events for keys that were already pressed before the client got focus.
-        let sync_events = store.keys_pressed.iter().map(|key| ui_input3::KeyEvent {
-            key: Some(*key),
-            type_: Some(ui_input3::KeyEventType::Sync),
-            ..ui_input3::KeyEvent::EMPTY
+        let sync_events = Self::get_pressed_key_meaning_pairs(&store).map(|(key, key_meaning)| {
+            ui_input3::KeyEvent {
+                key,
+                key_meaning,
+                type_: Some(ui_input3::KeyEventType::Sync),
+                ..ui_input3::KeyEvent::EMPTY
+            }
         });
 
         // Send the SYNC events to the newly focused client.
@@ -229,24 +239,61 @@ impl KeyboardService {
         Ok(())
     }
 
-    async fn update_keys_pressed(&mut self, event: &ui_input3::KeyEvent) {
-        let (type_, key) = match (event.type_, event.key) {
-            (Some(t), Some(k)) => (t, k),
-            _ => return,
-        };
-        let keys_pressed = &mut self.store.lock().await.keys_pressed;
+    async fn update_keys_pressed(&mut self, event: &ui_input3::KeyEvent) -> Result<(), Error> {
+        let type_ = event.type_.ok_or_else(|| format_err!("Missing event type: {:?}", event))?;
+
+        if event.key.is_none() && event.key_meaning.is_none() {
+            return Err(format_err!("Missing both key and key_meaning: {:?}", event));
+        }
+
+        let (key, meaning) = (event.key, event.key_meaning);
+
+        let store = &mut self.store.lock().await;
         match type_ {
             ui_input3::KeyEventType::Sync | ui_input3::KeyEventType::Pressed => {
-                keys_pressed.insert(key);
+                if let Some(key) = key {
+                    store.keys_pressed.insert(key, meaning);
+                } else {
+                    store.key_meanings_pressed.insert(meaning.unwrap());
+                }
             }
             ui_input3::KeyEventType::Cancel | ui_input3::KeyEventType::Released => {
-                keys_pressed.remove(&key);
+                if let Some(key) = key {
+                    store.keys_pressed.remove(&key);
+                } else {
+                    store.key_meanings_pressed.remove(&meaning.unwrap());
+                }
             }
         }
+        Ok(())
     }
 
     pub(crate) async fn get_keys_pressed(&self) -> HashSet<input::Key> {
-        self.store.lock().await.keys_pressed.clone()
+        self.store.lock().await.keys_pressed.keys().cloned().collect()
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn get_key_meanings_pressed(&self) -> HashSet<ui_input3::KeyMeaning> {
+        let store = self.store.lock().await;
+        store
+            .keys_pressed
+            .values()
+            .flatten()
+            .chain(store.key_meanings_pressed.iter())
+            .cloned()
+            .collect()
+    }
+
+    /// Returns an iterator over all the currently pressed `Key`s and `KeyMeaning`s. Some
+    /// `KeyMeaning`s may have been pressed in events without accompanying `Key`s.
+    fn get_pressed_key_meaning_pairs<'a>(
+        store_guard: &'a futures::lock::MutexGuard<'a, KeyListenerStore>,
+    ) -> impl Iterator<Item = (Option<input::Key>, Option<ui_input3::KeyMeaning>)> + 'a {
+        store_guard
+            .keys_pressed
+            .iter()
+            .map(|(key, key_meaning)| (Some(*key), *key_meaning))
+            .chain(store_guard.key_meanings_pressed.iter().map(|meaning| (None, Some(*meaning))))
     }
 }
 
@@ -296,6 +343,7 @@ impl KeyListenerStore {
                     }
                     let event = ui_input3::KeyEvent {
                         key: event.key,
+                        key_meaning: event.key_meaning,
                         modifiers: event.modifiers,
                         timestamp: event.timestamp,
                         type_: event.type_,
@@ -336,6 +384,7 @@ mod tests {
         fidl_fuchsia_input as input, fuchsia_async as fasync,
         fuchsia_syslog::fx_log_err,
         futures::{future, StreamExt, TryFutureExt},
+        maplit::hashset,
         std::iter::FromIterator,
         std::task::Poll,
     };
@@ -408,11 +457,15 @@ mod tests {
         }
     }
 
-    async fn expect_key_and_modifiers(
+    /// Waits for the next `KeyEvent` from the given stream and applies the given validation
+    /// function to it. The validation function should make assertions or otherwise `panic!` on
+    /// failure.
+    async fn expect_key_event_with_validation<F>(
         listener: &mut ui_input3::KeyboardListenerRequestStream,
-        key: input::Key,
-        modifiers: ui_input3::Modifiers,
-    ) {
+        validator: F,
+    ) where
+        F: FnOnce(&ui_input3::KeyEvent) -> (),
+    {
         let listener_request = listener.next().await;
         if let Some(Ok(ui_input3::KeyboardListenerRequest::OnKeyEvent {
             event, responder, ..
@@ -421,11 +474,22 @@ mod tests {
             responder
                 .send(ui_input3::KeyEventStatus::Handled)
                 .expect("responding from key listener");
+            validator(&event);
+        } else {
+            panic!("Unexpected key listener request: {:?}", listener_request);
+        }
+    }
+
+    async fn expect_key_and_modifiers(
+        listener: &mut ui_input3::KeyboardListenerRequestStream,
+        key: input::Key,
+        modifiers: ui_input3::Modifiers,
+    ) {
+        expect_key_event_with_validation(listener, |event| {
             assert_eq!(event.key, Some(key));
             assert_eq!(event.modifiers, Some(modifiers));
-        } else {
-            panic!("Expected key error: {:?}, got {:?}", (key, modifiers), listener_request);
-        }
+        })
+        .await
     }
 
     async fn expect_key_and_type(
@@ -433,19 +497,21 @@ mod tests {
         key: input::Key,
         type_: ui_input3::KeyEventType,
     ) {
-        let listener_request = listener.next().await;
-        if let Some(Ok(ui_input3::KeyboardListenerRequest::OnKeyEvent {
-            event, responder, ..
-        })) = listener_request
-        {
-            responder
-                .send(ui_input3::KeyEventStatus::Handled)
-                .expect("responding from key listener");
+        expect_key_event_with_validation(listener, |event| {
             assert_eq!(event.key, Some(key));
             assert_eq!(event.type_, Some(type_));
-        } else {
-            panic!("Expected key and type error: {:?}, got {:?}", (key, type_), listener_request);
-        }
+        })
+        .await
+    }
+
+    async fn expect_key_event(
+        listener: &mut ui_input3::KeyboardListenerRequestStream,
+        expected_event: &ui_input3::KeyEvent,
+    ) {
+        expect_key_event_with_validation(listener, |event| {
+            assert_eq!(expected_event, event);
+        })
+        .await
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -469,6 +535,74 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_key_only_passed_through() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        let (_view_ref, mut listener) = helper.create_and_focus_client().await?;
+
+        let dispatched_event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::A,
+            None,
+            None,
+        );
+
+        let (was_handled, _) = future::join(
+            helper.service.handle_key_event(dispatched_event.clone()),
+            expect_key_event(&mut listener, &dispatched_event),
+        )
+        .await;
+
+        assert!(was_handled?);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_key_meaning_only_passed_through() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        let (_view_ref, mut listener) = helper.create_and_focus_client().await?;
+
+        let dispatched_event =
+            test_helpers::create_key_event(ui_input3::KeyEventType::Pressed, None, None, 'a');
+
+        let (was_handled, _) = future::join(
+            helper.service.handle_key_event(dispatched_event.clone()),
+            expect_key_event(&mut listener, &dispatched_event),
+        )
+        .await;
+
+        assert!(was_handled?);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_key_and_key_meaning_passed_through() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        let (_view_ref, mut listener) = helper.create_and_focus_client().await?;
+
+        let dispatched_event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::A,
+            None,
+            'a',
+        );
+
+        let (was_handled, _) = future::join(
+            helper.service.handle_key_event(dispatched_event.clone()),
+            expect_key_event(&mut listener, &dispatched_event),
+        )
+        .await;
+
+        assert!(was_handled?);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_not_focused() -> Result<(), Error> {
         let mut helper = Helper::new();
         helper.create_fake_client().await?;
@@ -485,30 +619,33 @@ mod tests {
         let mut helper = Helper::new();
 
         // Create fake clients.
-        let (view_ref, mut listener) = helper.create_fake_client().await?;
-        let view_ref = ViewRef::new(view_ref);
-        let (other_view_ref, mut other_listener) = helper.create_fake_client().await?;
-        let other_view_ref = ViewRef::new(other_view_ref);
+        let (view_ref_a, mut listener_a) = helper.create_fake_client().await?;
+        let view_ref_a = ViewRef::new(view_ref_a);
+        let (view_ref_b, mut listener_b) = helper.create_fake_client().await?;
+        let view_ref_b = ViewRef::new(view_ref_b);
 
         // Set focus to the first fake client.
-        helper.service.handle_focus_change(view_ref).await;
+        helper.service.handle_focus_change(view_ref_a).await;
 
         // Scope part of the test case to release listeners and borrows once done.
         {
-            let (key, modifiers) = (input::Key::A, ui_input3::Modifiers::CapsLock);
-            let dispatched_event = create_key_event(key, modifiers);
+            let dispatched_event = test_helpers::create_key_event(
+                ui_input3::KeyEventType::Pressed,
+                input::Key::A,
+                ui_input3::Modifiers::CapsLock,
+                'A',
+            );
 
             // Setup key handing for both clients.
-            let expect_key_fut = expect_key_and_modifiers(&mut listener, key, modifiers);
-            let expect_other_key_fut =
-                expect_key_and_modifiers(&mut other_listener, key, modifiers);
-            futures::pin_mut!(expect_key_fut);
-            futures::pin_mut!(expect_other_key_fut);
+            let expect_key_fut_a = expect_key_event(&mut listener_a, &dispatched_event);
+            let expect_key_fut_b = expect_key_event(&mut listener_b, &dispatched_event);
+            futures::pin_mut!(expect_key_fut_a);
+            futures::pin_mut!(expect_key_fut_b);
 
             let (was_handled, activated_listener) = future::join(
-                helper.service.handle_key_event(dispatched_event),
+                helper.service.handle_key_event(dispatched_event.clone()),
                 // Correct listener is passed as first parameter to be resolved as Left.
-                future::select(expect_key_fut, expect_other_key_fut),
+                future::select(expect_key_fut_a, expect_key_fut_b),
             )
             .await;
 
@@ -519,9 +656,9 @@ mod tests {
         // Change focus to another client, expect CANCEL for unfocused client and SYNC for focused
         // client.
         future::join3(
-            helper.service.handle_focus_change(other_view_ref),
-            expect_key_and_type(&mut listener, input::Key::A, ui_input3::KeyEventType::Cancel),
-            expect_key_and_type(&mut other_listener, input::Key::A, ui_input3::KeyEventType::Sync),
+            helper.service.handle_focus_change(view_ref_b),
+            expect_key_and_type(&mut listener_a, input::Key::A, ui_input3::KeyEventType::Cancel),
+            expect_key_and_type(&mut listener_b, input::Key::A, ui_input3::KeyEventType::Sync),
         )
         .await;
 
@@ -531,16 +668,15 @@ mod tests {
             let dispatched_event = create_key_event(key, modifiers);
 
             // Setup key handing for both clients.
-            let expect_key_fut = expect_key_and_modifiers(&mut listener, key, modifiers);
-            let expect_other_key_fut =
-                expect_key_and_modifiers(&mut other_listener, key, modifiers);
-            futures::pin_mut!(expect_key_fut);
-            futures::pin_mut!(expect_other_key_fut);
+            let expect_key_fut_a = expect_key_and_modifiers(&mut listener_a, key, modifiers);
+            let expect_key_fut_b = expect_key_and_modifiers(&mut listener_b, key, modifiers);
+            futures::pin_mut!(expect_key_fut_a);
+            futures::pin_mut!(expect_key_fut_b);
 
             let (was_handled, activated_listener) = future::join(
                 helper.service.handle_key_event(dispatched_event),
                 // Correct listener is passed as first parameter to be resolved as Left.
-                future::select(expect_other_key_fut, expect_key_fut),
+                future::select(expect_key_fut_b, expect_key_fut_a),
             )
             .await;
 
@@ -626,6 +762,169 @@ mod tests {
             .await?;
 
         assert_eq!(helper.service.get_keys_pressed().await, HashSet::new());
+
+        Ok(())
+    }
+
+    /// 1. Pressed: LeftShift
+    /// 2. Pressed: Key5, key meaning '%'.
+    /// 3. Released: Key5, key meaning '%'.
+    /// 4. Released: LeftShift
+    #[fasync::run_singlethreaded(test)]
+    async fn update_keys_pressed_with_matching_key_meanings() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::LeftShift,
+            None,
+            None,
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::LeftShift));
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::Key5,
+            None,
+            '%',
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(
+            helper.service.get_keys_pressed().await,
+            hashset!(input::Key::LeftShift, input::Key::Key5)
+        );
+        assert_eq!(
+            helper.service.get_key_meanings_pressed().await,
+            hashset!(ui_input3::KeyMeaning::Codepoint('%' as u32))
+        );
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Released,
+            input::Key::Key5,
+            None,
+            '%',
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::LeftShift));
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Released,
+            input::Key::LeftShift,
+            None,
+            None,
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!());
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        Ok(())
+    }
+
+    /// 1. Pressed: LeftShift
+    /// 2. Pressed: Key5, key meaning '%'.
+    /// 3. Released: LeftShift
+    /// 4. Released: Key5, key meaning '5'.
+    #[fasync::run_singlethreaded(test)]
+    async fn update_keys_pressed_with_unmatched_key_meanings() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::LeftShift,
+            None,
+            None,
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::LeftShift));
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::Key5,
+            None,
+            '%',
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(
+            helper.service.get_keys_pressed().await,
+            hashset!(input::Key::LeftShift, input::Key::Key5)
+        );
+        assert_eq!(
+            helper.service.get_key_meanings_pressed().await,
+            hashset!(ui_input3::KeyMeaning::Codepoint('%' as u32))
+        );
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Released,
+            input::Key::LeftShift,
+            None,
+            None,
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::Key5));
+        assert_eq!(
+            helper.service.get_key_meanings_pressed().await,
+            hashset!(ui_input3::KeyMeaning::Codepoint('%' as u32))
+        );
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Released,
+            input::Key::Key5,
+            None,
+            '5',
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!());
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        Ok(())
+    }
+
+    /// 1. Pressed: LeftShift
+    /// 2. Pressed: key meaning '%'.
+    /// 3. Released: key meaning '%'.
+    /// 4. Released: LeftShift
+    #[fasync::run_singlethreaded(test)]
+    async fn update_keys_pressed_without_key_codes() -> Result<(), Error> {
+        let mut helper = Helper::new();
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Pressed,
+            input::Key::LeftShift,
+            None,
+            None,
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::LeftShift));
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        let event =
+            test_helpers::create_key_event(ui_input3::KeyEventType::Pressed, None, None, '%');
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::LeftShift));
+        assert_eq!(
+            helper.service.get_key_meanings_pressed().await,
+            hashset!(ui_input3::KeyMeaning::Codepoint('%' as u32))
+        );
+
+        let event =
+            test_helpers::create_key_event(ui_input3::KeyEventType::Released, None, None, '%');
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!(input::Key::LeftShift));
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
+
+        let event = test_helpers::create_key_event(
+            ui_input3::KeyEventType::Released,
+            input::Key::LeftShift,
+            None,
+            None,
+        );
+        helper.service.handle_key_event(event).await?;
+        assert_eq!(helper.service.get_keys_pressed().await, hashset!());
+        assert_eq!(helper.service.get_key_meanings_pressed().await, hashset!());
 
         Ok(())
     }

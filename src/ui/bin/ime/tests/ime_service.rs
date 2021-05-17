@@ -4,7 +4,6 @@
 
 #![cfg(test)]
 
-use crate::test_helpers::{bind_editor, get_state_update, simulate_keypress};
 use anyhow::{Context as _, Result};
 use fidl_fuchsia_input as input;
 use fidl_fuchsia_ui_input as ui_input;
@@ -14,8 +13,7 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
 use input_synthesis::usages::Usages;
-
-mod test_helpers;
+use test_helpers::{bind_editor, get_state_update, simulate_keypress};
 
 #[fasync::run_singlethreaded(test)]
 async fn test_visibility_service_sends_initial_update() -> Result<()> {

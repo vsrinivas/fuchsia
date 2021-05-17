@@ -5,21 +5,88 @@
 
 use {
     anyhow::{Context as _, Result},
-    fidl::endpoints::ServiceMarker as _,
+    fidl::endpoints::{create_request_stream, ServiceMarker as _},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_keyboard_focus as fidl_focus, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
+    fidl_fuchsia_ui_keyboard_focus as fidl_focus, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_async as fasync,
+    fuchsia_component::{
+        client::{App, AppBuilder},
+        server::{NestedEnvironment, ServiceFs, ServiceObj},
+    },
     fuchsia_scenic as scenic,
-    fuchsia_syslog::fx_log_debug,
+    fuchsia_syslog::*,
     futures::FutureExt,
     futures::{
         future,
         stream::{FusedStream, StreamExt},
     },
     matches::assert_matches,
+    test_helpers::create_key_event,
 };
 
-mod test_helpers;
+const URL_IME_SERVICE: &str = "fuchsia-pkg://fuchsia.com/keyboard_test#meta/ime_service.cmx";
+
+/// Wrapper for a `NestedEnvironment` that exposes the protocols offered by `ime_service.cmx`.
+/// Running each test method in its own environment allows the tests to be run in parallel.
+struct TestEnvironment {
+    _ime_service_app: App,
+    _fs_task: fasync::Task<()>,
+    env: NestedEnvironment,
+}
+
+impl TestEnvironment {
+    /// Creates a new `NestedEnvironment` exposing services from `ime_service.cmx`, which is
+    /// immediately launched.
+    #[must_use]
+    fn new() -> Result<Self> {
+        let mut ime_service_builder = AppBuilder::new(URL_IME_SERVICE);
+        let ime_service_dir =
+            ime_service_builder.directory_request().context("directory_request")?.to_owned();
+
+        let mut fs: ServiceFs<ServiceObj<'static, ()>> = ServiceFs::new();
+        fs.add_proxy_service_to::<fidl_fuchsia_ui_input::ImeServiceMarker, _>(
+            ime_service_dir.clone(),
+        )
+        .add_proxy_service_to::<ui_input3::KeyboardMarker, _>(ime_service_dir.clone())
+        .add_proxy_service_to::<ui_input3::KeyEventInjectorMarker, _>(ime_service_dir.clone())
+        .add_proxy_service_to::<fidl_focus::ControllerMarker, _>(ime_service_dir.clone());
+
+        let env = fs
+            .create_salted_nested_environment("test")
+            .context("create_salted_nested_environment")?;
+
+        let _ime_service_app =
+            ime_service_builder.spawn(env.launcher()).context("Launching ime_service")?;
+        let _fs_task = fasync::Task::spawn(fs.collect());
+
+        Ok(TestEnvironment { _ime_service_app, _fs_task, env })
+    }
+
+    /// Connects to the given discoverable service in the `NestedEnvironment`, with a readable
+    /// context on error.
+    fn connect_to_env_service<P>(&self) -> Result<P>
+    where
+        P: fidl::endpoints::Proxy,
+        P::Service: fidl::endpoints::DiscoverableService,
+    {
+        fx_log_debug!("Connecting to nested environment's {}", P::Service::DEBUG_NAME);
+        self.env.connect_to_protocol::<P::Service>().with_context(|| {
+            format!("Failed to connect to nested environment's {}", P::Service::DEBUG_NAME)
+        })
+    }
+
+    fn connect_to_focus_controller(&self) -> Result<fidl_focus::ControllerProxy> {
+        self.connect_to_env_service::<_>()
+    }
+
+    fn connect_to_keyboard_service(&self) -> Result<ui_input3::KeyboardProxy> {
+        self.connect_to_env_service::<_>()
+    }
+
+    fn connect_to_key_event_injector(&self) -> Result<ui_input3::KeyEventInjectorProxy> {
+        self.connect_to_env_service::<_>()
+    }
+}
 
 fn create_key_down_event(key: input::Key, modifiers: ui_input3::Modifiers) -> ui_input3::KeyEvent {
     ui_input3::KeyEvent {
@@ -138,52 +205,34 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_with_connection
     Ok(())
 }
 
-/// Connects to the given discoverable service, with a readable context on error.
-fn connect_to_service<P>() -> Result<P>
-where
-    P: fidl::endpoints::Proxy,
-    P::Service: fidl::endpoints::DiscoverableService,
-{
-    connect_to_protocol::<P::Service>()
-        .with_context(|| format!("Failed to connect to {}", P::Service::DEBUG_NAME))
-}
-
-fn connect_to_focus_controller() -> Result<fidl_focus::ControllerProxy> {
-    connect_to_service::<_>()
-}
-
-fn connect_to_keyboard_service() -> Result<ui_input3::KeyboardProxy> {
-    connect_to_service::<_>()
-}
-
-fn connect_to_key_event_injector() -> Result<ui_input3::KeyEventInjectorProxy> {
-    connect_to_service::<_>()
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_injector(
 ) -> Result<()> {
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
         .expect("syslog init should not fail");
 
-    let key_event_injector = connect_to_key_event_injector()?;
+    let test_env = TestEnvironment::new()?;
+
+    let key_event_injector = test_env.connect_to_key_event_injector()?;
 
     let key_dispatcher =
         test_helpers::KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
 
-    let keyboard_service_client_a = connect_to_keyboard_service().context("client_a")?;
+    let keyboard_service_client_a = test_env.connect_to_keyboard_service().context("client_a")?;
 
-    let keyboard_service_client_b = connect_to_keyboard_service().context("client_b")?;
+    let keyboard_service_client_b = test_env.connect_to_keyboard_service().context("client_b")?;
 
     test_disconnecting_keyboard_client_disconnects_listener_with_connections(
-        connect_to_focus_controller()?,
+        test_env.connect_to_focus_controller()?,
         &key_simulator,
         // This one will be dropped as part of the test, so needs to be moved.
         keyboard_service_client_a,
         &keyboard_service_client_b,
     )
-    .await
+    .await?;
+
+    Ok(())
 }
 
 async fn test_sync_cancel_with_connections(
@@ -282,22 +331,115 @@ async fn test_sync_cancel_via_key_event_injector() -> Result<()> {
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
         .expect("syslog init should not fail");
 
+    let test_env = TestEnvironment::new()?;
+
     // This test dispatches keys via KeyEventInjector.
-    let key_event_injector = connect_to_key_event_injector()?;
+    let key_event_injector = test_env.connect_to_key_event_injector()?;
 
     let key_dispatcher =
         test_helpers::KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
 
-    let keyboard_service_client_a = connect_to_keyboard_service().context("client_a")?;
+    let keyboard_service_client_a = test_env.connect_to_keyboard_service().context("client_a")?;
 
-    let keyboard_service_client_b = connect_to_keyboard_service().context("client_b")?;
+    let keyboard_service_client_b = test_env.connect_to_keyboard_service().context("client_b")?;
 
     test_sync_cancel_with_connections(
-        connect_to_focus_controller()?,
+        test_env.connect_to_focus_controller()?,
         &key_simulator,
         &keyboard_service_client_a,
         &keyboard_service_client_b,
     )
+    .await
+}
+
+struct TestHandles {
+    _test_env: TestEnvironment,
+    _keyboard_service: ui_input3::KeyboardProxy,
+    listener_stream: ui_input3::KeyboardListenerRequestStream,
+    injector_service: ui_input3::KeyEventInjectorProxy,
+    _view_ref: ui_views::ViewRef,
+}
+
+impl TestHandles {
+    async fn new() -> Result<TestHandles> {
+        let _test_env = TestEnvironment::new()?;
+
+        // Create fake client.
+        let (listener_client_end, listener_stream) = create_request_stream::<
+            ui_input3::KeyboardListenerMarker,
+        >()
+        .with_context(|| {
+            format!("create_request_stream for {}", ui_input3::KeyboardListenerMarker::DEBUG_NAME)
+        })?;
+        let _view_ref = scenic::ViewRefPair::new()?.view_ref;
+
+        let _keyboard_service: ui_input3::KeyboardProxy =
+            _test_env.connect_to_keyboard_service()?;
+        _keyboard_service
+            .add_listener(&mut scenic::duplicate_view_ref(&_view_ref)?, listener_client_end)
+            .await
+            .expect("add_listener");
+
+        let focus_controller = _test_env.connect_to_focus_controller()?;
+        focus_controller.notify(&mut scenic::duplicate_view_ref(&_view_ref)?).await?;
+
+        let injector_service = _test_env.connect_to_key_event_injector()?;
+
+        Ok(TestHandles {
+            _test_env,
+            _keyboard_service,
+            listener_stream,
+            injector_service,
+            _view_ref,
+        })
+    }
+}
+
+async fn assert_injected_event_passes_through_keyboard(event: ui_input3::KeyEvent) -> Result<()> {
+    let mut handles = TestHandles::new().await?;
+
+    let (was_handled, received_event) = future::join(
+        handles.injector_service.inject(event.clone()),
+        expect_key_event(&mut handles.listener_stream),
+    )
+    .await;
+
+    assert_eq!(was_handled?, ui_input3::KeyEventStatus::Handled);
+    assert_eq!(event, received_event);
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_inject_key_without_meaning() -> Result<()> {
+    assert_injected_event_passes_through_keyboard(create_key_event(
+        ui_input3::KeyEventType::Pressed,
+        input::Key::A,
+        None,
+        None,
+    ))
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_inject_key_and_meaning() -> Result<()> {
+    assert_injected_event_passes_through_keyboard(create_key_event(
+        ui_input3::KeyEventType::Pressed,
+        input::Key::A,
+        None,
+        'a',
+    ))
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_inject_only_key_meaning() -> Result<()> {
+    assert_injected_event_passes_through_keyboard(create_key_event(
+        ui_input3::KeyEventType::Pressed,
+        None,
+        None,
+        'a',
+    ))
     .await
 }

@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-// Not all helper methods are used in each test.
-#![allow(dead_code)]
-
 use async_trait::async_trait;
 use {
     anyhow::{format_err, Result},
@@ -235,4 +231,54 @@ pub async fn get_action(
         .try_next()
         .await
         .map(|maybe_msg| maybe_msg.ok_or(format_err!("ime should have sent message")))?
+}
+
+/// Used to reduce verbosity of instantiating `KeyMeaning`s.
+pub struct KeyMeaningWrapper(Option<ui_input3::KeyMeaning>);
+
+impl From<ui_input3::KeyMeaning> for KeyMeaningWrapper {
+    fn from(src: ui_input3::KeyMeaning) -> Self {
+        KeyMeaningWrapper(src.into())
+    }
+}
+
+impl From<Option<ui_input3::KeyMeaning>> for KeyMeaningWrapper {
+    fn from(src: Option<ui_input3::KeyMeaning>) -> Self {
+        KeyMeaningWrapper(src)
+    }
+}
+
+impl From<KeyMeaningWrapper> for Option<ui_input3::KeyMeaning> {
+    fn from(src: KeyMeaningWrapper) -> Self {
+        src.0
+    }
+}
+
+impl From<char> for KeyMeaningWrapper {
+    fn from(src: char) -> Self {
+        Some(ui_input3::KeyMeaning::Codepoint(src as u32)).into()
+    }
+}
+
+impl From<ui_input3::NonPrintableKey> for KeyMeaningWrapper {
+    fn from(src: ui_input3::NonPrintableKey) -> Self {
+        Some(ui_input3::KeyMeaning::NonPrintableKey(src)).into()
+    }
+}
+
+/// Creates a `KeyEvent` with the given parameters.
+pub fn create_key_event(
+    event_type: ui_input3::KeyEventType,
+    key: impl Into<Option<input::Key>>,
+    modifiers: impl Into<Option<ui_input3::Modifiers>>,
+    key_meaning: impl Into<KeyMeaningWrapper>,
+) -> ui_input3::KeyEvent {
+    let key_meaning: KeyMeaningWrapper = key_meaning.into();
+    ui_input3::KeyEvent {
+        type_: Some(event_type),
+        key: key.into(),
+        modifiers: modifiers.into(),
+        key_meaning: key_meaning.into(),
+        ..ui_input3::KeyEvent::EMPTY
+    }
 }

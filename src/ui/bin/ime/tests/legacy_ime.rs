@@ -11,12 +11,10 @@ use {
     fuchsia_component::client::connect_to_protocol,
 };
 
-use crate::test_helpers::{
+use test_helpers::{
     bind_editor, default_state, get_action, get_state_update, measure_utf16, setup_ime,
     simulate_ime_keypress, simulate_ime_keypress_with_held_keys,
 };
-
-mod test_helpers;
 
 #[fasync::run_singlethreaded(test)]
 async fn test_delete_backward_empty_string() -> Result<(), Error> {

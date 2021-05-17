@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 group("tests") {
@@ -30,7 +31,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
-    "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -49,6 +49,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicode-normalization",
     "//third_party/rust_crates:unicode-segmentation",
+  ]
+
+  test_deps = [
+    ":test_helpers",
+    "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
+    "//third_party/rust_crates:maplit",
   ]
 
   sources = [
@@ -108,7 +114,9 @@ rustc_test("keyboard3_integration_test_bin") {
 
   deps = [
     ":bin",
+    ":test_helpers",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
@@ -126,10 +134,7 @@ rustc_test("keyboard3_integration_test_bin") {
   ]
   source_root = "tests/keyboard3.rs"
 
-  sources = [
-    "tests/keyboard3.rs",
-    "tests/test_helpers.rs",
-  ]
+  sources = [ "tests/keyboard3.rs" ]
 }
 
 rustc_test("ime_service_integration_test_bin") {
@@ -138,6 +143,7 @@ rustc_test("ime_service_integration_test_bin") {
 
   deps = [
     ":bin",
+    ":test_helpers",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
@@ -156,10 +162,7 @@ rustc_test("ime_service_integration_test_bin") {
   ]
   source_root = "tests/ime_service.rs"
 
-  sources = [
-    "tests/ime_service.rs",
-    "tests/test_helpers.rs",
-  ]
+  sources = [ "tests/ime_service.rs" ]
 }
 
 rustc_test("legacy_ime_integration_test_bin") {
@@ -168,6 +171,7 @@ rustc_test("legacy_ime_integration_test_bin") {
 
   deps = [
     ":bin",
+    ":test_helpers",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
@@ -185,9 +189,24 @@ rustc_test("legacy_ime_integration_test_bin") {
   ]
   source_root = "tests/legacy_ime.rs"
 
-  sources = [
-    "tests/legacy_ime.rs",
-    "tests/test_helpers.rs",
+  sources = [ "tests/legacy_ime.rs" ]
+}
+
+rustc_library("test_helpers") {
+  testonly = true
+  edition = "2018"
+
+  source_root = "tests/test_helpers.rs"
+  sources = [ "tests/test_helpers.rs" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
   ]
 }
 
