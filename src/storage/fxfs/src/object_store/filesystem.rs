@@ -45,6 +45,9 @@ pub trait Filesystem: TransactionHandler {
 
     /// Returns the object manager for the filesystem.
     fn object_manager(&self) -> Arc<ObjectManager>;
+
+    /// Flushes buffered data to the underlying device.
+    async fn sync(&self, options: SyncOptions) -> Result<(), Error>;
 }
 
 pub struct ObjectManager {
@@ -376,10 +379,6 @@ impl FxFilesystem {
         self.objects.store(object_id)
     }
 
-    pub async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
-        self.journal.sync(options).await
-    }
-
     pub async fn close(&self) -> Result<(), Error> {
         let compaction =
             std::mem::replace(&mut *self.compaction.lock().unwrap(), Compaction::Paused);
@@ -461,6 +460,10 @@ impl Filesystem for FxFilesystem {
     fn object_manager(&self) -> Arc<ObjectManager> {
         self.objects.clone()
     }
+
+    async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
+        self.journal.sync(options).await
+    }
 }
 
 #[async_trait]
@@ -504,14 +507,10 @@ impl AsRef<LockManager> for FxFilesystem {
 #[cfg(test)]
 mod tests {
     use {
+        super::{Filesystem, FxFilesystem, SyncOptions},
         crate::{
             object_handle::{ObjectHandle, ObjectHandleExt},
-            object_store::{
-                directory::Directory,
-                filesystem::{FxFilesystem, SyncOptions},
-                fsck::fsck,
-                transaction::TransactionHandler,
-            },
+            object_store::{directory::Directory, fsck::fsck, transaction::TransactionHandler},
         },
         fuchsia_async as fasync,
         futures::future::join_all,

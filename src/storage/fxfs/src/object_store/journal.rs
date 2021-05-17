@@ -658,7 +658,7 @@ mod tests {
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 directory::Directory,
-                filesystem::{FxFilesystem, SyncOptions},
+                filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 fsck::fsck,
                 transaction::TransactionHandler,
                 HandleOptions, ObjectStore,

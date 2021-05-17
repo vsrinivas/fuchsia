@@ -5,7 +5,7 @@
 use {
     crate::object_store::{
         allocator::Allocator,
-        filesystem::{Filesystem, ObjectManager},
+        filesystem::{Filesystem, ObjectManager, SyncOptions},
         journal::JournalCheckpoint,
         transaction::{
             LockKey, LockManager, ReadGuard, Transaction, TransactionHandler, TxnMutation,
@@ -51,6 +51,10 @@ impl Filesystem for FakeFilesystem {
 
     fn object_manager(&self) -> Arc<ObjectManager> {
         self.object_manager.clone()
+    }
+
+    async fn sync(&self, _: SyncOptions) -> Result<(), Error> {
+        Ok(())
     }
 }
 

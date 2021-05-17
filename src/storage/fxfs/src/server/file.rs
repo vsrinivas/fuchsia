@@ -5,7 +5,7 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::{StoreObjectHandle, Timestamp},
+        object_store::{filesystem::SyncOptions, StoreObjectHandle, Timestamp},
         server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
     },
     anyhow::Error,
@@ -220,8 +220,9 @@ impl File for FxFile {
     }
 
     async fn sync(&self) -> Result<(), Status> {
-        log::error!("sync not implemented");
-        Err(Status::NOT_SUPPORTED)
+        // TODO(csuter): at the moment, this doesn't send a flush to the device, which doesn't
+        // match minfs.
+        self.handle.store().filesystem().sync(SyncOptions::default()).await.map_err(map_to_status)
     }
 }
 

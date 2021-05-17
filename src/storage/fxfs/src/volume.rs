@@ -137,7 +137,7 @@ mod tests {
         super::root_volume,
         crate::object_store::{
             directory::Directory,
-            filesystem::{FxFilesystem, SyncOptions},
+            filesystem::{Filesystem, FxFilesystem, SyncOptions},
             transaction::TransactionHandler,
         },
         anyhow::Error,

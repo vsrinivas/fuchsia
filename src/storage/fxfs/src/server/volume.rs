@@ -212,6 +212,7 @@ pub struct FxVolumeAndRoot {
 
 impl FxVolumeAndRoot {
     pub async fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
+        store.ensure_open().await?;
         let volume = Arc::new(FxVolume::new(store));
         let root_object_id = volume.store().root_directory_object_id();
         let root_dir = Directory::open(&volume, root_object_id).await?;

@@ -122,6 +122,7 @@ rustc_binary("fxfs") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/storage/block_client/rust:remote-block-device",
+    "//src/lib/storage/storage_device",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

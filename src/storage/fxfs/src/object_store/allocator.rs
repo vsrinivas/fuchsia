@@ -272,6 +272,7 @@ impl SimpleAllocator {
 
     /// Returns a number of allocated bytes. This can be used to return information needed by
     /// caching subsystem and needed by df/du commands.
+    #[cfg(test)]
     pub async fn get_bytes_allocated(&self) -> Result<u64, Error> {
         self.ensure_open().await?;
         Ok(self.inner.lock().unwrap().bytes_allocated)

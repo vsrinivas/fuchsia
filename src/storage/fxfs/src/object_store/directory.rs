@@ -385,7 +385,7 @@ mod tests {
             errors::FxfsError,
             object_store::{
                 directory::{replace_child, Directory},
-                filesystem::{FxFilesystem, SyncOptions},
+                filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 transaction::TransactionHandler,
                 HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt, ObjectStore,
             },

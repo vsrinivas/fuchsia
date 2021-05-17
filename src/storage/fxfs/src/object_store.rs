@@ -418,7 +418,7 @@ impl ObjectStore {
         self.store_info.lock().unwrap().as_ref().unwrap().clone()
     }
 
-    async fn ensure_open(&self) -> Result<(), Error> {
+    pub async fn ensure_open(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
         }
