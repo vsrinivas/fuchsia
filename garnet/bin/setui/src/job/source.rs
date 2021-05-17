@@ -15,7 +15,7 @@
 //!  produced [Jobs](Job) and their results.
 
 use crate::clock::now;
-use crate::job::{self, execution, Job, Payload};
+use crate::job::{self, execution, Job, Payload, StoreHandleMapping};
 use crate::message::base::{Audience, MessengerType};
 use crate::service::message::{Delegate, Messenger, Signature};
 
@@ -144,6 +144,10 @@ pub(super) struct Handler {
     /// A list of states. The element represents the most current [State]. We keep track of seen
     /// states to allow post analysis, such as source duration.
     states: VecDeque<(State, zx::Time)>,
+    /// This [HashMap] associates a given [Job] [Signature] with a [Data](job::data::Data) mapping.
+    /// [Signature] is used over [execution::Type] to allow storage to be shared across groups of
+    /// different [types](execution::Type) that share the same [Signature].
+    stores: StoreHandleMapping,
 }
 
 impl Handler {
@@ -152,6 +156,7 @@ impl Handler {
             job_id_generator: job::IdGenerator::new(),
             jobs: HashMap::new(),
             states: VecDeque::new(),
+            stores: HashMap::new(),
         };
 
         handler.set_state(State::Active);
@@ -188,22 +193,12 @@ impl Handler {
     ) -> bool {
         for (_, execution_group) in &mut self.jobs {
             // If there are no jobs ready to become active, move to next group.
-            if let Some(mut job_info) = execution_group.promote_next_to_active() {
-                // Create a messenger for the workload to communicate with the rest of the setting
-                // service.
-                let messenger = delegate
-                    .create(MessengerType::Unbound)
-                    .await
-                    .expect("messenger should be available")
-                    .0;
+            if let Some(job_info) = execution_group.promote_next_to_active() {
+                let execution =
+                    job_info.prepare_execution(delegate, &mut self.stores, callback).await;
 
                 fasync::Task::spawn(async move {
-                    let start = now();
-                    job_info.get_job_mut().workload.execute(messenger).await;
-                    callback(
-                        job_info,
-                        job::execution::Details { start_time: start, end_time: now() },
-                    );
+                    execution.await;
                 })
                 .detach();
 
@@ -253,7 +248,8 @@ mod tests {
     use crate::job::execution;
     use crate::service::message;
     use crate::service::test;
-    use crate::tests::scaffold::workload::{StubWorkload, Workload};
+    use crate::tests::scaffold::workload::{Sequential, StubWorkload, Workload};
+    use rand::Rng;
 
     use futures::FutureExt;
     use matches::assert_matches;
@@ -432,5 +428,84 @@ mod tests {
             test::Payload::Integer(1),
             receptor.next_of::<test::Payload>().await.expect("should have payload").0
         );
+    }
+
+    // Ensures that proper queueing happens amongst Jobs within Execution Groups.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_data() {
+        let mut rng = rand::thread_rng();
+
+        let (result_tx, mut result_rx) = futures::channel::mpsc::unbounded::<usize>();
+
+        // Create delegate for communication between components.
+        let mut message_hub_delegate = message::create_hub();
+
+        let mut handler = Handler::new();
+
+        let data_key = job::data::Key::TestInteger(rng.gen());
+        let initial_value = rng.gen_range(0, 9);
+        let signature = job::Signature::new(1);
+
+        // Each result is the square of the previous result,
+        let results: Vec<usize> = (0..5)
+            .map(move |val| {
+                let mut return_value: usize = initial_value;
+
+                for _ in 0..val {
+                    return_value = return_value.pow(2);
+                }
+
+                return_value
+            })
+            .collect();
+
+        for _ in &results {
+            let data_key = data_key.clone();
+            let result_tx = result_tx.clone();
+
+            // Add a job that writes the initial value and reads it back.
+            handler.add_pending_job(Job::new(job::work::Load::Sequential(
+                Sequential::boxed(move |_, store| {
+                    let result_tx = result_tx.clone();
+                    let data_key = data_key.clone();
+
+                    Box::pin(async move {
+                        let mut storage_lock = store.lock().await;
+                        let new_value = if let Some(job::data::Data::TestData(value)) =
+                            storage_lock.get(&data_key)
+                        {
+                            value.pow(2)
+                        } else {
+                            initial_value
+                        };
+
+                        // Store value.
+                        storage_lock.insert(data_key, job::data::Data::TestData(new_value));
+
+                        // Relay value back.
+                        result_tx.unbounded_send(new_value).expect("should send");
+                    })
+                }),
+                signature,
+            )));
+        }
+
+        for value in results {
+            let (completion_tx, mut completion_rx) =
+                futures::channel::mpsc::unbounded::<job::Info>();
+
+            // Execute next job.
+            assert!(
+                handler
+                    .execute_next(&mut message_hub_delegate, move |job, _| {
+                        completion_tx.unbounded_send(job).expect("should send job");
+                    })
+                    .await
+            );
+
+            // Ensure the returned value matches the calculation
+            assert_eq!(value, result_rx.next().await.expect("value should be returned"));
+            handler.handle_job_completion(completion_rx.next().await.expect("should receive job"));
+        }
     }
 }

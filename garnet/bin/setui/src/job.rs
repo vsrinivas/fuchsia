@@ -25,14 +25,20 @@ use async_trait::async_trait;
 use core::fmt::{Debug, Formatter};
 use core::pin::Pin;
 use fuchsia_zircon as zx;
+use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::stream::Stream;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub mod manager;
 pub mod source;
 
 payload_convert!(Job, Payload);
+
+/// [StoreHandleMapping] represents the mapping from a [Job's](Job) [Signature] to the [data::Data]
+/// store. This store is shared by all [Jobs](Job) with the same [Signature].
+pub(super) type StoreHandleMapping = HashMap<Signature, data::StoreHandle>;
 
 /// The data payload that can be sent to the [Job Manager](crate::job::manager::Manager).
 #[derive(Clone)]
@@ -53,8 +59,33 @@ impl PartialEq for Payload {
     }
 }
 
+pub mod data {
+    //! The data mod provides the components for interacting with information that can be stored and
+    //! retrieved by a [Job](super::Job) during its execution. [Keys](Key) provide a way to address
+    //! this data while [Data] defines the type of data that can be stored per entry.
+
+    use futures::lock::Mutex;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    /// A shared handle to the [Data] mapping.
+    pub type StoreHandle = Arc<Mutex<HashMap<Key, Data>>>;
+
+    #[derive(Clone, PartialEq, Eq, Hash)]
+    pub enum Key {
+        #[cfg(test)]
+        TestInteger(usize),
+    }
+
+    #[derive(Clone, PartialEq, Hash)]
+    pub enum Data {
+        #[cfg(test)]
+        TestData(usize),
+    }
+}
+
 pub mod work {
-    use super::Signature;
+    use super::{data, Signature};
     use crate::service::message;
     use async_trait::async_trait;
 
@@ -74,10 +105,15 @@ pub mod work {
         /// Workloads are expected to wait and complete all work within the scope of this execution.
         /// Therefore, invoking code can safely presume all work has completed after this function
         /// returns.
-        pub async fn execute(&mut self, messenger: message::Messenger) {
+        pub async fn execute(
+            &mut self,
+            messenger: message::Messenger,
+            store: Option<data::StoreHandle>,
+        ) {
             match self {
                 Load::Sequential(load, _) => {
-                    load.execute(messenger).await;
+                    load.execute(messenger, store.expect("all sequential loads should have store"))
+                        .await;
                 }
                 Load::Independent(load) => {
                     load.execute(messenger).await;
@@ -88,10 +124,10 @@ pub mod work {
 
     #[async_trait]
     pub trait Sequential {
-        // TODO(fxbug.dev/74552): Pass in shared data store.
         /// Called when the [Job](super::Job) processing is ready for the encapsulated
-        /// [Workload](super::Workload) be executed.
-        async fn execute(&mut self, messenger: message::Messenger);
+        /// [Workload](super::Workload) be executed. The provided [StoreHandle](data::StoreHandle)
+        /// is specific to the parent [Job](super::Job) group.
+        async fn execute(&mut self, messenger: message::Messenger, store: data::StoreHandle);
     }
 
     #[async_trait]
@@ -200,9 +236,34 @@ impl Info {
         &self.job.execution_type
     }
 
-    /// Returns a mutable reference to the contained [Job].
-    pub fn get_job_mut(&mut self) -> &mut Job {
-        return &mut self.job;
+    /// Prepares the components necessary for a [Job] to execute and then returns a future to
+    /// execute the [Job] workload with them. These components include a messenger for communicating
+    /// with the system and the store associated with the [Job's](Job) group if applicable.
+    pub async fn prepare_execution<F: Fn(Self, execution::Details) + Send + 'static>(
+        mut self,
+        delegate: &mut message::Delegate,
+        stores: &mut StoreHandleMapping,
+        callback: F,
+    ) -> BoxFuture<'static, ()> {
+        // Create a messenger for the workload to communicate with the rest of the setting
+        // service.
+        let messenger = delegate
+            .create(message::MessengerType::Unbound)
+            .await
+            .expect("messenger should be available")
+            .0;
+
+        let store = if let Some(signature) = self.job.execution_type.get_signature() {
+            Some(stores.entry(*signature).or_insert(Arc::new(Mutex::new(HashMap::new()))).clone())
+        } else {
+            None
+        };
+
+        Box::pin(async move {
+            let start = now();
+            self.job.workload.execute(messenger, store).await;
+            callback(self, execution::Details { start_time: start, end_time: now() });
+        })
     }
 }
 
@@ -222,6 +283,16 @@ pub(super) mod execution {
         /// Sequential [Jobs](job::Job) wait until all pre-existing [Jobs](job::Job) of the same
         /// [Signature] are completed.
         Sequential(Signature),
+    }
+
+    impl Type {
+        pub fn get_signature(&self) -> Option<&Signature> {
+            if let Type::Sequential(signature) = self {
+                Some(signature)
+            } else {
+                None
+            }
+        }
     }
 
     /// A collection of [Jobs](job::Job) which have matching execution types. [Groups](Group)
@@ -338,7 +409,7 @@ mod tests {
             receptor.get_signature(),
         )));
 
-        job.workload.execute(messenger).await;
+        job.workload.execute(messenger, Some(Arc::new(Mutex::new(HashMap::new())))).await;
 
         // Confirm received value matches the value sent from workload.
         assert_matches!(
