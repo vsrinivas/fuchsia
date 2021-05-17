@@ -24,8 +24,10 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Adds a child entry to this directory.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
-    ///   * An entry with the same name is already present in the directory.
+    ///   * `ZX_ERR_INVALID_ARGS` if `name` exceeds [`fidl_fuchsia_io::MAX_FILENAME`] bytes in
+    ///     length, or if `name` includes a path separator ('/') character.
+    ///   * `ZX_ERR_ALREADY_EXISTS` if an entry with the same name is already present in the
+    ///     directory.
     fn add_entry<Name>(&self, name: Name, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>
     where
         Name: Into<String>,
@@ -37,8 +39,10 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// Adds a child entry to this directory.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
-    ///   * An entry with the same name is already present in the directory.
+    ///   * `ZX_ERR_INVALID_ARGS` if `name` exceeds [`fidl_fuchsia_io::MAX_FILENAME`] bytes in
+    ///     length, or if `name` includes a path separator ('/') character.
+    ///   * `ZX_ERR_ALREADY_EXISTS` if an entry with the same name is already present in the
+    ///     directory.
     fn add_entry_impl(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was
@@ -46,7 +50,8 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// is returned if the entry is not a directory.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
+    ///   * `ZX_ERR_INVALID_ARGS` if `name` exceeds [`fidl_fuchsia_io::MAX_FILENAME`] bytes in
+    ///     length.
     fn remove_entry<Name>(
         &self,
         name: Name,
@@ -63,7 +68,8 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     /// found, the entry will be returned to the caller.
     ///
     /// Possible errors are:
-    ///   * `name` exceeding [`fidl_fuchsia_io::MAX_FILENAME`] bytes in length.
+    ///   * `ZX_ERR_INVALID_ARGS` if `name` exceeds [`fidl_fuchsia_io::MAX_FILENAME`] bytes in
+    ///     length.
     fn remove_entry_impl(
         &self,
         name: String,

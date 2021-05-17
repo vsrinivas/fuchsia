@@ -364,6 +364,9 @@ where
         if name.len() as u64 > MAX_NAME_LENGTH {
             return Err(Status::INVALID_ARGS);
         }
+        if name.contains('/') {
+            return Err(Status::INVALID_ARGS);
+        }
 
         let mut this = self.inner.lock();
 
@@ -513,5 +516,25 @@ where
 
     fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync> {
         self as Arc<Any + Send + Sync>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::file::vmo::read_only_static;
+
+    #[test]
+    fn name_with_path_separator() {
+        let dir = crate::directory::mutable::simple();
+        let status = dir
+            .add_entry("path/with/separators", read_only_static(b"test"))
+            .expect_err("add entry with path separator should fail");
+        assert_eq!(status, Status::INVALID_ARGS);
+        assert_eq!(
+            dir.add_entry("path_without_separators", read_only_static(b"test")),
+            Ok(()),
+            "add entry with valid filename should succeed"
+        );
     }
 }
