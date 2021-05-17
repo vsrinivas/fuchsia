@@ -2,17 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_diagnostics::Selector,
-    fuchsia_inspect as inspect,
-    selectors::{contains_recursive_glob, parse_selector_file},
-    serde::Deserialize,
-    std::path::{Path, PathBuf},
-    std::{collections::BTreeMap, fs},
+use crate::constants::DEFAULT_PIPELINES_PATH;
+use anyhow::{Context as _, Error};
+use fidl_fuchsia_diagnostics::Selector;
+use fuchsia_inspect as inspect;
+use selectors::{contains_recursive_glob, parse_selector_file};
+use serde::Deserialize;
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::{Path, PathBuf},
 };
 
 static DISABLE_FILTER_FILE_NAME: &'static str = "DISABLE_FILTERING.txt";
+
+fn default_pipelines_path() -> PathBuf {
+    DEFAULT_PIPELINES_PATH.into()
+}
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Config {
@@ -27,6 +33,10 @@ pub struct Config {
 
     /// Number of threads the archivist has available to use.
     pub num_threads: usize,
+
+    /// path where pipeline configuration data should be looked for
+    #[serde(default = "default_pipelines_path")]
+    pub pipelines_path: PathBuf,
 
     /// Configuration for Archivist's log subsystem.
     pub logs: LogsConfig,

@@ -132,20 +132,23 @@ impl ArchivistBuilder {
         let pipelines_node = diagnostics::root().create_child("pipelines");
         let feedback_pipeline_node = pipelines_node.create_child("feedback");
         let legacy_pipeline_node = pipelines_node.create_child("legacy_metrics");
+        let pipelines_path = &archivist_configuration.pipelines_path;
+        let feedback_path = format!("{}/feedback", pipelines_path.display());
+        let legacy_metrics_path = format!("{}/legacy_metrics", pipelines_path.display());
         let mut feedback_config = configs::PipelineConfig::from_directory(
-            "/config/data/feedback",
+            &feedback_path,
             configs::EmptyBehavior::DoNotFilter,
         );
         feedback_config.record_to_inspect(&feedback_pipeline_node);
         let mut legacy_config = configs::PipelineConfig::from_directory(
-            "/config/data/legacy_metrics",
+            &legacy_metrics_path,
             configs::EmptyBehavior::Disable,
         );
         legacy_config.record_to_inspect(&legacy_pipeline_node);
         // Do not set the state to error if the pipelines simply do not exist.
-        let pipeline_exists = !((Path::new("/config/data/feedback").is_dir()
+        let pipeline_exists = !((Path::new(&feedback_path).is_dir()
             && feedback_config.has_error())
-            || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
+            || (Path::new(&legacy_metrics_path).is_dir() && legacy_config.has_error()));
 
         let logs_budget =
             BudgetManager::new(archivist_configuration.logs.max_cached_original_bytes);
@@ -821,7 +824,7 @@ fn maybe_create_archive<ServiceObjTy: ServiceObjTrait>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{constants::LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES, logs::testing::*};
+    use crate::{constants::*, logs::testing::*};
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_diagnostics_test::ControllerMarker;
     use fidl_fuchsia_io as fio;
@@ -839,6 +842,7 @@ mod tests {
             logs: configs::LogsConfig {
                 max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,
             },
+            pipelines_path: DEFAULT_PIPELINES_PATH.into(),
         };
 
         ArchivistBuilder::new(config).unwrap()

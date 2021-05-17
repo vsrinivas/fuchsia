@@ -553,6 +553,14 @@ impl ScopedInstance {
         fclient::connect_to_protocol_at_dir_root::<S>(&self.exposed_dir)
     }
 
+    /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,
+    pub fn connect_to_named_protocol_at_exposed_dir<S: DiscoverableService>(
+        &self,
+        protocol_name: &str,
+    ) -> Result<S::Proxy, anyhow::Error> {
+        fclient::connect_to_named_protocol_at_dir_root::<S>(&self.exposed_dir, protocol_name)
+    }
+
     /// Connects to an instance of a FIDL protocol hosted in the component's exposed directory
     /// using the given `server_end`.
     pub fn connect_request_to_protocol_at_exposed_dir<S: DiscoverableService>(

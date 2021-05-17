@@ -10,7 +10,6 @@ group("tests") {
   deps = [
     ":archivist-integration-tests",
     "archive_path:test-spec",
-    "feedback_reader:test-spec",
     "logs-basic-integration",
     "logs-budget",
     "logs-connector",
@@ -22,7 +21,6 @@ group("tests") {
     "logs-unattributed-sinks",
     "logs/cpp:test-spec",
     "logs/cpp:test-spec-structured",
-    "unified_reader:test-spec",
     "v2:tests",
   ]
 }
@@ -32,9 +30,7 @@ fuchsia_package("archivist-integration-tests") {
   testonly = true
   deps = [
     "archive_path",
-    "feedback_reader",
     "logs/cpp",
     "logs/cpp:cpp-structured",
-    "unified_reader",
   ]
 }

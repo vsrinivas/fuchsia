@@ -77,6 +77,11 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
             capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
             source: RouteEndpoint::component("test/archivist"),
             targets: vec![RouteEndpoint::AboveRoot],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor"),
+            source: RouteEndpoint::component("test/archivist"),
+            targets: vec![RouteEndpoint::AboveRoot],
         })?;
     Ok(builder)
 }

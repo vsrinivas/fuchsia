@@ -2,20 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::constants::*;
 use diagnostics_hierarchy::{assert_data_tree, testing::AnyProperty};
 use diagnostics_reader::{ArchiveReader, Data, Inspect, Logs, Severity};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use futures::StreamExt;
 use std::{collections::HashSet, iter::FromIterator};
 
+mod constants;
+mod reader;
 mod test_topology;
-
-const STUB_INSPECT_COMPONENT_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
-const COMPONENT_WITH_CHILDREN_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/component_with_children.cm";
-const IQUERY_TEST_COMPONENT_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm";
 
 #[fuchsia::test]
 async fn read_v2_components_inspect() {

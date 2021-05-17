@@ -225,9 +225,17 @@ pub fn connect_to_unified_service<US: UnifiedServiceMarker>() -> Result<US::Prox
 pub fn connect_to_protocol_at_dir_root<S: DiscoverableService>(
     directory: &DirectoryProxy,
 ) -> Result<S::Proxy, Error> {
+    connect_to_named_protocol_at_dir_root::<S>(directory, S::SERVICE_NAME)
+}
+
+/// Connect to an instance of a FIDL protocol hosted in `directory` using the given `filename`.
+pub fn connect_to_named_protocol_at_dir_root<S: DiscoverableService>(
+    directory: &DirectoryProxy,
+    filename: &str,
+) -> Result<S::Proxy, Error> {
     let proxy = io_util::open_node(
         directory,
-        &PathBuf::from(S::SERVICE_NAME),
+        &PathBuf::from(filename),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
     )

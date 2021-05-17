@@ -45,3 +45,6 @@ pub const ARCHIVIST_MONIKER: &str = "./archivist:0";
 
 /// The root Archivist's URL in bootfs, used for attributing our own logs.
 pub const ARCHIVIST_URL: &str = "fuchsia-boot:///archivist.cm";
+
+/// Default path where pipeline configuration are located.
+pub const DEFAULT_PIPELINES_PATH: &str = "/config/data";

@@ -13,11 +13,22 @@
             "/pkg/data/config/archivist_config.json",
         ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
+        },
+    ],
     use: [
         {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
+            from: "self",
         },
     ],
 }
