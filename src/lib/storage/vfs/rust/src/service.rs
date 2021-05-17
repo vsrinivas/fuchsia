@@ -4,8 +4,8 @@
 
 //! Implementations of a service endpoint.
 
-mod common;
-mod connection;
+pub(crate) mod common;
+pub(crate) mod connection;
 
 #[cfg(test)]
 mod tests;

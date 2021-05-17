@@ -89,6 +89,8 @@ rustc_library("vfs") {
     "src/registry.rs",
     "src/registry/inode_registry.rs",
     "src/registry/token_registry.rs",
+    "src/remote.rs",
+    "src/remote/tests.rs",
     "src/service.rs",
     "src/service/common.rs",
     "src/service/connection.rs",

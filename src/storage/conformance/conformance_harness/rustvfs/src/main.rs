@@ -26,6 +26,7 @@ use {
         file::vmo::asynchronous as vmo,
         path::Path,
         registry::token_registry,
+        remote::remote_dir,
     },
 };
 
@@ -96,9 +97,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     no_get_buffer: Some(false),
                     no_rename: Some(false),
                     no_link: Some(false),
-                    // TODO(fxbug.dev/33880): Remote directories are supported by the vfs, just
-                    // haven't been implemented in this harness yet.
-                    no_remote_dir: Some(true),
+                    no_remote_dir: Some(false),
                     // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
                     no_set_attr: Some(true),
                     // Admin and exec bits aren't supported:
@@ -124,9 +123,17 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                 }
                 (dir, flags, directory_request)
             }
-            // TODO(fxbug.dev/33880): Implement GetDirectoryWithRemoteDirectory.
-            _ => {
-                return Err(anyhow!("Unsupported request type: {:?}.", request));
+            Io1HarnessRequest::GetDirectoryWithRemoteDirectory {
+                remote_directory,
+                name,
+                flags,
+                directory_request,
+                control_handle: _,
+            } => {
+                let remote = remote_dir(remote_directory.into_proxy()?);
+                let dir = simple();
+                dir.add_entry(name, remote)?;
+                (dir, flags, directory_request)
             }
         };
 
