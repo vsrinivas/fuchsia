@@ -28,9 +28,11 @@
 use {
     anyhow::Error,
     async_utils::stream::{IndexedStreams, StreamItem, WithEpitaph, WithTag},
+    fidl::endpoints::Proxy,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_sys::{
-        InputCapability, OutputCapability,
+        InputCapability, OutputCapability, PairingDelegateEvent, PairingDelegateEventStream,
+        PairingDelegateProxy,
         PairingDelegateRequest::{self, *},
         PairingDelegateRequestStream,
     },
@@ -47,7 +49,7 @@ use {
     std::convert::TryFrom,
 };
 
-use crate::services::pairing::{pairing_requests::PairingRequests, PairingDelegate};
+use crate::services::pairing::pairing_requests::PairingRequests;
 
 type Responder = fidl_fuchsia_bluetooth_sys::PairingDelegateOnPairingRequestResponder;
 
@@ -61,7 +63,9 @@ pub struct PairingDispatcher {
     input: InputCapability,
     output: OutputCapability,
     /// The upstream delegate to dispatch requests to
-    upstream: PairingDelegate,
+    upstream: PairingDelegateProxy,
+    // The event stream of the upstream delegate
+    upstream_events: PairingDelegateEventStream,
     /// Host Drivers we are currently dispatching requests for
     hosts: IndexedStreams<HostId, PairingDelegateRequestStream>,
     /// Currently in-flight requests
@@ -75,8 +79,8 @@ impl Drop for PairingDispatcher {
         // Drop hosts to stop processing the tasks of all host channels
         self.hosts = IndexedStreams::empty();
         for (_, reqs) in self.inflight_requests.take_all_requests().into_iter() {
-            for peer in reqs.into_iter() {
-                let _ignored = self.upstream.on_pairing_complete(peer, false);
+            for peer_id in reqs.into_iter() {
+                let _ignored = self.upstream.on_pairing_complete(&mut peer_id.into(), false);
             }
         }
     }
@@ -85,16 +89,18 @@ impl Drop for PairingDispatcher {
 impl PairingDispatcher {
     /// Create a new Dispatcher and corresponding Handle
     pub fn new(
-        upstream: PairingDelegate,
+        upstream: PairingDelegateProxy,
         input: InputCapability,
         output: OutputCapability,
     ) -> (PairingDispatcher, PairingDispatcherHandle) {
         let (hosts_added, handle) = PairingDispatcherHandle::new(upstream.clone());
 
+        let upstream_events = upstream.take_event_stream();
         let dispatcher = PairingDispatcher {
             input,
             output,
             upstream,
+            upstream_events,
             hosts: IndexedStreams::empty(),
             inflight_requests: PairingRequests::empty(),
             hosts_added,
@@ -141,8 +147,8 @@ impl PairingDispatcher {
                     // requests have aborted
                     StreamItem::Epitaph(host) => {
                         if let Some(reqs) = self.inflight_requests.remove_host_requests(host) {
-                            for peer in reqs {
-                                if let Err(e) = self.upstream.on_pairing_complete(peer, false) {
+                            for peer_id in reqs {
+                                if let Err(e) = self.upstream.on_pairing_complete(&mut peer_id.into(), false) {
                                     // If we receive an error communicating with upstream,
                                     // terminate
                                     warn!("Error notifying upstream when downstream closed: {}", e);
@@ -192,7 +198,18 @@ impl PairingDispatcher {
                     None => true,
                 }
             },
-            _ = self.upstream.when_done().fuse() => true,
+            event = self.upstream_events.next().fuse() => {
+                match event {
+                     // TODO(fxbug.dev/76133): Handle OnLocalKeypress event.
+                     Some(Ok(PairingDelegateEvent::OnLocalKeypress {id: _, keypress: _})) => {
+                         warn!("Ignoring pairing delegate local keypress (unimplemented)");
+                         false
+                     },
+                     // If the pairing delegate event stream closes or errors, terminate the dispatcher.
+                     _ => true,
+
+                }
+            },
         }
     }
 
@@ -206,7 +223,7 @@ impl PairingDispatcher {
                         let id = peer.id;
                         let response: BoxFuture<'static, _> = self
                             .upstream
-                            .on_pairing_request(peer, method, displayed_passkey)
+                            .on_pairing_request((&peer).into(), method, displayed_passkey)
                             .map(move |res| (res, responder))
                             .boxed();
                         info!(
@@ -227,8 +244,8 @@ impl PairingDispatcher {
                 }
                 false
             }
-            OnPairingComplete { id, success, control_handle: _ } => {
-                if self.upstream.on_pairing_complete(id.into(), success).is_err() {
+            OnPairingComplete { mut id, success, control_handle: _ } => {
+                if self.upstream.on_pairing_complete(&mut id, success).is_err() {
                     warn!(
                         "Failed to propagate OnPairingComplete for peer {}; upstream cancelled",
                         PeerId::from(id)
@@ -238,8 +255,8 @@ impl PairingDispatcher {
                     false
                 }
             }
-            OnRemoteKeypress { id, keypress, control_handle: _ } => {
-                if self.upstream.on_remote_keypress(id.into(), keypress).is_err() {
+            OnRemoteKeypress { mut id, keypress, control_handle: _ } => {
+                if self.upstream.on_remote_keypress(&mut id, keypress).is_err() {
                     warn!(
                         "Failed to propagate OnRemoteKeypress for peer {}; upstream cancelled",
                         PeerId::from(id)
@@ -265,11 +282,11 @@ pub struct PairingDispatcherHandle {
     /// Add a host to the PairingDispatcher
     add_hosts: mpsc::Sender<(HostId, HostProxy)>,
     /// Upstream handle, to determine when we've closed
-    upstream: PairingDelegate,
+    upstream: PairingDelegateProxy,
 }
 
 impl PairingDispatcherHandle {
-    pub fn new(upstream: PairingDelegate) -> (mpsc::Receiver<(HostId, HostProxy)>, Self) {
+    pub fn new(upstream: PairingDelegateProxy) -> (mpsc::Receiver<(HostId, HostProxy)>, Self) {
         let (add_hosts, hosts_receiver) = mpsc::channel(0);
         (hosts_receiver, Self { add_hosts, upstream })
     }
@@ -340,11 +357,8 @@ mod test {
         // Create a dispatcher with a closed upstream
         let (upstream, upstream_server) =
             fidl::endpoints::create_proxy_and_stream::<sys::PairingDelegateMarker>()?;
-        let (mut dispatcher, _handle) = PairingDispatcher::new(
-            PairingDelegate::Sys(upstream),
-            InputCapability::None,
-            OutputCapability::None,
-        );
+        let (mut dispatcher, _handle) =
+            PairingDispatcher::new(upstream, InputCapability::None, OutputCapability::None);
         // We directly insert the proxy to avoid the indirection of having to provide an
         // implementation of Host.SetPairingDelegate
         let _ =
@@ -417,11 +431,8 @@ mod test {
         let (upstream, requests) =
             fidl::endpoints::create_proxy_and_stream::<sys::PairingDelegateMarker>()?;
 
-        let (dispatcher, handle) = PairingDispatcher::new(
-            PairingDelegate::Sys(upstream),
-            InputCapability::None,
-            OutputCapability::None,
-        );
+        let (dispatcher, handle) =
+            PairingDispatcher::new(upstream, InputCapability::None, OutputCapability::None);
 
         Ok((dispatcher, handle, requests.try_for_each(handler).boxed()))
     }

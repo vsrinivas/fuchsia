@@ -13,7 +13,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.control.Control",
                 "fuchsia.bluetooth.gatt.Server",
                 "fuchsia.bluetooth.le.Central",
                 "fuchsia.bluetooth.le.Peripheral",
@@ -39,7 +38,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.control.Control",
                 "fuchsia.bluetooth.gatt.Server",
                 "fuchsia.bluetooth.le.Central",
                 "fuchsia.bluetooth.le.Peripheral",

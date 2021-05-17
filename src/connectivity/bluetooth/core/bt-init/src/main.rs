@@ -6,7 +6,6 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{DiscoverableService, ServiceMarker},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
-    fidl_fuchsia_bluetooth_control::ControlMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
@@ -167,7 +166,6 @@ fn main() -> Result<(), Error> {
             .add_service_at(ConfigurationMarker::NAME, |chan| {
                 Some((ConfigurationMarker::NAME, chan))
             })
-            .add_service_at(ControlMarker::NAME, |chan| Some((ControlMarker::NAME, chan)))
             .add_service_at(CentralMarker::NAME, |chan| Some((CentralMarker::NAME, chan)))
             .add_service_at(HostWatcherMarker::NAME, |chan| Some((HostWatcherMarker::NAME, chan)))
             .add_service_at(PeripheralMarker::NAME, |chan| Some((PeripheralMarker::NAME, chan)))

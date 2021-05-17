@@ -5,6 +5,5 @@
 pub mod access;
 pub mod bootstrap;
 pub mod configuration;
-pub mod control;
 pub mod host_watcher;
 pub mod pairing;

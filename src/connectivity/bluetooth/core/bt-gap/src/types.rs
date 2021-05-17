@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::format_err, fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_sys as sys,
-    fuchsia_bluetooth::bt_fidl_status, thiserror::Error,
-};
+use {anyhow::format_err, fidl_fuchsia_bluetooth_sys as sys, thiserror::Error};
 
 /// Type representing Possible errors raised in the operation of BT-GAP
 #[derive(Debug, Error)]
@@ -23,15 +20,6 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Error {
-    pub fn as_status(self) -> bt::Status {
-        match self {
-            Error::InternalError(err) => bt_fidl_status!(Failed, format!("{}", err)),
-            Error::SysError(err) => {
-                bt::Status { error: Some(Box::new(sys_error_to_deprecated(err))) }
-            }
-        }
-    }
-
     pub fn no_host() -> Error {
         Error::SysError(sys::Error::Failed)
     }
@@ -75,30 +63,5 @@ pub fn from_fidl_result<T>(r: fidl::Result<std::result::Result<T, sys::Error>>) 
     match r {
         Ok(r) => r.map_err(Error::from),
         Err(e) => Err(Error::from(e)),
-    }
-}
-
-// Maps a fuchsia.bluetooth.sys.Error value to a fuchsia.bluetooth.Error. This is maintained for
-// compatibility until fuchsia.bluetooth.control and fuchsia.bluetooth.Status are removed.
-fn sys_error_to_deprecated(e: sys::Error) -> bt::Error {
-    bt::Error {
-        error_code: match e {
-            sys::Error::Failed => bt::ErrorCode::Failed,
-            sys::Error::PeerNotFound => bt::ErrorCode::NotFound,
-            sys::Error::TimedOut => bt::ErrorCode::TimedOut,
-            sys::Error::Canceled => bt::ErrorCode::Canceled,
-            sys::Error::InProgress => bt::ErrorCode::InProgress,
-            sys::Error::NotSupported => bt::ErrorCode::NotSupported,
-            sys::Error::InvalidArguments => bt::ErrorCode::InvalidArguments,
-        },
-        protocol_error_code: 0,
-        description: None,
-    }
-}
-
-pub fn status_response(result: Result<()>) -> bt::Status {
-    match result {
-        Ok(()) => bt_fidl_status!(),
-        Err(err) => err.as_status(),
     }
 }

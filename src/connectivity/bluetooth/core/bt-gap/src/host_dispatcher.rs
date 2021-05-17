@@ -8,11 +8,12 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
-    fidl_fuchsia_bluetooth_control::{self as control, ControlControlHandle},
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
-    fidl_fuchsia_bluetooth_sys::{self as sys, InputCapability, OutputCapability},
+    fidl_fuchsia_bluetooth_sys::{
+        self as sys, InputCapability, OutputCapability, PairingDelegateProxy,
+    },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
@@ -47,10 +48,7 @@ use {
 use crate::{
     build_config, generic_access_service,
     host_device::{HostDevice, HostDiscoverableSession, HostDiscoverySession, HostListener},
-    services::pairing::{
-        pairing_dispatcher::{PairingDispatcher, PairingDispatcherHandle},
-        PairingDelegate,
-    },
+    services::pairing::pairing_dispatcher::{PairingDispatcher, PairingDispatcherHandle},
     store::stash::Stash,
     types,
     watch_peers::PeerWatcher,
@@ -175,8 +173,6 @@ struct HostDispatcherState {
 
     pairing_dispatcher: Option<PairingDispatcherHandle>,
 
-    event_listeners: Vec<Weak<ControlControlHandle>>,
-
     watch_peers_publisher: hanging_get::Publisher<HashMap<PeerId, Peer>>,
     watch_peers_registrar: hanging_get::SubscriptionRegistrar<PeerWatcher>,
 
@@ -217,7 +213,7 @@ impl HostDispatcherState {
     /// Returns `true` if the delegate was set successfully, otherwise false
     fn set_pairing_delegate(
         &mut self,
-        delegate: PairingDelegate,
+        delegate: PairingDelegateProxy,
         input: InputCapability,
         output: OutputCapability,
     ) -> bool {
@@ -243,14 +239,6 @@ impl HostDispatcherState {
                 true
             }
         }
-    }
-
-    /// Clear the currently active pairing delegate. After this call there will be no active
-    /// delegate. In progress pairings are terminated.
-    fn clear_pairing_delegate(&mut self) {
-        // Old pairing dispatcher dropped; this drops all host pairings
-        self.pairing_dispatcher = None;
-        self.inspect.has_pairing_delegate.set(false.to_property());
     }
 
     /// Return the active id. If the ID is currently not set,
@@ -292,11 +280,6 @@ impl HostDispatcherState {
         // Update inspect state
         self.inspect.host_count.set(self.host_devices.len() as u64);
 
-        // Notify Control interface clients about the new device.
-        self.notify_event_listeners(|l| {
-            let _res = l.send_on_adapter_updated(&mut control::AdapterInfo::from(host.info()));
-        });
-
         // Notify HostWatcher interface clients about the new device.
         self.notify_host_watchers();
 
@@ -309,25 +292,6 @@ impl HostDispatcherState {
         info!("New active adapter: {}", id.map_or("<none>".to_string(), |id| id.to_string()));
         self.active_id = id;
         self.notify_host_watchers();
-        if let Some(host) = self.get_active_host() {
-            let mut adapter_info = control::AdapterInfo::from(host.info());
-            self.notify_event_listeners(|listener| {
-                let _res = listener.send_on_active_adapter_changed(Some(&mut adapter_info));
-            });
-        }
-    }
-
-    pub fn notify_event_listeners<F>(&mut self, mut f: F)
-    where
-        F: FnMut(&ControlControlHandle) -> (),
-    {
-        self.event_listeners.retain(|listener| match listener.upgrade() {
-            Some(listener_) => {
-                f(&listener_);
-                true
-            }
-            None => false,
-        })
     }
 
     pub fn notify_host_watchers(&self) {
@@ -391,7 +355,6 @@ impl HostDispatcher {
             discovery: DiscoveryState::NotDiscovering,
             discoverable: None,
             pairing_dispatcher: None,
-            event_listeners: vec![],
             watch_peers_publisher,
             watch_peers_registrar,
             watch_hosts_publisher,
@@ -452,17 +415,11 @@ impl HostDispatcher {
     /// Returns `true` if the delegate was set successfully, otherwise false
     pub fn set_pairing_delegate(
         &self,
-        delegate: PairingDelegate,
+        delegate: PairingDelegateProxy,
         input: InputCapability,
         output: OutputCapability,
     ) -> bool {
         self.state.write().set_pairing_delegate(delegate, input, output)
-    }
-
-    /// Clear the currently active pairing delegate. After this call there will be no active
-    /// delegate. In progress pairings are terminated.
-    pub fn clear_pairing_delegate(&self) {
-        self.state.write().clear_pairing_delegate();
     }
 
     pub async fn apply_sys_settings(&self, new_settings: sys::Settings) -> build_config::Config {
@@ -628,6 +585,7 @@ impl HostDispatcher {
         self.state.read().host_devices.values().cloned().collect()
     }
 
+    #[cfg(test)]
     pub async fn get_adapters(&self) -> Vec<HostInfo> {
         let hosts = self.state.read();
         hosts.host_devices.values().map(|host| host.info()).collect()
@@ -660,17 +618,6 @@ impl HostDispatcher {
         }
     }
 
-    pub fn add_event_listener(&self, handle: Weak<ControlControlHandle>) {
-        self.state.write().event_listeners.push(handle);
-    }
-
-    pub fn notify_event_listeners<F>(&self, f: F)
-    where
-        F: FnMut(&ControlControlHandle) -> (),
-    {
-        self.state.write().notify_event_listeners(f);
-    }
-
     // This is not an async method as we do not want to borrow `self` for the duration of the async
     // call, and we also want to trigger the send immediately even if the future is not yet awaited
     pub fn store_bond(&self, bond_data: BondingData) -> impl Future<Output = Result<(), Error>> {
@@ -678,14 +625,6 @@ impl HostDispatcher {
     }
 
     pub fn on_device_updated(&self, peer: Peer) -> impl Future<Output = ()> {
-        // TODO(fxbug.dev/825): generic method for this pattern
-        let mut d = control::RemoteDevice::from(peer.clone());
-        self.notify_event_listeners(|listener| {
-            let _res = listener
-                .send_on_device_updated(&mut d)
-                .map_err(|e| info!("Failed to send device updated event: {:?}", e));
-        });
-
         let update_peer = peer.clone();
 
         let mut publisher = {
@@ -717,11 +656,6 @@ impl HostDispatcher {
             let mut state = self.state.write();
             drop(state.peers.remove(&id));
             state.inspect.peer_count.set(state.peers.len() as u64);
-            state.notify_event_listeners(|listener| {
-                let _res = listener
-                    .send_on_device_removed(&id.to_string())
-                    .map_err(|e| info!("Failed to send device removed event: {:?}", e));
-            });
             state.watch_peers_publisher.clone()
         };
 
@@ -735,10 +669,6 @@ impl HostDispatcher {
                 .await
                 .expect("Fatal error: Peer Watcher HangingGet unreachable")
         }
-    }
-
-    pub fn get_peers(&self) -> Vec<Peer> {
-        self.state.read().peers.values().map(|p| (*p).clone()).collect()
     }
 
     pub async fn watch_peers(&self) -> hanging_get::Subscriber<PeerWatcher> {
@@ -882,9 +812,6 @@ impl HostDispatcher {
 
             for id in &ids {
                 drop(hd.host_devices.remove(id));
-                hd.notify_event_listeners(|listener| {
-                    let _ = listener.send_on_adapter_removed(&id.to_string());
-                })
             }
 
             // Reset the active ID if it got removed.

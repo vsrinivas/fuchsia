@@ -221,15 +221,6 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
 
     let _ = fs
         .dir("svc")
-        .add_fidl_service(|request_stream| {
-            let hd = hd.clone();
-            info!("Spawning Control Service");
-            fasync::Task::spawn(
-                services::control::run(hd, request_stream)
-                    .unwrap_or_else(|e| warn!("Control service failed {:?}", e)),
-            )
-            .detach()
-        })
         .add_service_at(
             CentralMarker::NAME,
             host_service_handler(&hd, CentralMarker::DEBUG_NAME, LeCentral),
