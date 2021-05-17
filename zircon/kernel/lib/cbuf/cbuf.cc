@@ -14,6 +14,7 @@
 
 #include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 
@@ -41,53 +42,56 @@ bool Cbuf::Full() const TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 size_t Cbuf::WriteChar(char c) {
-  size_t ret = 0;
   {
     AutoSpinLock guard(&lock_);
 
-    if (!Full()) {
-      buf_[head_] = c;
-      IncPointer(&head_, 1);
-      ret = 1;
+    if (Full()) {
+      return 0;
     }
+
+    buf_[head_] = c;
+    IncPointer(&head_, 1);
   }
 
-  if (ret > 0) {
-    event_.Signal();
-  }
+  // By signaling after dropping the lock, we avoid lock thrashing (though it doesn't matter much
+  // since this lock is a spinlock).
+  //
+  // Note: by the time we signal, the buffer may have already been drained, but that's OK.  It just
+  // means a reader may be woken when the buffer is empty.
+  event_.Signal();
 
-  return ret;
+  return 1;
 }
 
 zx::status<char> Cbuf::ReadChar(bool block) {
   while (true) {
-    if (block) {
-      zx_status_t status = event_.Wait(Deadline::infinite());
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-    }
-
     {
       AutoSpinLock guard(&lock_);
 
-      // See if there's data available.
-      if (tail_ != head_) {
+      if (!Empty()) {
         char c = buf_[tail_];
         IncPointer(&tail_, 1);
-
-        if (tail_ == head_) {
-          // We've emptied the buffer, so unsignal the event.
+        if (Empty()) {
           event_.Unsignal();
         }
-
         return zx::ok(c);
       }
 
-      // No data available. Try again?
-      if (!block) {
-        return zx::error(ZX_ERR_SHOULD_WAIT);
-      }
+      // Because the signal state does not 100% match the buffer state, it is critical that the
+      // event is unsignaled when the buffer is found to be empty (not just when it *transitions* to
+      // empty).
+      event_.Unsignal();
+    }
+
+    if (!block) {
+      return zx::error(ZX_ERR_SHOULD_WAIT);
+    }
+
+    zx_status_t status = event_.Wait(Deadline::infinite());
+    if (status != ZX_OK) {
+      return zx::error(status);
     }
   }
 }
+
+bool Cbuf::Empty() const { return (tail_ == head_); }

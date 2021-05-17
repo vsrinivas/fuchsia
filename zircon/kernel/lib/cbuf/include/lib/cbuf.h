@@ -57,6 +57,9 @@ class Cbuf {
   size_t WriteChar(char c);
 
  private:
+  // Returns true iff the buffer is empty.
+  bool Empty() const TA_REQ(lock_);
+
   void IncPointer(uint32_t* ptr, uint inc) TA_REQ(lock_) { *ptr = modpow2(*ptr + inc, len_pow2_); }
 
   uint32_t head_ TA_GUARDED(lock_) = 0;
