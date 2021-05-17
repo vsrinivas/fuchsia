@@ -2929,7 +2929,7 @@ From //build/security.gni:36
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/d9d1152860fb59239f40b201bfde3132c1b62b0e/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/8fa6cf2c8cb4d611465d679f1ece4bb120e5609e/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
