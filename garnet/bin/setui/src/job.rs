@@ -62,6 +62,7 @@ pub mod data {
     //! retrieved by a [Job](super::Job) during its execution. [Keys](Key) provide a way to address
     //! this data while [Data] defines the type of data that can be stored per entry.
 
+    use crate::base::SettingInfo;
     use futures::lock::Mutex;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -71,12 +72,14 @@ pub mod data {
 
     #[derive(Clone, PartialEq, Eq, Hash)]
     pub enum Key {
+        Identifier(&'static str),
         #[cfg(test)]
         TestInteger(usize),
     }
 
-    #[derive(Clone, PartialEq, Hash)]
+    #[derive(Clone, PartialEq)]
     pub enum Data {
+        SettingInfo(SettingInfo),
         #[cfg(test)]
         TestData(usize),
     }

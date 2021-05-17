@@ -204,6 +204,7 @@ pub enum Error {
     #[error("Unsupported request for setting type: {0:?}")]
     UnsupportedError(SettingType),
 
+    // TODO(fxbug.dev/76425): Add source of error.
     #[error("Communication error")]
     CommunicationError,
 

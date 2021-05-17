@@ -94,6 +94,7 @@ pub mod base;
 pub mod config;
 pub mod fidl_common;
 pub mod handler;
+pub mod ingress;
 pub mod message;
 pub mod monitor;
 pub mod service_context;
