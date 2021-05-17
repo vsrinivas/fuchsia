@@ -475,7 +475,7 @@ protocol Flatland {
     /// during the next Present() because a released Link is guaranteed to provide no renderable
     /// content.
     ///
-    /// Use SetLinkOnTransform(transform_id, 0) to clean up references to deleted Links.
+    /// Use SetContent(transform_id, 0) to clean up references to deleted Links.
     ///
     /// Despite having a return type, this function is still feed-forward like LinkToParent() and
     /// requires a call to Present() to be executed. The ContentLinkToken will be returned after the
@@ -486,7 +486,7 @@ protocol Flatland {
     /// for rendering. For Images, this means the Image is no longer attached to any Transform and
     /// any pending rendering that references the Image is complete.
     ///
-    /// Use SetImageOnTransform(transform_id, 0) to clean up references to released Images.
+    /// Use SetContent(transform_id, 0) to clean up references to released Images.
     ///
     /// Once released, the id immediately goes out of scope for future function calls and can be
     /// reused when creating new Images.
