@@ -76,6 +76,8 @@ TEST_F(TestSysmgr, LaunchComponent) {
 
 // Test that a critical component crashing results in the system rebooting.
 // This is accomplished by configuring a component which doesn't exist as a critical component.
+// We also specify a nonsense service in update_dependencies to prevent sysmgr
+// from attempting to use the updating package loader.
 TEST_F(TestSysmgr, CrashingCriticalComponent) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ::sysmgr::Config config = NewConfig(R"({
@@ -83,7 +85,8 @@ TEST_F(TestSysmgr, CrashingCriticalComponent) {
       "example.random.service": "fuchsia-pkg://example.com/pkg#meta/component.cmx"
     },
     "startup_services": ["example.random.service"],
-    "critical_components": ["fuchsia-pkg://example.com/pkg#meta/component.cmx"]
+    "critical_components": ["fuchsia-pkg://example.com/pkg#meta/component.cmx"],
+    "update_dependencies": ["fuchsia.bogus.DoesNotExist"]
   })");
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   vfs::ComposedServiceDir composed_svc_dir;

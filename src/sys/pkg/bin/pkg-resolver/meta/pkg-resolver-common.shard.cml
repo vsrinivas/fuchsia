@@ -31,9 +31,9 @@
             from: "parent",
         },
         {
-            directory: "pkgfs",
+            directory: "pkgfs-system",
             rights: [ "r*" ],
-            path: "/pkgfs",
+            path: "/pkgfs/system",
         },
         {
             directory: "config-data",

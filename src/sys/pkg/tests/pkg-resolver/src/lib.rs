@@ -533,7 +533,6 @@ where
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![
                     RouteEndpoint::component("pkg_cache"),
-                    RouteEndpoint::component("pkg_resolver_wrapper"),
                 ],
             }).unwrap()
             .add_route(CapabilityRoute {
@@ -548,6 +547,13 @@ where
                 targets: vec![ RouteEndpoint::component("local_mirror") ],
             }).unwrap()
 
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("pkgfs-system", "/pkgfs/system", fidl_fuchsia_io2::R_STAR_DIR),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::directory("config-data", "/config/data", fidl_fuchsia_io2::R_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),

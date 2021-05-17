@@ -114,6 +114,10 @@
             url: "fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cm",
         },
         {
+            name: "pkg-resolver",
+            url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm",
+        },
+        {
             name: "dhcpd",
             url: "fuchsia-pkg://fuchsia.com/dhcpd#meta/dhcpd.cm",
         },
@@ -222,9 +226,8 @@
         },
         {
             protocol: [ "fuchsia.pkg.FontResolver" ],
-            from: "#appmgr",
+            from: "#pkg-resolver",
             to: "#font_provider",
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
@@ -262,9 +265,8 @@
         },
         {
             protocol: "fuchsia.pkg.PackageResolver",
-            from: "#appmgr",
+            from: "#pkg-resolver",
             to: "#universe-resolver",
-            dependency: "weak_for_migration",
         },
         {
             directory: "pkgfs",
@@ -296,6 +298,72 @@
                 "fuchsia.space.Manager",
             ],
             from: "#pkg-cache",
+            to: "#appmgr",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.paver.Paver",
+            ],
+            from: "parent",
+            to: "#pkg-resolver",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.net.NameLookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: "#pkg-resolver",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.pkg.PackageCache" ],
+            from: "#pkg-cache",
+            to: "#pkg-resolver",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#pkg-resolver",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#pkg-resolver",
+            subdir: "pkg-resolver",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "skip-block",
+            to: "#pkg-resolver",
+            subdir: "class/skip-block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "platform",
+            to: "#pkg-resolver",
+            subdir: "sys/platform",
+        },
+        {
+            directory: "pkgfs",
+            from: "parent",
+            as: "pkgfs-system",
+            to: "#pkg-resolver",
+            subdir: "system",
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
+            from: "#pkg-resolver",
             to: "#appmgr",
         },
 
@@ -406,6 +474,7 @@
                 "#last_reboot",
                 "#log-stats",
                 "#pkg-cache",
+                "#pkg-resolver",
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
@@ -652,6 +721,7 @@
             from: "parent",
             to: [
                 "#http-client",
+                "#pkg-resolver",
                 "#test_manager",
             ],
         },
@@ -972,9 +1042,6 @@
                 "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",
-                "fuchsia.pkg.PackageResolver",
-                "fuchsia.pkg.RepositoryManager",
-                "fuchsia.pkg.rewrite.Engine",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Resolver",
                 "fuchsia.sys.Environment",
@@ -1011,6 +1078,14 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
             from: "#sampler",
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
+            from: "#pkg-resolver",
         },
 
         // device_manager needs the hub for the serial console

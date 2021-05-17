@@ -142,13 +142,7 @@
         },
         {
             instance_id: "d577f733dfbe1787d272e43f7e4423a01108a71d7e3a89b4e97081ad39372e4e",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/pkg-resolver",
         },
         {
             instance_id: "ea59eb01e52454f12fab0b571008d2ba8518ae12508f46a3f3f0350b7bbea40f",
@@ -164,7 +158,7 @@
         },
         {
             instance_id: "8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af",
-            moniker: "/core/brightness_manager"
+            moniker: "/core/brightness_manager",
         },
         {
             instance_id: "f4597d9b92f6c3e4847a5bdb53ea095aee59ad07f69745ebcdb43c9f96125d73",
@@ -218,6 +212,7 @@
                 ],
             },
         },
+
         // An entry for `memory_monitor` is needed to preserve /cache across the v2 migration.
         // See https://fxbug.dev/74359 for more details.
         {
@@ -230,6 +225,7 @@
                 ],
             },
         },
+
         // An entry for `regulatory_region` is needed to preserve /cache across the v2 migration.
         // See https://fxbug.dev/74359 for more details.
         {
@@ -244,7 +240,7 @@
         },
         {
             instance_id: "21cfa3a89262d5a856acab7166b36af59fcdaa2227256638cf0a6202e265a199",
-            moniker: "/core/session-manager/session:session"
+            moniker: "/core/session-manager/session:session",
         },
     ],
 }

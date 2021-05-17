@@ -30,6 +30,8 @@ assemble_system("guest") {
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr",
+    "//src/sys/pkg/bin/pkg-cache",
+    "//src/sys/pkg/bin/pkg-resolver",
     "//src/sys/pkg/bin/system-update-committer",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",

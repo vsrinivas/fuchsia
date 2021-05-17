@@ -27,10 +27,15 @@ use {
 /// established.
 
 const APPMGR_BIN_PATH: &'static str = "/pkg/bin/appmgr";
+// The bogus update dependency prevents sysmgr from trying to autoupdate packages or make use of
+// pkg-resolver
 const SYSMGR_SERVICES_CONFIG: &'static str = r#"{
   "services": {
     "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server_rust.cmx"
-  }
+  },
+  "update_dependencies": [
+    "fuchsia.bogus.DoesNotExist"
+  ]
 }"#;
 const APPMGR_SCHEME_MAP: &'static str = r#"{
     "launchers": {

@@ -20,7 +20,7 @@
             to: "#pkg-resolver-coll",
         },
         {
-            directory: "pkgfs",
+            directory: "pkgfs-system",
             from: "parent",
             to: "#pkg-resolver-coll",
         },

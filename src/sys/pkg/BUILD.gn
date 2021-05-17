@@ -81,10 +81,7 @@ group("system-update-checker") {
 
 merge_sysmgr_config("core_config") {
   output = "pkg.config"
-  deps = [
-    "bin/pkg-resolver:config",
-    "bin/system-updater:config",
-  ]
+  deps = [ "bin/system-updater:config" ]
 }
 
 group("omaha-client") {

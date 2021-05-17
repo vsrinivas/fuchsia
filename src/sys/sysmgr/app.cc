@@ -65,9 +65,6 @@ App::App(Config config, std::shared_ptr<sys::ServiceDirectory> incoming_services
   env_->GetDirectory(std::move(directory));
 
   if (auto_updates_enabled_) {
-    const bool resolver_missing =
-        std::find(update_dependencies.begin(), update_dependencies.end(),
-                  fuchsia::pkg::PackageResolver::Name_) == update_dependencies.end();
     // Check if any component urls that are excluded (dependencies of
     // PackageResolver/startup) were not registered from the above
     // configuration.
@@ -79,7 +76,7 @@ App::App(Config config, std::shared_ptr<sys::ServiceDirectory> incoming_services
       }
     }
 
-    if (resolver_missing || missing_services) {
+    if (missing_services) {
       FX_LOGS(WARNING) << "auto_update_packages = true but some update "
                           "dependencies are missing in the sys environment. "
                           "Disabling auto-updates.";

@@ -2,5 +2,8 @@
   "services": {
     "fuchsia.vsock.Connector": "fuchsia-pkg://fuchsia.com/vsock_service#meta/vsock_service.cmx"
   },
-  "startup_services": []
+  "startup_services": [],
+  "update_dependencies": [
+    "fuchsia.bogus.DoesNotExist"
+  ]
 }

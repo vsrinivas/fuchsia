@@ -122,7 +122,7 @@ grand_swd_binary("bin") {
 }
 
 fuchsia_package_with_single_component("pkg-resolver") {
-  manifest = "meta/pkg-resolver.cmx"
+  manifest = "meta/pkg-resolver.cml"
   deps = [ ":bin" ]
 }
 
@@ -170,10 +170,6 @@ pkg_resolver_config("enable_dynamic_configuration") {
 resolver_persisted_repos_config("persisted_repos_dir") {
   persisted_repos_dir = "/data/repos"
   deps = [ "//build/validate:non_production_tag" ]
-}
-
-sysmgr_config("config") {
-  source = "sysmgr.config"
 }
 
 group("tests") {

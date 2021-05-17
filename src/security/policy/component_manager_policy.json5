@@ -202,6 +202,7 @@
                     "/core",
                     "/core/appmgr",
                     "/core/pkg-cache",
+                    "/core/pkg-resolver",
                 ],
             },
             {
@@ -253,7 +254,7 @@
             {
                 // We restrict access to PackageResolver because it gives direct access to package
                 // handles which provide executability which bypass VX security policy.
-                source_moniker: "/core/appmgr",
+                source_moniker: "/core/pkg-resolver",
                 source: "component",
                 source_name: "fuchsia.pkg.PackageResolver",
                 capability: "protocol",
@@ -266,6 +267,11 @@
                     // eng builds only.
                     "/bootstrap/driver_manager",
                     "/bootstrap/netsvc",
+
+                    // system-updater still runs as a v1 component and is a
+                    // valid client of PackageResolver.  appmgr has its own
+                    // allowlist for v1 components accessing pkg-resolver.
+                    "/core/appmgr",
                     "/core/universe-resolver",
                 ],
             },
@@ -278,6 +284,7 @@
                 capability: "protocol",
                 target_monikers: [
                     "/core/appmgr",
+                    "/core/pkg-resolver",
                 ],
             },
             {

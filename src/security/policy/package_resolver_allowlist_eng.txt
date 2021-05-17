@@ -21,3 +21,4 @@ fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_resolver_allowed
 fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/usb-system-update-checker-integration-tests#meta/usb-system-update-checker-isolated.cmx
+fuchsia-pkg://fuchsia.com/sysmgr-integration-tests#meta/service_startup_test.cmx
