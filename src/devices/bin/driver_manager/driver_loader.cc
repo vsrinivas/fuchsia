@@ -46,9 +46,9 @@ void DriverLoader::StartLoadingThread(Coordinator* coordinator) {
 }
 
 void DriverLoader::LoadDrivers() {
-  fbl::unique_fd fd(open("/system-delayed", O_RDONLY));
+  fbl::unique_fd fd(open("/system", O_RDONLY));
   if (fd.get() < 0) {
-    LOGF(WARNING, "Unabled to open '/system-delayed', system drivers are disabled");
+    LOGF(WARNING, "Unabled to open '/system', system drivers are disabled");
     return;
   }
 

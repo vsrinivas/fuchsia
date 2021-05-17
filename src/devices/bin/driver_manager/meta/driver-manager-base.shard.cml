@@ -30,14 +30,9 @@
             path: "/boot",
         },
         {
-            directory: "system",
-            rights: [ "rx*" ],
-            path: "/system",
-        },
-        {
             directory: "system-delayed",
             rights: [ "rx*" ],
-            path: "/system-delayed",
+            path: "/system",
         },
         {
             protocol: [

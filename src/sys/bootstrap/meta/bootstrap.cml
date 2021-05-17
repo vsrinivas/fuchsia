@@ -497,7 +497,6 @@
             from: "#fshost",
             to: [
                 "#console-launcher",
-                "#driver_manager",
                 "#netsvc",
             ],
             dependency: "weak_for_migration",
