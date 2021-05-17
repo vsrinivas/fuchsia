@@ -8,7 +8,11 @@ import("//build/test.gni")
 
 group("message_container") {
   testonly = true
-  deps = [ ":fidl_llcpp_message_container_tests" ]
+  deps = [
+    ":fidl_llcpp_message_container_tests",
+    ":fidl_llcpp_result_types_tests",
+    ":fidl_llcpp_result_types_tests_bin($host_toolchain)",
+  ]
 }
 
 fidl("fidl.llcpp.linearized.test") {
@@ -37,4 +41,17 @@ fuchsia_unittest_package("fidl_llcpp_message_container_tests") {
   # manifests by switching to zxtest.
   manifest = "meta/fidl_llcpp_message_container_tests.cmx"
   deps = [ ":fidl_llcpp_message_container_tests_bin" ]
+}
+
+test("fidl_llcpp_result_types_tests_bin") {
+  output_name = "fidl_llcpp_result_types_tests"
+  sources = [ "result_description_test.cc" ]
+  deps = [
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_result_types_tests") {
+  deps = [ ":fidl_llcpp_result_types_tests_bin" ]
 }

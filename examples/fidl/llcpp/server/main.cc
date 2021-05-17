@@ -33,9 +33,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
               // These are initiated by ourself.
               break;
             default:
-              std::cerr << "server error: " << static_cast<int>(info.reason())
-                        << ", status: " << info.status() << ", message: " << info.error_message()
-                        << std::endl;
+              std::cerr << "server error: " << info << std::endl;
           }
         };
     binding_ = fidl::BindServer(dispatcher, std::move(request), this, std::move(unbound_handler));

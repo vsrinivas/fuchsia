@@ -289,7 +289,6 @@ TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
                                          std::move(simple_struct),
                                          fidl::BufferSpan(response_buf, sizeof(response_buf)));
   ASSERT_OK(result.status());
-  ASSERT_NULL(result.error_message(), "%s", result.error_message());
   ASSERT_OK(result.Unwrap()->status);
   ASSERT_EQ(result.Unwrap()->field, 123);
 

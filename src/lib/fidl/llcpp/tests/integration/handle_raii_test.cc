@@ -428,7 +428,7 @@ TEST_F(HandleCloseTest, Handle) {
   {
     auto result = client.GetHandle();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value);
   }
@@ -443,7 +443,7 @@ TEST_F(HandleCloseTest, HandleStruct) {
   {
     auto result = client.GetHandleStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.h);
   }
@@ -458,7 +458,7 @@ TEST_F(HandleCloseTest, HandleStructStruct) {
   {
     auto result = client.GetHandleStructStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.s.h);
   }
@@ -473,7 +473,7 @@ TEST_F(HandleCloseTest, MultiFieldStruct) {
   {
     auto result = client.GetMultiFieldStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.h1);
     checker.AddEvent(result->value.s.h);
@@ -490,7 +490,7 @@ TEST_F(HandleCloseTest, MultiArgs) {
   {
     auto result = client.GetMultiArgs();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->h1);
     checker.AddEvent(result->s.h);
@@ -507,7 +507,7 @@ TEST_F(HandleCloseTest, VectorStruct) {
   {
     auto result = client.GetVectorStruct(4);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.v.count(); ++i) {
       checker.AddEvent(result->value.v[i].h);
@@ -524,7 +524,7 @@ TEST_F(HandleCloseTest, ArrayStruct) {
   {
     auto result = client.GetArrayStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (size_t i = 0; i < result->value.a.size(); ++i) {
       checker.AddEvent(result->value.a[i].h);
@@ -541,7 +541,7 @@ TEST_F(HandleCloseTest, HandleUnion1) {
   {
     auto result = client.GetHandleUnion(1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.is_h1());
     checker.AddEvent(result->value.h1());
@@ -557,7 +557,7 @@ TEST_F(HandleCloseTest, HandleUnion2) {
   {
     auto result = client.GetHandleUnion(2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.is_h2());
     checker.AddEvent(result->value.h2().h);
@@ -573,7 +573,7 @@ TEST_F(HandleCloseTest, HandleUnionStruct1) {
   {
     auto result = client.GetHandleUnionStruct(1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.u.is_h1());
     checker.AddEvent(result->value.u.h1());
@@ -589,7 +589,7 @@ TEST_F(HandleCloseTest, HandleUnionStruct2) {
   {
     auto result = client.GetHandleUnionStruct(2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.u.is_h2());
     checker.AddEvent(result->value.u.h2().h);
@@ -605,7 +605,7 @@ TEST_F(HandleCloseTest, HandleTableNone) {
   {
     auto result = client.GetHandleTable(0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -615,7 +615,7 @@ TEST_F(HandleCloseTest, HandleTableEvent) {
   {
     auto result = client.GetHandleTable(1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.h1());
   }
@@ -630,7 +630,7 @@ TEST_F(HandleCloseTest, HandleTableHandleStruct) {
   {
     auto result = client.GetHandleTable(2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.h2().h);
   }
@@ -645,7 +645,7 @@ TEST_F(HandleCloseTest, HandleTableAll) {
   {
     auto result = client.GetHandleTable(3);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.h1());
     checker.AddEvent(result->value.h2().h);
@@ -661,7 +661,7 @@ TEST_F(HandleCloseTest, HandleTableStructNone) {
   {
     auto result = client.GetHandleTableStruct(0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -671,7 +671,7 @@ TEST_F(HandleCloseTest, HandleTableStructEvent) {
   {
     auto result = client.GetHandleTableStruct(1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.t.h1());
   }
@@ -686,7 +686,7 @@ TEST_F(HandleCloseTest, HandleTableStructHandleStruct) {
   {
     auto result = client.GetHandleTableStruct(2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.t.h2().h);
   }
@@ -701,7 +701,7 @@ TEST_F(HandleCloseTest, HandleTableStructAll) {
   {
     auto result = client.GetHandleTableStruct(3);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.t.h1());
     checker.AddEvent(result->value.t.h2().h);
@@ -717,7 +717,7 @@ TEST_F(HandleCloseTest, OptionalHandleStructNotDefined) {
   {
     auto result = client.GetOptionalHandleStruct(false);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -727,7 +727,7 @@ TEST_F(HandleCloseTest, OptionalHandleStructDefined) {
   {
     auto result = client.GetOptionalHandleStruct(true);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value->h);
   }
@@ -742,7 +742,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionNone) {
   {
     auto result = client.GetOptionalHandleUnion(0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -752,7 +752,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnion1) {
   {
     auto result = client.GetOptionalHandleUnion(1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.is_h1());
     checker.AddEvent(result->value.h1());
@@ -768,7 +768,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnion2) {
   {
     auto result = client.GetOptionalHandleUnion(2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.is_h2());
     checker.AddEvent(result->value.h2().h);
@@ -784,7 +784,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStructNotDefined) {
   {
     auto result = client.GetOptionalHandleUnionStruct(false, 0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -794,7 +794,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct1) {
   {
     auto result = client.GetOptionalHandleUnionStruct(true, 1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value->u.is_h1());
     checker.AddEvent(result->value->u.h1());
@@ -810,7 +810,7 @@ TEST_F(HandleCloseTest, OptionalHandleUnionStruct2) {
   {
     auto result = client.GetOptionalHandleUnionStruct(true, 2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value->u.is_h2());
     checker.AddEvent(result->value->u.h2().h);
@@ -826,7 +826,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructNotDefined) {
   {
     auto result = client.GetOptionalHandleTableStruct(false, 0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -836,7 +836,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructNone) {
   {
     auto result = client.GetOptionalHandleTableStruct(true, 0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -846,7 +846,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructEvent) {
   {
     auto result = client.GetOptionalHandleTableStruct(true, 1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value->t.h1());
   }
@@ -861,7 +861,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructHandleStruct) {
   {
     auto result = client.GetOptionalHandleTableStruct(true, 2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value->t.h2().h);
   }
@@ -876,7 +876,7 @@ TEST_F(HandleCloseTest, OptionalHandleTableStructAll) {
   {
     auto result = client.GetOptionalHandleTableStruct(true, 3);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value->t.h1());
     checker.AddEvent(result->value->t.h2().h);
@@ -892,7 +892,7 @@ TEST_F(HandleCloseTest, HandleStructOptionalStructNotDefined) {
   {
     auto result = client.GetHandleStructOptionalStruct(false);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -902,7 +902,7 @@ TEST_F(HandleCloseTest, HandleStructOptionalStructDefined) {
   {
     auto result = client.GetHandleStructOptionalStruct(true);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     checker.AddEvent(result->value.s->h);
   }
@@ -917,7 +917,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStructNotDefined) {
   {
     auto result = client.GetHandleUnionOptionalStruct(false, 0);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
   }
 }
 
@@ -927,7 +927,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct1) {
   {
     auto result = client.GetHandleUnionOptionalStruct(true, 1);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.u.is_h1());
     checker.AddEvent(result->value.u.h1());
@@ -943,7 +943,7 @@ TEST_F(HandleCloseTest, HandleUnionOptionalStruct2) {
   {
     auto result = client.GetHandleUnionOptionalStruct(true, 2);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     ASSERT_TRUE(result->value.u.is_h2());
     checker.AddEvent(result->value.u.h2().h);
@@ -960,7 +960,7 @@ TEST_F(HandleCloseTest, VectorOfHandle) {
   {
     auto result = client.GetVectorOfHandle(kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.count(); ++i) {
       checker.AddEvent(result->value[i]);
@@ -980,7 +980,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfHandle) {
   {
     auto result = client.GetVectorOfVectorOfHandle(kNumVector, kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.count(); ++i) {
       for (uint32_t j = 0; j < result->value[i].count(); ++j) {
@@ -1003,7 +1003,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandle) {
   {
     auto result = client.GetVectorOfVectorOfVectorOfHandle(kNumVector1, kNumVector2, kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.count(); ++i) {
       for (uint32_t j = 0; j < result->value[i].count(); ++j) {
@@ -1026,7 +1026,7 @@ TEST_F(HandleCloseTest, VectorOfHandleStruct) {
   {
     auto result = client.GetVectorOfHandleStruct(kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.count(); ++i) {
       checker.AddEvent(result->value[i].h);
@@ -1046,7 +1046,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfHandleStruct) {
   {
     auto result = client.GetVectorOfVectorOfHandleStruct(kNumVector, kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.count(); ++i) {
       for (uint32_t j = 0; j < result->value[i].count(); ++j) {
@@ -1070,7 +1070,7 @@ TEST_F(HandleCloseTest, VectorOfVectorOfVectorOfHandleStruct) {
     auto result =
         client.GetVectorOfVectorOfVectorOfHandleStruct(kNumVector1, kNumVector2, kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (uint32_t i = 0; i < result->value.count(); ++i) {
       for (uint32_t j = 0; j < result->value[i].count(); ++j) {
@@ -1092,7 +1092,7 @@ TEST_F(HandleCloseTest, ArrayOfHandle) {
   {
     auto result = client.GetArrayOfHandle();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item : result->value) {
       checker.AddEvent(item);
@@ -1109,7 +1109,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandle) {
   {
     auto result = client.GetArrayOfArrayOfHandle();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item1 : result->value) {
       for (const auto& item2 : item1) {
@@ -1128,7 +1128,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandle) {
   {
     auto result = client.GetArrayOfArrayOfArrayOfHandle();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item1 : result->value) {
       for (const auto& item2 : item1) {
@@ -1149,7 +1149,7 @@ TEST_F(HandleCloseTest, ArrayOfHandleStruct) {
   {
     auto result = client.GetArrayOfHandleStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item : result->value) {
       checker.AddEvent(item.h);
@@ -1166,7 +1166,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfHandleStruct) {
   {
     auto result = client.GetArrayOfArrayOfHandleStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item1 : result->value) {
       for (const auto& item2 : item1) {
@@ -1185,7 +1185,7 @@ TEST_F(HandleCloseTest, ArrayOfArrayOfArrayOfHandleStruct) {
   {
     auto result = client.GetArrayOfArrayOfArrayOfHandleStruct();
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item1 : result->value) {
       for (const auto& item2 : item1) {
@@ -1207,7 +1207,7 @@ TEST_F(HandleCloseTest, Mixed1) {
   {
     auto result = client.GetMixed1(kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item1 : result->value) {
       for (const auto& item2 : item1) {
@@ -1228,7 +1228,7 @@ TEST_F(HandleCloseTest, Mixed2) {
   {
     auto result = client.GetMixed2(kNumHandle);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
 
     for (auto& item1 : result->value) {
       for (const auto& item2 : item1) {

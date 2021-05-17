@@ -88,7 +88,7 @@ class ResultTest : public ::testing::Test {
 TEST_F(ResultTest, OwnedPrimitiveError) {
   auto client = TakeClient();
   auto resp = client.NoArgsPrimitiveError(true);
-  ASSERT_TRUE(resp.ok()) << resp.error_message();
+  ASSERT_TRUE(resp.ok()) << resp.error();
   ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), kErrorStatus);
 }
@@ -324,7 +324,7 @@ TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
   auto client = TakeClient();
   auto result = client.GetHandle();
 
-  ASSERT_TRUE(result.ok()) << result.error_message();
+  ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_TRUE(result->value.h.is_valid());
 
   // Dupe the event so we can get the handle count after move.
@@ -347,7 +347,7 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   {
     auto result = client.GetHandleVector(kNumHandles);
 
-    ASSERT_TRUE(result.ok()) << result.error_message();
+    ASSERT_TRUE(result.ok()) << result.error();
     ASSERT_EQ(result->value.count(), kNumHandles);
 
     for (uint32_t i = 0; i < kNumHandles; i++) {

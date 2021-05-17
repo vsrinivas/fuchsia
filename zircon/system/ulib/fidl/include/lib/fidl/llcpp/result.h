@@ -9,6 +9,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <iosfwd>
+
 #ifdef __Fuchsia__
 #include <zircon/status.h>
 #endif  // __Fuchsia__
@@ -93,8 +95,8 @@ enum class Reason {
 
 namespace internal {
 
-// Same as |Reason::__DoNotUse|, but provides an internal name for use in
-// the bindings runtime.
+// A sentinel value that indicates an uninitialized reason. It should never be
+// exposed to the user.
 constexpr inline static ::fidl::Reason kUninitializedReason = static_cast<::fidl::Reason>(0);
 static_assert(static_cast<int>(::fidl::Reason{}) == static_cast<int>(kUninitializedReason));
 
@@ -117,13 +119,14 @@ extern const char* const kErrorWaitOneFailed;
 // - `ok()` returns true.
 // - `status()` returns ZX_OK.
 // - `reason()` should not be used.
-// - `error_message()` returns nullptr.
 //
 // If the operation failed:
 // - `ok()` returns false.
 // - `status()` contains a non-OK status code specific to the failed operation.
 // - `reason()` describes the operation which failed.
-// - `error_message()` returns a human-readable string for debugging purposes.
+//
+// |Result| may be piped to an output stream (`std::cerr`, `FX_LOGS`, ...) to
+// print a human-readable description for debugging purposes.
 class Result {
  public:
   constexpr Result() = default;
@@ -184,8 +187,8 @@ class Result {
   // for how to interpret the status.
   //
   // Generally, logging this status alone wouldn't be very useful, since its
-  // interpretation is dependent on the reason. Prefer logging all of |reason|,
-  // |status|, and |error_message|, or simply |status| and |error_message|.
+  // interpretation is dependent on the reason.
+  // Prefer logging |error| or via |FormatDescription|.
   [[nodiscard]] zx_status_t status() const { return status_; }
 
 #ifdef __Fuchsia__
@@ -197,30 +200,71 @@ class Result {
   //
   // Generally, logging this value alone wouldn't be the most convenient for
   // debugging, since it requires developers to check back to the enum.
-  // Prefer logging all of |reason|, |status|, and |error_message|, or simply
-  // |status| and |error_message|.
+  // Prefer logging |error| or via |FormatDescription|.
   [[nodiscard]] ::fidl::Reason reason() const {
     ZX_ASSERT(reason_ != internal::kUninitializedReason);
     return reason_;
   }
 
-  // A human readable description of the error.
+  // Renders a full description of the success or error.
   //
-  // It may be more specific than |reason| alone e.g. if an encoding error
-  // was encountered, it would contain a string description of the specific
-  // encoding problem.
-  [[nodiscard]] const char* error_message() const;
+  // It is more specific than |reason| alone e.g. if an encoding error was
+  // encountered, it would contain a string description of the specific encoding
+  // problem.
+  //
+  // If a logging API supports output streams (`<<` operators), piping the
+  // |Result| to the log via `<<` is more efficient than calling this function.
+  [[nodiscard]] std::string FormatDescription() const;
+
+  // Returns a lossy description of the error. The returned |const char*| has
+  // static lifetime, hence may be retained or passed around. If the result is a
+  // success, returns |nullptr|.
+  //
+  // Because of this constraint, the bindings will attempt to pick a static
+  // string that best represents the error, sometimes losing information. As
+  // such, this method should only be used when interfacing with C APIs that are
+  // unable to take a string or output stream.
+  [[nodiscard]] const char* lossy_description() const;
 
   // If the operation was successful.
   [[nodiscard]] bool ok() const { return status_ == ZX_OK; }
 
+  // If the operation failed, returns information about the error.
+  //
+  // This is meant be used by subclasses to accommodate a usage style that is
+  // similar to |fitx::result| types:
+  //
+  //   fidl::WireResult bar = fidl::WireCall(foo_client_end).GetBar();
+  //   if (!bar.ok()) {
+  //     FX_LOGS(ERROR) << "GetBar failed: " << bar.error();
+  //   }
+  //
+  const Result& error() const {
+    ZX_ASSERT(status_ != ZX_OK);
+    return *this;
+  }
+
  protected:
   void SetResult(const Result& other) { operator=(other); }
 
-  const char** error_address() { return &error_; }
+  // Returns a pointer to populate additional error message.
+  [[nodiscard]] const char** error_address() { return &error_; }
+
+  // A human readable description of |reason|.
+  [[nodiscard]] const char* reason_description() const;
+
+  // Renders the description into a buffer |destination| that is of size
+  // |length|. The description will cut off at `length - 1`.
+  //
+  // |from_unbind_info| should be true iff this is invoked by |UnbindInfo|.
+  //
+  // Returns how many bytes were written.
+  size_t FormatImpl(char* destination, size_t length, bool from_unbind_info) const;
 
  private:
   friend class UnbindInfo;
+  friend std::ostream& operator<<(std::ostream& ostream, const Result& result);
+
   __ALWAYS_INLINE
   constexpr Result(zx_status_t status, ::fidl::Reason reason, const char* error)
       : status_(status), reason_(reason), error_(error) {}
@@ -229,6 +273,9 @@ class Result {
   ::fidl::Reason reason_ = internal::kUninitializedReason;
   const char* error_ = nullptr;
 };
+
+// Logs a full description of the result to an output stream.
+std::ostream& operator<<(std::ostream& ostream, const Result& result);
 
 // |UnbindInfo| describes how the channel was unbound from a server or client.
 //
@@ -289,16 +336,15 @@ class UnbindInfo : private Result {
   //
   // Generally, logging this value alone wouldn't be the most convenient for
   // debugging, since it requires developers to check back to the enum.
-  // Prefer logging all of |reason|, |status|, and |error_message|, or simply
-  // |status| and |error_message|.
+  // Prefer logging the |UnbindInfo| itself or via |FormatDescription|.
   using Result::reason;
 
   // Status associated with the reason. See documentation on |fidl::Reason|
   // for how to interpret the status.
   //
   // Generally, logging this status alone wouldn't be very useful, since its
-  // interpretation is dependent on the reason. Prefer logging all of |reason|,
-  // |status|, and |error_message|, or simply |status| and |error_message|.
+  // interpretation is dependent on the reason.
+  // Prefer logging the |UnbindInfo| itself or via |FormatDescription|.
   using Result::status;
 
 #ifdef __Fuchsia__
@@ -306,12 +352,26 @@ class UnbindInfo : private Result {
   using Result::status_string;
 #endif  // __Fuchsia__
 
-  // A human readable description of the cause of the unbinding.
+  // Renders a full description of the cause of the unbinding.
   //
-  // It may be more specific than |reason| alone e.g. if an encoding error
-  // was encountered, it would contain a string description of the specific
-  // encoding problem.
-  using Result::error_message;
+  // It is more specific than |reason| alone e.g. if an encoding error was
+  // encountered, it would contain a string description of the specific encoding
+  // problem.
+  //
+  // If a logging API supports output streams (`<<` operators), piping the
+  // |UnbindInfo| to the log via `<<` is more efficient than calling this
+  // function.
+  [[nodiscard]] std::string FormatDescription() const;
+
+  // Returns a lossy description of the unbind cause. The returned |const char*| has
+  // static lifetime, hence may be retained or passed around. If the result is a
+  // success, returns |nullptr|.
+  //
+  // Because of this constraint, the bindings will attempt to pick a static
+  // string that best represents the cause, sometimes losing information. As
+  // such, this method should only be used when interfacing with C APIs that are
+  // unable to take a string or output stream.
+  using Result::lossy_description;
 
   // Returns true iff the unbinding was part of normal operation
   // (i.e. unbinding/closing that is explicitly initiated by the user),
@@ -330,7 +390,13 @@ class UnbindInfo : private Result {
         return false;
     }
   }
+
+ private:
+  friend std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info);
 };
+
+// Logs a full description of the cause of unbinding to an output stream.
+std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info);
 
 static_assert(sizeof(UnbindInfo) == sizeof(uintptr_t) * 2, "UnbindInfo should be reasonably small");
 

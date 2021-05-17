@@ -91,7 +91,9 @@ struct {{ .WireResponse }} final {
   const char* status_string() const { return message_.status_string(); }
 {{- EndifFuchsia -}}
   bool ok() const { return message_.status() == ZX_OK; }
-  const char* error_message() const { return message_.error_message(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -124,7 +126,9 @@ struct {{ .WireResponse }} final {
   const char* status_string() const { return message_.status_string(); }
 {{- EndifFuchsia -}}
   bool ok() const { return message_.ok(); }
-  const char* error_message() const { return message_.error_message(); }
+  std::string FormatDescription() const { return message_.FormatDescription(); }
+  const char* lossy_description() const { return message_.lossy_description(); }
+  const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 

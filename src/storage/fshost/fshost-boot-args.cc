@@ -56,7 +56,7 @@ FshostBootArgs::FshostBootArgs(
   auto ret =
       boot_args_->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(defaults));
   if (!ret.ok()) {
-    FX_LOGS(ERROR) << "failed to get boolean parameters: " << ret.error_message() << "";
+    FX_LOGS(ERROR) << "failed to get boolean parameters: " << ret.error();
   } else {
     netsvc_netboot_ = ret->values[0];
     zircon_system_disable_automount_ = ret->values[1];

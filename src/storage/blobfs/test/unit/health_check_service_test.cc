@@ -106,7 +106,7 @@ class HealthCheckServiceTest : public testing::Test {
 TEST_F(HealthCheckServiceTest, EmptyFilesystemPassesChecks) {
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client.Verify(fuv::wire::VerifyOptions{});
-  ASSERT_TRUE(result.ok()) << result.error_message();
+  ASSERT_TRUE(result.ok()) << result.error();
 }
 
 TEST_F(HealthCheckServiceTest, PopulatedFilesystemPassesChecks) {
@@ -124,7 +124,7 @@ TEST_F(HealthCheckServiceTest, PopulatedFilesystemPassesChecks) {
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client.Verify(fuv::wire::VerifyOptions{});
-  ASSERT_TRUE(result.ok()) << result.error_message();
+  ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_FALSE(result.value().result.is_err());
 
   // Balance out the OpenValidating() calls above so the node can clean up properly.
@@ -144,7 +144,7 @@ TEST_F(HealthCheckServiceTest, NullBlobPassesChecks) {
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client.Verify(fuv::wire::VerifyOptions{});
-  ASSERT_TRUE(result.ok()) << result.error_message();
+  ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_FALSE(result.value().result.is_err());
 
   // Balance out the OpenValidating() call above so the node can clean up properly.
@@ -163,7 +163,7 @@ TEST_F(HealthCheckServiceTest, InvalidFileFailsChecks) {
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client.Verify(fuv::wire::VerifyOptions{});
-  ASSERT_TRUE(result.ok()) << result.error_message();
+  ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_TRUE(result.value().result.is_err());
 
   // Balance out the OpenValidating() call above so the node can clean up properly.
@@ -177,7 +177,7 @@ TEST_F(HealthCheckServiceTest, InvalidButClosedFilePassesChecks) {
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client.Verify(fuv::wire::VerifyOptions{});
-  ASSERT_TRUE(result.ok()) << result.error_message();
+  ASSERT_TRUE(result.ok()) << result.error();
   ASSERT_FALSE(result.value().result.is_err());
 }
 

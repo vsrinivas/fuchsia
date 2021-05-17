@@ -26,8 +26,8 @@ class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
 
   void Unbound(fidl::UnbindInfo info) override {
     if (!info.ok()) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s, %s",
-           binary_value_.c_str(), info.status_string(), info.error_message());
+      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s",
+           binary_value_.c_str(), info.FormatDescription().c_str());
     }
   }
 
@@ -173,7 +173,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&request->start_args);
   if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
-         message->error_message());
+         message->FormatDescription().c_str());
     completer.Close(message->status());
     return;
   }
@@ -228,7 +228,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
         if (!info.ok() && info.reason() != fidl::Reason::kPeerClosed) {
           LOGF(WARNING, "Unexpected stop of driver '/pkg/%s': %s", driver->binary().data(),
-               info.error_message());
+               info.FormatDescription().c_str());
         }
         // Task to stop the driver. Post this to the driver dispatcher thread.
         auto stop_task = [this, driver] {

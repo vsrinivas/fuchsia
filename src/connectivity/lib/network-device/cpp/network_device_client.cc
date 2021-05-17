@@ -37,8 +37,7 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
       }()),
       device_handler_(std::make_shared<EventHandler<netdev::Device>>([this](fidl::UnbindInfo info) {
         if (!info.ok()) {
-          FX_LOGS(ERROR) << "device handler error: " << info.status_string()
-                         << ", message: " << info.error_message();
+          FX_LOGS(ERROR) << "device handler error: " << info;
           ErrorTeardown(info.status());
         }
       })),
@@ -46,8 +45,7 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
       session_handler_(
           std::make_shared<EventHandler<netdev::Session>>([this](fidl::UnbindInfo info) {
             if (!info.ok()) {
-              FX_LOGS(ERROR) << "session handler error: " << info.status_string()
-                             << ", message: " << info.error_message();
+              FX_LOGS(ERROR) << "session handler error: " << info;
               ErrorTeardown(info.status());
             }
           })),

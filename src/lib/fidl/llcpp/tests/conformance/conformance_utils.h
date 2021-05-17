@@ -80,8 +80,7 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
 
   ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
   if (!encoded.ok()) {
-    std::cout << "Encoding failed (" << zx_status_get_string(encoded.status())
-              << "): " << encoded.error_message() << std::endl;
+    std::cout << "Encoding failed: " << encoded.error() << std::endl;
     return false;
   }
   ::fidl::OutgoingMessage& outgoing = encoded.GetOutgoingMessage();
@@ -134,7 +133,7 @@ bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
   }
   if (encoded.status() != expected_error_code) {
     std::cout << "Encoding failed with error code " << zx_status_get_string(encoded.status())
-              << " (" << encoded.error_message() << "), but expected error code "
+              << " (" << encoded.error() << "), but expected error code "
               << zx_status_get_string(expected_error_code) << std::endl;
     return false;
   }
@@ -152,8 +151,7 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
                                          handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok()) {
-    std::cout << "Decoding failed (" << zx_status_get_string(decoded.status())
-              << "): " << decoded.error_message() << std::endl;
+    std::cout << "Decoding failed: " << decoded.error() << std::endl;
     return false;
   }
   return equality_check(*decoded.PrimaryObject());
@@ -174,7 +172,7 @@ bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> han
   }
   if (decoded.status() != expected_error_code) {
     std::cout << "Decoding failed with error code " << zx_status_get_string(decoded.status())
-              << " (" << decoded.error_message() << "), but expected error code "
+              << " (" << decoded.error() << "), but expected error code "
               << zx_status_get_string(expected_error_code) << std::endl;
     return false;
   }

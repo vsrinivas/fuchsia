@@ -24,8 +24,7 @@ TEST(Server, ShutdownService) {
   // Call |fuchsia.shell/Shell.Shutdown| on the connection.
   fidl::WireSyncClient<fuchsia_shell::Shell> client(std::move(endpoints->client));
   auto result = client.Shutdown();
-  ASSERT_EQ(ZX_OK, result.status())
-      << "Shutdown failed: " << result.status_string() << ", " << result.error_message();
+  ASSERT_EQ(ZX_OK, result.status()) << "Shutdown failed: " << result.error();
 
   // We should observe the server proactively terminating the connection.
   zx_signals_t observed = ZX_SIGNAL_NONE;

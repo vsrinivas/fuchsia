@@ -212,12 +212,13 @@ void Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
   binding_ = fidl::BindServer(dispatcher_, std::move(channel), this,
                               [](Session* self, fidl::UnbindInfo info,
                                  fidl::ServerEnd<fuchsia_hardware_network::Session> server_end) {
-                                self->OnUnbind(info.reason(), std::move(server_end));
+                                self->OnUnbind(info, std::move(server_end));
                               });
 }
 
-void Session::OnUnbind(fidl::Reason reason, fidl::ServerEnd<netdev::Session> channel) {
-  LOGF_TRACE("network-device(%s): session unbound, reason=%d", name(), reason);
+void Session::OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> channel) {
+  LOGF_TRACE("network-device(%s): session unbound, info: %s", name(),
+             info.FormatDescription().c_str());
 
   // Stop the Tx thread immediately, so we stop fetching more tx buffers from the client.
   StopTxThread();
@@ -228,7 +229,7 @@ void Session::OnUnbind(fidl::Reason reason, fidl::ServerEnd<netdev::Session> cha
   // possible it's currently shared with the Rx Queue. The session will drop its reference to the Rx
   // FIFO upon destruction.
 
-  switch (reason) {
+  switch (info.reason()) {
     case fidl::Reason::kUnbind:
     case fidl::Reason::kDispatcherError:
     case fidl::Reason::kTransportError:

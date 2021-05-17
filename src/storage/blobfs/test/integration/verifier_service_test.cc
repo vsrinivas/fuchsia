@@ -40,7 +40,7 @@ class VerifierServiceTest : public BlobfsTest {
 TEST_F(VerifierServiceTest, EmptyFilesystemIsValid) {
   fuv::wire::VerifyOptions options;
   auto status = ConnectToHealthCheckService().Verify(std::move(options));
-  ASSERT_EQ(status.status(), ZX_OK) << status.error_message();
+  ASSERT_EQ(status.status(), ZX_OK) << status.error();
 }
 
 }  // namespace

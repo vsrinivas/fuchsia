@@ -64,7 +64,6 @@ TEST_F(TransitionalTest, CallImplementedMethod) {
   auto client = TakeClient();
   auto result = client.ImplementedMethod();
   EXPECT_TRUE(result.ok());
-  EXPECT_EQ(result.error_message(), nullptr) << result.error_message();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
 }
 
@@ -76,7 +75,8 @@ TEST_F(TransitionalTest, CallUnimplementedMethod) {
   auto client = TakeClient();
   auto result = client.UnimplementedMethod();
   EXPECT_FALSE(result.ok());
-  EXPECT_EQ(std::string("peer closed"), result.error_message()) << result.error_message();
+  EXPECT_EQ("FIDL operation failed due to peer closed, status: ZX_ERR_PEER_CLOSED (-24)",
+            result.FormatDescription());
   ASSERT_EQ(result.status(), ZX_ERR_PEER_CLOSED) << zx_status_get_string(result.status());
 }
 

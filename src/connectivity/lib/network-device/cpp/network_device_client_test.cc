@@ -33,9 +33,7 @@ class TestEventHandler : public fidl::WireAsyncEventHandler<T> {
 
   virtual void Unbound(fidl::UnbindInfo info) override {
     if (!info.ok()) {
-      FAIL() << "Lost connection to " << name_ << ": " << info.status_string()
-             << ", reason: " << static_cast<int>(info.reason())
-             << ", message: " << info.error_message();
+      FAIL() << "Lost connection to " << name_ << ": " << info;
     }
   }
 

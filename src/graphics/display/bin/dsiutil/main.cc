@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
       client.SendCmd(std::move(res.value()), fidl::VectorView<uint8_t>::FromExternal(tbuf));
 
   if (!response.ok()) {
-    printf("Could not send command to DSI (%s)\n", response.error_message());
+    printf("Could not send command to DSI (%s)\n", response.FormatDescription().c_str());
     return -1;
   }
 

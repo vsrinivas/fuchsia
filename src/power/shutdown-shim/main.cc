@@ -198,7 +198,7 @@ zx_status_t set_system_state_transition_behavior(statecontrol_fidl::wire::System
   auto resp = system_state_transition_behavior_client.SetTerminationSystemState(state);
   if (resp.status() != ZX_OK) {
     fprintf(stderr, "[shutdown-shim]: transport error sending message to driver_manager: %s\n",
-            resp.error_message());
+            resp.FormatDescription().c_str());
     return resp.status();
   }
   if (resp->result.is_err()) {

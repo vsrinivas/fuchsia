@@ -84,7 +84,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     auto result =
         fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
             .GetInstanceGuid();
-    ASSERT_FALSE(result.error_message());
+    ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     EXPECT_FALSE(memcmp(result->guid.get(), kPlaceHolderInstanceGuid.data(),
                         kPlaceHolderInstanceGuid.size()) == 0);
@@ -102,7 +102,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     auto result =
         fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
             .GetInstanceGuid();
-    ASSERT_FALSE(result.error_message());
+    ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     EXPECT_TRUE(
         memcmp(result->guid.get(), partition_guid.data(), kPlaceHolderInstanceGuid.size()) == 0);

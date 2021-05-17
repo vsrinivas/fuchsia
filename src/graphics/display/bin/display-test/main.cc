@@ -112,8 +112,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   auto open_response = fidl::WireCall<fhd::Provider>(caller.channel())
                            .OpenController(std::move(device_server), std::move(dc_server));
   if (!open_response.ok()) {
-    printf("Failed to call service handle %d (%s)\n", open_response.status(),
-           open_response.error_message());
+    printf("Failed to call service handle: %s\n", open_response.FormatDescription().c_str());
     return false;
   }
   if (open_response->s != ZX_OK) {
@@ -230,7 +229,7 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
 bool apply_config() {
   auto result = dc->CheckConfig(false);
   if (!result.ok()) {
-    printf("Failed to make check call: %d (%s)\n", result.status(), result.error_message());
+    printf("Failed to make check call: %s\n", result.FormatDescription().c_str());
     return false;
   }
 
@@ -318,7 +317,7 @@ zx_status_t capture_setup() {
   // First make sure capture is supported on this platform
   auto support_resp = dc->IsCaptureSupported();
   if (!support_resp.ok()) {
-    printf("%s: %s\n", __func__, support_resp.error_message());
+    printf("%s: %s\n", __func__, support_resp.FormatDescription().c_str());
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (!support_resp.value().result.response().supported) {
@@ -338,7 +337,7 @@ zx_status_t capture_setup() {
   }
   auto event_status = dc->ImportEvent(std::move(e2), kEventId);
   if (event_status.status() != ZX_OK) {
-    printf("Could not import event: %s\n", event_status.error_message());
+    printf("Could not import event: %s\n", event_status.FormatDescription().c_str());
     return event_status.status();
   }
 
@@ -374,7 +373,8 @@ zx_status_t capture_setup() {
   // pass token server to sysmem allocator
   auto alloc_status = sysmem_allocator->AllocateSharedCollection(std::move(token_server));
   if (alloc_status.status() != ZX_OK) {
-    printf("Could not pass token to sysmem allocator: %s\n", alloc_status.error_message());
+    printf("Could not pass token to sysmem allocator: %s\n",
+           alloc_status.FormatDescription().c_str());
     return alloc_status.status();
   }
 
@@ -389,14 +389,14 @@ zx_status_t capture_setup() {
   fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
   auto dup_res = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
   if (dup_res.status() != ZX_OK) {
-    printf("Could not duplicate token: %s\n", dup_res.error_message());
+    printf("Could not duplicate token: %s\n", dup_res.FormatDescription().c_str());
     return dup_res.status();
   }
   token->Sync();
   auto import_resp =
       dc->ImportBufferCollection(kCollectionId, std::move(*display_token.mutable_channel()));
   if (import_resp.status() != ZX_OK) {
-    printf("Could not import token: %s\n", import_resp.error_message());
+    printf("Could not import token: %s\n", import_resp.FormatDescription().c_str());
     return import_resp.status();
   }
 
@@ -405,7 +405,7 @@ zx_status_t capture_setup() {
   image_config.type = fhd::wire::kTypeCapture;
   auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
   if (constraints_resp.status() != ZX_OK) {
-    printf("Could not set capture constraints %s\n", constraints_resp.error_message());
+    printf("Could not set capture constraints %s\n", constraints_resp.FormatDescription().c_str());
     return constraints_resp.status();
   }
 
@@ -421,7 +421,7 @@ zx_status_t capture_setup() {
   auto bind_resp = sysmem_allocator->BindSharedCollection(std::move(*token->mutable_channel()),
                                                           std::move(collection_server));
   if (bind_resp.status() != ZX_OK) {
-    printf("Could not bind to shared collection: %s\n", bind_resp.error_message());
+    printf("Could not bind to shared collection: %s\n", bind_resp.FormatDescription().c_str());
     return bind_resp.status();
   }
 
@@ -461,14 +461,14 @@ zx_status_t capture_setup() {
       std::move(collection_client));
   auto collection_resp = collection_->SetConstraints(true, constraints);
   if (collection_resp.status() != ZX_OK) {
-    printf("Could not set buffer constraints: %s\n", collection_resp.error_message());
+    printf("Could not set buffer constraints: %s\n", collection_resp.FormatDescription().c_str());
     return collection_resp.status();
   }
 
   // wait for allocation
   auto wait_resp = collection_->WaitForBuffersAllocated();
   if (wait_resp.status() != ZX_OK) {
-    printf("Wait for buffer allocation failed: %s\n", wait_resp.error_message());
+    printf("Wait for buffer allocation failed: %s\n", wait_resp.FormatDescription().c_str());
     return wait_resp.status();
   }
 
@@ -477,7 +477,7 @@ zx_status_t capture_setup() {
   fhd::wire::ImageConfig capture_cfg = {};  // will contain a handle
   auto importcap_resp = dc->ImportImageForCapture(capture_cfg, kCollectionId, 0);
   if (importcap_resp.status() != ZX_OK) {
-    printf("Failed to start capture: %s\n", importcap_resp.error_message());
+    printf("Failed to start capture: %s\n", importcap_resp.FormatDescription().c_str());
     return importcap_resp.status();
   }
   if (importcap_resp.value().result.is_err()) {
@@ -492,7 +492,7 @@ zx_status_t capture_start() {
   // start capture
   auto capstart_resp = dc->StartCapture(kEventId, capture_id);
   if (capstart_resp.status() != ZX_OK) {
-    printf("Could not start capture: %s\n", capstart_resp.error_message());
+    printf("Could not start capture: %s\n", capstart_resp.FormatDescription().c_str());
     return capstart_resp.status();
   }
   // wait for capture to complete

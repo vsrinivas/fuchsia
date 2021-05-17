@@ -167,9 +167,9 @@ zx_status_t send_poweroff() {
   auto admin_client = fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(channel_local));
   auto resp = admin_client.Poweroff();
 
-  if (resp.status() != ZX_OK) {
-    printf("pwrbtn-monitor: Call to %s failed: ret: %s, %s\n", service.c_str(),
-           resp.status_string(), resp.error_message());
+  if (!resp.ok()) {
+    printf("pwrbtn-monitor: Call to %s failed: %s\n", service.c_str(),
+           resp.FormatDescription().c_str());
     return resp.status();
   }
 

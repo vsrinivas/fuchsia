@@ -50,7 +50,7 @@ zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
   fidl::WireResult<Echo::EchoString> echo_result = client.EchoString(fidl::StringView("hello"));
   if (!echo_result.ok()) {
     std::cerr << "failed to make EchoString call to member protocol regular_echo of EchoService: "
-              << echo_result.error_message() << std::endl;
+              << echo_result.error() << std::endl;
     return zx::error(ZX_ERR_IO);
   }
 

@@ -455,7 +455,6 @@ void CallerAllocateCountNumDirectories() {
       }
     }
     ASSERT_OK(result.status());
-    ASSERT_NULL(result.error_message());
     ASSERT_EQ(expected_num_dir, result.Unwrap()->num_dir);
   }
   ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
@@ -476,7 +475,6 @@ void CallerAllocateReadDir() {
     fidl::Buffer<fidl::WireResponse<gen::DirEntTestInterface::ReadDir>> buffer;
     auto result = client.ReadDir(buffer.view());
     ASSERT_OK(result.status());
-    ASSERT_NULL(result.error_message(), "%s", result.error_message());
     const auto& dirents = result.Unwrap()->dirents;
     ASSERT_EQ(dirents.count(), golden_dirents().count());
     for (uint64_t i = 0; i < dirents.count(); i++) {
@@ -520,7 +518,6 @@ void CallerAllocateConsumeDirectories() {
   auto result =
       client.ConsumeDirectories(request_buffer.view(), golden_dirents(), response_buffer.view());
   ASSERT_OK(result.status());
-  ASSERT_NULL(result.error_message(), "%s", result.error_message());
   ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
 }
 

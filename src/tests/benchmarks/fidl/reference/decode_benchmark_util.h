@@ -5,7 +5,9 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_DECODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_DECODE_BENCHMARK_UTIL_H_
 
-#include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 
@@ -25,7 +27,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   fidl::FidlAllocator<65536> allocator;
   FidlType aligned_value = builder(allocator);
   fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
-  ZX_ASSERT(encoded.ok() && encoded.error_message() == nullptr);
+  ZX_ASSERT(encoded.ok());
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
@@ -49,7 +51,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   // Reencode the decoded result and compare against the initial (expected) encode_result.
   fidl::OwnedEncodedMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(bytes.data()));
   if (!reencoded.ok()) {
-    std::cout << "fidl::Encode failed with error: " << reencoded.error_message() << std::endl;
+    std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;
     return false;
   }
   auto reencoded_bytes = reencoded.GetOutgoingMessage().CopyBytes();

@@ -4,6 +4,8 @@
 
 #include "test_util.h"
 
+#include <iostream>
+
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/predicates/status.h"
@@ -323,11 +325,12 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
 
   auto res = netdevice.OpenSession(std::move(session_name), std::move(info));
   if (res.status() != ZX_OK) {
-    printf("OpenSession FIDL failure: %s %s\n", res.status_string(), res.error_message());
+    std::cout << "OpenSession FIDL failure: " << res.error() << std::endl;
     return res.status();
   }
   if (res.value().result.is_err()) {
-    printf("OpenSession failed: %s\n", zx_status_get_string(res.status()));
+    std::cout << "OpenSession failed: " << zx_status_get_string(res.value().result.err())
+              << std::endl;
     return res.value().result.err();
   }
 
@@ -346,14 +349,14 @@ zx_status_t TestSession::Init(uint16_t descriptor_count, uint64_t buffer_size) {
   if ((status = descriptors_.CreateAndMap(descriptor_count * sizeof(buffer_descriptor_t),
                                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                           &descriptors_vmo_)) != ZX_OK) {
-    printf("ERROR: failed to create descriptors map\n");
+    std::cout << "ERROR: failed to create descriptors map" << std::endl;
     return status;
   }
 
   if ((status = data_.CreateAndMap(descriptor_count * buffer_size,
                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &data_vmo_)) !=
       ZX_OK) {
-    printf("ERROR: failed to create data map");
+    std::cout << "ERROR: failed to create data map" << std::endl;
     return status;
   }
   descriptors_count_ = descriptor_count;

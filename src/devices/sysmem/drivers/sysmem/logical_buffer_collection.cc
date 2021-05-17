@@ -1139,10 +1139,11 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   fidl::OutgoingMessage& new_linear_buffer_collection_info =
       linearized_late_logical_allocation_buffer_collection_info->GetOutgoingMessage();
   if (!original_linear_buffer_collection_info.ok()) {
-    LOG(ERROR, "original error: %s", original_linear_buffer_collection_info.error_message());
+    LOG(ERROR, "original error: %s",
+        original_linear_buffer_collection_info.FormatDescription().c_str());
   }
   if (!new_linear_buffer_collection_info.ok()) {
-    LOG(ERROR, "new error: %s", new_linear_buffer_collection_info.error_message());
+    LOG(ERROR, "new error: %s", new_linear_buffer_collection_info.FormatDescription().c_str());
   }
   ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.ok());
   ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.ok());

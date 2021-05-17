@@ -71,9 +71,8 @@ void InputReportsReader::SendReportsToWaitingRead() {
   fidl::Result result = waiting_read_->ReplySuccess(
       fidl::VectorView<fuchsia_input_report::wire::InputReport>::FromExternal(reports.data(),
                                                                               num_reports));
-  if (result.status() != ZX_OK) {
-    zxlogf(ERROR, "SendReport: Failed to send reports (%s): %s\n", result.status_string(),
-           result.error_message());
+  if (!result.ok()) {
+    zxlogf(ERROR, "SendReport: Failed to send reports: %s\n", result.FormatDescription().c_str());
   }
   waiting_read_.reset();
 

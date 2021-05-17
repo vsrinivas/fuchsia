@@ -171,7 +171,10 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
   auto incoming2 = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming2.status());
   EXPECT_EQ(fidl::Reason::kTransportError, incoming2.reason());
-  EXPECT_EQ(std::string(fidl::internal::kErrorTransport), std::string(incoming2.error_message()));
+  EXPECT_EQ(
+      "FIDL operation failed due to underlying transport I/O error, "
+      "status: ZX_ERR_SHOULD_WAIT (-22)",
+      incoming2.FormatDescription());
 }
 
 TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
@@ -197,6 +200,8 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
   auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
   EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
-  EXPECT_EQ(std::string(fidl::internal::kErrorInvalidHeader),
-            std::string(incoming.error_message()));
+  EXPECT_EQ(
+      "FIDL operation failed due to unexpected message, "
+      "status: ZX_ERR_INVALID_ARGS (-10), detail: invalid header",
+      incoming.FormatDescription());
 }

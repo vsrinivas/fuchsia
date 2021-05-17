@@ -126,7 +126,7 @@ void Pipe::Bind(zx::channel server_request) {
         break;
       default:
         // handle pipe error.
-        zxlogf(ERROR, "[%s] Pipe error: %d, %s\n", kTag, info.status(), info.error_message());
+        zxlogf(ERROR, "[%s] Pipe error: %s\n", kTag, info.FormatDescription().c_str());
     }
     if (on_close_) {
       on_close_(this);

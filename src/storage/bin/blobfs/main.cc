@@ -63,7 +63,7 @@ zx::resource AttemptToGetVmexResource() {
   auto client = fidl::WireSyncClient<fuchsia_kernel::VmexResource>{std::move(local)};
   auto result = client.Get();
   if (!result.ok()) {
-    FX_LOGS(WARNING) << "fuchsia.kernel.VmexResource.Get() failed: " << result.status();
+    FX_LOGS(WARNING) << "fuchsia.kernel.VmexResource.Get() failed: " << result.error();
     return zx::resource();
   }
   return std::move(result->vmex_resource);

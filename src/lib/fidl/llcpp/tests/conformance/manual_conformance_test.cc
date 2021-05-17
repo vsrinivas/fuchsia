@@ -49,7 +49,6 @@ TEST(InlineXUnionInStruct, Success) {
     input.xu.set_su(fidl::ObjectView<llcpp_misc::wire::SimpleUnion>::FromExternal(&simple_union));
     input.after = fidl::StringView::FromExternal(after);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
-    ASSERT_STREQ(encoded.error_message(), nullptr);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -60,7 +59,6 @@ TEST(InlineXUnionInStruct, Success) {
     std::vector<uint8_t> encoded_bytes = expected;
     fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
         encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()));
-    ASSERT_STREQ(decoded.error_message(), nullptr);
     ASSERT_TRUE(decoded.ok());
     const llcpp_misc::wire::InlineXUnionInStruct& msg = *decoded.PrimaryObject();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
@@ -100,7 +98,6 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     input.xu.set_i(fidl::ObjectView<int32_t>::FromExternal(&integer));
     input.after = fidl::StringView::FromExternal(after);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
-    ASSERT_STREQ(encoded.error_message(), nullptr);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -111,7 +108,6 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     std::vector<uint8_t> encoded_bytes = expected;
     fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
         encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-    ASSERT_STREQ(decoded.error_message(), nullptr);
     ASSERT_TRUE(decoded.ok());
     const llcpp_misc::wire::InlineXUnionInStruct& msg = *decoded.PrimaryObject();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
@@ -129,7 +125,9 @@ TEST(InlineXUnionInStruct, FailToEncodeAbsentXUnion) {
   input.before = fidl::StringView::FromExternal(empty_str);
   input.after = fidl::StringView::FromExternal(empty_str);
   fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
-  EXPECT_STREQ(encoded.error_message(), "non-nullable xunion is absent");
+  EXPECT_FALSE(encoded.ok());
+  // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
+  EXPECT_EQ(std::string(encoded.lossy_description()), "non-nullable xunion is absent");
   EXPECT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS);
 }
 TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
@@ -150,7 +148,9 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
   // clang-format on
   fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
       encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-  EXPECT_STREQ(decoded.error_message(), "non-nullable xunion is absent");
+  EXPECT_FALSE(decoded.ok());
+  // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
+  EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable xunion is absent");
   EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
@@ -172,7 +172,9 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
   // clang-format on
   fidl::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
       encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-  EXPECT_STREQ(decoded.error_message(), "xunion with zero as ordinal must be empty");
+  EXPECT_FALSE(decoded.ok());
+  // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
+  EXPECT_EQ(std::string(decoded.lossy_description()), "xunion with zero as ordinal must be empty");
   EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 // The xunion ordinal hashing algorithm generates 32 bit values. But if it did
@@ -212,7 +214,6 @@ TEST(ComplexTable, SuccessEmpty) {
     fidl::FidlAllocator allocator;
     llcpp_misc::wire::ComplexTable input(allocator);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
-    ASSERT_STREQ(encoded.error_message(), nullptr);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -223,7 +224,6 @@ TEST(ComplexTable, SuccessEmpty) {
     std::vector<uint8_t> encoded_bytes = expected;
     fidl::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
         encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-    ASSERT_STREQ(decoded.error_message(), nullptr);
     ASSERT_TRUE(decoded.ok());
     const llcpp_misc::wire::ComplexTable& msg = *decoded.PrimaryObject();
     ASSERT_FALSE(msg.has_simple());
@@ -240,7 +240,10 @@ TEST(ComplexTable, FailToDecodeAbsentTable) {
   // clang-format on
   fidl::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
       encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-  ASSERT_STREQ(decoded.error_message(), "absent pointer disallowed in non-nullable collection");
+  ASSERT_FALSE(decoded.ok());
+  // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
+  ASSERT_EQ(std::string(decoded.lossy_description()),
+            "absent pointer disallowed in non-nullable collection");
   ASSERT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
 }
 TEST(ComplexTable, Success) {
@@ -309,7 +312,6 @@ TEST(ComplexTable, Success) {
         .set_u(allocator, std::move(xu))
         .set_strings(allocator, std::move(strings));
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
-    ASSERT_STREQ(encoded.error_message(), nullptr);
     ASSERT_TRUE(encoded.ok());
     auto bytes = encoded.GetOutgoingMessage().CopyBytes();
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(bytes.data(), bytes.size(), &expected[0],
@@ -320,7 +322,6 @@ TEST(ComplexTable, Success) {
     std::vector<uint8_t> encoded_bytes = expected;
     fidl::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
         encoded_bytes.data(), static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-    ASSERT_STREQ(decoded.error_message(), nullptr);
     ASSERT_TRUE(decoded.ok());
     const llcpp_misc::wire::ComplexTable& msg = *decoded.PrimaryObject();
     ASSERT_TRUE(msg.has_simple());

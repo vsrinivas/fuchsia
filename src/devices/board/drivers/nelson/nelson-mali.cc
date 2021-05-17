@@ -94,7 +94,8 @@ zx_status_t Nelson::MaliInit() {
   metadata.set_supports_protected_mode(allocator, true);
   fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok()) {
-    zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error_message());
+    zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,
+           encoded_metadata.FormatDescription().c_str());
     return encoded_metadata.status();
   }
   auto encoded_metadata_bytes = encoded_metadata.GetOutgoingMessage().CopyBytes();

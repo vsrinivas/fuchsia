@@ -59,7 +59,7 @@ zx_status_t SysInfo::GetBoardName(std::string *board_name) {
   // Get board name from platform bus
   auto result = client.GetBoardName();
   if (!result.ok()) {
-    printf("sysinfo: Could not GetBoardName: %s\n", result.error_message());
+    printf("sysinfo: Could not GetBoardName: %s\n", result.FormatDescription().c_str());
     return result.status();
   }
   *board_name = std::string(result->name.cbegin(), result->name.size());
@@ -77,7 +77,7 @@ zx_status_t SysInfo::GetBoardRevision(uint32_t *board_revision) {
   // Get board revision from platform bus
   auto result = client.GetBoardRevision();
   if (!result.ok()) {
-    printf("sysinfo: Could not GetBoardRevision: %s\n", result.error_message());
+    printf("sysinfo: Could not GetBoardRevision: %s\n", result.FormatDescription().c_str());
     return result.status();
   }
   *board_revision = result->revision;
@@ -95,7 +95,7 @@ zx_status_t SysInfo::GetBootloaderVendor(std::string *bootloader_vendor) {
   // Get bootloader vendor from platform bus
   auto result = client.GetBootloaderVendor();
   if (!result.ok()) {
-    printf("sysinfo: Could not GetBootloaderVendor: %s\n", result.error_message());
+    printf("sysinfo: Could not GetBootloaderVendor: %s\n", result.FormatDescription().c_str());
     return result.status();
   }
   *bootloader_vendor = std::string(result->vendor.cbegin(), result->vendor.size());
@@ -114,7 +114,8 @@ zx_status_t SysInfo::GetInterruptControllerInfo(
   // Get interrupt controller information from platform bus
   auto result = client.GetInterruptControllerInfo();
   if (!result.ok()) {
-    printf("sysinfo: Could not GetInterruptControllerInfo: %s\n", result.error_message());
+    printf("sysinfo: Could not GetInterruptControllerInfo: %s\n",
+           result.FormatDescription().c_str());
     return result.status();
   }
   info->type = result->info->type;

@@ -35,8 +35,7 @@ zx_status_t StatusWatcher::Bind(async_dispatcher_t* dispatcher,
       dispatcher, std::move(channel), this,
       [](StatusWatcher* closed, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_hardware_network::StatusWatcher> /*unused*/) {
-        LOGF_TRACE("network-device: watcher closed, status=%s, reason=%d, error=%s",
-                   info.status_string(), info.reason(), info.error_message());
+        LOGF_TRACE("network-device: watcher closed: %s", info.FormatDescription().c_str());
         fbl::AutoLock lock(&closed->lock_);
         closed->binding_.reset();
         if (closed->pending_txn_.has_value()) {

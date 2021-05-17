@@ -476,7 +476,7 @@ class OutgoingToIncomingMessage {
 
   [[nodiscard]] zx_status_t status() const { return incoming_message_.status(); }
   [[nodiscard]] bool ok() const { return incoming_message_.ok(); }
-  [[nodiscard]] const char* error_message() const { return incoming_message_.error_message(); }
+  [[nodiscard]] std::string FormatDescription() const;
 
  private:
   static fidl::IncomingMessage ConversionImpl(OutgoingMessage& input,

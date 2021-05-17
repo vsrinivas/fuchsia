@@ -5,7 +5,9 @@
 #ifndef SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_ENCODE_BENCHMARK_UTIL_H_
 #define SRC_TESTS_BENCHMARKS_FIDL_REFERENCE_ENCODE_BENCHMARK_UTIL_H_
 
-#include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/fidl.h>
 
 #include <cstdint>
@@ -43,7 +45,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   fidl::FidlAllocator<65536> allocator;
   FidlType aligned_value = builder(allocator);
   ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
-  ZX_ASSERT(encoded.ok() && encoded.error_message() == nullptr);
+  ZX_ASSERT(encoded.ok());
 
   fidl::FidlAllocator<65536> allocator2;
   aligned_value = builder(allocator2);

@@ -332,9 +332,7 @@ zx_status_t OtStackApp::SetupFidlService() {
             loop_.dispatcher(), std::move(request), fidl_request_handler_ptr_.get(),
             [](LowpanSpinelDeviceFidlImpl* /*unused*/, fidl::UnbindInfo info,
                fidl::ServerEnd<fuchsia_lowpan_spinel::Device> /*unused*/) {
-              FX_LOGS(INFO) << "channel handle unbound with reason: "
-                            << static_cast<uint32_t>(info.reason())
-                            << ", message: " << info.error_message();
+              FX_LOGS(INFO) << "channel handle unbound: " << info;
             });
         return ZX_OK;
       }));

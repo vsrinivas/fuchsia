@@ -117,7 +117,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
 
   auto check_status = collection.CheckBuffersAllocated();
-  if (check_status.error_message() || check_status->status != ZX_OK) {
+  if (!check_status.ok() || check_status->status != ZX_OK) {
     _completer.Reply(ZX_ERR_SHOULD_WAIT, 0);
     return;
   }
@@ -142,7 +142,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   if (is_vc_) {
     ZX_ASSERT(it->second.kernel.channel());
     auto res = it->second.kernel.WaitForBuffersAllocated();
-    if (res.error_message() || res->status != ZX_OK) {
+    if (!res.ok() || res->status != ZX_OK) {
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
       return;
     }
@@ -221,24 +221,24 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
   if (is_vc_) {
     zx::channel vc_token_server, vc_token_client;
     zx::channel::create(0, &vc_token_server, &vc_token_client);
-    if (fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
-            .Duplicate(UINT32_MAX, std::move(vc_token_server))
-            .error_message()) {
+    if (!fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
+             .Duplicate(UINT32_MAX, std::move(vc_token_server))
+             .ok()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
-    if (fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
-            .Sync()
-            .error_message()) {
+    if (!fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
+             .Sync()
+             .ok()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
 
     zx::channel collection_server;
     zx::channel::create(0, &collection_server, &vc_collection);
-    if (sysmem_allocator_
-            .BindSharedCollection(std::move(vc_token_client), std::move(collection_server))
-            .error_message()) {
+    if (!sysmem_allocator_
+             .BindSharedCollection(std::move(vc_token_client), std::move(collection_server))
+             .ok()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
@@ -246,10 +246,10 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
 
   zx::channel collection_server, collection_client;
   zx::channel::create(0, &collection_server, &collection_client);
-  if (sysmem_allocator_
-          .BindSharedCollection(request->collection_token.TakeChannel(),
-                                std::move(collection_server))
-          .error_message()) {
+  if (!sysmem_allocator_
+           .BindSharedCollection(request->collection_token.TakeChannel(),
+                                 std::move(collection_server))
+           .ok()) {
     _completer.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -832,7 +832,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
   // Check whether buffer has already been allocated for the requested collection id.
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
   auto check_status = collection.CheckBuffersAllocated();
-  if (check_status.error_message() || check_status->status != ZX_OK) {
+  if (!check_status.ok() || check_status->status != ZX_OK) {
     _completer.ReplyError(ZX_ERR_SHOULD_WAIT);
     return;
   }

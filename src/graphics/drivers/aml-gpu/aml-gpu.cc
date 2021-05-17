@@ -292,8 +292,8 @@ zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
   properties_ = {};
   fidl::DecodedMessage<fuchsia_hardware_gpu_amlogic::wire::Metadata> decoded(
       raw_metadata.data(), static_cast<uint32_t>(raw_metadata.size()));
-  if (!decoded.ok() || (decoded.error_message() != nullptr)) {
-    GPU_ERROR("Unable to parse metadata %s", decoded.error_message());
+  if (!decoded.ok()) {
+    GPU_ERROR("Unable to parse metadata %s", decoded.FormatDescription().c_str());
     return ZX_ERR_INTERNAL;
   }
   const auto& metadata = decoded.PrimaryObject();

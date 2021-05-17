@@ -548,8 +548,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
       void Unbound(fidl::UnbindInfo info) override {
         std::lock_guard checker(*device_->loop_checker_);
         if (info.reason() != fidl::Reason::kPeerClosed && info.reason() != fidl::Reason::kClose) {
-          DRIVER_ERROR("Heap failed: reason %d status %d error %s\n",
-                       static_cast<int>(info.reason()), info.status(), info.error_message());
+          DRIVER_ERROR("Heap failed: %s\n", info.FormatDescription().c_str());
           device_->allocators_.erase(heap_);
         }
       }

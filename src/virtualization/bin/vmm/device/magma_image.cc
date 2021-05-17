@@ -408,8 +408,7 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
 
   auto unbind_info = async_handler_->unbind_info();
   if (unbind_info && unbind_info->status() != ZX_OK) {
-    LOG_VERBOSE("Unbind: reason %d status %d message %s", unbind_info->reason(),
-                unbind_info->status(), unbind_info->error_message());
+    LOG_VERBOSE("Unbind: %s", unbind_info->FormatDescription().c_str());
     return unbind_info->status();
   }
 

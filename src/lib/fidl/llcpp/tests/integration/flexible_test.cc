@@ -320,7 +320,6 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
   auto client = TakeClient();
   auto result = client.GetUnknownXUnionMoreBytes();
   EXPECT_TRUE(result.ok());
-  EXPECT_EQ(result.error_message(), nullptr) << result.error_message();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
   ASSERT_EQ(result.value().xu.which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
@@ -334,7 +333,6 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   auto client = TakeClient();
   auto result = client.GetUnknownXUnionMoreHandles();
   EXPECT_TRUE(result.ok());
-  EXPECT_EQ(result.error_message(), nullptr) << result.error_message();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
   ASSERT_EQ(result.value().xu.which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
@@ -348,7 +346,6 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreBytes) {
   auto client = TakeClient();
   auto result = client.GetUnknownTableMoreBytes();
   EXPECT_TRUE(result.ok());
-  EXPECT_EQ(result.error_message(), nullptr) << result.error_message();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
   EXPECT_FALSE(result.value().t.has_want_more_than_30_bytes_at_ordinal_3());
   EXPECT_FALSE(result.value().t.has_want_more_than_4_handles_at_ordinal_4());
@@ -363,7 +360,6 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreHandles) {
   auto client = TakeClient();
   auto result = client.GetUnknownTableMoreHandles();
   EXPECT_TRUE(result.ok());
-  EXPECT_EQ(result.error_message(), nullptr) << result.error_message();
   ASSERT_EQ(result.status(), ZX_OK) << zx_status_get_string(result.status());
   EXPECT_FALSE(result.value().t.has_want_more_than_30_bytes_at_ordinal_3());
   EXPECT_FALSE(result.value().t.has_want_more_than_4_handles_at_ordinal_4());

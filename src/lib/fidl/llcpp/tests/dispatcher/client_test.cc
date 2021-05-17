@@ -144,7 +144,8 @@ TEST(ClientBindingTestCase, AsyncTxn) {
     void Unbound(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
-      EXPECT_EQ(std::string("peer closed"), std::string(info.error_message()));
+      EXPECT_EQ("FIDL endpoint was unbound due to peer closed, status: ZX_ERR_PEER_CLOSED (-24)",
+                info.FormatDescription());
       EXPECT_EQ(0, client_->GetTxidCount());
       sync_completion_signal(&unbound_);
     }
@@ -261,7 +262,10 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
     void Unbound(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kUnexpectedMessage, info.reason());
       EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status());
-      EXPECT_EQ(std::string(fidl::internal::kErrorUnknownTxId), std::string(info.error_message()));
+      EXPECT_EQ(
+          "FIDL endpoint was unbound due to unexpected message, "
+          "status: ZX_ERR_NOT_FOUND (-25), detail: unknown txid",
+          info.FormatDescription());
       EXPECT_EQ(0, client_->GetTxidCount());
       sync_completion_signal(&unbound_);
     }

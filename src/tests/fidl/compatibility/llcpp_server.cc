@@ -146,7 +146,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     } else {
       EchoClientApp app(request->forward_to_server);
       auto result = app.EchoStruct(std::move(request->value), "");
-      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error_message());
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
@@ -163,7 +164,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       EchoClientApp app(request->forward_to_server);
       auto result = app.EchoStructWithError(std::move(request->value), request->result_err, "",
                                             request->result_variant);
-      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error_message());
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
     }
   }
@@ -216,7 +218,8 @@ class EchoConnection final : public fidl::WireServer<Echo> {
           ::fidl::BufferSpan(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
           std::move(request->value), "",
           ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
-      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error_message());
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
@@ -234,7 +237,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       auto result = app.EchoArraysWithError(std::move(request->value), request->result_err, "",
                                             request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
     }
   }
@@ -247,7 +250,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       wire::VectorsStruct out_value;
       auto result = app.EchoVectors(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
@@ -265,7 +268,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       auto result = app.EchoVectorsWithError(std::move(request->value), request->result_err, "",
                                              request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
     }
   }
@@ -282,7 +285,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
           std::move(request->value), "",
           ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
@@ -304,7 +307,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
           std::move(request->value), request->result_err, "", request->result_variant,
           ::fidl::BufferSpan(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
     }
   }
@@ -316,7 +319,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       EchoClientApp app(request->forward_to_server);
       auto result = app.EchoXunions(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result.Unwrap()->value));
     }
   }
@@ -334,7 +337,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       auto result = app.EchoXunionsWithError(std::move(request->value), request->result_err, "",
                                              request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
-                    zx_status_get_string(result.status()), result.error_message());
+                    zx_status_get_string(result.status()), result.FormatDescription().c_str());
       completer.Reply(std::move(result->result));
     }
   }

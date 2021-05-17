@@ -39,7 +39,10 @@ TEST(SyncClientErrorTest, EncodeError) {
   auto result = client.SendEnum(static_cast<test::wire::MyError>(bad_error));
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
-  EXPECT_EQ(std::string("not a valid enum member"), result.error_message());
+  EXPECT_EQ(
+      "FIDL operation failed due to encode error, status: ZX_ERR_INVALID_ARGS (-10), "
+      "detail: not a valid enum member",
+      result.FormatDescription());
 }
 
 TEST(SyncClientErrorTest, DecodeError) {
@@ -67,5 +70,8 @@ TEST(SyncClientErrorTest, DecodeError) {
   replier.join();
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
-  EXPECT_EQ(std::string("not a valid enum member"), result.error_message());
+  EXPECT_EQ(
+      "FIDL operation failed due to decode error, status: ZX_ERR_INVALID_ARGS (-10), "
+      "detail: not a valid enum member",
+      result.FormatDescription());
 }

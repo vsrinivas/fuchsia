@@ -135,7 +135,7 @@ TEST_F(RegistersDeviceTest, EncodeDecodeTest) {
 
   auto converted = fidl::OutgoingToIncomingMessage(msg.GetOutgoingMessage());
   auto metadata = Metadata::DecodedMessage(std::move(converted.incoming_message()));
-  ASSERT_TRUE(metadata.ok(), "%s", metadata.error_message());
+  ASSERT_TRUE(metadata.ok(), "%s", metadata.FormatDescription().c_str());
   ASSERT_EQ(metadata.PrimaryObject()->mmio().count(), 3);
   EXPECT_EQ(metadata.PrimaryObject()->mmio()[0].id(), 0);
   EXPECT_EQ(metadata.PrimaryObject()->mmio()[1].id(), 1);

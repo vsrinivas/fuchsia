@@ -86,7 +86,6 @@ TEST(LlcppTypesTests, RoundTripTest) {
   ASSERT_EQ(ZX_OK, incoming.status());
   auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(std::move(incoming));
   EXPECT_TRUE(decoded.ok());
-  EXPECT_EQ(decoded.error_message(), nullptr) << decoded.error_message();
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10u);
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x2DCB24A3E917F14Clu);
   EXPECT_EQ(decoded.PrimaryObject()->channel.get(), unsafe_handle_backup);
@@ -101,7 +100,6 @@ TEST(LlcppTypesTests, RoundTripTest) {
   {
     fidl::OwnedEncodedMessage<NonNullableChannelRequest> encoded2(decoded.PrimaryObject());
     EXPECT_TRUE(encoded2.ok());
-    EXPECT_EQ(encoded2.error_message(), nullptr) << encoded2.error_message();
 
     // Byte-level comparison
     auto encoded2_bytes = encoded2.GetOutgoingMessage().CopyBytes();

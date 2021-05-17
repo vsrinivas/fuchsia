@@ -675,7 +675,7 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
       FailAsync(FROM_HERE, reply_status.status(),
                 "fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_"
                 "reply failed - status: %s",
-                reply_status.error_message());
+                reply_status.FormatDescription().c_str());
       return;
     }
     // ~txn

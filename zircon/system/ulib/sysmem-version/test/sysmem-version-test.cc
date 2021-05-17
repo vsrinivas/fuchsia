@@ -57,7 +57,6 @@ class LinearSnap {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
     fidl::UnownedEncodedMessage<FidlType> encoded(linear_data_, kMaxDataSize, &aligned);
     ZX_ASSERT(encoded.ok());
-    ZX_ASSERT(encoded.error_message() == nullptr);
     fidl::OutgoingMessage& outgoing_message = encoded.GetOutgoingMessage();
     fidl::OutgoingMessage::CopiedBytes outgoing_message_bytes_(outgoing_message.CopyBytes());
     ZX_ASSERT(outgoing_message_bytes_.size() <= sizeof(snap_data_));
@@ -72,7 +71,6 @@ class LinearSnap {
     ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
     decoded_.emplace(std::move(outgoing_to_incoming_result_.value().incoming_message()));
     ZX_ASSERT(decoded_.value().ok());
-    ZX_ASSERT(decoded_.value().error_message() == nullptr);
   }
 
   // During MoveFrom, used for linearizing, encoding.

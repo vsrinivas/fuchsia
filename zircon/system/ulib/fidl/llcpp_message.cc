@@ -10,6 +10,7 @@
 #include <zircon/assert.h>
 
 #include <cstring>
+#include <string>
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_base.h>
@@ -124,7 +125,7 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
                                      handle_capacity(), backing_buffer(), backing_buffer_capacity(),
                                      &num_iovecs_actual, &num_handles_actual, error_address());
   if (status != ZX_OK) {
-    SetResult(fidl::Result::EncodeError(status, error_message()));
+    SetResult(fidl::Result::EncodeError(status, *error_address()));
     return;
   }
   iovec_message().num_iovecs = num_iovecs_actual;
@@ -187,7 +188,7 @@ void OutgoingMessage::CallImpl(const fidl_type_t* response_type, zx_handle_t cha
   status = fidl_decode_etc(response_type, result_bytes, actual_num_bytes, result_handles,
                            actual_num_handles, error_address());
   if (status != ZX_OK) {
-    SetResult(fidl::Result::DecodeError(status, error_message()));
+    SetResult(fidl::Result::DecodeError(status, *error_address()));
     return;
   }
 }
@@ -259,7 +260,7 @@ void IncomingMessage::Decode(const fidl_type_t* message_type) {
   // Now the caller is responsible for the handles contained in `bytes()`.
   ReleaseHandles();
   if (status != ZX_OK) {
-    SetResult(fidl::Result::DecodeError(status, error_message()));
+    SetResult(fidl::Result::DecodeError(status, *error_address()));
   }
 }
 
@@ -304,6 +305,10 @@ IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
 
 OutgoingToIncomingMessage::OutgoingToIncomingMessage(OutgoingMessage& input)
     : incoming_message_(ConversionImpl(input, buf_bytes_, buf_handles_)) {}
+
+[[nodiscard]] std::string OutgoingToIncomingMessage::FormatDescription() const {
+  return incoming_message_.FormatDescription();
+}
 
 IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     OutgoingMessage& input, OutgoingMessage::CopiedBytes& buf_bytes,

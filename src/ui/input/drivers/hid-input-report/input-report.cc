@@ -121,8 +121,8 @@ void InputReport::GetDescriptor(GetDescriptorRequestView request,
 
   fidl::Result result = completer.Reply(std::move(descriptor));
   if (result.status() != ZX_OK) {
-    zxlogf(ERROR, "GetDescriptor: Failed to send descriptor (%s): %s\n", result.status_string(),
-           result.error_message());
+    zxlogf(ERROR, "GetDescriptor: Failed to send descriptor: %s\n",
+           result.FormatDescription().c_str());
   }
 }
 

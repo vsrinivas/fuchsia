@@ -6,6 +6,8 @@
 #define SRC_TESTS_BENCHMARKS_FIDL_LLCPP_ENCODE_BENCHMARK_UTIL_H_
 
 #include <lib/fidl/llcpp/coding.h>
+#include <lib/fidl/llcpp/fidl_allocator.h>
+#include <lib/fidl/llcpp/message.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
@@ -34,8 +36,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     {
       ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
-      if (encoded.error_message() != nullptr) {
-        std::cerr << "Unexpected error: " << encoded.error_message() << '\n';
+      if (!encoded.ok()) {
+        std::cerr << "Unexpected error: " << encoded.error() << std::endl;
       }
       ZX_ASSERT(encoded.ok());
     }

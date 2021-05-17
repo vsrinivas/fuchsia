@@ -13,3 +13,5 @@ for them:
   - `fidl::OutgoingToIncomingMessage`
   - ...
 
+In addition, the `fidl::Result` result/error types are also tested here, since
+a major use case is them being composed by message container types.
