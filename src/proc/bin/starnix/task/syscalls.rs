@@ -8,6 +8,7 @@ use std::ffi::CString;
 use crate::mm::*;
 use crate::not_implemented;
 use crate::runner::*;
+use crate::strace;
 use crate::syscalls::*;
 use crate::types::*;
 
@@ -25,9 +26,46 @@ pub fn sys_clone(
 
     let mut registers = ctx.registers;
     registers.rax = 0;
-    spawn_task(task_owner, registers);
+    spawn_task(task_owner, registers, |_| {});
 
     Ok(tid.into())
+}
+
+fn read_c_string_vector(
+    mm: &MemoryManager,
+    user_vector: UserRef<UserCString>,
+    buf: &mut [u8],
+) -> Result<Vec<CString>, Errno> {
+    let mut user_current = user_vector;
+    let mut vector: Vec<CString> = vec![];
+    loop {
+        let mut user_string = UserCString::default();
+        mm.read_object(user_current, &mut user_string)?;
+        if user_string.is_null() {
+            break;
+        }
+        let string = mm.read_c_string(user_string, buf)?;
+        vector.push(CString::new(string).map_err(|_| EINVAL)?);
+        user_current = user_current.next();
+    }
+    Ok(vector)
+}
+
+pub fn sys_execve(
+    ctx: &mut SyscallContext<'_>,
+    user_path: UserCString,
+    user_argv: UserRef<UserCString>,
+    user_environ: UserRef<UserCString>,
+) -> Result<SyscallResult, Errno> {
+    let mut buf = [0u8; PATH_MAX as usize];
+    let path = CString::new(ctx.task.mm.read_c_string(user_path, &mut buf)?).map_err(|_| EINVAL)?;
+    // TODO: What is the maximum size for an argument?
+    let argv = read_c_string_vector(&ctx.task.mm, user_argv, &mut buf)?;
+    let environ = read_c_string_vector(&ctx.task.mm, user_environ, &mut buf)?;
+    strace!("execve({:?}, argv={:?}, environ={:?})", path, argv, environ);
+    let start_info = ctx.task.exec(&path, &argv, &environ)?;
+    ctx.registers = start_info.to_registers();
+    Ok(SUCCESS)
 }
 
 pub fn sys_getpid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {

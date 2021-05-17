@@ -27,7 +27,6 @@ use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::fs::*;
-use crate::loader::*;
 use crate::not_implemented;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
@@ -56,11 +55,12 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
     }
 }
 
-/// Runs the process associated with `process_context`.
+/// Runs the given task.
 ///
-/// The process in `process_context.handle` is expected to already have been started. This function
-/// listens to the exception channel for the process (`exceptions`) and handles each exception
-/// by:
+/// The task is expected to already have been started. This function listens to
+/// the exception channel for the process (`exceptions`) and handles each
+///  exception by:
+///
 ///   - verifying that the exception represents a `ZX_EXCP_POLICY_CODE_BAD_SYSCALL`
 ///   - reading the thread's registers
 ///   - executing the appropriate syscall
@@ -135,30 +135,31 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
     Ok(0)
 }
 
-pub fn spawn_task(task_owner: TaskOwner, registers: zx_thread_state_general_regs_t) {
+fn start_task(
+    task: &Task,
+    registers: zx_thread_state_general_regs_t,
+) -> Result<zx::Channel, zx::Status> {
+    let exceptions = task.thread.create_exception_channel()?;
+    let suspend_token = task.thread.suspend()?;
+    task.thread_group.process.start(&task.thread, 0, 0, zx::Handle::invalid(), 0)?;
+    task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
+    task.thread.write_state_general_regs(registers)?;
+    mem::drop(suspend_token);
+    Ok(exceptions)
+}
+
+pub fn spawn_task<F>(
+    task_owner: TaskOwner,
+    registers: zx_thread_state_general_regs_t,
+    task_complete: F,
+) where
+    F: FnOnce(Result<i32, Error>) + Send + Sync + 'static,
+{
     std::thread::spawn(move || {
-        let result = (|| -> Result<(), Error> {
-            let exceptions = task_owner.task.thread.create_exception_channel()?;
-            let suspend_token = task_owner.task.thread.suspend()?;
-            task_owner.task.thread_group.process.start(
-                &task_owner.task.thread,
-                0,
-                0,
-                zx::Handle::invalid(),
-                0,
-            )?;
-            task_owner
-                .task
-                .thread
-                .wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
-            task_owner.task.thread.write_state_general_regs(registers)?;
-            mem::drop(suspend_token);
-            let _exit_code = run_task(task_owner, exceptions)?;
-            Ok(())
-        })();
-        if let Err(error) = result {
-            error!("Thread terminated with error: {}", error);
-        }
+        task_complete(|| -> Result<i32, Error> {
+            let exceptions = start_task(&task_owner.task, registers)?;
+            run_task(task_owner, exceptions)
+        }());
     });
 }
 
@@ -175,7 +176,7 @@ async fn start_component(
     let root_path = runner::get_program_string(&start_info, "root")
         .ok_or_else(|| anyhow!("No root in component manifest"))?
         .to_owned();
-    let binary_path = runner::get_program_binary(&start_info)?;
+    let binary_path = CString::new(runner::get_program_binary(&start_info)?)?;
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
 
     let pkg = fio::DirectorySynchronousProxy::new(
@@ -193,50 +194,32 @@ async fn start_component(
     )
     .map_err(|e| anyhow!("Failed to open root: {}", e))?;
 
-    let executable_vmo = syncio::directory_open_vmo(
-        &root,
-        &binary_path,
-        fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
-        zx::Time::INFINITE,
-    )
-    .map_err(|e| anyhow!("Failed to load executable: {}", e))?;
-
-    let name = CString::new(binary_path.clone())?;
     let files = FdTable::new();
-    let fs = FileSystem::new(root);
-    let creds = Credentials::new(3);
-
     let stdio = SyslogFile::new();
     files.insert(FdNumber::from_raw(0), stdio.clone());
     files.insert(FdNumber::from_raw(1), stdio.clone());
     files.insert(FdNumber::from_raw(2), stdio);
 
-    let task_owner = Task::new(&kernel, &name, files, fs, creds, None)?;
+    let task_owner =
+        Task::new(&kernel, &binary_path, files, FileSystem::new(root), Credentials::new(3), None)?;
 
-    let argv = vec![CString::new(binary_path.clone())?];
-    let environ = vec![];
+    let argv = vec![binary_path];
+    let start_info = task_owner.task.exec(&argv[0], &argv, &vec![])?;
 
-    std::thread::spawn(move || {
-        let err = (|| -> Result<(), Error> {
-            let exceptions = task_owner.task.thread.create_exception_channel()?;
-            load_executable(&task_owner.task, executable_vmo, &argv, &environ)?;
-            let exit_code = run_task(task_owner, exceptions)?;
-
-            // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
-            // communicate the exit code. The component manager could interpret certain epitaphs as starnix
-            // being unstable, and chose to terminate starnix as a result.
-            // Errors when closing the controller with an epitaph are disregarded, since there are
-            // legitimate reasons for this to fail (like the client having closed the channel).
-            let _ = match exit_code {
-                0 => controller.close_with_epitaph(zx::Status::OK),
-                _ => controller.close_with_epitaph(zx::Status::from_raw(
-                    fcomponent::Error::InstanceDied.into_primitive() as i32,
-                )),
-            };
-            Ok(())
-        })();
-        err.unwrap();
+    spawn_task(task_owner, start_info.to_registers(), |result| {
+        // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
+        // communicate the exit code. The component manager could interpret certain epitaphs as starnix
+        // being unstable, and chose to terminate starnix as a result.
+        // Errors when closing the controller with an epitaph are disregarded, since there are
+        // legitimate reasons for this to fail (like the client having closed the channel).
+        let _ = match result {
+            Ok(0) => controller.close_with_epitaph(zx::Status::OK),
+            _ => controller.close_with_epitaph(zx::Status::from_raw(
+                fcomponent::Error::InstanceDied.into_primitive() as i32,
+            )),
+        };
     });
+
     Ok(())
 }
 

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task as zxTask};
 use log::warn;
 use parking_lot::{Condvar, Mutex, RwLock};
 use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::fmt;
 use std::ops;
 use std::sync::{Arc, Weak};
@@ -17,26 +18,12 @@ pub mod syscalls;
 
 use crate::auth::Credentials;
 use crate::fs::{FdTable, FileSystem};
+use crate::loader::*;
 use crate::logging::*;
 use crate::mm::MemoryManager;
 use crate::not_implemented;
 use crate::signals::types::*;
 use crate::types::*;
-
-// # Ownership structure
-//
-// The Kernel object is the root object of the task hierarchy.
-//
-// The Kernel owns the PidTable, which has the owning reference to each task in the
-// kernel via its |tasks| field.
-//
-// Each task holds a reference to its ThreadGroup and an a reference to the objects
-// for each major subsystem (e.g., file system, memory manager).
-//
-// # Back pointers
-//
-// Each ThreadGroup has weak pointers to its threads and to the kernel to which its
-// threads belong.
 
 pub struct Kernel {
     /// The Zircon job object that holds the processes running in this kernel.
@@ -200,6 +187,10 @@ impl ThreadGroup {
             self.kernel.pids.write().remove_thread_group(self.leader);
         }
     }
+
+    pub fn set_name(&self, name: &CStr) -> Result<(), Errno> {
+        self.process.set_name(name).map_err(Errno::from_status_like_fdio)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -360,6 +351,44 @@ impl Task {
         }
 
         Ok(child)
+    }
+
+    pub fn exec(
+        &self,
+        path: &CStr,
+        argv: &Vec<CString>,
+        environ: &Vec<CString>,
+    ) -> Result<ThreadStartInfo, Errno> {
+        // TODO: This operation should be abstracted by the FileSystem.
+        let executable = syncio::directory_open_vmo(
+            &self.fs.root,
+            path.to_str().map_err(|_| ENOENT)?,
+            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
+            zx::Time::INFINITE,
+        )
+        .map_err(Errno::from_status_like_fdio)?;
+
+        // TODO: Implement #!interpreter [optional-arg]
+
+        // TODO: All threads other than the calling thread are destroyed.
+
+        self.mm.exec().map_err(Errno::from_status_like_fdio)?;
+
+        // TODO: The file descriptor table is unshared, undoing the effect of
+        //       the CLONE_FILES flag of clone(2).
+        //
+        // To make this work, we can put the files in an RwLock and then cache
+        // a reference to the files on the SyscallContext. That will let
+        // functions that have SyscallContext access the FdTable without
+        // needing to grab the read-lock.
+        //
+        // For now, we do not implement that behavior.
+        self.files.exec();
+
+        // TODO: The termination signal is reset to SIGCHLD.
+
+        self.thread_group.set_name(path)?;
+        Ok(load_executable(self, executable, argv, environ)?)
     }
 
     /// Called by the Drop trait on TaskOwner.

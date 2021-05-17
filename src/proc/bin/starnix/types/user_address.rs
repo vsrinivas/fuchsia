@@ -5,6 +5,7 @@
 use fuchsia_zircon::sys::zx_vaddr_t;
 use std::fmt;
 use std::marker::PhantomData;
+use std::mem;
 use std::ops;
 use zerocopy::{AsBytes, FromBytes};
 
@@ -131,6 +132,10 @@ impl<T: AsBytes + FromBytes> UserRef<T> {
     pub fn addr(&self) -> UserAddress {
         self.addr
     }
+
+    pub fn next(&self) -> UserRef<T> {
+        Self::new(self.addr() + mem::size_of::<T>())
+    }
 }
 
 impl<T: AsBytes + FromBytes> ops::Deref for UserRef<T> {
@@ -147,7 +152,7 @@ impl<T: AsBytes + FromBytes> fmt::Display for UserRef<T> {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, AsBytes, FromBytes)]
 #[repr(transparent)]
 pub struct UserCString(UserAddress);
 

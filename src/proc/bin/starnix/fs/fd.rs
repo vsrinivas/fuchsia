@@ -211,6 +211,11 @@ impl FdTable {
         Arc::new(FdTable { table: RwLock::new(self.table.read().clone()) })
     }
 
+    pub fn exec(&self) {
+        let mut table = self.table.write();
+        table.retain(|_fd, entry| !entry.flags.contains(FdFlags::CLOEXEC));
+    }
+
     pub fn insert(&self, fd: FdNumber, file: FileHandle) {
         let mut table = self.table.write();
         table.insert(fd, FdTableEntry::new(file));
@@ -291,6 +296,25 @@ mod test {
         files.set_flags(fd0, FdFlags::CLOEXEC).unwrap();
         assert_eq!(FdFlags::CLOEXEC, files.get_flags(fd0).unwrap());
         assert_ne!(FdFlags::CLOEXEC, forked.get_flags(fd0).unwrap());
+    }
+
+    #[test]
+    fn test_fd_table_exec() {
+        let files = FdTable::new();
+        let file = SyslogFile::new();
+
+        let fd0 = files.install_fd(file.clone()).unwrap();
+        let fd1 = files.install_fd(file.clone()).unwrap();
+
+        files.set_flags(fd0, FdFlags::CLOEXEC).unwrap();
+
+        assert!(files.get(fd0).is_ok());
+        assert!(files.get(fd1).is_ok());
+
+        files.exec();
+
+        assert!(!files.get(fd0).is_ok());
+        assert!(files.get(fd1).is_ok());
     }
 
     #[test]

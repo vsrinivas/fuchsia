@@ -114,6 +114,7 @@ pub fn dispatch_syscall(
         clock_gettime[2],
         clone[5],
         close[1],
+        execve[3],
         exit[1],
         exit_group[1],
         faccessat[3],

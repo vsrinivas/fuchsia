@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
+use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, HandleBased};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
@@ -109,15 +109,26 @@ fn load_elf(vmo: &zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
     Ok(LoadedElf { headers, base, bias })
 }
 
-// TODO(abarth): Split the loading of the executable from the starting of the thread
-//               so that execve can reconfigure the memory in the process using this
-//               function without needing to actually start the thread.
+pub struct ThreadStartInfo {
+    pub entry: UserAddress,
+    pub stack: UserAddress,
+}
+
+impl ThreadStartInfo {
+    pub fn to_registers(&self) -> zx_thread_state_general_regs_t {
+        let mut registers = zx_thread_state_general_regs_t::default();
+        registers.rip = self.entry.ptr() as u64;
+        registers.rsp = self.stack.ptr() as u64;
+        registers
+    }
+}
+
 pub fn load_executable(
     task: &Task,
     executable: zx::Vmo,
     argv: &Vec<CString>,
     environ: &Vec<CString>,
-) -> Result<(), Errno> {
+) -> Result<ThreadStartInfo, Errno> {
     let main_elf = load_elf(&executable, &task.mm)?;
     let interp_elf = if let Some(interp_hdr) = main_elf
         .headers
@@ -147,7 +158,8 @@ pub fn load_executable(
     };
 
     let entry_elf = (&interp_elf).as_ref().unwrap_or(&main_elf);
-    let entry = entry_elf.headers.file_header().entry.wrapping_add(entry_elf.bias);
+    let entry =
+        UserAddress::from_ptr(entry_elf.headers.file_header().entry.wrapping_add(entry_elf.bias));
 
     // TODO(tbodt): implement MAP_GROWSDOWN and then reset this to 1 page. The current value of
     // this is based on adding 0x1000 each time a segfault appears.
@@ -178,20 +190,14 @@ pub fn load_executable(
         (AT_SECURE, 0),
     ];
     let stack = populate_initial_stack(&stack_vmo, argv, environ, auxv, stack_base, stack)?;
-    task.thread_group
-        .process
-        .start(&task.thread, entry, stack.ptr(), zx::Handle::invalid(), 0)
-        .map_err(Errno::from_status_like_fdio)?;
 
-    Ok(())
+    Ok(ThreadStartInfo { entry, stack })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
-    use fuchsia_zircon::Task as zxTask;
 
     use crate::testing::*;
 
@@ -232,37 +238,17 @@ mod tests {
         assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
     }
 
-    fn load_hello_starnix(task: &Task) -> Result<(), Errno> {
-        let executable = syncio::directory_open_vmo(
-            &task.fs.root,
-            &"bin/hello_starnix",
-            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
-            zx::Time::INFINITE,
-        )
-        .expect("failed to load vmo for bin/hello_starnix");
-
-        let argv = &vec![];
-        let environ = &vec![];
-
-        load_executable(&task, executable, argv, environ)
+    fn exec_hello_starnix(task: &Task) -> Result<(), Errno> {
+        let argv = vec![CString::new("bin/hello_starnix").unwrap()];
+        task.exec(&argv[0], &argv, &&vec![])?;
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_load_hello_starnix() {
         let (_kernel, task_owner) = create_kernel_and_task();
         let task = &task_owner.task;
-
-        // Currently, load_executable also starts the thread. We need to install
-        // an exception handler so that the test framework doesn't see any
-        // BAD_SYSCALL exceptions.
-        let _exceptions = task_owner
-            .task
-            .thread
-            .create_exception_channel()
-            .expect("failed to create exception channel");
-
-        load_hello_starnix(task).expect("failed to load executable");
-
+        exec_hello_starnix(task).expect("failed to load executable");
         assert!(task.mm.get_mapping_count() > 0);
     }
 
@@ -270,20 +256,9 @@ mod tests {
     async fn test_snapshot_hello_starnix() {
         let (kernel, task_owner) = create_kernel_and_task();
         let task = &task_owner.task;
-
-        // Currently, load_executable also starts the thread. We need to install
-        // an exception handler so that the test framework doesn't see any
-        // BAD_SYSCALL exceptions.
-        let _exceptions = task_owner
-            .task
-            .thread
-            .create_exception_channel()
-            .expect("failed to create exception channel");
-
-        load_hello_starnix(task).expect("failed to load executable");
+        exec_hello_starnix(task).expect("failed to load executable");
 
         let task_owner2 = create_task(&kernel, "another-task");
-
         let task2 = &task_owner2.task;
         task.mm.snapshot_to(&task2.mm).expect("failed to snapshot mm");
 

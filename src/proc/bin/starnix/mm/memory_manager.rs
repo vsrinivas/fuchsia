@@ -195,7 +195,7 @@ pub struct MemoryManager {
     ///
     /// Instead of mapping memory directly in this VMAR, we map the memory in
     /// `state.user_vmar`.
-    _root_vmar: zx::Vmar,
+    root_vmar: zx::Vmar,
 
     /// The base address of the root_vmar.
     pub base_addr: UserAddress,
@@ -213,12 +213,12 @@ impl MemoryManager {
         let user_vmar = create_user_vmar(&root_vmar, &info)?;
         Ok(MemoryManager {
             process,
-            _root_vmar: root_vmar,
+            root_vmar,
             base_addr: UserAddress::from_ptr(info.base),
             state: RwLock::new(MemoryManagerState {
                 user_vmar,
                 brk: None,
-                mappings: RangeMap::<UserAddress, Mapping>::new(),
+                mappings: RangeMap::new(),
             }),
             dumpable: Mutex::new(DumpPolicy::DISABLE),
         })
@@ -348,6 +348,19 @@ impl MemoryManager {
         target_state.brk = state.brk;
         *target.dumpable.lock() = *self.dumpable.lock();
 
+        Ok(())
+    }
+
+    pub fn exec(&self) -> Result<(), zx::Status> {
+        let mut state = self.state.write();
+        let info = self.root_vmar.info()?;
+        // SAFETY: This operation is safe because the VMAR is for another process.
+        unsafe { state.user_vmar.destroy()? }
+        state.user_vmar = create_user_vmar(&self.root_vmar, &info)?;
+        state.brk = None;
+        state.mappings = RangeMap::new();
+
+        *self.dumpable.lock() = DumpPolicy::DISABLE;
         Ok(())
     }
 
@@ -497,6 +510,7 @@ mod tests {
     use super::*;
     use fuchsia_async as fasync;
 
+    use crate::syscalls::*;
     use crate::testing::*;
 
     #[fasync::run_singlethreaded(test)]
@@ -555,5 +569,37 @@ mod tests {
         let range5 = get_range(&base_addr);
         assert_eq!(range5.start, base_addr);
         assert_eq!(range5.end, addr5 + *PAGE_SIZE);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_mm_exec() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let mm = &task_owner.task.mm;
+
+        let has = |addr: &UserAddress| -> bool {
+            let state = mm.state.read();
+            state.mappings.get(addr).is_some()
+        };
+
+        let brk_addr =
+            mm.set_brk(UserAddress::default()).expect("failed to set initial program break");
+        assert!(brk_addr > UserAddress::default());
+        assert!(has(&brk_addr));
+
+        let mapped_addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        assert!(mapped_addr > UserAddress::default());
+        assert!(has(&mapped_addr));
+
+        mm.exec().expect("failed to exec memory manager");
+
+        assert!(!has(&brk_addr));
+        assert!(!has(&mapped_addr));
+
+        // Check that the old addresses are actually available for mapping.
+        let brk_addr2 = map_memory(&ctx, brk_addr, *PAGE_SIZE);
+        assert_eq!(brk_addr, brk_addr2);
+        let mapped_addr2 = map_memory(&ctx, mapped_addr, *PAGE_SIZE);
+        assert_eq!(mapped_addr, mapped_addr2);
     }
 }
