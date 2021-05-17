@@ -4,9 +4,13 @@
 {
     // This manifest shard provides the set of capabilities used by the A2DP profile.
     //
-    // The manifest that includes it (production, testing) should declare "bt-avrcp-target"
-    // as a child with the appropriate package URL.
+    // The manifest that includes it (production, testing) should declare two fields:
+    //   1. A `program` field, with the `binary` argument set to the package-local binary path.
+    //   2. "bt-avrcp-target" as a child with the appropriate package URL.
     // e.g.:
+    //   program: {
+    //       binary: "bin/bt_a2dp",
+    //   },
     //   children: [
     //     {
     //         name: "bt-avrcp-target",
