@@ -403,7 +403,7 @@ mod tests {
         }
 
         let independent_job_info = execution_rx.next().await.expect("should have gotten job");
-        assert_matches!(independent_job_info.job.execution_type, execution::Type::Independent);
+        assert_matches!(*independent_job_info.get_execution_type(), execution::Type::Independent);
 
         // Handle independent job completion.
         handler.handle_job_completion(independent_job_info);

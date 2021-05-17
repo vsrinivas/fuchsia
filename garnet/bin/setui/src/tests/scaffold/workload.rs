@@ -21,12 +21,12 @@ impl StubWorkload {
 
 #[async_trait]
 impl job::work::Independent for StubWorkload {
-    async fn execute(&mut self, _messenger: Messenger) {}
+    async fn execute(self: Box<Self>, _messenger: Messenger) {}
 }
 
 #[async_trait]
 impl job::work::Sequential for StubWorkload {
-    async fn execute(&mut self, _messenger: Messenger, _store: job::data::StoreHandle) {}
+    async fn execute(self: Box<Self>, _messenger: Messenger, _store: job::data::StoreHandle) {}
 }
 
 /// [Workload] provides a simple implementation of [Workload](job::Workload) for sending a test
@@ -46,7 +46,7 @@ impl Workload {
 
 #[async_trait]
 impl job::work::Independent for Workload {
-    async fn execute(&mut self, messenger: Messenger) {
+    async fn execute(self: Box<Self>, messenger: Messenger) {
         messenger
             .message(self.payload.clone().into(), Audience::Messenger(self.target.clone()))
             .send()
@@ -56,7 +56,7 @@ impl job::work::Independent for Workload {
 
 #[async_trait]
 impl job::work::Sequential for Workload {
-    async fn execute(&mut self, messenger: Messenger, _store: data::StoreHandle) {
+    async fn execute(self: Box<Self>, messenger: Messenger, _store: data::StoreHandle) {
         messenger
             .message(self.payload.clone().into(), Audience::Messenger(self.target.clone()))
             .send()
@@ -81,7 +81,7 @@ impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync
 impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync>
     job::work::Sequential for Sequential<T>
 {
-    async fn execute(&mut self, messenger: Messenger, store: data::StoreHandle) {
+    async fn execute(self: Box<Self>, messenger: Messenger, store: data::StoreHandle) {
         (self.callback)(messenger, store).await;
     }
 }

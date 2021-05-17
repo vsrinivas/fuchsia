@@ -21,10 +21,8 @@ use crate::clock::now;
 use crate::payload_convert;
 use crate::service::message;
 
-use async_trait::async_trait;
 use core::fmt::{Debug, Formatter};
 use core::pin::Pin;
-use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::stream::Stream;
@@ -106,7 +104,7 @@ pub mod work {
         /// Therefore, invoking code can safely presume all work has completed after this function
         /// returns.
         pub async fn execute(
-            &mut self,
+            self,
             messenger: message::Messenger,
             store: Option<data::StoreHandle>,
         ) {
@@ -127,23 +125,15 @@ pub mod work {
         /// Called when the [Job](super::Job) processing is ready for the encapsulated
         /// [Workload](super::Workload) be executed. The provided [StoreHandle](data::StoreHandle)
         /// is specific to the parent [Job](super::Job) group.
-        async fn execute(&mut self, messenger: message::Messenger, store: data::StoreHandle);
+        async fn execute(self: Box<Self>, messenger: message::Messenger, store: data::StoreHandle);
     }
 
     #[async_trait]
     pub trait Independent {
         /// Called when a [Workload](super::Workload) should run. All workload specific logic should
         /// be encompassed in this method.
-        async fn execute(&mut self, messenger: message::Messenger);
+        async fn execute(self: Box<Self>, messenger: message::Messenger);
     }
-}
-
-/// A trait for creating work that can be executed as a job.
-#[async_trait]
-pub trait Workload {
-    /// Called when a [Workload] should run. All workload specific logic should be encompassed in
-    /// this method.
-    async fn execute(&mut self, messenger: message::Messenger);
 }
 
 /// An identifier specified by [Jobs](Job) to group related workflows. This is useful for
@@ -218,22 +208,33 @@ impl IdGenerator {
     }
 }
 
+/// An enumeration of stages a [Job] can be in.
+enum State {
+    /// The workload associated with the [Job] has not been executed yet.
+    Ready(Job),
+    /// The workload is executing.
+    Executing,
+    /// THe workload execution has completed.
+    Executed,
+}
+
 /// [Info] is used to capture details about a [Job] once it has been accepted by an entity that will
 /// process it. This includes an assigned [Id] and a recording at what time it was accepted.
 pub(self) struct Info {
-    pub id: Id,
-    pub acceptance_time: zx::Time,
-    pub job: Job,
+    id: Id,
+    state: State,
+    execution_type: execution::Type,
 }
 
 impl Info {
     pub fn new(id: Id, job: Job) -> Self {
-        Self { id, acceptance_time: now(), job }
+        let execution_type = job.execution_type.clone();
+        Self { id, state: State::Ready(job), execution_type }
     }
 
     /// Retrieves the [execution::Type] of the underlying [Job].
     pub fn get_execution_type(&self) -> &execution::Type {
-        &self.job.execution_type
+        &self.execution_type
     }
 
     /// Prepares the components necessary for a [Job] to execute and then returns a future to
@@ -253,7 +254,7 @@ impl Info {
             .expect("messenger should be available")
             .0;
 
-        let store = if let Some(signature) = self.job.execution_type.get_signature() {
+        let store = if let Some(signature) = self.execution_type.get_signature() {
             Some(stores.entry(*signature).or_insert(Arc::new(Mutex::new(HashMap::new()))).clone())
         } else {
             None
@@ -261,8 +262,16 @@ impl Info {
 
         Box::pin(async move {
             let start = now();
-            self.job.workload.execute(messenger, store).await;
-            callback(self, execution::Details { start_time: start, end_time: now() });
+            let mut state = State::Executing;
+            std::mem::swap(&mut state, &mut self.state);
+
+            if let State::Ready(job) = state {
+                job.workload.execute(messenger, store).await;
+                self.state = State::Executed;
+                callback(self, execution::Details { start_time: start, end_time: now() });
+            } else {
+                panic!("job not in the ready state");
+            }
         })
     }
 }
@@ -404,7 +413,7 @@ mod tests {
         let val = rng.gen();
 
         // Create job from workload scaffolding.
-        let mut job = Job::new(work::Load::Independent(Workload::new(
+        let job = Job::new(work::Load::Independent(Workload::new(
             Payload::Integer(val),
             receptor.get_signature(),
         )));
