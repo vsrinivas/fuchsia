@@ -142,7 +142,7 @@ if (current_toolchain == dart_toolchain) {
         _pubspec_target_name = "${_test_target_name}_pubspec"
 
         _bootstrap_filename = "$target_gen_dir/${_bootstrap_target_name}.dart"
-        _dill_filename = "$target_gen_dir/${_kernel_target_name}_kernel.dil"
+        _dill_filename = "$target_gen_dir/__untraced_dart_kernel__/${_kernel_target_name}_kernel.dil"
 
         action(_bootstrap_target_name) {
           hermetic_deps = false

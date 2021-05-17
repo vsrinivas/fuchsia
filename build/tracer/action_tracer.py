@@ -882,6 +882,11 @@ def main():
         "__untraced_kazoo_test_dir__",
         # This temporary directory is only used to find nonterministic outputs.
         ".tmp-repro",
+        # Dart kernel actions write intermediate outputs in order to generate
+        # the final `.dil` file. These intermediate outputs cannot be determined
+        # at GN gen time, so write them to `__untraced_dart_kernel__` and ignore
+        # accesses to them.
+        "__untraced_dart_kernel__",
     }
     # TODO(fangism): for suffixes that we always ignore for writing, such as
     # safe or intended side-effect byproducts, make sure no declared inputs ever

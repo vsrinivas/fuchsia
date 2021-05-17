@@ -200,7 +200,7 @@ template("flutter_dart_component") {
 
   _kernel_target_name = _component_name + "_kernel"
   _kernel_target_dep_name = _kernel_target_name + "_gen_file"
-  _kernel_path = "$target_gen_dir/${target_name}.dil"
+  _kernel_path = "$target_gen_dir/__untraced_dart_kernel__/${target_name}.dil"
 
   dart_kernel(_kernel_target_name) {
     kernel_path = _kernel_path

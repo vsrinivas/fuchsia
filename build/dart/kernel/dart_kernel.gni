@@ -166,23 +166,19 @@ template("dart_kernel") {
   action(_kernel_target_name) {
     forward_variables_from(invoker,
                            [
-                             "args",
                              "testonly",
                              "visibility",
                            ])
-    if (!defined(args)) {
-      args = []
-    }
-
     pool = "//build/dart:dart_pool($dart_toolchain)"
 
     if (defined(invoker.kernel_path)) {
       _kernel_path = invoker.kernel_path
     } else {
-      _kernel_path = "$target_gen_dir/${target_name}.dil"
+      _kernel_path =
+          "$target_gen_dir/__untraced_dart_kernel__/${target_name}.dil"
     }
 
-    _depfile = "${_kernel_path}.d"
+    depfile = "${_kernel_path}.d"
 
     _kernel_deps += [ _gen_kernel_label ]
 
@@ -197,6 +193,12 @@ template("dart_kernel") {
              "platform_name must be either dart_runner or flutter_runner")
     }
 
+    _platform_strong_dill = "${_platform_path}/platform_strong.dill"
+    inputs = [
+      _gen_kernel_path,
+      _platform_strong_dill,
+      invoker.packages_path,
+    ]
     outputs = [ _kernel_path ]
 
     if (_generate_manifest) {
@@ -216,23 +218,35 @@ template("dart_kernel") {
     # relative to the sources.
     _rebased_packages_path = rebase_path(invoker.packages_path, "//")
 
-    hermetic_deps = false
-    script = _gen_kernel_path
+    # gen_kernel writes absolute paths to depfiles, convert them to relative.
+    # See more information in https://fxbug.dev/75451.
+    script = "//build/depfile_path_to_relative.py"
+    args = [
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+      "--",
+      rebase_path(_gen_kernel_path, root_build_dir),
+    ]
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
     args += [
       "--verbosity=warning",
       "--no-sound-null-safety",
       "--target",
       invoker.platform_name,
       "--platform",
-      rebase_path("${_platform_path}/platform_strong.dill", root_build_dir),
+      rebase_path(_platform_strong_dill, root_build_dir),
       "--filesystem-scheme",
       _multi_root_scheme,
       "--filesystem-root",
       rebase_path("//"),
       "--packages",
       "$_multi_root_scheme:///$_rebased_packages_path",
+
+      # Repeating "--depfile" because the previous one is for
+      # `depfile_path_to_relative.py`, and this one is for `_gen_kernel_path`.
       "--depfile",
-      rebase_path(_depfile, root_build_dir),
+      rebase_path(depfile, root_build_dir),
       "--output",
       rebase_path(_kernel_path, root_build_dir),
     ]
