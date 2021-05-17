@@ -36,5 +36,5 @@ require (
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.4.0
-	gvisor.dev/gvisor v0.0.0-20210514195747-69b159307df3
+	gvisor.dev/gvisor v0.0.0-20210515002610-8665ce2587e9
 )

@@ -225,29 +225,27 @@ func TestFuchsiaNetStack(t *testing.T) {
 
 	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
 		ns := newNetstack(t)
-		t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
+		ifs := addNoopEndpoint(t, ns, "")
+		t.Cleanup(ifs.Remove)
 		ni := stackImpl{ns: ns}
 
-		err := ni.EnableIpForwarding(context.Background())
-		AssertNoError(t, err)
-		enabled := ni.isIpForwardingEnabled()
-		if !enabled {
-			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = t", enabled)
+		if enabled := ni.isIPForwardingEnabled(t, ifs.nicid); enabled {
+			t.Fatalf("got ni.isIPForwardingEnabled(_, %d) = true, want = false", ifs.nicid)
 		}
 
-		err = ni.DisableIpForwarding(context.Background())
-		AssertNoError(t, err)
-		enabled = ni.isIpForwardingEnabled()
-		AssertNoError(t, err)
-		if enabled {
-			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = false", enabled)
+		AssertNoError(t, ni.EnableIpForwarding(context.Background()))
+		if enabled := ni.isIPForwardingEnabled(t, ifs.nicid); !enabled {
+			t.Fatalf("got ni.isIPForwardingEnabled(_, %d) = false, want = true", ifs.nicid)
 		}
 
-		err = ni.EnableIpForwarding(context.Background())
-		AssertNoError(t, err)
-		enabled = ni.isIpForwardingEnabled()
-		if !enabled {
-			t.Fatalf("got ni.isIpForwardingEnabled() = %v, want = t", enabled)
+		AssertNoError(t, ni.DisableIpForwarding(context.Background()))
+		if enabled := ni.isIPForwardingEnabled(t, ifs.nicid); enabled {
+			t.Fatalf("got ni.isIPForwardingEnabled(_, %d) = true, want = false", ifs.nicid)
+		}
+
+		AssertNoError(t, ni.EnableIpForwarding(context.Background()))
+		if enabled := ni.isIPForwardingEnabled(t, ifs.nicid); !enabled {
+			t.Fatalf("got ni.isIPForwardingEnabled(_, %d) = false, want = true", ifs.nicid)
 		}
 	})
 }
@@ -277,12 +275,18 @@ func (ni *stackImpl) isPacketFilterEnabled(id uint64) (bool, error) {
 	return !ni.ns.filter.IsInterfaceDisabled(name), nil
 }
 
-func (ni *stackImpl) isIpForwardingEnabled() bool {
+func (ni *stackImpl) isIPForwardingEnabled(t *testing.T, nicID tcpip.NICID) bool {
+	t.Helper()
+
 	for _, protocol := range []tcpip.NetworkProtocolNumber{
 		ipv4.ProtocolNumber,
 		ipv6.ProtocolNumber,
 	} {
-		if !ni.ns.stack.Forwarding(protocol) {
+		forwarding, err := ni.ns.stack.NICForwarding(nicID, protocol)
+		if err != nil {
+			t.Fatalf("ni.ns.stack.NICForwarding(%d, %d): %s", nicID, protocol, err)
+		}
+		if !forwarding {
 			return false
 		}
 	}
