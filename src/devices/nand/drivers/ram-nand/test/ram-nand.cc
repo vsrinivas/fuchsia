@@ -4,7 +4,6 @@
 
 #include "ram-nand.h"
 
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,10 +26,9 @@ constexpr int kBlockSize = 4;
 constexpr int kNumBlocks = 5;
 constexpr int kNumPages = kBlockSize * kNumBlocks;
 
-fuchsia_hardware_nand_RamNandInfo BuildConfig() {
-  fuchsia_hardware_nand_RamNandInfo config = {};
-  config.vmo = ZX_HANDLE_INVALID;
-  config.nand_info = {4096, 4, 5, 6, 0, fuchsia_hardware_nand_Class_TEST, {}};
+fuchsia_hardware_nand::wire::RamNandInfo BuildConfig() {
+  fuchsia_hardware_nand::wire::RamNandInfo config = {};
+  config.nand_info = {4096, 4, 5, 6, 0, fuchsia_hardware_nand::wire::Class::kTest, {}};
   return config;
 }
 
@@ -56,7 +54,8 @@ TEST(RamNandTest, DdkLifetime) {
   NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
 
   fake_ddk::Bind ddk;
-  ASSERT_OK(device->Bind(BuildConfig()));
+  auto config = BuildConfig();
+  ASSERT_OK(device->Bind(config));
   device->DdkAsyncRemove();
   EXPECT_TRUE(ddk.Ok());
 
@@ -68,12 +67,12 @@ TEST(RamNandTest, ExportNandConfig) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
   NandDevice device(params, fake_ddk::kFakeParent);
 
-  fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+  fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_nand_config = true;
   config.partition_map.partition_count = 3;
 
   // Setup the first and third partitions with extra copies, and the second one with a bbt.
-  memset(config.partition_map.partitions[0].unique_guid, 11, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.partitions[0].unique_guid.data(), 11, ZBI_PARTITION_GUID_LEN);
   config.partition_map.partitions[0].copy_count = 12;
   config.partition_map.partitions[0].copy_byte_offset = 13;
 
@@ -82,7 +81,7 @@ TEST(RamNandTest, ExportNandConfig) {
   config.partition_map.partitions[1].hidden = true;
   config.partition_map.partitions[1].bbt = true;
 
-  memset(config.partition_map.partitions[2].unique_guid, 22, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.partitions[2].unique_guid.data(), 22, ZBI_PARTITION_GUID_LEN);
   config.partition_map.partitions[2].copy_count = 23;
   config.partition_map.partitions[2].copy_byte_offset = 24;
 
@@ -122,25 +121,25 @@ TEST(RamNandTest, ExportPartitionMap) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
   NandDevice device(params, fake_ddk::kFakeParent);
 
-  fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+  fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_partition_map = true;
   config.partition_map.partition_count = 3;
-  memset(config.partition_map.device_guid, 33, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.device_guid.data(), 33, ZBI_PARTITION_GUID_LEN);
 
   // Setup the first and third partitions with data, and the second one hidden.
-  memset(config.partition_map.partitions[0].type_guid, 44, ZBI_PARTITION_GUID_LEN);
-  memset(config.partition_map.partitions[0].unique_guid, 45, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.partitions[0].type_guid.data(), 44, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.partitions[0].unique_guid.data(), 45, ZBI_PARTITION_GUID_LEN);
   config.partition_map.partitions[0].first_block = 46;
   config.partition_map.partitions[0].last_block = 47;
-  memset(config.partition_map.partitions[0].name, 48, ZBI_PARTITION_NAME_LEN);
+  memset(config.partition_map.partitions[0].name.data(), 48, ZBI_PARTITION_NAME_LEN);
 
   config.partition_map.partitions[1].hidden = true;
 
-  memset(config.partition_map.partitions[2].type_guid, 55, ZBI_PARTITION_GUID_LEN);
-  memset(config.partition_map.partitions[2].unique_guid, 56, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.partitions[2].type_guid.data(), 55, ZBI_PARTITION_GUID_LEN);
+  memset(config.partition_map.partitions[2].unique_guid.data(), 56, ZBI_PARTITION_GUID_LEN);
   config.partition_map.partitions[2].first_block = 57;
   config.partition_map.partitions[2].last_block = 58;
-  memset(config.partition_map.partitions[2].name, 59, ZBI_PARTITION_NAME_LEN);
+  memset(config.partition_map.partitions[2].name.data(), 59, ZBI_PARTITION_NAME_LEN);
 
   // Expect only two partitions on the result.
   size_t expected_size = sizeof(zbi_partition_map_t) + 2 * sizeof(zbi_partition_t);
@@ -180,7 +179,7 @@ TEST(RamNandTest, AddMetadata) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
   NandDevice device(params, fake_ddk::kFakeParent);
 
-  fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+  fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_nand_config = true;
   config.export_partition_map = true;
 
@@ -214,34 +213,28 @@ std::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
   return device;
 }
 
-TEST(RamNandTest, BasicDeviceProtocol) {
-  NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
-  NandDevice device(params);
-
-  char name[NAME_MAX];
-  ASSERT_OK(device.Init(name, zx::vmo()));
-
-  ASSERT_EQ(kPageSize * kNumPages, device.DdkGetSize());
-
-  // Since we have not called DdkAdd, calling DdkAsyncRemove will assert failure.
-  device.DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
-
-  ASSERT_EQ(ZX_ERR_BAD_STATE, device.DdkMessage(nullptr, nullptr));
-}
-
 TEST(RamNandTest, Unlink) {
   NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);
   NandDevice* device(new NandDevice(params, fake_ddk::kFakeParent));
 
   fake_ddk::Bind ddk;
   // We need to DdkAdd the device, as Unlink will call DdkAsyncRemove.
-  ASSERT_OK(device->Bind(BuildConfig()));
+  auto config = BuildConfig();
+  ASSERT_OK(device->Bind(config));
 
-  ASSERT_OK(device->Unlink());
+  auto client = fidl::BindSyncClient(ddk.FidlClient<fuchsia_hardware_nand::RamNand>());
+  {
+    auto result = client.Unlink();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
   ASSERT_OK(ddk.WaitUntilRemove());
 
   // The device is "dead" now.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, device->DdkMessage(nullptr, nullptr));
+  {
+    auto result = client.Unlink();
+    ASSERT_EQ(ZX_ERR_PEER_CLOSED, result.status());
+  }
 
   // This should delete the object, which means this test should not leak.
   device->DdkRelease();

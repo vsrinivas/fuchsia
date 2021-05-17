@@ -4,7 +4,7 @@
 
 #include "ram-nand-ctl.h"
 
-#include <fuchsia/hardware/nand/c/fidl.h>
+#include <fuchsia/hardware/nand/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
@@ -23,57 +23,43 @@
 namespace {
 
 class RamNandCtl;
-using RamNandCtlDeviceType = ddk::Device<RamNandCtl, ddk::MessageableOld>;
+using RamNandCtlDeviceType =
+    ddk::Device<RamNandCtl, ddk::Messageable<fuchsia_hardware_nand::RamNandCtl>::Mixin>;
 
-class RamNandCtl : public RamNandCtlDeviceType {
+class RamNandCtl : public RamNandCtlDeviceType,
+                   public fidl::WireServer<fuchsia_hardware_nand::RamNandCtl> {
  public:
   explicit RamNandCtl(zx_device_t* parent) : RamNandCtlDeviceType(parent) {}
 
   zx_status_t Bind() { return DdkAdd("nand-ctl"); }
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-
-  zx_status_t CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info, const char** name);
+  void CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RamNandCtl);
 };
 
-zx_status_t CreateDevice(void* ctx, const fuchsia_hardware_nand_RamNandInfo* info,
-                         fidl_txn_t* txn) {
-  RamNandCtl* device = reinterpret_cast<RamNandCtl*>(ctx);
-  const char* name = nullptr;
-  zx_status_t status = device->CreateDevice(info, &name);
-  return fuchsia_hardware_nand_RamNandCtlCreateDevice_reply(txn, status, name,
-                                                            name ? strlen(name) : 0);
-}
-
-fuchsia_hardware_nand_RamNandCtl_ops_t fidl_ops = {.CreateDevice = CreateDevice};
-
-zx_status_t RamNandCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_nand_RamNandCtl_dispatch(this, txn, msg, &fidl_ops);
-}
-
-zx_status_t RamNandCtl::CreateDevice(const fuchsia_hardware_nand_RamNandInfo* info,
-                                     const char** name) {
+void RamNandCtl::CreateDevice(CreateDeviceRequestView request,
+                              CreateDeviceCompleter::Sync& completer) {
   nand_info_t temp_info;
-  nand::nand_banjo_from_fidl(info->nand_info, &temp_info);
+  nand::nand_banjo_from_fidl(request->info.nand_info, &temp_info);
   const auto& params = static_cast<const NandParams>(temp_info);
   fbl::AllocChecker checker;
   std::unique_ptr<NandDevice> device(new (&checker) NandDevice(params, zxdev()));
   if (!checker.check()) {
-    return ZX_ERR_NO_MEMORY;
+    completer.Reply(ZX_ERR_NO_MEMORY, fidl::StringView());
+    return;
   }
 
-  zx_status_t status = device->Bind(*info);
+  zx_status_t status = device->Bind(request->info);
   if (status != ZX_OK) {
-    return status;
+    completer.Reply(status, fidl::StringView());
+    return;
   }
-  *name = device->name();
 
   // devmgr is now in charge of the device.
   __UNUSED NandDevice* dummy = device.release();
-  return status;
+  completer.Reply(ZX_OK, fidl::StringView::FromExternal(dummy->name(), strlen(dummy->name())));
 }
 
 }  // namespace

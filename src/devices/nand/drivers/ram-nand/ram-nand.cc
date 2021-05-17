@@ -33,22 +33,15 @@ struct RamNandOp {
   list_node_t node;
 };
 
-zx_status_t Unlink(void* ctx, fidl_txn_t* txn) {
-  NandDevice* device = reinterpret_cast<NandDevice*>(ctx);
-  zx_status_t status = device->Unlink();
-  return fuchsia_hardware_nand_RamNandUnlink_reply(txn, status);
+static_assert(ZBI_PARTITION_NAME_LEN == fuchsia_hardware_nand::wire::kNameLen, "bad fidl name");
+static_assert(ZBI_PARTITION_GUID_LEN == fuchsia_hardware_nand::wire::kGuidLen, "bad fidl guid");
+
+uint32_t GetNumPartitions(const fuchsia_hardware_nand::wire::RamNandInfo& info) {
+  return std::min(info.partition_map.partition_count, fuchsia_hardware_nand::wire::kMaxPartitions);
 }
 
-fuchsia_hardware_nand_RamNand_ops_t fidl_ops = {.Unlink = Unlink};
-
-static_assert(ZBI_PARTITION_NAME_LEN == fuchsia_hardware_nand_NAME_LEN, "bad fidl name");
-static_assert(ZBI_PARTITION_GUID_LEN == fuchsia_hardware_nand_GUID_LEN, "bad fidl guid");
-
-uint32_t GetNumPartitions(const fuchsia_hardware_nand_RamNandInfo& info) {
-  return std::min(info.partition_map.partition_count, fuchsia_hardware_nand_MAX_PARTITIONS);
-}
-
-void ExtractNandConfig(const fuchsia_hardware_nand_RamNandInfo& info, nand_config_t* config) {
+void ExtractNandConfig(const fuchsia_hardware_nand::wire::RamNandInfo& info,
+                       nand_config_t* config) {
   config->bad_block_config.type = kAmlogicUboot;
 
   uint32_t extra_count = 0;
@@ -61,7 +54,7 @@ void ExtractNandConfig(const fuchsia_hardware_nand_RamNandInfo& info, nand_confi
       if (partition.copy_count > 1) {
         nand_partition_config_t* extra = &config->extra_partition_config[extra_count];
 
-        memcpy(extra->type_guid, partition.unique_guid, ZBI_PARTITION_GUID_LEN);
+        memcpy(extra->type_guid, partition.unique_guid.data(), ZBI_PARTITION_GUID_LEN);
         extra->copy_count = partition.copy_count;
         extra->copy_byte_offset = partition.copy_byte_offset;
         extra_count++;
@@ -71,7 +64,7 @@ void ExtractNandConfig(const fuchsia_hardware_nand_RamNandInfo& info, nand_confi
   config->extra_partition_config_count = extra_count;
 }
 
-fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand_RamNandInfo& info) {
+fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand::wire::RamNandInfo& info) {
   uint32_t num_partitions = GetNumPartitions(info);
   uint32_t dest_partitions = num_partitions;
   for (uint32_t i = 0; i < num_partitions; i++) {
@@ -88,17 +81,17 @@ fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand_RamNandInfo& in
   map->block_count = info.nand_info.num_blocks;
   map->block_size = info.nand_info.page_size * info.nand_info.pages_per_block;
   map->partition_count = dest_partitions;
-  memcpy(map->guid, info.partition_map.device_guid, sizeof(map->guid));
+  memcpy(map->guid, info.partition_map.device_guid.data(), sizeof(map->guid));
 
   zbi_partition_t* dest = map->partitions;
   for (uint32_t i = 0; i < num_partitions; i++) {
     const auto& src = info.partition_map.partitions[i];
     if (!src.hidden) {
-      memcpy(dest->type_guid, src.type_guid, sizeof(dest->type_guid));
-      memcpy(dest->uniq_guid, src.unique_guid, sizeof(dest->uniq_guid));
+      memcpy(dest->type_guid, src.type_guid.data(), sizeof(dest->type_guid));
+      memcpy(dest->uniq_guid, src.unique_guid.data(), sizeof(dest->uniq_guid));
       dest->first_block = src.first_block;
       dest->last_block = src.last_block;
-      memcpy(dest->name, src.name, sizeof(dest->name));
+      memcpy(dest->name, src.name.data(), sizeof(dest->name));
       dest++;
     }
   }
@@ -123,9 +116,9 @@ NandDevice::~NandDevice() {
   }
 }
 
-zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
-  char name[fuchsia_hardware_nand_NAME_LEN];
-  zx_status_t status = Init(name, zx::vmo(info.vmo));
+zx_status_t NandDevice::Bind(fuchsia_hardware_nand::wire::RamNandInfo& info) {
+  char name[fuchsia_hardware_nand::wire::kNameLen];
+  zx_status_t status = Init(name, std::move(info.vmo));
   if (status != ZX_OK) {
     return status;
   }
@@ -217,19 +210,14 @@ void NandDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t NandDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  {
-    fbl::AutoLock lock(&lock_);
-    if (dead_) {
-      return ZX_ERR_BAD_STATE;
-    }
+void NandDevice::Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) {
+  fbl::AutoLock lock(&lock_);
+  if (dead_) {
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
   }
-  return fuchsia_hardware_nand_RamNand_dispatch(this, txn, msg, &fidl_ops);
-}
-
-zx_status_t NandDevice::Unlink() {
   DdkAsyncRemove();
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
 void NandDevice::NandQuery(nand_info_t* info_out, size_t* nand_op_size_out) {

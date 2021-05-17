@@ -6,8 +6,8 @@
 #define SRC_DEVICES_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 
 #include <fuchsia/hardware/nand/c/banjo.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
+#include <fuchsia/hardware/nand/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -36,7 +36,7 @@ struct NandParams : public nand_info_t {
                                num_blocks,
                                ecc_bits,
                                oob_size,
-                               fuchsia_hardware_nand_Class_FTL,
+                               static_cast<nand_class_t>(fuchsia_hardware_nand::wire::Class::kFtl),
                                {}}) {}
 
   NandParams(const nand_info_t& base) {
@@ -50,16 +50,18 @@ struct NandParams : public nand_info_t {
 };
 
 class NandDevice;
-using DeviceType =
-    ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_hardware_nand::RamNand>::Mixin>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
-class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
+class NandDevice : public DeviceType,
+                   public fidl::WireServer<fuchsia_hardware_nand::RamNand>,
+                   public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:
   explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
   ~NandDevice();
 
-  zx_status_t Bind(const fuchsia_hardware_nand_RamNandInfo& info);
+  zx_status_t Bind(fuchsia_hardware_nand::wire::RamNandInfo& info);
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
 
@@ -71,10 +73,9 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   // Device protocol implementation.
   zx_off_t DdkGetSize() { return params_.GetSize(); }
   void DdkUnbind(ddk::UnbindTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Fidl RamNand implementation.
-  zx_status_t Unlink();
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer);
 
   // NAND protocol implementation.
   void NandQuery(nand_info_t* info_out, size_t* nand_op_size_out);
