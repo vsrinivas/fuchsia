@@ -53,11 +53,11 @@ mod tests {
     use super::*;
     use fidl::endpoints::RequestStream;
     use fuchsia_async as fasync;
-    use input_pipeline::text_settings_handler;
+    use input_pipeline::text_settings;
 
     #[fasync::run_singlethreaded(test)]
     async fn try_a_setting() {
-        let handler = text_settings_handler::Instance::new(None);
+        let handler = text_settings::Handler::new(None);
 
         let (client_end, server_end) =
             fidl::endpoints::create_proxy_and_stream::<fkeymap::ConfigurationMarker>().unwrap();

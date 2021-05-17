@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    ::input_pipeline::text_settings,
     anyhow::Error,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_input_keymap as fkeymap,
     fidl_fuchsia_session_scene::{ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     fidl_fuchsia_ui_scenic::ScenicMarker,
@@ -12,7 +14,7 @@ use {
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_syslog::fx_log_warn,
     futures::lock::Mutex,
-    futures::{StreamExt, TryStreamExt},
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
     scene_management::{self, SceneManager},
     std::sync::Arc,
 };
@@ -27,6 +29,8 @@ mod touch_pointer_hack;
 enum ExposedServices {
     Manager(ManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    /// The requests for `fuchsia.input.keymap.Configuration`.
+    TextSettingsConfig(fkeymap::ConfigurationRequestStream),
 }
 
 #[fasync::run_singlethreaded]
@@ -36,12 +40,17 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::Manager);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
+    fs.dir("svc").add_fidl_service(ExposedServices::TextSettingsConfig);
     fs.take_and_serve_directory_handle()?;
 
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
         input_device_registry_server::make_server_and_receiver();
 
     let mut input_receiver = Some(input_device_registry_request_stream_receiver);
+
+    // text_handler is used to attach keymap and text editing settings to the input events.
+    // It also listens to configuration.
+    let text_handler = text_settings::Handler::new(None);
 
     while let Some(service_request) = fs.next().await {
         match service_request {
@@ -54,6 +63,8 @@ async fn main() -> Result<(), Error> {
                         request_stream,
                         scene_manager,
                         input_receiver,
+                        // All text_handler clones share data, so it is OK to clone as needed.
+                        text_handler.clone(),
                     ))
                     .detach();
                 }
@@ -85,6 +96,20 @@ async fn main() -> Result<(), Error> {
                     }
                 }
             }
+            // Serves calls to fuchsia.input.keymap.Configuration.
+            ExposedServices::TextSettingsConfig(request_stream) => {
+                let mut handler = text_handler.clone();
+                fasync::Task::local(
+                    async move { handler.process_keymap_configuration_from(request_stream).await }
+                        .unwrap_or_else(|e| {
+                            fx_log_warn!(
+                                "failed to forward fkeymap::ConfigurationRequestStream: {:?}",
+                                e
+                            )
+                        }),
+                )
+                .detach();
+            }
         }
     }
 
@@ -97,6 +122,7 @@ pub async fn handle_manager_request_stream(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
+    text_handler: text_settings::Handler,
 ) {
     let scene_manager = Arc::new(Mutex::new(scene_manager));
     let listeners: Vec<PointerCaptureListenerHackProxy> = vec![];
@@ -106,6 +132,7 @@ pub async fn handle_manager_request_stream(
         scene_manager.clone(),
         pointer_listeners.clone(),
         input_device_registry_request_stream_receiver,
+        text_handler,
     )
     .await
     {

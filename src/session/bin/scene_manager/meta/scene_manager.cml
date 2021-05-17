@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/ui/lib/input_pipeline/meta/input_keymap_configuration.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/scene_manager",

@@ -21,6 +21,7 @@ use {
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline},
         mouse_handler::MouseHandler,
         shortcut_handler::ShortcutHandler,
+        text_settings,
         touch_handler::TouchHandler,
         Position, Size,
     },
@@ -34,13 +35,18 @@ use {
 /// # Parameters
 /// - `scene_manager`: The scene manager used by the session.
 /// - `pointer_hack_server`: The pointer hack server, used to fetch listeners for pointer
-/// hack input handlers.
+///    hack input handlers.
+/// - `input_device_registry_request_stream_receiver`: A receiving end of a MPSC channel for
+///   `InputDeviceRegistry` messages.
+/// - `text_settings_handler`: An input pipeline stage that decorates `InputEvent`s with
+///    text settings (e.g. desired keymap IDs).
 pub async fn handle_input(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
     pointer_hack_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
+    text_settings_handler: text_settings::Handler,
 ) -> Result<InputPipeline, Error> {
     let input_pipeline = InputPipeline::new(
         vec![
@@ -48,7 +54,7 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        input_handlers(scene_manager, pointer_hack_listeners).await,
+        input_handlers(scene_manager, pointer_hack_listeners, text_settings_handler).await,
     )
     .await
     .context("Failed to create InputPipeline.")?;
@@ -68,11 +74,14 @@ pub async fn handle_input(
 async fn input_handlers(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
     pointer_hack_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
+    text_settings_handler: text_settings::Handler,
 ) -> Vec<Box<dyn InputHandler>> {
     let mut handlers: Vec<Box<dyn InputHandler>> = vec![];
 
     {
         let locked_scene_manager = scene_manager.lock().await;
+        // Adds the text settings handler early in the pipeline.
+        handlers.push(Box::new(text_settings_handler));
         // Touch and mouse hack handlers are inserted first.
         add_touch_hack(&locked_scene_manager, pointer_hack_listeners.clone(), &mut handlers).await;
         add_mouse_hack(&locked_scene_manager, pointer_hack_listeners.clone(), &mut handlers).await;

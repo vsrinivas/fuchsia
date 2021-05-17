@@ -59,7 +59,7 @@ rustc_library("input_pipeline") {
     "src/mouse_handler.rs",
     "src/shortcut_handler.rs",
     "src/testing_utilities.rs",
-    "src/text_settings_handler.rs",
+    "src/text_settings.rs",
     "src/touch.rs",
     "src/touch_handler.rs",
     "src/utils.rs",

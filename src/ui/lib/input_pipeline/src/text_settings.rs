@@ -12,11 +12,11 @@ use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use futures::{lock, TryFutureExt, TryStreamExt};
 use std::sync;
 
-/// The text settings handler instance. Refer to as `text_settings_handler::Instance`.
+/// The text settings handler instance. Refer to as `text_settings::Handler`.
 /// Its task is to decorate an input event with the keymap identifier.  The instance can
 /// be freely cloned, each clone is thread-safely sharing data with others.
 #[derive(Clone, Debug)]
-pub struct Instance {
+pub struct Handler {
     /// Stores the currently active keymap identifier, if present.  Wrapped
     /// in an arc-mutex as it can be changed out of band through
     /// `fuchsia.input.keymap.Configuration/SetLayout`.
@@ -24,7 +24,7 @@ pub struct Instance {
 }
 
 #[async_trait]
-impl InputHandler for Instance {
+impl InputHandler for Handler {
     async fn handle_input_event(
         &mut self,
         input_event: input_device::InputEvent,
@@ -62,12 +62,12 @@ impl InputHandler for Instance {
     }
 }
 
-impl Instance {
+impl Handler {
     /// Creates a new text settings handler instance.
     /// `initial` contains the desired initial keymap value to be served.
     /// Usually you want this to be `None`.
     pub fn new(initial: Option<fkeymap::Id>) -> Self {
-        Instance { keymap_id: sync::Arc::new(lock::Mutex::new(initial)) }
+        Handler { keymap_id: sync::Arc::new(lock::Mutex::new(initial)) }
     }
 
     /// Processes requests for keymap change from `stream`.
@@ -152,7 +152,7 @@ mod tests {
             Test { keymap_id: Some(fkeymap::Id::FrAzerty), expected: Some("FR_AZERTY".to_owned()) },
         ];
         for test in tests {
-            let mut handler = Instance::new(test.keymap_id.clone());
+            let mut handler = Handler::new(test.keymap_id.clone());
             let expected = get_fake_key_event(test.expected.clone());
             let result = handler.handle_input_event(get_fake_key_event(None)).await;
             assert_eq!(vec![expected], result, "for: {:?}", &test);
@@ -161,7 +161,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn config_call_processing() {
-        let mut handler = Instance::new(None);
+        let mut handler = Handler::new(None);
 
         let (client_end, server_end) =
             fidl::endpoints::create_proxy_and_stream::<fkeymap::ConfigurationMarker>().unwrap();

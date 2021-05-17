@@ -19,7 +19,7 @@ pub mod input_handler;
 pub mod media_buttons_handler;
 pub mod mouse_handler;
 pub mod shortcut_handler;
-pub mod text_settings_handler;
+pub mod text_settings;
 pub mod touch_handler;
 
 pub mod focus_listening;
