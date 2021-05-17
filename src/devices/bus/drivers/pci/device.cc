@@ -141,7 +141,7 @@ zx_status_t Device::CreateProxy() {
       {BIND_PCI_SUBCLASS, 0, subclass_},
       {BIND_PCI_INTERFACE, 0, prog_if_},
       {BIND_PCI_REVISION, 0, rev_id_},
-      {BIND_TOPO_PCI, 0, static_cast<uint32_t>(BIND_TOPO_PCI_PACK(bus_id(), dev_id(), func_id()))},
+      {BIND_PCI_TOPO, 0, static_cast<uint32_t>(BIND_PCI_TOPO_PACK(bus_id(), dev_id(), func_id()))},
   };
 
   // Create an isolated devhost to load the proxy pci driver containing the PciProxy

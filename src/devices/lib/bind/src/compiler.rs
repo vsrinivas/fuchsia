@@ -294,6 +294,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_PCI_INTERFACE".to_string(), 0x0104));
     keys.push(("BIND_PCI_REVISION".to_string(), 0x0105));
     keys.push(("BIND_PCI_COMPONENT".to_string(), 0x0106));
+    keys.push(("BIND_PCI_TOPO".to_string(), 0x0107));
 
     // usb binding variables at 0x02XX
     // these are used for both ZX_PROTOCOL_USB_INTERFACE and ZX_PROTOCOL_USB_FUNCTION
@@ -372,18 +373,6 @@ fn deprecated_keys() -> Vec<(String, u32)> {
 
     // Registers binding variables at 0x0A8X
     keys.push(("BIND_REGISTER_ID".to_string(), 0x0A80));
-
-    // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
-    // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
-    // For vendor properties, it is recommended that a vendor ID be included
-    // and checked via some other property.
-    keys.push(("BIND_TOPO_START".to_string(), 0x0B00));
-    keys.push(("BIND_TOPO_PCI".to_string(), 0x0B00));
-    keys.push(("BIND_TOPO_I2C".to_string(), 0x0B01));
-    keys.push(("BIND_TOPO_SPI".to_string(), 0x0B02));
-    keys.push(("BIND_TOPO_VENDOR_START".to_string(), 0x0B80));
-    keys.push(("BIND_TOPO_VENDOR_END".to_string(), 0x0BFF));
-    keys.push(("BIND_TOPO_END".to_string(), 0x0BFF));
 
     keys
 }

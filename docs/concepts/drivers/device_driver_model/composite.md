@@ -125,10 +125,6 @@ The following rules apply:
    the target device, in order.
    Some of those **devices** may be skipped, but every **element** must
    be matched.
-4. Every device on the path that has a property from the range
-   `BIND_TOPO_START` through `BIND_TOPO_END` (basically buses, like I2C
-   and PCI) must be matched.
-   These sequences of matches must be unique.
 
 Finally, we combine them into an aggregate called `fragments[]` of type
 `device_fragment_t`:

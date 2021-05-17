@@ -115,8 +115,6 @@ void MakeDeviceList(const fbl::RefPtr<T>& device, fbl::Array<fbl::RefPtr<T>>* ou
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_props, props,
                                      const fbl::Array<const zx_device_prop_t>& (C::*)() const);
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_topo_prop, topo_prop,
-                                     const zx_device_prop_t* (C::*)() const);
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_parent, parent, const fbl::RefPtr<T>& (C::*)());
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::*)() const);
 
@@ -130,25 +128,18 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::
 // 3) In (p_(N-1), d), d must be the leaf device.
 // 4) If we have pairs (p_i, d) and (p_j, e), and i < j, then d is an ancestor
 //    of e.  That is, the devices must match in the same sequence as the parts.
-// 5) For every ancestor of the leaf device that has a BIND_TOPO_* property,
-//    there exists a part that matches matches it.
-// 6) There is a unique pairing that satisfies properties 1-5.
+// 5) There is a unique pairing that satisfies properties 1-4.
 //
 // The high-level idea of the rules above is that we want an unambiguous
-// matching of the parts to the devices that is allowed to skip over ancestors
-// that do not have topological properties.  We do not allow skipping over
-// devices with topological properties, since the intent of this mechanism is to
-// allow the description of devices that correspond to particular pieces of
-// hardware.
+// matching of the parts to the devices.
 //
 // If all of these properties hold, MatchParts() returns Match::One.  If all of
-// the properties except for property 6 hold, it returns Match::Many.
+// the properties except for property 5 hold, it returns Match::Many.
 // Otherwise, it returns Match::None.
 template <typename T>
 Match MatchParts(const fbl::RefPtr<T>& device, const FragmentPartDescriptor* parts,
                  uint32_t parts_count) {
-  static_assert(has_props<T>::value && has_topo_prop<T>::value && has_parent<T>::value &&
-                has_protocol_id<T>::value);
+  static_assert(has_props<T>::value && has_parent<T>::value && has_protocol_id<T>::value);
 
   if (parts_count == 0) {
     return Match::None;
@@ -187,18 +178,10 @@ Match MatchParts(const fbl::RefPtr<T>& device, const FragmentPartDescriptor* par
   }
 
   // We now need to find if there exists a unique chain from parts[1] to
-  // parts[parts_count - 2] such that each bind program has a match, and every
-  // ancestor that has a BIND_TOPO property has a match.
+  // parts[parts_count - 2] such that each bind program has a match.
 
-  // If we have only two parts, we need to see if there are any unmatched
-  // topological nodes.
   if (parts_count == 2) {
-    // We've matched on the first and last device already, so check everything in-between
-    for (size_t i = 1; i < device_list.size() - 1; ++i) {
-      if (device_list[i]->topo_prop() != nullptr) {
-        return Match::None;
-      }
-    }
+    // We've matched on the first and last device already.
     return Match::One;
   }
 
@@ -242,25 +225,15 @@ Match MatchParts(const fbl::RefPtr<T>& device, const FragmentPartDescriptor* par
         // matching chains is unchanged.
         state.set(part_idx, device_idx, match_count);
       }
-
-      // Move on to the next fragment, since we cannot cross a
-      // topological property without matching against it.
-      if (device_list[device_idx]->topo_prop() != nullptr) {
-        break;
-      }
     }
   }
 
   // Any chains we have found will be in the state with part_idx=1.  We need
-  // to find how many of those chains have no devices with topological
-  // properties between the last matching device in the chain and the root
-  // device.
+  // count chains by iterating over devices between the last matching device and
+  // the root.
   Match match_count = Match::None;
   for (size_t i = device_list.size() - 2; i >= parts_count - 2; --i) {
     match_count = SumMatchCounts(match_count, state.get(1, i));
-    if (device_list[i]->topo_prop() != nullptr) {
-      break;
-    }
   }
   return match_count;
 }

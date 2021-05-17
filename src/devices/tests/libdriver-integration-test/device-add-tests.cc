@@ -36,15 +36,12 @@ class DeviceAddTest : public IntegrationTest {
   }
 };
 
-// This test checks what happens when only one topological properties is
-// specified
-TEST_F(DeviceAddTest, OneTopologicalProperty) {
+TEST_F(DeviceAddTest, CreateDevice) {
   std::unique_ptr<RootMockDevice> root_device;
   std::unique_ptr<MockDevice> child_device;
 
   auto promise = CreateDevice(
                      {
-                         (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0)},
                          (zx_device_prop_t){BIND_PCI_VID, 0, 1234},
                      },
                      ZX_OK, &root_device, &child_device)
@@ -55,38 +52,6 @@ TEST_F(DeviceAddTest, OneTopologicalProperty) {
                        return ExpectUnbindThenRelease(child_device);
                      });
 
-  RunPromise(std::move(promise));
-}
-
-// This test checks what happens when two different topological properties are
-// specified
-TEST_F(DeviceAddTest, TooManyTopologicalProperties) {
-  std::unique_ptr<RootMockDevice> root_device;
-  std::unique_ptr<MockDevice> child_device;
-
-  auto promise = CreateDevice(
-      {
-          (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0)},
-          (zx_device_prop_t){BIND_TOPO_I2C, 0, BIND_TOPO_I2C_PACK(1)},
-          (zx_device_prop_t){BIND_PCI_VID, 0, 1234},
-      },
-      ZX_ERR_INVALID_ARGS, &root_device, &child_device);
-  RunPromise(std::move(promise));
-}
-
-// This test checks what happens when the same topological property is
-// specified twice
-TEST_F(DeviceAddTest, TooManyTopologicalPropertiesDuplicated) {
-  std::unique_ptr<RootMockDevice> root_device;
-  std::unique_ptr<MockDevice> child_device;
-
-  auto promise = CreateDevice(
-      {
-          (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 0)},
-          (zx_device_prop_t){BIND_TOPO_PCI, 0, BIND_TOPO_PCI_PACK(0, 0, 1)},
-          (zx_device_prop_t){BIND_PCI_VID, 0, 1234},
-      },
-      ZX_ERR_INVALID_ARGS, &root_device, &child_device);
   RunPromise(std::move(promise));
 }
 

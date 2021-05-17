@@ -333,11 +333,9 @@ class Device
   // Break the relationship between this device object and its parent
   void DetachFromParent();
 
-  // Sets the properties of this device.  Returns an error if the properties
-  // array contains more than one property from the BIND_TOPO_* range.
+  // Sets the properties of this device.
   zx_status_t SetProps(fbl::Array<const zx_device_prop_t> props);
   const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
-  const zx_device_prop_t* topo_prop() const { return topo_prop_; }
 
   const fbl::Array<const StrProperty>& str_props() const { return str_props_; }
   zx_status_t SetStrProps(fbl::Array<const StrProperty> str_props);
@@ -592,8 +590,6 @@ class Device
   fbl::RefPtr<Device> proxy_;
 
   fbl::Array<const zx_device_prop_t> props_;
-  // If the device has a topological property in |props|, this points to it.
-  const zx_device_prop_t* topo_prop_ = nullptr;
 
   fbl::Array<const StrProperty> str_props_;
 

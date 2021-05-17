@@ -58,9 +58,9 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       {BIND_PCI_INTERFACE, 0, device.info.program_interface},
       {BIND_PCI_REVISION, 0, device.info.revision_id},
       {BIND_PCI_COMPONENT, 0, bind::fuchsia::pci::BIND_PCI_COMPONENT_COMPONENT},
-      {BIND_TOPO_PCI, 0,
+      {BIND_PCI_TOPO, 0,
        static_cast<uint32_t>(
-           BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
+           BIND_PCI_TOPO_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
   };
 
   char name[ZX_DEVICE_NAME_MAX];
@@ -74,7 +74,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
   }
 
   auto pci_bind_topo = static_cast<uint32_t>(
-      BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id));
+      BIND_PCI_TOPO_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id));
   const zx_bind_inst_t pci_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
       BI_ABORT_IF(NE, BIND_PCI_VID, device.info.vendor_id),
@@ -84,7 +84,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       BI_ABORT_IF(NE, BIND_PCI_INTERFACE, device.info.program_interface),
       BI_ABORT_IF(NE, BIND_PCI_REVISION, device.info.revision_id),
       BI_ABORT_IF(NE, BIND_PCI_COMPONENT, bind::fuchsia::pci::BIND_PCI_COMPONENT_COMPONENT),
-      BI_MATCH_IF(EQ, BIND_TOPO_PCI, pci_bind_topo),
+      BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
   };
 
   const device_fragment_part_t pci_fragment[] = {
@@ -105,9 +105,9 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
       {BIND_PCI_INTERFACE, 0, device.info.program_interface},
       {BIND_PCI_REVISION, 0, device.info.revision_id},
       {BIND_PCI_COMPONENT, 0, bind::fuchsia::pci::BIND_PCI_COMPONENT_COMPOSITE},
-      {BIND_TOPO_PCI, 0,
+      {BIND_PCI_TOPO, 0,
        static_cast<uint32_t>(
-           BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
+           BIND_PCI_TOPO_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
   };
 
   composite_device_desc_t composite_desc = {
@@ -144,9 +144,9 @@ zx_status_t KernelPci::CreateSimple(zx_device_t* parent, kpci_device device) {
       {BIND_PCI_INTERFACE, 0, device.info.program_interface},
       {BIND_PCI_REVISION, 0, device.info.revision_id},
       {BIND_PCI_COMPONENT, 0, 0},
-      {BIND_TOPO_PCI, 0,
+      {BIND_PCI_TOPO, 0,
        static_cast<uint32_t>(
-           BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
+           BIND_PCI_TOPO_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
   };
 
   auto kpci = std::unique_ptr<KernelPci>(new KernelPci(parent, device));

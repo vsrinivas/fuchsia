@@ -158,8 +158,8 @@ const char* di_bind_param_name(uint32_t param_num) {
       return "PCI.Interface";
     case BIND_PCI_REVISION:
       return "PCI.Revision";
-    case BIND_TOPO_PCI:
-      return "Topology.PCI";
+    case BIND_PCI_TOPO:
+      return "PCI.Topology";
     case BIND_USB_VID:
       return "USB.VID";
     case BIND_USB_PID:

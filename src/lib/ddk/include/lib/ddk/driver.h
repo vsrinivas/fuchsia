@@ -126,8 +126,7 @@ typedef struct device_add_args {
   // Pointer to device's device protocol operations
   const zx_protocol_device_t* ops;
 
-  // Optional list of device properties.  This list cannot contain more than
-  // one property with an id in the range [BIND_TOPO_START, BIND_TOPO_END].
+  // Optional list of device properties.
   zx_device_prop_t* props;
 
   // Number of device properties
@@ -309,10 +308,8 @@ typedef struct device_fragment_part {
 // last element in |parts| must describe the target device itself.  The
 // remaining elements of |parts| must match devices on the path from the root to
 // the target device, in order.  Some of those devices may be skipped, but every
-// element of |parts| must have a match.  Every device on the path that has a
-// property from the range [BIND_TOPO_START, BIND_TOPO_END] must be matched to
-// an element of |parts|.  This sequences of matches between |parts| and devices
-// must be unique.
+// element of |parts| must have a match.  This sequence of matches between
+// |parts| and devices must be unique.
 typedef struct device_fragment {
   const char* name;
   uint32_t parts_count;

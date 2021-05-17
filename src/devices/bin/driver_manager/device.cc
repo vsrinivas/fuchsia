@@ -667,16 +667,7 @@ zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   ZX_DEBUG_ASSERT(props_.data() == nullptr);
 
   props_ = std::move(props);
-  topo_prop_ = nullptr;
 
-  for (const auto prop : props_) {
-    if (prop.id >= BIND_TOPO_START && prop.id <= BIND_TOPO_END) {
-      if (topo_prop_ != nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      topo_prop_ = &prop;
-    }
-  }
   return ZX_OK;
 }
 

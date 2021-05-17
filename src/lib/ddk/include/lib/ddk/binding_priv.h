@@ -69,6 +69,9 @@ __BEGIN_CDECLS
 #define BIND_PCI_INTERFACE 0x0104
 #define BIND_PCI_REVISION 0x0105
 #define BIND_PCI_COMPONENT 0x0106
+#define BIND_PCI_TOPO 0x0107
+
+#define BIND_PCI_TOPO_PACK(bus, dev, func) (((bus) << 8) | (dev << 3) | (func))
 
 // usb binding variables at 0x02XX
 // these are used for both ZX_PROTOCOL_USB_INTERFACE and ZX_PROTOCOL_USB_FUNCTION
@@ -158,30 +161,6 @@ __BEGIN_CDECLS
 
 // Regsiters binding variables at 0x0A8X
 #define BIND_REGISTER_ID 0x0A80
-
-// Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
-// Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
-// For vendor properties, it is recommended that a vendor ID be included
-// and checked via some other property.
-#define BIND_TOPO_START 0x0B00
-#define BIND_TOPO_PCI 0x0B00
-#define BIND_TOPO_I2C 0x0B01
-#define BIND_TOPO_SPI 0x0B02
-#define BIND_TOPO_VENDOR_START 0x0B80
-#define BIND_TOPO_VENDOR_END 0x0BFF
-#define BIND_TOPO_END 0x0BFF
-
-#define BIND_TOPO_PCI_PACK(bus, dev, func) (((bus) << 8) | (dev << 3) | (func))
-#define BIND_TOPO_PCI_UNPACK_BUS(topo) (((topo) >> 8) & 0xff)
-#define BIND_TOPO_PCI_UNPACK_DEVICE(topo) (((topo) >> 3) & 0x1f)
-#define BIND_TOPO_PCI_UNPACK_FUNCTION(topo) ((topo)&0x7)
-
-#define BIND_TOPO_I2C_PACK(addr) ((addr))
-#define BIND_TOPO_I2C_UNPACK(topo) ((topo))
-
-#define BIND_TOPO_SPI_PACK(bus, chip_select) (((bus) << 8) | (chip_select))
-#define BIND_TOPO_SPI_UNPACK_BUS_ID(topo) (((topo) >> 8) && 0xff)
-#define BIND_TOPO_SPI_UNPACK_CHIP_SELECT(topo) ((topo)&0xff)
 
 typedef struct zx_bind_inst {
   uint32_t op;

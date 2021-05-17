@@ -102,7 +102,6 @@ void SpiDevice::AddChildren() {
       zx_device_prop_t props[] = {
           {BIND_SPI_BUS_ID, 0, bus_id},
           {BIND_SPI_CHIP_SELECT, 0, cs},
-          {BIND_TOPO_SPI, 0, BIND_TOPO_SPI_PACK(bus_id, cs)},
           {BIND_PLATFORM_DEV_VID, 0, vid},
           {BIND_PLATFORM_DEV_PID, 0, pid},
           {BIND_PLATFORM_DEV_DID, 0, did},
@@ -113,7 +112,6 @@ void SpiDevice::AddChildren() {
       zx_device_prop_t props[] = {
           {BIND_SPI_BUS_ID, 0, bus_id},
           {BIND_SPI_CHIP_SELECT, 0, cs},
-          {BIND_TOPO_SPI, 0, BIND_TOPO_SPI_PACK(bus_id, cs)},
       };
 
       status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props).set_proto_id(ZX_PROTOCOL_SPI));
