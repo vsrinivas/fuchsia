@@ -248,8 +248,8 @@ the device supports [ABR](/docs/glossary.md#ABR). To prevent flash wear,
 the image is only written to a partition if the image is different from the
 image that already exists on the block device.
 
-Note: To see more information on how the Fuchsia paver works for the bootloader,
-see [`fuchsia.paver`][fuchsia-paver-booloader].
+Note: To see more information on how the Fuchsia paver works for the firmware,
+see [`fuchsia.paver`][fuchsia-paver-firmware].
 
 Then, the `system-updater` instructs the paver to write the Fuchsia ZBI and its
 vbmeta. The final location of these images depends on whether the device
@@ -407,7 +407,7 @@ After this, the update is considered committed. This means:
 [need]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/pkg-resolver/src/cache.rs;l=275;drc=c557680c2d1d59f4ec4f31981b08610bec7c8514
 [update-rs]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-updater/src/update.rs;l=507;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178
 [image-types]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-updater/src/update/paver.rs;l=200;drc=216f7ea082148714bac1e95299c1bc8b087dc1d8
-[fuchsia-paver-booloader]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteBootloader
+[fuchsia-paver-firmware]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteFirmware
 [fuchsia-paver-assets]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteAsset
 [abr-slot-data]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/firmware/lib/abr/include/lib/abr/data.h;l=32;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
 [Successful]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/firmware/lib/abr/include/lib/abr/data.h;l=43;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
