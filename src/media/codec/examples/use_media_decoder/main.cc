@@ -94,10 +94,10 @@ int main(int argc, char* argv[]) {
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("fidl_thread", &fidl_thread));
   async_dispatcher_t* fidl_dispatcher = fidl_loop.dispatcher();
 
-  // The moment we sys::ComponentContext::CreateAndServeOutgoingDirectory() + let the
-  // fidl_thread retrieve anything from its port, we potentially are letting a
-  // request for fuchsia::ui::views::View fail, since it'll fail to find the
-  // View service in outgoing_services(), since we haven't yet added View to
+  // The moment we serve the outgoing directory + let the fidl_thread retrieve
+  // anything from its port, we potentially are letting a request for
+  // fuchsia::ui::views::View fail, since it'll fail to find the View service in
+  // outgoing_services(), since we haven't yet added View to
   // outgoing_services().  A way to prevent this failure is by not letting
   // fidl_thread read from its port between Create() and
   // outgoing_services()+=View.
@@ -113,10 +113,9 @@ int main(int argc, char* argv[]) {
   // an equivalent "batch".
   std::vector<fit::closure> to_run_on_fidl_thread;
 
-  std::unique_ptr<sys::ComponentContext> component_context;
-  to_run_on_fidl_thread.emplace_back([&component_context] {
-    component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  });
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
+  to_run_on_fidl_thread.emplace_back(
+      [&component_context] { component_context->outgoing()->ServeFromStartupInfo(); });
 
   // This creates handles for channels for these protocols and connects them to
   // the namespace entries for these protocols. These handles will be bound to
