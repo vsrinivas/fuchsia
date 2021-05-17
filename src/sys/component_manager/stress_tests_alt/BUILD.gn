@@ -101,6 +101,9 @@ fuchsia_test_package("component-manager-stress-tests-alt") {
   ]
   test_components = [ ":stressor" ]
   test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
     environments = [
       {
         dimensions = {
