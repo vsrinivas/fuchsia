@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::*,
     ffx_core::ffx_bail,
     fuchsia_async::TimeoutExt,
+    serde_json::Value,
     std::process::Stdio,
+    std::time::Instant,
     std::{env, path::PathBuf, process::Command, time::Duration},
     std::{future::Future, pin::Pin},
     tempfile::TempDir,
@@ -14,6 +16,59 @@ use {
 };
 
 pub mod asserts;
+
+/// Get the target nodename we're expected to interact with in this test, or
+/// pick the first discovered target. If nodename is set via $FUCHSIA_NODENAME
+/// that is returned, if the nodename is not given, and zero targets are found,
+/// this is also an error.
+pub async fn get_target_nodename() -> Result<String> {
+    if let Ok(nodename) = std::env::var("FUCHSIA_NODENAME") {
+        return Ok(nodename);
+    }
+
+    let isolate = Isolate::new("initial-target-discovery")?;
+
+    // ensure a daemon is spun up first, so we have a moment to discover targets.
+    let start = Instant::now();
+    loop {
+        let mut cmd = isolate.ffx(&["ffx", "target", "list"]);
+        let out = fuchsia_async::Task::blocking(async move { cmd.output() }).await?;
+        if out.stdout.len() > 10 {
+            break;
+        }
+        if start.elapsed() > Duration::from_secs(5) {
+            bail!("No targets found after 5s")
+        }
+    }
+
+    let mut cmd = isolate.ffx(&["target", "list", "-f", "j"]);
+    let out =
+        fuchsia_async::Task::blocking(async move { cmd.output().context("failed to execute") })
+            .await
+            .context("getting target list")?;
+
+    ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
+
+    let targets: Value =
+        serde_json::from_slice(&out.stdout).context("parsing output from target list")?;
+
+    let targets = targets.as_array().ok_or(anyhow!("expected target list ot return an array"))?;
+
+    let target = targets
+        .iter()
+        .find(|target| {
+            target["nodename"] != ""
+                && target["target_state"]
+                    .as_str()
+                    .map(|s| s.to_lowercase().contains("product"))
+                    .unwrap_or(false)
+        })
+        .ok_or(anyhow!("did not find any named targets in a product state"))?;
+    target["nodename"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or(anyhow!("expected product state target to have a nodename"))
+}
 
 pub struct Isolate {
     _tmpdir: TempDir,

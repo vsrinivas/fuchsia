@@ -141,22 +141,12 @@ async fn test_target_get_ssh_address_timeout() -> Result<()> {
 }
 
 async fn test_target_get_ssh_address_target_includes_port() -> Result<()> {
+    let target_nodename = get_target_nodename().await?;
+
     let isolate = Isolate::new("get-ssh-address")?;
 
-    let mut cmd = isolate.ffx(&["target", "list", "-f", "s"]);
-    let out =
-        fuchsia_async::Task::blocking(async move { cmd.output().context("failed to execute") })
-            .await
-            .context("getting target list")?;
-
-    ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
-    let stdout = String::from_utf8(out.stdout.clone()).context("convert from utf8")?;
-    let first_line = stdout.lines().next().expect("at least one target to be found");
-    // The second element should be the target name
-    let target_name =
-        first_line.split_whitespace().skip(1).next().expect("target name to be in second element");
-
-    let mut cmd = isolate.ffx(&["--target", target_name, "target", "get-ssh-address", "-t", "5"]);
+    let mut cmd =
+        isolate.ffx(&["--target", &target_nodename, "target", "get-ssh-address", "-t", "5"]);
     let out = fuchsia_async::Task::blocking(async move {
         let out = cmd.output().context("failed to execute")?;
         Ok::<_, anyhow::Error>(out)
