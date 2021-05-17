@@ -349,58 +349,36 @@ class FidlEncoder final
 namespace fidl {
 namespace internal {
 
+#define USER_ASSERT(condition, message) \
+  if (unlikely(!(condition))) {         \
+    *out_error_msg = message;           \
+    return ZX_ERR_INVALID_ARGS;         \
+  }
+
 zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
                            uint32_t num_iovecs, zx_handle_disposition_t* handle_dispositions,
                            uint32_t num_handle_dispositions, uint8_t* backing_buffer,
                            uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
                            uint32_t* out_actual_handles, const char** out_error_msg) {
-  auto set_error = [&out_error_msg](const char* msg) {
-    if (out_error_msg)
-      *out_error_msg = msg;
-  };
-  // TODO(fxbug.dev/66977) Change these to debug asserts after tests expecting these are removed.
-  // This is only used in one place and the runtime checks add unnecessary overhead.
-  if (unlikely(type == nullptr)) {
-    set_error("fidl type cannot be null");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(value == nullptr)) {
-    set_error("Cannot encode null value");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(backing_buffer == nullptr)) {
-    set_error("Cannot encode to null byte array");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(value)))) {
-    set_error("value must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(!FidlIsAligned(backing_buffer))) {
-    set_error("backing_buffer must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(num_backing_buffer % FIDL_ALIGNMENT != 0)) {
-    set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(out_actual_iovec == nullptr)) {
-    set_error("Cannot encode with null out_actual_iovec");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (num_iovecs < 1) {
-    set_error("iovecs must contain at least one iovec");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(out_actual_handles == nullptr)) {
-    set_error("Cannot encode with null out_actual_handles");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(handle_dispositions == nullptr && num_handle_dispositions != 0)) {
-    set_error("Cannot provide non-zero handle count and null handle pointer");
-    // When |handles| is nullptr, handles are closed as part of traversal.
-    return ZX_ERR_INVALID_ARGS;
-  }
+  // Use debug asserts for preconditions that are not user dependent to avoid the runtime cost.
+  ZX_DEBUG_ASSERT(type != nullptr);
+  ZX_DEBUG_ASSERT(iovecs != nullptr);
+  ZX_DEBUG_ASSERT(out_actual_iovec != nullptr);
+  ZX_DEBUG_ASSERT(out_actual_handles != nullptr);
+  ZX_DEBUG_ASSERT(out_error_msg != nullptr);
+  ZX_DEBUG_ASSERT(num_iovecs > 0);
+
+  // Return errors for user-input dependent errors.
+  USER_ASSERT(value != nullptr, "Cannot encode null value");
+  USER_ASSERT(backing_buffer != nullptr, "Cannot encode to null byte array");
+  USER_ASSERT(FidlIsAligned(reinterpret_cast<uint8_t*>(value)),
+              "value must be aligned to FIDL_ALIGNMENT");
+  USER_ASSERT(FidlIsAligned(reinterpret_cast<uint8_t*>(backing_buffer)),
+              "backing_buffer must be aligned to FIDL_ALIGNMENT");
+  USER_ASSERT(num_backing_buffer % FIDL_ALIGNMENT == 0,
+              "num_backing_buffer must be aligned to FIDL_ALIGNMENT");
+  USER_ASSERT(handle_dispositions != nullptr || num_handle_dispositions == 0,
+              "Cannot provide non-zero handle count and null handle pointer");
 
   zx_status_t status;
   uint32_t primary_size;

@@ -22,69 +22,6 @@
 #include "fidl_coded_types.h"
 #include "fidl_structs.h"
 
-namespace {
-
-// TODO(fxb/74599) Migrate usages to fidl::internal::EncodeIovecEtc.
-zx_status_t fidl_linearize_and_encode_etc(const fidl_type_t* type, void* value, uint8_t* bytes,
-                                          uint32_t num_bytes, zx_handle_disposition_t* handles,
-                                          uint32_t num_handles, uint32_t* out_actual_bytes,
-                                          uint32_t* out_actual_handles,
-                                          const char** out_error_msg) {
-  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
-  auto backing_buffer = std::make_unique<uint8_t[]>(num_bytes);
-  uint32_t actual_iovecs = 0;
-  zx_status_t status = fidl::internal::EncodeIovecEtc(
-      type, value, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS, handles, num_handles,
-      backing_buffer.get(), num_bytes, &actual_iovecs, out_actual_handles, out_error_msg);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (out_actual_bytes == nullptr) {
-    *out_error_msg = "Cannot encode with null out_actual_bytes";
-    FidlHandleDispositionCloseMany(handles, *out_actual_handles);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  *out_actual_bytes = 0;
-  for (uint32_t i = 0; i < actual_iovecs; i++) {
-    zx_channel_iovec_t& iovec = iovecs[i];
-    if (*out_actual_bytes + iovec.capacity > num_bytes) {
-      *out_error_msg = "pointed offset exceeds buffer size";
-      FidlHandleDispositionCloseMany(handles, *out_actual_handles);
-      return ZX_ERR_INVALID_ARGS;
-    }
-    memcpy(bytes + *out_actual_bytes, iovec.buffer, iovec.capacity);
-    *out_actual_bytes += iovec.capacity;
-  }
-
-  return ZX_OK;
-}
-
-// TODO(fxb/74599) Migrate usages to fidl::internal::EncodeIovecEtc.
-zx_status_t fidl_linearize_and_encode(const fidl_type_t* type, void* value, uint8_t* bytes,
-                                      uint32_t num_bytes, zx_handle_t* handles,
-                                      uint32_t num_handles, uint32_t* out_actual_bytes,
-                                      uint32_t* out_actual_handles, const char** out_error_msg) {
-  std::unique_ptr<zx_handle_disposition_t[]> handle_dispositions;
-  if (handles != nullptr) {
-    handle_dispositions = std::make_unique<zx_handle_disposition_t[]>(num_handles);
-  }
-  zx_status_t status = fidl_linearize_and_encode_etc(
-      type, value, bytes, num_bytes, handle_dispositions.get(), num_handles, out_actual_bytes,
-      out_actual_handles, out_error_msg);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (handles != nullptr) {
-    for (uint32_t i = 0; i < num_handles; i++) {
-      handles[i] = handle_dispositions[i].handle;
-    }
-  }
-  return ZX_OK;
-}
-
-}  // namespace
-
 namespace fidl {
 namespace {
 
@@ -162,7 +99,7 @@ bool IsPeerValid(const zx::unowned_eventpair handle) {
 }
 #endif
 
-enum class Mode { EncodeOnly, LinearizeAndEncode };
+enum class Mode { EncodeOnly, Iovec1FullyLinearized, Iovec16 };
 
 template <Mode mode>
 zx_status_t encode_helper(const fidl_type_t* type, void* value, uint8_t* out_bytes,
@@ -187,22 +124,74 @@ zx_status_t encode_helper<Mode::EncodeOnly>(const fidl_type_t* type, void* value
   return status;
 }
 
+zx_status_t iovec_encode_helper_impl(uint32_t num_iovec, const fidl_type_t* type, void* value,
+                                     uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles,
+                                     uint32_t num_handles, uint32_t* out_actual_bytes,
+                                     uint32_t* out_actual_handles, const char** out_error_msg) {
+  std::unique_ptr<zx_handle_disposition_t[]> handle_dispositions;
+  if (handles != nullptr) {
+    handle_dispositions = std::make_unique<zx_handle_disposition_t[]>(num_handles);
+  }
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(num_iovec);
+  auto backing_buffer = std::make_unique<uint8_t[]>(num_bytes);
+  uint32_t actual_iovecs = 0;
+  zx_status_t status = fidl::internal::EncodeIovecEtc(
+      type, value, iovecs.get(), num_iovec, handle_dispositions.get(), num_handles,
+      backing_buffer.get(), num_bytes, &actual_iovecs, out_actual_handles, out_error_msg);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (out_actual_bytes == nullptr) {
+    *out_error_msg = "Cannot encode with null out_actual_bytes";
+    FidlHandleDispositionCloseMany(handle_dispositions.get(), *out_actual_handles);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out_actual_bytes = 0;
+  for (uint32_t i = 0; i < actual_iovecs; i++) {
+    zx_channel_iovec_t& iovec = iovecs[i];
+    if (*out_actual_bytes + iovec.capacity > num_bytes) {
+      *out_error_msg = "pointed offset exceeds buffer size";
+      FidlHandleDispositionCloseMany(handle_dispositions.get(), *out_actual_handles);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(bytes + *out_actual_bytes, iovec.buffer, iovec.capacity);
+    *out_actual_bytes += iovec.capacity;
+  }
+  if (handles != nullptr) {
+    for (uint32_t i = 0; i < *out_actual_handles; i++) {
+      handles[i] = handle_dispositions[i].handle;
+    }
+  } else {
+    // If no out arg, close any handles that were created.
+    FidlHandleDispositionCloseMany(handle_dispositions.get(), *out_actual_handles);
+  }
+  return ZX_OK;
+}
+
 template <>
-zx_status_t encode_helper<Mode::LinearizeAndEncode>(const fidl_type_t* type, void* value,
-                                                    uint8_t* out_bytes, uint32_t num_bytes,
-                                                    zx_handle_t* out_handles, uint32_t num_handles,
-                                                    uint32_t* out_num_actual_bytes,
-                                                    uint32_t* out_num_actual_handles,
-                                                    const char** out_error_msg) {
-  return fidl_linearize_and_encode(type, value, out_bytes, num_bytes, out_handles, num_handles,
-                                   out_num_actual_bytes, out_num_actual_handles, out_error_msg);
+zx_status_t encode_helper<Mode::Iovec1FullyLinearized>(
+    const fidl_type_t* type, void* value, uint8_t* out_bytes, uint32_t num_bytes,
+    zx_handle_t* out_handles, uint32_t num_handles, uint32_t* out_num_actual_bytes,
+    uint32_t* out_num_actual_handles, const char** out_error_msg) {
+  return iovec_encode_helper_impl(1u, type, value, out_bytes, num_bytes, out_handles, num_handles,
+                                  out_num_actual_bytes, out_num_actual_handles, out_error_msg);
+}
+
+template <>
+zx_status_t encode_helper<Mode::Iovec16>(const fidl_type_t* type, void* value, uint8_t* out_bytes,
+                                         uint32_t num_bytes, zx_handle_t* out_handles,
+                                         uint32_t num_handles, uint32_t* out_num_actual_bytes,
+                                         uint32_t* out_num_actual_handles,
+                                         const char** out_error_msg) {
+  return iovec_encode_helper_impl(16u, type, value, out_bytes, num_bytes, out_handles, num_handles,
+                                  out_num_actual_bytes, out_num_actual_handles, out_error_msg);
 }
 
 template <Mode mode>
 void encode_null_encode_parameters() {
 // Null message type.
 #ifdef __Fuchsia__
-  {
+  if (mode == Mode::EncodeOnly) {
     nonnullable_handle_message_layout message;
     uint8_t buf[sizeof(nonnullable_handle_message_layout)];
     zx_handle_t handles[1] = {};
@@ -260,21 +249,8 @@ void encode_null_encode_parameters() {
 
 // A null actual byte count pointer.
 #ifdef __Fuchsia__
-  if (mode == Mode::LinearizeAndEncode) {
-    nonnullable_handle_message_layout message;
-    uint8_t buf[sizeof(nonnullable_handle_message_layout)];
-    zx_handle_t handles[1] = {};
-    const char* error = nullptr;
-    uint32_t actual_handles = 0u;
-    auto status =
-        fidl_linearize_and_encode(&nonnullable_handle_message_type, &message, buf, ArrayCount(buf),
-                                  handles, ArrayCount(handles), nullptr, &actual_handles, &error);
-    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
-    EXPECT_NOT_NULL(error);
-  }
-
   // A null actual handle count pointer.
-  {
+  if (mode == Mode::EncodeOnly) {
     nonnullable_handle_message_layout message;
     uint8_t buf[sizeof(nonnullable_handle_message_layout)];
     zx_handle_t handles[1] = {};
@@ -289,7 +265,7 @@ void encode_null_encode_parameters() {
 #endif
 
   // A null error string pointer is ok, though.
-  {
+  if (mode == Mode::EncodeOnly) {
     uint32_t actual_bytes = 0u;
     uint32_t actual_handles = 0u;
     auto status = encode_helper<mode>(nullptr, nullptr, nullptr, 0u, nullptr, 0u, &actual_bytes,
@@ -299,7 +275,7 @@ void encode_null_encode_parameters() {
 
 // A null error is also ok in success cases.
 #ifdef __Fuchsia__
-  {
+  if (mode == Mode::EncodeOnly) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = dummy_handle_0;
     uint8_t buf[sizeof(nonnullable_handle_message_layout)];
@@ -314,34 +290,22 @@ void encode_null_encode_parameters() {
     EXPECT_EQ(status, ZX_OK);
     EXPECT_EQ(actual_handles, 1u);
     EXPECT_EQ(handles[0], dummy_handle_0);
-    if (mode == Mode::LinearizeAndEncode) {
-      EXPECT_EQ(message.inline_struct.handle, ZX_HANDLE_INVALID);
-    }
     EXPECT_EQ(result.inline_struct.handle, FIDL_HANDLE_PRESENT);
   }
 #endif
 }
 
-#ifdef __Fuchsia__
-TEST(BufferSizes, linearize_and_encode_produces_actual_buffer_sizes) {
-  nonnullable_handle_message_layout message;
-  message.inline_struct.handle = dummy_handle_0;
-
-  uint8_t buf[2 * sizeof(nonnullable_handle_message_layout)];  // larger than needed
-  zx_handle_t handles[256] = {};                               // larger than needed
-
-  const char* error = nullptr;
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  auto status = fidl_linearize_and_encode(&nonnullable_handle_message_type, &message, buf,
-                                          ArrayCount(buf), handles, ArrayCount(handles),
-                                          &actual_bytes, &actual_handles, &error);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error);
-  EXPECT_EQ(actual_bytes, sizeof(nonnullable_handle_message_layout));
-  EXPECT_EQ(actual_handles, 1);
+TEST(NullParameters, encode_null_encode_parameters_Mode_EncodeOnly) {
+  encode_null_encode_parameters<Mode::EncodeOnly>();
+}
+TEST(NullParameters, encode_null_encode_parameters_Mode_Iovec1FullyLinearized) {
+  encode_null_encode_parameters<Mode::Iovec1FullyLinearized>();
+}
+TEST(NullParameters, encode_null_encode_parameters_Mode_Iovec16) {
+  encode_null_encode_parameters<Mode::Iovec16>();
 }
 
+#ifdef __Fuchsia__
 TEST(BufferSizes, encode_too_many_bytes_specified_should_close_handles) {
   zx::eventpair ep0, ep1;
   ASSERT_EQ(zx::eventpair::create(0, &ep0, &ep1), ZX_OK);
@@ -406,6 +370,18 @@ void encode_single_present_handle_unaligned_error() {
 }
 #endif
 
+#if __Fuchsia__
+TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_EncodeOnly) {
+  encode_single_present_handle_unaligned_error<Mode::EncodeOnly>();
+}
+TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_Iovec1FullyLinearized) {
+  encode_single_present_handle_unaligned_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_Iovec16) {
+  encode_single_present_handle_unaligned_error<Mode::Iovec16>();
+}
+#endif
+
 template <Mode mode>
 void encode_present_nonnullable_string_unaligned_error() {
   unbounded_nonnullable_string_message_layout message = {};
@@ -445,6 +421,16 @@ void encode_present_nonnullable_string_unaligned_error() {
   ASSERT_SUBSTR(error, "must be aligned to FIDL_ALIGNMENT");
 }
 
+TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_EncodeOnly) {
+  encode_present_nonnullable_string_unaligned_error<Mode::EncodeOnly>();
+}
+TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_string_unaligned_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_Iovec16) {
+  encode_present_nonnullable_string_unaligned_error<Mode::Iovec16>();
+}
+
 #ifdef __Fuchsia__
 template <Mode mode>
 void encode_single_present_handle() {
@@ -465,7 +451,7 @@ void encode_single_present_handle() {
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 1u);
   EXPECT_EQ(handles[0], dummy_handle_0);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handle, ZX_HANDLE_INVALID);
   }
   EXPECT_EQ(result.inline_struct.handle, FIDL_HANDLE_PRESENT);
@@ -501,7 +487,7 @@ void encode_single_present_handle_zero_trailing_padding() {
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 1u);
   EXPECT_EQ(handles[0], dummy_handle_0);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message->inline_struct.handle, ZX_HANDLE_INVALID);
   }
   EXPECT_EQ(result.inline_struct.handle, FIDL_HANDLE_PRESENT);
@@ -542,7 +528,7 @@ void encode_multiple_present_handles() {
   EXPECT_EQ(result.inline_struct.handle_1, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(result.inline_struct.handle_2, FIDL_HANDLE_PRESENT);
   EXPECT_EQ(result.inline_struct.data_2, 0u);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handle_0, ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handle_1, ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handle_2, ZX_HANDLE_INVALID);
@@ -570,7 +556,7 @@ void encode_single_absent_handle() {
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 0u);
   EXPECT_EQ(result.inline_struct.handle, FIDL_HANDLE_ABSENT);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handle, ZX_HANDLE_INVALID);
   }
 }
@@ -600,7 +586,7 @@ void encode_multiple_absent_handles() {
   EXPECT_EQ(result.inline_struct.handle_1, FIDL_HANDLE_ABSENT);
   EXPECT_EQ(result.inline_struct.handle_2, FIDL_HANDLE_ABSENT);
   EXPECT_EQ(result.inline_struct.data_2, 0u);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handle_0, ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handle_1, ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handle_2, ZX_HANDLE_INVALID);
@@ -629,7 +615,7 @@ void encode_array_of_present_handles() {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 4u);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[2], ZX_HANDLE_INVALID);
@@ -651,7 +637,7 @@ void encode_array_of_present_handles_error_closes_handles() {
   array_of_nonnullable_handles_message_layout message = {};
   zx_handle_t handle_pairs[4][2];
   // Use eventpairs so that we can know for sure that handles were closed by
-  // fidl_linearize_and_encode.
+  // EncodeIovecEtc.
   for (uint32_t i = 0; i < ArrayCount(handle_pairs); ++i) {
     ASSERT_EQ(zx_eventpair_create(0u, &handle_pairs[i][0], &handle_pairs[i][1]), ZX_OK);
   }
@@ -683,7 +669,7 @@ void encode_array_of_present_handles_error_closes_handles() {
               ZX_OK);
     EXPECT_EQ(observed_signals & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
     EXPECT_EQ(zx_handle_close(handle_pairs[i][1]),
-              ZX_OK);  // [i][0] was closed by fidl_linearize_and_encode.
+              ZX_OK);  // [i][0] was closed by EncodeIovecEtc.
   }
 }
 #endif
@@ -712,7 +698,7 @@ void encode_array_of_nullable_handles() {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 3u);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[2], ZX_HANDLE_INVALID);
@@ -784,7 +770,7 @@ void encode_array_of_array_of_present_handles() {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
   EXPECT_EQ(actual_handles, 12u);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.handles[0][0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[0][1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.handles[0][2], ZX_HANDLE_INVALID);
@@ -850,7 +836,7 @@ void encode_out_of_line_array_of_nonnullable_handles() {
 
   auto array_ptr = reinterpret_cast<uint64_t>(result.inline_struct.maybe_array);
   EXPECT_EQ(array_ptr, FIDL_ALLOC_PRESENT);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.data.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.data.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.data.handles[2], ZX_HANDLE_INVALID);
@@ -982,18 +968,19 @@ TEST(Strings, encode_absent_nonnullable_string_error) {
   EXPECT_NOT_NULL(error);
 }
 
-TEST(Strings, linearize_and_encode_absent_nonnullable_string_error) {
+TEST(Strings, EncodeIovecEtc_absent_nonnullable_string) {
   unbounded_nonnullable_string_message_layout message = {};
   message.inline_struct.string = fidl_string_t{0u, nullptr};
 
   uint8_t buf[sizeof(unbounded_nonnullable_string_message_layout)];
+  zx_channel_iovec_t iovecs[1];
 
   const char* error = nullptr;
-  uint32_t actual_bytes = 0u;
+  uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
-  auto status = fidl_linearize_and_encode(&unbounded_nonnullable_string_message_type, &message, buf,
-                                          ArrayCount(buf), nullptr, 0, &actual_bytes,
-                                          &actual_handles, &error);
+  auto status = fidl::internal::EncodeIovecEtc(
+      &unbounded_nonnullable_string_message_type, &message, iovecs, std::size(iovecs), nullptr, 0,
+      buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
 
   EXPECT_EQ(status, ZX_OK);
   auto& result = *reinterpret_cast<unbounded_nonnullable_string_message_layout*>(buf);
@@ -1215,7 +1202,7 @@ void encode_present_nonnullable_vector_of_handles() {
   EXPECT_EQ(handles[1], dummy_handle_1);
   EXPECT_EQ(handles[2], dummy_handle_2);
   EXPECT_EQ(handles[3], dummy_handle_3);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[2], ZX_HANDLE_INVALID);
@@ -1257,7 +1244,7 @@ void encode_present_nullable_vector_of_handles() {
   EXPECT_EQ(handles[1], dummy_handle_1);
   EXPECT_EQ(handles[2], dummy_handle_2);
   EXPECT_EQ(handles[3], dummy_handle_3);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[2], ZX_HANDLE_INVALID);
@@ -1336,7 +1323,7 @@ void encode_present_nonnullable_bounded_vector_of_handles() {
   EXPECT_EQ(handles[1], dummy_handle_1);
   EXPECT_EQ(handles[2], dummy_handle_2);
   EXPECT_EQ(handles[3], dummy_handle_3);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[2], ZX_HANDLE_INVALID);
@@ -1378,7 +1365,7 @@ void encode_present_nullable_bounded_vector_of_handles() {
   EXPECT_EQ(handles[1], dummy_handle_1);
   EXPECT_EQ(handles[2], dummy_handle_2);
   EXPECT_EQ(handles[3], dummy_handle_3);
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.handles[0], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[1], ZX_HANDLE_INVALID);
     EXPECT_EQ(message.handles[2], ZX_HANDLE_INVALID);
@@ -1555,17 +1542,18 @@ TEST(Vectors, encode_absent_and_empty_nonnullable_vector_of_uint32_error) {
   EXPECT_NOT_NULL(error);
 }
 
-TEST(Vectors, linearize_and_encode_absent_and_empty_nonnullable_vector_of_uint32) {
+TEST(Vectors, EncodeIovecEtc_absent_and_empty_nonnullable_vector_of_uint32) {
   unbounded_nonnullable_vector_of_uint32_message_layout message = {};
   message.inline_struct.vector = fidl_vector_t{0, nullptr};
 
+  zx_channel_iovec_t iovecs[1];
   uint8_t buf[sizeof(message.inline_struct)];
   const char* error = nullptr;
-  uint32_t actual_bytes = 0u;
+  uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
-  auto status = fidl_linearize_and_encode(&unbounded_nonnullable_vector_of_uint32_message_type,
-                                          &message, buf, ArrayCount(buf), nullptr, 0, &actual_bytes,
-                                          &actual_handles, &error);
+  auto status = fidl::internal::EncodeIovecEtc(
+      &unbounded_nonnullable_vector_of_uint32_message_type, &message, iovecs, std::size(iovecs),
+      nullptr, 0, buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
   auto& result = *reinterpret_cast<decltype(message.inline_struct)*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
@@ -1749,7 +1737,7 @@ void encode_nested_nonnullable_structs() {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 
-  if (mode == Mode::LinearizeAndEncode) {
+  if (mode == Mode::Iovec1FullyLinearized || mode == Mode::Iovec16) {
     EXPECT_EQ(message.inline_struct.l0.l1.handle_1, ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.l0.l1.l2.l3.handle_3, ZX_HANDLE_INVALID);
     EXPECT_EQ(message.inline_struct.l0.l1.l2.handle_2, ZX_HANDLE_INVALID);
@@ -1989,170 +1977,28 @@ void encode_nested_nullable_structs() {
   EXPECT_EQ(reinterpret_cast<uintptr_t>(result.out_out_1.l2_inline.l3_absent), FIDL_ALLOC_ABSENT);
   EXPECT_EQ(reinterpret_cast<uintptr_t>(result.out_out_out_2.l3_absent), FIDL_ALLOC_ABSENT);
 }
-
-TEST(TrackingPtr, encode_union_tracking_ptr_unowned) {
-  int32_t int_val = 0x12345678;
-  LLCPPStyleUnionStruct str;
-  str.u.set_Primitive(fidl::ObjectView<int32_t>::FromExternal(&int_val));
-
-  constexpr uint32_t kBufSize = 512;
-  uint8_t buffer[kBufSize];
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  const char* error = nullptr;
-  auto status =
-      fidl_linearize_and_encode(&fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
-                                kBufSize, nullptr, 0, &actual_bytes, &actual_handles, &error);
-  EXPECT_EQ(status, ZX_OK);
-
-  fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
-
-  EXPECT_EQ(actual_bytes, 32);
-  EXPECT_EQ(actual_handles, 0);
-  EXPECT_EQ(written_xunion->tag, 1);
-  EXPECT_EQ(written_xunion->envelope.num_handles, 0);
-  EXPECT_EQ(written_xunion->envelope.num_bytes, 8);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(written_xunion->envelope.data), FIDL_ALLOC_PRESENT);
-  EXPECT_EQ(*reinterpret_cast<int32_t*>(buffer + sizeof(LLCPPStyleUnionStruct)), int_val);
-  // Padding should be zero.
-  EXPECT_EQ(*reinterpret_cast<int32_t*>(buffer + sizeof(LLCPPStyleUnionStruct) + 4), 0);
-}
 #endif
 
-// Heap allocated objects are not co-located with the stack object so this tests linearization.
-TEST(TrackingPtr, encode_union_tracking_ptr_heap_allocate) {
-  int32_t int_val = 0x12345678;
-  LLCPPStyleUnionStruct str;
-  str.u.set_Primitive(fidl::ObjectView<int32_t>::FromExternal(&int_val));
-
-  constexpr uint32_t kBufSize = 512;
-  uint8_t buffer[kBufSize];
-  const char* error = nullptr;
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  auto status =
-      fidl_linearize_and_encode(&fidl_test_coding_LLCPPStyleUnionStructTable, &str, buffer,
-                                kBufSize, nullptr, 0, &actual_bytes, &actual_handles, &error);
-  EXPECT_EQ(status, ZX_OK);
-
-  fidl_xunion_t* written_xunion = reinterpret_cast<fidl_xunion_t*>(buffer);
-
-  EXPECT_EQ(actual_bytes, 32);
-  EXPECT_EQ(actual_handles, 0);
-  EXPECT_EQ(written_xunion->tag, 1);
-  EXPECT_EQ(written_xunion->envelope.num_handles, 0);
-  EXPECT_EQ(written_xunion->envelope.num_bytes, 8);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(written_xunion->envelope.data), FIDL_ALLOC_PRESENT);
-  EXPECT_EQ(*reinterpret_cast<int32_t*>(buffer + sizeof(LLCPPStyleUnionStruct)), int_val);
-  // Padding should be zero.
-  EXPECT_EQ(*reinterpret_cast<int32_t*>(buffer + sizeof(LLCPPStyleUnionStruct) + 4), 0);
-}
-
-TEST(TrackingPtr, encode_vector_view_tracking_ptr_unowned) {
-  constexpr uint32_t kSize = 16;
-  uint32_t arr[kSize];
-  for (uint32_t i = 0; i < kSize; i++)
-    arr[i] = i;
-
-  Uint32VectorStruct str;
-  str.vec = fidl::VectorView<uint32_t>::FromExternal(arr);
-
-  constexpr uint32_t kBufSize = 512;
-  uint8_t buffer[kBufSize];
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  const char* error = nullptr;
-  auto status =
-      fidl_linearize_and_encode(&fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
-                                nullptr, 0, &actual_bytes, &actual_handles, &error);
-  EXPECT_EQ(status, ZX_OK);
-
-  fidl_vector_t* written_vector = reinterpret_cast<fidl_vector_t*>(buffer);
-
-  EXPECT_EQ(actual_bytes, 80);
-  EXPECT_EQ(actual_handles, 0);
-  EXPECT_EQ(written_vector->count, 16);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(written_vector->data), FIDL_ALLOC_PRESENT);
-  uint32_t* written_arr = reinterpret_cast<uint32_t*>(buffer + sizeof(fidl_vector_t));
-  for (uint32_t i = 0; i < kSize; i++)
-    EXPECT_EQ(written_arr[i], i);
-}
-
-// Heap allocated objects are not co-located with the stack object so this tests linearization.
-TEST(TrackingPtr, encode_vector_view_tracking_ptr_heap_allocate) {
-  constexpr uint32_t kSize = 16;
-  uint32_t uptr[kSize];
-  for (uint32_t i = 0; i < kSize; i++)
-    uptr[i] = i;
-
-  Uint32VectorStruct str;
-  str.vec = fidl::VectorView<uint32_t>::FromExternal(uptr);
-
-  constexpr uint32_t kBufSize = 512;
-  uint8_t buffer[kBufSize];
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  const char* error = nullptr;
-  auto status =
-      fidl_linearize_and_encode(&fidl_test_coding_Uint32VectorStructTable, &str, buffer, kBufSize,
-                                nullptr, 0, &actual_bytes, &actual_handles, &error);
-  EXPECT_EQ(status, ZX_OK);
-
-  fidl_vector_t* written_vector = reinterpret_cast<fidl_vector_t*>(buffer);
-
-  EXPECT_EQ(actual_bytes, 80);
-  EXPECT_EQ(actual_handles, 0);
-  EXPECT_EQ(written_vector->count, 16);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(written_vector->data), FIDL_ALLOC_PRESENT);
-  uint32_t* written_arr = reinterpret_cast<uint32_t*>(buffer + sizeof(fidl_vector_t));
-  for (uint32_t i = 0; i < kSize; i++)
-    EXPECT_EQ(written_arr[i], i);
-}
-
-TEST(TrackingPtr, encode_string_view_tracking_ptr_unowned) {
-  const char input[] = "abcd";
-  StringStruct str = {.str = fidl::StringView(input)};
-
-  constexpr uint32_t kBufSize = 512;
-  uint8_t buffer[kBufSize];
-  uint32_t actual_bytes = 0u;
-  uint32_t actual_handles = 0u;
-  const char* error = nullptr;
-  auto status =
-      fidl_linearize_and_encode(&fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
-                                nullptr, 0, &actual_bytes, &actual_handles, &error);
-  EXPECT_EQ(status, ZX_OK);
-
-  fidl_string_t* written_string = reinterpret_cast<fidl_string_t*>(buffer);
-
-  EXPECT_EQ(actual_bytes, 24);
-  EXPECT_EQ(actual_handles, 0);
-  EXPECT_EQ(written_string->size, strlen(input));
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(written_string->data), FIDL_ALLOC_PRESENT);
-  const char* written_data = reinterpret_cast<char*>(buffer + sizeof(fidl_string_t));
-  for (size_t i = 0; i < strlen(input); i++)
-    EXPECT_EQ(written_data[i], input[i]);
-}
-
-// Allocated objects are not co-located with the stack object so this tests linearization.
 TEST(TrackingPtr, encode_string_view_with_fidl_allocator) {
   fidl::FidlAllocator allocator;
   const char input[] = "abcd";
   StringStruct str = {.str = fidl::StringView(allocator, input)};
 
+  zx_channel_iovec_t iovecs[1];
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
-  uint32_t actual_bytes = 0u;
+  uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
   const char* error = nullptr;
   auto status =
-      fidl_linearize_and_encode(&fidl_test_coding_StringStructTable, &str, buffer, kBufSize,
-                                nullptr, 0, &actual_bytes, &actual_handles, &error);
+      fidl::internal::EncodeIovecEtc(&fidl_test_coding_StringStructTable, &str, iovecs, 1, nullptr,
+                                     0, buffer, kBufSize, &actual_iovecs, &actual_handles, &error);
   EXPECT_EQ(status, ZX_OK);
 
   fidl_string_t* written_string = reinterpret_cast<fidl_string_t*>(buffer);
 
-  EXPECT_EQ(actual_bytes, 24);
+  ASSERT_EQ(actual_iovecs, 1);
+  EXPECT_EQ(iovecs[0].capacity, 24);
   EXPECT_EQ(actual_handles, 0);
   EXPECT_EQ(written_string->size, strlen(input));
   EXPECT_EQ(reinterpret_cast<uintptr_t>(written_string->data), FIDL_ALLOC_PRESENT);
@@ -2166,22 +2012,21 @@ struct BoolStruct {
 };
 
 #if __Fuchsia__
-// Most fidl_linearize_and_encode_etc code paths are covered by the fidl_linearize_and_encode tests.
-// These tests cover additional paths.
 
-TEST(FidlLinearizeAndEncodeEtc, linearize_and_encode_single_present_handle_disposition) {
+TEST(EncodeIovecEtc, single_present_handle_disposition) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = dummy_handle_0;
 
+  zx_channel_iovec_t iovecs[1];
   uint8_t buf[sizeof(message)];
   zx_handle_disposition_t handle_dispositions[1] = {};
 
   const char* error = nullptr;
-  uint32_t actual_bytes = 0u;
+  uint32_t actual_iovecs = 0u;
   uint32_t actual_handles = 0u;
-  auto status = fidl_linearize_and_encode_etc(
-      &nonnullable_channel_message_type, &message, buf, ArrayCount(buf), handle_dispositions,
-      ArrayCount(handle_dispositions), &actual_bytes, &actual_handles, &error);
+  auto status = fidl::internal::EncodeIovecEtc(
+      &nonnullable_channel_message_type, &message, iovecs, std::size(iovecs), handle_dispositions,
+      std::size(handle_dispositions), buf, std::size(buf), &actual_iovecs, &actual_handles, &error);
   auto& result = *reinterpret_cast<nonnullable_handle_message_layout*>(buf);
 
   EXPECT_EQ(status, ZX_OK);
@@ -2220,29 +2065,6 @@ TEST(FidlLinearizeAndEncodeEtc, encode_single_present_handle_disposition) {
 }
 #endif
 
-TEST(NullParameters, encode_null_encode_parameters_Mode_EncodeOnly) {
-  encode_null_encode_parameters<Mode::EncodeOnly>();
-}
-TEST(NullParameters, encode_null_encode_parameters_Mode_LinearizeAndEncode) {
-  encode_null_encode_parameters<Mode::LinearizeAndEncode>();
-}
-
-#if __Fuchsia__
-TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_EncodeOnly) {
-  encode_single_present_handle_unaligned_error<Mode::EncodeOnly>();
-}
-TEST(Unaligned, encode_single_present_handle_unaligned_error_Mode_LinearizeAndEncode) {
-  encode_single_present_handle_unaligned_error<Mode::LinearizeAndEncode>();
-}
-#endif
-
-TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_EncodeOnly) {
-  encode_present_nonnullable_string_unaligned_error<Mode::EncodeOnly>();
-}
-TEST(Unaligned, encode_present_nonnullable_string_unaligned_error_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_string_unaligned_error<Mode::LinearizeAndEncode>();
-}
-
 #if __Fuchsia__
 TEST(Handles, encode_single_present_handle_Mode_EncodeOnly) {
   encode_single_present_handle<Mode::EncodeOnly>();
@@ -2259,20 +2081,35 @@ TEST(Handles, encode_single_absent_handle_Mode_EncodeOnly) {
 TEST(Handles, encode_multiple_absent_handles_Mode_EncodeOnly) {
   encode_multiple_absent_handles<Mode::EncodeOnly>();
 }
-TEST(Handles, encode_single_present_handle_Mode_LinearizeAndEncode) {
-  encode_single_present_handle<Mode::LinearizeAndEncode>();
+TEST(Handles, encode_single_present_handle_Mode_Iovec1FullyLinearized) {
+  encode_single_present_handle<Mode::Iovec1FullyLinearized>();
 }
-TEST(Handles, encode_single_present_handle_zero_trailing_padding_Mode_LinearizeAndEncode) {
-  encode_single_present_handle_zero_trailing_padding<Mode::LinearizeAndEncode>();
+TEST(Handles, encode_single_present_handle_zero_trailing_padding_Mode_Iovec1FullyLinearized) {
+  encode_single_present_handle_zero_trailing_padding<Mode::Iovec1FullyLinearized>();
 }
-TEST(Handles, encode_multiple_present_handles_Mode_LinearizeAndEncode) {
-  encode_multiple_present_handles<Mode::LinearizeAndEncode>();
+TEST(Handles, encode_multiple_present_handles_Mode_Iovec1FullyLinearized) {
+  encode_multiple_present_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Handles, encode_single_absent_handle_Mode_LinearizeAndEncode) {
-  encode_single_absent_handle<Mode::LinearizeAndEncode>();
+TEST(Handles, encode_single_absent_handle_Mode_Iovec1FullyLinearized) {
+  encode_single_absent_handle<Mode::Iovec1FullyLinearized>();
 }
-TEST(Handles, encode_multiple_absent_handles_Mode_LinearizeAndEncode) {
-  encode_multiple_absent_handles<Mode::LinearizeAndEncode>();
+TEST(Handles, encode_multiple_absent_handles_Mode_Iovec1FullyLinearized) {
+  encode_multiple_absent_handles<Mode::Iovec1FullyLinearized>();
+}
+TEST(Handles, encode_single_present_handle_Mode_Iovec16) {
+  encode_single_present_handle<Mode::Iovec16>();
+}
+TEST(Handles, encode_single_present_handle_zero_trailing_padding_Mode_Iovec16) {
+  encode_single_present_handle_zero_trailing_padding<Mode::Iovec16>();
+}
+TEST(Handles, encode_multiple_present_handles_Mode_Iovec16) {
+  encode_multiple_present_handles<Mode::Iovec16>();
+}
+TEST(Handles, encode_single_absent_handle_Mode_Iovec16) {
+  encode_single_absent_handle<Mode::Iovec16>();
+}
+TEST(Handles, encode_multiple_absent_handles_Mode_Iovec16) {
+  encode_multiple_absent_handles<Mode::Iovec16>();
 }
 
 TEST(Arrays, encode_array_of_present_handles_Mode_EncodeOnly) {
@@ -2295,24 +2132,43 @@ TEST(Arrays, encode_array_of_present_handles_error_closes_handles_Mode_EncodeOnl
   encode_array_of_present_handles_error_closes_handles<Mode::EncodeOnly>();
 }
 
-TEST(Arrays, encode_array_of_present_handles_Mode_LinearizeAndEncode) {
-  encode_array_of_present_handles<Mode::LinearizeAndEncode>();
+TEST(Arrays, encode_array_of_present_handles_Mode_Iovec1FullyLinearized) {
+  encode_array_of_present_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Arrays, encode_array_of_nullable_handles_Mode_LinearizeAndEncode) {
-  encode_array_of_nullable_handles<Mode::LinearizeAndEncode>();
+TEST(Arrays, encode_array_of_nullable_handles_Mode_Iovec1FullyLinearized) {
+  encode_array_of_nullable_handles<Mode::Iovec1FullyLinearized>();
 }
 TEST(Arrays,
-     encode_array_of_nullable_handles_with_insufficient_handles_error_Mode_LinearizeAndEncode) {
-  encode_array_of_nullable_handles_with_insufficient_handles_error<Mode::LinearizeAndEncode>();
+     encode_array_of_nullable_handles_with_insufficient_handles_error_Mode_Iovec1FullyLinearized) {
+  encode_array_of_nullable_handles_with_insufficient_handles_error<Mode::Iovec1FullyLinearized>();
 }
-TEST(Arrays, encode_array_of_array_of_present_handles_Mode_LinearizeAndEncode) {
-  encode_array_of_array_of_present_handles<Mode::LinearizeAndEncode>();
+TEST(Arrays, encode_array_of_array_of_present_handles_Mode_Iovec1FullyLinearized) {
+  encode_array_of_array_of_present_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Arrays, encode_out_of_line_array_of_nonnullable_handles_Mode_LinearizeAndEncode) {
-  encode_out_of_line_array_of_nonnullable_handles<Mode::LinearizeAndEncode>();
+TEST(Arrays, encode_out_of_line_array_of_nonnullable_handles_Mode_Iovec1FullyLinearized) {
+  encode_out_of_line_array_of_nonnullable_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Arrays, encode_array_of_present_handles_error_closes_handles_Mode_LinearizeAndEncode) {
-  encode_array_of_present_handles_error_closes_handles<Mode::LinearizeAndEncode>();
+TEST(Arrays, encode_array_of_present_handles_error_closes_handles_Mode_Iovec1FullyLinearized) {
+  encode_array_of_present_handles_error_closes_handles<Mode::Iovec1FullyLinearized>();
+}
+
+TEST(Arrays, encode_array_of_present_handles_Mode_Iovec16) {
+  encode_array_of_present_handles<Mode::Iovec16>();
+}
+TEST(Arrays, encode_array_of_nullable_handles_Mode_Iovec16) {
+  encode_array_of_nullable_handles<Mode::Iovec16>();
+}
+TEST(Arrays, encode_array_of_nullable_handles_with_insufficient_handles_error_Mode_Iovec16) {
+  encode_array_of_nullable_handles_with_insufficient_handles_error<Mode::Iovec16>();
+}
+TEST(Arrays, encode_array_of_array_of_present_handles_Mode_Iovec16) {
+  encode_array_of_array_of_present_handles<Mode::Iovec16>();
+}
+TEST(Arrays, encode_out_of_line_array_of_nonnullable_handles_Mode_Iovec16) {
+  encode_out_of_line_array_of_nonnullable_handles<Mode::Iovec16>();
+}
+TEST(Arrays, encode_array_of_present_handles_error_closes_handles_Mode_Iovec16) {
+  encode_array_of_present_handles_error_closes_handles<Mode::Iovec16>();
 }
 #endif
 
@@ -2346,35 +2202,65 @@ TEST(Strings, encode_present_nonnullable_bounded_string_short_error_Mode_EncodeO
 TEST(Strings, encode_present_nullable_bounded_string_short_error_Mode_EncodeOnly) {
   encode_present_nullable_bounded_string_short_error<Mode::EncodeOnly>();
 }
-TEST(Strings, encode_present_nonnullable_string_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_present_nonnullable_string_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_multiple_present_nullable_string_Mode_LinearizeAndEncode) {
-  encode_multiple_present_nullable_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_multiple_present_nullable_string_Mode_Iovec1FullyLinearized) {
+  encode_multiple_present_nullable_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_present_nullable_string_Mode_LinearizeAndEncode) {
-  encode_present_nullable_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_present_nullable_string_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_absent_nullable_string_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_absent_nullable_string_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_present_nonnullable_bounded_string_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_bounded_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_present_nonnullable_bounded_string_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_bounded_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_present_nullable_bounded_string_Mode_LinearizeAndEncode) {
-  encode_present_nullable_bounded_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_present_nullable_bounded_string_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_bounded_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_absent_nonnullable_bounded_string_error_Mode_LinearizeAndEncode) {
-  encode_absent_nonnullable_bounded_string_error<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_absent_nonnullable_bounded_string_error_Mode_Iovec1FullyLinearized) {
+  encode_absent_nonnullable_bounded_string_error<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_absent_nullable_bounded_string_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_bounded_string<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_absent_nullable_bounded_string_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_bounded_string<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_present_nonnullable_bounded_string_short_error_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_bounded_string_short_error<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_present_nonnullable_bounded_string_short_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_bounded_string_short_error<Mode::Iovec1FullyLinearized>();
 }
-TEST(Strings, encode_present_nullable_bounded_string_short_error_Mode_LinearizeAndEncode) {
-  encode_present_nullable_bounded_string_short_error<Mode::LinearizeAndEncode>();
+TEST(Strings, encode_present_nullable_bounded_string_short_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_bounded_string_short_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Strings, encode_present_nonnullable_string_Mode_Iovec16) {
+  encode_present_nonnullable_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_multiple_present_nullable_string_Mode_Iovec16) {
+  encode_multiple_present_nullable_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_present_nullable_string_Mode_Iovec16) {
+  encode_present_nullable_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_absent_nullable_string_Mode_Iovec16) {
+  encode_absent_nullable_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_present_nonnullable_bounded_string_Mode_Iovec16) {
+  encode_present_nonnullable_bounded_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_present_nullable_bounded_string_Mode_Iovec16) {
+  encode_present_nullable_bounded_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_absent_nonnullable_bounded_string_error_Mode_Iovec16) {
+  encode_absent_nonnullable_bounded_string_error<Mode::Iovec16>();
+}
+TEST(Strings, encode_absent_nullable_bounded_string_Mode_Iovec16) {
+  encode_absent_nullable_bounded_string<Mode::Iovec16>();
+}
+TEST(Strings, encode_present_nonnullable_bounded_string_short_error_Mode_Iovec16) {
+  encode_present_nonnullable_bounded_string_short_error<Mode::Iovec16>();
+}
+TEST(Strings, encode_present_nullable_bounded_string_short_error_Mode_Iovec16) {
+  encode_present_nullable_bounded_string_short_error<Mode::Iovec16>();
 }
 
 TEST(Vectors, encode_vector_with_huge_count_Mode_EncodeOnly) {
@@ -2443,83 +2329,149 @@ TEST(Vectors, encode_present_nonnullable_bounded_vector_of_uint32_short_error_Mo
 TEST(Vectors, encode_present_nullable_bounded_vector_of_uint32_short_error_Mode_EncodeOnly) {
   encode_present_nullable_bounded_vector_of_uint32_short_error<Mode::EncodeOnly>();
 }
-TEST(Vectors, encode_vector_with_huge_count_Mode_LinearizeAndEncode) {
-  encode_vector_with_huge_count<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_vector_with_huge_count_Mode_Iovec1FullyLinearized) {
+  encode_vector_with_huge_count<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_vector_with_huge_count_Mode_Iovec16) {
+  encode_vector_with_huge_count<Mode::Iovec16>();
 }
 #if __Fuchsia__
 TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_EncodeOnly) {
   encode_absent_nonnullable_vector_of_handles_error<Mode::EncodeOnly>();
 }
-TEST(Vectors, encode_present_nonnullable_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_vector_of_handles<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_present_nonnullable_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_present_nullable_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_present_nullable_vector_of_handles<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_present_nullable_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_absent_nullable_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_vector_of_handles<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_absent_nullable_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_present_nonnullable_bounded_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_bounded_vector_of_handles<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_present_nonnullable_bounded_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_bounded_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_present_nullable_bounded_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_present_nullable_bounded_vector_of_handles<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_present_nullable_bounded_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_bounded_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_absent_nonnullable_bounded_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_absent_nonnullable_bounded_vector_of_handles<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_absent_nonnullable_bounded_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_absent_nonnullable_bounded_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_absent_nullable_bounded_vector_of_handles_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_bounded_vector_of_handles<Mode::LinearizeAndEncode>();
-}
-TEST(Vectors,
-     encode_present_nonnullable_bounded_vector_of_handles_short_error_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_bounded_vector_of_handles_short_error<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_absent_nullable_bounded_vector_of_handles_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_bounded_vector_of_handles<Mode::Iovec1FullyLinearized>();
 }
 TEST(Vectors,
-     encode_present_nullable_bounded_vector_of_handles_short_error_Mode_LinearizeAndEncode) {
-  encode_present_nullable_bounded_vector_of_handles_short_error<Mode::LinearizeAndEncode>();
+     encode_present_nonnullable_bounded_vector_of_handles_short_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_bounded_vector_of_handles_short_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors,
+     encode_present_nullable_bounded_vector_of_handles_short_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_bounded_vector_of_handles_short_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_present_nonnullable_vector_of_handles_Mode_Iovec16) {
+  encode_present_nonnullable_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nullable_vector_of_handles_Mode_Iovec16) {
+  encode_present_nullable_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nullable_vector_of_handles_Mode_Iovec16) {
+  encode_absent_nullable_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nonnullable_bounded_vector_of_handles_Mode_Iovec16) {
+  encode_present_nonnullable_bounded_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nullable_bounded_vector_of_handles_Mode_Iovec16) {
+  encode_present_nullable_bounded_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nonnullable_bounded_vector_of_handles_Mode_Iovec16) {
+  encode_absent_nonnullable_bounded_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nullable_bounded_vector_of_handles_Mode_Iovec16) {
+  encode_absent_nullable_bounded_vector_of_handles<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nonnullable_bounded_vector_of_handles_short_error_Mode_Iovec16) {
+  encode_present_nonnullable_bounded_vector_of_handles_short_error<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nullable_bounded_vector_of_handles_short_error_Mode_Iovec16) {
+  encode_present_nullable_bounded_vector_of_handles_short_error<Mode::Iovec16>();
 }
 #endif
-TEST(Vectors, encode_present_nonnullable_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_vector_of_uint32<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_present_nonnullable_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_vector_of_uint32<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_present_nullable_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_present_nullable_vector_of_uint32<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_present_nullable_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_vector_of_uint32<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_absent_nonnullable_vector_of_uint32_error_Mode_LinearizeAndEncode) {
-  encode_absent_nonnullable_vector_of_uint32_error<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_absent_nonnullable_vector_of_uint32_error_Mode_Iovec1FullyLinearized) {
+  encode_absent_nonnullable_vector_of_uint32_error<Mode::Iovec1FullyLinearized>();
 }
-TEST(Vectors, encode_absent_nullable_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_vector_of_uint32<Mode::LinearizeAndEncode>();
-}
-TEST(Vectors,
-     encode_absent_nullable_vector_of_uint32_non_zero_length_error_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_vector_of_uint32_non_zero_length_error<Mode::LinearizeAndEncode>();
-}
-TEST(Vectors, encode_present_nonnullable_bounded_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_bounded_vector_of_uint32<Mode::LinearizeAndEncode>();
-}
-TEST(Vectors, encode_present_nullable_bounded_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_present_nullable_bounded_vector_of_uint32<Mode::LinearizeAndEncode>();
-}
-TEST(Vectors, encode_absent_nonnullable_bounded_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_absent_nonnullable_bounded_vector_of_uint32<Mode::LinearizeAndEncode>();
-}
-TEST(Vectors, encode_absent_nullable_bounded_vector_of_uint32_Mode_LinearizeAndEncode) {
-  encode_absent_nullable_bounded_vector_of_uint32<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_absent_nullable_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_vector_of_uint32<Mode::Iovec1FullyLinearized>();
 }
 TEST(Vectors,
-     encode_present_nonnullable_bounded_vector_of_uint32_short_error_Mode_LinearizeAndEncode) {
-  encode_present_nonnullable_bounded_vector_of_uint32_short_error<Mode::LinearizeAndEncode>();
+     encode_absent_nullable_vector_of_uint32_non_zero_length_error_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_vector_of_uint32_non_zero_length_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_present_nonnullable_bounded_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_bounded_vector_of_uint32<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_present_nullable_bounded_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_bounded_vector_of_uint32<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_absent_nonnullable_bounded_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_absent_nonnullable_bounded_vector_of_uint32<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_absent_nullable_bounded_vector_of_uint32_Mode_Iovec1FullyLinearized) {
+  encode_absent_nullable_bounded_vector_of_uint32<Mode::Iovec1FullyLinearized>();
 }
 TEST(Vectors,
-     encode_present_nullable_bounded_vector_of_uint32_short_error_Mode_LinearizeAndEncode) {
-  encode_present_nullable_bounded_vector_of_uint32_short_error<Mode::LinearizeAndEncode>();
+     encode_present_nonnullable_bounded_vector_of_uint32_short_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nonnullable_bounded_vector_of_uint32_short_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors,
+     encode_present_nullable_bounded_vector_of_uint32_short_error_Mode_Iovec1FullyLinearized) {
+  encode_present_nullable_bounded_vector_of_uint32_short_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_present_nonnullable_vector_of_uint32_Mode_Iovec16) {
+  encode_present_nonnullable_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nullable_vector_of_uint32_Mode_Iovec16) {
+  encode_present_nullable_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nonnullable_vector_of_uint32_error_Mode_Iovec16) {
+  encode_absent_nonnullable_vector_of_uint32_error<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nullable_vector_of_uint32_Mode_Iovec16) {
+  encode_absent_nullable_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nullable_vector_of_uint32_non_zero_length_error_Mode_Iovec16) {
+  encode_absent_nullable_vector_of_uint32_non_zero_length_error<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nonnullable_bounded_vector_of_uint32_Mode_Iovec16) {
+  encode_present_nonnullable_bounded_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nullable_bounded_vector_of_uint32_Mode_Iovec16) {
+  encode_present_nullable_bounded_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nonnullable_bounded_vector_of_uint32_Mode_Iovec16) {
+  encode_absent_nonnullable_bounded_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_absent_nullable_bounded_vector_of_uint32_Mode_Iovec16) {
+  encode_absent_nullable_bounded_vector_of_uint32<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nonnullable_bounded_vector_of_uint32_short_error_Mode_Iovec16) {
+  encode_present_nonnullable_bounded_vector_of_uint32_short_error<Mode::Iovec16>();
+}
+TEST(Vectors, encode_present_nullable_bounded_vector_of_uint32_short_error_Mode_Iovec16) {
+  encode_present_nullable_bounded_vector_of_uint32_short_error<Mode::Iovec16>();
 }
 
 #if __Fuchsia__
-TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_LinearizeAndEncode) {
-  encode_absent_nonnullable_vector_of_handles_error<Mode::LinearizeAndEncode>();
+TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_Iovec1FullyLinearized) {
+  encode_absent_nonnullable_vector_of_handles_error<Mode::Iovec1FullyLinearized>();
+}
+TEST(Vectors, encode_absent_nonnullable_vector_of_handles_error_Mode_Iovec16) {
+  encode_absent_nonnullable_vector_of_handles_error<Mode::Iovec16>();
 }
 TEST(Structs, encode_nested_nonnullable_structs_Mode_EncodeOnly) {
   encode_nested_nonnullable_structs<Mode::EncodeOnly>();
@@ -2530,14 +2482,23 @@ TEST(Structs, encode_nested_nonnullable_structs_zero_padding_Mode_EncodeOnly) {
 TEST(Structs, encode_nested_nullable_structs_Mode_EncodeOnly) {
   encode_nested_nullable_structs<Mode::EncodeOnly>();
 }
-TEST(Structs, encode_nested_nonnullable_structs_Mode_LinearizeAndEncode) {
-  encode_nested_nonnullable_structs<Mode::LinearizeAndEncode>();
+TEST(Structs, encode_nested_nonnullable_structs_Mode_Iovec1FullyLinearized) {
+  encode_nested_nonnullable_structs<Mode::Iovec1FullyLinearized>();
 }
-TEST(Structs, encode_nested_nonnullable_structs_zero_padding_Mode_LinearizeAndEncode) {
-  encode_nested_nonnullable_structs_zero_padding<Mode::LinearizeAndEncode>();
+TEST(Structs, encode_nested_nonnullable_structs_zero_padding_Mode_Iovec1FullyLinearized) {
+  encode_nested_nonnullable_structs_zero_padding<Mode::Iovec1FullyLinearized>();
 }
-TEST(Structs, encode_nested_nullable_structs_Mode_LinearizeAndEncode) {
-  encode_nested_nullable_structs<Mode::LinearizeAndEncode>();
+TEST(Structs, encode_nested_nullable_structs_Mode_Iovec1FullyLinearized) {
+  encode_nested_nullable_structs<Mode::Iovec1FullyLinearized>();
+}
+TEST(Structs, encode_nested_nonnullable_structs_Mode_Iovec16) {
+  encode_nested_nonnullable_structs<Mode::Iovec16>();
+}
+TEST(Structs, encode_nested_nonnullable_structs_zero_padding_Mode_Iovec16) {
+  encode_nested_nonnullable_structs_zero_padding<Mode::Iovec16>();
+}
+TEST(Structs, encode_nested_nullable_structs_Mode_Iovec16) {
+  encode_nested_nullable_structs<Mode::Iovec16>();
 }
 #endif
 
@@ -2579,21 +2540,6 @@ TEST(Iovec, SimpleObject) {
   EXPECT_EQ(iovecs[0].capacity, 8);
   EXPECT_EQ(iovecs[0].reserved, 0);
   EXPECT_EQ(*reinterpret_cast<const bool*>(iovecs[0].buffer), obj.v);
-}
-
-TEST(Iovec, TooFewIovec) {
-  zx_channel_iovec_t iovecs[1];
-  BoolStruct obj{true};
-  constexpr uint32_t kBufferSize = 128;
-  uint8_t buffer[kBufferSize];
-  uint32_t out_actual_iovecs;
-  uint32_t out_actual_handles;
-  const char* out_error = nullptr;
-  zx_status_t status = fidl::internal::EncodeIovecEtc(
-      &fidl_test_coding_BoolStructTable, &obj, iovecs, 0, nullptr, 0, buffer, kBufferSize,
-      &out_actual_iovecs, &out_actual_handles, &out_error);
-  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
-  EXPECT_NOT_NULL(out_error);
 }
 
 TEST(Iovec, EncodeDoesntMutateVectorObject) {
