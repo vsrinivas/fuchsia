@@ -221,6 +221,7 @@ class Result {
 
  private:
   friend class UnbindInfo;
+  __ALWAYS_INLINE
   constexpr Result(zx_status_t status, ::fidl::Reason reason, const char* error)
       : status_(status), reason_(reason), error_(error) {}
 
