@@ -154,8 +154,12 @@ Presentation::Presentation(
       proxy_view_->AddChild(client_view_holder_.value());
     }
 
-    injector_.emplace(component_context, /*context*/ std::move(root_view_ref),
-                      /*target*/ std::move(injector_view_ref));
+    injector_.emplace(component_context, /*context*/ fidl::Clone(root_view_ref),
+                      /*target*/ fidl::Clone(injector_view_ref));
+
+    // Sets up InjectorConfigSetup for input pipeline to receive view refs and viewport updates.
+    injector_config_setup_.emplace(component_context, /*context*/ std::move(root_view_ref),
+                                   /*target*/ std::move(injector_view_ref));
   }
 
   // Link ourselves to the presentation interface once screen dimensions are
@@ -427,6 +431,7 @@ void Presentation::UpdateViewport() {
       .x_offset = ndc_to_pixel_x * (center_offset_ndc - clip_offset_x_),
       .y_offset = ndc_to_pixel_y * (center_offset_ndc - clip_offset_y_),
   });
+  injector_config_setup_->UpdateViewport(injector_->GetCurrentViewport());
 }
 
 void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {

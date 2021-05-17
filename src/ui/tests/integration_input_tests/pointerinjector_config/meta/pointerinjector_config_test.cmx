@@ -1,0 +1,18 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx",
+        "src/lib/vulkan/test-application.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/pointerinjector_config_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.accessibility.Magnifier",
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

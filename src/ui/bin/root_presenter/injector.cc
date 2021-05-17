@@ -183,7 +183,7 @@ void Injector::OnEvent(const fuchsia::ui::input::InputEvent& event) {
   InjectPending(injector_id);
 }
 
-fuchsia::ui::pointerinjector::Viewport Injector::GetCurrentViewport() {
+fuchsia::ui::pointerinjector::Viewport Injector::GetCurrentViewport() const {
   fuchsia::ui::pointerinjector::Viewport viewport;
   std::array<std::array<float, 2>, 2> extents{{/*min*/ {0, 0},
                                                /*max*/ {viewport_.width, viewport_.height}}};

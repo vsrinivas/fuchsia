@@ -97,6 +97,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.keyboard.focus",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -114,6 +115,7 @@ source_set("lib") {
     ":color_transform",
     ":constants",
     ":displays",
+    ":injector_config_setup",
     ":media_buttons_handler",
     ":safe_presenter",
     ":virtual_keyboard",
@@ -122,6 +124,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
@@ -274,5 +277,19 @@ source_set("virtual_keyboard") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+  ]
+}
+
+source_set("injector_config_setup") {
+  sources = [
+    "injector_config_setup.cc",
+    "injector_config_setup.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
   ]
 }

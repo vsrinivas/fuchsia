@@ -52,6 +52,7 @@ class Injector {
   Injector& operator=(Injector&&) = delete;
 
   void SetViewport(Viewport viewport);
+  fuchsia::ui::pointerinjector::Viewport GetCurrentViewport() const;
   void OnDeviceAdded(uint32_t device_id);
   void OnDeviceRemoved(uint32_t device_id);
   void OnEvent(const fuchsia::ui::input::InputEvent& event);
@@ -76,8 +77,6 @@ class Injector {
   void SetupInputInjection(InjectorId injector_id, uint32_t device_id);
 
   void InjectPending(InjectorId injector_id);
-
-  fuchsia::ui::pointerinjector::Viewport GetCurrentViewport();
 
   const sys::ComponentContext* const component_context_;
   const fuchsia::ui::views::ViewRef context_view_ref_;

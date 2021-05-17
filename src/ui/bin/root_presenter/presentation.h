@@ -24,6 +24,7 @@
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
 #include "src/ui/bin/root_presenter/injector.h"
+#include "src/ui/bin/root_presenter/injector_config_setup.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
@@ -205,6 +206,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // True if the client has connected its view.
   bool client_view_connected_to_viewholder_ = false;
 
+  std::optional<InjectorConfigSetup> injector_config_setup_;
   std::optional<Injector> injector_;
 
   bool display_model_initialized_ = false;
