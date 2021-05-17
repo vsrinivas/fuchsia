@@ -12,6 +12,8 @@ use std::path::PathBuf;
 pub struct ProductConfig {
     /// The path to a file indicating the version of the product.
     pub version_file: PathBuf,
+    /// The path to a file on the host indicating the OTA backstop.
+    pub epoch_file: PathBuf,
     /// The packages whose files get added to the base package. The
     /// packages themselves are not added, but their individual files are
     /// extracted and added to the base package. These files are needed
@@ -52,6 +54,9 @@ pub struct BoardConfig {
     pub zbi: ZbiConfig,
     /// The information required to construct and flash the FVM.
     pub fvm: FvmConfig,
+    /// The information required to update and flash recovery.
+    /// TODO(fxbug.dev/76371): Re-design so that recovery is a separate product.
+    pub recovery: RecoveryConfig,
 }
 
 /// A mapping between a file source and destination.
@@ -173,6 +178,15 @@ fn default_fvm_filesystem_layout_format() -> String {
     "compact".to_string()
 }
 
+/// The information required to update and flash recovery.
+#[derive(Deserialize, Serialize)]
+pub struct RecoveryConfig {
+    /// The path on the host to the prebuilt recovery ZBI.
+    pub zbi: PathBuf,
+    /// The path on the host to the prebuilt recovery VBMeta.
+    pub vbmeta: PathBuf,
+}
+
 pub fn from_reader<R, T>(reader: &mut R) -> Result<T>
 where
     R: Read,
@@ -192,6 +206,7 @@ mod tests {
         let json = r#"
             {
               version_file: "path/to/version",
+              epoch_file: "path/to/epoch",
               extra_packages_for_base_package: ["package0"],
               base_packages: ["package1", "package2"],
               cache_packages: ["package3", "package4"],
@@ -216,6 +231,7 @@ mod tests {
         let json = r#"
             {
               version_file: "path/to/version",
+              epoch_file: "path/to/epoch",
               kernel_image: "path/to/kernel",
             }
         "#;
@@ -272,6 +288,10 @@ mod tests {
                   },
                 ],
               },
+              recovery: {
+                zbi: "path/to/recovery.zbi",
+                vbmeta: "path/to/recovery.vbmeta",
+              },
             }
          "#;
 
@@ -296,6 +316,10 @@ mod tests {
               },
               fvm: {
                 partition: "name",
+              },
+              recovery: {
+                zbi: "path/to/recovery.zbi",
+                vbmeta: "path/to/recovery.vbmeta",
               },
             }
          "#;

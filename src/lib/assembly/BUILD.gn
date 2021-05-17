@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "base_package:tests",
+    "update_package:tests",
     "vbmeta:tests",
     "zbi:tests",
   ]

@@ -6,10 +6,11 @@ use crate::config::{from_reader, BoardConfig, ProductConfig};
 use crate::vfs::RealFilesystemProvider;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
+use assembly_update_package::UpdatePackageBuilder;
 use ffx_assembly_args::ImageArgs;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
-use fuchsia_pkg::PackageManifest;
+use fuchsia_pkg::{PackageManifest, PackagePath};
 use std::fs::{File, OpenOptions};
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
@@ -26,14 +27,16 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let base_merkle = MerkleTree::from_reader(&base_package)
         .context("Failed to calculate the base merkle")?
         .root();
-    println!("Base merkle: {}", base_merkle);
+    println!("Base merkle: {}", &base_merkle);
 
     if !full {
         return Ok(());
     }
 
     let zbi_path = construct_zbi(&outdir, &gendir, &product, Some(base_merkle))?;
-    let _vbmeta_path = construct_vbmeta(&outdir, &board, &zbi_path)?;
+    let vbmeta_path = construct_vbmeta(&outdir, &board, &zbi_path)?;
+    let _update_pkg_path =
+        construct_update(&outdir, &gendir, &product, &board, &zbi_path, &vbmeta_path, base_merkle)?;
 
     Ok(())
 }
@@ -170,4 +173,64 @@ fn construct_vbmeta(
     let vbmeta_path = outdir.as_ref().join("fuchsia.vbmeta");
     std::fs::write(&vbmeta_path, vbmeta.as_bytes())?;
     Ok(vbmeta_path)
+}
+
+fn construct_update(
+    outdir: impl AsRef<Path>,
+    gendir: impl AsRef<Path>,
+    product: &ProductConfig,
+    board: &BoardConfig,
+    zbi: impl AsRef<Path>,
+    vbmeta: impl AsRef<Path>,
+    base_merkle: Hash,
+) -> Result<PathBuf> {
+    // Create the board name file.
+    // TODO(fxbug.dev/76326): Create a better system for writing intermediate files.
+    let board_name = gendir.as_ref().join("board");
+    std::fs::write(&board_name, &board.board_name)?;
+
+    // Add several files to the update package.
+    let mut update_pkg_builder = UpdatePackageBuilder::new();
+    update_pkg_builder.add_file(&product.epoch_file, "epoch.json")?;
+    update_pkg_builder.add_file(&product.version_file, "version")?;
+    update_pkg_builder.add_file(&board_name, "board")?;
+    update_pkg_builder.add_file(zbi, "zbi")?;
+    update_pkg_builder.add_file(vbmeta, "fuchsia.vbmeta")?;
+    update_pkg_builder.add_file(&board.recovery.zbi, "zedboot")?;
+    update_pkg_builder.add_file(&board.recovery.vbmeta, "recovery.vbmeta")?;
+
+    // Add the bootloaders.
+    for bootloader in &board.bootloaders {
+        update_pkg_builder
+            .add_file(&bootloader.source, format!("firmware_{}", bootloader.bootloader_type))?;
+    }
+
+    // Add the packages that need to be updated.
+    let mut add_packages_to_update = |packages: &Vec<PathBuf>| -> Result<()> {
+        for package_path in packages {
+            let manifest = pkg_manifest_from_path(package_path)?;
+            update_pkg_builder.add_package_by_manifest(manifest)?;
+        }
+        Ok(())
+    };
+    add_packages_to_update(&product.base_packages)?;
+    add_packages_to_update(&product.cache_packages)?;
+
+    // Add the base package merkle.
+    // TODO(fxbug.dev/76986): Do not hardcode the base package path.
+    update_pkg_builder
+        .add_package(PackagePath::from_name_and_variant("system_image", "0")?, base_merkle)?;
+
+    // Build the update package and return its path.
+    let update_package_path = outdir.as_ref().join("update.far");
+    let mut update_package = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&update_package_path)
+        .context("Failed to create the update package file")?;
+    update_pkg_builder
+        .build(gendir, &mut update_package)
+        .context("Failed to build the update package")?;
+    Ok(update_package_path)
 }
