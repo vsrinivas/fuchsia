@@ -1,0 +1,80 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/bt_init_v2",
+    },
+    children: [
+        {
+            name: "bt-gap",
+            url: "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cm",
+        },
+        {
+            name: "bt-rfcomm",
+            url: "fuchsia-pkg://fuchsia.com/bt-rfcomm#meta/bt-rfcomm.cm",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.Realm" ],
+            from: "framework",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
+            from: "parent",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev-bt-host",
+            from: "parent",
+            to: [ "#bt-gap" ],
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.stash.SecureStore",
+            ],
+            from: "parent",
+            to: [ "#bt-gap" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#bt-gap",
+                "#bt-rfcomm",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#bt-gap",
+            to: [ "#bt-rfcomm" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Central",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+            ],
+            from: "#bt-gap",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "self",
+        },
+    ],
+}
