@@ -145,8 +145,8 @@ if (current_toolchain == dart_toolchain) {
         _dill_filename = "$target_gen_dir/__untraced_dart_kernel__/${_kernel_target_name}_kernel.dil"
 
         action(_bootstrap_target_name) {
-          hermetic_deps = false
           script = "$root_out_dir/dart-tools/build_test_bootstrap"
+          inputs = [ "$root_gen_dir/build/flutter/internal/build_test_bootstrap/build_test_bootstrap.snapshot" ]
           outputs = [ _bootstrap_filename ]
 
           rebased_source = rebase_path(_source_path, target_gen_dir)
@@ -157,7 +157,10 @@ if (current_toolchain == dart_toolchain) {
             "$rebased_source",
           ]
 
-          deps = [ "//build/flutter/internal/build_test_bootstrap" ]
+          deps = [
+            "//build/flutter/internal/build_test_bootstrap",
+            "//build/flutter/internal/build_test_bootstrap:build_test_bootstrap_snapshot",
+          ]
         }
 
         # Dart requires each package to have a unique package_root. This
@@ -235,8 +238,6 @@ if (current_toolchain == dart_toolchain) {
     _main_file = "//third_party/dart-pkg/git/flutter/packages/flutter_tools/bin/fuchsia_tester.dart"
 
     action(_snapshot_target_name) {
-      hermetic_deps = false
-
       testonly = true
       depfile = "${_snapshot}.d"
 
