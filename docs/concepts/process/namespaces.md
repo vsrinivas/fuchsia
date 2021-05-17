@@ -216,7 +216,8 @@ There are some typical objects that a component namespace might contain:
 
 ### Typical Directory Structure
 
-- `pkg/`: the contents of the current program's package
+- `pkg/`: the contents of the current program's package as they were when the
+  package was signed
   - `bin/`: executable binaries within the package
   - `lib/`: shared libraries within the package
   - `data/`: data, such as assets, within the package
