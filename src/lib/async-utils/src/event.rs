@@ -107,6 +107,7 @@ impl EventSignaler {
     /// Internal function to set the self.inner.state value if it has not already been set to
     /// `State::Signaled`. Returns true if this function call changed the value of self.inner.state.
     fn set(&self, state: State) -> bool {
+        assert!(state != State::Waiting, "Cannot reset the state to Waiting");
         let mut guard = self.inner.lock();
         if let State::Signaled = guard.state {
             // Avoid double panicking.
@@ -157,7 +158,7 @@ impl Future for EventWaitResult {
         match guard.state {
             State::Waiting => {
                 let mut new_key = None;
-                if this.waker_key == NULL_WAKER_KEY {
+                if this.waker_key == NULL_WAKER_KEY || !guard.wakers.contains(this.waker_key) {
                     new_key = Some(guard.wakers.insert(cx.waker().clone()));
                 } else {
                     guard.wakers[this.waker_key] = cx.waker().clone();
@@ -194,15 +195,11 @@ impl Unpin for EventWaitResult {}
 impl Drop for EventWaitResult {
     fn drop(&mut self) {
         if self.waker_key != NULL_WAKER_KEY {
+            // Cleanup the EventWaitResult's waker one is present in the wakers slab.
             let mut guard = self.inner.lock();
-            // Avoid double panicking.
-            if !std::thread::panicking() {
-                assert!(
-                    guard.wakers.contains(self.waker_key),
-                    "EventWait contained invalid waker key"
-                );
+            if guard.wakers.contains(self.waker_key) {
+                let _ = guard.wakers.remove(self.waker_key);
             }
-            guard.wakers.remove(self.waker_key);
         }
     }
 }
@@ -248,6 +245,8 @@ impl std::error::Error for Dropped {}
 #[cfg(test)]
 mod tests {
     use {super::*, fuchsia_async as fasync};
+
+    // TODO: Add tests to check waker count in EventWait and EventWaitResult.
 
     #[test]
     fn signaled_method_respects_signaling() {
@@ -371,5 +370,34 @@ mod tests {
         drop(event_clone);
         assert!(ex.run_until_stalled(&mut wait).is_pending());
         assert!(ex.run_until_stalled(&mut wait_or_dropped).is_ready());
+    }
+
+    #[test]
+    fn drop_receiver_after_poll_without_event_signal() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let event = Event::new();
+        let mut waiter = event.wait_or_dropped();
+        assert!(exec.run_until_stalled(&mut waiter).is_pending());
+        drop(event);
+        drop(waiter);
+    }
+
+    #[test]
+    fn drop_receiver_after_event_signal_without_repoll() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let event = Event::new();
+        let mut waiter = event.wait_or_dropped();
+        assert_eq!(event.inner.inner.lock().wakers.len(), 0);
+
+        // Polling the waiter will register a new waker.
+        assert!(exec.run_until_stalled(&mut waiter).is_pending());
+        assert_eq!(event.inner.inner.lock().wakers.len(), 1);
+
+        // The waiter's waker is used.
+        event.signal();
+        assert_eq!(event.inner.inner.lock().wakers.len(), 0);
+
+        // Dropping a waiter without polling it is valid.
+        drop(waiter);
     }
 }
