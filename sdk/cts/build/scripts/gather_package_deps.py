@@ -4,6 +4,7 @@
 # found in the LICENSE file.
 
 import argparse
+import io
 import json
 import os
 import re
@@ -17,31 +18,28 @@ class GatherPackageDeps:
     into an archive that will then be available at runtime.
 
     Args:
-      package_json_path (string): An absolute path to the package's `package_manifest.json` file.
-      meta_far_path (string): An absolute path to the package's `meta.far` file.
-      output_dir (string): The absolute path to the directory that this should output into.
+      package_json (string): Path to the package's `package_manifest.json` file.
+      meta_far (string): Path to the package's `meta.far` file.
+      depfile (string): Path to the depfile to write to.
 
     Raises: ValueError if any parameter is empty.
     """
 
-    # Selects everything that comes after '/' and/or any number of '../'.
-    path_stripper = re.compile(r'(?:(?:\.\.\/)+)?\/?(.+)')
-
-    def __init__(self, package_json_path, meta_far_path, output_dir, depfile):
-        if package_json_path and os.path.exists(package_json_path):
-            self.package_json_path = package_json_path
+    def __init__(self, package_json, meta_far, output_tar, depfile):
+        if package_json and os.path.exists(package_json):
+            self.package_json = package_json
         else:
-            raise ValueError('package_json_path must be to a valid file')
+            raise ValueError('package_json must be to a valid file')
 
-        if meta_far_path and os.path.exists(meta_far_path):
-            self.meta_far_path = meta_far_path
+        if meta_far and os.path.exists(meta_far):
+            self.meta_far = meta_far
         else:
-            raise ValueError('meta_far_path must be to a valid file')
+            raise ValueError('meta_far must be to a valid file')
 
-        if output_dir:
-            self.output_dir = output_dir
+        if output_tar:
+            self.output_tar = output_tar
         else:
-            raise ValueError('output_dir cannot be empty')
+            raise ValueError('output_tar cannot be empty')
 
         if depfile:
             self.depfile = depfile
@@ -49,98 +47,60 @@ class GatherPackageDeps:
             raise ValueError('depfile cannot be empty')
 
     def parse_package_json(self):
-        manifest_dict = {}
-        with open(self.package_json_path) as f:
+        manifest_paths = []
+        with open(self.package_json) as f:
             data = json.load(f)
             for file in data['blobs']:
                 if file['path'].startswith('meta/'):
                     continue
-                manifest_dict[file['path']] = file['source_path']
-        return manifest_dict
+                manifest_paths.append((file['path'], file['source_path']))
+        return manifest_paths
 
-    def copy_meta_far(self):
-        shutil.copyfile(
-            self.meta_far_path, os.path.join(self.output_dir, 'meta.far'))
-
-    def copy_to_output_dir(self, manifest_dict):
-        for archive_path, source_path in manifest_dict.items():
-            # Some `source_path`s are prefixed with a couple of `../`'s or are absolute paths.
-            # Examples:
-            #    "../../prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++.so.2"
-            #    "/root/to/fuchsia/out/core.x64-host_asan/obj/topaz/runtime/flutter_runner/flutter_aot_runner.meta/blobs/2ae9bee944d30eeec29608eb2f5e21df71f92bdb8f75f8c2ea1a2cd8d273915b"
-            #
-            # All of these files must end up in our `output_dir`, where `../`s are meaningless and
-            # wrong, and absolute paths are definitely wrong. All of these must be cleaned up into
-            # useable relative paths - relative to the `output_dir`.
-            # The above examples should become:
-            #    "prebuilt/third_party/clang/linux-x64/lib/aarch64-unknown-fuchsia/c++/libc++.so.2"
-            #    "root/to/fuchsia/out/core.x64-host_asan/obj/topaz/runtime/flutter_runner/flutter_aot_runner.meta/blobs/2ae9bee944d30eeec29608eb2f5e21df71f92bdb8f75f8c2ea1a2cd8d273915b"
-            #
-            # These are the paths as they will appear within the output `tar` file and will be how
-            # they are referenced within the manifest file.
-            m = self.path_stripper.match(source_path)
-            out_path = os.path.join(self.output_dir, m.group(1))
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
-            shutil.copyfile(source_path, out_path)
-            manifest_dict[archive_path] = m.group(1)
-
-    def write_new_manifest(self, manifest_dict):
-        with open(os.path.join(self.output_dir, 'package.manifest'), 'w') as f:
-            for archive_path, source_path in manifest_dict.items():
-                f.write(archive_path + '=' + source_path + '\n')
-            f.write('meta/package=meta.far\n')
-
-    def archive_output(self, tar_path):
+    def create_archive(self, manifest_paths):
         # Explicitly use the GNU_FORMAT because the current dart library
         # (v.3.0.0) does not support parsing other tar formats that allow for
         # filenames longer than 100 characters.
-        with tarfile.open(tar_path, 'w', format=tarfile.GNU_FORMAT) as tar:
-            for root, _, files in os.walk(self.output_dir):
-                for name in files:
-                    relative_dir = os.path.relpath(root, self.output_dir)
-                    input_path = os.path.join(root, name)
-                    relative_path = os.path.join(relative_dir, name)
-                    if input_path == tar_path:
-                        continue
-                    tar.add(input_path, arcname=relative_path)
-                    # Removes files added to archive otherwise they'll be
-                    # considered as unexpected outputs.
-                    os.remove(input_path)
+        with tarfile.open(self.output_tar, 'w',
+                          format=tarfile.GNU_FORMAT) as tar:
+            # Create package.manifest in memory and add it to archive.
+            manifest_lines = []
+            # Add all source files to archive and add manfiest lines.
+            for (archive_path, source_path) in manifest_paths:
+                tar.add(source_path, arcname=archive_path)
+                manifest_lines.append(f'{archive_path}={archive_path}')
+
+            # Add meta.far to archive and insert corresponding manfiest line.
+            tar.add(self.meta_far, arcname='meta.far')
+            manifest_lines.append('meta/package=meta.far\n')
+
+            with io.BytesIO('\n'.join(manifest_lines).encode()) as manifest:
+                tarinfo = tarfile.TarInfo('package.manifest')
+                tarinfo.size = len(manifest.getvalue())
+                tar.addfile(tarinfo, fileobj=manifest)
 
     def run(self):
-        manifest_dict = self.parse_package_json()
-
-        # Record deps before manifest_dict is updated.
-        deps = ' '.join(manifest_dict.values())
-
-        self.copy_meta_far()
-        self.copy_to_output_dir(manifest_dict)
-        self.write_new_manifest(manifest_dict)
-        tar_path = os.path.join(self.output_dir, 'package.tar')
-        self.archive_output(tar_path)
-
+        manifest_paths = self.parse_package_json()
+        self.create_archive(manifest_paths)
         with open(self.depfile, 'w') as f:
-            f.write(f'{tar_path}: {deps}\n')
+            f.write(
+                "{}: {}\n".format(
+                    self.output_tar, ' '.join(
+                        os.path.relpath(source_path)
+                        for (_, source_path) in manifest_paths)))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--package_json_path',
+        '--package_json',
         required=True,
         help=
         'The path to the package_manifest.json generated by a `fuchsia_package`.'
     )
     parser.add_argument(
-        '--meta_far_path',
-        required=True,
-        help='The path to the package\'s meta.far.')
+        '--meta_far', required=True, help="The path to the package's meta.far.")
     parser.add_argument(
-        '--output_dir',
-        required=True,
-        help=
-        'The path to where the new manifest and all required files will be copied to.'
-    )
+        '--output_tar', required=True, help='The path to the output archive.')
     parser.add_argument(
         '--depfile',
         required=True,
@@ -148,13 +108,8 @@ def main():
     )
     args = parser.parse_args()
 
-    try:
-        gatherer = GatherPackageDeps(
-            args.package_json_path, args.meta_far_path, args.output_dir,
-            args.depfile).run()
-    except Exception as e:
-        print('GatherPackageDeps errored during run: %s' % e)
-        return 1
+    gatherer = GatherPackageDeps(
+        args.package_json, args.meta_far, args.output_tar, args.depfile).run()
 
     return 0
 

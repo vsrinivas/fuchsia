@@ -16,21 +16,25 @@ from gather_package_deps import GatherPackageDeps
 class GatherPackageDepsTests(unittest.TestCase):
 
     source_dir = None
-    package_json_path = None
-    meta_far_path = None
+    package_json = None
+    meta_far = None
+
     output_dir = None
+    output_tar = None
+    depfile = None
 
     def setUp(self):
         self.source_dir = tempfile.TemporaryDirectory()
-        self.output_dir = tempfile.TemporaryDirectory()
+        self.package_json = os.path.join(self.source_dir.name, 'pkg.json')
+        self.meta_far = os.path.join(self.source_dir.name, 'meta.far')
 
-        self.package_json_path = os.path.join(self.source_dir.name, 'pkg.json')
-        self.meta_far_path = os.path.join(self.source_dir.name, 'meta.far')
-        self.depfile = os.path.join(self.source_dir.name, 'depfile.d')
+        self.output_dir = tempfile.TemporaryDirectory()
+        self.depfile = os.path.join(self.output_dir.name, 'depfile.d')
+        self.output_tar = os.path.join(self.output_dir.name, 'output.tar')
 
         # Create placeholder files.
-        open(self.package_json_path, 'a').close()
-        open(self.meta_far_path, 'a').close()
+        open(self.package_json, 'a').close()
+        open(self.meta_far, 'a').close()
 
     def tearDown(self):
         self.source_dir.cleanup()
@@ -38,71 +42,65 @@ class GatherPackageDepsTests(unittest.TestCase):
 
     def test_init(self):
         GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
+            self.package_json, self.meta_far, self.output_tar, self.depfile)
+
+        with self.assertRaises(ValueError):
+            GatherPackageDeps('', self.meta_far, self.output_tar, self.depfile)
+        with self.assertRaises(ValueError):
+            GatherPackageDeps(
+                None, self.meta_far, self.output_tar, self.depfile)
 
         with self.assertRaises(ValueError):
             GatherPackageDeps(
-                '', self.meta_far_path, self.output_dir.name, self.depfile)
+                self.package_json, '', self.output_tar, self.depfile)
         with self.assertRaises(ValueError):
             GatherPackageDeps(
-                None, self.meta_far_path, self.output_dir.name, self.depfile)
+                self.package_json, None, self.output_tar, self.depfile)
 
         with self.assertRaises(ValueError):
             GatherPackageDeps(
-                self.package_json_path, '', self.output_dir.name, self.depfile)
+                self.package_json, self.meta_far, '', self.depfile)
         with self.assertRaises(ValueError):
             GatherPackageDeps(
-                self.package_json_path, None, self.output_dir.name,
-                self.depfile)
+                self.package_json, self.meta_far, None, self.depfile)
 
         with self.assertRaises(ValueError):
             GatherPackageDeps(
-                self.package_json_path, self.meta_far_path, '', self.depfile)
+                self.package_json, self.meta_far, self.output_tar, '')
         with self.assertRaises(ValueError):
             GatherPackageDeps(
-                self.package_json_path, self.meta_far_path, None, self.depfile)
-
-        with self.assertRaises(ValueError):
-            GatherPackageDeps(
-                self.package_json_path, self.meta_far_path,
-                self.output_dir.name, '')
-        with self.assertRaises(ValueError):
-            GatherPackageDeps(
-                self.package_json_path, self.meta_far_path,
-                self.output_dir.name, None)
+                self.package_json, self.meta_far, self.output_tar, None)
 
     def test_parse_package_json(self):
 
         gatherer = GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
+            self.package_json, self.meta_far, self.output_tar, self.depfile)
 
-        with open(self.package_json_path, 'w') as f:
+        with open(self.package_json, 'w') as f:
             f.write('noooot JSOOOOON')
         with self.assertRaises(ValueError):
             gatherer.parse_package_json()
 
-        with open(self.package_json_path, 'w') as f:
+        with open(self.package_json, 'w') as f:
             f.write(r'{ }')
         with self.assertRaises(KeyError):
             gatherer.parse_package_json()
 
-        with open(self.package_json_path, 'w') as f:
+        with open(self.package_json, 'w') as f:
             f.write(r'{ "blobs": [] }')
-        manifest_dict = gatherer.parse_package_json()
-        self.assertDictEqual(manifest_dict, {})
+        manifest_paths = gatherer.parse_package_json()
+        self.assertEqual(manifest_paths, [])
 
-        with open(self.package_json_path, 'w') as f:
+        with open(self.package_json, 'w') as f:
             f.write(
                 """{ "blobs":
                         [ { "source_path": "some/path/A", "path": "path/A" } ]
                    }
                 """)
-        manifest_dict = gatherer.parse_package_json()
-        self.assertDictEqual(manifest_dict, {'path/A': 'some/path/A'})
+        manifest_paths = gatherer.parse_package_json()
+        self.assertEqual(manifest_paths, [('path/A', 'some/path/A')])
 
-        with open(self.package_json_path, 'w') as f:
+        with open(self.package_json, 'w') as f:
             f.write(
                 """{ "blobs":
                         [
@@ -111,75 +109,42 @@ class GatherPackageDepsTests(unittest.TestCase):
                         ]
                     }
                 """)
-        manifest_dict = gatherer.parse_package_json()
-        self.assertDictEqual(
-            manifest_dict, {
-                'path/A': 'some/path/A',
-                'path/B': 'some/path/B'
-            })
+        manifest_paths = gatherer.parse_package_json()
+        self.assertEqual(
+            manifest_paths,
+            [
+                ('path/A', 'some/path/A'),
+                ('path/B', 'some/path/B'),
+            ],
+        )
 
-    @unittest.mock.patch.object(shutil, 'copyfile', autospec=True)
-    def test_copy_meta_far(self, copyfile_mock):
+        with open(self.package_json, 'w') as f:
+            f.write(
+                """{ "blobs":
+                        [
+                            { "source_path": "/abs/path/to/A", "path": "path/A" },
+                            { "source_path": "../../path/to/B", "path": "path/B" }
+                        ]
+                    }
+                """)
+        manifest_paths = gatherer.parse_package_json()
+        self.assertEqual(
+            manifest_paths,
+            [
+                ('path/A', '/abs/path/to/A'),
+                ('path/B', '../../path/to/B'),
+            ],
+        )
+
+    def test_create_archive(self):
         gatherer = GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
-        gatherer.copy_meta_far()
-        copyfile_mock.assert_called_once_with(
-            self.meta_far_path, os.path.join(self.output_dir.name, 'meta.far'))
+            self.package_json, self.meta_far, self.output_tar, self.depfile)
+        gatherer.create_archive({})
+        self.assertTrue(os.path.isfile(self.output_tar))
 
-    @unittest.mock.patch.object(shutil, 'copyfile', autospec=True)
-    @unittest.mock.patch.object(os, 'makedirs', autospec=True)
-    def test_copy_to_output_dir(self, makedirs_mock, copyfile_mock):
-        gatherer = GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
-        test_dict = {
-            'path/A': '../../../thing/A',
-            'path/B': 'thing/B',
-            'path/to/C': '/abs/path/C'
-        }
-        gatherer.copy_to_output_dir(test_dict)
-
-        self.assertEqual(3, makedirs_mock.call_count)
-        self.assertEqual(3, copyfile_mock.call_count)
-
-        self.assertDictEqual(
-            test_dict, {
-                'path/A': 'thing/A',
-                'path/B': 'thing/B',
-                'path/to/C': 'abs/path/C'
-            })
-
-    def test_write_new_manifest(self):
-
-        gatherer = GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
-
-        gatherer.write_new_manifest(
-            {
-                'path/A': 'some/path/A',
-                'path/B': 'some/path/B'
-            })
-        with open(os.path.join(self.output_dir.name, 'package.manifest'),
-                  'r') as f:
-            manifest_data = f.read()
-            self.assertIn('path/A=some/path/A', manifest_data)
-            self.assertIn('path/B=some/path/B', manifest_data)
-            self.assertIn('meta/package=meta.far', manifest_data)
-
-    def test_archive_output(self):
-        tar_path = os.path.join(self.output_dir.name, 'package.tar')
-        self.assertFalse(os.path.isfile(tar_path))
-        gatherer = GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
-        gatherer.archive_output(tar_path)
-        self.assertTrue(os.path.isfile(tar_path))
-
-        file_a = os.path.join(self.output_dir.name, 'fileA')
-        file_b = os.path.join(self.output_dir.name, 'sub', 'fileB')
-        file_c = os.path.join(self.output_dir.name, 'another', 'dir', 'fileC')
+        file_a = os.path.join(self.source_dir.name, 'fileA')
+        file_b = os.path.join(self.source_dir.name, 'sub', 'fileB')
+        file_c = os.path.join(self.source_dir.name, 'another', 'dir', 'fileC')
         with open(file_a, 'w') as f:
             f.write('A')
         os.makedirs(os.path.dirname(file_b), exist_ok=False)
@@ -189,20 +154,28 @@ class GatherPackageDepsTests(unittest.TestCase):
         with open(file_c, 'w') as f:
             f.write('CCC')
 
-        gatherer.archive_output(tar_path)
-        self.assertTrue(os.path.isfile(tar_path))
-        # Test that all temporary files are deleted after archive.
-        for f in (file_a, file_b, file_c):
-            self.assertFalse(os.path.exists(f))
+        manifest_paths = {
+            ('path/A', file_a),
+            ('path/B', file_b),
+            ('path/C', file_c),
+        }
+        gatherer.create_archive(manifest_paths)
+        self.assertTrue(os.path.isfile(self.output_tar))
 
         # Main thing we need to check here is that the paths within the archive
-        # are relative instead of absolute, because absolute paths relative to the
-        # system that created the archive are meaningless for anyone unarchiving.
-        size_index = {'./fileA': 1, 'sub/fileB': 2, 'another/dir/fileC': 3}
-        with tarfile.open(tar_path, 'r') as tar:
+        # matches what's specified in manifest_paths.
+        expected_size_index = {
+            'path/A': 1,
+            'path/B': 2,
+            'path/C': 3,
+            'meta.far': 0,
+            'package.manifest': 64,
+        }
+        observed_size_index = {}
+        with tarfile.open(self.output_tar, 'r') as tar:
             for member in tar.getmembers():
-                self.assertIn(member.name, size_index)
-                self.assertEqual(member.size, size_index[member.name])
+                observed_size_index[member.name] = member.size
+        self.assertDictEqual(observed_size_index, expected_size_index)
 
     def test_run(self):
 
@@ -211,6 +184,7 @@ class GatherPackageDepsTests(unittest.TestCase):
 
         file_meta = 'meta.far'
         file_a = 'fileA'
+        file_a_abs = os.path.abspath(file_a)
         file_b = os.path.join('sub', 'fileB')
         file_c = os.path.join('another', 'dir', 'fileC')
         open(file_meta, 'a').close()
@@ -220,7 +194,7 @@ class GatherPackageDepsTests(unittest.TestCase):
         os.makedirs(os.path.dirname(file_c), exist_ok=False)
         open(file_c, 'a').close()
 
-        with open(self.package_json_path, 'w') as f:
+        with open(self.package_json, 'w') as f:
             f.write(
                 """{{ "blobs":
                         [
@@ -229,27 +203,30 @@ class GatherPackageDepsTests(unittest.TestCase):
                             {{ "source_path": "{}", "path": "path/C" }}
                         ]
                     }}
-                """.format(file_a, file_b, file_c))
+                """.format(file_a_abs, file_b, file_c))
 
         gatherer = GatherPackageDeps(
-            self.package_json_path, self.meta_far_path, self.output_dir.name,
-            self.depfile)
+            self.package_json, self.meta_far, self.output_tar, self.depfile)
         gatherer.run()
         expected_files = {
-            './package.manifest', './meta.far', './fileA', 'sub/fileB',
-            'another/dir/fileC'
+            'package.manifest',
+            'meta.far',
+            'path/A',
+            'path/B',
+            'path/C',
         }
         observed_files = set()
         expected_manifest_lines = {
-            'path/A=fileA', 'path/B=sub/fileB', 'path/C=another/dir/fileC',
-            'meta/package=meta.far'
+            'path/A=path/A',
+            'path/B=path/B',
+            'path/C=path/C',
+            'meta/package=meta.far',
         }
         observed_manifest_lines = set()
-        output_tar = os.path.join(self.output_dir.name, 'package.tar')
-        with tarfile.open(output_tar, 'r') as tar:
+        with tarfile.open(self.output_tar, 'r') as tar:
             for member in tar.getmembers():
                 observed_files.add(member.name)
-                if member.name == './package.manifest':
+                if member.name == 'package.manifest':
                     for line in tar.extractfile(member).readlines():
                         observed_manifest_lines.add(
                             line.decode("utf-8").strip())
@@ -258,7 +235,7 @@ class GatherPackageDepsTests(unittest.TestCase):
 
         with open(self.depfile, 'r') as f:
             observed_depfile = f.read()
-            expected_depfile = f'{output_tar}: fileA sub/fileB another/dir/fileC\n'
+            expected_depfile = f'{self.output_tar}: fileA sub/fileB another/dir/fileC\n'
             self.assertEqual(observed_depfile, expected_depfile)
 
         os.chdir(backup_cwd)

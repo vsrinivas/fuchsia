@@ -51,22 +51,22 @@ if (is_host) {
 
     script = "//sdk/cts/build/scripts/gather_package_deps.py"
 
-    output_tar = "$target_gen_dir/pm_deps/package.tar"
-    outputs = [ output_tar ]
+    _output_tar = "$target_gen_dir/pm_deps/package.tar"
+    outputs = [ _output_tar ]
 
-    depfile = "${output_tar}.d"
+    depfile = "${_output_tar}.d"
 
     deps = [
       "components:cts-package-manager-sample-component($default_toolchain)",
     ]
 
     args = [
-      "--package_json_path",
+      "--package_json",
       rebase_path(_package_json, root_build_dir),
-      "--meta_far_path",
+      "--meta_far",
       rebase_path(_meta_far, root_build_dir),
-      "--output_dir",
-      rebase_path("${target_gen_dir}/pm_deps", root_build_dir),
+      "--output_tar",
+      rebase_path(_output_tar, root_build_dir),
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
