@@ -20,12 +20,6 @@ static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 
-static const zx_bind_inst_t goldfish_address_space_pci_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
-    BI_ABORT_IF(NE, BIND_PCI_VID, PCI_VID_GOLDFISH_ADDRESS_SPACE),
-    BI_MATCH_IF(EQ, BIND_PCI_DID, PCI_DID_GOLDFISH_ADDRESS_SPACE),
-};
-
 static const zx_bind_inst_t goldfish_pipe_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
 };
@@ -45,7 +39,6 @@ static const device_fragment_part_t goldfish_pipe_fragment[] = {
 
 static const device_fragment_part_t goldfish_address_space_fragment[] = {
     {std::size(root_match), root_match},
-    {std::size(goldfish_address_space_pci_match), goldfish_address_space_pci_match},
     {std::size(goldfish_address_space_match), goldfish_address_space_match},
 };
 
