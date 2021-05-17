@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -578,6 +579,50 @@ func TestSerialTester(t *testing.T) {
 			stdoutBytes := stdout.Bytes()
 			if !bytes.Contains(stdoutBytes, []byte(started+testReturn)) {
 				t.Errorf("Expected stdout to contain %q, got %q", started+testReturn, string(stdoutBytes))
+			}
+		})
+	}
+}
+
+func longKernelLog(numChars int) string {
+	kernelLog := "[123.456]"
+	for i := 0; i < numChars; i++ {
+		kernelLog += "a"
+	}
+	return kernelLog + "\n"
+}
+
+func TestParseOutKernelReader(t *testing.T) {
+	cases := []struct {
+		name           string
+		output         string
+		expectedOutput string
+	}{
+		{
+			name:           "no kernel logs",
+			output:         "line1\n[line2]output\nline3[output]\nline4[out",
+			expectedOutput: "line1\n[line2]output\nline3[output]\nline4[out",
+		}, {
+			name:           "with kernel logs",
+			output:         "line1\n[123.456]kernel line1\noutput[123.456]kernel line2\noutput continued [bracket] output [123.456] kernel [line3]\noutput continued[123]\n",
+			expectedOutput: "line1\noutputoutput continued [bracket] output output continued",
+		}, {
+			name:           "long kernel log",
+			output:         "line1" + longKernelLog(2000) + "output continued\n",
+			expectedOutput: "line1output continued\n",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := &parseOutKernelReader{
+				reader: strings.NewReader(c.output),
+			}
+			b, err := ioutil.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(b) != c.expectedOutput {
+				t.Errorf("expected: %s, got: %s", c.expectedOutput, string(b))
 			}
 		})
 	}

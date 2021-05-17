@@ -11,9 +11,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -493,6 +495,111 @@ func (w *lastWriteSaver) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// parseOutKernelReader is an io.Reader that reads from the underlying reader
+// everything not pertaining to a kernel log. A kernel log is distinguished by
+// a line that starts with the timestamp represented as a float inside brackets.
+type parseOutKernelReader struct {
+	reader io.Reader
+	// lineStart stores the last characters read from a Read() block if it
+	// ended with a truncated line. This will be prepended to the next Read() block.
+	lineStart  string
+	reachedEOF bool
+}
+
+func (r *parseOutKernelReader) Read(buf []byte) (int, error) {
+	var err error
+	if r.reachedEOF {
+		bytesToRead := int(math.Min(float64(len(buf)), float64(len(r.lineStart))))
+		copy(buf, []byte(r.lineStart[:bytesToRead]))
+		r.lineStart = r.lineStart[bytesToRead:]
+		if bytesToRead > 0 {
+			err = nil
+		} else {
+			err = io.EOF
+		}
+		return bytesToRead, err
+	}
+	bytesRead := 0
+	for bytesRead < len(buf) {
+		bytesLeftToRead := len(buf) - bytesRead
+		b := make([]byte, bytesLeftToRead)
+		var n int
+		n, err = r.reader.Read(b)
+		if err != nil && err != io.EOF {
+			break
+		}
+		// readBlock contains everything stored in lineStart (bytes read from the
+		// underlying reader but not processed or read by this reader yet) along
+		// with the new bytes just read. Because readBlock contains lineStart, its
+		// length will likely be greater than bytesLeftToRead. However, it is
+		// necessary to read more bytes in the case that lineStart contains a long
+		// truncated kernel log and we need to keep reading more bytes until we get
+		// to the end of the line so we can discard it.
+		readBlock := r.lineStart + string(b[:n])
+		r.lineStart = ""
+		lines := strings.Split(readBlock, "\n")
+		for i, line := range lines {
+			bytesLeftToRead = len(buf) - bytesRead
+			isTruncated := i == len(lines)-1
+			line = r.lineWithoutKernelLog(line, isTruncated)
+			if bytesLeftToRead == 0 {
+				// If there are no more bytes left to read, store the rest of the lines
+				// into lineStart to be read at the next call to Read().
+				r.lineStart += line
+				continue
+			}
+			if len(line) > bytesLeftToRead {
+				// If the line is longer than bytesLeftToRead, read as much as possible
+				// and store the rest in lineStart.
+				copy(buf[bytesRead:], []byte(line[:bytesLeftToRead]))
+				r.lineStart = line[bytesLeftToRead:]
+				bytesRead += bytesLeftToRead
+			} else {
+				copy(buf[bytesRead:bytesRead+len(line)], []byte(line))
+				bytesRead += len(line)
+			}
+		}
+		if n < len(b) {
+			if err == io.EOF {
+				r.reachedEOF = true
+			}
+			if len(r.lineStart) > 0 {
+				err = nil
+			}
+			break
+		}
+	}
+	return bytesRead, err
+}
+
+func (r *parseOutKernelReader) lineWithoutKernelLog(line string, isTruncated bool) string {
+	containsKernelLog := false
+	re := regexp.MustCompile(`\[[0-9]+\.?[0-9]+\]`)
+	match := re.FindStringIndex(line)
+	if match != nil {
+		if isTruncated {
+			r.lineStart = line[match[0]:]
+		}
+		// The new line to add to bytes read contains everything in the line up to
+		// the bracket indicating the kernel log.
+		line = line[:match[0]]
+		containsKernelLog = true
+	} else if isTruncated {
+		// Match the beginning of a possible kernel log timestamp.
+		// i.e. `[`, `[123` `[123.4`
+		re = regexp.MustCompile(`\[[0-9]*\.?[0-9]*$`)
+		match = re.FindStringIndex(line)
+		if match != nil {
+			r.lineStart = line[match[0]:]
+			line = line[:match[0]]
+		}
+	}
+	if !containsKernelLog && !isTruncated {
+		line = line + "\n"
+	}
+	return line
+}
+
 func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
 	// We don't collect data sinks for serial tests. Just return an empty DataSinkReference.
 	sinks := runtests.DataSinkReference{}
@@ -524,12 +631,12 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		return sinks, ctx.Err()
 	}
 
-	success, err := runtests.TestPassed(ctx, io.TeeReader(
+	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
-		io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket),
-		// To capture stdout.
-		stdout),
-		test.Name)
+		&parseOutKernelReader{reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},
+		// Writes to stdout as it reads from the above reader.
+		stdout)
+	success, err := runtests.TestPassed(ctx, testOutputReader, test.Name)
 
 	if err != nil {
 		return sinks, err
