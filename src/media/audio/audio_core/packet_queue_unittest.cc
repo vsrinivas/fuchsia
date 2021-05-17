@@ -41,7 +41,8 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     auto it = payload_buffers_.find(payload_buffer_id);
     if (it == payload_buffers_.end()) {
       auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
-      zx_status_t res = vmo_mapper->CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+      zx_status_t res =
+          vmo_mapper->CreateAndMap(zx_system_get_page_size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
       if (res != ZX_OK) {
         FX_PLOGS(ERROR, res) << "Failed to map payload buffer";
         return nullptr;

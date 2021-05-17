@@ -13,7 +13,7 @@
 namespace media::audio {
 namespace {
 
-constexpr int64_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
+constexpr int64_t kRingBufferSizePages = 8;
 
 class AudioInputTestDriver : public testing::ThreadingModelFixture,
                              public ::testing::WithParamInterface<int32_t> {
@@ -42,7 +42,8 @@ class AudioInputTestDriver : public testing::ThreadingModelFixture,
                                 context().clock_manager());
     ASSERT_NE(input_, nullptr);
 
-    ring_buffer_mapper_ = remote_driver_->CreateRingBuffer(kRingBufferSizeBytes);
+    ring_buffer_mapper_ =
+        remote_driver_->CreateRingBuffer(kRingBufferSizePages * zx_system_get_page_size());
     ASSERT_NE(ring_buffer_mapper_.start(), nullptr);
   }
 

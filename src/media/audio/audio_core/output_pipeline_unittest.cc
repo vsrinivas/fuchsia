@@ -177,10 +177,10 @@ void OutputPipelineTest::TestOutputPipelineTrim(ClockMode clock_mode) {
 
   // We set up four different streams (PacketQueues), each with its own PacketFactory.
   // The last one might have a custom clock; the rest share a common "client_clock_".
-  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
-  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
-  testing::PacketFactory packet_factory3(dispatcher(), kDefaultFormat, PAGE_SIZE);
-  testing::PacketFactory packet_factory4(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  testing::PacketFactory packet_factory3(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  testing::PacketFactory packet_factory4(dispatcher(), kDefaultFormat, zx_system_get_page_size());
 
   auto stream1 =
       std::make_shared<PacketQueue>(kDefaultFormat, timeline_function, CreateClientClock());
@@ -642,7 +642,8 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   const Mixer::Resampler resampler = Mixer::Resampler::WindowedSinc;
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(kDefaultTransform);
 
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, 2 * PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat,
+                                        2 * zx_system_get_page_size());
   std::shared_ptr<PacketQueue> stream;
 
   if (clock_mode == ClockMode::SAME) {

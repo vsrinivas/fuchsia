@@ -109,7 +109,8 @@ class TapStageTest : public testing::ThreadingModelFixture {
   }
 
   uint32_t tap_frame_offset_;
-  testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};
+  testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat,
+                                         4 * zx_system_get_page_size()};
   std::shared_ptr<PacketQueue> packet_queue_;
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
   std::shared_ptr<TapStage> tap_;

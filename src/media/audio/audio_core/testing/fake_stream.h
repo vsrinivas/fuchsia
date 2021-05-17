@@ -18,8 +18,7 @@ namespace media::audio::testing {
 class FakeStream : public ReadableStream {
  public:
   FakeStream(const Format& format, std::shared_ptr<AudioClockManager> clock_manager,
-             size_t max_buffer_size = PAGE_SIZE,
-             zx::clock clock = audio::clock::CloneOfMonotonic());
+             size_t max_buffer_size = 0, zx::clock clock = audio::clock::CloneOfMonotonic());
 
   void set_usage_mask(StreamUsageMask mask) { usage_mask_ = mask; }
   void set_gain_db(float gain_db) { gain_db_ = gain_db; }

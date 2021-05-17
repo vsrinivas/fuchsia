@@ -203,7 +203,7 @@ void MixStageTest::TestMixStageTrim(ClockMode clock_mode) {
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   std::shared_ptr<PacketQueue> packet_queue;
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
 
   if (clock_mode == ClockMode::SAME) {
     packet_queue = std::make_shared<PacketQueue>(
@@ -268,8 +268,8 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
 
   // Create 2 PacketQueues that we mix together. One may have a clock with an offset, so create a
   // seperate PacketFactory for it, that can set timestamps appropriately.
-  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
-  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, zx_system_get_page_size());
 
   auto packet_queue1 = std::make_shared<PacketQueue>(
       kDefaultFormat, timeline_function,
@@ -498,7 +498,7 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
   std::shared_ptr<PacketQueue> packet_queue;
 
   if (clock_mode == ClockMode::SAME) {
@@ -541,11 +541,11 @@ TEST_F(MixStageTest, MixMultipleInputs) {
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input1 =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                      zx_system_get_page_size());
   input1->timeline_function()->Update(timeline_function);
-  auto input2 =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                      zx_system_get_page_size());
   input2->timeline_function()->Update(timeline_function);
   mix_stage_->AddInput(input1);
   mix_stage_->AddInput(input2);
@@ -578,11 +578,11 @@ TEST_F(MixStageTest, BufferGainDbDoesNotIncludeSourceGain) {
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input1 =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                      zx_system_get_page_size());
   input1->timeline_function()->Update(timeline_function);
-  auto input2 =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                      zx_system_get_page_size());
   input2->timeline_function()->Update(timeline_function);
   auto mixer1 = mix_stage_->AddInput(input1);
   auto mixer2 = mix_stage_->AddInput(input2);
@@ -615,11 +615,11 @@ TEST_F(MixStageTest, BufferGainDbIncludesDestGain) {
   auto timeline_function = TimelineFunction(
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input1 =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input1 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                      zx_system_get_page_size());
   input1->timeline_function()->Update(timeline_function);
-  auto input2 =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input2 = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                      zx_system_get_page_size());
   input2->timeline_function()->Update(timeline_function);
   auto mixer1 = mix_stage_->AddInput(input1);
   auto mixer2 = mix_stage_->AddInput(input2);
@@ -652,7 +652,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
       context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic()));
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
   bool packet_released = false;
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
                                                  [&packet_released] { packet_released = true; }));
@@ -778,8 +778,8 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
 // This is a regression test for fxbug.dev/67996.
 TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   // Unused, but MixStage::ProcessMix needs this argument.
-  auto input =
-      std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(), PAGE_SIZE);
+  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager(),
+                                                     zx_system_get_page_size());
 
   // As summarized in the calculations at the link below, the following hard-coded source_info
   // values result in dest_offset = 301. In order for this offset to not overflow the dest buffer,

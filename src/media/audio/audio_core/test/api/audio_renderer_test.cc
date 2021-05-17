@@ -23,7 +23,8 @@ constexpr fuchsia::media::AudioStreamType kTestStreamType = {
 // The following are valid/invalid when used with |kTestStreamType|.
 constexpr uint64_t kValidPayloadSize = sizeof(float) * kTestStreamType.channels;
 constexpr uint64_t kInvalidPayloadSize = kValidPayloadSize - 1;
-constexpr size_t kDefaultPayloadBufferSize = PAGE_SIZE;
+
+static inline size_t DefaultPayloadBufferSize() { return zx_system_get_page_size(); }
 
 //
 // AudioRendererTest
@@ -97,7 +98,7 @@ void AudioRendererTest::AssertConnectedAndDiscardAllPackets() {
 void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
   zx::vmo payload_buffer;
   constexpr uint32_t kVmoOptionsNone = 0;
-  ASSERT_EQ(zx::vmo::create(kDefaultPayloadBufferSize, kVmoOptionsNone, &payload_buffer), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(DefaultPayloadBufferSize(), kVmoOptionsNone, &payload_buffer), ZX_OK);
   audio_renderer_->AddPayloadBuffer(id, std::move(payload_buffer));
 }
 
@@ -333,7 +334,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyBufferOutOfBoundsShouldDisconnect) {
   fuchsia::media::StreamPacket packet;
   packet.payload_buffer_id = 0;
   // |payload_offset| is beyond the end of the payload buffer.
-  packet.payload_offset = kDefaultPayloadBufferSize;
+  packet.payload_offset = DefaultPayloadBufferSize();
   packet.payload_size = kValidPayloadSize;
   audio_renderer_->SendPacketNoReply(std::move(packet));
 
@@ -350,7 +351,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyBufferOverrunShouldDisconnect) {
   packet.payload_buffer_id = 0;
   // |payload_offset| + |payload_size| is beyond the end of the payload buffer.
   packet.payload_size = kValidPayloadSize * 2;
-  packet.payload_offset = kDefaultPayloadBufferSize - kValidPayloadSize;
+  packet.payload_offset = DefaultPayloadBufferSize() - kValidPayloadSize;
   audio_renderer_->SendPacketNoReply(std::move(packet));
 
   ExpectDisconnect(audio_renderer_);
@@ -416,7 +417,7 @@ TEST_F(AudioRendererTest, DiscardAllPacketsReturnsAfterAllPackets) {
   fuchsia::media::StreamPacket packet1, packet2, packet3;
   packet1.payload_buffer_id = packet2.payload_buffer_id = packet3.payload_buffer_id = 0;
   packet1.payload_offset = packet2.payload_offset = packet3.payload_offset = 0;
-  packet1.payload_size = packet2.payload_size = packet3.payload_size = kDefaultPayloadBufferSize;
+  packet1.payload_size = packet2.payload_size = packet3.payload_size = DefaultPayloadBufferSize();
 
   audio_renderer_->SendPacket(std::move(packet1), AddCallback("SendPacket1"));
   audio_renderer_->SendPacket(std::move(packet2), AddCallback("SendPacket2"));
@@ -925,7 +926,7 @@ TEST_F(AudioRendererClockTest, SetRefClockPacketActiveShouldDisconnect) {
   fuchsia::media::StreamPacket packet, packet2;
   packet.payload_buffer_id = packet2.payload_buffer_id = 0;
   packet.payload_offset = packet2.payload_offset = 0;
-  packet.payload_size = packet2.payload_size = kDefaultPayloadBufferSize;
+  packet.payload_size = packet2.payload_size = DefaultPayloadBufferSize();
   audio_renderer_->SendPacketNoReply(std::move(packet));
   audio_renderer_->SendPacketNoReply(std::move(packet2));
 

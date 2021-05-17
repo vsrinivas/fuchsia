@@ -140,7 +140,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   context().route_graph().AddDevice(fake_output.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
-  AddPayloadBuffer(0, PAGE_SIZE, fidl_renderer_.get());
+  AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
   fuchsia::media::StreamPacket packet;
   packet.payload_buffer_id = 0;
   packet.payload_offset = 0;
@@ -177,7 +177,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   context().route_graph().AddDevice(fake_output.get());
 
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
-  AddPayloadBuffer(0, PAGE_SIZE, fidl_renderer_.get());
+  AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
   fuchsia::media::StreamPacket packet;
   packet.payload_buffer_id = 0;
   packet.payload_offset = 0;

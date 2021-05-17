@@ -46,7 +46,8 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
+                                        zx_system_get_page_size());
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -262,7 +263,8 @@ static const std::string kInitialConfig = "different size than kConfig";
 static const std::string kConfig = "config";
 
 TEST_F(EffectsStageTest, UpdateEffect) {
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
+                                        zx_system_get_page_size());
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -309,7 +311,8 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
       .WithChannelization(FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY, FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY)
       .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
 
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
+                                        zx_system_get_page_size());
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -370,7 +373,8 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
 
 TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
+                                        zx_system_get_page_size());
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -412,7 +416,8 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
 
 TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   test_effects_.AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE);
+  testing::PacketFactory packet_factory(dispatcher(), k48k2ChanFloatFormat,
+                                        zx_system_get_page_size());
 
   // Create a packet queue to use as our source stream.
   auto timeline_function =
@@ -466,8 +471,8 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
   auto timeline_function = TimelineFunction(TimelineRate(
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
-  auto input = std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat,
-                                                     context().clock_manager(), PAGE_SIZE);
+  auto input = std::make_shared<testing::FakeStream>(
+      k48k2ChanFloatFormat, context().clock_manager(), zx_system_get_page_size());
   input->timeline_function()->Update(timeline_function);
 
   // Create a simple effects stage.
@@ -537,7 +542,8 @@ TEST_F(EffectsStageTest, SendStreamInfoToEffects) {
 }
 
 TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
-  testing::PacketFactory packet_factory{dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE};
+  testing::PacketFactory packet_factory{dispatcher(), k48k2ChanFloatFormat,
+                                        zx_system_get_page_size()};
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
@@ -619,7 +625,8 @@ class EffectsStageRingoutTest : public EffectsStageTest,
         context().clock_manager()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
   }
 
-  testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat, PAGE_SIZE};
+  testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat,
+                                         zx_system_get_page_size()};
   std::shared_ptr<PacketQueue> stream_;
 };
 

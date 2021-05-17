@@ -58,7 +58,7 @@ class ThrottleOutput : public AudioOutput {
 
     // This must be non-0, but it doesn't actually matter much since we'll never mix with a throttle
     // output.
-    static const uint32_t kMaxBatchSize = PAGE_SIZE;
+    const uint32_t kMaxBatchSize = zx_system_get_page_size();
     SetupMixTask(DeviceConfig::OutputDeviceProfile(), kMaxBatchSize,
                  driver_ref_time_to_frac_presentation_frame());
   }

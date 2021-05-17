@@ -27,10 +27,11 @@ using testing::FloatEq;
 
 namespace media::audio {
 namespace {
-constexpr int64_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
 constexpr zx::duration kExpectedMixInterval =
     DriverOutput::kDefaultHighWaterNsec - DriverOutput::kDefaultLowWaterNsec;
 constexpr zx::duration kBeyondSubmittedPackets = zx::sec(1);
+
+int64_t RingBufferSizeBytes() { return 8 * zx_system_get_page_size(); }
 
 }  // namespace
 
@@ -91,7 +92,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
                                              context().process_config().default_volume_curve());
     ASSERT_NE(output_, nullptr);
 
-    ring_buffer_mapper_ = driver_->CreateRingBuffer(kRingBufferSizeBytes);
+    ring_buffer_mapper_ = driver_->CreateRingBuffer(RingBufferSizeBytes());
     ASSERT_NE(ring_buffer_mapper_.start(), nullptr);
 
     // Add a rechannel effect.
@@ -103,18 +104,16 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
   // Use len = -1 for the end of the buffer.
   template <typename T>
   fbl::Span<T> RingBufferSlice(size_t first, ssize_t maybe_len) const {
-    static_assert(kRingBufferSizeBytes % sizeof(T) == 0);
+    assert(RingBufferSizeBytes() % sizeof(T) == 0);
     T* array = static_cast<T*>(ring_buffer_mapper_.start());
-    size_t len = maybe_len >= 0 ? maybe_len : (kRingBufferSizeBytes / sizeof(T)) - first;
-    FX_CHECK((first + len) * sizeof(T) <= kRingBufferSizeBytes);
+    size_t len = maybe_len >= 0 ? maybe_len : (RingBufferSizeBytes() / sizeof(T)) - first;
+    FX_CHECK((first + len) * sizeof(T) <= static_cast<size_t>(RingBufferSizeBytes()));
     return {&array[first], len};
   }
 
   template <typename T>
-  std::array<T, kRingBufferSizeBytes / sizeof(T)>& RingBuffer() const {
-    static_assert(kRingBufferSizeBytes % sizeof(T) == 0);
-    return reinterpret_cast<std::array<T, kRingBufferSizeBytes / sizeof(T)>&>(
-        static_cast<T*>(ring_buffer_mapper_.start())[0]);
+  fbl::Span<T> RingBuffer() const {
+    return RingBufferSlice<T>(0, RingBufferSizeBytes() / sizeof(T));
   }
 
   // Updates the driver to advertise the given format. This will be the only audio format that the
@@ -354,7 +353,7 @@ TEST_F(DriverOutputTest, WriteSilenceToRingWhenMuted) {
                                [&packet2_released] { packet2_released = true; });
 
   // Fill the ring buffer with some bytes so we can detect if we've written to the buffer.
-  memset(ring_buffer_mapper_.start(), 0xff, kRingBufferSizeBytes);
+  memset(ring_buffer_mapper_.start(), 0xff, RingBufferSizeBytes());
 
   const uint32_t kMixWindowFrames = 480;
   const uint32_t kSilentFrame = 0;

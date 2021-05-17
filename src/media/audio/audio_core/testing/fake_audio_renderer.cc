@@ -42,7 +42,7 @@ FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::option
       dispatcher_(dispatcher),
       format_(format),
       usage_(usage),
-      packet_factory_(dispatcher, *format, 2 * PAGE_SIZE),
+      packet_factory_(dispatcher, *format, 2 * zx_system_get_page_size()),
       link_matrix_(*link_matrix),
       clock_manager_(clock_manager) {}
 

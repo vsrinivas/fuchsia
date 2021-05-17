@@ -17,11 +17,6 @@
 
 namespace media::audio {
 
-// Note: This is available in as PAGE_SIZE from <arch/defines.h>, but that header
-// is not available outside of the kernel. We expect PAGE_SIZE to be no smaller than
-// this value (it may be larger, e.g. 16k or 64k on some architectures).
-static constexpr auto kPageSizeBytes = 4096;
-
 // Memory is considered "unused" if it has not been touched for more than 30s.
 // To keep all executable memory pinned, we must run at least once every 30s.
 // To ensure we never miss a deadline, do this twice every 30s.
@@ -61,6 +56,8 @@ __attribute__((no_sanitize_address)) void PinExecutableMemory::Pin() {
   size_t total_bytes = 0;
   size_t total_executable_bytes = 0;
 
+  const size_t kPageSize = zx_system_get_page_size();
+
   for (auto& vmap : ListVMaps()) {
     // All readable, non-writable pages are eligible for pinning.
     if ((vmap.type != ZX_INFO_MAPS_TYPE_MAPPING) ||
@@ -91,7 +88,7 @@ __attribute__((no_sanitize_address)) void PinExecutableMemory::Pin() {
     // Using volatile ensures the memory access is not discarded: https://godbolt.org/z/YdzEPo
     //
     auto base = reinterpret_cast<volatile char*>(vmap.base);
-    for (auto ptr = base; ptr < base + vmap.size; ptr += kPageSizeBytes) {
+    for (auto ptr = base; ptr < base + vmap.size; ptr += kPageSize) {
       if (!executable) {
         AssertMutexHeld();
         if (ShouldSkip(reinterpret_cast<size_t>(ptr))) {

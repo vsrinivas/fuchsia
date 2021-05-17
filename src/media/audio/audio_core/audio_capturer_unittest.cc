@@ -112,7 +112,7 @@ TEST_F(AudioCapturerTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffersD
   auto fake_driver =
       testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
 
-  auto vmo = fake_driver.CreateRingBuffer(PAGE_SIZE);
+  auto vmo = fake_driver.CreateRingBuffer(zx_system_get_page_size());
 
   input->driver()->Init(std::move(c2));
   fake_driver.Start();
