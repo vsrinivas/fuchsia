@@ -43,6 +43,7 @@ test("fdio-test") {
     "fdio_poll.cc",
     "fdio_select.cc",
     "fdio_timerfd.cc",
+    "fdio_unistd.cc",
   ]
   deps = [
     "//zircon/public/lib/fbl",
@@ -69,7 +70,6 @@ test("fdio-test") {
       "fdio_socket_cleanup.cc",
       "fdio_startup.cc",
       "fdio_stubs.cc",
-      "fdio_unistd.cc",
       "fdio_unsafe.cc",
       "fdio_watcher.cc",
       "memfd.h",
