@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -16,8 +17,6 @@
 
 #include <memory>
 #include <mutex>
-
-#include <fbl/intrusive_wavl_tree.h>
 
 namespace fidl {
 namespace internal {
@@ -43,17 +42,14 @@ namespace internal {
 // is invoked. This means that the user or generated code must keep the
 // response context object alive for the duration of the async method call.
 //
-// TODO(fxbug.dev/50664): fbl::WAVLTree must be made available in the SDK,
-// otherwise it needs to be replaced here with some tree that is available
-// there.
-//
 // NOTE: |ResponseContext| are additionally referenced with a |list_node_t|
 // in order to safely iterate over outstanding transactions on |ClientBase|
 // destruction, invoking |OnError| on each outstanding response context.
-class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, private list_node_t {
+class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<ResponseContext*>,
+                        private list_node_t {
  public:
   explicit ResponseContext(uint64_t ordinal)
-      : fbl::WAVLTreeContainable<ResponseContext*>(),
+      : fidl::internal_wavl::WAVLTreeContainable<ResponseContext*>(),
         list_node_t(LIST_INITIAL_CLEARED_VALUE),
         ordinal_(ordinal) {}
   virtual ~ResponseContext() = default;
@@ -97,7 +93,7 @@ class ResponseContext : public fbl::WAVLTreeContainable<ResponseContext*>, priva
  private:
   friend class ClientBase;
 
-  // For use with |fbl::WAVLTree|.
+  // For use with |fidl::internal_wavl::WAVLTree|.
   struct Traits {
     static zx_txid_t GetKey(const ResponseContext& context) { return context.txid_; }
     static bool LessThan(const zx_txid_t& key1, const zx_txid_t& key2) { return key1 < key2; }
@@ -250,7 +246,8 @@ class ClientBase {
   std::mutex lock_;
   // The base node of an intrusive container of ResponseContexts corresponding to outstanding
   // asynchronous transactions.
-  fbl::WAVLTree<zx_txid_t, ResponseContext*, ResponseContext::Traits> contexts_ __TA_GUARDED(lock_);
+  fidl::internal_wavl::WAVLTree<zx_txid_t, ResponseContext*, ResponseContext::Traits> contexts_
+      __TA_GUARDED(lock_);
   // Mirror list used to safely invoke OnError() on outstanding ResponseContexts in ~ClientBase().
   list_node_t delete_list_ __TA_GUARDED(lock_) = LIST_INITIAL_VALUE(delete_list_);
   zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;  // Value used to compute the next txid.

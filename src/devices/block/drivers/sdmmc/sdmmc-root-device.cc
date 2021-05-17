@@ -11,6 +11,8 @@
 
 #include <memory>
 
+#include <fbl/alloc_checker.h>
+
 #include "src/devices/block/drivers/sdmmc/sdmmc-bind.h"
 
 namespace sdmmc {

@@ -38,6 +38,7 @@ driver_module("usb-hub-rewrite") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
 }
@@ -68,6 +69,7 @@ test("usb-hub-test") {
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
 }

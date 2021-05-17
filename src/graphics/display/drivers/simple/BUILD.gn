@@ -17,6 +17,7 @@ source_set("shared") {
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

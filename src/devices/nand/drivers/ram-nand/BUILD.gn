@@ -57,6 +57,7 @@ source_set("common") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
 }
 
 test("ram-nand-test") {

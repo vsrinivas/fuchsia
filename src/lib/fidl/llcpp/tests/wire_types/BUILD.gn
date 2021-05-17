@@ -72,7 +72,10 @@ test("fidl_llcpp_builder_tests_bin") {
       # These tests use fbl.
       "memory_test.cc",
     ]
-    deps += [ "//src/lib/fidl/llcpp/tests:types_test_utils" ]
+    deps += [
+      "//src/lib/fidl/llcpp/tests:types_test_utils",
+      "//zircon/system/ulib/fbl",
+    ]
   }
 }
 

@@ -60,37 +60,46 @@ zx_library("fidl") {
   public_deps = [ ":fidl_base" ]
 }
 
+llcpp_wavl_tree_headers = [
+  "lib/fidl/llcpp/internal/intrusive_container/node_utils.h",
+  "lib/fidl/llcpp/internal/intrusive_container/container_utils.h",
+  "lib/fidl/llcpp/internal/intrusive_container/pointer_traits.h",
+  "lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h",
+  "lib/fidl/llcpp/internal/intrusive_container/wavl_tree_internal.h",
+  "lib/fidl/llcpp/internal/intrusive_container/helper_macros.h",
+]
+
 if (is_fuchsia) {
   zx_library("fidl-llcpp") {
     sdk = "source"
     sdk_headers = [
-      "lib/fidl/llcpp/array.h",
-      "lib/fidl/llcpp/async_binding.h",
-      "lib/fidl/llcpp/async_transaction.h",
-      "lib/fidl/llcpp/client_base.h",
-      "lib/fidl/llcpp/client_end.h",
-      "lib/fidl/llcpp/client.h",
-      "lib/fidl/llcpp/coding.h",
-      "lib/fidl/llcpp/connect_service.h",
-      "lib/fidl/llcpp/envelope.h",
-      "lib/fidl/llcpp/extract_resource_on_destruction.h",
-      "lib/fidl/llcpp/fidl_allocator.h",
-      "lib/fidl/llcpp/internal/server_details.h",
-      "lib/fidl/llcpp/message_storage.h",
-      "lib/fidl/llcpp/message.h",
-      "lib/fidl/llcpp/object_view.h",
-      "lib/fidl/llcpp/result.h",
-      "lib/fidl/llcpp/server_end.h",
-      "lib/fidl/llcpp/server.h",
-      "lib/fidl/llcpp/service_handler_interface.h",
-      "lib/fidl/llcpp/soft_migration.h",
-      "lib/fidl/llcpp/string_view.h",
-      "lib/fidl/llcpp/sync_call.h",
-      "lib/fidl/llcpp/traits.h",
-      "lib/fidl/llcpp/transaction.h",
-      "lib/fidl/llcpp/vector_view.h",
-      "lib/fidl/llcpp/wire_messaging.h",
-    ]
+                    "lib/fidl/llcpp/array.h",
+                    "lib/fidl/llcpp/async_binding.h",
+                    "lib/fidl/llcpp/async_transaction.h",
+                    "lib/fidl/llcpp/client_base.h",
+                    "lib/fidl/llcpp/client_end.h",
+                    "lib/fidl/llcpp/client.h",
+                    "lib/fidl/llcpp/coding.h",
+                    "lib/fidl/llcpp/connect_service.h",
+                    "lib/fidl/llcpp/envelope.h",
+                    "lib/fidl/llcpp/extract_resource_on_destruction.h",
+                    "lib/fidl/llcpp/fidl_allocator.h",
+                    "lib/fidl/llcpp/internal/server_details.h",
+                    "lib/fidl/llcpp/message_storage.h",
+                    "lib/fidl/llcpp/message.h",
+                    "lib/fidl/llcpp/object_view.h",
+                    "lib/fidl/llcpp/result.h",
+                    "lib/fidl/llcpp/server_end.h",
+                    "lib/fidl/llcpp/server.h",
+                    "lib/fidl/llcpp/service_handler_interface.h",
+                    "lib/fidl/llcpp/soft_migration.h",
+                    "lib/fidl/llcpp/string_view.h",
+                    "lib/fidl/llcpp/sync_call.h",
+                    "lib/fidl/llcpp/traits.h",
+                    "lib/fidl/llcpp/transaction.h",
+                    "lib/fidl/llcpp/vector_view.h",
+                    "lib/fidl/llcpp/wire_messaging.h",
+                  ] + llcpp_wavl_tree_headers
     sdk_migrated = true
     sources = [
       "llcpp_async_binding.cc",
@@ -113,9 +122,6 @@ if (is_fuchsia) {
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/async/dispatcher.h>
       "//zircon/system/ulib/async:headers",
 
-      # <lib/fidl/llcpp/client_base.h> has #include <fbl/intrusive_wavl_tree.h>
-      "//zircon/system/ulib/fbl:headers",
-
       # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
       "//sdk/lib/fit:headers",
       "//sdk/lib/fit-promise:headers",
@@ -135,7 +141,6 @@ if (is_fuchsia) {
       "//sdk/lib/fit-promise",
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/async",
-      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/sync",
       "//zircon/system/ulib/zxc",
     ]
@@ -145,16 +150,16 @@ if (is_fuchsia) {
     host = true
     sdk = "source"
     sdk_headers = [
-      "lib/fidl/llcpp/array.h",
-      "lib/fidl/llcpp/coding.h",
-      "lib/fidl/llcpp/envelope.h",
-      "lib/fidl/llcpp/fidl_allocator.h",
-      "lib/fidl/llcpp/object_view.h",
-      "lib/fidl/llcpp/soft_migration.h",
-      "lib/fidl/llcpp/string_view.h",
-      "lib/fidl/llcpp/traits.h",
-      "lib/fidl/llcpp/vector_view.h",
-    ]
+                    "lib/fidl/llcpp/array.h",
+                    "lib/fidl/llcpp/coding.h",
+                    "lib/fidl/llcpp/envelope.h",
+                    "lib/fidl/llcpp/fidl_allocator.h",
+                    "lib/fidl/llcpp/object_view.h",
+                    "lib/fidl/llcpp/soft_migration.h",
+                    "lib/fidl/llcpp/string_view.h",
+                    "lib/fidl/llcpp/traits.h",
+                    "lib/fidl/llcpp/vector_view.h",
+                  ] + llcpp_wavl_tree_headers
     sdk_migrated = true
     sources = [
       "llcpp_coding.c",
@@ -173,7 +178,6 @@ if (is_fuchsia) {
       ":fidl_base",
       "//sdk/lib/fit",
       "//src/zircon/lib/zircon",
-      "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/zxc",
     ]
   }

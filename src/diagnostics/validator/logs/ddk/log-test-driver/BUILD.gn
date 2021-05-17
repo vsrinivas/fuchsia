@@ -26,6 +26,7 @@ source_set("common") {
     "//src/diagnostics/validator/logs/sink/fidl:sink-puppet_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

@@ -49,6 +49,7 @@ source_set("common") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

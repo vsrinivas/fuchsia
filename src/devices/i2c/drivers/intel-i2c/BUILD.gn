@@ -45,6 +45,7 @@ driver_module("intel-i2c") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
   ]
 
   # TODO(fxbug.dev/58161): delete the below and fix compiler warnings

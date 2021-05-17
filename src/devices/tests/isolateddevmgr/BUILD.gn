@@ -27,6 +27,7 @@ driver_module("isolateddevmgr-test-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

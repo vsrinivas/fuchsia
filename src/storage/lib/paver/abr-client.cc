@@ -25,6 +25,8 @@
 
 #include <string_view>
 
+#include <fbl/algorithm.h>
+
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/partition-client.h"

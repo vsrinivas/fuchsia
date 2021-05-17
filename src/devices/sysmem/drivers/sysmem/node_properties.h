@@ -12,8 +12,10 @@
 #include <memory>
 #include <unordered_map>
 
-#include "table_holder.h"
+#include <fbl/ref_ptr.h>
+
 #include "logging.h"
+#include "table_holder.h"
 
 namespace sysmem_driver {
 

@@ -21,6 +21,7 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 using fdio_ptr = fbl::RefPtr<fdio>;
 

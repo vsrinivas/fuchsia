@@ -33,6 +33,7 @@ driver_module("ddk-power-test") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -57,6 +58,7 @@ driver_module("ddk-power-test-child") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 

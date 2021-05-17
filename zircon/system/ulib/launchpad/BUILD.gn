@@ -25,6 +25,7 @@ zx_library("launchpad") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/elf-psabi",
     "//zircon/system/ulib/elfload",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ldmsg",
   ]
   visibility = [

@@ -26,6 +26,7 @@ driver_module("ddk-runcompatibilityhook-test") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
@@ -48,6 +49,7 @@ driver_module("ddk-runcompatibilityhook-test-child") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
   ]
 }
 
