@@ -10,6 +10,7 @@
 #include <inet6.h>
 #include <inttypes.h>
 #include <lib/abr/data.h>
+#include <mdns.h>
 #include <netifc.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -233,7 +234,7 @@ int fb_poll(fb_bootimg_t *img) {
   // Continue processing fastboot packets.
   netifc_poll();
   if (fb_boot_now) {
-    memcpy((void *) img, (void *) &boot_img, sizeof(fb_bootimg_t));
+    memcpy((void *)img, (void *)&boot_img, sizeof(fb_bootimg_t));
   }
   return fb_boot_now;
 }

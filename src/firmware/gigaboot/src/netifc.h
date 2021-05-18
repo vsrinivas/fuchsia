@@ -6,6 +6,9 @@
 #define SRC_FIRMWARE_GIGABOOT_SRC_NETIFC_H_
 
 #include <stdint.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 // setup networking
 int netifc_open(void);
@@ -24,5 +27,7 @@ void netifc_set_timer(uint32_t ms);
 
 // returns true once the timer has expired
 int netifc_timer_expired(void);
+
+__END_CDECLS
 
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_NETIFC_H_

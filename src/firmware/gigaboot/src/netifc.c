@@ -12,6 +12,7 @@
 #include <efi/protocol/simple-network.h>
 
 #include "inet6.h"
+#include "mdns.h"
 #include "osboot.h"
 
 static efi_simple_network_protocol* snp;

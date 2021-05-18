@@ -7,6 +7,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
 
 typedef struct mac_addr_t mac_addr;
 typedef struct ip6_addr_t ip6_addr;
@@ -14,6 +17,9 @@ typedef struct ip6_hdr_t ip6_hdr;
 typedef struct udp_hdr_t udp_hdr;
 typedef struct icmp6_hdr_t icmp6_hdr;
 typedef struct ndp_n_hdr_t ndp_n_hdr;
+
+extern mac_addr ll_mac_addr;
+extern ip6_addr ll_ip6_addr;
 
 #define ETH_ADDR_LEN 6
 #define ETH_HDR_LEN 14
@@ -101,13 +107,15 @@ struct ndp_n_hdr_t {
 #ifndef ntohs
 #define ntohs(n) _swap16(n)
 #define htons(n) _swap16(n)
-static inline uint16_t _swap16(uint16_t n) { return (n >> 8) | (n << 8); }
+static inline uint16_t __UNUSED _swap16(uint16_t n) {
+  return ((uint16_t)(n >> 8)) | ((uint16_t)(n << 8));
+}
 #endif
 
 #ifndef ntohl
 #define ntohl(n) _swap32(n)
 #define htonl(n) _swap32(n)
-static inline uint32_t _swap32(uint32_t n) {
+static inline uint32_t __UNUSED _swap32(uint32_t n) {
   return (n >> 24) | ((n >> 8) & 0xFF00) | ((n & 0xFF00) << 8) | (n << 24);
 }
 #endif
@@ -166,4 +174,5 @@ void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport, co
 // via eth_put_buffer().
 //
 
+__END_CDECLS
 #endif  // SRC_FIRMWARE_GIGABOOT_SRC_INET6_H_

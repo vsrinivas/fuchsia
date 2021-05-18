@@ -30,6 +30,7 @@
 #include "avb.h"
 #include "bootbyte.h"
 #include "diskio.h"
+#include "mdns.h"
 
 #define DEFAULT_TIMEOUT 10
 
@@ -165,14 +166,18 @@ void do_select_fb(void) {
   }
 }
 
-void do_fastboot(efi_handle img, efi_system_table *sys) {
+void do_fastboot(efi_handle img, efi_system_table* sys, uint32_t namegen) {
   printf("entering fastboot mode\n");
   fb_bootimg_t bootimg;
+  mdns_start(namegen);
   while (true) {
+    mdns_poll();
     if (fb_poll(&bootimg)) {
+      mdns_stop();
       zbi_boot(img, sys, bootimg.kernel_start, bootimg.kernel_size);
     }
   }
+  mdns_stop();
 }
 
 void do_bootmenu(bool have_fb) {
@@ -671,7 +676,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         do_netboot();
         break;
       case 'f':
-        do_fastboot(img, sys);
+        do_fastboot(img, sys, namegen);
         break;
       case '1':
       case 'm':

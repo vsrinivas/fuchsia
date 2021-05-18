@@ -20,6 +20,7 @@ source_set("src") {
     "fastboot.c",
     "framebuffer.c",
     "inet6.c",
+    "mdns.c",
     "misc.c",
     "netboot.c",
     "netifc.c",
@@ -60,6 +61,8 @@ if (!is_mac) {
       "compression_test.cc",
       "diskio.c",
       "diskio_test.cc",
+      "mdns.c",
+      "mdns_test.cc",
       "utf_conversion.c",
     ]
     include_dirs = [ "." ]
