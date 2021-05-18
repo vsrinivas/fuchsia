@@ -25,15 +25,16 @@ enum Mode : uint32 {
     PROMISCUOUS = 4;
 };
 
-/// Device features reported by [`fuchsia.hardware.network.mac/MacAddr.GetFeatures`].
+/// Device features reported by [`MacAddr.GetFeatures`].
 struct Features {
-    /// The maximum number of multicast filtering entries available on this device. Implementations
-    /// must set 0 if multicast filtering is not supported. Values will always be saturated to
-    /// [`fuchsia.hardware.network.mac/MAX_MAC_FILTER`].
+    /// The maximum number of multicast filtering entries available on this device.
+    ///
+    /// Implementations must set 0 if multicast filtering is not supported. Values will always be
+    /// saturated to [`MAX_MAC_FILTER`].
     uint32 multicast_filter_count;
-    /// The filtering operating modes supported by this device. Bitfield of possible
-    /// [`fuchsia.hardware.network.mac/Mode`] values that can be passed to
-    /// [`fuchsia.hardware.network.mac/MacAddr.SetMode`].
+    /// The filtering operating modes supported by this device.
+    ///
+    /// Bitfield of possible [`Mode`] values that can be passed to [`MacAddr.SetMode`].
     uint32 supported_modes;
 };
 
@@ -47,9 +48,10 @@ protocol MacAddr {
     /// Gets this device's features.
     GetFeatures() -> (Features features);
     /// Sets this device's operating mode.
-    /// `mode` is one of the variants in [`fuchsia.hardware.network.mac/Mode`], it's guaranteed to
-    /// be one of the reported modes in this device's reported features. `multicast_macs` is only
-    /// provided (though it can still be empty) when `mode` is `MULTICAST_FILTER`. `multicast_macs`
-    /// is always guaranteed to be at most `multicast_filter_count` entries.
+    ///
+    /// `mode` is one of the variants in [`Mode`], it's guaranteed to be one of the reported modes
+    /// in this device's reported features. `multicast_macs` is only provided (though it can still
+    /// be empty) when `mode` is `MULTICAST_FILTER`. `multicast_macs` is always guaranteed to be at
+    /// most `multicast_filter_count` entries.
     SetMode(Mode mode, vector<array<uint8>:MAC_SIZE>:MAX_MAC_FILTER multicast_macs) -> ();
 };

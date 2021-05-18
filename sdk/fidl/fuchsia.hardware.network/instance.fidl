@@ -12,11 +12,15 @@ library fuchsia.hardware.network;
 // devices, and they should refrain from passing this Hub service to netstack, but rather pass along
 // fulfilled requests to the inner protocols.
 protocol DeviceInstance {
-    /// Connects to the [`fuchsia.hardware.network/Device`] implementation, giving access to
-    /// data-plane features.
+    /// Connects to the [`Device`] implementation.
+    ///
+    /// + request `device` device handle.
     GetDevice(request<Device> device);
-    /// Connects to the [`fuchsia.hardware.network/MacAddressing`] implementation, giving access to
-    /// MAC filtering control. `DeviceInstance`s that do not support `MacAddressing` will have the
-    /// request immediately closed.
+    /// Connects to the [`MacAddressing`] implementation.
+    ///
+    /// `DeviceInstance`s that do not support `MacAddressing` will have the request immediately
+    /// closed.
+    ///
+    /// + request `mac` mac handle.
     GetMacAddressing(request<MacAddressing> mac);
 };

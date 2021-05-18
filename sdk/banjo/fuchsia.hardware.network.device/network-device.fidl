@@ -25,60 +25,58 @@
 /// buffer is a piece of data that is received from the network, and makes its way to the
 /// application layer. A transmit buffer travels in the opposite direction: it originates in the
 /// application layer and makes its way out into the network. The device implementation receives
-/// buffers from the [`fuchsia.hardware.network.device/NetworkDeviceIfc`], which is offered by the
-/// middleware implementation.
+/// buffers from the [`NetworkDeviceIfc`], which is offered by the middleware implementation.
 ///
-/// A receive buffer flows from [`fuchsia.hardware.network.device/NetworkDeviceIfc`] into
-/// [`fuchsia.hardware.network.device/NetworkDeviceImpl`] through the
-/// [`fuchsia.hardware.network.device/NetworkDeviceImpl.QueueRxSpace`] method, which gives access to
-/// receive buffers. The diagram below illustrates the mechanism:
-///
+/// A receive buffer flows from [`NetworkDeviceIfc`] into [`NetworkDeviceImpl`] through the
+/// [`NetworkDeviceImpl.QueueRxSpace`] method, which gives access to receive buffers. The diagram
+/// below illustrates the mechanism:
+/// ```text
 ///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
 ///  |                     (1)  |  => RxSpaceBuffer => |        (2)          |
 ///  | NetworkDeviceIfc         |                      |  NetworkDeviceImpl  |
 ///  |                     (4)  |  <=    RxBuffer   <= |        (3)          |  <= Network data
 ///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+/// ```
 ///
-///  (1) `NetworkDeviceIfc` pushes available rx buffer space to `NetworkDeviceImpl` through
-///  [`fuchsia.hardware.network.device/NetworkDeviceImpl.QueueRxSpace`].
-///  (2) `NetworkDeviceImpl` retains the available space buffers until network data comes in.
-///  (3) `NetworkDeviceImpl` receives data from the network, stores it in one of its available
-///  [`fuchsia.hardware.network.device/RxSpaceBuffers`], making it an
-///  [`fuchsia.hardware.network.device/NetworkDeviceImpl.RxBuffer`].
-///  (4) `NetworkDeviceImpl` sends the fulfilled `RxBuffer` to `NetworkDeviceIfc` through
-///  [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`], which, in turn, sends that
-///  data over to applications.
+/// - (1) `NetworkDeviceIfc` pushes available rx buffer space to `NetworkDeviceImpl` through
+/// [`NetworkDeviceImpl.QueueRxSpace`].
+/// - (2) `NetworkDeviceImpl` retains the available space buffers until network data comes in.
+/// - (3) `NetworkDeviceImpl` receives data from the network, stores it in one of its available
+/// [`RxSpaceBuffers`], making it a [`NetworkDeviceImpl.RxBuffer`].
+/// - (4) `NetworkDeviceImpl` sends the fulfilled `RxBuffer` to `NetworkDeviceIfc` through
+/// [`NetworkDeviceIfc.CompleteRx`], which, in turn, sends that data over to applications.
 ///
 /// A receive buffer flows from `NetworkDeviceIfc` into `NetworkDeviceImpl` through the
-/// [`fuchsia.hardware.network.device/NetworkDeviceImpl.QueueTx`] method, and it's returned to
-/// `NetworkDeviceIfc` as a [`fuchsia.hardware.network.device/TxResult`]. The diagram below
-/// illustrates the mechanism:
+/// [`NetworkDeviceImpl.QueueTx`] method, and it's returned to [`NetworkDeviceIfc`] as a
+/// [`TxResult`]. The diagram below illustrates the mechanism:
 ///
+/// ```text
 ///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
 ///  |                      (1) |   =>  TxBuffer =>    |        (2)          |
 ///  | NetworkDeviceIfc         |                      |  NetworkDeviceImpl  |
 ///  |                      (4) |  <=    TxResult   <= |        (3)          |  => Network data
 ///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+/// ```
 ///
-///  (1) `NetworkDeviceIfc` receives a transmit buffer from applications filled with data intended
-///  to be delivered to the network.
-///  (2) `NetworkDeviceIfc` pushes the buffer into `NetworkDeviceImpl` through the
-///  [`fuchsia.hardware.network.device/NetworkDeviceImpl.QueueTx`] call.
-///  (3) `NetworkDeviceImpl` sends the data contained in the buffer out into the network.
-///  (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks the transmission as
-///  complete referencing the buffer's identifier to
-///  [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`].
+/// - (1) `NetworkDeviceIfc` receives a transmit buffer from applications filled with data intended
+/// to be delivered to the network.
+/// - (2) `NetworkDeviceIfc` pushes the buffer into `NetworkDeviceImpl` through the
+/// [`NetworkDeviceImpl.QueueTx`] call.
+/// - (3) `NetworkDeviceImpl` sends the data contained in the buffer out into the network.
+/// - (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks the transmission as
+/// complete referencing the buffer's identifier to [`NetworkDeviceIfc.CompleteTx`].
 library fuchsia.hardware.network.device;
 
 using zx;
 using fuchsia.hardware.network.mac;
 
-/// Disables automatic snooping for the device. The generic NetworkDevice layer typically
-/// automatically copies all tx traffic to any snooping clients. Devices may turn off that behavior
-/// by setting the `FEATURE_NO_AUTO_SNOOP` flag.
-/// Devices that disable auto-snooping SHOULD use the
-/// [`fuchsia.hardware.network.device/NetworkDeviceIfc.Snoop`] interface method to expose any tx
-/// frames they receive.
+/// Disables automatic snooping for the device.
+///
+/// The generic NetworkDevice layer typically automatically copies all tx traffic to any snooping
+/// clients. Devices may turn off that behavior by setting the `FEATURE_NO_AUTO_SNOOP` flag.
+///
+/// Devices that disable auto-snooping SHOULD use the [`NetworkDeviceIfc.Snoop`] interface method to
+/// expose any tx frames they receive.
 const uint32 FEATURE_NO_AUTO_SNOOP = 0x01;
 
 /// Maximum number of disjoint parts a buffer may have.
@@ -101,10 +99,9 @@ const uint8 MAX_PORTS = 32;
 
 /// VMO identifier.
 ///
-/// VMO identifiers are always in the range [0, [`fuchsia.hardware.network.device/MAX_VMOS`]).
+/// VMO identifiers are always in the range [0, [`MAX_VMOS`]).
 ///
-/// VMO identifiers are reported to devices through
-/// [`fuchsia.hardware.network.device/NetworkDeviceImpl.PrepareVmo`].
+/// VMO identifiers are reported to devices through [`NetworkDeviceImpl.PrepareVmo`].
 alias vmo_id = uint8;
 
 /// Buffer identifier.
@@ -115,7 +112,7 @@ alias buffer_id = uint32;
 
 /// Port identifier.
 ///
-/// Port identifiers are always in the range [0, [`fuchsia.hardware.network.device/MAX_PORTS`]).
+/// Port identifiers are always in the range [0, [`MAX_PORTS`]).
 alias port_id = uint8;
 
 /// A contiguous memory region.
@@ -129,7 +126,7 @@ struct BufferRegion {
     uint64 length;
 };
 
-/// No extra frame metadata, [`fuchsia.hardware.network.device/FrameInfo.info_type`] must be
+/// No extra frame metadata, [`FrameInfo.info_type`] must be
 /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
 struct NoInfo {
     // TODO(brunodalbo) remove this dummy field once banjo supports it. Currently banjo uses empty
@@ -137,24 +134,23 @@ struct NoInfo {
     uint8 nothing;
 };
 
-/// Extra frame sidecar metadata stored in [`fuchsia.hardware.network.device/BufferMetadata`].
+/// Extra frame sidecar metadata stored in [`BufferMetadata`].
 union FrameInfo {
     /// No extra frame metadata.
     1: NoInfo no_info;
 };
 
-/// Metadata associated with a [`fuchsia.hardware.network.device/TxBuffer`] or
-/// [`fuchsia.hardware.network.device/RxBuffer`].
+/// Metadata associated with a [`TxBuffer`] or an [`RxBuffer`].
 struct BufferMetadata {
     /// Destination or source port identifier for this buffer.
     port_id port;
     /// Extra frame metadata information. The type of the
-    /// [`fuchsia.hardware.network.device/FrameInfo`] union is defined by the value in `info_type`.
+    /// [`FrameInfo`] union is defined by the value in `info_type`.
     FrameInfo info;
     /// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
     uint32 info_type;
     /// Frame tx or rx flags, as defined in [`fuchsia.hardware.network/RxFlags`],
-    /// [`fuchsia.hardware.network/txFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
+    /// [`fuchsia.hardware.network/TxFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
     uint32 flags;
     /// Type of frame contained in this buffer, as defined in
     /// [`fuchsia.hardware.network/FrameType`].
@@ -172,18 +168,17 @@ struct TxBuffer {
     /// Metadata associated with this buffer.
     BufferMetadata meta;
     /// Length of header bytes in the data contained in this buffer. Will always be either 0 or the
-    /// requested [`fuchsia.hardware.network.device/DeviceInfo.tx_head_length`] value. The head
-    /// bytes are always at the beginning of the buffer.
+    /// requested [`DeviceInfo.tx_head_length`] value. The head bytes are always at the beginning of
+    /// the buffer.
     uint16 head_length;
     /// Length of tail bytes in the data contained in this buffer. Will always be either 0 or the
-    /// requested [`fuchsia.hardware.network.device/tx_tail_length`] value. The tail bytes are
-    /// always at the end of the buffer.
+    /// requested [`DeviceInfo.tx_tail_length`] value. The tail bytes are always at the end of the
+    /// buffer.
     uint16 tail_length;
 };
 
 /// A buffer with allocated space to receive frames in. An `RxSpaceBuffer` must always be returned
-/// as an [`fuchsia.hardware.network.device/RxBufferPart`] within a
-/// [`fuchsia.hardware.network.device/NetworkDeviceIfc.RxBuffer`].
+/// as an [`RxBufferPart`] within an [`RxBuffer`].
 struct RxSpaceBuffer {
     /// Unique buffer identifier.
     buffer_id id;
@@ -193,20 +188,17 @@ struct RxSpaceBuffer {
     BufferRegion region;
 };
 
-/// A single contiguous part of an [`fuchsia.hardware.network.device/RxBuffer`], created from a
-/// [`fuchsia.hardware.network.device/RxSpaceBuffer`].
+/// A single contiguous part of an [`RxBuffer`], created from an [`RxSpaceBuffer`].
 struct RxBufferPart {
-    /// The buffer identifier informed in the [`fuchsia.hardware.network.device/RxSpaceBuffer`] that
-    /// originated this `RxBuffer`.
+    /// The buffer identifier informed in the [`RxSpaceBuffer`] that originated this `RxBuffer`.
     buffer_id id;
-    /// Offset in bytes from [`fuchsia.hardware.network.device/RxSpaceBuffer`]'s start where inbound
-    /// data begins.
+    /// Offset in bytes from [`RxSpaceBuffer`]'s start where inbound data begins.
     ///
     /// This is a relative offset within the region defined by the originating space, not an
     /// absolute offset in the space's VMO.
     uint32 offset;
-    /// The total length in bytes written in the [`fuchsia.hardware.network.device/RxSpaceBuffer`]
-    /// referenced by `id`, excluding any `offset` bytes.
+    /// The total length in bytes written in the [`RxSpaceBuffer`] referenced by `id`, excluding any
+    /// `offset` bytes.
     uint32 length;
 };
 
@@ -220,11 +212,10 @@ struct RxBuffer {
     vector<RxBufferPart>:MAX_BUFFER_PARTS data;
 };
 
-/// The result of a tx operation, reported to [`fuchsia.hardware.network.device/NetworkDeviceIfc`]
-/// through [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`].
+/// The result of a tx operation, reported to [`NetworkDeviceIfc`] through
+/// [`NetworkDeviceIfc.CompleteTx`].
 struct TxResult {
-    /// The buffer identifier informed in the [`fuchsia.hardware.network.device/TxBuffer`] that
-    /// originated this `TxResult`.
+    /// The buffer identifier informed in the [`TxBuffer`] that originated this `TxResult`.
     buffer_id id;
     /// The result status to report.
     ///
@@ -246,11 +237,14 @@ protocol NetworkPort {
     /// Gets information about the port.
     ///
     /// Port information must not change over the port's lifetime.
+    ///
+    /// - response `info` port information.
     GetInfo() -> (PortInfo info);
     /// Gets operational status of the port.
     ///
-    /// Changes to operational status must be reported via
-    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.StatusChanged`]
+    /// Changes to operational status must be reported via [`NetworkDeviceIfc.StatusChanged`]
+    ///
+    /// - response `status` snapshot of port's operational status.
     GetStatus() -> (PortStatus status);
     /// Notifies the port that there are sessions interested in it.
     ///
@@ -260,11 +254,15 @@ protocol NetworkPort {
     ///   - must return errors for outbound frames destined to inactive ports.
     ///
     /// All ports are inactive on creation.
+    ///
+    /// + request `active` `true` if port has sessions attached to it, `false` otherwise.
     SetActive(bool active);
     /// Gets an interface to the MAC addressing layer of the port.
     ///
     /// Ports that do not support MAC addressing must return an empty interface. That means the
     /// generated-banjo bindings `ctx` and `ops` fields must both be null.
+    ///
+    /// - response `mac_ifc` mac addressing handle.
     // TODO(https://fxbug.dev/67196): Make this an optional interface return once this is FIDL.
     GetMac() -> (fuchsia.hardware.network.mac.MacAddr mac_ifc);
     /// Notifies this port has been removed from the interface.
@@ -278,65 +276,72 @@ protocol NetworkDeviceIfc {
     /// Notifies the interface of status changes on port with `id`.
     ///
     /// Port status changes must always be notified through `StatusChanged`. The interface will not
-    /// poll ports for status via [`fuchsia.hardware.network.device/NetworkPort.GetStatus`].
+    /// poll ports for status via [`NetworkPort.GetStatus`].
+    ///
+    /// + request `id` port identifier.
+    /// + request `new_status` new port's status.
     PortStatusChanged(port_id id, PortStatus new_status);
     /// Instantiates a new port with `id`.
     ///
-    /// `id` must not be currently in use by any other ports. `id`s may be reused once the
-    /// provided port is destroyed by [`fuchsia.hardware.network.device/NetworkPort.Removed`].
+    /// `id` must not be currently in use by any other ports. `id`s may be reused once the provided
+    /// port is destroyed by [`NetworkPort.Removed`].
     ///
-    /// Port identifiers do not need to be stable across instantiations or reboots.
-    /// Port identifiers don't need to be allocated in any specific order as long as
-    /// [`fuchsia.hardware.network.device/MAX_PORTS`] is not exceeded.
+    /// Port identifiers do not need to be stable across instantiations or reboots. Port identifiers
+    /// don't need to be allocated in any specific order as long as [`MAX_PORTS`] is not exceeded.
+    ///
+    /// + request `id` new port identifier.
+    /// + request `port` handle to network port implementation.
     AddPort(port_id id, NetworkPort port);
     /// Destroys port with `id`.
     ///
-    /// NOTE: Resources associated with the port must not be freed until
-    /// [`fuchsia.hardware.network.device/NetworkPort.Removed`] is called.
-    RemovePort(port_id id);
-    /// Notifies interface of incoming rx data, contained in
-    /// [`fuchsia.hardware.network.device/RxBuffer`].
+    /// NOTE: Resources associated with the port must not be freed until [`NetworkPort.Removed`] is
+    /// called.
     ///
-    /// Callers should attempt to batch as many buffers as possible in a single call.
-    /// Number of buffers in a single call must be limited to the
-    /// [`fuchsia.hardware.network.device/DeviceInfo.rx_depth`] reported by the `NetworkDeviceImpl`
-    /// that is returning the buffers.
+    /// + request `id` removed port identifier.
+    RemovePort(port_id id);
+    /// Notifies interface of incoming rx data, contained in [`RxBuffer`].
+    ///
+    /// Callers should attempt to batch as many buffers as possible in a single call. Number of
+    /// buffers in a single call must be limited to the [`DeviceInfo.rx_depth`] reported by the
+    /// `NetworkDeviceImpl` that is returning the buffers.
     ///
     /// Buffers with zero length are considered "unfulfilled". They're not reported to any sessions
     /// and the buffer space comprising them may be reused. Devices should return any outstanding
-    /// buffer space as unfulfilled on stop. See
-    /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.Stop`].
+    /// buffer space as unfulfilled on stop. See [`NetworkDeviceImpl.Stop`].
     ///
     /// By calling `CompleteRx` the caller relinquishes ownership of all buffers that are being
     /// marked as complete.
+    ///
+    /// + request `rx` buffers containing incoming data.
     CompleteRx(vector<RxBuffer>:MAX rx);
     /// Notifies interface of complete transmit buffers.
+    ///
     /// Callers should attempt to batch as many buffers as possible in a single call.
     ///
-    /// Number of buffers in a single call must be limited to the
-    /// [`fuchsia.hardware.network.device/DeviceInfo.tx_depth`] reported by the `NetworkDeviceImpl`
-    /// that is returning the buffers.
+    /// Number of buffers in a single call must be limited to the [`DeviceInfo.tx_depth`] reported
+    /// by the `NetworkDeviceImpl` that is returning the buffers.
     ///
     /// By calling `CompleteTx` the caller relinquishes ownership of all buffers that are being
     /// returned.
+    ///
+    /// + request `tx` transmit results.
     CompleteTx(vector<TxResult>:MAX tx);
     /// Notifies interface of a snooped tx frame.
     ///
-    /// Typically used by implementations that have the
-    /// [`fuchsia.hardware.network.device/FEATURE_NO_AUTO_SNOOP`] bit set in
-    /// [`fuchsia.hardware.network.device/DeviceInfo.device_features`]. Implementations that
-    /// generate transmit traffic internally should use `Snoop` regardless of
-    /// `FEATURE_NO_AUTO_SNOOP` being set.
+    /// Typically used by implementations that have the [`FEATURE_NO_AUTO_SNOOP`] bit set in
+    /// [`DeviceInfo.device_features`]. Implementations that generate transmit traffic internally
+    /// should use `Snoop` regardless of `FEATURE_NO_AUTO_SNOOP` being set.
+    ///
     /// Snooped frames are *ALWAYS* outbound frames that are being fed back into the interface for
-    /// traffic snooping.
-    /// Device implementations need to call
-    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.Snoop`] ONLY if
-    /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.SetSnoop`] was set to `true` by the
-    /// interface, otherwise any buffers in `Snoop` will be ignored.
+    /// traffic snooping. Device implementations need to call [`NetworkDeviceIfc.Snoop`] ONLY if
+    /// [`NetworkDeviceImpl.SetSnoop`] was set to `true` by the interface, otherwise any buffers in
+    /// `Snoop` will be ignored.
+    ///
+    /// + request `rx` snooped transmit frames to be looped back as incoming data.
     Snoop(vector<RxBuffer>:MAX rx);
 };
 
-/// Supported tx frame types
+/// Supported tx frame types.
 // NOTE(brunodalbo): TxSupport has exactly the same structure as
 // `fuchsia.hardware.network.FrameTypeSupport`, but importing FIDL types into banjo is not yet
 // supported.
@@ -386,34 +391,43 @@ struct DeviceInfo {
     /// Must be in the range [1, `MAX_BUFFER_PARTS`].
     uint8 max_buffer_parts;
     /// Maximum total length of buffers. May be set to zero for no maximum.
+    ///
     /// Devices that do not support scatter-gather DMA may set this to a value smaller than a
     /// page size to guarantee compatibility.
+    ///
     /// Can't be larger than `MAX_PHYSICAL_PARTS` pages.
     uint32 max_buffer_length;
     /// Alignment requirement for buffers relative to the start of VMOs.
+    ///
     /// Must be greater than zero.
     uint32 buffer_alignment;
     /// The minimum rx buffer length for correct operation, in bytes.
     uint32 min_rx_buffer_length;
-    /// The minimum tx buffer length for correct operation, in bytes. This length accounts only for
-    /// the buffer's body, and should not account for `tx_head_length` or `tx_tail_length`.
+    /// The minimum tx buffer length for correct operation, in bytes.
+    ///
+    /// This length accounts only for the buffer's body, and should not account for `tx_head_length`
+    /// or `tx_tail_length`.
     uint32 min_tx_buffer_length;
-    /// Number of bytes requested as header bytes on tx buffers. If set to zero, tx buffers will
-    /// never contain header space. Otherwise, tx buffers will start at the beginning of the header
-    /// space, and the header region will be informed.
+    /// Number of bytes requested as header bytes on tx buffers.
+    ///
+    /// If set to zero, tx buffers will never contain header space. Otherwise, tx buffers will start
+    /// at the beginning of the header space, and the header region will be informed.
     uint16 tx_head_length;
-    /// Number of bytes requested as tail bytes on tx buffers. If set to zero, tx buffers will never
-    /// contain tail space. Otherwise, tx buffers will end at the end of the tail space,
-    /// and the tail region will be informed.
+    /// Number of bytes requested as tail bytes on tx buffers.
+    ///
+    /// If set to zero, tx buffers will never contain tail space. Otherwise, tx buffers will end at
+    /// the end of the tail space, and the tail region will be informed.
     uint16 tx_tail_length;
     /// Available Rx acceleration flags for this device, as defined in
     /// [`fuchsia.hardware.network/RxAcceleration`].
+    ///
     /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with semantic acceleration
     /// features described by `RxAcceleration`. Position `n` of `rx_accel` conveys the meaning of
     /// the `RX_ACCEL_n` flag.
     vector<uint8>:MAX rx_accel;
     /// Available tx acceleration flags for this device, as defined in
     /// [`fuchsia.hardware.network/TxAcceleration`].
+    ///
     /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with semantic acceleration
     /// features described by `TxAcceleration`. Position `n` of `tx_accel` conveys the meaning of
     /// the `TX_ACCEL_n` flag.
@@ -421,12 +435,14 @@ struct DeviceInfo {
 };
 
 /// Dynamic port information.
-/// `Status` reflects the operational status of a port, changes to status are reported through
-/// [`fuchsia.hardware.network/NetworkDeviceIfc.StatusChanged`].
+///
+/// `PortStatus` reflects the operational status of a port, changes to status are reported through
+/// [`NetworkDeviceIfc.StatusChanged`].
 struct PortStatus {
     /// Port's maximum transmission unit, in bytes.
     uint32 mtu;
     /// Port status flags.
+    ///
     /// Status flags, as defined in [`fuchsia.hardware.network/Status`].
     uint32 flags;
 };
@@ -434,14 +450,22 @@ struct PortStatus {
 [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol NetworkDeviceImpl {
     /// Initializes the network device.
+    ///
     /// `Init` is only called once during the lifetime of the device to register `iface` as the
     /// callback target for the Network Device implementation.
+    ///
     /// Upon initialization, the device is expected to be in the "Stopped" state, the `Start` method
     /// will be called once the data path needs to be opened.
+    ///
+    /// + request `iface` handle to the device interface.
+    /// - response `s` initialization status. A value other than `ZX_OK` will cause the device
+    /// to unbind.
     Init(NetworkDeviceIfc iface) -> (zx.status s);
     /// Starts the device's data path.
+    ///
     /// `start` signals to the device implementation that it should bring up its data path and be
     /// ready to receive tx frames and `iface` will start accepting rx frames.
+    ///
     /// The device is only considered started once `Start` returns. Until then, the contract
     /// guarantees that no other data-path calls will be made to the device (`QueueTx`,
     /// `RxAvailable`, `Stop`), implementers can safely assume or assert that this contract is
@@ -452,53 +476,69 @@ protocol NetworkDeviceImpl {
     ///
     /// The device implementation must return all outstanding Tx and Rx buffers upon receiving this
     /// call. Any new buffers received in the stopped state must be returned with an appropriate
-    /// error (tx) or unfulfilled (rx). See
-    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`] and
-    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`] for details.
+    /// error (tx) or unfulfilled (rx). See [`NetworkDeviceIfc.CompleteTx`] and
+    /// [`NetworkDeviceIfc.CompleteRx`] for details.
     ///
     /// The device implementation may perform any power saving measures after observing stop.
     [Async]
     Stop() -> ();
-    /// Gets information about the device. Device information must not change over the course
-    /// of the lifetime of the device.
+    /// Gets information about the device.
+    ///
+    /// Device information must not change over the course of the lifetime of the device.
+    ///
+    /// - response `info` device information.
     GetInfo() -> (DeviceInfo info);
     /// Enqueues a list of buffers for transmission on the network device.
     ///
     /// The driver takes ownership of the buffer and must complete the tx transaction by using
-    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`] operations once it is done
+    /// [`NetworkDeviceIfc.CompleteTx`] operations once it is done
     /// with each buffer in `buffers`.
     ///
     /// The total number of outstanding tx buffers given to a device will never exceed the reported
-    /// [`fuchsia.hardware.network.device/DeviceInfo.tx_depth`] value. Which also means that no more
+    /// [`DeviceInfo.tx_depth`] value. Which also means that no more
     /// than `tx_depth` buffers are going to be informed at once in a single call to `QueueTx`.
     ///
     /// Buffers enqueued while the device in is the stopped state must be returned with an
-    /// appropriate error. See [`fuchsia.hardware.network.device/TxResult.status`] for specific
+    /// appropriate error. See [`TxResult.status`] for specific
     /// error codes.
+    ///
+    /// + request `buffers` tx buffers to enqueue for sending.
     QueueTx(vector<TxBuffer>:MAX buffers);
     /// Enqueues a list of rx buffer space on the network device.
     ///
     /// The driver takes ownership of the buffer and must complete the transaction (once network
-    /// data arrives) using [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`].
+    /// data arrives) using [`NetworkDeviceIfc.CompleteRx`].
     ///
     /// The total number of outstanding rx buffers given to a device will never exceed the reported
-    /// [`fuchsia.hardware.network.device/DeviceInfo.rx_depth`] value. Which also means that no more
+    /// [`DeviceInfo.rx_depth`] value. Which also means that no more
     /// than `rx_depth` buffers are going to be informed at once in a single call to `QueueRxSpace`.
     ///
     /// Buffers enqueued while the device in is the stopped state must be returned with a zero
     /// length.
+    ///
+    /// + request `buffers` rx space buffers to be filled with network data when it arrives.
     QueueRxSpace(vector<RxSpaceBuffer>:MAX buffers);
     /// Informs device that a new VMO is being used to store frame data.
+    ///
     /// Implementers must store the VMO handle referenced by `id` until
-    /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.ReleaseVmo`] is called with the same
-    /// `id`.
+    /// [`NetworkDeviceImpl.ReleaseVmo`] is called with the same `id`.
+    ///
+    /// + request `id` identifier used to reference this VMO.
+    /// + request `vmo` VMO where frame data will be stored.
     PrepareVmo(vmo_id id, zx.handle:VMO vmo);
-    /// Device may dispose of all references to the VMO referenced by `id`, no more buffers will
-    /// be sent with this identifier.
-    /// `ReleaseVmo` is guaranteed to only be called when the implementation holds no buffers
-    /// that reference that `id`.
+    /// Device may dispose of all references to the VMO referenced by `id`.
+    ///
+    /// No more buffers will be sent with this `id`.
+    ///
+    /// `ReleaseVmo` is guaranteed to only be called when the implementation holds no buffers that
+    /// reference that `id`.
+    ///
+    /// + request `id` VMO identifier.
     ReleaseVmo(vmo_id id);
     /// Informs the device that it should start or stop reporting snooped transmit frames through
-    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.Snoop`].
+    /// [`NetworkDeviceIfc.Snoop`].
+    ///
+    /// + request `snoop` if `true` device should start reporting snooping frames. If `false` device
+    /// should stop reporting snooped frames. Upon initialization, device assumes `snop` is `false`.
     SetSnoop(bool snoop);
 };
