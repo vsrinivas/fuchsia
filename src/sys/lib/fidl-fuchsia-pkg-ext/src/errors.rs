@@ -4,11 +4,8 @@
 
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum ResolveError {
-    #[error("transport error")]
-    Fidl(#[from] fidl::Error),
-
     #[error("the resolver encountered an otherwise unspecified error while handling the request")]
     Internal,
 
@@ -62,7 +59,6 @@ impl From<fidl_fuchsia_pkg::ResolveError> for ResolveError {
 impl From<ResolveError> for fidl_fuchsia_pkg::ResolveError {
     fn from(e: ResolveError) -> Self {
         match e {
-            ResolveError::Fidl(_) => fidl_fuchsia_pkg::ResolveError::Io,
             ResolveError::Internal => fidl_fuchsia_pkg::ResolveError::Internal,
             ResolveError::AccessDenied => fidl_fuchsia_pkg::ResolveError::AccessDenied,
             ResolveError::Io => fidl_fuchsia_pkg::ResolveError::Io,

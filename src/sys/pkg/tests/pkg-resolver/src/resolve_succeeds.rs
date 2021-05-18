@@ -302,6 +302,7 @@ async fn variant_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn error_codes() {
+    fuchsia_syslog::init_with_tags(&["RESOLVE_TEST"]).expect("syslog init should not fail");
     let env = TestEnvBuilder::new().build().await;
     let pkg = PackageBuilder::new("error-foo")
         .add_resource_at("data/foo", "foo".as_bytes())
@@ -329,7 +330,7 @@ async fn error_codes() {
     // Nonexistant repo
     assert_matches!(
         env.resolve_package("fuchsia-pkg://nonexistent-repo/a").await,
-        Err(fidl_fuchsia_pkg::ResolveError::Internal)
+        Err(fidl_fuchsia_pkg::ResolveError::RepoNotFound)
     );
 
     // Nonexistant package
@@ -492,7 +493,7 @@ async fn use_cached_package() {
     // the package can't be resolved before the repository is configured.
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
-        Err(fidl_fuchsia_pkg::ResolveError::Internal)
+        Err(fidl_fuchsia_pkg::ResolveError::RepoNotFound)
     );
 
     env.register_repo(&served_repository).await;

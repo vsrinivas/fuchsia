@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        cache::{BlobFetcher, CacheError, MerkleForError, ToResolveStatus},
+        cache::{BlobFetcher, CacheError, MerkleForError, ToResolveError, ToResolveStatus},
         experiment::Experiments,
         inspect_util::{self, InspectableRepositoryConfig},
         repository::Repository,
@@ -13,7 +13,7 @@ use {
     anyhow::anyhow,
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::LocalMirrorProxy,
-    fidl_fuchsia_pkg_ext::{cache, BlobId, RepositoryConfig, RepositoryConfigs},
+    fidl_fuchsia_pkg_ext::{self as pkg, cache, BlobId, RepositoryConfig, RepositoryConfigs},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
     fuchsia_pkg::PackageDirectory,
@@ -779,6 +779,11 @@ impl ToResolveStatus for OpenRepoError {
         Status::INTERNAL
     }
 }
+impl ToResolveError for OpenRepoError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
+        pkg::ResolveError::Internal
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum GetPackageError {
@@ -807,15 +812,13 @@ pub enum GetPackageHashError {
     MerkleFor(#[from] MerkleForError),
 }
 
-impl ToResolveStatus for GetPackageError {
-    fn to_resolve_status(&self) -> Status {
+impl ToResolveError for GetPackageError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            // If we return NOT_FOUND, the shell will interpret that as file not found
-            // and fall back to the next $PATH directory.
-            GetPackageError::RepoNotFound(_) => Status::BAD_STATE,
-            GetPackageError::OpenRepo(err) => err.to_resolve_status(),
-            GetPackageError::Cache(err) => err.to_resolve_status(),
-            GetPackageError::OpenPackage(err) => err.to_resolve_status(),
+            GetPackageError::RepoNotFound(_) => pkg::ResolveError::RepoNotFound,
+            GetPackageError::OpenRepo(err) => err.to_resolve_error(),
+            GetPackageError::Cache(err) => err.to_resolve_error(),
+            GetPackageError::OpenPackage(err) => err.to_resolve_error(),
         }
     }
 }

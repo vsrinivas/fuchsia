@@ -236,24 +236,42 @@ impl ToResolveError for Status {
 pub(crate) trait ToResolveStatus {
     fn to_resolve_status(&self) -> Status;
 }
+impl ToResolveStatus for pkg::ResolveError {
+    fn to_resolve_status(&self) -> Status {
+        match *self {
+            pkg::ResolveError::AccessDenied => Status::ACCESS_DENIED,
+            pkg::ResolveError::Io => Status::IO,
+            pkg::ResolveError::PackageNotFound
+            | pkg::ResolveError::RepoNotFound
+            | pkg::ResolveError::BlobNotFound => Status::NOT_FOUND,
+            pkg::ResolveError::NoSpace => Status::NO_SPACE,
+            pkg::ResolveError::UnavailableBlob | pkg::ResolveError::UnavailableRepoMetadata => {
+                Status::UNAVAILABLE
+            }
+            pkg::ResolveError::InvalidUrl => Status::INVALID_ARGS,
+            pkg::ResolveError::Internal => Status::INTERNAL,
+        }
+    }
+}
 
 // From resolver.fidl:
 // * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error
 //   while handling the request
 // * `ZX_ERR_NOT_FOUND` if the package does not exist.
 // * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
-impl ToResolveStatus for CacheError {
-    fn to_resolve_status(&self) -> Status {
+impl ToResolveError for CacheError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            CacheError::Fidl(_) => Status::IO,
-            CacheError::MerkleFor(err) => err.to_resolve_status(),
-            CacheError::ListNeeds(err) => err.to_resolve_status(),
-            CacheError::FetchMetaFar(err, ..) => err.to_resolve_status(),
-            CacheError::FetchContentBlob(err, _) => err.to_resolve_status(),
-            CacheError::Get(err) => err.to_resolve_status(),
+            CacheError::Fidl(_) => pkg::ResolveError::Io,
+            CacheError::MerkleFor(err) => err.to_resolve_error(),
+            CacheError::ListNeeds(err) => err.to_resolve_error(),
+            CacheError::FetchMetaFar(err, ..) => err.to_resolve_error(),
+            CacheError::FetchContentBlob(err, _) => err.to_resolve_error(),
+            CacheError::Get(err) => err.to_resolve_error(),
         }
     }
 }
+
 impl ToResolveStatus for MerkleForError {
     fn to_resolve_status(&self) -> Status {
         match self {
@@ -266,91 +284,117 @@ impl ToResolveStatus for MerkleForError {
         }
     }
 }
-impl ToResolveStatus for pkg::cache::OpenError {
-    fn to_resolve_status(&self) -> Status {
+
+impl ToResolveError for MerkleForError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            pkg::cache::OpenError::NotFound => Status::NOT_FOUND,
-            pkg::cache::OpenError::UnexpectedResponse(_) => Status::INTERNAL,
-            pkg::cache::OpenError::Fidl(_) => Status::INTERNAL,
+            MerkleForError::NotFound => pkg::ResolveError::PackageNotFound,
+            MerkleForError::InvalidTargetPath(_) => pkg::ResolveError::Internal,
+            // FIXME(42326) when tuf::Error gets an HTTP error variant, this should be mapped to Status::UNAVAILABLE
+            MerkleForError::FetchTargetDescription(..) => pkg::ResolveError::Internal,
+            MerkleForError::NoCustomMetadata => pkg::ResolveError::Internal,
+            MerkleForError::SerdeError(_) => pkg::ResolveError::Internal,
         }
     }
 }
-impl ToResolveStatus for pkg::cache::GetError {
-    fn to_resolve_status(&self) -> Status {
+
+impl ToResolveError for pkg::cache::OpenError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            pkg::cache::GetError::UnexpectedResponse(_) => Status::INTERNAL,
-            pkg::cache::GetError::Fidl(_) => Status::INTERNAL,
+            pkg::cache::OpenError::NotFound => pkg::ResolveError::PackageNotFound,
+            pkg::cache::OpenError::UnexpectedResponse(_) | pkg::cache::OpenError::Fidl(_) => {
+                pkg::ResolveError::Internal
+            }
         }
     }
 }
-impl ToResolveStatus for pkg::cache::OpenBlobError {
-    fn to_resolve_status(&self) -> Status {
+
+impl ToResolveError for pkg::cache::GetError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            pkg::cache::OpenBlobError::OutOfSpace => Status::NO_SPACE,
-            pkg::cache::OpenBlobError::ConcurrentWrite => Status::INTERNAL,
-            pkg::cache::OpenBlobError::UnspecifiedIo => Status::IO,
-            pkg::cache::OpenBlobError::Internal => Status::INTERNAL,
-            pkg::cache::OpenBlobError::Fidl(_) => Status::INTERNAL,
+            pkg::cache::GetError::UnexpectedResponse(_) => pkg::ResolveError::Internal,
+            pkg::cache::GetError::Fidl(_) => pkg::ResolveError::Internal,
         }
     }
 }
-impl ToResolveStatus for pkg::cache::ListMissingBlobsError {
-    fn to_resolve_status(&self) -> Status {
-        let pkg::cache::ListMissingBlobsError(_) = self;
-        Status::INTERNAL
-    }
-}
-impl ToResolveStatus for pkg::cache::TruncateBlobError {
-    fn to_resolve_status(&self) -> Status {
+
+impl ToResolveError for pkg::cache::OpenBlobError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            pkg::cache::TruncateBlobError::NoSpace => Status::NO_SPACE,
-            pkg::cache::TruncateBlobError::UnexpectedResponse(_) => Status::IO,
-            pkg::cache::TruncateBlobError::Fidl(_) => Status::IO,
+            pkg::cache::OpenBlobError::OutOfSpace => pkg::ResolveError::NoSpace,
+            pkg::cache::OpenBlobError::ConcurrentWrite => pkg::ResolveError::Internal,
+            pkg::cache::OpenBlobError::UnspecifiedIo => pkg::ResolveError::Io,
+            pkg::cache::OpenBlobError::Internal => pkg::ResolveError::Internal,
+            pkg::cache::OpenBlobError::Fidl(_) => pkg::ResolveError::Internal,
         }
     }
 }
-impl ToResolveStatus for pkg::cache::WriteBlobError {
-    fn to_resolve_status(&self) -> Status {
+
+impl ToResolveError for pkg::cache::ListMissingBlobsError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            pkg::cache::WriteBlobError::Overwrite => Status::IO,
-            pkg::cache::WriteBlobError::Corrupt => Status::IO,
-            pkg::cache::WriteBlobError::NoSpace => Status::NO_SPACE,
-            pkg::cache::WriteBlobError::UnexpectedResponse(_) => Status::IO,
-            pkg::cache::WriteBlobError::Fidl(_) => Status::IO,
+            pkg::cache::ListMissingBlobsError(_) => pkg::ResolveError::Internal,
         }
     }
 }
-impl ToResolveStatus for FetchError {
-    fn to_resolve_status(&self) -> Status {
+
+impl ToResolveError for pkg::cache::TruncateBlobError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
+        match self {
+            pkg::cache::TruncateBlobError::NoSpace => pkg::ResolveError::NoSpace,
+            pkg::cache::TruncateBlobError::UnexpectedResponse(_) => pkg::ResolveError::Io,
+            pkg::cache::TruncateBlobError::Fidl(_) => pkg::ResolveError::Io,
+        }
+    }
+}
+
+impl ToResolveError for pkg::cache::WriteBlobError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
+        match self {
+            pkg::cache::WriteBlobError::Overwrite => pkg::ResolveError::Io,
+            pkg::cache::WriteBlobError::Corrupt => pkg::ResolveError::Io,
+            pkg::cache::WriteBlobError::NoSpace => pkg::ResolveError::NoSpace,
+            pkg::cache::WriteBlobError::UnexpectedResponse(_) => pkg::ResolveError::Io,
+            pkg::cache::WriteBlobError::Fidl(_) => pkg::ResolveError::Io,
+        }
+    }
+}
+
+impl ToResolveError for FetchError {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
         use FetchError::*;
         match self {
-            CreateBlob(e) => e.to_resolve_status(),
-            BadHttpStatus { code: hyper::StatusCode::UNAUTHORIZED, .. } => Status::ACCESS_DENIED,
-            BadHttpStatus { code: hyper::StatusCode::FORBIDDEN, .. } => Status::ACCESS_DENIED,
-            BadHttpStatus { .. } => Status::UNAVAILABLE,
-            ContentLengthMismatch { .. } => Status::UNAVAILABLE,
-            UnknownLength { .. } => Status::UNAVAILABLE,
-            BlobTooSmall { .. } => Status::UNAVAILABLE,
-            BlobTooLarge { .. } => Status::UNAVAILABLE,
-            Hyper { .. } => Status::UNAVAILABLE,
-            Http { .. } => Status::UNAVAILABLE,
-            Truncate(e) => e.to_resolve_status(),
-            Write(e) => e.to_resolve_status(),
-            NoMirrors => Status::INTERNAL,
-            BlobUrl(_) => Status::INTERNAL,
-            FidlError(_) => Status::INTERNAL,
-            IoError(_) => Status::IO,
-            LocalMirror(_) => Status::INTERNAL,
-            NoBlobSource { .. } => Status::INTERNAL,
-            ConflictingBlobSources => Status::INTERNAL,
-            BlobHeaderTimeout { .. } => Status::UNAVAILABLE,
-            BlobBodyTimeout { .. } => Status::UNAVAILABLE,
-            ExpectedHttpStatus206 { .. } => Status::UNAVAILABLE,
-            MissingContentRangeHeader { .. } => Status::UNAVAILABLE,
-            MalformedContentRangeHeader { .. } => Status::UNAVAILABLE,
-            InvalidContentRangeHeader { .. } => Status::UNAVAILABLE,
-            ExceededResumptionAttemptLimit { .. } => Status::UNAVAILABLE,
-            ContentLengthContentRangeMismatch { .. } => Status::UNAVAILABLE,
+            CreateBlob(e) => e.to_resolve_error(),
+            BadHttpStatus { code: hyper::StatusCode::UNAUTHORIZED, .. } => {
+                pkg::ResolveError::AccessDenied
+            }
+            BadHttpStatus { code: hyper::StatusCode::FORBIDDEN, .. } => {
+                pkg::ResolveError::AccessDenied
+            }
+            BadHttpStatus { .. } => pkg::ResolveError::UnavailableBlob,
+            ContentLengthMismatch { .. } => pkg::ResolveError::UnavailableBlob,
+            UnknownLength { .. } => pkg::ResolveError::UnavailableBlob,
+            BlobTooSmall { .. } => pkg::ResolveError::UnavailableBlob,
+            BlobTooLarge { .. } => pkg::ResolveError::UnavailableBlob,
+            Hyper { .. } => pkg::ResolveError::UnavailableBlob,
+            Http { .. } => pkg::ResolveError::UnavailableBlob,
+            Truncate(e) => e.to_resolve_error(),
+            Write(e) => e.to_resolve_error(),
+            NoMirrors => pkg::ResolveError::Internal,
+            BlobUrl(_) => pkg::ResolveError::Internal,
+            FidlError(_) => pkg::ResolveError::Internal,
+            IoError(_) => pkg::ResolveError::Io,
+            LocalMirror(_) => pkg::ResolveError::Internal,
+            NoBlobSource { .. } => pkg::ResolveError::Internal,
+            ConflictingBlobSources => pkg::ResolveError::Internal,
+            BlobHeaderTimeout { .. } => pkg::ResolveError::UnavailableBlob,
+            BlobBodyTimeout { .. } => pkg::ResolveError::UnavailableBlob,
+            ExpectedHttpStatus206 { .. } => pkg::ResolveError::UnavailableBlob,
+            MissingContentRangeHeader { .. } => pkg::ResolveError::UnavailableBlob,
+            MalformedContentRangeHeader { .. } => pkg::ResolveError::UnavailableBlob,
+            InvalidContentRangeHeader { .. } => pkg::ResolveError::UnavailableBlob,
+            ExceededResumptionAttemptLimit { .. } => pkg::ResolveError::UnavailableBlob,
+            ContentLengthContentRangeMismatch { .. } => pkg::ResolveError::UnavailableBlob,
         }
     }
 }

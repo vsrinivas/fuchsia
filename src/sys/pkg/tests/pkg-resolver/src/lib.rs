@@ -951,7 +951,6 @@ impl<P: PkgFs> TestEnv<P> {
             fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
-
     /// Wait until at least `expected_event_codes.len()` events of metric id `expected_metric_id`
     /// are received, then assert that the event codes of the received events correspond, in order,
     /// to the event codes in `expected_event_codes`.

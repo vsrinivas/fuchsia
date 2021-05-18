@@ -202,11 +202,8 @@ async fn resolve_success_regular() {
     );
 
     env.assert_count_events(
-        metrics::RESOLVE_METRIC_ID,
-        vec![(
-            metrics::ResolveDurationMetricDimensionResult::Success,
-            metrics::ResolveDurationMetricDimensionResolverType::Regular,
-        )],
+        metrics::RESOLVE_STATUS_METRIC_ID,
+        vec![(metrics::ResolveStatusMetricDimensionResult::Success,)],
     )
     .await;
     env.stop().await;
@@ -217,15 +214,12 @@ async fn resolve_failure_regular_unreachable() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
-        Err(fidl_fuchsia_pkg::ResolveError::Internal),
+        Err(fidl_fuchsia_pkg::ResolveError::RepoNotFound),
     );
 
     env.assert_count_events(
-        metrics::RESOLVE_METRIC_ID,
-        vec![(
-            metrics::ResolveMetricDimensionResult::ZxErrBadState,
-            metrics::ResolveDurationMetricDimensionResolverType::Regular,
-        )],
+        metrics::RESOLVE_STATUS_METRIC_ID,
+        vec![(metrics::ResolveStatusMetricDimensionResult::RepoNotFound,)],
     )
     .await;
     env.stop().await;
@@ -271,7 +265,7 @@ async fn resolve_duration_failure() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
-        Err(fidl_fuchsia_pkg::ResolveError::Internal),
+        Err(fidl_fuchsia_pkg::ResolveError::RepoNotFound),
     );
 
     assert_elapsed_duration_events(

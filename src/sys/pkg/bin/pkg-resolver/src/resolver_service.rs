@@ -39,7 +39,8 @@ use {
 mod inspect;
 pub use inspect::ResolverService as ResolverServiceInspectState;
 
-pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Status>>;
+pub type PackageFetcher =
+    queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>;
 
 pub fn make_package_fetch_queue(
     cache: pkg::cache::Client,
@@ -107,10 +108,9 @@ pub async fn run_resolver_service(
                         let response = resolve(&package_fetcher, package_url.clone(), dir).await;
 
                         cobalt_sender.log_event_count(
-                            metrics::RESOLVE_METRIC_ID,
+                            metrics::RESOLVE_STATUS_METRIC_ID,
                             (
-                                resolve_result_to_resolve_code(response),
-                                metrics::ResolveMetricDimensionResolverType::Regular,
+                                resolve_result_to_resolve_status_code(&response),
                             ),
                             0,
                             1,
@@ -125,7 +125,7 @@ pub async fn run_resolver_service(
                             Instant::now().duration_since(start_time).as_micros() as i64,
                         );
                         responder
-                            .send(&mut response.map_err(|status| status.to_resolve_error().into()))
+                            .send(&mut response.map_err(|status| status.into()))
                             .with_context(
                                 || format!(
                                     "sending fuchsia.pkg/PackageResolver.Resolve response for {:?}",
@@ -294,19 +294,19 @@ async fn package_from_base_or_repo_or_cache(
     cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
     inspect: &ResolverServiceInspectState,
-) -> Result<PackageDirectory, Status> {
+) -> Result<PackageDirectory, pkg::ResolveError> {
     let package_inspect = inspect.resolve(pkg_url);
     if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
         fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
         let dir = cache.open(blob).await.map_err(|e| {
-            let status = e.to_resolve_status();
+            let error = e.to_resolve_error();
             fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
-            status
+            error
         })?;
         return Ok(dir);
     }
 
-    let rewritten_url = rewrite_url(rewriter, &pkg_url)?;
+    let rewritten_url = rewrite_url(rewriter, &pkg_url).map_err(|e| e.to_resolve_error())?;
     let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
     package_from_repo_or_cache(
         repo_manager,
@@ -319,9 +319,9 @@ async fn package_from_base_or_repo_or_cache(
     )
     .await
     .map_err(|e| {
-        let status = e.to_resolve_status();
+        let error = e.to_resolve_error();
         fx_log_warn!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
-        status
+        error
     })
     .map(|hash| match hash {
         PackageSource::Tuf(blob, pkg) => {
@@ -483,24 +483,28 @@ async fn resolve(
     package_fetcher: &PackageFetcher,
     url: String,
     dir_request: ServerEnd<DirectoryMarker>,
-) -> Result<(), Status> {
+) -> Result<(), pkg::ResolveError> {
     trace::duration_begin!("app", "resolve", "url" => url.as_str());
-    let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url(e, &url))?;
+    let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
     // given one.
     if pkg_url.resource().is_some() {
         fx_log_err!("package url should not contain a resource name: {}", pkg_url);
-        return Err(Status::INVALID_ARGS);
+        return Err(pkg::ResolveError::InvalidUrl);
     }
 
     let queued_fetch = package_fetcher.push(pkg_url.clone(), ());
     let pkg_or_status = queued_fetch.await.expect("expected queue to be open");
-    trace::duration_end!("app", "resolve", "status" => pkg_or_status.as_ref().err().cloned().unwrap_or(Status::OK).to_string().as_str());
+    let err_str = match pkg_or_status {
+        Ok(_) => "no error".to_string(),
+        Err(ref e) => e.to_string(),
+    };
+    trace::duration_end!("app", "resolve", "status" => err_str.as_str());
     let pkg = pkg_or_status?;
 
     pkg.reopen(dir_request).map_err(|clone_err| {
         fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(clone_err));
-        Status::INTERNAL
+        pkg::ResolveError::Internal
     })
 }
 
@@ -526,16 +530,16 @@ pub async fn run_font_resolver_service(
             )
             .await;
 
+            let response_legacy = response.clone().map_err(|s| s.to_resolve_status());
             cobalt_sender.log_event_count(
                 metrics::RESOLVE_METRIC_ID,
                 (
-                    resolve_result_to_resolve_code(response),
+                    resolve_result_to_resolve_code(response_legacy),
                     metrics::ResolveMetricDimensionResolverType::Font,
                 ),
                 0,
                 1,
             );
-
             cobalt_sender.log_elapsed_time(
                 metrics::RESOLVE_DURATION_METRIC_ID,
                 (
@@ -544,7 +548,7 @@ pub async fn run_font_resolver_service(
                 ),
                 Instant::now().duration_since(start_time).as_micros() as i64,
             );
-            responder.send(&mut response.map_err(|s| s.into_raw()))?;
+            responder.send(&mut response_legacy.map_err(|s| s.into_raw()))?;
             Ok(())
         })
         .await
@@ -557,9 +561,9 @@ async fn resolve_font<'a>(
     package_url: String,
     directory_request: ServerEnd<DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
-) -> Result<(), Status> {
+) -> Result<(), pkg::ResolveError> {
     let parsed_package_url =
-        PkgUrl::parse(&package_url).map_err(|e| handle_bad_package_url(e, &package_url))?;
+        PkgUrl::parse(&package_url).map_err(|e| handle_bad_package_url_error(e, &package_url))?;
     let is_font_package = font_package_manager.is_font_package(&parsed_package_url);
     cobalt_sender.log_event_count(
         metrics::IS_FONT_PACKAGE_CHECK_METRIC_ID,
@@ -575,8 +579,13 @@ async fn resolve_font<'a>(
         resolve(&package_fetcher, package_url, directory_request).await
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
-        Err(Status::NOT_FOUND)
+        Err(pkg::ResolveError::PackageNotFound)
     }
+}
+
+fn handle_bad_package_url_error(parse_error: ParseError, pkg_url: &str) -> pkg::ResolveError {
+    fx_log_err!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
+    pkg::ResolveError::InvalidUrl
 }
 
 fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
@@ -584,12 +593,44 @@ fn handle_bad_package_url(parse_error: ParseError, pkg_url: &str) -> Status {
     Status::INVALID_ARGS
 }
 
-fn resolve_result_to_resolve_duration_code(
-    res: &Result<(), Status>,
+fn resolve_result_to_resolve_duration_code<T>(
+    res: &Result<(), T>,
 ) -> metrics::ResolveDurationMetricDimensionResult {
     match res {
         Ok(_) => metrics::ResolveDurationMetricDimensionResult::Success,
         Err(_) => metrics::ResolveDurationMetricDimensionResult::Failure,
+    }
+}
+
+fn resolve_result_to_resolve_status_code(
+    result: &Result<(), pkg::ResolveError>,
+) -> metrics::ResolveStatusMetricDimensionResult {
+    match *result {
+        Ok(()) => metrics::ResolveStatusMetricDimensionResult::Success,
+        Err(pkg::ResolveError::Internal) => metrics::ResolveStatusMetricDimensionResult::Internal,
+        Err(pkg::ResolveError::AccessDenied) => {
+            metrics::ResolveStatusMetricDimensionResult::AccessDenied
+        }
+        Err(pkg::ResolveError::Io) => metrics::ResolveStatusMetricDimensionResult::Io,
+        Err(pkg::ResolveError::BlobNotFound) => {
+            metrics::ResolveStatusMetricDimensionResult::BlobNotFound
+        }
+        Err(pkg::ResolveError::PackageNotFound) => {
+            metrics::ResolveStatusMetricDimensionResult::PackageNotFound
+        }
+        Err(pkg::ResolveError::RepoNotFound) => {
+            metrics::ResolveStatusMetricDimensionResult::RepoNotFound
+        }
+        Err(pkg::ResolveError::NoSpace) => metrics::ResolveStatusMetricDimensionResult::NoSpace,
+        Err(pkg::ResolveError::UnavailableBlob) => {
+            metrics::ResolveStatusMetricDimensionResult::UnavailableBlob
+        }
+        Err(pkg::ResolveError::UnavailableRepoMetadata) => {
+            metrics::ResolveStatusMetricDimensionResult::UnavailableRepoMetadata
+        }
+        Err(pkg::ResolveError::InvalidUrl) => {
+            metrics::ResolveStatusMetricDimensionResult::InvalidUrl
+        }
     }
 }
 

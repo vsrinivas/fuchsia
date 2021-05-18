@@ -417,6 +417,7 @@ rustc_test("resolve_succeeds") {
     "//src/lib/fuchsia-hyper",
     "//src/lib/fuchsia-url",
     "//src/lib/http-uri-ext",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
