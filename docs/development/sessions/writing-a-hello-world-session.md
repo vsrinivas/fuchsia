@@ -16,7 +16,7 @@ component is called `hello-world-session` and is written in Rust.
 Run the following command to create the directory structure for this example:
 
 ```posix-terminal
-fx create component-v2 hello-world-session --lang rust
+fx create component --path hello-world-session --lang rust
 ```
 
 This command creates the following directory structure with a template for a

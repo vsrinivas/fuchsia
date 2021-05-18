@@ -34,7 +34,7 @@ Creating a new driver can be done automatically by using the
 [Create Tool](/tools/create/README.md). Simply run the following command:
 
 ```
-fx create driver <PATH> --lang cpp
+fx create driver --path <PATH> --lang cpp
 ```
 
 This will create the directory `<PATH>` containing an empty driver where the
