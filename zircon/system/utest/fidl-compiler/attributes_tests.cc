@@ -542,6 +542,24 @@ protocol A {
   ASSERT_SUBSTR(warnings[0]->msg.c_str(), "Doc");
 }
 
+// Test that a lower_snake_cased attribute doesn't produce a warning in the old
+// syntax.
+TEST(AttributesTests, GoodAttributeCaseNormalizedOldSyntax) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+[for_deprecated_c_bindings]
+protocol A {
+    [transitional]
+    MethodA();
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  const auto& warnings = library.warnings();
+  ASSERT_EQ(warnings.size(), 0);
+}
+
 // This tests our ability to treat warnings as errors.  It is here because this
 // is the most convenient warning.
 TEST(AttributesTests, BadWarningsAsErrorsTest) {
