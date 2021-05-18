@@ -8,3 +8,7 @@ pub const COMPONENT_WITH_CHILDREN_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/component_with_children.cm";
 pub const IQUERY_TEST_COMPONENT_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm";
+pub const ARCHIVIST_WITH_FEEDBACK_FILTERING: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-with-feedback-filtering#meta/archivist.cm";
+pub const ARCHIVIST_WITH_FEEDBACK_FILTERING_DISABLED: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-with-feedback-filtering-disabled#meta/archivist.cm";

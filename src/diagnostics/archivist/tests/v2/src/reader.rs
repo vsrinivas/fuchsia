@@ -17,11 +17,6 @@ const TIMESTAMP_KEY: &str = "timestamp";
 
 const TEST_ARCHIVIST_MONIKER: &str = "archivist";
 
-const ARCHIVIST_WITH_FEEDBACK_FILTERING: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-with-feedback-filtering#meta/archivist.cm";
-const ARCHIVIST_WITH_FEEDBACK_FILTERING_DISABLED: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-with-feedback-filtering-disabled#meta/archivist.cm";
-
 lazy_static! {
     static ref UNIFIED_SINGLE_VALUE_GOLDEN: &'static str =
         include_str!("../test_data/unified_reader_single_value_golden.json");
