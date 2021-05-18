@@ -8,8 +8,7 @@ use {
         types::{Address, HostId},
     },
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth::Bool,
-    fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
+    fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_inspect::{self as inspect, Property},
     std::{convert::TryFrom, fmt},
 };
@@ -82,28 +81,6 @@ impl From<&HostInfo> for fsys::HostInfo {
 impl From<HostInfo> for fsys::HostInfo {
     fn from(src: HostInfo) -> fsys::HostInfo {
         fsys::HostInfo::from(&src)
-    }
-}
-
-// TODO(fxbug.dev/36378): Remove this conversion function when we no longer need to support
-// fuchsia.bluetooth.control.
-impl From<HostInfo> for fctrl::AdapterInfo {
-    fn from(src: HostInfo) -> fctrl::AdapterInfo {
-        fctrl::AdapterInfo {
-            identifier: src.id.to_string(),
-            technology: match src.technology {
-                fsys::TechnologyType::LowEnergy => fctrl::TechnologyType::LowEnergy,
-                fsys::TechnologyType::Classic => fctrl::TechnologyType::Classic,
-                fsys::TechnologyType::DualMode => fctrl::TechnologyType::DualMode,
-            },
-            address: src.address.to_string(),
-            state: Some(Box::new(fctrl::AdapterState {
-                local_name: src.local_name,
-                discoverable: Some(Box::new(Bool { value: src.discoverable })),
-                discovering: Some(Box::new(Bool { value: src.discovering })),
-                local_service_uuids: None,
-            })),
-        }
     }
 }
 
@@ -293,32 +270,6 @@ mod tests {
             discoverable: Some(false),
             discovering: Some(false),
             ..fsys::HostInfo::EMPTY
-        };
-
-        assert_eq!(expected, info.into());
-    }
-
-    #[test]
-    fn to_fidl_adapter_info() {
-        let info = HostInfo {
-            id: HostId(1),
-            technology: fsys::TechnologyType::LowEnergy,
-            address: Address::Public([1, 2, 3, 4, 5, 6]),
-            active: false,
-            local_name: Some("name".to_string()),
-            discoverable: false,
-            discovering: false,
-        };
-        let expected = fctrl::AdapterInfo {
-            identifier: "0000000000000001".to_string(),
-            technology: fctrl::TechnologyType::LowEnergy,
-            address: "06:05:04:03:02:01".to_string(),
-            state: Some(Box::new(fctrl::AdapterState {
-                local_name: Some("name".to_string()),
-                discoverable: Some(Box::new(Bool { value: false })),
-                discovering: Some(Box::new(Bool { value: false })),
-                local_service_uuids: None,
-            })),
         };
 
         assert_eq!(expected, info.into());

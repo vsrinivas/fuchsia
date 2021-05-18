@@ -10,9 +10,9 @@ use {
     },
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
-    fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
+    fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_inspect::Node,
-    std::{convert::TryFrom, fmt, str::FromStr},
+    std::{convert::TryFrom, fmt},
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -121,95 +121,6 @@ fn names_from_services(services: &Vec<Uuid>) -> Vec<String> {
         .collect()
 }
 
-fn appearance_from_deprecated(src: fctrl::Appearance) -> Result<Option<Appearance>, Error> {
-    Ok(match src {
-        fctrl::Appearance::Unknown => None,
-        src => Some(
-            Appearance::from_primitive(src.into_primitive())
-                .ok_or(format_err!("failed to construct appearance"))?,
-        ),
-    })
-}
-
-fn appearance_into_deprecated(src: Appearance) -> Result<fctrl::Appearance, Error> {
-    fctrl::Appearance::from_primitive(src.into_primitive())
-        .ok_or(format_err!("failed to construct appearance"))
-}
-
-fn address_from_deprecated(src: &str) -> Result<Address, Error> {
-    // Since `RemoteDevice` does not encode the type of its address, that information is not available
-    // to use here. We incorrectly encode all addresses as "public" instead of inventing a new
-    // encoding because (a) the control API is deprecated and will be removed; (b) the existing Rust
-    // users of the deprecated API do not use or display the type of an address.
-    Address::public_from_str(src)
-}
-
-impl TryFrom<&fctrl::RemoteDevice> for Peer {
-    type Error = Error;
-    fn try_from(src: &fctrl::RemoteDevice) -> Result<Peer, Self::Error> {
-        Ok(Peer {
-            id: PeerId::from_str(&src.identifier)?,
-            technology: match src.technology {
-                fctrl::TechnologyType::LowEnergy => fsys::TechnologyType::LowEnergy,
-                fctrl::TechnologyType::Classic => fsys::TechnologyType::Classic,
-                fctrl::TechnologyType::DualMode => fsys::TechnologyType::DualMode,
-            },
-            address: address_from_deprecated(&src.address)?,
-            connected: src.connected,
-            bonded: src.bonded,
-            name: src.name.clone(),
-            appearance: appearance_from_deprecated(src.appearance.clone())?,
-            device_class: None,
-            rssi: src.rssi.as_ref().map(|rssi| rssi.value),
-            tx_power: src.tx_power.as_ref().map(|tx| tx.value),
-            le_services: vec![],
-            bredr_services: src
-                .service_uuids
-                .iter()
-                .map(|uuid| Uuid::from_str(uuid).map_err(|e| e.into()))
-                .collect::<Result<Vec<Uuid>, Error>>()?,
-        })
-    }
-}
-
-impl TryFrom<fctrl::RemoteDevice> for Peer {
-    type Error = Error;
-    fn try_from(src: fctrl::RemoteDevice) -> Result<Peer, Self::Error> {
-        Peer::try_from(&src)
-    }
-}
-
-impl From<&Peer> for fctrl::RemoteDevice {
-    fn from(src: &Peer) -> fctrl::RemoteDevice {
-        fctrl::RemoteDevice {
-            identifier: src.id.to_string(),
-            address: src.address.to_string(),
-            technology: match src.technology {
-                fsys::TechnologyType::LowEnergy => fctrl::TechnologyType::LowEnergy,
-                fsys::TechnologyType::Classic => fctrl::TechnologyType::Classic,
-                fsys::TechnologyType::DualMode => fctrl::TechnologyType::DualMode,
-            },
-            name: src.name.clone(),
-            appearance: src
-                .appearance
-                .map(|a| appearance_into_deprecated(a))
-                .map_or(Ok(fctrl::Appearance::Unknown), |a| a)
-                .unwrap_or(fctrl::Appearance::Unknown),
-            rssi: src.rssi.map(|r| Box::new(fidl_fuchsia_bluetooth::Int8 { value: r })),
-            tx_power: src.tx_power.map(|t| Box::new(fidl_fuchsia_bluetooth::Int8 { value: t })),
-            connected: src.connected,
-            bonded: src.bonded,
-            service_uuids: src.bredr_services.iter().map(|uuid| uuid.to_string()).collect(),
-        }
-    }
-}
-
-impl From<Peer> for fctrl::RemoteDevice {
-    fn from(src: Peer) -> fctrl::RemoteDevice {
-        fctrl::RemoteDevice::from(&src)
-    }
-}
-
 impl TryFrom<fsys::Peer> for Peer {
     type Error = Error;
     fn try_from(src: fsys::Peer) -> Result<Peer, Self::Error> {
@@ -258,42 +169,6 @@ mod tests {
         fidl_fuchsia_bluetooth as fbt,
         proptest::{collection::vec, option, prelude::*},
     };
-
-    #[test]
-    fn try_from_control_invalid_id() {
-        let peer = fctrl::RemoteDevice {
-            identifier: "💩".to_string(),
-            technology: fctrl::TechnologyType::DualMode,
-            address: "public_00:01:02:03:04:05".to_string(),
-            name: None,
-            appearance: fctrl::Appearance::Unknown,
-            rssi: None,
-            tx_power: None,
-            connected: false,
-            bonded: false,
-            service_uuids: vec![],
-        };
-        let peer = Peer::try_from(&peer);
-        assert!(peer.is_err());
-    }
-
-    #[test]
-    fn try_from_control_invalid_address() {
-        let peer = fctrl::RemoteDevice {
-            identifier: "1".to_string(),
-            technology: fctrl::TechnologyType::DualMode,
-            address: "💩".to_string(),
-            name: None,
-            appearance: fctrl::Appearance::Unknown,
-            rssi: None,
-            tx_power: None,
-            connected: false,
-            bonded: false,
-            service_uuids: vec![],
-        };
-        let peer = Peer::try_from(&peer);
-        assert!(peer.is_err());
-    }
 
     #[test]
     fn try_from_sys_id_not_present() {
@@ -402,32 +277,6 @@ mod tests {
 
     proptest! {
         #[test]
-        fn peer_control_roundtrip(mut peer in any_peer()) {
-            use std::convert::TryInto;
-
-            // The `appearance` field of `RemoteDevice` is not optional and a missing value from
-            // `Peer` is represented on conversion as `Appearance::Unknown`. However a valid value
-            // of `Appearance::Unknown` is also represented the same way. Since these do not map
-            // well in a round-trip conversion test, we align this to the target conversion state.
-            peer.appearance = peer.appearance
-                .map(|a| if a == Appearance::Unknown { None } else { Some(a) })
-                .unwrap_or(None);
-
-            // `RemoteDevice` does not have a DeviceClass field and converting one into a `Peer`
-            // always initializes this field to None.
-            peer.device_class = None;
-
-            // `RemoteDevice` does not have transport-specific service UUID caches, so arbitrarily
-            // use its `service_uuids` field for BR/EDR services. No production bt-host (as of
-            // fxbug.dev/57344) filled in `RemoteDevice.service_uuids` or `Peer.le_services`, so
-            // this permits a `fsys::Peer`->`Peer`->`fctrl::RemoteDevice`->`Peer`->`fsys::Peer`
-            // trip without losing production data (not that such a loop necessarily exists).
-            peer.le_services = vec![];
-
-            let control = fctrl::RemoteDevice::from(&peer);
-            assert_eq!(Ok(peer), control.try_into().map_err(|e: anyhow::Error| e.to_string()));
-        }
-
         fn peer_sys_roundtrip(peer in any_peer()) {
             use std::convert::TryInto;
 

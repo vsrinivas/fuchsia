@@ -4,7 +4,6 @@
 
 //! Expectations for Bluetooth Peers (i.e. Remote Devices)
 
-//use fidl_fuchsia_bluetooth_control::{RemoteDevice, TechnologyType};
 use fidl_fuchsia_bluetooth_sys::TechnologyType;
 
 use crate::{

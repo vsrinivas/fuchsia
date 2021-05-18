@@ -2,17 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_control as control,
-    fidl_fuchsia_bluetooth_sys as sys, std::fmt,
-};
+use {fidl_fuchsia_bluetooth, fidl_fuchsia_bluetooth_sys as sys, std::fmt};
 
-pub use {
-    self::uuid::*, adapter_info::*, address::*, bonding_data::*, channel::*, host_info::*, id::*,
-    peer::*,
-};
+pub use {self::uuid::*, address::*, bonding_data::*, channel::*, host_info::*, id::*, peer::*};
 
-mod adapter_info;
 mod address;
 /// Types related to bonding data. This module defines helper functions for unit tests that utilize
 /// proptest.
@@ -31,21 +24,17 @@ mod peer;
 mod uuid;
 
 macro_rules! bt_fidl_wrap {
-    ($x:ident) => {
-        bt_fidl_wrap!($x, fidl_fuchsia_bluetooth::$x);
-    };
-    ($outer:ident, $inner:ty) => {
-        /// Wrapper for mapping $inner to fuchsia_bluetooth::$outer
-        pub struct $outer($inner);
+    ($outer:ident) => {
+        pub struct $outer(fidl_fuchsia_bluetooth::$outer);
 
-        impl From<$inner> for $outer {
-            fn from(b: $inner) -> $outer {
+        impl From<fidl_fuchsia_bluetooth::$outer> for $outer {
+            fn from(b: fidl_fuchsia_bluetooth::$outer) -> $outer {
                 $outer(b)
             }
         }
 
-        impl Into<$inner> for $outer {
-            fn into(self) -> $inner {
+        impl Into<fidl_fuchsia_bluetooth::$outer> for $outer {
+            fn into(self) -> fidl_fuchsia_bluetooth::$outer {
                 self.0
             }
         }
@@ -56,7 +45,6 @@ bt_fidl_wrap!(Status);
 bt_fidl_wrap!(Bool);
 bt_fidl_wrap!(Int8);
 bt_fidl_wrap!(UInt16);
-bt_fidl_wrap!(DeviceClass, fidl_fuchsia_bluetooth_control::DeviceClass);
 
 impl fmt::Display for Bool {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -67,12 +55,6 @@ impl fmt::Display for Bool {
 impl fmt::Display for Status {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{:?}", self.0.error)
-    }
-}
-
-impl fmt::Debug for DeviceClass {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{:?}", self.0)
     }
 }
 
@@ -127,28 +109,6 @@ impl From<Technology> for sys::TechnologyType {
             Technology::LE => sys::TechnologyType::LowEnergy,
             Technology::Classic => sys::TechnologyType::Classic,
             Technology::DualMode => sys::TechnologyType::DualMode,
-        }
-    }
-}
-
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<control::TechnologyType> for Technology {
-    fn from(tech: control::TechnologyType) -> Self {
-        match tech {
-            control::TechnologyType::LowEnergy => Technology::LE,
-            control::TechnologyType::Classic => Technology::Classic,
-            control::TechnologyType::DualMode => Technology::DualMode,
-        }
-    }
-}
-
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<Technology> for control::TechnologyType {
-    fn from(tech: Technology) -> Self {
-        match tech {
-            Technology::LE => control::TechnologyType::LowEnergy,
-            Technology::Classic => control::TechnologyType::Classic,
-            Technology::DualMode => control::TechnologyType::DualMode,
         }
     }
 }

@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use {fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys};
+use fidl_fuchsia_bluetooth_sys as sys;
 
 use crate::types::Technology;
 
@@ -50,25 +50,6 @@ impl From<SecurityLevel> for sys::PairingSecurityLevel {
     }
 }
 
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<control::PairingSecurityLevel> for SecurityLevel {
-    fn from(level: control::PairingSecurityLevel) -> Self {
-        match level {
-            control::PairingSecurityLevel::Encrypted => SecurityLevel::Encrypted,
-            control::PairingSecurityLevel::Authenticated => SecurityLevel::Authenticated,
-        }
-    }
-}
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<SecurityLevel> for control::PairingSecurityLevel {
-    fn from(level: SecurityLevel) -> Self {
-        match level {
-            SecurityLevel::Encrypted => control::PairingSecurityLevel::Encrypted,
-            SecurityLevel::Authenticated => control::PairingSecurityLevel::Authenticated,
-        }
-    }
-}
-
 impl From<sys::PairingOptions> for PairingOptions {
     fn from(opts: sys::PairingOptions) -> Self {
         (&opts).into()
@@ -108,45 +89,6 @@ impl From<&PairingOptions> for sys::PairingOptions {
 impl From<PairingOptions> for sys::PairingOptions {
     fn from(opts: PairingOptions) -> Self {
         (&opts).into()
-    }
-}
-
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<control::PairingOptions> for PairingOptions {
-    fn from(opts: control::PairingOptions) -> Self {
-        (&opts).into()
-    }
-}
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<&control::PairingOptions> for PairingOptions {
-    fn from(opts: &control::PairingOptions) -> Self {
-        let bondable = match opts.non_bondable {
-            Some(true) => BondableMode::NonBondable,
-            Some(false) => BondableMode::Bondable,
-            None => BondableMode::Bondable,
-        };
-        let le_security_level =
-            opts.le_security_level.map_or(SecurityLevel::Encrypted, SecurityLevel::from);
-        let transport = opts.transport.map_or(Technology::DualMode, Technology::from);
-        PairingOptions { le_security_level, bondable, transport }
-    }
-}
-
-// TODO(fxbug.dev/48051) - remove once fuchsia.bluetooth.control is retired
-impl From<PairingOptions> for control::PairingOptions {
-    fn from(opts: PairingOptions) -> Self {
-        let non_bondable = match opts.bondable {
-            BondableMode::NonBondable => Some(true),
-            BondableMode::Bondable => Some(false),
-        };
-        let le_security_level = Some(opts.le_security_level.into());
-        let transport = Some(opts.transport.into());
-        control::PairingOptions {
-            le_security_level,
-            non_bondable,
-            transport,
-            ..control::PairingOptions::EMPTY
-        }
     }
 }
 

@@ -4,15 +4,13 @@
 
 use {
     anyhow::format_err,
-    fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_control as control,
-    fidl_fuchsia_bluetooth_sys as sys, fuchsia_inspect as inspect,
+    fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_sys as sys, fuchsia_inspect as inspect,
     std::convert::{TryFrom, TryInto},
 };
 
 use crate::{
     inspect::{InspectData, IsInspectable, ToProperty},
     types::{uuid::Uuid, Address, OneOrBoth, PeerId},
-    util::CollectExt,
 };
 
 #[derive(Debug)]
@@ -203,36 +201,6 @@ pub struct LeBondData {
     pub csrk: Option<sys::PeerKey>,
 }
 
-impl LeBondData {
-    fn into_control(src: Self, address: &Address) -> control::LeData {
-        let address_type = match address {
-            Address::Public(_) => control::AddressType::LePublic,
-            Address::Random(_) => control::AddressType::LeRandom,
-        };
-        let ltk = {
-            // TODO(fxbug.dev/2411): bt-host currently supports the exchange of only a single LTK during
-            // LE legacy pairing and still reports this in the singular `ltk` field of the control
-            // library `BondingData` type. Until bt-host's dependency on control gets removed, we
-            // map both peer and local LTKs in the new internal representations to this singular
-            // LTK. Remove this workaround and the control conversions once they are no longer
-            // needed for bt-host compatibility.
-            assert!(src.peer_ltk == src.local_ltk);
-            src.peer_ltk.map(|k| Box::new(compat::ltk_to_control(k)))
-        };
-        control::LeData {
-            address: address.to_string(),
-            address_type,
-            connection_parameters: src
-                .connection_parameters
-                .map(|b| Box::new(compat::sys_conn_params_to_control(b))),
-            services: src.services.into_iter().map(|uuid| uuid.to_string()).collect(),
-            ltk,
-            irk: src.irk.map(|k| Box::new(compat::peer_key_to_control(k))),
-            csrk: src.csrk.map(|k| Box::new(compat::peer_key_to_control(k))),
-        }
-    }
-}
-
 /// Bluetooth BR/EDR (Classic) specific bonding data
 #[derive(Clone, Debug, PartialEq)]
 pub struct BredrBondData {
@@ -246,132 +214,6 @@ pub struct BredrBondData {
     pub link_key: Option<sys::PeerKey>,
 }
 
-impl BredrBondData {
-    fn into_control(src: Self, address: &Address) -> control::BredrData {
-        let address = address.to_string();
-        let piconet_leader =
-            src.role_preference.map_or(false, |role| role == bt::ConnectionRole::Leader);
-        let services = src.services.into_iter().map(|uuid| uuid.to_string()).collect();
-        let link_key = src.link_key.map(|key| {
-            Box::new(control::Ltk {
-                key: compat::peer_key_to_control(key),
-                key_size: key.security.encryption_key_size,
-                // These values are LE-only, unused for Br/Edr. In sys::BredrData they are not stored,
-                // but control::BredrData expects them
-                ediv: 0,
-                rand: 0,
-            })
-        });
-        control::BredrData { address, piconet_leader, services, link_key }
-    }
-}
-
-/// TODO(fxbug.dev/36378) - Compatibility functions to convert from the to-be-deprecated Control api types
-/// into the newer sys types. To be removed when the Control library is removed.
-mod compat {
-    use fidl_fuchsia_bluetooth_control as control;
-    use fidl_fuchsia_bluetooth_sys as sys;
-
-    pub fn peer_key_from_control(src: control::RemoteKey) -> sys::PeerKey {
-        sys::PeerKey {
-            security: sys_security_from_control(src.security_properties),
-            data: sys::Key { value: src.value },
-        }
-    }
-
-    pub fn ltk_from_control(src: control::Ltk) -> sys::Ltk {
-        sys::Ltk { key: peer_key_from_control(src.key), ediv: src.ediv, rand: src.rand }
-    }
-
-    pub fn peer_key_to_control(src: sys::PeerKey) -> control::RemoteKey {
-        control::RemoteKey {
-            security_properties: sys_security_to_control(src.security),
-            value: src.data.value,
-        }
-    }
-
-    pub fn local_key_from_control(src: control::LocalKey) -> sys::Key {
-        sys::Key { value: src.value }
-    }
-
-    pub fn local_key_to_control(src: sys::Key) -> control::LocalKey {
-        control::LocalKey { value: src.value }
-    }
-
-    pub fn ltk_to_control(src: sys::Ltk) -> control::Ltk {
-        control::Ltk {
-            key: peer_key_to_control(src.key),
-            ediv: src.ediv,
-            rand: src.rand,
-            key_size: src.key.security.encryption_key_size,
-        }
-    }
-
-    pub fn sys_security_from_control(src: control::SecurityProperties) -> sys::SecurityProperties {
-        sys::SecurityProperties {
-            authenticated: src.authenticated,
-            secure_connections: src.secure_connections,
-            encryption_key_size: src.encryption_key_size,
-        }
-    }
-
-    pub fn sys_security_to_control(src: sys::SecurityProperties) -> control::SecurityProperties {
-        control::SecurityProperties {
-            authenticated: src.authenticated,
-            secure_connections: src.secure_connections,
-            encryption_key_size: src.encryption_key_size,
-        }
-    }
-
-    pub fn sys_conn_params_from_control(
-        src: control::LeConnectionParameters,
-    ) -> sys::LeConnectionParameters {
-        sys::LeConnectionParameters {
-            connection_interval: src.connection_interval,
-            connection_latency: src.connection_latency,
-            supervision_timeout: src.supervision_timeout,
-        }
-    }
-    pub fn sys_conn_params_to_control(
-        src: sys::LeConnectionParameters,
-    ) -> control::LeConnectionParameters {
-        control::LeConnectionParameters {
-            connection_interval: src.connection_interval,
-            connection_latency: src.connection_latency,
-            supervision_timeout: src.supervision_timeout,
-        }
-    }
-}
-
-fn address_from_ctrl_le_data(src: &control::LeData) -> Result<Address, anyhow::Error> {
-    match src.address_type {
-        control::AddressType::LePublic => Ok(Address::public_from_str(&src.address)?),
-        control::AddressType::LeRandom => Ok(Address::random_from_str(&src.address)?),
-        _ => Err(format_err!("Invalid address type, expected LE_PUBLIC or LE_RANDOM")),
-    }
-}
-
-impl TryFrom<control::LeData> for LeBondData {
-    type Error = anyhow::Error;
-    fn try_from(src: control::LeData) -> Result<Self, Self::Error> {
-        let services: Result<Vec<Uuid>, uuid::parser::ParseError> =
-            src.services.iter().map(|s| s.parse::<Uuid>()).collect();
-        Ok(Self {
-            connection_parameters: src
-                .connection_parameters
-                .map(|params| compat::sys_conn_params_from_control(*params)),
-            services: services?,
-            // TODO(fxbug.dev/35008): For now we map the singular control LTK to both the local and peer
-            // types, which should match the current behavior of bt-host. Remove this logic once
-            // bt-host generates separate local and peer keys during legacy pairing.
-            peer_ltk: src.ltk.clone().map(|ltk| compat::ltk_from_control(*ltk)),
-            local_ltk: src.ltk.map(|ltk| compat::ltk_from_control(*ltk)),
-            irk: src.irk.map(|irk| compat::peer_key_from_control(*irk)),
-            csrk: src.csrk.map(|csrk| compat::peer_key_from_control(*csrk)),
-        })
-    }
-}
-
 impl From<sys::LeBondData> for LeBondData {
     fn from(src: sys::LeBondData) -> Self {
         Self {
@@ -382,20 +224,6 @@ impl From<sys::LeBondData> for LeBondData {
             irk: src.irk,
             csrk: src.csrk,
         }
-    }
-}
-
-impl TryFrom<control::BredrData> for BredrBondData {
-    type Error = anyhow::Error;
-    fn try_from(src: control::BredrData) -> Result<Self, Self::Error> {
-        let role_preference = Some(if src.piconet_leader {
-            bt::ConnectionRole::Leader
-        } else {
-            bt::ConnectionRole::Follower
-        });
-        let services = src.services.iter().map(|uuid_str| uuid_str.parse()).collect_results()?;
-        let link_key = src.link_key.map(|ltk| compat::peer_key_from_control(ltk.key));
-        Ok(Self { role_preference, services, link_key })
     }
 }
 
@@ -459,62 +287,6 @@ impl BondingData {
     }
     pub fn bredr(&self) -> Option<&BredrBondData> {
         self.data.right()
-    }
-}
-
-impl TryFrom<control::BondingData> for BondingData {
-    type Error = anyhow::Error;
-    fn try_from(fidl: control::BondingData) -> Result<BondingData, Self::Error> {
-        let le = fidl.le.map(|le| *le);
-        let bredr = fidl.bredr.map(|bredr| *bredr);
-        let (data, address) = match (le, bredr) {
-            (Some(le), Some(bredr)) => {
-                // If bonding data for both transports is present, then their transport-specific
-                // addresses must be identical and present for this to be a valid dual-mode peer.
-                let le_addr = address_from_ctrl_le_data(&le)?;
-                let bredr_addr = Address::public_from_str(&bredr.address)?;
-                if le_addr != bredr_addr {
-                    return Err(format_err!(
-                        "LE and BR/EDR addresses for dual-mode bond do not match!"
-                    ));
-                }
-                (OneOrBoth::Both(le.try_into()?, bredr.try_into()?), le_addr)
-            }
-            (Some(le), None) => {
-                let addr = address_from_ctrl_le_data(&le)?;
-                (OneOrBoth::Left(le.try_into()?), addr)
-            }
-            (None, Some(bredr)) => {
-                let addr = Address::public_from_str(&bredr.address)?;
-                (OneOrBoth::Right(bredr.try_into()?), addr)
-            }
-            (None, None) => {
-                return Err(format_err!("Cannot store bond with neither LE nor Classic data"))
-            }
-        };
-        Ok(BondingData {
-            identifier: fidl.identifier.parse::<PeerId>()?,
-            address,
-            local_address: Address::public_from_str(&fidl.local_address)?,
-            name: fidl.name,
-            data,
-        })
-    }
-}
-
-impl From<BondingData> for control::BondingData {
-    fn from(bd: BondingData) -> control::BondingData {
-        let le = bd.le().map(|le| Box::new(LeBondData::into_control(le.clone(), &bd.address)));
-        let bredr = bd
-            .bredr()
-            .map(|bredr| Box::new(BredrBondData::into_control(bredr.clone(), &bd.address)));
-        control::BondingData {
-            identifier: bd.identifier.to_string(),
-            local_address: bd.local_address.to_string(),
-            name: bd.name,
-            le,
-            bredr,
-        }
     }
 }
 
@@ -593,18 +365,6 @@ impl From<sys::HostData> for HostData {
     }
 }
 
-impl From<control::HostData> for HostData {
-    fn from(src: control::HostData) -> HostData {
-        HostData { irk: src.irk.map(|k| compat::local_key_from_control(*k)) }
-    }
-}
-
-impl From<HostData> for control::HostData {
-    fn from(src: HostData) -> control::HostData {
-        control::HostData { irk: src.irk.map(|k| Box::new(compat::local_key_to_control(k))) }
-    }
-}
-
 pub struct Identity {
     pub host: HostData,
     pub bonds: Vec<BondingData>,
@@ -624,8 +384,6 @@ impl From<Identity> for sys::Identity {
 pub mod proptest_util {
     use super::*;
     use crate::types::address::proptest_util::any_address;
-    #[cfg(test)]
-    use crate::types::address::proptest_util::any_public_address;
     use proptest::{option, prelude::*};
 
     pub fn any_bonding_data() -> impl Strategy<Value = BondingData> {
@@ -641,14 +399,12 @@ pub mod proptest_util {
             })
     }
 
-    // TODO(fxbug.dev/36378) Note: We don't generate data with a None role_preference, as these can't be
-    // safely roundtripped to control::BredrData. This can be removed when the control api is
-    // retired.
     pub(crate) fn any_bredr_data() -> impl Strategy<Value = BredrBondData> {
-        (any_connection_role(), option::of(any_peer_key())).prop_map(
-            |(role_preference, link_key)| {
-                let role_preference = Some(role_preference);
-                BredrBondData { role_preference, services: vec![], link_key }
+        (option::of(any_connection_role()), option::of(any_peer_key())).prop_map(
+            |(role_preference, link_key)| BredrBondData {
+                role_preference,
+                services: vec![],
+                link_key,
             },
         )
     }
@@ -670,47 +426,6 @@ pub mod proptest_util {
                     irk,
                     csrk,
                 }
-            })
-    }
-
-    // TODO(fxbug.dev/35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
-    // same. We emulate that invariant here.
-    #[cfg(test)]
-    pub(crate) fn any_le_data_for_control_test() -> impl Strategy<Value = LeBondData> {
-        (
-            option::of(any_connection_params()),
-            option::of(any_ltk()),
-            option::of(any_peer_key()),
-            option::of(any_peer_key()),
-        )
-            .prop_map(|(connection_parameters, ltk, irk, csrk)| LeBondData {
-                connection_parameters,
-                services: vec![],
-                peer_ltk: ltk,
-                local_ltk: ltk,
-                irk,
-                csrk,
-            })
-    }
-
-    #[cfg(test)]
-    pub(crate) fn any_bonding_data_for_control_test() -> impl Strategy<Value = BondingData> {
-        let any_data = prop_oneof![
-            any_le_data_for_control_test().prop_map(OneOrBoth::Left),
-            any_bredr_data().prop_map(OneOrBoth::Right),
-            (any_le_data_for_control_test(), any_bredr_data())
-                .prop_map(|(le, bredr)| OneOrBoth::Both(le, bredr)),
-        ];
-        (
-            any::<u64>(),
-            any_public_address(),
-            any_public_address(),
-            option::of("[a-zA-Z][a-zA-Z0-9_]*"),
-            any_data,
-        )
-            .prop_map(|(ident, address, local_address, name, data)| {
-                let identifier = PeerId(ident);
-                BondingData { identifier, address, local_address, name, data }
             })
     }
 
@@ -805,38 +520,7 @@ pub mod example {
 
 #[cfg(test)]
 pub mod tests {
-    use {super::*, fidl_fuchsia_bluetooth_control as control, fidl_fuchsia_bluetooth_sys as sys};
-
-    #[test]
-    fn host_data_to_control() {
-        let host_data = HostData {
-            irk: Some(sys::Key { value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] }),
-        };
-        let expected = control::HostData {
-            irk: Some(Box::new(control::LocalKey {
-                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-            })),
-        };
-        assert_eq!(expected, host_data.into());
-    }
-
-    #[test]
-    fn empty_host_data_to_control() {
-        let host_data = HostData { irk: None };
-        let expected = control::HostData { irk: None };
-        assert_eq!(expected, host_data.into());
-    }
-
-    #[test]
-    fn bonding_data_conversion() {
-        let bond =
-            example::bond(Address::Public([0, 0, 0, 0, 0, 0]), Address::Public([0, 0, 0, 0, 0, 0]));
-        assert_eq!(
-            Ok(bond.clone()),
-            BondingData::try_from(control::BondingData::from(bond.clone()))
-                .map_err(|e| e.to_string())
-        )
-    }
+    use {super::*, fidl_fuchsia_bluetooth_sys as sys};
 
     // Tests for conversions from fuchsia.bluetooth.sys API
     mod from_sys {
@@ -976,223 +660,13 @@ pub mod tests {
         }
     }
 
-    // Tests for conversions from fuchsia.bluetooth.control API
-    mod from_control {
-        use super::*;
-
-        fn default_data() -> control::BondingData {
-            control::BondingData {
-                identifier: "".to_string(),
-                local_address: "".to_string(),
-                name: None,
-                le: None,
-                bredr: None,
-            }
-        }
-
-        fn default_le_data() -> control::LeData {
-            control::LeData {
-                address: "".to_string(),
-                address_type: control::AddressType::LePublic,
-                connection_parameters: None,
-                services: vec![],
-                ltk: None,
-                irk: None,
-                csrk: None,
-            }
-        }
-
-        fn default_bredr_data() -> control::BredrData {
-            control::BredrData {
-                address: "".to_string(),
-                piconet_leader: true,
-                services: vec![],
-                link_key: None,
-            }
-        }
-
-        #[test]
-        fn id_malformed() {
-            let src = control::BondingData { identifier: "derp".to_string(), ..default_data() };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn le_address_malformed() {
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData {
-                    address: "derp".to_string(),
-                    ..default_le_data()
-                })),
-                ..default_data()
-            };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn bredr_address_malformed() {
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                bredr: Some(Box::new(control::BredrData {
-                    address: "derp".to_string(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn dual_mode_le_address_malformed() {
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData {
-                    address: "derp".to_string(),
-                    ..default_le_data()
-                })),
-                bredr: Some(Box::new(control::BredrData {
-                    address: "00:00:00:00:00:01".to_string(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn dual_mode_bredr_address_malformed() {
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData {
-                    address: "00:00:00:00:00:01".to_string(),
-                    ..default_le_data()
-                })),
-                bredr: Some(Box::new(control::BredrData {
-                    address: "derp".to_string(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn dual_mode_address_mismatch() {
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData {
-                    address: "00:00:00:00:00:01".to_string(),
-                    ..default_le_data()
-                })),
-                bredr: Some(Box::new(control::BredrData {
-                    address: "00:00:00:00:00:02".to_string(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn dual_mode_address_type_mismatch() {
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData {
-                    address: "00:00:00:00:00:01".to_string(),
-                    address_type: control::AddressType::LeRandom,
-                    ..default_le_data()
-                })),
-                bredr: Some(Box::new(control::BredrData {
-                    address: "00:00:00:00:00:01".to_string(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result = BondingData::try_from(src);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn use_le_address() {
-            let addr = "00:00:00:00:00:01".to_string();
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData {
-                    address: addr.clone(),
-                    address_type: control::AddressType::LeRandom,
-                    ..default_le_data()
-                })),
-                ..default_data()
-            };
-            let result =
-                BondingData::try_from(src).expect("failed to convert from control.BondingData");
-            let addr = Address::random_from_str(&addr).expect("failed to convert address");
-            assert_eq!(result.address, addr);
-        }
-
-        #[test]
-        fn use_bredr_address() {
-            let addr = "00:00:00:00:00:01".to_string();
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                bredr: Some(Box::new(control::BredrData {
-                    address: addr.clone(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result =
-                BondingData::try_from(src).expect("failed to convert from control.BondingData");
-            let addr = Address::public_from_str(&addr).expect("failed to convert address");
-            assert_eq!(result.address, addr);
-        }
-
-        #[test]
-        fn dual_mode_address() {
-            let addr = "00:00:00:00:00:01".to_string();
-            let src = control::BondingData {
-                identifier: "123".to_string(),
-                local_address: "00:00:00:00:00:00".to_string(),
-                le: Some(Box::new(control::LeData { address: addr.clone(), ..default_le_data() })),
-                bredr: Some(Box::new(control::BredrData {
-                    address: addr.clone(),
-                    ..default_bredr_data()
-                })),
-                ..default_data()
-            };
-            let result =
-                BondingData::try_from(src).expect("failed to convert from control.BondingData");
-            let addr = Address::public_from_str(&addr).expect("failed to convert address");
-            assert_eq!(result.address, addr);
-        }
-    }
-
     // The test cases below use proptest to exercise round-trip conversions between FIDL and the
     // library type across several permutations.
     mod roundtrip {
         use super::{
-            proptest_util::{
-                any_bonding_data, any_bonding_data_for_control_test, any_bredr_data, any_le_data,
-                any_le_data_for_control_test,
-            },
+            proptest_util::{any_bonding_data, any_bredr_data, any_le_data},
             *,
         };
-        use crate::types::address::proptest_util::any_public_address;
         use proptest::prelude::*;
 
         proptest! {
@@ -1202,33 +676,15 @@ pub mod tests {
                 assert_eq!(data, sys_bredr_data.into());
             }
             #[test]
-            fn bredr_data_control_roundtrip((address, data) in (any_public_address(), any_bredr_data())) {
-                let control_bredr_data = BredrBondData::into_control(data.clone(), &address);
-                assert_eq!(address.to_string(), control_bredr_data.address);
-                assert_eq!(Ok(data), control_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
-            }
-
-            #[test]
             fn le_data_sys_roundtrip(data in any_le_data()) {
                 let sys_le_data: sys::LeBondData = data.clone().into();
                 assert_eq!(data, sys_le_data.into());
-            }
-            #[test]
-            fn le_data_control_roundtrip((address, data) in (any_public_address(), any_le_data_for_control_test())) {
-                let control_le_data = LeBondData::into_control(data.clone(), &address);
-                assert_eq!(address.to_string(), control_le_data.address);
-                assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
             #[test]
             fn bonding_data_sys_roundtrip(data in any_bonding_data()) {
                 let peer_id = data.identifier;
                 let sys_bonding_data: sys::BondingData = data.clone().into();
                 assert_eq!(Ok(data), (sys_bonding_data, peer_id).try_into().map_err(|e: anyhow::Error| e.to_string()));
-            }
-            #[test]
-            fn bonding_data_control_roundtrip(data in any_bonding_data_for_control_test()) {
-                let control_bonding_data: control::BondingData = data.clone().into();
-                assert_eq!(Ok(data), control_bonding_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
         }
     }
