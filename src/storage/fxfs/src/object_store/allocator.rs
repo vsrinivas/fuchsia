@@ -249,7 +249,6 @@ impl SimpleAllocator {
     }
 
     /// Returns the number of allocated bytes.
-    #[cfg(test)]
     pub fn get_allocated_bytes(&self) -> i64 {
         self.inner.lock().unwrap().allocated_bytes
     }
