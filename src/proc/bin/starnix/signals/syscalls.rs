@@ -146,8 +146,8 @@ pub fn sys_rt_sigsuspend(
 
     // This block makes sure the write lock on the pids is dropped before waiting.
     let waiter = {
-        let mut pid_table = ctx.task.thread_group.kernel.pids.write();
-        pid_table.add_suspended_task(ctx.task.id)
+        let mut scheduler = ctx.task.thread_group.kernel.scheduler.write();
+        scheduler.add_suspended_task(ctx.task.id)
     };
 
     // Since a given task can't wait twice, it's fine to pass the current signal mask as the
@@ -734,6 +734,92 @@ mod tests {
         assert_eq!(sys_kill(&ctx, task_owner.task.id, UncheckedSignal::from(75)), Err(EINVAL));
     }
 
+    /// Sending a blocked signal should result in a pending signal.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_blocked_signal_pending() {
+        let (kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        ctx.task
+            .mm
+            .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
+            .expect("failed to clear struct");
+
+        let new_mask: sigset_t = Signal::SIGPOLL.mask();
+        let set = UserRef::<sigset_t>::new(addr);
+        ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
+
+        assert_eq!(
+            sys_rt_sigprocmask(
+                &ctx,
+                SIG_BLOCK,
+                set,
+                UserRef::default(),
+                std::mem::size_of::<sigset_t>()
+            ),
+            Ok(SUCCESS)
+        );
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGPOLL.into()), Ok(SUCCESS));
+
+        {
+            let mut scheduler = kernel.scheduler.write();
+            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            assert_eq!(pending_signals[&Signal::SIGPOLL], 1);
+        }
+
+        // A second signal should not increment the number of pending signals.
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGPOLL.into()), Ok(SUCCESS));
+
+        {
+            let mut scheduler = kernel.scheduler.write();
+            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            assert_eq!(pending_signals[&Signal::SIGPOLL], 1);
+        }
+    }
+
+    /// More than one instance of a real-time signal can be blocked.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_blocked_real_time_signal_pending() {
+        let (kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        ctx.task
+            .mm
+            .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
+            .expect("failed to clear struct");
+
+        let new_mask: sigset_t = Signal::SIGRTMIN.mask();
+        let set = UserRef::<sigset_t>::new(addr);
+        ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
+
+        assert_eq!(
+            sys_rt_sigprocmask(
+                &ctx,
+                SIG_BLOCK,
+                set,
+                UserRef::default(),
+                std::mem::size_of::<sigset_t>()
+            ),
+            Ok(SUCCESS)
+        );
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGRTMIN.into()), Ok(SUCCESS));
+
+        {
+            let mut scheduler = kernel.scheduler.write();
+            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            assert_eq!(pending_signals[&Signal::SIGRTMIN], 1);
+        }
+
+        // A second signal should increment the number of pending signals.
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGRTMIN.into()), Ok(SUCCESS));
+
+        {
+            let mut scheduler = kernel.scheduler.write();
+            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            assert_eq!(pending_signals[&Signal::SIGRTMIN], 2);
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_suspend() {
         let (kernel, task_owner) = create_kernel_and_task();
@@ -744,7 +830,7 @@ mod tests {
             let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
             let user_ref = UserRef::<sigset_t>::new(addr);
 
-            let sigset: sigset_t = Signal::SIGPOLL.mask();
+            let sigset: sigset_t = !Signal::SIGPOLL.mask();
             ctx.task.mm.write_object(user_ref, &sigset).expect("failed to set action");
 
             assert_eq!(
@@ -759,8 +845,8 @@ mod tests {
         // Wait for the first task to be suspended.
         let mut suspended = false;
         while !suspended {
-            let pid_table = kernel.pids.read();
-            suspended = pid_table.is_task_suspended(first_task_id);
+            let scheduler = kernel.scheduler.read();
+            suspended = scheduler.is_task_suspended(first_task_id);
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
@@ -770,7 +856,7 @@ mod tests {
         // Wait for the sigsuspend to complete.
         let _ = thread.join();
 
-        let pid_table = kernel.pids.read();
-        assert!(!pid_table.is_task_suspended(first_task_id));
+        let scheduler = kernel.scheduler.read();
+        assert!(!scheduler.is_task_suspended(first_task_id));
     }
 }

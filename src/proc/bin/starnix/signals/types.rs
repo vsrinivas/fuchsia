@@ -32,7 +32,7 @@ impl From<u32> for UncheckedSignal {
 }
 
 /// The `Signal` struct represents a valid signal.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Signal {
     /// The signal number, guaranteed to be a value between 1..=NUM_SIGNALS.
     number: u32,
@@ -59,6 +59,11 @@ impl Signal {
     /// Returns the bitmask for this signal number.
     pub fn mask(&self) -> u64 {
         1 << self.number
+    }
+
+    /// Returns true if the signal is a real-time signal.
+    pub fn is_real_time(&self) -> bool {
+        self.number >= SIGRTMIN
     }
 
     /// The number of signals, also the highest valid signal number.

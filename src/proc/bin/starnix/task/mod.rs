@@ -31,49 +31,46 @@ pub struct Kernel {
 
     /// The processes and threads running in this kernel, organized by pid_t.
     pub pids: RwLock<PidTable>,
+
+    /// The scheduler associated with this kernel. The scheduler stores state like suspended tasks,
+    /// pending signals, etc.
+    pub scheduler: RwLock<Scheduler>,
 }
 
 impl Kernel {
     pub fn new(name: &CString) -> Result<Arc<Kernel>, zx::Status> {
         let job = fuchsia_runtime::job_default().create_child_job()?;
         job.set_name(&name)?;
-        let kernel = Kernel { job, pids: RwLock::new(PidTable::new()) };
+        let kernel = Kernel {
+            job,
+            pids: RwLock::new(PidTable::new()),
+            scheduler: RwLock::new(Scheduler::new()),
+        };
         Ok(Arc::new(kernel))
     }
 }
 
-pub struct PidTable {
-    /// The most-recently allocated pid in this table.
-    last_pid: pid_t,
-
-    /// The tasks in this table, organized by pid_t.
-    ///
-    /// This reference is the primary reference keeping the tasks alive.
-    tasks: HashMap<pid_t, Weak<Task>>,
-
-    /// The thread groups that are present in this table.
-    thread_groups: HashMap<pid_t, Weak<ThreadGroup>>,
-
+pub struct Scheduler {
     /// The condvars that suspended tasks are waiting on, organized by pid_t of the suspended task.
     suspended_tasks: HashMap<pid_t, Arc<Condvar>>,
+
+    /// The number of pending signals for a given task.
+    ///
+    /// There may be more than one instance of a real-time signal pending, but for standard
+    /// signals there is only ever one instance of any given signal.
+    ///
+    /// Signals are delivered immediately if the target is running, but there are two cases where
+    /// the signal would end up pending:
+    ///   1. The task is not running, the signal will then be delivered the next time the task is
+    ///      scheduled to run.
+    ///   2. The signal is blocked by the target. The signal is then pending until the signal is
+    ///      unblocked and can be delivered to the target.
+    pending_signals: HashMap<pid_t, HashMap<Signal, u64>>,
 }
 
-impl PidTable {
-    pub fn new() -> PidTable {
-        PidTable {
-            last_pid: 0,
-            tasks: HashMap::new(),
-            thread_groups: HashMap::new(),
-            suspended_tasks: HashMap::new(),
-        }
-    }
-
-    pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
-        self.tasks.get(&pid).and_then(|task| task.upgrade())
-    }
-
-    pub fn get_thread_groups(&self) -> Vec<Arc<ThreadGroup>> {
-        self.thread_groups.iter().flat_map(|(_pid, thread_group)| thread_group.upgrade()).collect()
+impl Scheduler {
+    pub fn new() -> Scheduler {
+        Scheduler { suspended_tasks: HashMap::new(), pending_signals: HashMap::new() }
     }
 
     /// Adds a task to the set of tasks currently suspended via `rt_sigsuspend`.
@@ -100,6 +97,61 @@ impl PidTable {
     /// for the task to resume operation in `rt_sigsuspend`.
     pub fn remove_suspended_task(&mut self, pid: pid_t) -> Option<Arc<Condvar>> {
         self.suspended_tasks.remove(&pid)
+    }
+
+    /// Adds a pending signal for `pid`.
+    ///
+    /// If there is already a `signal` pending for `pid`, the new signal is:
+    ///   - Ignored if the signal is a standard signal.
+    ///   - Added to the queue if the signal is a real-time signal.
+    pub fn add_pending_signal(&mut self, pid: pid_t, signal: Signal) {
+        let pending_signals = self.pending_signals.entry(pid).or_default();
+
+        let number_of_pending_signals = pending_signals.entry(signal.clone()).or_insert(0);
+
+        // A single real-time signal can be queued multiple times, but all other signals are only
+        // queued once.
+        if signal.is_real_time() {
+            *number_of_pending_signals += 1;
+        } else {
+            *number_of_pending_signals = 1;
+        }
+    }
+
+    /// Gets the pending signals for `pid`.
+    ///
+    /// Note: `self` is `&mut` because an empty map is created if no map currently exists. This
+    /// could potentially return Option<&HashMap> if the `&mut` becomes a problem.
+    #[cfg(test)]
+    pub fn get_pending_signals(&mut self, pid: pid_t) -> &HashMap<Signal, u64> {
+        self.pending_signals.entry(pid).or_default()
+    }
+}
+
+pub struct PidTable {
+    /// The most-recently allocated pid in this table.
+    last_pid: pid_t,
+
+    /// The tasks in this table, organized by pid_t.
+    ///
+    /// This reference is the primary reference keeping the tasks alive.
+    tasks: HashMap<pid_t, Weak<Task>>,
+
+    /// The thread groups that are present in this table.
+    thread_groups: HashMap<pid_t, Weak<ThreadGroup>>,
+}
+
+impl PidTable {
+    pub fn new() -> PidTable {
+        PidTable { last_pid: 0, tasks: HashMap::new(), thread_groups: HashMap::new() }
+    }
+
+    pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
+        self.tasks.get(&pid).and_then(|task| task.upgrade())
+    }
+
+    pub fn get_thread_groups(&self) -> Vec<Arc<ThreadGroup>> {
+        self.thread_groups.iter().flat_map(|(_pid, thread_group)| thread_group.upgrade()).collect()
     }
 
     fn allocate_pid(&mut self) -> pid_t {
@@ -455,12 +507,15 @@ impl Task {
         }
 
         let signal = Signal::try_from(unchecked_signal)?;
-        if signal.mask() & *self.signal_mask.lock() != 0 {
+        if signal.mask() & *self.signal_mask.lock() == 0 {
             if let Some(waiter_condvar) =
-                self.thread_group.kernel.pids.write().remove_suspended_task(self.id)
+                self.thread_group.kernel.scheduler.write().remove_suspended_task(self.id)
             {
                 waiter_condvar.notify_all();
             }
+        } else {
+            let mut scheduler = self.thread_group.kernel.scheduler.write();
+            scheduler.add_pending_signal(self.id, signal);
         }
         Ok(())
     }
