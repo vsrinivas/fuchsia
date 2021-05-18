@@ -2083,13 +2083,13 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   if (!Ok())
     return Fail();
 
-  if (member_kind == raw::LayoutMember::Kind::kValue && members.empty())
-    return Fail(ErrMustHaveOneMember);
-
-  // avoid returning a "must have non reserved member" error if there was en
-  // error while parsing the members
+  // avoid returning a empty type related errors if there was an error while
+  // parsing the members
   if (!checkpoint.NoNewErrors())
     return nullptr;
+
+  if (member_kind == raw::LayoutMember::Kind::kValue && members.empty())
+    return Fail(ErrMustHaveOneMember);
 
   if (kind == raw::Layout::Kind::kUnion) {
     bool contains_non_reserved_member = false;
