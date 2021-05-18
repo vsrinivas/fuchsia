@@ -12,7 +12,8 @@ import("//tools/cmc/build/cmc.gni")
 # Parameters
 #
 #   v2 (optional)
-#     If specified and set to true, will generate a CFv2 (.cml) manifest.
+#     If specified and set to false, will generate a CFv1 (.cmx) manifest,
+#     otherwise a CFv2 (.cml) manifest is generated.
 #     Type: boolean
 #
 #   deps
