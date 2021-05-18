@@ -669,6 +669,9 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
                                         fuchsia::ui::input::PointerEventType::MOUSE);
     }
   }
+
+  // Send pointer event to capture listeners.
+  ReportPointerEventToPointerCaptureListener(event);
 }
 
 // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
