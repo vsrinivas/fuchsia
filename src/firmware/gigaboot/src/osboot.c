@@ -170,12 +170,19 @@ void do_fastboot(efi_handle img, efi_system_table* sys, uint32_t namegen) {
   printf("entering fastboot mode\n");
   fb_bootimg_t bootimg;
   mdns_start(namegen);
-  while (true) {
+  fb_poll_next_action action = POLL;
+  while (action == POLL) {
     mdns_poll();
-    if (fb_poll(&bootimg)) {
+    action = fb_poll(&bootimg);
+  }
+  switch (action) {
+    case BOOT_FROM_RAM:
       mdns_stop();
       zbi_boot(img, sys, bootimg.kernel_start, bootimg.kernel_size);
-    }
+      break;
+    case CONTINUE_BOOT:
+    case POLL:
+      break;
   }
   mdns_stop();
 }

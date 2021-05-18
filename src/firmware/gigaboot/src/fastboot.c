@@ -26,7 +26,7 @@
 #define FB_PROTOCOL_VERSION 4
 #define INIT_PKT_SIZE (FB_HDR_SIZE + 4)
 #define INITIAL_SEQ_NUM 0x55aa
-#define NUM_COMMANDS 7
+#define NUM_COMMANDS 8
 #define NUM_VARIABLES 14
 #define PAGE_SIZE 4096
 #define PARTITION_OFFSET 0
@@ -107,6 +107,7 @@ void fb_download(char *cmd);
 void fb_getvar(char *cmd);
 void fb_set_active(char *cmd);
 void fb_boot(char *cmd);
+void fb_continue(char *cmd);
 
 // Fastboot variable functions. These functions retreive a variable and return
 // the value as a null terminated string. They are responsible for sending
@@ -130,7 +131,7 @@ static uint8_t curr_var_idx;
 static uint8_t curr_var_arg_idx;
 static const char *slot_suffix_list[] = {"a", "b", NULL};
 static fb_bootimg_t boot_img;
-static int fb_boot_now = 0;
+static fb_poll_next_action fb_poll_action = 0;
 
 // cmdlist maps a command name to the function that handles that command.
 static fb_cmd_t cmdlist[NUM_COMMANDS] = {
@@ -162,7 +163,12 @@ static fb_cmd_t cmdlist[NUM_COMMANDS] = {
     {
         .name = "boot",
         .func = fb_boot,
-    }};
+    },
+    {
+        .name = "continue",
+        .func = fb_continue,
+    },
+};
 
 // varlist contains all variables this bootloader supports.
 static fb_var_t varlist[NUM_VARIABLES] = {
@@ -229,14 +235,14 @@ static fb_var_t varlist[NUM_VARIABLES] = {
 
 int fb_poll(fb_bootimg_t *img) {
   // If a previous fastboot boot failed, prevent retries by clearing fb_boot_now.
-  fb_boot_now = 0;
+  fb_poll_action = POLL;
 
   // Continue processing fastboot packets.
   netifc_poll();
-  if (fb_boot_now) {
+  if (fb_poll_action == BOOT_FROM_RAM) {
     memcpy((void *)img, (void *)&boot_img, sizeof(fb_bootimg_t));
   }
-  return fb_boot_now;
+  return fb_poll_action;
 }
 
 // fb_recv runs every time a UDP packet destined for the fastboot port is
@@ -700,9 +706,15 @@ void fb_boot(char *cmd) {
     fb_send_fail("failed to get page size from bootimg");
     return;
   }
-  fb_boot_now = 1;
+  fb_poll_action = BOOT_FROM_RAM;
   boot_img.kernel_size = kernel_size;
   boot_img.kernel_start = curr_img.data + page_size;
+  fb_send_okay("");
+}
+
+// resumes boot.
+void fb_continue(char *cmd) {
+  fb_poll_action = CONTINUE_BOOT;
   fb_send_okay("");
 }
 
