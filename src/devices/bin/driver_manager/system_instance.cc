@@ -13,8 +13,6 @@
 #include "src/devices/lib/log/log.h"
 #include "system_state_manager.h"
 
-SystemInstance::SystemInstance() : launcher_(this) {}
-
 zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
                                                 zx::job* driver_host_job_out) {
   zx::job driver_host_job;

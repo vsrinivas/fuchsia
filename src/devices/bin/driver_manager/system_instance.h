@@ -34,9 +34,6 @@ class DirectoryFilter {
 
 class SystemInstance : public FsProvider {
  public:
-  SystemInstance();
-  ~SystemInstance() { loop_.Shutdown(); }
-
   // Implementation required to implement FsProvider
   zx::channel CloneFs(const char* path) override;
 
@@ -55,7 +52,7 @@ class SystemInstance : public FsProvider {
  private:
   zx_status_t InitializeDriverHostSvcDir();
 
-  DevmgrLauncher launcher_;
+  DevmgrLauncher launcher_{this};
 
   // Hosts vfs which filters driver host svc requests to /svc provided by svchost.
   // Lazily initialized.
