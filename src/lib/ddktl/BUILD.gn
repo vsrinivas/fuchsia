@@ -20,12 +20,14 @@ source_set("ddktl") {
     "include/ddktl/fidl.h",
     "include/ddktl/init-txn.h",
     "include/ddktl/resume-txn.h",
-    "include/ddktl/span.h",
     "include/ddktl/suspend-txn.h",
     "include/ddktl/unbind-txn.h",
   ]
   public_configs = [ ":include" ]
   public_deps = [
+    # <ddktl/fidl.h> has #include <lib/stdcompat/span.h>
+    "//sdk/lib/stdcompat",
+
     # <ddktl/fidl.h> has #include <lib/fidl/llcpp/transaction.h>.
     "//zircon/public/lib/fidl-llcpp",
 

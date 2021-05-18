@@ -522,7 +522,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         memcpy(name, add_device_action.name.data(), add_device_action.name.size());
         name[add_device_action.name.size()] = 0;
 
-        ddktl::Span<zx_device_prop_t> props(
+        cpp20::span<zx_device_prop_t> props(
             reinterpret_cast<zx_device_prop_t*>(add_device_action.properties.mutable_data()),
             add_device_action.properties.count());
 

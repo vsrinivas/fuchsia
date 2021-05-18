@@ -9,6 +9,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -19,7 +20,6 @@
 #include <ddktl/fidl.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/resume-txn.h>
-#include <ddktl/span.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
 
@@ -425,7 +425,7 @@ class DeviceAddArgs {
     args_.flags = flags;
     return *this;
   }
-  DeviceAddArgs& set_props(ddktl::Span<zx_device_prop_t> props) {
+  DeviceAddArgs& set_props(cpp20::span<zx_device_prop_t> props) {
     args_.props = props.data();
     args_.prop_count = static_cast<uint32_t>(props.size());
     return *this;
@@ -446,13 +446,13 @@ class DeviceAddArgs {
     args_.inspect_vmo = inspect_vmo.release();
     return *this;
   }
-  DeviceAddArgs& set_power_states(ddktl::Span<const device_power_state_info_t> power_states) {
+  DeviceAddArgs& set_power_states(cpp20::span<const device_power_state_info_t> power_states) {
     args_.power_states = power_states.data();
     args_.power_state_count = static_cast<uint8_t>(power_states.size());
     return *this;
   }
   DeviceAddArgs& set_performance_states(
-      ddktl::Span<const device_performance_state_info_t> performance_states) {
+      cpp20::span<const device_performance_state_info_t> performance_states) {
     args_.performance_states = performance_states.data();
     args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
     return *this;
@@ -469,13 +469,13 @@ class DeviceMakeVisibleArgs {
   DeviceMakeVisibleArgs() {}
 
   DeviceMakeVisibleArgs& set_power_states(
-      ddktl::Span<const device_power_state_info_t> power_states) {
+      cpp20::span<const device_power_state_info_t> power_states) {
     args_.power_states = power_states.data();
     args_.power_state_count = static_cast<uint8_t>(power_states.size());
     return *this;
   }
   DeviceMakeVisibleArgs& set_performance_states(
-      ddktl::Span<const device_performance_state_info_t> performance_states) {
+      cpp20::span<const device_performance_state_info_t> performance_states) {
     args_.performance_states = performance_states.data();
     args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
     return *this;
