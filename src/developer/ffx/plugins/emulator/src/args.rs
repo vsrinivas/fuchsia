@@ -204,6 +204,14 @@ pub struct StartCommand {
     /// (DISPLAY) will be set to run the emulator.
     #[argh(option)]
     pub envs: Vec<String>,
+
+    /// bool, disable acceleration using KVM on Linux and HVF on macOS.
+    #[argh(switch)]
+    pub noacceleration: bool,
+
+    /// int, port to an existing package server running on the host.
+    #[argh(option)]
+    pub package_server_port: Option<usize>,
 }
 
 fn default_window_height() -> usize {

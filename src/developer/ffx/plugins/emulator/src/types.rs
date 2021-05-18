@@ -178,7 +178,7 @@ impl HostTools {
                         .filter_map(|e| e.ok())
                         .find(|e| e.file_name() == "emulator")
                         .ok_or(anyhow!(
-                            "Cannot find find emulator executable from {:?}",
+                            "Cannot find emulator executable from {:?}",
                             fuchsia_root.join("prebuilt/third_party/aemu").display()
                         ))?
                         .path()
@@ -194,7 +194,7 @@ impl HostTools {
                         .filter_map(|e| e.ok())
                         .find(|e| e.file_name() == "grpcwebproxy")
                         .ok_or(anyhow!(
-                            "Cannot find find grpcwebproxy executable from {:?}",
+                            "Cannot find grpcwebproxy executable from {:?}",
                             fuchsia_root.join("prebuilt/third_party/grpcwebproxy").display()
                         ))?
                         .path()
@@ -564,6 +564,9 @@ pub struct VDLArgs {
     pub sdk_version: String,
     pub cache_root: PathBuf,
     pub extra_kerel_args: String,
+    pub amber_unpack_root: String,
+    pub package_server_port: String,
+    pub acceleration: bool,
 }
 
 impl From<&StartCommand> for VDLArgs {
@@ -623,6 +626,13 @@ impl From<&StartCommand> for VDLArgs {
             sdk_version: sdk_version,
             cache_root: cache_path,
             extra_kerel_args: cmd.kernel_args.as_ref().unwrap_or(&String::from("")).to_string(),
+            amber_unpack_root: cmd
+                .amber_unpack_root
+                .as_ref()
+                .unwrap_or(&String::from(""))
+                .to_string(),
+            package_server_port: cmd.package_server_port.as_ref().unwrap_or(&0).to_string(),
+            acceleration: !cmd.noacceleration,
         }
     }
 }
@@ -660,6 +670,9 @@ mod tests {
         assert_eq!(vdl_args.device_proto, "");
         assert_eq!(vdl_args.gpu, "host");
         assert_eq!(vdl_args.start_package_server, true);
+        assert_eq!(vdl_args.acceleration, true);
+        assert_eq!(vdl_args.package_server_port, "0");
+        assert_eq!(vdl_args.amber_unpack_root, "");
         assert!(vdl_args.cache_root.as_path().ends_with("qemu-x64/0.20201130.3.1"));
     }
 

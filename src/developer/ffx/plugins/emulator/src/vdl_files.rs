@@ -332,18 +332,14 @@ impl VDLFiles {
             }
         }
 
-        let emu_log = match &start_command.emulator_log {
-            Some(location) => PathBuf::from(location),
-            None => self.emulator_log.clone(),
-        };
-        let package_server_log = match &start_command.package_server_log {
-            Some(location) => PathBuf::from(location),
-            None => PathBuf::new(),
-        };
-        let amber_unpack_root = match &start_command.amber_unpack_root {
-            Some(location) => PathBuf::from(location),
-            None => PathBuf::new(),
-        };
+        let emu_log = start_command
+            .emulator_log
+            .as_ref()
+            .map_or(self.emulator_log.clone(), |v| PathBuf::from(v));
+
+        let package_server_log =
+            start_command.package_server_log.as_ref().map_or(PathBuf::new(), |v| PathBuf::from(v));
+
         if let Some(location) = &start_command.vdl_output {
             self.output_proto = PathBuf::from(location);
         }
@@ -387,8 +383,6 @@ impl VDLFiles {
             .arg(&emu_log)
             .arg("--package_server_log")
             .arg(&package_server_log)
-            .arg("--unpack_repo_root")
-            .arg(&amber_unpack_root)
             .arg("--proto_file_path")
             .arg(&fvd)
             .arg("--audio=true")
@@ -403,6 +397,8 @@ impl VDLFiles {
             .arg(format!("--upscript={}", vdl_args.upscript))
             .arg(format!("--start_package_server={}", vdl_args.start_package_server))
             .arg(format!("--serve_packages={}", vdl_args.packages_to_serve))
+            .arg(format!("--package_server_port={}", vdl_args.package_server_port))
+            .arg(format!("--unpack_repo_root={}", vdl_args.amber_unpack_root))
             .arg(format!("--pointing_device={}", vdl_args.pointing_device))
             .arg(format!("--enable_webrtc={}", vdl_args.enable_grpcwebproxy))
             .arg(format!("--grpcwebproxy_port={}", vdl_args.grpcwebproxy_port))
@@ -412,7 +408,8 @@ impl VDLFiles {
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
-            .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args));
+            .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
+            .arg(format!("--accel={}", vdl_args.acceleration));
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
         }
