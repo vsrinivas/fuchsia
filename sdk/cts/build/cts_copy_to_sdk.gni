@@ -1,0 +1,66 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/sdk/sdk_atom.gni")
+
+# Copies specific sources to an SDK.
+#
+# This template should only be used directly to copy BUILD.gn files
+# to the CTS SDK. All other uses should be through specific CTS build templates.
+#
+# Example:
+#  ```
+#  # This will create :build_sdk, which should be added to an sdk_molecule in the
+#  # same file.
+#  cts_copy_to_sdk("build") {
+#    testonly = true
+#    suite_name = "my_test_suite"
+#    sources = [ "BUILD.gn" ]
+#  }
+#  ```
+#
+# Parameters
+#
+#   sources (required)
+#     A list of sources to include in the atom.
+#     Type: list(labels)
+#
+#   suite_name (required)
+#     Name of the test suite this executable belongs to.
+#     This will determine where in the SDK these files are grouped.
+#     Type: string
+template("cts_copy_to_sdk") {
+  assert(defined(invoker.sources), "Sources must be defined.")
+  assert(defined(invoker.suite_name), "Suite name must be defined.")
+
+  main_target_name = target_name
+  suite_name = invoker.suite_name
+  file_base = "tests/${suite_name}"
+  sdk_target_name = "${target_name}_sdk"
+
+  foreach(src, invoker.sources) {
+    sdk_files = [
+      {
+        source = src
+        dest = "${file_base}/${src}"
+      },
+    ]
+  }
+
+  sdk_atom(sdk_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    category = "cts"
+    id = "sdk://${file_base}/${main_target_name}"
+    files = sdk_files
+
+    meta = {
+      schema = "cts_resource"
+      dest = "${file_base}/json/${main_target_name}/meta.json"
+      value = {
+        type = "resource"
+        name = main_target_name
+        resources = invoker.sources
+      }
+    }
+  }
+}

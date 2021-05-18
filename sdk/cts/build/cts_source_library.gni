@@ -1,0 +1,117 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/sdk/sdk_atom.gni")
+
+# Creates an SDK atom so that sources can be exported to the CTS SDK.
+# This should not be called directly, but through the other CTS build rules.
+#
+# Parameters
+#
+#   sources (required)
+#     A list of sources to include in the atom.
+#     Type: list(labels)
+#
+#   suite_name (required)
+#     Name of the test suite this executable belongs to.
+#     This will determine where in the SDK these files are grouped.
+#     Type: string
+template("cts_source_library") {
+  assert(defined(invoker.suite_name), "Suite name must be defined.")
+
+  suite_name = invoker.suite_name
+  file_base = "tests/${suite_name}"
+
+  main_target_name = target_name
+  sdk_target_name = target_name + "_sdk"
+
+  sdk_deps = []
+  sdk_files = []
+  sdk_metadata_headers = []
+  sdk_metadata_sources = []
+  sdk_metas = []
+
+  if (defined(invoker.deps)) {
+    foreach(dep, invoker.deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+
+      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+      name = get_label_info(sdk_dep, "name")
+      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    }
+  }
+
+  if (defined(invoker.sources)) {
+    foreach(file, invoker.sources) {
+      extension = get_path_info(file, "extension")
+      destination = "${file_base}/${file}"
+
+      if (extension == "h") {
+        sdk_metadata_headers += [ destination ]
+      } else {
+        sdk_metadata_sources += [ destination ]
+      }
+
+      sdk_files += [
+        {
+          source = file
+          dest = destination
+        },
+      ]
+    }
+  }
+
+  metadata_file = "${target_gen_dir}/${target_name}.sdk_meta.json"
+  metadata_target_name = "${target_name}_metadata"
+  action(metadata_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    script = "//sdk/cts/build/scripts/gen_cts_meta_file.py"
+
+    inputs = sdk_metas
+
+    outputs = [ metadata_file ]
+
+    args = [
+      "--out",
+      rebase_path(metadata_file),
+      "--name",
+      suite_name,
+      "--root",
+      file_base,
+      "--include-dir",
+      "${file_base}/include",
+    ]
+    args += [ "--deps" ] + sdk_metas
+    args += [ "--sources" ] + sdk_metadata_sources
+    args += [ "--headers" ] + sdk_metadata_headers
+
+    deps = sdk_deps
+  }
+
+  sdk_atom(sdk_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    category = "cts"
+    id = "sdk://tests/${main_target_name}"
+
+    meta = {
+      source = metadata_file
+      dest = "${file_base}/json/${main_target_name}/meta.json"
+      schema = "cts_source_library"
+    }
+
+    deps = sdk_deps
+    files = sdk_files
+
+    non_sdk_deps = [
+      ":${main_target_name}",
+      ":${metadata_target_name}",
+    ]
+
+    if (defined(invoker.non_sdk_deps)) {
+      non_sdk_deps += invoker.non_sdk_deps
+    }
+  }
+}
