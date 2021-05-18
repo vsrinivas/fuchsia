@@ -318,9 +318,6 @@ pub struct LauncherConfigArgs<'a> {
 
     /// proxy for `fuchsia.proc.Launcher`.
     pub launcher: &'a fproc::LauncherProxy,
-
-    /// Custom loader proxy. If None, /pkg/lib would be used to load libraries.
-    pub loader_proxy_chan: Option<zx::Channel>,
 }
 
 /// Configures launcher to launch process using passed params and creates launch info.
@@ -346,24 +343,18 @@ pub async fn configure_launcher(
         .await
         .map_err(|e| LaunchError::LoadingExecutable(e.to_string()))?;
 
-    let ll_client_chan = match config_args.loader_proxy_chan {
-        None => {
-            // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
-            // scope is potentially a security vulnerability, as it could make it trivial for parts of
-            // applications to get handles to things the application author didn't intend.
-            let lib_proxy = io_util::open_directory(
-                pkg_proxy,
-                &Path::new("lib"),
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-            )
-            .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
-            let (ll_client_chan, ll_service_chan) =
-                zx::Channel::create().map_err(LaunchError::ChannelCreation)?;
-            library_loader::start(lib_proxy.into(), ll_service_chan);
-            ll_client_chan
-        }
-        Some(chan) => chan,
-    };
+    // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
+    // scope is potentially a security vulnerability, as it could make it trivial for parts of
+    // applications to get handles to things the application author didn't intend.
+    let lib_proxy = io_util::open_directory(
+        pkg_proxy,
+        &Path::new("lib"),
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    )
+    .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
+    let (ll_client_chan, ll_service_chan) =
+        zx::Channel::create().map_err(LaunchError::ChannelCreation)?;
+    library_loader::start(lib_proxy, ll_service_chan);
 
     // Get the provided job to create the new process in, if one was provided, or else create a new
     // child job of this process's (this process that this code is running in) own 'default job'.
@@ -769,7 +760,6 @@ mod tests {
                     name_infos: None,
                     environs: None,
                     launcher: &launcher_proxy,
-                    loader_proxy_chan: None,
                 })
                 .await,
                 Err(LaunchError::MissingPkg),
@@ -794,7 +784,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await
             .expect_err("should error out")
@@ -820,7 +809,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await
             .expect_err("should error out")
@@ -847,7 +835,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await?;
 
@@ -878,7 +865,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await?;
 
@@ -909,7 +895,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await?;
 
@@ -956,7 +941,6 @@ mod tests {
                 name_infos: Some(names),
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await?;
 
@@ -991,44 +975,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
-            })
-            .await?;
-
-            drop(launcher_proxy);
-
-            let ls = recv.await?;
-
-            assert_eq!(
-                ls.handles,
-                vec!(
-                    HandleInfo::new(HandleType::LdsvcLoader, 0).as_raw(),
-                    HandleInfo::new(HandleType::DefaultJob, 0).as_raw()
-                )
-            );
-
-            Ok(())
-        }
-
-        #[fasync::run_singlethreaded(test)]
-        async fn handles_added_with_custom_loader_chan() -> Result<(), Error> {
-            let (launcher_proxy, recv) = start_launcher()?;
-
-            let (c1, _c2) = zx::Channel::create()?;
-
-            let ns = setup_namespace(true, vec![])?;
-
-            let _launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "bin/runner_lib_test",
-                name: "name",
-                args: None,
-                ns: ns,
-                job: None,
-                handle_infos: None,
-                name_infos: None,
-                environs: None,
-                launcher: &launcher_proxy,
-                loader_proxy_chan: Some(c1),
             })
             .await?;
 
@@ -1073,7 +1019,6 @@ mod tests {
                 name_infos: None,
                 environs: None,
                 launcher: &launcher_proxy,
-                loader_proxy_chan: None,
             })
             .await?;
 

@@ -5,9 +5,6 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl::endpoints,
-    fidl::endpoints::ClientEnd,
-    fidl::endpoints::Proxy,
-    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_test::{
@@ -18,16 +15,9 @@ use {
     },
     fidl_fuchsia_test_manager as ftest_manager,
     fuchsia_component::client::{self, connect_to_protocol_at_dir_root},
-    fuchsia_runtime::job_default,
-    fuchsia_zircon as zx,
     futures::prelude::*,
-    runner::component::ComponentNamespace,
-    runner::component::ComponentNamespaceError,
     std::collections::HashMap,
-    std::convert::TryFrom,
-    std::sync::Arc,
     test_executor::TestEvent,
-    test_runners_lib::elf::{BuilderArgs, Component},
 };
 
 #[derive(PartialEq, Debug)]
@@ -221,7 +211,7 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
     test_events
 }
 
-/// Binds to test manager component and returns the test suite service.
+// Binds to test manager component and returns the test suite serivce.
 pub async fn connect_to_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
     let realm = client::connect_to_protocol::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
@@ -236,46 +226,6 @@ pub async fn connect_to_test_manager() -> Result<ftest_manager::HarnessProxy, Er
 
     connect_to_protocol_at_dir_root::<ftest_manager::HarnessMarker>(&dir)
         .context("failed to open test suite service")
-}
-
-fn create_ns_from_current_ns(
-    dir_paths: Vec<(&str, u32)>,
-) -> Result<ComponentNamespace, ComponentNamespaceError> {
-    let mut ns = vec![];
-    for (path, permission) in dir_paths {
-        let chan = io_util::open_directory_in_namespace(path, permission)
-            .unwrap()
-            .into_channel()
-            .unwrap()
-            .into_zx_channel();
-        let handle = ClientEnd::new(chan);
-
-        ns.push(fcrunner::ComponentNamespaceEntry {
-            path: Some(path.to_string()),
-            directory: Some(handle),
-            ..fcrunner::ComponentNamespaceEntry::EMPTY
-        });
-    }
-    ComponentNamespace::try_from(ns)
-}
-
-/// Create a new component object for testing purposes.
-pub fn test_component(
-    url: &str,
-    name: &str,
-    binary: &str,
-    args: Vec<String>,
-) -> Result<Arc<Component>, Error> {
-    let ns = create_ns_from_current_ns(vec![("/pkg", io_util::OPEN_RIGHT_READABLE)])?;
-    let component = Component::create_for_tests(BuilderArgs {
-        url: url.to_string(),
-        name: name.to_string(),
-        binary: binary.to_string(),
-        args,
-        ns,
-        job: job_default().duplicate(zx::Rights::SAME_RIGHTS)?,
-    })?;
-    Ok(Arc::new(component))
 }
 
 #[cfg(test)]

@@ -632,9 +632,6 @@ async fn launch_component_process<E>(
 where
     E: From<NamespaceError> + From<launch::LaunchError>,
 {
-    let (client, loader) =
-        fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
-    component.loader_service(loader);
     Ok(launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -644,7 +641,6 @@ where
         name_infos: Some(names),
         environs: None,
         handle_infos: None,
-        loader_proxy_chan: Some(client.into_channel()),
     })
     .await?)
 }
@@ -654,13 +650,18 @@ mod tests {
     use {
         super::*,
         anyhow::{Context as _, Error},
+        fidl::endpoints::ClientEnd,
+        fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_test::{RunListenerMarker, RunOptions, SuiteMarker},
         fio::OPEN_RIGHT_WRITABLE,
+        fuchsia_runtime::job_default,
         pretty_assertions::assert_eq,
+        runner::component::ComponentNamespace,
+        runner::component::ComponentNamespaceError,
+        std::convert::TryFrom,
         std::fs,
         test_runners_test_lib::{
-            assert_event_ord, collect_listener_event, names_to_invocation, test_component,
-            ListenerEvent,
+            assert_event_ord, collect_listener_event, names_to_invocation, ListenerEvent,
         },
         uuid::Uuid,
     };
@@ -718,13 +719,44 @@ mod tests {
         }
     }
 
+    fn create_ns_from_current_ns(
+        dir_paths: Vec<(&str, u32)>,
+    ) -> Result<ComponentNamespace, ComponentNamespaceError> {
+        let mut ns = vec![];
+        for (path, permission) in dir_paths {
+            let chan = io_util::open_directory_in_namespace(path, permission)
+                .unwrap()
+                .into_channel()
+                .unwrap()
+                .into_zx_channel();
+            let handle = ClientEnd::new(chan);
+
+            ns.push(fcrunner::ComponentNamespaceEntry {
+                path: Some(path.to_string()),
+                directory: Some(handle),
+                ..fcrunner::ComponentNamespaceEntry::EMPTY
+            });
+        }
+        ComponentNamespace::try_from(ns)
+    }
+
+    macro_rules! current_job {
+        () => {
+            job_default().duplicate(zx::Rights::SAME_RIGHTS)?
+        };
+    }
+
     fn sample_test_component() -> Result<Arc<Component>, Error> {
-        test_component(
-            "fuchsia-pkg://fuchsia.com/sample_test#test.cm",
-            "test.cm",
-            "bin/gtest_runner_sample_tests",
-            vec![],
-        )
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        Ok(Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/gtest_runner_sample_tests".to_owned(),
+            args: vec![],
+            ns,
+            job: current_job!(),
+        }))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -781,12 +813,16 @@ mod tests {
     async fn can_enumerate_test_with_custom_args() -> Result<(), Error> {
         let test_data = TestDataDir::new()?;
 
-        let component = test_component(
-            "fuchsia-pkg://fuchsia.com/test_with_custom_args#test.cm",
-            "test.cm",
-            "bin/gtest_runner_test_with_custom_args",
-            vec!["--my_custom_arg".to_owned()],
-        )?;
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/test_with_custom_args#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/gtest_runner_test_with_custom_args".to_owned(),
+            args: vec!["--my_custom_arg".to_owned()],
+            ns,
+            job: current_job!(),
+        });
 
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
@@ -803,13 +839,16 @@ mod tests {
     async fn can_enumerate_empty_test_file() -> Result<(), Error> {
         let test_data = TestDataDir::new()?;
 
-        let component = test_component(
-            "fuchsia-pkg://fuchsia.com/sample_test#test.cm",
-            "test.cm",
-            "bin/gtest_runner_no_tests",
-            vec![],
-        )?;
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/gtest_runner_no_tests".to_owned(),
+            args: vec![],
+            ns,
+            job: current_job!(),
+        });
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
@@ -821,13 +860,17 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn enumerate_huge_tests() -> Result<(), Error> {
         let test_data = TestDataDir::new()?;
-        let component = test_component(
-            "fuchsia-pkg://fuchsia.com/huge_test#test.cm",
-            "test.cm",
-            "bin/huge_gtest_runner_example",
-            vec![],
-        )?;
 
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/huge_test#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/huge_gtest_runner_example".to_owned(),
+            args: vec![],
+            ns,
+            job: current_job!(),
+        });
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
 
@@ -932,14 +975,16 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_test_with_custom_arg() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["gtest_runner_test"]).expect("cannot init logger");
+        let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
-        let component = test_component(
-            "fuchsia-pkg://fuchsia.com/test_with_arg#test.cm",
-            "test.cm",
-            "bin/gtest_runner_test_with_custom_args",
-            vec!["--my_custom_arg".to_owned()],
-        )?;
-
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/test_with_arg#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/gtest_runner_test_with_custom_args".to_owned(),
+            args: vec!["--my_custom_arg".to_owned()],
+            ns,
+            job: current_job!(),
+        });
         let events = run_tests(
             names_to_invocation(vec!["TestArg.TestArg"]),
             RunOptions {

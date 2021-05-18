@@ -407,10 +407,6 @@ where
         });
     }
 
-    let (client_end, loader) =
-        fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
-    component.loader_service(loader);
-
     let (p, j, l) = launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -420,7 +416,6 @@ where
         name_infos: None,
         environs: None,
         handle_infos: Some(handle_infos),
-        loader_proxy_chan: Some(client_end.into_channel()),
     })
     .await?;
     Ok((p, j, l, client))
@@ -431,26 +426,63 @@ mod tests {
     use {
         super::*,
         anyhow::{Context as _, Error},
+        fidl::endpoints::{ClientEnd, Proxy},
+        fidl_fuchsia_component_runner as fcrunner,
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fidl_fuchsia_test::{
             Result_ as TestResult, RunListenerMarker, RunOptions, Status, SuiteMarker,
         },
+        fuchsia_runtime::job_default,
         itertools::Itertools,
         matches::assert_matches,
         pretty_assertions::assert_eq,
+        runner::component::ComponentNamespace,
+        runner::component::ComponentNamespaceError,
+        std::convert::TryFrom,
         test_runners_lib::cases::TestCaseInfo,
         test_runners_test_lib::{
-            assert_event_ord, collect_listener_event, names_to_invocation, test_component,
-            ListenerEvent,
+            assert_event_ord, collect_listener_event, names_to_invocation, ListenerEvent,
         },
     };
 
+    fn create_ns_from_raw_ns(
+        dir_paths: Vec<(&str, u32)>,
+    ) -> Result<ComponentNamespace, ComponentNamespaceError> {
+        let mut ns = vec![];
+        for (path, permission) in dir_paths {
+            let chan = io_util::open_directory_in_namespace(path, permission)
+                .unwrap()
+                .into_channel()
+                .unwrap()
+                .into_zx_channel();
+            let handle = ClientEnd::new(chan);
+
+            ns.push(fcrunner::ComponentNamespaceEntry {
+                path: Some(path.to_string()),
+                directory: Some(handle),
+                ..fcrunner::ComponentNamespaceEntry::EMPTY
+            });
+        }
+        ComponentNamespace::try_from(ns)
+    }
+
+    macro_rules! current_job {
+        () => {
+            job_default().duplicate(zx::Rights::SAME_RIGHTS)?
+        };
+    }
+
     fn sample_test_component() -> Result<Arc<Component>, Error> {
-        test_component(
-            "fuchsia-pkg://fuchsia.com/go-test-runner-test#sample-go-test.cm",
-            "test/sample_go_test.cm",
-            "test/sample_go_test",
-            vec!["-my_custom_flag".to_string()],
-        )
+        let ns = create_ns_from_raw_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
+
+        Ok(Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-test#meta/sample-go-test.cm".to_owned(),
+            name: "test/sample_go_test".to_owned(),
+            binary: "test/sample_go_test".to_owned(),
+            args: vec!["-my_custom_flag".to_string()],
+            ns: ns,
+            job: current_job!(),
+        }))
     }
 
     #[test]
@@ -509,13 +541,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn enumerate_empty_test_file() -> Result<(), Error> {
-        let component = test_component(
-            "fuchsia-pkg://fuchsia.com/go-test-runner-test#empty-go-test.cm",
-            "test/empty_go_test.cm",
-            "test/empty_go_test",
-            vec![],
-        )?;
+        let ns = create_ns_from_raw_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-test#meta/empty-go-test.cm".to_owned(),
+            name: "test/empty_go_test".to_owned(),
+            binary: "test/empty_go_test".to_owned(),
+            args: vec![],
+            ns: ns,
+            job: current_job!(),
+        });
         let server = TestServer::new();
 
         assert_eq!(*server.enumerate_tests(component.clone()).await?, Vec::<TestCaseInfo>::new());
@@ -525,13 +560,16 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn enumerate_invalid_file() -> Result<(), Error> {
-        let component = test_component(
-            "fuchsia-pkg://fuchsia.com/go-test-runner-test#invalid-test.cm",
-            "test/invalid.cm",
-            "test/invalid",
-            vec![],
-        )?;
+        let ns = create_ns_from_raw_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
+        let component = Arc::new(Component {
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner-test#meta/invalid-test.cm".to_owned(),
+            name: "test/invalid".to_owned(),
+            binary: "test/invalid".to_owned(),
+            args: vec![],
+            ns: ns,
+            job: current_job!(),
+        });
         let server = TestServer::new();
 
         let err = server
