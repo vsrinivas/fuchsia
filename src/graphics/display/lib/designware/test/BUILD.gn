@@ -1,0 +1,27 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("hdmi-dw") {
+  sources = [ "hdmi-dw-test.cc" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_llcpp",
+    "//src/devices/lib/mmio",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
+    "//src/graphics/display/lib/designware:hdmi-dw",
+    "//src/graphics/display/lib/hdmi",
+    "//src/lib/ddk",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("hdmi-dw-test") {
+  deps = [ ":hdmi-dw" ]
+}

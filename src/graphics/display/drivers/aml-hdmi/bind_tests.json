@@ -1,0 +1,52 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.HDMI",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "ProtocolError"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.HDMI",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.QEMU",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "VIDError"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.HDMI",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.S905D2",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "PIDError"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.PWM",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "DIDError"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "amlogic.platform.BIND_PLATFORM_DEV_DID.HDMI",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "amlogic.platform.BIND_PLATFORM_DEV_PID.A311D",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "match",
+        "name": "Success"
+    }
+]

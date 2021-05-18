@@ -62,7 +62,7 @@ class AmlHdmiDevice : public DeviceType,
       : DeviceType(parent),
         HdmiIpBase(),
         pdev_(parent),
-        hdmi_dw_(this),
+        hdmi_dw_(std::make_unique<hdmi_dw::HdmiDw>(this)),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
   zx_status_t Bind();
 
@@ -109,14 +109,21 @@ class AmlHdmiDevice : public DeviceType,
     completer.ReplySuccess();
   }
   void PrintHdmiRegisters(PrintHdmiRegistersRequestView request,
-                          PrintHdmiRegistersCompleter::Sync& completer) {
-    completer.Reply();
-  }  // TODO (rdzhuang): print registers
+                          PrintHdmiRegistersCompleter::Sync& completer);
 
  private:
+  friend class FakeAmlHdmiDevice;
   enum {
     MMIO_HDMI,
   };
+
+  // For unit testing
+  AmlHdmiDevice(zx_device_t* parent, ddk::MmioBuffer mmio, std::unique_ptr<hdmi_dw::HdmiDw> hdmi_dw)
+      : DeviceType(parent),
+        pdev_(parent),
+        hdmi_dw_(std::move(hdmi_dw)),
+        hdmitx_mmio_(std::move(mmio)),
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void WriteIpReg(uint32_t addr, uint32_t data) {
     fbl::AutoLock lock(&register_lock_);
@@ -129,9 +136,11 @@ class AmlHdmiDevice : public DeviceType,
   void WriteReg(uint32_t reg, uint32_t val);
   uint32_t ReadReg(uint32_t reg);
 
+  void PrintReg(std::string name, uint8_t reg);
+
   ddk::PDev pdev_;
   fbl::Mutex dw_lock_;
-  hdmi_dw::HdmiDw hdmi_dw_ TA_GUARDED(dw_lock_);
+  std::unique_ptr<hdmi_dw::HdmiDw> hdmi_dw_ TA_GUARDED(dw_lock_);
 
   fbl::Mutex register_lock_;
   std::optional<ddk::MmioBuffer> hdmitx_mmio_ TA_GUARDED(register_lock_);

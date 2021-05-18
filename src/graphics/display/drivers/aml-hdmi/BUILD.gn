@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 
 bind_rules("aml_hdmi_bind") {
   rules = "aml-hdmi.bind"
@@ -24,7 +24,6 @@ source_set("common_srcs") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "aml-hdmi.cc" ]
   public_deps = [
     ":aml_hdmi_bind",
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
@@ -48,5 +47,37 @@ source_set("common_srcs") {
 }
 
 driver_module("aml-hdmi") {
+  sources = [ "aml-hdmi.cc" ]
   deps = [ ":common_srcs" ]
+}
+
+test("aml-hdmi-test-bin") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "aml-hdmi-test"
+  sources = [
+    "aml-hdmi-test.cc",
+    "aml-hdmi.cc",
+  ]
+  deps = [
+    ":common_srcs",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-mmio-reg",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("aml-hdmi-test") {
+  deps = [ ":aml-hdmi-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":aml-hdmi-test",
+    ":aml_hdmi_bind_test",
+  ]
 }

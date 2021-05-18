@@ -23,20 +23,25 @@ struct hdmi_param_tx {
 class HdmiDw {
  public:
   explicit HdmiDw(HdmiIpBase* base) : base_(base) {}
+  virtual ~HdmiDw() = default;
 
   zx_status_t InitHw();
   zx_status_t EdidTransfer(const i2c_impl_op_t* op_list, size_t op_count);
 
-  void ConfigHdmitx(const DisplayMode& mode, const hdmi_param_tx& p);
-  void SetupInterrupts();
-  void Reset();
-  void SetupScdc(bool is4k);
-  void ResetFc();
-  void SetFcScramblerCtrl(bool is4k);
+  virtual void ConfigHdmitx(const DisplayMode& mode, const hdmi_param_tx& p);
+  virtual void SetupInterrupts();
+  virtual void Reset();
+  virtual void SetupScdc(bool is4k);
+  virtual void ResetFc();
+  virtual void SetFcScramblerCtrl(bool is4k);
+
+  void PrintRegisters();
 
  private:
   void WriteReg(uint32_t addr, uint32_t data) { base_->WriteIpReg(addr, data); }
   uint32_t ReadReg(uint32_t addr) { return base_->ReadIpReg(addr); }
+
+  void PrintReg(std::string name, uint8_t reg);
 
   void ScdcWrite(uint8_t addr, uint8_t val);
   void ScdcRead(uint8_t addr, uint8_t* val);

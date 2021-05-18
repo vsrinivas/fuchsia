@@ -128,7 +128,7 @@ void AmlHdmiDevice::Reset(ResetRequestView request, ResetCompleter::Sync& comple
   WriteReg(HDMITX_TOP_CLK_CNTL, 0x000000ff);
 
   fbl::AutoLock lock(&dw_lock_);
-  auto status = hdmi_dw_.InitHw();
+  auto status = hdmi_dw_->InitHw();
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -166,11 +166,11 @@ void AmlHdmiDevice::ModeSet(ModeSetRequestView request, ModeSetCompleter::Sync& 
 
   // Configure HDMI TX IP
   fbl::AutoLock lock(&dw_lock_);
-  hdmi_dw_.ConfigHdmitx(request->mode, p);
+  hdmi_dw_->ConfigHdmitx(request->mode, p);
   WriteReg(HDMITX_TOP_INTR_STAT_CLR, 0x0000001f);
-  hdmi_dw_.SetupInterrupts();
+  hdmi_dw_->SetupInterrupts();
   WriteReg(HDMITX_TOP_INTR_MASKN, 0x9f);
-  hdmi_dw_.Reset();
+  hdmi_dw_->Reset();
 
   if (p.is4K) {
     // Setup TMDS Clocks (taken from recommended test pattern in DVI spec)
@@ -180,14 +180,14 @@ void AmlHdmiDevice::ModeSet(ModeSetRequestView request, ModeSetCompleter::Sync& 
     WriteReg(HDMITX_TOP_TMDS_CLK_PTTN_01, 0x001f001f);
     WriteReg(HDMITX_TOP_TMDS_CLK_PTTN_23, 0x001f001f);
   }
-  hdmi_dw_.SetFcScramblerCtrl(p.is4K);
+  hdmi_dw_->SetFcScramblerCtrl(p.is4K);
 
   WriteReg(HDMITX_TOP_TMDS_CLK_PTTN_CNTL, 0x1);
   usleep(2);
   WriteReg(HDMITX_TOP_TMDS_CLK_PTTN_CNTL, 0x2);
 
-  hdmi_dw_.SetupScdc(p.is4K);
-  hdmi_dw_.ResetFc();
+  hdmi_dw_->SetupScdc(p.is4K);
+  hdmi_dw_->ResetFc();
 
   completer.ReplySuccess();
 }
@@ -261,7 +261,7 @@ void AmlHdmiDevice::EdidTransfer(EdidTransferRequestView request,
   }
 
   fbl::AutoLock lock(&dw_lock_);
-  auto status = hdmi_dw_.EdidTransfer(op_list, request->ops.count());
+  auto status = hdmi_dw_->EdidTransfer(op_list, request->ops.count());
 
   if (status == ZX_OK) {
     fidl::FidlAllocator allocator;
@@ -280,6 +280,30 @@ void AmlHdmiDevice::EdidTransfer(EdidTransferRequestView request,
     completer.ReplyError(status);
   }
 }
+
+#define PRINT_REG(name) PrintReg(#name, (name))
+void AmlHdmiDevice::PrintReg(std::string name, uint8_t reg) {
+  zxlogf(INFO, "%s (0x%4x): %u", &name[0], reg, ReadReg(reg));
+}
+
+void AmlHdmiDevice::PrintHdmiRegisters(PrintHdmiRegistersRequestView request,
+                                       PrintHdmiRegistersCompleter::Sync& completer) {
+  zxlogf(INFO, "------------Top Registers------------");
+  PRINT_REG(HDMITX_TOP_SW_RESET);
+  PRINT_REG(HDMITX_TOP_CLK_CNTL);
+  PRINT_REG(HDMITX_TOP_INTR_MASKN);
+  PRINT_REG(HDMITX_TOP_INTR_STAT_CLR);
+  PRINT_REG(HDMITX_TOP_BIST_CNTL);
+  PRINT_REG(HDMITX_TOP_TMDS_CLK_PTTN_01);
+  PRINT_REG(HDMITX_TOP_TMDS_CLK_PTTN_23);
+  PRINT_REG(HDMITX_TOP_TMDS_CLK_PTTN_CNTL);
+
+  fbl::AutoLock lock(&dw_lock_);
+  hdmi_dw_->PrintRegisters();
+
+  completer.Reply();
+}
+#undef PRINT_REG
 
 // main bind function called from dev manager
 zx_status_t AmlHdmiBind(void* ctx, zx_device_t* parent) {

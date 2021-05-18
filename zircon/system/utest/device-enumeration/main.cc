@@ -206,6 +206,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "mali/aml-gpu",
       "sys/platform/05:00:10/aml-canvas",
       "display/amlogic-display/display-controller",
+      "sys/platform/05:06:2b/aml-hdmi",
       "sys/platform/05:06:1d",  // pwm
 
       // Thermal

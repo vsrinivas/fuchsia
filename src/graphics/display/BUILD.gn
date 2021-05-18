@@ -28,6 +28,7 @@ group("tests") {
     ":display-fuzzers",
     "bin/display-factory-test:display_png_test",
     "drivers:tests",
+    "lib:tests",
   ]
 }
 
