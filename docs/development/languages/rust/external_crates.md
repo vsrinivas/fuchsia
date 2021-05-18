@@ -143,6 +143,12 @@ To update an external crate, do the following:
       the `Cargo.toml` file.
       See [cargo-gnaw's README][cargo-gnaw-readme] for more details.
 
+   1. Run the following command to perform a build test:
+
+      ```posix-terminal
+      fx set core.x64 && fx build
+      ```
+
    1. Request OSRB approval by doing the following:
       - Create an issue with the
       [Open Source Review Board (OSRB) template](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Open+Source+Review+Board+).
