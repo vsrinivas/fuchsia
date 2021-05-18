@@ -35,6 +35,11 @@
             path: "/system",
         },
         {
+            directory: "pkgfs-delayed",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",

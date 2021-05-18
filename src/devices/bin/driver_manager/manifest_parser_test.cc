@@ -15,7 +15,7 @@ TEST(ManifestParserTest, BootUrl) {
   auto result = ParseDriverManifest(std::move(doc));
   ASSERT_EQ(result.status_value(), ZX_OK);
   ASSERT_EQ(result.value().size(), 1);
-  ASSERT_EQ(result.value()[0].driver_path, "/boot/driver/my-driver.so");
+  ASSERT_EQ(result.value()[0].driver_url, "fuchsia-boot:///#driver/my-driver.so");
 }
 
 TEST(ManifestParserTest, FuchsiaUrl) {
@@ -28,6 +28,18 @@ TEST(ManifestParserTest, FuchsiaUrl) {
   auto result = ParseDriverManifest(std::move(doc));
   ASSERT_EQ(result.status_value(), ZX_OK);
   ASSERT_EQ(result.value().size(), 1);
-  ASSERT_EQ(result.value()[0].driver_path,
-            "/pkgfs-delayed/packages/my-package/0/driver/my-driver.so");
+  ASSERT_EQ(result.value()[0].driver_url,
+            "fuchsia-pkg://fuchsia.com/my-package#driver/my-driver.so");
+}
+
+TEST(ManifestParserTest, FuchsiaUrlToPath) {
+  auto result = GetPathFromUrl("fuchsia-pkg://fuchsia.com/my-package#driver/my-driver.so");
+  ASSERT_EQ(result.status_value(), ZX_OK);
+  ASSERT_EQ(result.value(), "/pkgfs/packages/my-package/0/driver/my-driver.so");
+}
+
+TEST(ManifestParserTest, BootUrlToPath) {
+  auto result = GetPathFromUrl("fuchsia-boot:///#driver/my-driver.so");
+  ASSERT_EQ(result.status_value(), ZX_OK);
+  ASSERT_EQ(result.value(), "/boot/driver/my-driver.so");
 }

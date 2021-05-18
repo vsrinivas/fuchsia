@@ -34,6 +34,8 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
+    "base_package_resolver.cc",
+    "base_package_resolver.h",
     "binding.cc",
     "binding_internal.h",
     "component_lifecycle.cc",

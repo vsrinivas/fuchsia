@@ -10,8 +10,10 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/json_parser/json_parser.h"
 
+zx::status<std::string> GetPathFromUrl(const std::string& url);
+
 struct DriverManifestEntry {
-  std::string driver_path;
+  std::string driver_url;
 };
 
 using DriverManifestEntries = std::vector<DriverManifestEntry>;

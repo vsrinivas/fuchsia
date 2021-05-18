@@ -30,6 +30,8 @@ zx::status<std::string> GetResourcePath(std::string_view url) {
   return zx::ok(url.substr(seperator + 1));
 }
 
+}  // namespace
+
 zx::status<std::string> GetPathFromUrl(const std::string& url) {
   if (IsFuchsiaPkgScheme(url)) {
     component::FuchsiaPkgUrl package_url;
@@ -37,7 +39,7 @@ zx::status<std::string> GetPathFromUrl(const std::string& url) {
       LOGF(ERROR, "Failed to parse fuchsia url: %s", url.c_str());
       return zx::error(ZX_ERR_INTERNAL);
     }
-    return zx::ok(fxl::Substitute("/pkgfs-delayed/packages/$0/$1/$2", package_url.package_name(),
+    return zx::ok(fxl::Substitute("/pkgfs/packages/$0/$1/$2", package_url.package_name(),
                                   package_url.variant(), package_url.resource_path()));
   }
   if (IsFuchsiaBootScheme(url)) {
@@ -50,8 +52,6 @@ zx::status<std::string> GetPathFromUrl(const std::string& url) {
   }
   return zx::error(ZX_ERR_NOT_FOUND);
 }
-
-}  // namespace
 
 zx::status<DriverManifestEntries> ParseDriverManifest(rapidjson::Document manifest) {
   DriverManifestEntries parsed_drivers;
@@ -69,12 +69,8 @@ zx::status<DriverManifestEntries> ParseDriverManifest(rapidjson::Document manife
     if (manifest[i].HasMember("driver_url")) {
       const auto& driver_url = manifest[i]["driver_url"];
       if (driver_url.IsString()) {
-        auto result = GetPathFromUrl(driver_url.GetString());
-        if (result.is_error()) {
-          continue;
-        }
         DriverManifestEntry entry;
-        entry.driver_path = std::move(result.value());
+        entry.driver_url = driver_url.GetString();
         parsed_drivers.push_back(std::move(entry));
       }
     }

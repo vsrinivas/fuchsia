@@ -743,6 +743,12 @@
             from: "#fshost",
             to: "#live_usb",
         },
+        {
+            directory: "pkgfs-delayed",
+            from: "#fshost",
+            to: "#driver_manager",
+            dependency: "weak_for_migration",
+        },
 
         // -- Archivist offers below here --
 

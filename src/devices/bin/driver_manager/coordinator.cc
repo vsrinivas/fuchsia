@@ -99,6 +99,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
                          async_dispatcher_t* dispatcher)
     : config_(std::move(config)),
       dispatcher_(dispatcher),
+      driver_loader_(config.boot_args),
       suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
       inspect_manager_(inspect_manager),
       package_resolver_(config.boot_args) {

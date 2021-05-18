@@ -10,11 +10,15 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "driver.h"
+#include "src/devices/bin/driver_manager/base_package_resolver.h"
 
 class Coordinator;
 
 class DriverLoader {
  public:
+  // Takes in an unowned connection to boot arguments. boot_args must outlive DriverLoader.
+  explicit DriverLoader(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args)
+      : base_resolver_(boot_args) {}
   ~DriverLoader();
 
   // Start a Thread to service loading drivers.
@@ -33,6 +37,7 @@ class DriverLoader {
 
   void DriverAdded(Driver* drv, const char* version);
 
+  internal::BasePackageResolver base_resolver_;
   std::optional<thrd_t> loading_thread_;
   Coordinator* coordinator_ = nullptr;
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
