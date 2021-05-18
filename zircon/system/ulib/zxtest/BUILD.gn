@@ -7,19 +7,26 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("zxtest") {
   host = true
   sdk = "source"
+  sdk_publishable = "cts"
   sdk_headers = [
     "zxtest/base/assertion.h",
+    "zxtest/base/death-statement.h",
     "zxtest/base/environment.h",
     "zxtest/base/event-broadcaster.h",
     "zxtest/base/log-sink.h",
     "zxtest/base/observer.h",
+    "zxtest/base/reporter.h",
+    "zxtest/base/runner.h",
     "zxtest/base/test-case.h",
     "zxtest/base/test-driver.h",
     "zxtest/base/test-info.h",
     "zxtest/base/test-internal.h",
     "zxtest/base/test.h",
     "zxtest/base/types.h",
-    "zxtest/base/runner.h",
+    "zxtest/c/zxtest.h",
+    "zxtest/cpp/internal.h",
+    "zxtest/cpp/zxtest.h",
+    "zxtest/zxtest.h",
   ]
   sdk_migrated = true
   sources = [
