@@ -189,6 +189,10 @@ impl VmoImage {
     pub fn clear(&mut self, clear_color: [u8; 4]) {
         duration!("gfx", "VmoImage::clear");
 
+        if let Some(buffer_layer_cache) = self.buffer_layer_cache.as_ref() {
+            buffer_layer_cache.clear();
+        }
+
         let coherency_domain = self.coherency_domain;
 
         let (data, len) = Arc::get_mut(&mut self.mapping).unwrap().as_ptr_len();

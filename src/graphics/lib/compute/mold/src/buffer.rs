@@ -40,6 +40,15 @@ pub struct BufferLayerCache {
     pub(crate) buffers_with_caches: Weak<RefCell<SmallBitSet>>,
 }
 
+impl BufferLayerCache {
+    pub fn clear(&self) {
+        if let Some(buffers_with_caches) = Weak::upgrade(&self.buffers_with_caches) {
+            self.layers_per_tile.clear();
+            buffers_with_caches.borrow_mut().clear();
+        }
+    }
+}
+
 impl Drop for BufferLayerCache {
     fn drop(&mut self) {
         if let Some(buffers_with_caches) = Weak::upgrade(&self.buffers_with_caches) {
