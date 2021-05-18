@@ -1,0 +1,35 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_session_keyboard") {
+  version = "0.0.1"
+  edition = "2018"
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+
+  deps = [ "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc" ]
+  args_deps = [ "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc" ]
+}
+
+fuchsia_unittest_component("ffx_session_keyboard_test") {
+  deps = [ ":ffx_keyboard" ]
+}
+
+# Canonical target that builds tests.
+group("tests") {
+  testonly = true
+  deps = [ ":ffx_session_keyboard_test" ]
+}
+
+# Canonical target that builds everything.
+group("keyboard") {
+  testonly = true
+  deps = [ ":tests" ]
+}

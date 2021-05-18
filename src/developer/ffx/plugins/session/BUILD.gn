@@ -10,6 +10,7 @@ ffx_plugin("ffx_session") {
   with_unit_tests = true
   plugin_deps = [
     "add:ffx_session_add",
+    "keyboard:ffx_session_keyboard",
     "launch:ffx_session_launch",
     "restart:ffx_session_restart",
     "show:ffx_session_show",
@@ -23,6 +24,7 @@ group("tests") {
   deps = [
     ":ffx_session_tests",
     "add:ffx_session_add_tests",
+    "keyboard:ffx_session_keyboard_tests",
     "launch:ffx_session_launch_tests",
     "restart:ffx_session_restart_tests",
     "show:ffx_session_show_tests",
