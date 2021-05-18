@@ -18,6 +18,7 @@ dart_library("settings") {
     "src/channel.dart",
     "src/datetime.dart",
     "src/memory.dart",
+    "src/system_information.dart",
     "src/timezone.dart",
     "src/volume.dart",
   ]
@@ -50,6 +51,7 @@ flutter_test("ermine_settings_unittests") {
     "channel_test.dart",
     "datetime_test.dart",
     "memory_test.dart",
+    "system_information_test.dart",
     "timezone_test.dart",
     "volume_test.dart",
   ]

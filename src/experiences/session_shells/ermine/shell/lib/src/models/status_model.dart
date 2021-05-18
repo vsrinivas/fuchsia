@@ -24,6 +24,7 @@ class StatusModel implements Inspectable {
   final UiStream datetime;
   final UiStream timezone;
   final UiStream channel;
+  final UiStream systemInformation;
   final AdministratorProxy deviceManager;
   final VoidCallback logout;
   final ValueNotifier<UiStream> detailNotifier = ValueNotifier<UiStream>(null);
@@ -39,6 +40,7 @@ class StatusModel implements Inspectable {
     this.deviceManager,
     this.logout,
     this.channel,
+    this.systemInformation,
   });
 
   factory StatusModel.withSvcPath(VoidCallback logout) {
@@ -56,6 +58,7 @@ class StatusModel implements Inspectable {
       deviceManager: deviceManager,
       logout: logout,
       channel: UiStream(Channel.withSvcPath()),
+      systemInformation: UiStream(SystemInformation.withSvcPath()),
     );
   }
 
@@ -69,6 +72,7 @@ class StatusModel implements Inspectable {
     timezone.dispose();
     bluetooth.dispose();
     channel.dispose();
+    systemInformation.dispose();
   }
 
   UiStream get detailStream => detailNotifier.value;

@@ -21,6 +21,7 @@ void main() {
   final volume = MockUiStream();
   final bluetooth = MockUiStream();
   final channel = MockUiStream();
+  final systemInformation = MockUiStream();
   final deviceManager = MockAdministratorProxy();
   var logoutCalled = false;
 
@@ -35,6 +36,7 @@ void main() {
       bluetooth: bluetooth,
       deviceManager: deviceManager,
       channel: channel,
+      systemInformation: systemInformation,
       logout: () => logoutCalled = true,
     );
   });
@@ -53,6 +55,7 @@ void main() {
     verify(volume.dispose()).called(1);
     verify(bluetooth.dispose()).called(1);
     verify(channel.dispose()).called(1);
+    verify(systemInformation.dispose()).called(1);
   });
 
   test('Restart should call device reboot', () {

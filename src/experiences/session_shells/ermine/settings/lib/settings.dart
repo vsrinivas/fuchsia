@@ -8,5 +8,6 @@ export 'src/brightness.dart';
 export 'src/channel.dart';
 export 'src/datetime.dart';
 export 'src/memory.dart';
+export 'src/system_information.dart';
 export 'src/timezone.dart';
 export 'src/volume.dart';

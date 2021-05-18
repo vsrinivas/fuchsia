@@ -615,4 +615,19 @@ class Strings {
         name: 'sshKeys',
         desc: 'The label for displaying one or more SSH keys.',
       );
+  static String get systemInformation => Intl.message(
+        'System Information',
+        name: 'System Information',
+        desc: 'The label for System Information.',
+      );
+  static String get view => Intl.message(
+        'View',
+        name: 'view',
+        desc: 'The label for the "view" text field.',
+      );
+  static String get loading => Intl.message(
+        'Loading',
+        name: 'loading',
+        desc: 'The label for the "loading" text field.',
+      );
 }
