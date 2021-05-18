@@ -611,6 +611,11 @@ impl LogsDataBuilder {
         self
     }
 
+    pub fn set_severity(mut self, severity: Severity) -> Self {
+        self.args.severity = severity;
+        self
+    }
+
     /// Sets the process ID that logged the message
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_pid(mut self, value: u64) -> Self {
@@ -618,25 +623,10 @@ impl LogsDataBuilder {
         self
     }
 
-    /// Sets the process ID that logged the message, if present.
-
-    #[must_use = "You must call build on your builder to consume its result"]
-    pub fn maybe_set_pid(mut self, value: Option<u64>) -> Self {
-        self.pid = value;
-        self
-    }
-
     /// Sets the thread ID that logged the message
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_tid(mut self, value: u64) -> Self {
         self.tid = Some(value);
-        self
-    }
-
-    /// Sets the thread ID that logged the message, if present.
-    #[must_use = "You must call build on your builder to consume its result"]
-    pub fn maybe_set_tid(mut self, value: Option<u64>) -> Self {
-        self.tid = value;
         self
     }
 
@@ -685,13 +675,6 @@ impl LogsDataBuilder {
         self
     }
 
-    /// Sets the message to be printed in the log message, if present.
-    #[must_use = "You must call build on your builder to consume its result"]
-    pub fn maybe_set_message(mut self, msg: Option<String>) -> Self {
-        self.msg = msg;
-        self
-    }
-
     /// Sets the file name that printed this message.
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_file(mut self, file: impl Into<String>) -> Self {
@@ -703,20 +686,6 @@ impl LogsDataBuilder {
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_line(mut self, line: u64) -> Self {
         self.line = Some(line);
-        self
-    }
-
-    /// Sets the file name that printed this message, if present.
-    #[must_use = "You must call build on your builder to consume its result"]
-    pub fn maybe_set_file(mut self, file: Option<String>) -> Self {
-        self.file = file;
-        self
-    }
-
-    /// Sets the line number that printed this message, if present.
-    #[must_use = "You must call build on your builder to consume its result"]
-    pub fn maybe_set_line(mut self, line: Option<u64>) -> Self {
-        self.line = line;
         self
     }
 

@@ -219,25 +219,27 @@ impl Message {
     pub fn from_structured(source: &ComponentIdentity, bytes: &[u8]) -> Result<Self, StreamError> {
         let (record, _) = diagnostics_log_encoding::parse::parse_record(bytes)?;
 
-        let mut properties = vec![];
-        let mut dropped_logs = 0;
-        let mut tags = vec![];
-        let mut pid = None;
-        let mut tid = None;
-        let mut msg = None;
-        let mut file = None;
-        let mut line = None;
+        let mut builder = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: record.timestamp.into(),
+            component_url: source.url.clone(),
+            moniker: source.to_string(),
+            // NOTE: this severity is not final. Severity will be set after parsing the
+            // record.arguments
+            severity: Severity::Info,
+            size_bytes: bytes.len(),
+        });
+
         // Raw value from the client that we don't trust (not yet sanitized)
-        let mut severity_untrusted: Option<i64> = None;
+        let mut severity_untrusted = None;
         for a in record.arguments {
             let label = LogsField::from(a.name);
 
             match (a.value, label) {
                 (Value::SignedInt(v), LogsField::Dropped) => {
-                    dropped_logs = v as u64;
+                    builder = builder.set_dropped(v as u64);
                 }
                 (Value::UnsignedInt(v), LogsField::Dropped) => {
-                    dropped_logs = v;
+                    builder = builder.set_dropped(v);
                 }
                 (Value::Floating(f), LogsField::Dropped) => {
                     return Err(StreamError::ExpectedInteger {
@@ -255,33 +257,35 @@ impl Message {
                     return Err(StreamError::ExpectedInteger { value: "".into(), found: "other" });
                 }
                 (Value::Text(text), LogsField::Tag) => {
-                    tags.push(text);
+                    builder = builder.add_tag(text);
                 }
                 (_, LogsField::Tag) => {
                     return Err(StreamError::UnrecognizedValue);
                 }
-                (Value::UnsignedInt(v), LogsField::ProcessId) if pid.is_none() => {
-                    pid = Some(v);
+                (Value::UnsignedInt(v), LogsField::ProcessId) => {
+                    builder = builder.set_pid(v);
                 }
-                (Value::UnsignedInt(v), LogsField::ThreadId) if tid.is_none() => {
-                    tid = Some(v);
+                (Value::UnsignedInt(v), LogsField::ThreadId) => {
+                    builder = builder.set_tid(v);
                 }
-                (Value::Text(v), LogsField::Msg) if msg.is_none() => {
-                    msg = Some(v);
+                (Value::Text(v), LogsField::Msg) => {
+                    builder = builder.set_message(v);
                 }
-                (Value::Text(v), LogsField::FilePath) if file.is_none() => {
-                    file = Some(v);
+                (Value::Text(v), LogsField::FilePath) => {
+                    builder = builder.set_file(v);
                 }
-                (Value::UnsignedInt(v), LogsField::LineNumber) if line.is_none() => {
-                    line = Some(v);
+                (Value::UnsignedInt(v), LogsField::LineNumber) => {
+                    builder = builder.set_line(v);
                 }
-                (value, label) => properties.push(match value {
-                    Value::SignedInt(v) => LogsProperty::Int(label, v),
-                    Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
-                    Value::Floating(v) => LogsProperty::Double(label, v),
-                    Value::Text(v) => LogsProperty::String(label, v),
-                    ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
-                }),
+                (value, label) => {
+                    builder = builder.add_key(match value {
+                        Value::SignedInt(v) => LogsProperty::Int(label, v),
+                        Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
+                        Value::Floating(v) => LogsProperty::Double(label, v),
+                        Value::Text(v) => LogsProperty::String(label, v),
+                        ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
+                    })
+                }
             }
         }
 
@@ -292,31 +296,14 @@ impl Message {
             LegacySeverity::try_from(record.severity).unwrap()
         };
         let (severity, verbosity) = raw_severity.for_structured();
-        let mut builder = LogsDataBuilder::new(BuilderArgs {
-            timestamp_nanos: record.timestamp.into(),
-            component_url: source.url.clone(),
-            moniker: source.to_string(),
-            severity,
-            size_bytes: bytes.len(),
-        })
-        .maybe_set_pid(pid)
-        .maybe_set_tid(tid)
-        .maybe_set_file(file)
-        .maybe_set_line(line)
-        .set_dropped(dropped_logs)
-        .maybe_set_message(msg);
-        for prop in properties {
-            builder = builder.add_key(prop);
-        }
-        for tag in tags {
-            builder = builder.add_tag(tag);
-        }
-        let mut ret = Message::from(builder.build());
+        builder = builder.set_severity(severity);
+
+        let mut result = Message::from(builder.build());
 
         if severity_untrusted.is_some() && verbosity.is_some() {
-            ret.set_legacy_verbosity(verbosity.unwrap())
+            result.set_legacy_verbosity(verbosity.unwrap())
         }
-        Ok(ret)
+        Ok(result)
     }
 
     /// The message's severity.
