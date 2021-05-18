@@ -120,25 +120,6 @@ TEST(BindingTestCase, CompositeMatchZeroPartsTwoDevices) {
   ASSERT_EQ(match, Match::None);
 }
 
-TEST(BindingTestCase, CompositeMatchOnePartTwoDevices) {
-  constexpr uint32_t kProtocolId = 1;
-  fbl::RefPtr<MockDevice> devices[] = {
-      fbl::MakeRefCounted<MockDevice>(nullptr, nullptr, 0, kProtocolId),
-      fbl::MakeRefCounted<MockDevice>(devices[0], nullptr, 0, kProtocolId),
-  };
-
-  // This program matches both devices
-  auto part = MakeBindProgram({
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, kProtocolId),
-  });
-  FragmentPartDescriptor parts[] = {
-      {std::move(part)},
-  };
-
-  Match match = MatchParts(devices[std::size(devices) - 1], parts, std::size(parts));
-  ASSERT_EQ(match, Match::None);
-}
-
 TEST(BindingTestCase, CompositeMatchTwoPartsTwoDevicesFail) {
   constexpr uint32_t kProtocolId1 = 1;
   constexpr uint32_t kProtocolId2 = 2;

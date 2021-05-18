@@ -124,7 +124,8 @@ DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_protocol_id, protocol_id, uint32_t (C::
 // We consider a match to be found if the following hold:
 // 1) For every part p_i, there is a device d that matches the bind program in
 //    that part (we'll refer to this as a part/device pair (p_i, d)).
-// 2) In (p_0, d), d must be the root device.
+// 2) If there are more than one part, then in (p_0, d), d must be the root
+//    device.
 // 3) In (p_(N-1), d), d must be the leaf device.
 // 4) If we have pairs (p_i, d) and (p_j, e), and i < j, then d is an ancestor
 //    of e.  That is, the devices must match in the same sequence as the parts.
@@ -162,11 +163,8 @@ Match MatchParts(const fbl::RefPtr<T>& device, const FragmentPartDescriptor* par
     return Match::None;
   }
 
-  // Special-case for a single part: can only happen if one device
+  // Special-case for a single part: do not require a root device match.
   if (parts_count == 1) {
-    if (device_list.size() != 1) {
-      return Match::None;
-    }
     return Match::One;
   }
 

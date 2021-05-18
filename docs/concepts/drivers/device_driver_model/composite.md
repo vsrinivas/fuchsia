@@ -56,10 +56,6 @@ These binding instructions are the ones discussed in the
 For the `astro-audio` device, we have:
 
 ```c
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
-
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_3),
@@ -79,10 +75,8 @@ static const zx_bind_inst_t enable_gpio_match[] = {
 
 These binding instructions are used to find the devices.
 
-We have four binding instruction arrays; a `root_match[]`, which contains
-common information for the other three, and then the three devices:
-the I2C (`i2c_match[]`) device and the two GPIOs (`fault_gpio_match[]` and
-`enable_gpio_match[]`).
+We have three binding instruction arrays; the I2C (`i2c_match[]`) device and the
+two GPIOs (`fault_gpio_match[]` and `enable_gpio_match[]`).
 
 These instructions are then placed into an array of structures
 (`device_fragment_part_t`), which defines each fragment:
@@ -94,17 +88,14 @@ In the `astro-audio` device, we have:
 
 ```c
 static const device_fragment_part_t i2c_fragment[] = {
-    { countof(root_match), root_match },
     { countof(i2c_match), i2c_match },
 };
 
 static const device_fragment_part_t fault_gpio_fragment[] = {
-    { countof(root_match), root_match },
     { countof(fault_gpio_match), fault_gpio_match },
 };
 
 static const device_fragment_part_t enable_gpio_fragment[] = {
-    { countof(root_match), root_match },
     { countof(enable_gpio_match), enable_gpio_match },
 };
 ```
@@ -116,12 +107,8 @@ At this point, we have three fragment devices, `i2c_fragment[]`,
 
 The following rules apply:
 
-1. The first element must describe the root of the device tree &mdash; this
-   is why we've used the mnemonic `root_match` identifier.
-   Note that this requirement is likely to change, since most users provide
-   an "always match" anyway.
-2. The last element must describe the target device itself.
-3. The remaining elements must match devices on the path from the root to
+1. The last element must describe the target device itself.
+2. The remaining elements must match devices on the path from the root to
    the target device, in order.
    Some of those **devices** may be skipped, but every **element** must
    be matched.
