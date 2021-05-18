@@ -1,0 +1,16 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/flatland_display_rust"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.scenic.allocation.Allocator",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.scenic.internal.Flatland",
+            "fuchsia.ui.scenic.internal.FlatlandDisplay"
+        ]
+    }
+}

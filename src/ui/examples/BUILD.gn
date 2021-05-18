@@ -2,8 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/package.gni")
+import("//src/lib/vulkan/compact_image.gni")
+import("//src/lib/vulkan/layers.gni")
+
 group("examples") {
   public_deps = [
+    ":flatland-examples",
     "bouncing_ball",
     "embedder",
     "frame-compression",
@@ -18,5 +24,13 @@ group("examples") {
     "standalone_app",
     "tile_view",
     "yuv_to_image_pipe",
+  ]
+}
+
+fuchsia_package("flatland-examples") {
+  package_name = "flatland-examples"
+  deps = [
+    "flatland-display",
+    "flatland-display:flatland-display-rust",
   ]
 }
