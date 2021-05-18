@@ -6,20 +6,25 @@ use {
     crate::agent::{
         AgentError, Context, Invocation, InvocationResult, Lifespan, Payload as AgentPayload,
     },
-    crate::base::SettingType,
+    crate::base::{Dependency, Entity, SettingType},
     crate::blueprint_definition,
     crate::event::{Event, Payload as EventPayload},
+    crate::handler::base::Payload as HandlerPayload,
+    crate::handler::base::Request,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl,
+    crate::ingress::registration,
     crate::message::base::{filter, Audience, MessengerType},
     crate::service::Payload,
     crate::service_context::ServiceContext,
-    crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
+    crate::tests::fakes::base::create_setting_handler,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::message_utils::verify_payload,
     crate::{service, Environment, EnvironmentBuilder},
     fuchsia_async as fasync,
     futures::future::BoxFuture,
-    futures::lock::Mutex,
+    futures::StreamExt,
+    matches::assert_matches,
     std::sync::Arc,
 };
 
@@ -102,15 +107,11 @@ impl TestAgent {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_message_hub() {
     let service_registry = ServiceRegistry::create();
-    let input_device_registry_service_handle =
-        Arc::new(Mutex::new(InputDeviceRegistryService::new()));
-    service_registry.lock().await.register_service(input_device_registry_service_handle.clone());
 
     let Environment { nested_environment: _, delegate, .. } =
         EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
             .service(ServiceRegistry::serve(service_registry))
             .agents(&[blueprint::create()])
-            .settings(&[SettingType::Unknown])
             .spawn_nested(ENV_NAME)
             .await
             .unwrap();
@@ -136,4 +137,88 @@ async fn test_message_hub() {
         None,
     )
     .await;
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_bringup() {
+    let setting_type = SettingType::Unknown;
+    let (request_in_tx, mut request_in_rx) = futures::channel::mpsc::unbounded::<Request>();
+    let registrant = registration::Builder::new(registration::Registrar::TestWithDelegate(
+        Box::new(move |delegate| {
+            fasync::Task::spawn(async move {
+                while let Some(request) = request_in_rx.next().await {
+                    let messenger = delegate
+                        .create(MessengerType::Unbound)
+                        .await
+                        .expect("messenger should be created")
+                        .0;
+                    messenger
+                        .message(
+                            HandlerPayload::Request(request).into(),
+                            Audience::Address(service::Address::Handler(setting_type)),
+                        )
+                        .send();
+                }
+            })
+            .detach();
+        }),
+    ))
+    .add_dependency(Dependency::Entity(Entity::Handler(setting_type)))
+    .build();
+
+    let (request_out_tx, mut request_out_rx) = futures::channel::mpsc::unbounded::<Request>();
+
+    let _ = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
+        .registrants(vec![registrant])
+        .handler(
+            setting_type,
+            create_setting_handler(Box::new(move |request| {
+                let request_out_tx = request_out_tx.clone();
+                Box::pin(async move {
+                    request_out_tx.unbounded_send(request).expect("send should succeed");
+                    Ok(None)
+                })
+            })),
+        )
+        .spawn_nested(ENV_NAME)
+        .await
+        .expect("environment should be built");
+
+    let request = Request::Get;
+    request_in_tx.unbounded_send(request.clone()).expect("sending inbound request should succeed");
+    assert_matches!(request_out_rx.next().await, Some(x) if x == request);
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_dependency_generation() {
+    let entity = Entity::Handler(SettingType::Unknown);
+    let registrant =
+        registration::Builder::new(registration::Registrar::Test(Box::new(move || {})))
+            .add_dependency(Dependency::Entity(entity.clone()))
+            .build();
+
+    let Environment { nested_environment: _, delegate: _, entities } =
+        EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
+            .registrants(vec![registrant])
+            .spawn_nested(ENV_NAME)
+            .await
+            .expect("environment should be built");
+
+    assert!(entities.contains(&entity));
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_display_interface_consolidation() {
+    let Environment { nested_environment: _, delegate: _, entities } =
+        EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
+            .fidl_interfaces(&[
+                fidl::Interface::Display(fidl::display::InterfaceFlags::BASE),
+                fidl::Interface::Display(fidl::display::InterfaceFlags::LIGHT_SENSOR),
+            ])
+            .spawn_nested(ENV_NAME)
+            .await
+            .expect("environment should be built");
+
+    assert!(entities.contains(&Entity::Handler(SettingType::Display)));
+    assert!(entities.contains(&Entity::Handler(SettingType::LightSensor)));
 }

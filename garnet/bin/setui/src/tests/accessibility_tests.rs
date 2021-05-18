@@ -6,6 +6,7 @@ use {
     crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType},
     crate::base::SettingType,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
@@ -22,7 +23,7 @@ async fn create_test_accessibility_env(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> AccessibilityProxy {
     EnvironmentBuilder::new(storage_factory)
-        .settings(&[SettingType::Accessibility])
+        .fidl_interfaces(&[Interface::Accessibility])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap()
@@ -34,10 +35,15 @@ async fn create_test_accessibility_env(
 async fn create_a11y_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> AccessibilityProxy {
-    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Accessibility)
-        .await
-        .connect_to_protocol::<AccessibilityMarker>()
-        .unwrap()
+    create_test_env_with_failures(
+        storage_factory,
+        ENV_NAME,
+        Interface::Accessibility,
+        SettingType::Accessibility,
+    )
+    .await
+    .connect_to_protocol::<AccessibilityMarker>()
+    .unwrap()
 }
 
 #[fuchsia_async::run_until_stalled(test)]

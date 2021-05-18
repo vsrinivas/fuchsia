@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType,
     crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME},
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::{display, Interface},
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     anyhow::format_err,
@@ -48,7 +48,7 @@ async fn test_light_sensor() {
 
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))
-        .settings(&[SettingType::LightSensor])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::LIGHT_SENSOR)])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
@@ -74,7 +74,7 @@ async fn test_watch_light_sensor_no_service_error() {
 
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
-        .settings(&[SettingType::Display])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::LIGHT_SENSOR)])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

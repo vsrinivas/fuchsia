@@ -53,6 +53,35 @@ pub enum SettingType {
     Setup,
 }
 
+/// [Entity] defines the types of components that exist within the setting service. Entities can be
+/// any part of the system that can be interacted with. Others can reference [Entities](Entity) to
+/// declare associations, such as dependencies.
+#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
+pub enum Entity {
+    /// A component that handles requests for the specified [SettingType].
+    Handler(SettingType),
+}
+
+/// A [Dependency] declares a reliance of a particular configuration/feature/component/etc. within
+/// the setting service. [Dependencies](Dependency) are used to generate the necessary component map
+//// to support a particular service configuration. It can used to determine if the platform/product
+//// configuration can support the requested service configuration.
+#[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
+pub enum Dependency {
+    /// An [Entity] is a component within the setting service.
+    Entity(Entity),
+}
+
+impl Dependency {
+    /// Returns whether the [Dependency] can be handled by the provided environment. Currently, this
+    /// only involves [SettingType] handlers.
+    pub fn is_fulfilled(&self, entities: &HashSet<Entity>) -> bool {
+        match self {
+            Dependency::Entity(entity) => entities.contains(entity),
+        }
+    }
+}
+
 /// This macro takes an enum, which has variants associated with exactly one data, and
 /// generates the same enum and implements a for_inspect method.
 /// The for_inspect method returns variants' names and formated data contents.
@@ -244,5 +273,28 @@ mod testing {
         fn into(self) -> SettingInfo {
             SettingInfo::Unknown(self)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dependency_fulfillment() {
+        let target_entity = Entity::Handler(SettingType::Unknown);
+        let dependency = Dependency::Entity(target_entity);
+        let mut available_entities = HashSet::new();
+
+        // Verify that an empty entity set does not fulfill dependency.
+        assert!(!dependency.is_fulfilled(&available_entities));
+
+        // Verify an entity set without the target entity does not fulfill dependency.
+        available_entities.insert(Entity::Handler(SettingType::FactoryReset));
+        assert!(!dependency.is_fulfilled(&available_entities));
+
+        // Verify an entity set with target entity does fulfill dependency.
+        available_entities.insert(target_entity);
+        assert!(dependency.is_fulfilled(&available_entities));
     }
 }

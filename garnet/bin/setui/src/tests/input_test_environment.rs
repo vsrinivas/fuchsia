@@ -10,6 +10,7 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorage;
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
+use crate::ingress::fidl::Interface;
 use crate::input::input_controller::InputController;
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::types::InputInfoSources;
@@ -96,7 +97,7 @@ impl TestInputEnvironmentBuilder {
         let mut environment_builder = EnvironmentBuilder::new(Arc::clone(&storage_factory))
             .service(Box::new(ServiceRegistry::serve(service_registry)))
             .agents(&self.agents.into_iter().map(BlueprintHandle::from).collect::<Vec<_>>())
-            .settings(&[SettingType::Input]);
+            .fidl_interfaces(&[Interface::Input]);
 
         if let Some(config) = self.input_device_config {
             // If hardware configuration was specified, we need a generate_handler to include the

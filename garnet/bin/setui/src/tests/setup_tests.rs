@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface,
     crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::hardware_power_statecontrol_service::{
         Action, HardwarePowerStatecontrolService,
@@ -22,7 +22,7 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_setup_default() {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .settings(&[SettingType::Setup, SettingType::Power])
+        .fidl_interfaces(&[Interface::Setup])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
@@ -61,7 +61,7 @@ async fn test_setup_with_reboot() {
     // Handle reboot
     let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry.clone()))
-        .settings(&[SettingType::Setup, SettingType::Power])
+        .fidl_interfaces(&[Interface::Setup])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
@@ -114,7 +114,7 @@ async fn test_setup_no_reboot() {
         .register_service(hardware_power_statecontrol_service_handle.clone());
 
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .settings(&[SettingType::Setup, SettingType::Power])
+        .fidl_interfaces(&[Interface::Setup])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

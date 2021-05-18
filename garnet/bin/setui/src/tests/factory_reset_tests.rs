@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
-use crate::base::SettingType;
 use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
 use crate::tests::fakes::recovery_policy_service::RecoveryPolicy;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
@@ -26,7 +26,7 @@ async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
         .register_service(Arc::new(Mutex::new(recovery_policy_service_handler.clone())));
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .settings(&[SettingType::FactoryReset])
+        .fidl_interfaces(&[Interface::FactoryReset])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
@@ -98,7 +98,7 @@ async fn validate_restore(is_local_reset_allowed: bool) {
     let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
-        .settings(&[SettingType::FactoryReset])
+        .fidl_interfaces(&[Interface::FactoryReset])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .expect("env should be available");

@@ -62,7 +62,6 @@ async fn test_agent_event_propagation() {
     });
 
     let _ = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .settings(&[])
         .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
         .agents(&[Arc::new(scaffold::agent::Blueprint::new(scaffold::agent::Generate::Async(
             create_agent,

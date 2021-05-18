@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
 use crate::tests::fakes::hardware_power_statecontrol_service::HardwarePowerStatecontrolService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -34,7 +34,7 @@ async fn test_multiple_watches() {
 
     let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(ServiceRegistry::serve(service_registry.clone()))
-        .settings(&[SettingType::Setup, SettingType::Power])
+        .fidl_interfaces(&[Interface::Setup])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType,
     crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface,
     crate::EnvironmentBuilder,
     fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings},
     std::sync::Arc,
@@ -20,7 +20,7 @@ async fn test_do_not_disturb() {
         InMemoryStorageFactory::with_initial_data(&DoNotDisturbInfo::new(true, false));
 
     let env = EnvironmentBuilder::new(Arc::new(storage_factory))
-        .settings(&[SettingType::DoNotDisturb])
+        .fidl_interfaces(&[Interface::DoNotDisturb])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

@@ -6,6 +6,7 @@ use {
     crate::base::SettingType,
     crate::handler::base::Payload as HandlerPayload,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface,
     crate::input::common::MediaButtonsEventBuilder,
     crate::input::input_device_configuration::{
         InputConfiguration, InputDeviceConfiguration, SourceState,
@@ -145,7 +146,7 @@ fn default_mic_cam_config_cam_disabled() -> InputConfiguration {
 async fn create_input_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> InputProxy {
-    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Input)
+    create_test_env_with_failures(storage_factory, ENV_NAME, Interface::Input, SettingType::Input)
         .await
         .connect_to_protocol::<InputMarker>()
         .unwrap()

@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType, crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::EnvironmentBuilder, fidl_fuchsia_settings::DeviceMarker, std::sync::Arc,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface, crate::EnvironmentBuilder,
+    fidl_fuchsia_settings::DeviceMarker, std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_device_test_environment";
@@ -14,7 +15,7 @@ const ENV_NAME: &str = "settings_service_device_test_environment";
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_device() {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .settings(&[SettingType::Device])
+        .fidl_interfaces(&[Interface::Device])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

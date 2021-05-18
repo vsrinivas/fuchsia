@@ -17,6 +17,7 @@ use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::DeviceStorage;
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
+use crate::ingress::fidl::Interface;
 use crate::input::common::MediaButtonsEventBuilder;
 use crate::light::light_controller::LightController;
 use crate::light::light_hardware_configuration::{DisableConditions, LightGroupConfiguration};
@@ -187,7 +188,7 @@ impl TestLightEnvironmentBuilder {
         let mut environment_builder = EnvironmentBuilder::new(Arc::clone(&storage_factory))
             .service(Box::new(ServiceRegistry::serve(service_registry)))
             .agents(&self.agents.into_iter().map(BlueprintHandle::from).collect::<Vec<_>>())
-            .settings(&[SettingType::Light]);
+            .fidl_interfaces(&[Interface::Light]);
 
         if let Some(config) = self.light_hardware_config {
             // If hardware configuration was specified, we need a generate_handler to include the

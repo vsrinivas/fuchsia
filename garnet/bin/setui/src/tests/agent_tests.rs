@@ -6,7 +6,6 @@ use crate::agent::authority::Authority;
 use crate::agent::{
     AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
 };
-use crate::base::SettingType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::service;
 use crate::service_context::ServiceContext;
@@ -193,7 +192,6 @@ async fn test_environment_startup() {
 
     assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .agents(&[service_agent_generate, agent_generate,])
-        .settings(&[SettingType::Display])
         .spawn_nested(ENV_NAME)
         .await
         .is_ok());

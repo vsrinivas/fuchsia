@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType, crate::handler::device_storage::testing::InMemoryStorageFactory,
-    crate::night_mode::types::NightModeInfo, crate::EnvironmentBuilder,
-    fidl_fuchsia_settings::NightModeMarker, std::sync::Arc,
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface, crate::night_mode::types::NightModeInfo,
+    crate::EnvironmentBuilder, fidl_fuchsia_settings::NightModeMarker, std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";
@@ -19,7 +19,7 @@ async fn test_night_mode() {
     let factory = Arc::new(InMemoryStorageFactory::new());
 
     let env = EnvironmentBuilder::new(Arc::clone(&factory))
-        .settings(&[SettingType::NightMode])
+        .fidl_interfaces(&[Interface::NightMode])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

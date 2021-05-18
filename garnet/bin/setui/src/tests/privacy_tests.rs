@@ -6,6 +6,7 @@ use {
     crate::base::SettingType,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorage,
+    crate::ingress::fidl::Interface,
     crate::privacy::types::PrivacyInfo,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
@@ -21,10 +22,15 @@ const ENV_NAME: &str = "settings_service_privacy_test_environment";
 /// Creates an environment that will fail on a get request.
 async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
     let storage_factory = InMemoryStorageFactory::new();
-    create_test_env_with_failures(Arc::new(storage_factory), ENV_NAME, SettingType::Privacy)
-        .await
-        .connect_to_protocol::<PrivacyMarker>()
-        .unwrap()
+    create_test_env_with_failures(
+        Arc::new(storage_factory),
+        ENV_NAME,
+        Interface::Privacy,
+        SettingType::Privacy,
+    )
+    .await
+    .connect_to_protocol::<PrivacyMarker>()
+    .unwrap()
 }
 
 /// Creates an environment for privacy.
@@ -32,7 +38,7 @@ async fn create_test_privacy_env(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> (PrivacyProxy, Arc<DeviceStorage>) {
     let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
-        .settings(&[SettingType::Privacy])
+        .fidl_interfaces(&[Interface::Privacy])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

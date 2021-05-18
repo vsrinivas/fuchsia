@@ -5,9 +5,9 @@
 use {
     crate::audio::default_audio_info,
     crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
-    crate::base::SettingType,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorage,
+    crate::ingress::fidl::Interface,
     crate::input::common::MediaButtonsEventBuilder,
     crate::message::base::MessengerType,
     crate::service,
@@ -196,7 +196,7 @@ async fn create_environment(
     let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry))
         .event_subscribers(&[scaffold::event::subscriber::Blueprint::create(create_subscriber)])
-        .settings(&[SettingType::Audio])
+        .fidl_interfaces(&[Interface::Audio])
         .agents(&[
             AgentType::Restore.into(),
             AgentType::Earcons.into(),

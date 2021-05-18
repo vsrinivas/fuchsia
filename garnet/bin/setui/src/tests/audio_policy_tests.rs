@@ -8,9 +8,9 @@ use crate::audio::policy::{
 };
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::audio::utils::round_volume_level;
-use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::ingress::fidl::Interface;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::response;
 use crate::policy::{Payload, PolicyInfo, PolicyType, Request};
@@ -59,7 +59,7 @@ async fn create_test_environment_with_data(data: Option<&State>) -> TestEnvironm
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
-        .settings(&[SettingType::Audio])
+        .fidl_interfaces(&[Interface::Audio])
         .policies(&[PolicyType::Audio])
         .agents(&[AgentType::Restore.into()])
         .spawn_and_get_nested_environment(ENV_NAME)

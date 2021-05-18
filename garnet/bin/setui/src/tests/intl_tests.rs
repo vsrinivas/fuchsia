@@ -5,6 +5,7 @@
 use {
     crate::base::SettingType,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::Interface,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     anyhow::format_err,
@@ -69,7 +70,7 @@ async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> I
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(Box::new(service_gen))
-        .settings(&[SettingType::Intl])
+        .fidl_interfaces(&[Interface::Intl])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
@@ -81,7 +82,7 @@ async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> I
 async fn create_intl_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> IntlProxy {
-    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Intl)
+    create_test_env_with_failures(storage_factory, ENV_NAME, Interface::Intl, SettingType::Intl)
         .await
         .connect_to_protocol::<IntlMarker>()
         .unwrap()

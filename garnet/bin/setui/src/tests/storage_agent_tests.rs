@@ -28,11 +28,8 @@ async fn create_test_environment() -> (service::message::Delegate, Arc<DeviceSto
         .initialize::<TestAccess>()
         .await
         .expect("Should be able to initialize unknown info");
-    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
-        .settings(&[SettingType::Unknown])
-        .spawn_nested(ENV_NAME)
-        .await
-        .unwrap();
+    let env =
+        EnvironmentBuilder::new(Arc::clone(&storage_factory)).spawn_nested(ENV_NAME).await.unwrap();
     let store = storage_factory.get_store().await;
     store.write(&UnknownInfo(ORIGINAL_VALUE), true).await.expect("Write should succeed");
     (env.delegate, store)

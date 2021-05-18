@@ -8,6 +8,7 @@ use crate::event::{self as event, restore, Event};
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
+use crate::ingress::fidl::Interface;
 use crate::service;
 use crate::service::message::Receptor;
 use crate::tests::fakes::base::create_setting_handler;
@@ -37,7 +38,7 @@ async fn create_event_environment() -> Arc<Mutex<Option<Receptor>>> {
     let _env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .event_subscribers(&[Blueprint::create(create_subscriber)])
-        .settings(&[SettingType::Setup])
+        .fidl_interfaces(&[Interface::Setup])
         .agents(&[restore_agent::blueprint::create()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

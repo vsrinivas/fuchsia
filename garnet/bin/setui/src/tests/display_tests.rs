@@ -8,6 +8,7 @@ use {
     crate::config::base::ControllerFlag,
     crate::display::types::{DisplayInfo, LowLightMode, Theme},
     crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::ingress::fidl::{display, Interface},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -36,7 +37,7 @@ const AUTO_BRIGHTNESS_LEVEL: f32 = 0.9;
 
 async fn setup_display_env() -> DisplayProxy {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .settings(&[SettingType::Display])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
@@ -54,7 +55,7 @@ async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
 
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .settings(&[SettingType::Display])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
         .flags(&[ControllerFlag::ExternalBrightnessControl])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -67,10 +68,15 @@ async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
 async fn create_display_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> DisplayProxy {
-    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Display)
-        .await
-        .connect_to_protocol::<DisplayMarker>()
-        .unwrap()
+    create_test_env_with_failures(
+        storage_factory,
+        ENV_NAME,
+        Interface::Display(display::InterfaceFlags::BASE),
+        SettingType::Display,
+    )
+    .await
+    .connect_to_protocol::<DisplayMarker>()
+    .unwrap()
 }
 
 // Tests that the FIDL calls for manual brightness result in appropriate
@@ -461,7 +467,7 @@ async fn validate_restore_with_storage_controller(
     let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
-        .settings(&[SettingType::Display])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .ok();
@@ -532,7 +538,7 @@ async fn validate_restore_with_brightness_controller(
     assert!(EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
-        .settings(&[SettingType::Display])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
         .flags(&[ControllerFlag::ExternalBrightnessControl])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -601,7 +607,7 @@ async fn test_display_failure() {
 
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))
-        .settings(&[SettingType::Display, SettingType::Intl])
+        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE), Interface::Intl])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

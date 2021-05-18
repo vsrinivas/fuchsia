@@ -75,7 +75,6 @@ async fn test_environment_bringup() {
     assert!(EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .agents(&[TestMonitorAgent::create(monitor_actor_tx)])
         .resource_monitors(&[generate_monitor])
-        .settings(&[])
         .spawn_nested(ENV_NAME)
         .await
         .is_ok());

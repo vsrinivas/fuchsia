@@ -153,6 +153,7 @@ rustc_library("lib") {
     "src/handler/setting_proxy.rs",
     "src/hanging_get_handler.rs",
     "src/ingress.rs",
+    "src/ingress/fidl.rs",
     "src/ingress/request.rs",
     "src/ingress/watch.rs",
     "src/input.rs",

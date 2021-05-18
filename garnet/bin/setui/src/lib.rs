@@ -12,7 +12,7 @@ use {
     crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan},
     crate::audio::audio_controller::AudioController,
     crate::audio::policy::audio_policy_handler::AudioPolicyHandler,
-    crate::base::SettingType,
+    crate::base::{Dependency, Entity, SettingType},
     crate::config::base::{AgentType, ControllerFlag},
     crate::device::device_controller::DeviceController,
     crate::display::display_controller::{DisplayController, ExternalBrightnessControl},
@@ -24,6 +24,8 @@ use {
     crate::handler::setting_handler::persist::Handler as DataHandler,
     crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::handler::setting_proxy::SettingProxy,
+    crate::ingress::fidl,
+    crate::ingress::registration::Registrant,
     crate::input::input_controller::InputController,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
@@ -40,12 +42,6 @@ use {
     crate::service_context::ServiceContext,
     crate::setup::setup_controller::SetupController,
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_settings::{
-        AccessibilityRequestStream, AudioRequestStream, DeviceRequestStream, DisplayRequestStream,
-        DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream,
-        IntlRequestStream, LightRequestStream, NightModeRequestStream, PrivacyRequestStream,
-        SetupRequestStream,
-    },
     fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
@@ -156,10 +152,10 @@ pub struct ServiceFlags {
 
 #[derive(PartialEq, Debug, Default, Clone)]
 pub struct ServiceConfiguration {
-    pub agent_types: HashSet<AgentType>,
-    pub services: HashSet<SettingType>,
-    pub policies: HashSet<PolicyType>,
-    pub controller_flags: HashSet<ControllerFlag>,
+    agent_types: HashSet<AgentType>,
+    fidl_interfaces: HashSet<fidl::Interface>,
+    policies: HashSet<PolicyType>,
+    controller_flags: HashSet<ControllerFlag>,
 }
 
 impl ServiceConfiguration {
@@ -169,16 +165,41 @@ impl ServiceConfiguration {
         policies: EnabledPoliciesConfiguration,
         flags: ServiceFlags,
     ) -> Self {
-        Self {
+        let fidl_interfaces: HashSet<fidl::Interface> =
+            services.services.iter().map(|x| x.into()).collect();
+
+        let mut return_val = Self {
             agent_types: agent_types.agent_types,
-            services: services.services,
+            fidl_interfaces: HashSet::new(),
             policies: policies.policies,
             controller_flags: flags.controller_flags,
-        }
+        };
+
+        return_val.set_fidl_interfaces(fidl_interfaces);
+
+        return_val
     }
 
-    fn set_services(&mut self, services: HashSet<SettingType>) {
-        self.services = services;
+    fn set_fidl_interfaces(&mut self, interfaces: HashSet<fidl::Interface>) {
+        self.fidl_interfaces = interfaces;
+
+        let display_subinterfaces = [
+            fidl::Interface::Display(fidl::display::InterfaceFlags::LIGHT_SENSOR),
+            fidl::Interface::Display(fidl::display::InterfaceFlags::BASE),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        // Consolidate display type.
+        // TODO(fxbug.dev/76991): Remove this special handling once light sensor is its own FIDL
+        // interface.
+        if self.fidl_interfaces.is_superset(&display_subinterfaces) {
+            self.fidl_interfaces = &self.fidl_interfaces - &display_subinterfaces;
+            self.fidl_interfaces.insert(fidl::Interface::Display(
+                fidl::display::InterfaceFlags::BASE | fidl::display::InterfaceFlags::LIGHT_SENSOR,
+            ));
+        }
     }
 
     fn set_policies(&mut self, policies: HashSet<PolicyType>) {
@@ -197,25 +218,17 @@ impl ServiceConfiguration {
 pub struct Environment {
     pub nested_environment: Option<NestedEnvironment>,
     pub delegate: Delegate,
+    pub entities: HashSet<Entity>,
 }
 
 impl Environment {
-    pub fn new(nested_environment: Option<NestedEnvironment>, delegate: Delegate) -> Environment {
-        Environment { nested_environment, delegate }
+    pub fn new(
+        nested_environment: Option<NestedEnvironment>,
+        delegate: Delegate,
+        entities: HashSet<Entity>,
+    ) -> Environment {
+        Environment { nested_environment, delegate, entities }
     }
-}
-
-/// The EnvironmentBuilder aggregates the parameters surrounding an environment
-/// and ultimately spawns an environment based on them.
-pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
-    configuration: Option<ServiceConfiguration>,
-    agent_blueprints: Vec<AgentBlueprintHandle>,
-    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
-    event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
-    storage_factory: Arc<T>,
-    generate_service: Option<GenerateService>,
-    handlers: HashMap<SettingType, GenerateHandler>,
-    resource_monitors: Vec<monitor_base::monitor::Generate>,
 }
 
 macro_rules! register_handler {
@@ -237,24 +250,19 @@ macro_rules! register_handler {
     };
 }
 
-/// This macro conditionally adds a FIDL service handler based on the presence
-/// of `SettingType`s in the available components. The caller specifies the
-/// mod containing a generated fidl_io mod to handle the incoming request
-/// streams, the target FIDL interface, and a list of `SettingType`s whose
-/// presence will cause this handler to be included.
-macro_rules! register_fidl_handler {
-    ($components:ident, $service_dir:ident, $delegate:ident,
-            $interface:ident, $handler_mod:ident$(, $target:ident)+) => {
-        if false $(|| $components.contains(&SettingType::$target))+
-        {
-            let delegate = $delegate.clone();
-            $service_dir.add_fidl_service(
-                    move |stream: $interface| {
-                        crate::$handler_mod::fidl_io::spawn(delegate.clone(),
-                        stream);
-                    });
-        }
-    }
+/// The [EnvironmentBuilder] aggregates the parameters surrounding an [environment](Environment) and
+/// ultimately spawns an environment based on them.
+pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
+    configuration: Option<ServiceConfiguration>,
+    agent_blueprints: Vec<AgentBlueprintHandle>,
+    agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
+    event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
+    storage_factory: Arc<T>,
+    generate_service: Option<GenerateService>,
+    registrants: Vec<Registrant>,
+    settings: Vec<SettingType>,
+    handlers: HashMap<SettingType, GenerateHandler>,
+    resource_monitors: Vec<monitor_base::monitor::Generate>,
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
@@ -267,6 +275,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             storage_factory,
             generate_service: None,
             handlers: HashMap::new(),
+            registrants: vec![],
+            settings: vec![],
             resource_monitors: vec![],
         }
     }
@@ -292,15 +302,27 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    /// Setting types to participate.
-    pub fn settings(mut self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
+    pub fn fidl_interfaces(mut self, interfaces: &[fidl::Interface]) -> EnvironmentBuilder<T> {
         if self.configuration.is_none() {
             self.configuration = Some(ServiceConfiguration::default());
         }
 
         if let Some(c) = self.configuration.as_mut() {
-            c.set_services(settings.iter().copied().collect());
+            c.set_fidl_interfaces(interfaces.iter().copied().collect());
         }
+
+        self
+    }
+
+    pub fn registrants(mut self, mut registrants: Vec<Registrant>) -> EnvironmentBuilder<T> {
+        self.registrants.append(&mut registrants);
+
+        self
+    }
+
+    /// Setting types to participate.
+    pub fn settings(mut self, settings: &[SettingType]) -> EnvironmentBuilder<T> {
+        self.settings.extend(settings);
 
         self
     }
@@ -362,9 +384,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     }
 
     async fn prepare_env(
-        self,
+        mut self,
         runtime: Runtime,
-    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, Delegate), Error> {
+    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, Delegate, HashSet<Entity>), Error> {
         let mut fs = ServiceFs::new();
 
         let service_dir;
@@ -380,15 +402,31 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         // Define top level MessageHub for service communication.
         let delegate = service::message::create_hub();
 
-        let (agent_types, settings, policies, flags) = match self.configuration {
+        let (agent_types, fidl_interfaces, policies, flags) = match self.configuration {
             Some(configuration) => (
                 configuration.agent_types,
-                configuration.services,
+                configuration.fidl_interfaces,
                 configuration.policies,
                 configuration.controller_flags,
             ),
             _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
         };
+
+        self.registrants
+            .extend(fidl_interfaces.into_iter().map(|x| x.into()).collect::<Vec<Registrant>>());
+
+        let mut settings = HashSet::new();
+        settings.extend(self.settings);
+
+        for registrant in &self.registrants {
+            for dependency in registrant.get_dependencies() {
+                match dependency {
+                    Dependency::Entity(Entity::Handler(setting_type)) => {
+                        settings.insert(*setting_type);
+                    }
+                }
+            }
+        }
 
         let service_context =
             Arc::new(ServiceContext::new(self.generate_service, Some(delegate.clone())));
@@ -447,10 +485,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             })
             .unwrap_or(self.agent_blueprints);
 
-        create_environment(
+        let entities = create_environment(
             service_dir,
             delegate.clone(),
             settings,
+            self.registrants,
             policies,
             agent_blueprints,
             self.resource_monitors,
@@ -463,12 +502,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         .await
         .map_err(|err| format_err!("could not create environment: {:?}", err))?;
 
-        Ok((fs, delegate))
+        Ok((fs, delegate, entities))
     }
 
     pub fn spawn(self, mut executor: fasync::LocalExecutor) -> Result<(), Error> {
         match executor.run_singlethreaded(self.prepare_env(Runtime::Service)) {
-            Ok((mut fs, _)) => {
+            Ok((mut fs, ..)) => {
                 fs.take_and_serve_directory_handle().expect("could not service directory handle");
                 let () = executor.run_singlethreaded(fs.collect());
 
@@ -480,11 +519,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         match self.prepare_env(Runtime::Nested(env_name)).await {
-            Ok((mut fs, delegate)) => {
+            Ok((mut fs, delegate, entities)) => {
                 let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
                 fasync::Task::spawn(fs.collect()).detach();
 
-                Ok(Environment::new(nested_environment, delegate))
+                Ok(Environment::new(nested_environment, delegate, entities))
             }
             Err(error) => Err(error),
         }
@@ -661,6 +700,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     delegate: service::message::Delegate,
     components: HashSet<SettingType>,
+    registrants: Vec<Registrant>,
     policies: HashSet<PolicyType>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
@@ -669,7 +709,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
     storage_factory: Arc<T>,
-) -> Result<(), Error> {
+) -> Result<HashSet<Entity>, Error> {
     for blueprint in event_subscriber_blueprints {
         blueprint.create(delegate.clone()).await;
     }
@@ -679,6 +719,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     } else {
         Some(monitor::environment::Builder::new().add_monitors(resource_monitor_generators).build())
     };
+
+    let mut entities = HashSet::new();
 
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
     // TODO(fxbug.dev/59174): make setting proxy response timeout and retry configurable.
@@ -693,6 +735,8 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             true,
         )
         .await?;
+
+        entities.insert(Entity::Handler(*setting_type));
     }
 
     for policy_type in &policies {
@@ -706,72 +750,12 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     let mut agent_authority =
         Authority::create(delegate.clone(), components.clone(), policies, monitor_actor).await?;
 
-    register_fidl_handler!(components, service_dir, delegate, LightRequestStream, light, Light);
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        delegate,
-        AccessibilityRequestStream,
-        accessibility,
-        Accessibility
-    );
-
-    register_fidl_handler!(components, service_dir, delegate, AudioRequestStream, audio, Audio);
-
-    register_fidl_handler!(components, service_dir, delegate, DeviceRequestStream, device, Device);
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        delegate,
-        DisplayRequestStream,
-        display,
-        Display,
-        LightSensor
-    );
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        delegate,
-        DoNotDisturbRequestStream,
-        do_not_disturb,
-        DoNotDisturb
-    );
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        delegate,
-        FactoryResetRequestStream,
-        factory_reset,
-        FactoryReset
-    );
-
-    register_fidl_handler!(components, service_dir, delegate, IntlRequestStream, intl, Intl);
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        delegate,
-        NightModeRequestStream,
-        night_mode,
-        NightMode
-    );
-
-    register_fidl_handler!(
-        components,
-        service_dir,
-        delegate,
-        PrivacyRequestStream,
-        privacy,
-        Privacy
-    );
-
-    register_fidl_handler!(components, service_dir, delegate, InputRequestStream, input, Input);
-
-    register_fidl_handler!(components, service_dir, delegate, SetupRequestStream, setup, Setup);
+    for registrant in registrants {
+        if registrant.get_dependencies().iter().all(|dependency| dependency.is_fulfilled(&entities))
+        {
+            registrant.register(delegate.clone(), &mut service_dir);
+        }
+    }
 
     // TODO(fxbug.dev/60925): allow configuration of policy API
     service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
@@ -799,7 +783,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await
         .ok();
 
-    Ok(())
+    Ok(entities)
 }
 
 #[cfg(test)]

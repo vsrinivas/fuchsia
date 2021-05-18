@@ -6,20 +6,19 @@ use crate::base::SettingType;
 use crate::handler::base::Request;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::ControllerError;
+use crate::ingress::fidl::Interface;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
 use std::sync::Arc;
 
-/// Creates an environment that will fail on a get request.
-///
-/// Returns a NestedEnvironment so that each test can connect to its own
-/// service without having to constrain the Proxy type here.
 pub async fn create_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
     env_name: &'static str,
+    interface: Interface,
     setting_type: SettingType,
 ) -> fuchsia_component::server::NestedEnvironment {
     EnvironmentBuilder::new(storage_factory)
+        .fidl_interfaces(&[interface])
         .handler(
             setting_type,
             create_setting_handler(Box::new(move |request| {

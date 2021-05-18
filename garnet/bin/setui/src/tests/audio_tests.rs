@@ -11,6 +11,7 @@ use {
     crate::base::SettingType,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorage,
+    crate::ingress::fidl::Interface,
     crate::input::common::MediaButtonsEventBuilder,
     crate::tests::fakes::audio_core_service::{self, AudioCoreService},
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
@@ -75,7 +76,7 @@ const CHANGED_MEDIA_STREAM_SETTINGS_2: AudioStreamSettings = AudioStreamSettings
 async fn create_audio_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
 ) -> AudioProxy {
-    create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Audio)
+    create_test_env_with_failures(storage_factory, ENV_NAME, Interface::Audio, SettingType::Audio)
         .await
         .connect_to_protocol::<AudioMarker>()
         .unwrap()
@@ -148,7 +149,7 @@ async fn create_environment(
 
     let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry))
-        .settings(&[SettingType::Audio])
+        .fidl_interfaces(&[Interface::Audio])
         .agents(&[AgentType::MediaButtons.into()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
@@ -364,7 +365,7 @@ async fn test_volume_restore() {
     assert!(EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
-        .settings(&[SettingType::Audio])
+        .fidl_interfaces(&[Interface::Audio])
         .spawn_nested(ENV_NAME)
         .await
         .is_ok());
@@ -460,7 +461,7 @@ async fn test_persisted_values_applied_at_start() {
     let env = EnvironmentBuilder::new(Arc::new(storage_factory))
         .service(ServiceRegistry::serve(service_registry))
         .agents(&[restore_agent::blueprint::create()])
-        .settings(&[SettingType::Audio])
+        .fidl_interfaces(&[Interface::Audio])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
