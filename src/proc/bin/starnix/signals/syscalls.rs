@@ -32,12 +32,15 @@ pub fn sys_rt_sigaction(
 
     let mut signal_actions = ctx.task.thread_group.signal_actions.write();
     if !user_old_action.is_null() {
-        let existing_signal_action = signal_actions[&signal];
+        let existing_signal_action = match signal_actions.get(&signal) {
+            SignalAction::Custom(action) => *action,
+            _ => sigaction_t::default(),
+        };
         ctx.task.mm.write_object(user_old_action, &existing_signal_action)?;
     }
 
     if let Some(new_signal_action) = new_signal_action {
-        signal_actions[&signal] = new_signal_action;
+        signal_actions.set_handler(&signal, new_signal_action);
     }
 
     Ok(SUCCESS)
@@ -650,7 +653,11 @@ mod tests {
         original_action.sa_mask = 3;
 
         {
-            ctx.task.thread_group.signal_actions.write()[&Signal::SIGHUP] = original_action.clone();
+            ctx.task
+                .thread_group
+                .signal_actions
+                .write()
+                .set_handler(&Signal::SIGHUP, original_action.clone());
         }
 
         let old_action_ref = UserRef::<sigaction_t>::new(addr);
@@ -694,7 +701,10 @@ mod tests {
             Ok(SUCCESS)
         );
 
-        assert_eq!(ctx.task.thread_group.signal_actions.read()[&Signal::SIGINT], original_action,);
+        assert_eq!(
+            ctx.task.thread_group.signal_actions.read().get(&Signal::SIGINT),
+            &SignalAction::Custom(original_action),
+        );
     }
 
     /// A task should be able to signal itself.
