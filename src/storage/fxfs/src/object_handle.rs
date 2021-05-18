@@ -45,6 +45,8 @@ pub trait ObjectHandle: Send + Sync + 'static {
     async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
 
     /// Writes |buf| to the device at |offset|.
+    /// The alignment of |offset| and |buf.range().start| must be equal (but they do not need to be
+    /// block-aligned).
     async fn txn_write<'a>(
         &'a self,
         transaction: &mut Transaction<'a>,

@@ -5,7 +5,7 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::{filesystem::SyncOptions, StoreObjectHandle, Timestamp},
+        object_store::{filesystem::SyncOptions, round_down, StoreObjectHandle, Timestamp},
         server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
     },
     anyhow::Error,
@@ -55,11 +55,13 @@ impl FxFile {
         offset: Option<u64>,
         content: &[u8],
     ) -> Result<(u64, u64), Error> {
-        let mut buf = self.handle.allocate_buffer(content.len());
-        let mut transaction = self.handle.new_transaction().await?;
-        buf.as_mut_slice().copy_from_slice(content);
         let offset = offset.unwrap_or_else(|| self.handle.get_size());
-        self.handle.txn_write(&mut transaction, offset, buf.as_ref()).await?;
+        let start = round_down(offset, self.handle.block_size());
+        let align = (offset - start) as usize;
+        let mut buf = self.handle.allocate_buffer(align + content.len());
+        let mut transaction = self.handle.new_transaction().await?;
+        buf.as_mut_slice()[align..].copy_from_slice(content);
+        self.handle.txn_write(&mut transaction, offset, buf.subslice(align..)).await?;
         transaction.commit().await;
         Ok((content.len() as u64, offset + content.len() as u64))
     }

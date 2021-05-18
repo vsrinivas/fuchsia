@@ -1055,11 +1055,11 @@ impl<S: Send + Sync> AssociatedObject for StoreObjectHandle<S> {
 }
 
 // TODO(jfsulliv): Move into utils module or something else.
-fn round_down<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
+pub fn round_down<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
     offset - offset % block_size.into()
 }
 
-fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> Option<u64> {
+pub fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> Option<u64> {
     let block_size = block_size.into();
     Some(round_down(offset.checked_add(block_size - 1)?, block_size))
 }
@@ -1197,6 +1197,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     ) -> Result<(), Error> {
         if buf.is_empty() {
             return Ok(());
+        }
+        if offset % self.block_size() as u64 != buf.range().start as u64 % self.block_size() as u64
+        {
+            panic!("Unaligned write off: {} buf.range: {:?}", offset, buf.range());
         }
         self.apply_pending_properties(transaction).await?;
         if self.options.overwrite {
@@ -1576,9 +1580,11 @@ mod tests {
         object.truncate(&mut transaction, 3).await.expect("truncate failed"); // This deletes 512..1024.
         transaction.commit().await;
         let data = b"foo";
-        let mut buf = object.allocate_buffer(data.len());
-        buf.as_mut_slice().copy_from_slice(data);
-        object.write(1500, buf.as_ref()).await.expect("write failed"); // This adds 1024..1536.
+        let offset = 1500u64;
+        let align = (offset % TEST_DEVICE_BLOCK_SIZE as u64) as usize;
+        let mut buf = object.allocate_buffer(align + data.len());
+        buf.as_mut_slice()[align..].copy_from_slice(data);
+        object.write(1500, buf.subslice(align..)).await.expect("write failed"); // This adds 1024..1536.
 
         const LEN1: usize = 1503;
         let mut buf = object.allocate_buffer(LEN1);
