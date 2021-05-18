@@ -28,12 +28,12 @@ void main() {
     sl4f?.close();
   });
 
-  test('verify memory setting present in quicksettings', () async {
+  test('verify channel setting present in quicksettings', () async {
     await ermine.gotoOverview();
 
-    // memory will always be present in quicksettings
-    final memoryTitle = await ermine.driver.getText(find.text('MEMORY'));
-    expect(memoryTitle, 'MEMORY');
+    // channel will always be present in quicksettings
+    final channelTitle = await ermine.driver.getText(find.text('CHANNEL'));
+    expect(channelTitle, 'CHANNEL');
   });
 
   test('verify can change timezone setting in quicksettings', () async {
