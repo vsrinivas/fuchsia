@@ -57,7 +57,8 @@ linter:
     - close_sinks
     - constant_identifier_names
     - control_flow_in_finally
-    - directives_ordering
+    # TODO(fxbug.dev/77058) Disabling to avoid build spam
+    #- directives_ordering
     - empty_catches
     - empty_constructor_bodies
     - empty_statements
