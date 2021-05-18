@@ -48,6 +48,7 @@ var (
 	symbolCache       string
 	symbolizeDumpFile flagmisc.StringsValue
 	dryRun            bool
+	skipFunctions     bool
 	outputDir         string
 	llvmCov           string
 	llvmProfdata      string
@@ -74,6 +75,7 @@ func init() {
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
 	flag.Var(&symbolizeDumpFile, "symbolize-dump", "path to the json emited from the symbolizer")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
+	flag.BoolVar(&skipFunctions, "skip-functions", true, "if set, the coverage report enabled by the `report-dir` flag will not include function coverage")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
 	flag.StringVar(&llvmProfdata, "llvm-profdata", "llvm-profdata", "the location of llvm-profdata")
 	flag.StringVar(&llvmCov, "llvm-cov", "llvm-cov", "the location of llvm-cov")
@@ -411,7 +413,9 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			"export",
 			"-instr-profile", mergedFile,
 			"-skip-expansions",
-			"-skip-functions",
+		}
+		if skipFunctions {
+			args = append(args, "-skip-functions")
 		}
 		for _, remapping := range pathRemapping {
 			args = append(args, "-path-equivalence", remapping)
