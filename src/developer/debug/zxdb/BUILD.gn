@@ -50,6 +50,7 @@ if (is_host) {
     deps = [
       "//src/developer/debug/ipc:tests",
       "//src/developer/debug/shared:tests",
+      "//src/developer/debug/unwinder:tests",
       "//src/developer/debug/zxdb/client:tests",
       "//src/developer/debug/zxdb/common:tests",
       "//src/developer/debug/zxdb/console:tests",
@@ -57,7 +58,6 @@ if (is_host) {
       "//src/developer/debug/zxdb/expr:tests",
       "//src/developer/debug/zxdb/symbols:tests",
       "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
     ]
   }
 

@@ -239,6 +239,7 @@ test("unit_tests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/debug/ipc:tests",
     "//src/developer/debug/shared:tests",
+    "//src/developer/debug/unwinder:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

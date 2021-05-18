@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("unwinder") {
+  public = [
+    "error.h",
+    "memory.h",
+    "registers.h",
+    "unwind.h",
+  ]
+  sources = [
+    "dwarf_cfi.cc",
+    "dwarf_cfi.h",
+    "memory.cc",
+    "registers.cc",
+    "unwind.cc",
+  ]
+
+  # UnwindLocal() is only supported on ELF systems.
+  if (!is_mac) {
+    public += [ "unwind_local.h" ]
+    sources += [
+      "third_party/libunwindstack/context.h",
+      "unwind_local.cc",
+    ]
+    if (current_cpu == "x64") {
+      sources += [ "third_party/libunwindstack/context_x86_64.S" ]
+    }
+  }
+
+  public_deps = [ "//src/lib/fxl" ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [ "memory_unittest.cc" ]
+  if (!is_mac) {
+    sources += [ "unwind_local_unittest.cc" ]
+  }
+
+  deps = [
+    ":unwinder",
+    "//third_party/googletest:gtest",
+  ]
+}
