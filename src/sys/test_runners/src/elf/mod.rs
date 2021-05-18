@@ -8,7 +8,7 @@
 mod elf_component;
 mod server;
 
-pub use elf_component::{start_component, BuilderArgs, Component, ComponentError};
+pub use elf_component::{start_component, BuilderArgs, Component};
 pub use server::{
     EnumeratedTestCases, FidlError, KernelError, MemoizedFutureContainer, PinnedFuture,
     SuiteServer, SuiteServerError,

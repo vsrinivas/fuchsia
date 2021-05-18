@@ -50,9 +50,7 @@ async fn start_runner(
                     controller,
                     TestServer::new,
                     TestServer::validate_args,
-                )
-                .await
-                {
+                ) {
                     warn!("Cannot start component '{}': {:?}", url, e);
                 }
             }

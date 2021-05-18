@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    log::{error, info, warn},
+    log::{error, info},
     test_runners_lib::elf,
     test_server::TestServer,
     thiserror::Error,
@@ -44,17 +44,12 @@ async fn start_runner(
     while let Some(event) = request_stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let url = start_info.resolved_url.clone().unwrap_or("".to_owned());
-                if let Err(e) = elf::start_component(
+                let _ = elf::start_component(
                     start_info,
                     controller,
                     get_new_test_server,
                     TestServer::validate_args,
-                )
-                .await
-                {
-                    warn!("Cannot start component '{}': {:?}", url, e)
-                };
+                );
             }
         }
     }

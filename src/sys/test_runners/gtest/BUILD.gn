@@ -44,7 +44,6 @@ rustc_binary("bin") {
 
   test_deps = [
     "//src/sys/test_runners:test_lib",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:pretty_assertions",
   ]
 

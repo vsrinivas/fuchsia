@@ -23,8 +23,8 @@ use {
     test_runners_lib::{
         cases::TestCaseInfo,
         elf::{
-            Component, ComponentError, EnumeratedTestCases, FidlError, KernelError,
-            MemoizedFutureContainer, PinnedFuture, SuiteServer,
+            Component, EnumeratedTestCases, FidlError, KernelError, MemoizedFutureContainer,
+            PinnedFuture, SuiteServer,
         },
         errors::*,
         launch,
@@ -467,12 +467,11 @@ async fn launch_component_process<E>(
     test_invoke: Option<String>,
 ) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
 where
-    E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
+    E: From<NamespaceError> + From<launch::LaunchError>,
 {
     let (client, loader) =
         fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
     component.loader_service(loader);
-    let executable_vmo = Some(component.executable_vmo()?);
     Ok(launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -483,7 +482,6 @@ where
         environs: test_invoke.map(|test_invoke| vec![test_invoke]),
         handle_infos: None,
         loader_proxy_chan: Some(client.into_channel()),
-        executable_vmo,
     })
     .await?)
 }
@@ -529,19 +527,18 @@ mod tests {
         }
     }
 
-    async fn sample_test_component() -> Result<Arc<Component>, Error> {
+    fn sample_test_component() -> Result<Arc<Component>, Error> {
         test_component(
             "fuchsia-pkg://fuchsia.com/rust-test-runner-test#sample-rust-tests.cm",
             "bin/sample_rust_tests.cm",
             "bin/sample_rust_tests",
             vec!["--my_custom_arg".to_string()],
         )
-        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn enumerate_simple_test() -> Result<(), Error> {
-        let component = sample_test_component().await.unwrap();
+        let component = sample_test_component().unwrap();
         let server = TestServer::new();
         let expected: Vec<TestCaseInfo> = vec![
             TestCaseInfo { name: "my_tests::sample_test_one".to_string(), enabled: true },
@@ -576,8 +573,7 @@ mod tests {
             "bin/no_rust_tests.cm",
             "bin/no_rust_tests",
             vec![],
-        )
-        .await?;
+        )?;
 
         let server = TestServer::new();
 
@@ -593,8 +589,7 @@ mod tests {
             "bin/huge_rust_tests.cm",
             "bin/huge_rust_tests",
             vec![],
-        )
-        .await?;
+        )?;
 
         let server = TestServer::new();
 
@@ -617,21 +612,32 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn invalid_executable_file() -> Result<(), Error> {
-        let err = test_component(
+    async fn enumerate_invalid_file() -> Result<(), Error> {
+        let component = test_component(
             "fuchsia-pkg://fuchsia.com/rust-test-runner-test#invalid-test.cm",
             "bin/invalid.cm",
             "bin/invalid",
             vec![],
-        )
-        .await
-        .expect_err("this function should have error-ed out due to non-existent file.");
+        )?;
 
-        assert_matches!(
-            err.downcast::<ComponentError>().unwrap(),
-            ComponentError::LoadingExecutable(..)
-        );
+        let server = TestServer::new();
 
+        let err = server
+            .enumerate_tests(component.clone())
+            .await
+            .expect_err("this function have error-ed out due to non-existent file.");
+
+        assert_matches!(err, EnumerationError::LaunchTest(..));
+        let is_valid_error = match &err {
+            EnumerationError::LaunchTest(arc) => match **arc {
+                launch::LaunchError::LoadInfo(
+                    runner::component::LaunchError::LoadingExecutable(_),
+                ) => true,
+                _ => false,
+            },
+            _ => false,
+        };
+        assert!(is_valid_error, "Invalid error: {:?}", err);
         Ok(())
     }
 
@@ -639,7 +645,7 @@ mod tests {
         invocations: Vec<Invocation>,
         run_options: RunOptions,
     ) -> Result<Vec<ListenerEvent>, anyhow::Error> {
-        let component = sample_test_component().await.context("Cannot create test component")?;
+        let component = sample_test_component().context("Cannot create test component")?;
         let weak_component = Arc::downgrade(&component);
         let server = TestServer::new();
 

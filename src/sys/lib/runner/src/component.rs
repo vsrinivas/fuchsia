@@ -321,9 +321,6 @@ pub struct LauncherConfigArgs<'a> {
 
     /// Custom loader proxy. If None, /pkg/lib would be used to load libraries.
     pub loader_proxy_chan: Option<zx::Channel>,
-
-    /// VMO containing mapping to executable binary. If None, it would be loaded from /pkg.
-    pub executable_vmo: Option<zx::Vmo>,
 }
 
 /// Configures launcher to launch process using passed params and creates launch info.
@@ -345,12 +342,9 @@ pub async fn configure_launcher(
     // package directory as a VMO in the same way that dynamic libraries are loaded. Doing this
     // first allows launching to fail quickly and clearly in case the main executable can't be
     // loaded with ZX_RIGHT_EXECUTE from the package directory.
-    let executable_vmo = match config_args.executable_vmo {
-        Some(v) => v,
-        None => library_loader::load_vmo(pkg_proxy, &config_args.bin_path)
-            .await
-            .map_err(|e| LaunchError::LoadingExecutable(e.to_string()))?,
-    };
+    let executable_vmo = library_loader::load_vmo(pkg_proxy, &config_args.bin_path)
+        .await
+        .map_err(|e| LaunchError::LoadingExecutable(e.to_string()))?;
 
     let ll_client_chan = match config_args.loader_proxy_chan {
         None => {
@@ -776,7 +770,6 @@ mod tests {
                     environs: None,
                     launcher: &launcher_proxy,
                     loader_proxy_chan: None,
-                    executable_vmo: None
                 })
                 .await,
                 Err(LaunchError::MissingPkg),
@@ -802,7 +795,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await
             .expect_err("should error out")
@@ -829,7 +821,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await
             .expect_err("should error out")
@@ -857,7 +848,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await?;
 
@@ -867,35 +857,6 @@ mod tests {
 
             assert_eq!(ls.args, vec!("/pkg/bin/runner_lib_test".to_owned()));
 
-            Ok(())
-        }
-
-        #[fasync::run_singlethreaded(test)]
-        async fn custom_executable_vmo() -> Result<(), Error> {
-            let (launcher_proxy, _recv) = start_launcher()?;
-
-            let ns = setup_namespace(true, vec![])?;
-            let vmo = zx::Vmo::create(100)?;
-            vmo.write(b"my_data", 0)?;
-            let launch_info = configure_launcher(LauncherConfigArgs {
-                bin_path: "bin/runner_lib_test",
-                name: "name",
-                args: None,
-                ns: ns,
-                job: None,
-                handle_infos: None,
-                name_infos: None,
-                environs: None,
-                launcher: &launcher_proxy,
-                loader_proxy_chan: None,
-                executable_vmo: Some(vmo),
-            })
-            .await?;
-
-            let mut bytes: [u8; 10] = [0; 10];
-            launch_info.executable.read(&mut bytes, 0)?;
-            let expected = b"my_data";
-            assert_eq!(bytes[0..expected.len()], expected[..]);
             Ok(())
         }
 
@@ -918,7 +879,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await?;
 
@@ -950,7 +910,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await?;
 
@@ -998,7 +957,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await?;
 
@@ -1034,7 +992,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await?;
 
@@ -1072,7 +1029,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: Some(c1),
-                executable_vmo: None,
             })
             .await?;
 
@@ -1118,7 +1074,6 @@ mod tests {
                 environs: None,
                 launcher: &launcher_proxy,
                 loader_proxy_chan: None,
-                executable_vmo: None,
             })
             .await?;
 

@@ -57,12 +57,6 @@ pub enum ComponentError {
     #[error("Cannot load library for {}: {}.", _0, _1)]
     LibraryLoadError(String, anyhow::Error),
 
-    #[error("Cannot load executable binary '{}': {}", _0, _1)]
-    LoadingExecutable(String, anyhow::Error),
-
-    #[error("Cannot clone vmo for test {}: {}", _0, _1)]
-    CloneVmo(String, fidl::Status),
-
     #[error("Cannot run suite server: {:?}", _0)]
     ServeSuite(anyhow::Error),
 
@@ -92,8 +86,6 @@ impl ComponentError {
             Self::MissingOutDir(_) => zx::Status::INVALID_ARGS,
             Self::MissingPkg(_) => zx::Status::INVALID_ARGS,
             Self::LibraryLoadError(_, _) => zx::Status::INVALID_ARGS,
-            Self::LoadingExecutable(_, _) => zx::Status::INVALID_ARGS,
-            Self::CloneVmo(_, _) => zx::Status::INTERNAL,
             Self::ServeSuite(_) => zx::Status::INTERNAL,
             Self::Fidl(_, _) => zx::Status::INTERNAL,
             Self::CreateJob(_) => zx::Status::INTERNAL,
@@ -139,9 +131,6 @@ pub struct Component {
 
     /// Handle to library loader cache.
     lib_loader_cache: Arc<LibraryLoaderCache>,
-
-    /// cached executable vmo.
-    executable_vmo: zx::Vmo,
 }
 
 pub struct BuilderArgs {
@@ -166,8 +155,8 @@ pub struct BuilderArgs {
 
 impl Component {
     /// Create new object using `ComponentStartInfo`.
-    /// On success returns self and outgoing_dir from `ComponentStartInfo`.
-    pub async fn new<F>(
+    /// On sucess returns self and outgoing_dir from `ComponentStartInfo`.
+    pub fn new<F>(
         start_info: fcrunner::ComponentStartInfo,
         validate_args: F,
     ) -> Result<(Self, ServerEnd<DirectoryMarker>), ComponentError>
@@ -197,11 +186,7 @@ impl Component {
         let outgoing_dir =
             start_info.outgoing_dir.ok_or_else(|| ComponentError::MissingOutDir(url.clone()))?;
 
-        let (pkg_proxy, lib_proxy) = get_pkg_and_lib_proxy(&ns, &url)?;
-
-        let executable_vmo = library_loader::load_vmo(pkg_proxy, &binary)
-            .await
-            .map_err(|e| ComponentError::LoadingExecutable(binary.clone(), e))?;
+        let lib_proxy = Arc::new(get_lib_proxy(&ns, &url)?);
 
         Ok((
             Self {
@@ -212,31 +197,20 @@ impl Component {
                 ns: ns,
                 job: job_default().create_child_job().map_err(ComponentError::CreateJob)?,
                 lib_loader_cache: Arc::new(LibraryLoaderCache {
-                    lib_proxy: lib_proxy.into(),
+                    lib_proxy,
                     load_response_map: FutMutex::new(HashMap::new()),
                 }),
-                executable_vmo,
             },
             outgoing_dir,
         ))
-    }
-
-    pub fn executable_vmo(&self) -> Result<zx::Vmo, ComponentError> {
-        self.executable_vmo
-            .duplicate_handle(zx::Rights::SAME_RIGHTS)
-            .map_err(|e| ComponentError::CloneVmo(self.url.clone(), e))
     }
 
     pub fn loader_service(&self, loader: ServerEnd<LoaderMarker>) {
         Component::serve_lib_loader(loader, Arc::downgrade(&self.lib_loader_cache))
     }
 
-    pub async fn create_for_tests(args: BuilderArgs) -> Result<Self, ComponentError> {
-        let (pkg_proxy, lib_proxy) = get_pkg_and_lib_proxy(&args.ns, &args.url)?;
-        let executable_vmo = library_loader::load_vmo(pkg_proxy, &args.binary)
-            .await
-            .map_err(|e| ComponentError::LoadingExecutable(args.url.clone(), e))?;
-
+    pub fn create_for_tests(args: BuilderArgs) -> Result<Self, ComponentError> {
+        let lib_proxy = Arc::new(get_lib_proxy(&args.ns, &args.url)?);
         Ok(Self {
             url: args.url,
             name: args.name,
@@ -245,10 +219,9 @@ impl Component {
             ns: args.ns,
             job: args.job,
             lib_loader_cache: Arc::new(LibraryLoaderCache {
-                lib_proxy: lib_proxy.into(),
+                lib_proxy,
                 load_response_map: FutMutex::new(HashMap::new()),
             }),
-            executable_vmo,
         })
     }
 
@@ -349,11 +322,7 @@ fn duplicate_vmo(vmo: &Option<zx::Vmo>) -> Result<Option<zx::Vmo>, anyhow::Error
     })
 }
 
-// returns (pkg_proxy, lib_proxy)
-fn get_pkg_and_lib_proxy<'a>(
-    ns: &'a ComponentNamespace,
-    url: &String,
-) -> Result<(&'a DirectoryProxy, DirectoryProxy), ComponentError> {
+fn get_lib_proxy(ns: &ComponentNamespace, url: &String) -> Result<DirectoryProxy, ComponentError> {
     // Locate the '/pkg' directory proxy previously added to the new component's namespace.
     let (_, pkg_proxy) = ns
         .items()
@@ -361,13 +330,12 @@ fn get_pkg_and_lib_proxy<'a>(
         .find(|(p, _)| p.as_str() == PKG_PATH)
         .ok_or_else(|| ComponentError::MissingPkg(url.clone()))?;
 
-    let lib_proxy = io_util::open_directory(
+    io_util::open_directory(
         pkg_proxy,
         &Path::new("lib"),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
-    .map_err(|e| ComponentError::LibraryLoadError(url.clone(), e))?;
-    Ok((pkg_proxy, lib_proxy))
+    .map_err(|e| ComponentError::LibraryLoadError(url.clone(), e))
 }
 
 #[async_trait]
@@ -457,7 +425,7 @@ impl ComponentRuntime {
 /// Setup and run test component in background.
 ///
 /// * `F`: Function which returns new instance of `SuiteServer`.
-pub async fn start_component<F, U, S>(
+pub fn start_component<F, U, S>(
     start_info: fcrunner::ComponentStartInfo,
     mut server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
     get_test_server: F,
@@ -470,7 +438,7 @@ where
 {
     let resolved_url = runner::get_resolved_url(&start_info).unwrap_or(String::new());
     if let Err(e) =
-        start_component_inner(start_info, &mut server_end, get_test_server, validate_args).await
+        start_component_inner(start_info, &mut server_end, get_test_server, validate_args)
     {
         // Take ownership of `server_end`.
         let server_end = take_server_end(&mut server_end);
@@ -485,7 +453,7 @@ where
     Ok(())
 }
 
-async fn start_component_inner<F, U, S>(
+fn start_component_inner<F, U, S>(
     start_info: fcrunner::ComponentStartInfo,
     server_end: &mut ServerEnd<fcrunner::ComponentControllerMarker>,
     get_test_server: F,
@@ -496,7 +464,7 @@ where
     U: 'static + Fn(&Vec<String>) -> Result<(), ArgumentError>,
     S: SuiteServer,
 {
-    let (component, outgoing_dir) = Component::new(start_info, validate_args).await?;
+    let (component, outgoing_dir) = Component::new(start_info, validate_args)?;
     let component = Arc::new(component);
 
     let job_runtime_dup = component
@@ -621,20 +589,17 @@ mod tests {
         };
     }
 
-    async fn sample_test_component() -> Result<Arc<Component>, Error> {
+    fn sample_test_component() -> Result<Arc<Component>, Error> {
         let ns = create_ns_from_current_ns(vec![("/pkg", OPEN_RIGHT_READABLE)])?;
 
-        Ok(Arc::new(
-            Component::create_for_tests(BuilderArgs {
-                url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
-                name: "test.cm".to_owned(),
-                binary: "bin/test_runners_lib_lib_test".to_owned(), //reference self binary
-                args: vec![],
-                ns: ns,
-                job: child_job!(),
-            })
-            .await?,
-        ))
+        Ok(Arc::new(Component::create_for_tests(BuilderArgs {
+            url: "fuchsia-pkg://fuchsia.com/sample_test#test.cm".to_owned(),
+            name: "test.cm".to_owned(),
+            binary: "bin/sample_tests".to_owned(),
+            args: vec![],
+            ns: ns,
+            job: child_job!(),
+        })?))
     }
 
     async fn dummy_func() -> u32 {
@@ -685,7 +650,7 @@ mod tests {
         };
         let (client_controller, server_controller) = endpoints::create_proxy().unwrap();
         let get_test_server = || DummyServer {};
-        let err = start_component(start_info, server_controller, get_test_server, |_| Ok(())).await;
+        let err = start_component(start_info, server_controller, get_test_server, |_| Ok(()));
         assert_matches!(err, Err(ComponentError::InvalidStartInfo(_)));
         assert_matches!(
             client_controller.take_event_stream().next().await,
@@ -694,13 +659,8 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn start_component_works() {
-        let _ = sample_test_component().await.unwrap();
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn component_runtime_kill_job_works() {
-        let component = sample_test_component().await.unwrap();
+        let component = sample_test_component().unwrap();
 
         let mut futs = vec![];
         let mut handles = vec![];

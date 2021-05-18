@@ -32,8 +32,8 @@ use {
     test_runners_lib::{
         cases::TestCaseInfo,
         elf::{
-            Component, ComponentError, EnumeratedTestCases, FidlError, KernelError,
-            MemoizedFutureContainer, PinnedFuture, SuiteServer,
+            Component, EnumeratedTestCases, FidlError, KernelError, MemoizedFutureContainer,
+            PinnedFuture, SuiteServer,
         },
         errors::*,
         launch,
@@ -630,13 +630,11 @@ async fn launch_component_process<E>(
     args: Vec<String>,
 ) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
 where
-    E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
+    E: From<NamespaceError> + From<launch::LaunchError>,
 {
     let (client, loader) =
         fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
     component.loader_service(loader);
-    let executable_vmo = Some(component.executable_vmo()?);
-
     Ok(launch::launch_process(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
@@ -647,7 +645,6 @@ where
         environs: None,
         handle_infos: None,
         loader_proxy_chan: Some(client.into_channel()),
-        executable_vmo,
     })
     .await?)
 }
@@ -659,7 +656,6 @@ mod tests {
         anyhow::{Context as _, Error},
         fidl_fuchsia_test::{RunListenerMarker, RunOptions, SuiteMarker},
         fio::OPEN_RIGHT_WRITABLE,
-        matches::assert_matches,
         pretty_assertions::assert_eq,
         std::fs,
         test_runners_test_lib::{
@@ -722,21 +718,20 @@ mod tests {
         }
     }
 
-    async fn sample_test_component() -> Result<Arc<Component>, Error> {
+    fn sample_test_component() -> Result<Arc<Component>, Error> {
         test_component(
             "fuchsia-pkg://fuchsia.com/sample_test#test.cm",
             "test.cm",
             "bin/gtest_runner_sample_tests",
             vec![],
         )
-        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn can_enumerate_sample_test() -> Result<(), Error> {
         let test_data = TestDataDir::new()?;
 
-        let component = sample_test_component().await?;
+        let component = sample_test_component()?;
 
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
@@ -783,25 +778,6 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn invalid_executable_file() -> Result<(), Error> {
-        let err = test_component(
-            "fuchsia-pkg://fuchsia.com/rust-test-runner-test#invalid-test.cm",
-            "bin/invalid.cm",
-            "bin/invalid",
-            vec![],
-        )
-        .await
-        .expect_err("this function should have error-ed out due to non-existent file.");
-
-        assert_matches!(
-            err.downcast::<ComponentError>().unwrap(),
-            ComponentError::LoadingExecutable(..)
-        );
-
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn can_enumerate_test_with_custom_args() -> Result<(), Error> {
         let test_data = TestDataDir::new()?;
 
@@ -810,8 +786,7 @@ mod tests {
             "test.cm",
             "bin/gtest_runner_test_with_custom_args",
             vec!["--my_custom_arg".to_owned()],
-        )
-        .await?;
+        )?;
 
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
@@ -833,8 +808,7 @@ mod tests {
             "test.cm",
             "bin/gtest_runner_no_tests",
             vec![],
-        )
-        .await?;
+        )?;
 
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
@@ -852,8 +826,7 @@ mod tests {
             "test.cm",
             "bin/huge_gtest_runner_example",
             vec![],
-        )
-        .await?;
+        )?;
 
         let server =
             TestServer::new(test_data.proxy()?, "some_name".to_owned(), "some_path".to_owned());
@@ -874,8 +847,8 @@ mod tests {
         component: Option<Arc<Component>>,
     ) -> Result<Vec<ListenerEvent>, anyhow::Error> {
         let test_data = TestDataDir::new().context("Cannot create test data")?;
-        let component = component
-            .unwrap_or(sample_test_component().await.context("Cannot create test component")?);
+        let component =
+            component.unwrap_or(sample_test_component().context("Cannot create test component")?);
         let weak_component = Arc::downgrade(&component);
         let server = TestServer::new(
             test_data.proxy().context("Cannot create test server")?,
@@ -965,8 +938,7 @@ mod tests {
             "test.cm",
             "bin/gtest_runner_test_with_custom_args",
             vec!["--my_custom_arg".to_owned()],
-        )
-        .await?;
+        )?;
 
         let events = run_tests(
             names_to_invocation(vec!["TestArg.TestArg"]),

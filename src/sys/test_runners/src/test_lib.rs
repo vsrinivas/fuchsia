@@ -260,7 +260,7 @@ fn create_ns_from_current_ns(
 }
 
 /// Create a new component object for testing purposes.
-pub async fn test_component(
+pub fn test_component(
     url: &str,
     name: &str,
     binary: &str,
@@ -274,8 +274,7 @@ pub async fn test_component(
         args,
         ns,
         job: job_default().duplicate(zx::Rights::SAME_RIGHTS)?,
-    })
-    .await?;
+    })?;
     Ok(Arc::new(component))
 }
 

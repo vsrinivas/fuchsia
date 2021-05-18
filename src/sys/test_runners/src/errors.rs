@@ -5,7 +5,7 @@
 //! Type definitions for common errors related to running component or tests.
 
 use {
-    crate::{elf::ComponentError, elf::KernelError, launch::LaunchError, logs::LogError},
+    crate::{elf::KernelError, launch::LaunchError, logs::LogError},
     fuchsia_zircon as zx,
     runner::component::ComponentNamespaceError,
     serde_json,
@@ -40,9 +40,6 @@ pub enum EnumerationError {
 
     #[error("{:?}", _0)]
     Kernel(#[from] Arc<KernelError>),
-
-    #[error("{:?}", _0)]
-    Component(#[from] Arc<ComponentError>),
 }
 
 impl From<NamespaceError> for EnumerationError {
@@ -78,12 +75,6 @@ impl From<serde_json::error::Error> for EnumerationError {
 impl From<LogError> for EnumerationError {
     fn from(e: LogError) -> Self {
         EnumerationError::Log(Arc::new(e))
-    }
-}
-
-impl From<ComponentError> for EnumerationError {
-    fn from(e: ComponentError) -> Self {
-        EnumerationError::Component(Arc::new(e))
     }
 }
 
@@ -152,9 +143,6 @@ pub enum RunTestError {
 
     #[error("error reloading list of tests: {:?}", _0)]
     EnumerationError(#[from] EnumerationError),
-
-    #[error("{:?}", _0)]
-    Component(#[from] Arc<ComponentError>),
 }
 
 /// Error encountered while calling fdio operations.
@@ -168,10 +156,4 @@ pub enum FdioError {
 
     #[error("Cannot transfer file descriptor: {:?}", _0)]
     Transfer(zx::Status),
-}
-
-impl From<ComponentError> for RunTestError {
-    fn from(e: ComponentError) -> Self {
-        RunTestError::Component(Arc::new(e))
-    }
 }

@@ -5,14 +5,9 @@
 mod test_server;
 
 use {
-    anyhow::Context as _,
-    fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
-    futures::prelude::*,
-    test_runners_lib::elf,
-    test_server::TestServer,
-    thiserror::Error,
+    anyhow::Context as _, fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs, fuchsia_syslog::fx_log_info, futures::prelude::*,
+    test_runners_lib::elf, test_server::TestServer, thiserror::Error,
 };
 
 fn main() -> Result<(), anyhow::Error> {
@@ -45,17 +40,12 @@ async fn start_runner(
     while let Some(event) = stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let url = start_info.resolved_url.clone().unwrap_or("".to_owned());
-                if let Err(e) = elf::start_component(
+                let _ = elf::start_component(
                     start_info,
                     controller,
                     TestServer::new,
                     TestServer::validate_args,
-                )
-                .await
-                {
-                    fx_log_warn!("Cannot start component '{}': {:?}", url, e)
-                };
+                );
             }
         }
     }
