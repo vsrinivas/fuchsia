@@ -74,7 +74,7 @@ impl PackageReader for PackageServerReader {
         let mut cf_v1_files: Vec<String> = Vec::new();
         let mut cf_v2_files: Vec<String> = Vec::new();
         let mut contains_meta_contents = false;
-        for item in far.list() {
+        for item in far.list().map(|e| e.path()) {
             if item == "meta/contents" {
                 contains_meta_contents = true;
             } else if item == "meta/package" {
@@ -90,7 +90,7 @@ impl PackageReader for PackageServerReader {
         }
 
         // Meta files exist directly in the FAR and aren't represented by blobs.
-        let meta_files: Vec<String> = far.list().map(String::from).collect();
+        let meta_files: Vec<String> = far.list().map(|e| e.path().to_string()).collect();
         for meta_item in meta_files {
             let meta_bytes = far.read_file(&meta_item)?;
             if let Ok(meta_contents) = str::from_utf8(&meta_bytes) {

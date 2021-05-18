@@ -225,7 +225,7 @@ impl Package {
         }
 
         // Verify all entries in the meta FAR exist and have the correct contents.
-        for path in meta_far.list().map(|s| s.to_owned()).collect::<Vec<_>>() {
+        for path in meta_far.list().map(|e| e.path().to_string()).collect::<Vec<_>>() {
             if read_file(dir, path.as_str()).await? != meta_far.read_file(path.as_str())? {
                 return Err(VerificationError::DifferentFileData { path });
             }

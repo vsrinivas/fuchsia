@@ -4,9 +4,9 @@
 
 use {
     crate::{
-        align, name::validate_name, DirectoryEntry, Error, Index, IndexEntry, CONTENT_ALIGNMENT,
-        DIRECTORY_ENTRY_LEN, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE, INDEX_ENTRY_LEN, INDEX_LEN,
-        MAGIC_INDEX_VALUE,
+        align, name::validate_name, DirectoryEntry, Entry, Error, Index, IndexEntry,
+        CONTENT_ALIGNMENT, DIRECTORY_ENTRY_LEN, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE,
+        INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
     },
     bincode::deserialize_from,
     std::{
@@ -87,8 +87,12 @@ where
     }
 
     /// Return a list of the items in the archive
-    pub fn list(&self) -> impl Iterator<Item = &str> {
-        self.directory_entries.keys().map(String::as_str)
+    pub fn list(&self) -> impl Iterator<Item = Entry<'_>> {
+        (&self.directory_entries).into_iter().map(|(k, v)| Entry {
+            path: k,
+            offset: v.data_offset,
+            length: v.data_length,
+        })
     }
 
     fn read_index(source: &mut T) -> Result<Index, Error> {
@@ -351,7 +355,11 @@ mod tests {
         let reader = Reader::new(&mut example_cursor).unwrap();
 
         let files = reader.list().collect::<Vec<_>>();
-        let want = ["a", "b", "dir/c"];
+        let want = [
+            Entry { path: "a", offset: 4096, length: 2 },
+            Entry { path: "b", offset: 8192, length: 2 },
+            Entry { path: "dir/c", offset: 12288, length: 6 },
+        ];
         assert_equal(want.iter(), &files);
     }
 

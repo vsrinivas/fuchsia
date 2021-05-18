@@ -54,7 +54,7 @@ impl DataController for PackageExtractController {
                 let mut cursor = Cursor::new(pkg_buffer);
                 let mut far = FarReader::new(&mut cursor)?;
 
-                let pkg_files: Vec<String> = far.list().map(|s| String::from(s)).collect();
+                let pkg_files: Vec<String> = far.list().map(|e| e.path().to_string()).collect();
                 // Extract all the far meta files.
                 for file_name in pkg_files.iter() {
                     let data = far.read_file(file_name)?;

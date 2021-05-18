@@ -279,7 +279,7 @@ mod test_build_with_file_system {
                 }
                 map
             };
-            let actual_far_directory_names: HashSet<&str> = reader.list().collect();
+            let actual_far_directory_names = reader.list().map(|e| e.path()).collect();
             prop_assert_eq!(expected_far_directory_names, actual_far_directory_names);
         }
 

@@ -118,6 +118,31 @@ fn align(unrounded_value: u64, multiple: u64) -> u64 {
     }
 }
 
+/// An entry in the archive, returned by Reader::list
+#[derive(Debug, PartialEq, Eq)]
+pub struct Entry<'a> {
+    path: &'a str,
+    offset: u64,
+    length: u64,
+}
+
+impl<'a> Entry<'a> {
+    /// The path of the entry.
+    pub fn path(&self) -> &'a str {
+        self.path
+    }
+
+    /// The offset in bytes of the entry's content chunk.
+    pub fn offset(&self) -> u64 {
+        self.offset
+    }
+
+    /// The length in bytes of the entry's content chunk.
+    pub fn length(&self) -> u64 {
+        self.length
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use {
