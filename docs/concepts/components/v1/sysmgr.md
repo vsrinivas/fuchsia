@@ -1,4 +1,6 @@
-# sysmgr
+# sysmgr (Components v1)
+
+<<../_v1_banner.md>>
 
 sysmgr is one of the two major pieces of Components v1 (appmgr being the other).
 It is responsible for hosting the 'sys' [realm](/docs/glossary.md#realm) that

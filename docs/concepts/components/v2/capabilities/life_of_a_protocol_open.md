@@ -1,12 +1,12 @@
-# Life of a protocol open (Components v2)
-
-<<../../_v2_banner.md>>
+# Life of a protocol open
 
 This document describes the steps that occur when a component attempts to
 connect to a protocol in its namespace.
 
-These steps apply to the components v2 model as run under component manager.
-Portions of it also apply to the components v1 model as run under appmgr.
+These steps apply to the [Components v2][glossary-components-v2] model as run
+under component manager.
+Portions of it also apply to the [Components v1][glossary-components-v1] model
+as run under appmgr.
 
 At a high level these steps are:
 
@@ -267,14 +267,16 @@ To prevent dependency cycles from occurring in component namespaces, a parent
 component cannot declare a static dependency on the protocols of its children
 with `use` declarations; it must use `BindChild()`.
 
-[ns-construction]: #constructing-a-components-namespace
-[protocol-open]: #a-component-opens-a-protocol
-[cap-routing]: #the-open-triggers-capability-routing
+[abi-system]: /docs/concepts/system/abi/system.md
 [binding]: #binding-to-a-component-and-sending-a-protocol-channel
-[handle]: /docs/concepts/kernel/handles.md
+[cap-routing]: #the-open-triggers-capability-routing
 [channel]: /docs/reference/kernel_objects/channel.md
-[namespaces]: /docs/concepts/process/namespaces.md
 [component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [fuchsia.io]: /sdk/fidl/fuchsia.io/io.fidl
-[abi-system]: /docs/concepts/system/abi/system.md
+[glossary-components-v1]: /docs/glossary.md#components-v1
+[glossary-components-v2]: /docs/glossary.md#components-v2
+[handle]: /docs/concepts/kernel/handles.md
+[namespaces]: /docs/concepts/process/namespaces.md
+[ns-construction]: #constructing-a-components-namespace
+[protocol-open]: #a-component-opens-a-protocol
 [realm.fidl]: /sdk/fidl/fuchsia.sys2/realm.fidl

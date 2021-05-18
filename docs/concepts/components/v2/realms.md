@@ -1,4 +1,4 @@
-# Realms (Components v2)
+# Realms
 
 <<../_v2_banner.md>>
 

@@ -1,4 +1,4 @@
-# Component declarations (Components v2)
+# Component declarations
 
 <<../_v2_banner.md>>
 

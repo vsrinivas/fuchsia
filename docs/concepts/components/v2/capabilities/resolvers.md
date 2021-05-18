@@ -1,4 +1,4 @@
-# Component resolvers (Components v2)
+# Component resolvers
 
 <<../../_v2_banner.md>>
 

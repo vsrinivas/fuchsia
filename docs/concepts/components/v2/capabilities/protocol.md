@@ -1,4 +1,4 @@
-# Protocol capabilities (Components v2)
+# Protocol capabilities
 
 <<../../_v2_banner.md>>
 

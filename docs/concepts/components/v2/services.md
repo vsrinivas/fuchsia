@@ -1,4 +1,4 @@
-# Services (Components v2)
+# Services
 
 <<../_v2_banner.md>>
 

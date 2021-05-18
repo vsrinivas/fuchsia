@@ -1,8 +1,7 @@
 # Component URLs {#component-urls}
 
 A component URL is a [URL][wiki-url] that locates a component, including its
-declaration, program, and assets. In [Components v2][glossary-components-v2],
-component URLs are resolved to
+declaration, program, and assets. Component URLs are resolved to
 [component declarations][doc-manifests-declaration] by a
 [resolver][doc-resolvers].
 
@@ -82,7 +81,6 @@ https://en.wikipedia.org/wiki/Hippos
 [doc-package]: /docs/concepts/packages/package.md
 [doc-package-url]: /docs/concepts/packages/package_url.md
 [doc-package-url-resource-path]: /docs/concepts/packages/package_url.md#resource-paths
-[glossary-components-v2]: /docs/glossary.md#components-v2
 [doc-runners]: v2/capabilities/runners.md
 [wiki-url]: https://en.wikipedia.org/wiki/URL
 [rfc-uri-scheme]: https://tools.ietf.org/html/rfc3986#section-3.1

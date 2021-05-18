@@ -1,4 +1,4 @@
-# Directory capabilities (Components v2)
+# Directory capabilities
 
 <<../../_v2_banner.md>>
 

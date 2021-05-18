@@ -1,4 +1,4 @@
-# Hub (Components v2)
+# Hub
 
 <<../_v2_banner.md>>
 

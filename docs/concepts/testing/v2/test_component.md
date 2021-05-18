@@ -78,7 +78,7 @@ For more information, see [Run Fuchsia tests][executing-tests].
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [glossary-component]: /docs/glossary.md#component
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
-[integration-testing]: v2_integration_testing.md
+[integration-testing]: integration_testing.md
 [test-packages]: /docs/development/components/build.md#test-packages
 [trf]: test_runner_framework.md
 [unit-tests]: /docs/development/components/build.md#unit-tests

@@ -1,4 +1,4 @@
-# Service capabilities (Components v2)
+# Service capabilities
 
 <<../../_v2_banner.md>>
 

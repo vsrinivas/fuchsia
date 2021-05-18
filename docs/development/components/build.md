@@ -1792,5 +1792,5 @@ templates. These unsupported features include:
 [source-code-layout]: /docs/concepts/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
 [test-environments]: /docs/concepts/testing/environments.md
-[v2-test-component]: /docs/concepts/testing/v2/v2_test_component.md
+[v2-test-component]: /docs/concepts/testing/v2/test_component.md
 [working-with-packages]: /docs/development/idk/documentation/packages.md

@@ -1,4 +1,4 @@
-# Monikers (Components v2)
+# Monikers
 
 <<../_v2_banner.md>>
 

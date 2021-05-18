@@ -1,4 +1,4 @@
-# Design principles (Components v2)
+# Design principles
 
 <<../_v2_banner.md>>
 

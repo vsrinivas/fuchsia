@@ -1,4 +1,4 @@
-# Component topology (Components v2)
+# Component topology
 
 <<../_v2_banner.md>>
 

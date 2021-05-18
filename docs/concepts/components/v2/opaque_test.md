@@ -1,4 +1,4 @@
-# [DEPRECATED] Hermetic testing using OpaqueTest (Components v2)
+# [DEPRECATED] Hermetic testing using OpaqueTest
 
 Warning: OpaqueTest is deprecated. Refer to [this document](/docs/concepts/testing/v2/README.md) for
 information about testing v2 components using the Test Runner Framework.

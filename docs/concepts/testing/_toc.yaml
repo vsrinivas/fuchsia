@@ -6,15 +6,6 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Testing with Components v1"
-  section:
-  - title: "Test components"
-    path: /docs/concepts/testing/v1_test_component.md
-  - title: "Testing isolated cache storage"
-    path: /docs/concepts/testing/testing_isolated_cache_storage.md
-- title: "Testing with Components v2"
-  section:
-  - include: /docs/concepts/testing/v2/_toc.yaml
 - title: "Test environments"
   path: /docs/concepts/testing/environments.md
 - title: "Scripting Layer for Fuchsia (SL4F)"

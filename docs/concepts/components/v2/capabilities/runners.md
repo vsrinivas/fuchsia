@@ -1,4 +1,4 @@
-# Component Runners (Components v2)
+# Component Runners
 
 <<../../_v2_banner.md>>
 

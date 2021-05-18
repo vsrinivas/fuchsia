@@ -1,4 +1,4 @@
-# Component lifecycle (Components v2)
+# Component lifecycle
 
 <<../_v2_banner.md>>
 

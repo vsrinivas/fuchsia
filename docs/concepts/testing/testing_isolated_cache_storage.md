@@ -1,4 +1,6 @@
-# Testing Isolated Cache Storage
+# Testing Isolated Cache Storage (Components v1)
+
+<<../components/_v1_banner.md>>
 
 A component may request that persistent storage be present in its incoming
 namespace under `/cache` by using [the `isolated-cache-storage`

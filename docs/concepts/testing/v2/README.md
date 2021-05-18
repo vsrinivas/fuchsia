@@ -1,4 +1,4 @@
-# Testing with Components v2
+# Testing with Components
 
 [Component Framework][cfv2] is responsible for running units of sandboxed
 software, or components, and facilitating their interaction.
@@ -8,11 +8,11 @@ capabilities exchanged between components.
 
 You can find more information below:
 
-*   [Test components](v2_test_component.md): defining a component that
+*   [Test components](test_component.md): defining a component that
     implements a test, and running it in isolation from the rest of the system.
 *   [Test Runner Framework](test_runner_framework.md): writing idiomatic tests
     in different languages and using common testing frameworks.
-*   [Complex topologies and integration testing](v2_integration_testing.md):
+*   [Complex topologies and integration testing](integration_testing.md):
     testing interactions between multiple components.
 
 [cfv2]: /docs/concepts/components/v2/README.md

@@ -1,4 +1,4 @@
-# Introduction to the Fuchsia component framework (Components v2)
+# Introduction to Fuchsia components
 
 <<../_v2_banner.md>>
 
@@ -131,7 +131,6 @@ There are only a few exceptions, notably:
 [doc-topology]: /docs/concepts/components/v2/topology.md
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-capability]: /docs/glossary.md#capability
-[glossary-components-v1]: /docs/glossary.md#components-v1
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [wiki-component-based-software]: https://en.wikipedia.org/wiki/Component-based_software_engineering
 [wiki-separation-of-concerns]: https://en.wikipedia.org/wiki/Separation_of_concerns

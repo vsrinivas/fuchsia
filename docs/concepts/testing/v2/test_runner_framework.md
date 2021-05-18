@@ -312,7 +312,7 @@ Components in the test realm may play various roles in the test, as follows:
 [ffx]: /docs/development/tools/ffx/overview.md
 [fx-test]: https://fuchsia.dev/reference/tools/fx/cmd/test
 [inclusive]: /docs/concepts/principles/inclusive.md
-[integration-testing]: /docs/concepts/testing/v2/v2_integration_testing.md
+[integration-testing]: /docs/concepts/testing/v2/integration_testing.md
 [manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [runners]: /docs/concepts/components/v2/capabilities/runners.md

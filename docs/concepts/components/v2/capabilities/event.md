@@ -1,4 +1,4 @@
-# Event capabilities (Components v2) {#event-capabilities}
+# Event capabilities {#event-capabilities}
 
 <<../../_v2_banner.md>>
 

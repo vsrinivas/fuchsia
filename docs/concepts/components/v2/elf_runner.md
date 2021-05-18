@@ -1,4 +1,4 @@
-# ELF Runner (Components v2)
+# ELF Runner
 
 <<../_v2_banner.md>>
 
@@ -22,7 +22,7 @@ To use the ELF runner, the component must add a `program` block, containing:
 - (optionally) program arguments that should be used.
 
 The ELF runner receives instructions from the `program` section of the
-[component manifest][glossary-component-manifests]. The `binary` field holds the
+[component manifest][component-manifests]. The `binary` field holds the
 path to an executable file in the package the manifest comes from, and the
 `args` field holds any additional string arguments that should be provided to
 the process when it is created.
@@ -104,6 +104,7 @@ For more information, see [fxb-72178] and [fxb-72764] respectively.
 [use]: /docs/glossary.md#use
 [capability-routing]: component_manifests.md#capability-routing
 [cml-shards]: component_manifests.md#include
+[component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [glossary-components]: /docs/glossary.md#component
 [lc-example]: /examples/components/basic/src/lifecycle_full.rs
 [lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl
@@ -113,6 +114,3 @@ For more information, see [fxb-72178] and [fxb-72764] respectively.
 [fxb-72178]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72178
 [fxb-72764]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72764
 [logsink]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
-
-<!-- TODO: the component manifest link describes v1 manifests -->
-[glossary-component-manifests]: /docs/glossary.md#component-manifest

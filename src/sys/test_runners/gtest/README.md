@@ -61,6 +61,6 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
-[override-parallel]: /docs/concepts/testing/v2_test_component.md#running_test_cases_in_parallel
+[override-parallel]: /docs/concepts/testing/v2/test_component.md#running_test_cases_in_parallel
 [passing-arguments]: /docs/concepts/testing/v2/test_runner_framework.md#passing_arguments
 

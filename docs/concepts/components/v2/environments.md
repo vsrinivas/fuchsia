@@ -1,4 +1,4 @@
-# Environments (Components v2)
+# Environments
 
 <<../_v2_banner.md>>
 

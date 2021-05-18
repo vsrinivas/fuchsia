@@ -1,4 +1,4 @@
-# Component manifests (Components v2) {#component-manifests}
+# Component manifests {#component-manifests}
 
 <<../_v2_banner.md>>
 
@@ -725,7 +725,6 @@ This section may be omitted.
 [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
-[doc-legacy-manifest]: /docs/concepts/components/v1/component_manifests.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
 [doc-package-url]: /docs/concepts/packages/package_url.md

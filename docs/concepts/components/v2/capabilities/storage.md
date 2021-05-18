@@ -1,4 +1,4 @@
-# Storage capabilities (Components v2)
+# Storage capabilities
 
 <<../../_v2_banner.md>>
 

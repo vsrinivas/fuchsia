@@ -1,7 +1,8 @@
-Note: This document pertains to [Components v1][cfv1]
-Your component is v1 if its [manifest][manifest] ends in `.cmx`.  
-A migration from Components v1 to v2 is [in progress][migration].
+Caution: This document pertains to [legacy components][legacy-components].
+Legacy components contain a [manifest][manifest] that ends in `.cmx`.
+If you are still using legacy components, consider [migrating][migration] to
+the modern component framework.
 
-[cfv1]: /docs/glossary.md#components-v1
+[legacy-components]: /docs/concepts/components/v1/README.md
 [manifest]: /docs/glossary.md#component-manifest
-[migration]: /docs/concepts/components/v2/migration.md
+[migration]: /docs/development/components/v2/migration.md
