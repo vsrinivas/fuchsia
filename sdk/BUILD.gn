@@ -260,9 +260,6 @@ sdk_molecule("fidl") {
 sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
-  # TODO: Move to cross_compiled once it's possible to cross-compile them.
-  not_cross_compiled = [ "//tools/fidlcat:fidlcat_sdk" ]
-
   cross_compiled = [
     "tools:symbolize_sdk",
     "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
@@ -284,6 +281,7 @@ sdk_molecule("host_tools") {
     "//tools/symbolizer:sdk",
     "//tools/fidl/fidlc:fidl-format_sdk",
     "//tools/fidl/fidlc:fidlc_sdk",
+    "//tools/fidlcat:fidlcat_sdk",
     "//zircon/tools/merkleroot:merkleroot_sdk",
     "//zircon/tools/minfs:minfs_sdk",
     "//zircon/tools/zbi:zbi_sdk",
@@ -306,15 +304,6 @@ sdk_molecule("host_tools") {
       deps += [ "$dep($toolchain)" ]
       if (toolchain == host_toolchain) {
         deps += [ "${dep}_legacy($toolchain)" ]
-      }
-    }
-
-    if (toolchain == host_toolchain) {
-      foreach(dep, not_cross_compiled) {
-        deps += [
-          "$dep($toolchain)",
-          "${dep}_legacy($toolchain)",
-        ]
       }
     }
   }
@@ -432,6 +421,7 @@ if (is_host) {
       "//tools/fidl/fidlc:fidl-format_sdk",
       "//tools/fidl/fidlc:fidlc_sdk",
       "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
+      "//tools/fidlcat:fidlcat_sdk",
       "//tools/fvdl:fvdl_sdk",
       "//tools/net/device-finder:device-finder_sdk",
       "//tools/symbol-index:symbol_index_sdk",
@@ -440,11 +430,6 @@ if (is_host) {
       "//zircon/tools/minfs:minfs_sdk",
       "//zircon/tools/zbi:zbi_sdk",
     ]
-
-    # These tools can't currently be cross-compiled.
-    if (current_toolchain == host_toolchain) {
-      deps += [ "//tools/fidlcat:fidlcat_sdk" ]
-    }
   }
 }
 

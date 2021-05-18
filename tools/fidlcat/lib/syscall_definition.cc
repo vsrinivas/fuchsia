@@ -18,6 +18,17 @@
 #include "tools/fidlcat/lib/statistics.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
+// ZX_PROP_REGISTER_GS and ZX_PROP_REGISTER_FS which are used by zx_object_set_property are defined
+// in <zircon/system/public/zircon/syscalls/object.h> but only available for amd64.
+// We need these values in all the environments.
+#ifndef ZX_PROP_REGISTER_GS
+#define ZX_PROP_REGISTER_GS ((uint32_t)2u)
+#endif
+
+#ifndef ZX_PROP_REGISTER_FS
+#define ZX_PROP_REGISTER_FS ((uint32_t)4u)
+#endif
+
 namespace fidlcat {
 
 class ZxChannelCallArgs {

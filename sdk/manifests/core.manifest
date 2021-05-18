@@ -172,6 +172,7 @@ sdk://tools/arm64/fconfig
 sdk://tools/arm64/ffx
 sdk://tools/arm64/fidl-format
 sdk://tools/arm64/fidlc
+sdk://tools/arm64/fidlcat
 sdk://tools/arm64/fidlgen
 sdk://tools/arm64/fpublish
 sdk://tools/arm64/fserve

@@ -7,6 +7,7 @@ sdk://tools/arm64/far
 sdk://tools/arm64/ffx
 sdk://tools/arm64/fidl-format
 sdk://tools/arm64/fidlc
+sdk://tools/arm64/fidlcat
 sdk://tools/arm64/fidlgen
 sdk://tools/arm64/fvdl
 sdk://tools/arm64/fvm
