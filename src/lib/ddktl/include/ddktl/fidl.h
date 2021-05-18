@@ -121,6 +121,9 @@ class DdkTransaction : public fidl::Transaction {
     return status_;
   }
 
+  void set_status(zx_status_t status) { status_ = status; }
+  fidl_txn_t* fidl_txn() { return connection_.Txn(); }
+
  protected:
   zx_status_t Reply(fidl::OutgoingMessage* message) final {
     if (closed_) {

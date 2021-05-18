@@ -222,8 +222,10 @@ zx_status_t AmlThermal::ThermalConnect(zx::channel chan) {
   return st;
 }
 
-zx_status_t AmlThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
+void AmlThermal::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
+  txn.set_status(
+      fuchsia_hardware_thermal_Device_dispatch(this, txn.fidl_txn(), &message, &fidl_ops));
 }
 
 zx_status_t AmlThermal::GetInfo(fidl_txn_t* txn) {

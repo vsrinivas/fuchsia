@@ -571,12 +571,13 @@ zx_status_t fidl_RunTests(void*, fidl_txn_t* txn) {
   return fuchsia_device_test_DeviceRunTests_reply(txn, ZX_OK, &driver->report());
 }
 
-zx_status_t ProtocolTestDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+void ProtocolTestDriver::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
   static const fuchsia_device_test_Test_ops_t kOps = {
       .RunTests = fidl_RunTests,
   };
 
-  return fuchsia_device_test_Test_dispatch(this, txn, msg, &kOps);
+  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
+  txn.set_status(fuchsia_device_test_Test_dispatch(this, txn.fidl_txn(), &message, &kOps));
 }
 
 static zx_status_t pci_test_driver_bind(void* ctx, zx_device_t* parent) {

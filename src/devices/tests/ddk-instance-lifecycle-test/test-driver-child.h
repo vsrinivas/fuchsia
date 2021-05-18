@@ -12,7 +12,7 @@
 #include <ddktl/fidl.h>
 
 class TestLifecycleDriverChild;
-using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::MessageableOld,
+using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::MessageableManual,
                                ddk::Openable, ddk::Closable>;
 using fuchsia_device_instancelifecycle_test::Lifecycle;
 
@@ -37,7 +37,7 @@ class TestLifecycleDriverChild : public DeviceType {
     ZX_PANIC("DdkClose reached in device that only returns instances\n");
   }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
     ZX_PANIC("DdkMessage reached in device that only returns instances\n");
   }
 

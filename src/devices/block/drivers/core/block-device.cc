@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/operation/block.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -30,7 +31,6 @@
 #include <limits>
 #include <new>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -44,7 +44,7 @@ class BlockDevice;
 namespace {
 
 using storage_metrics::BlockDeviceMetrics;
-using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::MessageableOld,
+using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::MessageableManual,
                                     ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable>;
 
 struct StatsCookie {
@@ -81,7 +81,7 @@ class BlockDevice : public BlockDeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
   zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();
@@ -231,13 +231,17 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   }
 }
 
-zx_status_t BlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+void BlockDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
   if (parent_volume_protocol_.is_valid()) {
-    return fuchsia_hardware_block_volume_Volume_dispatch(this, txn, msg, VolumeOps());
+    txn.set_status(
+        fuchsia_hardware_block_volume_Volume_dispatch(this, txn.fidl_txn(), &message, VolumeOps()));
   } else if (parent_partition_protocol_.is_valid()) {
-    return fuchsia_hardware_block_partition_Partition_dispatch(this, txn, msg, PartitionOps());
+    txn.set_status(fuchsia_hardware_block_partition_Partition_dispatch(this, txn.fidl_txn(),
+                                                                       &message, PartitionOps()));
   } else {
-    return fuchsia_hardware_block_Block_dispatch(this, txn, msg, BlockOps());
+    txn.set_status(
+        fuchsia_hardware_block_Block_dispatch(this, txn.fidl_txn(), &message, BlockOps()));
   }
 }
 

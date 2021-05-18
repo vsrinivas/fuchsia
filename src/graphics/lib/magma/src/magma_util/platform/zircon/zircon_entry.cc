@@ -38,7 +38,8 @@ class GpuDevice;
 
 using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
-using DdkDeviceType = ddk::Device<GpuDevice, ddk::MessageableOld, ddk::Unbindable, ddk::Initializable>;
+using DdkDeviceType =
+    ddk::Device<GpuDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
 
 class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
                   public DdkDeviceType,
@@ -199,7 +200,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
   }
 
   void DdkInit(ddk::InitTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -249,15 +250,14 @@ void GpuDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t GpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+void GpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
   if (!magma_system_device_) {
     MAGMA_LOG(WARNING, "Got message on torn-down device");
-    return ZX_ERR_BAD_STATE;
+    txn.set_status(ZX_ERR_BAD_STATE);
+    return;
   }
 
-  DdkTransaction ddk_transaction(txn);
-  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, msg, &ddk_transaction);
-  return ddk_transaction.Status();
+  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, std::move(msg), &txn);
 }
 
 void GpuDevice::DdkRelease() {

@@ -89,9 +89,6 @@
 // |                          |                                                    |
 // | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
 // |                          |                                                    |
-// | ddk::MessageableOld      | zx_status_t DdkMessage(fidl_incoming_msg_t* msg,   |
-// |                          |                        fidl_txn_t* txn)            |
-// |                          |                                                    |
 // +--------------------------+----------------------------------------------------+
 //
 //
@@ -307,20 +304,6 @@ class MessageableManual : public base_mixin {
     DdkTransaction transaction(txn);
     static_cast<D*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg), transaction);
     return transaction.Status();
-  }
-};
-
-template <typename D>
-class MessageableOld : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckMessageableOld<D>();
-    proto->message = Message;
-  }
-
- private:
-  static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    return static_cast<D*>(ctx)->DdkMessage(msg, txn);
   }
 };
 

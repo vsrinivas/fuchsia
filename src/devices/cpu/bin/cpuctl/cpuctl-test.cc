@@ -28,7 +28,7 @@ constexpr uint32_t kNumLogicalCores = 4;
 constexpr uint64_t kLogicalCoreIds[kNumLogicalCores] = {1, 2, 3, 4};
 
 class FakeCpuDevice;
-using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::MessageableOld, ddk::PerformanceTunable>;
+using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::MessageableManual, ddk::PerformanceTunable>;
 
 class FakeCpuDevice : TestDeviceType,
                       fidl::WireServer<cpuctrl::Device>,
@@ -44,7 +44,7 @@ class FakeCpuDevice : TestDeviceType,
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx::channel& GetMessengerChannel() { return messenger_.local(); }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
   void DdkRelease() {}
 
   zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state) {
@@ -112,18 +112,17 @@ zx_status_t FakeCpuDevice::Init() {
 }
 
 zx_status_t FakeCpuDevice::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return static_cast<FakeCpuDevice*>(ctx)->DdkMessage(msg, txn);
+  DdkTransaction transaction(txn);
+  static_cast<FakeCpuDevice*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg),
+                                               transaction);
+  return transaction.Status();
 }
 
-zx_status_t FakeCpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  auto incoming_msg = fidl::IncomingMessage::FromEncodedCMessage(msg);
-  if (fidl::WireTryDispatch<cpuctrl::Device>(this, incoming_msg, &transaction) ==
-      ::fidl::DispatchResult::kFound) {
-    return transaction.Status();
+void FakeCpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  if (fidl::WireTryDispatch<cpuctrl::Device>(this, msg, &txn) == ::fidl::DispatchResult::kFound) {
+    return;
   }
-  fidl::WireDispatch<fuchsia_device::Controller>(this, std::move(incoming_msg), &transaction);
-  return transaction.Status();
+  fidl::WireDispatch<fuchsia_device::Controller>(this, std::move(msg), &txn);
 }
 
 void FakeCpuDevice::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,

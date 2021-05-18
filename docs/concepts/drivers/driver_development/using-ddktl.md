@@ -25,6 +25,7 @@ Mixin class            | Function             | Purpose
 `ddk::PerformanceTunable` | **DdkSetPerformanceState()**   | to transition the performant state
 `ddk::AutoSuspendable`    | **DdkConfigureAutoSuspend()**   | to configure whether a driver can auto suspend the device
 `ddk::Rxrpcable`          | **DdkRxrpc()**       | remote messages for bus devices
+`ddk::MessageableManual   | **DdkMessage()**     | for FIDL IPC messages
 
 For completeness, the following mixins are also provided, but have been deprecated:
 
@@ -34,7 +35,6 @@ Deprecated Mixin class      | Function             | Purpose
 `ddk::Writable`             | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`           | **DdkGetSize()**     | returns size of device
 `ddk::UnbindableDeprecated` | **DdkUnbindDeprecated()**   | called when this device is being removed
-`ddk::MessageableOld`       | **DdkMessage()**     | for FIDL IPC messages
 
 These mixins correspond to the functions defined in the
 [`zx_protocol_device_t`](/src/lib/ddk/include/lib/ddk/device.h#74) struct

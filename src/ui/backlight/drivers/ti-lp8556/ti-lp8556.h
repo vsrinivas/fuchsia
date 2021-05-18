@@ -59,7 +59,7 @@ constexpr int kNumBacklightDriverChannels = 6;
 constexpr int kMilliampPerAmp = 1000;
 
 class Lp8556Device;
-using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::MessageableManual>;
 namespace FidlBacklight = fuchsia_hardware_backlight;
 namespace FidlPowerSensor = fuchsia_hardware_power_sensor;
 
@@ -89,7 +89,7 @@ class Lp8556Device : public DeviceType,
   // Methods required by the ddk mixins
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
+  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
 
   zx_status_t GetBacklightState(bool* power, double* brightness);
   zx_status_t SetBacklightState(bool power, double brightness);

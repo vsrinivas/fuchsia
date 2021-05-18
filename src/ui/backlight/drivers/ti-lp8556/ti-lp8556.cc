@@ -269,15 +269,12 @@ void Lp8556Device::GetPowerWatts(GetPowerWattsRequestView request,
   completer.ReplySuccess(backlight_power_);
 }
 
-zx_status_t Lp8556Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  auto incoming_msg = fidl::IncomingMessage::FromEncodedCMessage(msg);
-  if (fidl::WireTryDispatch<FidlBacklight::Device>(this, incoming_msg, &transaction) ==
+void Lp8556Device::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  if (fidl::WireTryDispatch<FidlBacklight::Device>(this, msg, &txn) ==
       ::fidl::DispatchResult::kFound) {
-    return transaction.Status();
+    return;
   }
-  fidl::WireDispatch<FidlPowerSensor::Device>(this, std::move(incoming_msg), &transaction);
-  return transaction.Status();
+  fidl::WireDispatch<FidlPowerSensor::Device>(this, std::move(msg), &txn);
 }
 
 zx_status_t Lp8556Device::Init() {

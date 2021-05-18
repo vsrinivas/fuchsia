@@ -5,6 +5,7 @@
 #include "mtk-thermal.h"
 
 #include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <zircon/rights.h>
@@ -13,7 +14,6 @@
 #include <cmath>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <soc/mt8167/mt8167-hw.h>
@@ -405,8 +405,10 @@ zx_status_t MtkThermal::SetDvfsOpp(uint16_t op_idx) {
   return ZX_OK;
 }
 
-zx_status_t MtkThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_Device_dispatch(this, txn, msg, &fidl_ops);
+void MtkThermal::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
+  txn.set_status(
+      fuchsia_hardware_thermal_Device_dispatch(this, txn.fidl_txn(), &message, &fidl_ops));
 }
 
 zx_status_t MtkThermal::GetInfo(fidl_txn_t* txn) {

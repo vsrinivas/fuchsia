@@ -67,8 +67,8 @@ BEGIN_SUCCESS_CASE(GetSizable)
 zx_off_t DdkGetSize() { return 0; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(MessageableOld)
-zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) { return ZX_OK; }
+BEGIN_SUCCESS_CASE(MessageableManual)
+void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {}
 END_SUCCESS_CASE
 
 class TestMessageable;

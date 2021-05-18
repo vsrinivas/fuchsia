@@ -49,7 +49,10 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
 
     const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
                                fidl_txn_t* txn) -> zx_status_t {
-      return static_cast<Lp8556Device*>(ctx)->DdkMessage(msg, txn);
+      DdkTransaction transaction(txn);
+      static_cast<Lp8556Device*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg),
+                                                  transaction);
+      return transaction.Status();
     };
     ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));
     ASSERT_OK(loop_.StartThread("lp8556-client-thread"));
