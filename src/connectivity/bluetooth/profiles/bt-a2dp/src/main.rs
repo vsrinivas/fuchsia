@@ -568,7 +568,7 @@ async fn main() -> Result<(), Error> {
 
     // The AVRCP Target component is needed if it is requested and A2DP Source is requested.
     let _avrcp_target = if config.enable_source && config.enable_avrcp_target {
-        avrcp_target::launch()
+        avrcp_target::start_avrcp_target()
             .await
             .or_else(|e| {
                 warn!("Couldn't launch AVRCP target: {}", e);
