@@ -100,12 +100,12 @@ used as the GN build target name. GN-style paths are supported (//src/sys).
 The last segment of the path must start with an alphabetic character and be
 followed by zero or more alphanumeric characters, or the `-` character.",
     example = "To create a new component project:
-    $ fx create component v2 --path <project-path> --lang rust
+    $ fx create component --path <project-path> --lang rust
 
 Supports the following project types:
-    create component v2   # CML-based component launched by Component Manager
-    create component v1   # CMX-based component launched by appmgr
-    create driver         # Driver launched in a devhost"
+    create component        # CML-based component launched by Component Manager
+    create component legacy # CMX-based component launched by appmgr
+    create driver           # Driver launched in a devhost"
 )]
 struct CreateArgs {
     /// type of the newly created project.
@@ -253,8 +253,8 @@ impl fmt::Display for Language {
 /// `out/default/host-tools/create_templates/templates.json`:
 /// ```json
 /// [
-///     "component-v2/BUILD.gn.tmpl-rust",
-///     "component-v2/src/main.rs.tmpl-rust"
+///     "component-default/BUILD.gn.tmpl-rust",
+///     "component-default/src/main.rs.tmpl-rust"
 /// ]
 /// ```
 ///
@@ -346,7 +346,7 @@ struct TemplateArgs {
     /// Reference from a template with `{{PROJECT_PATH}}`.
     project_path: String,
 
-    /// The project-type, as specified on the command line. E.g. 'component-v2'.
+    /// The project-type, as specified on the command line. E.g. 'component-default'.
     project_type: String,
 }
 
@@ -667,7 +667,7 @@ mod tests {
             copyright_year: "2020".to_string(),
             project_name: "foo".to_string(),
             project_path: "bar/foo".to_string(),
-            project_type: "component-v2".to_string(),
+            project_type: "component".to_string(),
         };
 
         let rendered =
@@ -687,8 +687,7 @@ mod tests {
                         entries.insert(
                             "file.h".to_string(),
                             Box::new(RenderedTree::File(
-                                "#include \"bar/foo/file.h\"\n// `fx create component-v2`"
-                                    .to_string(),
+                                "#include \"bar/foo/file.h\"\n// `fx create component`".to_string(),
                             )),
                         );
                         entries
@@ -711,13 +710,13 @@ mod tests {
     fn template_tree_from_file_list() {
         let mut files = HashMap::new();
         files.insert(
-            Path::new("create-templates/component-v2/main.cc.tmpl-cpp"),
+            Path::new("create-templates/component-default/main.cc.tmpl-cpp"),
             r#"{{PROJECT_NAME}}"#,
         );
         let tree = TemplateTree::from_file_list(
             Path::new("create-templates"),
-            &vec![PathBuf::from("component-v2/main.cc.tmpl-cpp")],
-            "component-v2",
+            &vec![PathBuf::from("component-default/main.cc.tmpl-cpp")],
+            "component-default",
             &files,
         )
         .expect("failed");
@@ -731,27 +730,27 @@ mod tests {
             Path::new("create-templates/templates.json"),
             r#"[
                 "_partial.tmpl",
-                "component-v2/_partial.tmpl",
-                "component-v2/src/main.rs.tmpl-rust",
-                "component-v1/_partial.tmpl"
+                "component-default/_partial.tmpl",
+                "component-default/src/main.rs.tmpl-rust",
+                "component-legacy/_partial.tmpl"
             ]"#,
         );
         files.insert(Path::new("create-templates/_partial.tmpl"), r#"root {{PROJECT_NAME}}"#);
         files.insert(
-            Path::new("create-templates/component-v2/_partial.tmpl"),
-            r#"component-v2 {{PROJECT_NAME}}"#,
+            Path::new("create-templates/component-default/_partial.tmpl"),
+            r#"component {{PROJECT_NAME}}"#,
         );
         files.insert(
-            Path::new("create-templates/component-v2/src/main.rs.tmpl-rust"),
-            r#"component-v2 {{PROJECT_NAME}}"#,
+            Path::new("create-templates/component-default/src/main.rs.tmpl-rust"),
+            r#"component {{PROJECT_NAME}}"#,
         );
         files.insert(
-            Path::new("create-templates/component-v1/_partial.tmpl"),
-            r#"component-v1 {{PROJECT_NAME}}"#,
+            Path::new("create-templates/component-legacy/_partial.tmpl"),
+            r#"component-legacy {{PROJECT_NAME}}"#,
         );
         let mut files = find_template_files(
             Path::new("create-templates/templates.json"),
-            "component-v2",
+            "component-default",
             &Language::Rust,
             &files,
         )
@@ -762,8 +761,8 @@ mod tests {
             &files,
             &[
                 PathBuf::from("_partial.tmpl"),
-                PathBuf::from("component-v2/_partial.tmpl"),
-                PathBuf::from("component-v2/src/main.rs.tmpl-rust"),
+                PathBuf::from("component-default/_partial.tmpl"),
+                PathBuf::from("component-default/src/main.rs.tmpl-rust"),
             ],
         );
     }
@@ -773,13 +772,13 @@ mod tests {
         let mut files = HashMap::new();
         files.insert(Path::new("create-templates/_partial.tmpl"), r#"root {{PROJECT_NAME}}"#);
         files.insert(
-            Path::new("create-templates/component-v2/_partial.tmpl"),
-            r#"component-v2 {{PROJECT_NAME}}"#,
+            Path::new("create-templates/component-default/_partial.tmpl"),
+            r#"component {{PROJECT_NAME}}"#,
         );
         let file_list = vec![
             PathBuf::from("_partial.tmpl"),
-            PathBuf::from("component-v2/_partial.tmpl"),
-            PathBuf::from("component-v2/src/main.rs.tmpl-rust"),
+            PathBuf::from("component-default/_partial.tmpl"),
+            PathBuf::from("component-default/src/main.rs.tmpl-rust"),
         ];
         let mut handlebars = Handlebars::new();
         register_partial_templates(
@@ -791,7 +790,7 @@ mod tests {
         .expect("failed");
         let registered_templates = handlebars.get_templates();
         assert!(registered_templates.contains_key("partial"));
-        assert!(registered_templates.contains_key("component-v2/partial"));
+        assert!(registered_templates.contains_key("component-default/partial"));
         assert_eq!(registered_templates.len(), 2);
 
         let mut args = HashMap::new();
@@ -802,9 +801,9 @@ mod tests {
         );
         assert_eq!(
             handlebars
-                .render_template("{{>component-v2/partial}}", &args)
+                .render_template("{{>component-default/partial}}", &args)
                 .expect("failed to render"),
-            "component-v2 foo"
+            "component foo"
         );
     }
 }

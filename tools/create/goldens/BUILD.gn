@@ -41,7 +41,7 @@ group("tests") {
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v1-rust") {
   project_type = "component"
-  project_subtype = "v1"
+  project_subtype = "legacy"
   language = "rust"
   golden_files = [
     "my-component-v1-rust/BUILD.gn",
@@ -55,7 +55,7 @@ golden_test("my-component-v1-rust") {
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v1-cpp") {
   project_type = "component"
-  project_subtype = "v1"
+  project_subtype = "legacy"
   language = "cpp"
   golden_files = [
     "my-component-v1-cpp/BUILD.gn",
@@ -72,7 +72,6 @@ golden_test("my-component-v1-cpp") {
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v2-cpp") {
   project_type = "component"
-  project_subtype = "v2"
   language = "cpp"
   golden_files = [
     "my-component-v2-cpp/BUILD.gn",
@@ -90,7 +89,6 @@ golden_test("my-component-v2-cpp") {
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v2-rust") {
   project_type = "component"
-  project_subtype = "v2"
   language = "rust"
   golden_files = [
     "my-component-v2-rust/BUILD.gn",

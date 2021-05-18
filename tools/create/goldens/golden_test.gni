@@ -30,7 +30,6 @@ import("//build/testing/host_test_data.gni")
 #
 #   golden_test("my-component-v2-cpp") {
 #     project_type = "component"
-#     project_subtype = "v2"
 #     language = "cpp"
 #     golden_files = [
 #       "my-component-v2-cpp/BUILD.gn",
