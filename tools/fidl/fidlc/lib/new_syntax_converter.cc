@@ -8,6 +8,8 @@
 
 namespace fidl::conv {
 
+namespace {
+
 // Until FTP-033 is fully implemented, it is possible for "strict" types to not
 // have an actual "strict" keyword preceding them (ie, "strict union U {...}"
 // and "union U {...}" are represented identically in the raw AST).  This
@@ -54,7 +56,7 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& nam
       // should just assume the underlying type is a handle.
       return UnderlyingType(flat::Type::Kind::kHandle, is_behind_alias);
     }
-    return UnderlyingType(decl_ptr->kind, is_behind_alias);
+    return UnderlyingType(decl_ptr, is_behind_alias);
   }
 
   auto type_alias_ptr = static_cast<const flat::TypeAlias*>(decl_ptr);
@@ -68,7 +70,7 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& nam
 
 // Matches a string keyword to the "builtin" representing the FIDL-native type
 // it represents.
-std::optional<UnderlyingType> resolve_as_user_defined_type(const std::string& keyword) {
+std::optional<UnderlyingType> resolve_as_builtin_type(const std::string& keyword) {
   const flat::Typespace root = flat::Typespace::RootTypes(nullptr);
   const flat::Name instrinsic = flat::Name::CreateIntrinsic(keyword);
   const flat::TypeTemplate* t = root.LookupTemplate(instrinsic, fidl::utils::Syntax::kOld);
@@ -114,7 +116,7 @@ std::optional<UnderlyingType> resolve_identifier(const std::unique_ptr<raw::Iden
   if (underlying_type) {
     return underlying_type;
   }
-  return resolve_as_user_defined_type(type_decl);
+  return resolve_as_builtin_type(type_decl);
 }
 
 // Lookup the definition of a type's "key" identifier (ie, "vector" in the
@@ -148,6 +150,69 @@ std::optional<UnderlyingType> resolve_type(
   // library after all.  Go ahead and look for it in our current library.
   return resolve_identifier(id->components.back(), lib);
 }
+
+bool is_resource(const std::unique_ptr<raw::TypeConstructorOld>& type_ctor,
+                 const flat::Library* lib) {
+  // handle types with arguments: recurse into the argument type
+  if (type_ctor->maybe_arg_type_ctor)
+    return is_resource(type_ctor->maybe_arg_type_ctor, lib);
+
+  // handle builtin types
+  auto underlying_type = resolve_type(type_ctor, lib);
+  switch (underlying_type->kind()) {
+    case UnderlyingType::Kind::kHandle:
+    case UnderlyingType::Kind::kProtocol:
+      return true;
+    case UnderlyingType::Kind::kPrimitive:
+    case UnderlyingType::Kind::kString:
+      return false;
+    case UnderlyingType::Kind::kRequestHandle:
+    case UnderlyingType::Kind::kVector:
+    case UnderlyingType::Kind::kArray:
+      assert(false && "types with arguments should be handled by the recursive call above");
+      __builtin_unreachable();
+    case UnderlyingType::Kind::kStruct:
+    case UnderlyingType::Kind::kOther:
+      break;
+  }
+
+  // handle user defined types
+  const auto* decl = underlying_type->maybe_decl();
+  assert(decl != nullptr &&
+         "non user-defined types should be handled by the underlying type switch above");
+  switch (decl->kind) {
+    case flat::Decl::Kind::kBits:
+    case flat::Decl::Kind::kEnum:
+      return false;
+    case flat::Decl::Kind::kStruct: {
+      const auto* struct_decl = static_cast<const flat::Struct*>(decl);
+      assert(struct_decl->resourceness.has_value() && "compiled decl must have resourceness");
+      return *struct_decl->resourceness == types::Resourceness::kResource;
+    }
+    case flat::Decl::Kind::kUnion: {
+      const auto* union_decl = static_cast<const flat::Union*>(decl);
+      assert(union_decl->resourceness.has_value() && "compiled decl must have resourceness");
+      return *union_decl->resourceness == types::Resourceness::kResource;
+    }
+    case flat::Decl::Kind::kTable: {
+      const auto* table_decl = static_cast<const flat::Table*>(decl);
+      return table_decl->resourceness == types::Resourceness::kResource;
+    }
+    case flat::Decl::Kind::kProtocol:
+    case flat::Decl::Kind::kResource:
+    case flat::Decl::Kind::kService:
+    case flat::Decl::Kind::kConst:
+    case flat::Decl::Kind::kTypeAlias:
+      // protocol, resource: should be handled in switch statement above
+      // service, const: can't be used as type
+      // alias: underlying type should always be fully resolved
+      assert(false && "shouldn't get here");
+      __builtin_unreachable();
+  }
+  return false;
+}
+
+}  // namespace
 
 std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(
     const std::unique_ptr<raw::TypeConstructorOld>& type_ctor) {
@@ -407,11 +472,11 @@ void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember
 
 void ConvertingTreeVisitor::OnTypeConstructorOld(
     const std::unique_ptr<raw::TypeConstructorOld>& element) {
-  std::optional<UnderlyingType> underlying_type = resolve(element);
-  if (in_parameter_list_ && underlying_type->kind() == UnderlyingType::Kind::kHandle) {
+  if (in_parameter_list_ && is_resource(element, library_)) {
     in_resourced_parameter_list_ = true;
   }
 
+  std::optional<UnderlyingType> underlying_type = resolve(element);
   // We should never get a null Builtin - if we do, there is a mistake in the
   // converter code.  Failing this assert means we are looking at an
   // identifier that is neither explicitly defined in the source, nor

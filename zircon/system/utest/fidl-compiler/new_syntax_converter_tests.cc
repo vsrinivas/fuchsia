@@ -1196,6 +1196,35 @@ protocol Foo {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+TEST(ConverterTests, ProtocolWithTransitiveResource) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource table ResourceType {
+  1: reserved;
+};
+
+protocol Foo {
+  DoFoo(ResourceType data);
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type ResourceType = resource table {
+  1: reserved;
+};
+
+protocol Foo {
+  DoFoo(resource struct { data ResourceType; });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, ResourceDeclaration) {
   std::string old_version = R"FIDL(
 library example;

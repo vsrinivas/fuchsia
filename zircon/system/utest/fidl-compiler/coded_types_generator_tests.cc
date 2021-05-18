@@ -207,8 +207,7 @@ protocol UseOfProtocol {
     Call(SomeProtocol arg);
 };
 )FIDL");
-  // TODO(fcz): re-enable in new syntax after fixing converter bug
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 
@@ -248,8 +247,7 @@ protocol UseOfRequestOfProtocol {
     Call(request<SomeProtocol> arg);
 };
 )FIDL");
-  // TODO(fcz): re-enable in new syntax after fixing converter bug
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
 

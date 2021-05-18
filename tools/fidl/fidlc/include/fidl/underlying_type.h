@@ -23,6 +23,8 @@ class UnderlyingType {
     kRequestHandle,
     kStruct,
     kVector,
+    kPrimitive,
+    kString,
     kOther,
   };
 
@@ -45,14 +47,20 @@ class UnderlyingType {
       case flat::Type::Kind::kVector:
         kind_ = Kind::kVector;
         break;
+      case flat::Type::Kind::kString:
+        kind_ = Kind::kString;
+        break;
+      case flat::Type::Kind::kPrimitive:
+        kind_ = Kind::kPrimitive;
+        break;
       default:
         kind_ = Kind::kOther;
     }
   }
 
-  constexpr explicit UnderlyingType(flat::Decl::Kind decl_kind, bool is_behind_alias)
-      : kind_(Kind::kOther), is_behind_alias_(is_behind_alias) {
-    switch (decl_kind) {
+  constexpr explicit UnderlyingType(const flat::Decl* decl, bool is_behind_alias)
+      : kind_(Kind::kOther), is_behind_alias_(is_behind_alias), maybe_decl_(decl) {
+    switch (decl->kind) {
       case flat::Decl::Kind::kProtocol:
         kind_ = Kind::kProtocol;
         break;
@@ -66,10 +74,12 @@ class UnderlyingType {
 
   [[nodiscard]] constexpr Kind kind() const { return kind_; }
   [[nodiscard]] constexpr bool is_behind_alias() const { return is_behind_alias_; }
+  [[nodiscard]] constexpr const flat::Decl* maybe_decl() const { return maybe_decl_; }
 
  private:
   Kind kind_;
   bool is_behind_alias_;
+  const flat::Decl* maybe_decl_ = nullptr;
 };
 
 }  // namespace fidl::conv

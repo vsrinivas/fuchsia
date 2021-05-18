@@ -174,8 +174,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    // TODO(fcz): re-enable in new syntax after fixing converter bug
-    ASSERT_COMPILED(library);
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
 
@@ -218,8 +217,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    // TODO(fcz): re-enable in new syntax after fixing converter bug
-    ASSERT_COMPILED(library);
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(3, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
@@ -249,8 +247,7 @@ struct #Payload# {
 
 )FIDL");
     TestLibrary library(source);
-    // TODO(fcz): re-enable in new syntax after fixing converter bug
-    ASSERT_COMPILED(library);
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
@@ -281,8 +278,7 @@ struct #Payload# {
 
 )FIDL");
     TestLibrary library(source);
-    // TODO(fcz): re-enable in new syntax after fixing converter bug
-    ASSERT_COMPILED(library);
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
 
