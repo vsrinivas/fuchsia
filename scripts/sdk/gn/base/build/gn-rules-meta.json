@@ -6,6 +6,7 @@
     "build/cmc.gni",
     "build/config/BUILD.gn",
     "build/config/config.gni",
+    "build/enable_coverage_data.cmx",
     "build/fuchsia_sdk_pkg.gni",
     "build/gn_run_binary.py",
     "build/fidl_library.gni",
