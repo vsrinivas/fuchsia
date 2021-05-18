@@ -184,6 +184,22 @@ struct ClientCompositionOp {
     ClientCompositionOpcode opcode;
 };
 
+resource struct DisplayFence {
+    /// The internal event object to signal.
+    zx.handle:EVENT event;
+
+    /// A bitmap indicating the scope of displays the event will affect.
+    /// Each bit in `displays` represents a display in an array defined
+    /// elsewhere (e.g. for ApplyConfig2(), the array is `display_ids`.)
+    uint64 displays;
+};
+
+/// Maximum number of `displays` supported in an ApplyConfig2() call.
+const uint64 APPLY_CONFIG_MAX_DISPLAYS = 32;
+
+/// Maximum number of `signal_fences` supported in an ApplyConfig2() call.
+const uint64 APPLY_CONFIG_MAX_SIGNAL_FENCES = 32;
+
 /// Provider for display controllers.
 ///
 /// The driver supports two simultaneous clients - a primary client and a virtcon
@@ -484,6 +500,38 @@ protocol Controller {
     // fail, so the client should ensure its configuration is valid with
     // CheckConfig.
     ApplyConfig();
+
+    /// Applies any pending changes to the current configuration. This will
+    /// not apply pending changes to layers which are not on any display.
+    ///
+    /// For each `event` in `signal_fences`, once the pending configuration is
+    /// applied to and contents are displayed on all the displays in its
+    /// `displays` bitmap, the fence signal will be signaled immediately.
+    ///
+    /// Arguments
+    ///
+    ///   `display_ids`:
+    ///     Lists all display IDs which are used on the incoming configuration.
+    ///     Each display ID represents the corresponding bit in the `display`
+    ///     field of `signal_fences`.
+    ///
+    ///   `signal_fences`:
+    ///     Stores all fence events that will be signaled once the configuration
+    ///     is applied and display scopes of each event. See the definition of
+    ///     `DisplayFences` for details.
+    ///
+    /// Error handling
+    ///
+    ///     If the input is invalid, for example:
+    ///         - `signal_fences` contains invalid events
+    ///         - `display` has bits referring to display ID `INVALID_DISP_ID`.
+    ///     or the pending configuration cannot be applied, this call will
+    ///     silently fail, so the client should ensure its configuration is
+    ///     valid with CheckConfig().
+    [Transitional]
+    ApplyConfig2(
+        vector<uint64>:APPLY_CONFIG_MAX_DISPLAYS display_ids,
+        vector<DisplayFence>:APPLY_CONFIG_MAX_SIGNAL_FENCES signal_fences);
 
     // Sets whether or not vsync events will be given to this client. Defaults
     // to false.
