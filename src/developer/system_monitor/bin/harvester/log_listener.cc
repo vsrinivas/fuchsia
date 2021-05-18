@@ -62,7 +62,7 @@ void LogListener::GetLogData(
 
         // "An empty vector implies that the data hierarchy has been fully
         // iterated".
-        // https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#fuchsia.diagnostics/BatchIterator.GetNext
+        // https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#BatchIterator.GetNext
         if (batch.empty()) {
           FX_LOGS(INFO) << "Done getting logs.";
           completer.complete_ok();

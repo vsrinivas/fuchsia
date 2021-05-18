@@ -48,7 +48,7 @@ element's view][example-present-view].
 [example-present-view]: /docs/development/sessions/roles-and-responsibilities.md#presenting-an-elements-view
 [`fuchsia.element.GraphicalPresenter`]: https://fuchsia.dev/reference/fidl/fuchsia.element#GraphicalPresenter
 [Graphical Presenter]: /docs/glossary.md#graphical-presenter
-[`PresentView()`]: https://fuchsia.dev/reference/fidl/fuchsia.element#fuchsia.element/GraphicalPresenter.PresentView
+[`PresentView()`]: https://fuchsia.dev/reference/fidl/fuchsia.element#GraphicalPresenter.PresentView
 [`Scenic`]: /docs/glossary.md#scenic
 [session]: /docs/glossary.md#session
 [`ViewController`]: /docs/glossary.md#view-controller

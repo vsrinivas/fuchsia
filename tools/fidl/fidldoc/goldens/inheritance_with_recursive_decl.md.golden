@@ -9,7 +9,7 @@
 *Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=7)*
 
 
-### First {#fidl.test.inheritancewithrecursivedecl/Child.First}
+### First {#Child.First}
 
 
 #### Request
@@ -24,7 +24,7 @@
 
 
 
-### Second {#fidl.test.inheritancewithrecursivedecl/Child.Second}
+### Second {#Child.Second}
 
 
 #### Request
@@ -43,7 +43,7 @@
 *Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=3)*
 
 
-### First {#fidl.test.inheritancewithrecursivedecl/Parent.First}
+### First {#Parent.First}
 
 
 #### Request

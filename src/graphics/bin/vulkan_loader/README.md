@@ -99,7 +99,7 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 the system. It is only temporary and will be removed once libvulkan.so has
 been converted to use a newer mechanism to identify ICDs.
 
-[GetIcdList]: https://fuchsia.dev/reference/fidl/fuchsia.gpu.magma?hl=en#fuchsia.gpu.magma/Device.GetIcdList
+[GetIcdList]: https://fuchsia.dev/reference/fidl/fuchsia.gpu.magma#Device.GetIcdList
 [VMO]: /docs/glossary.md#virtual-memory-object
 [ICD]: /docs/concepts/system/abi/system.md#vulkan-icd
 [runner]: /docs/concepts/components/v2/capabilities/runners.md

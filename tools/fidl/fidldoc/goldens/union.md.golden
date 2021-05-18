@@ -9,7 +9,7 @@
 *Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=127)*
 
 
-### FlexibleXUnionHenceResponseMustBeHeapAllocated {#fidl.test.union/TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated}
+### FlexibleXUnionHenceResponseMustBeHeapAllocated {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated}
 
 
 #### Request
@@ -28,7 +28,7 @@
             </td>
         </tr></table>
 
-### StrictXUnionHenceResponseMayBeStackAllocated {#fidl.test.union/TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated}
+### StrictXUnionHenceResponseMayBeStackAllocated {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated}
 
 
 #### Request

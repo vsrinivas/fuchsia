@@ -9,7 +9,7 @@
 *Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
 
 
-### foo {#fidl.test.error/Example.foo}
+### foo {#Example.foo}
 
 
 #### Request

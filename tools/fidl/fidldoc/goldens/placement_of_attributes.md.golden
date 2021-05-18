@@ -9,7 +9,7 @@
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=22)*
 
 
-### Method {#fidl.test.placementofattributes/ExampleProtocol.Method}
+### Method {#ExampleProtocol.Method}
 
 
 #### Request

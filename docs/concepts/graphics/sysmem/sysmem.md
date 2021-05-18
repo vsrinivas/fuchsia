@@ -176,7 +176,7 @@ collection.
 [HeapType]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#HeapType
 [ImageFormat]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#ImageFormat_2
 [SingleBufferSettings]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#SingleBufferSettings
-[duplicates]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollectionToken.Duplicate
+[duplicates]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollectionToken.Duplicate
 [Allocator]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#Allocator
 [BufferCollectionToken]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollectionToken
 [BufferCollection]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollection
@@ -184,10 +184,10 @@ collection.
 [pmt]: /docs/reference/kernel_objects/pinned_memory_token.md
 [vmo_create_child]: /docs/reference/syscalls/vmo_create_child.md
 [handles]: /docs/concepts/kernel/handles.md
-[bind]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/Allocator.BindSharedCollection
-[setconstraints]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollection.SetConstraints
+[bind]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#Allocator.BindSharedCollection
+[setconstraints]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollection.SetConstraints
 [fidl]: /docs/development/languages/fidl/README.md
 [map]: /docs/reference/syscalls/vmar_map.md
 [constraints]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollectionConstraints
-[AttachToken]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollection.AttachToken
-[SetDispensable]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollectionToken.SetDispensable
+[AttachToken]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollection.AttachToken
+[SetDispensable]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollectionToken.SetDispensable

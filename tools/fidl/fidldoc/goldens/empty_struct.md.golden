@@ -9,7 +9,7 @@
 *Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=6)*
 
 
-### Receive {#fidl.test.emptystruct/EmptyProtocol.Receive}
+### Receive {#EmptyProtocol.Receive}
 
 
 
@@ -24,7 +24,7 @@
             </td>
         </tr></table>
 
-### Send {#fidl.test.emptystruct/EmptyProtocol.Send}
+### Send {#EmptyProtocol.Send}
 
 
 #### Request
@@ -39,7 +39,7 @@
 
 
 
-### SendAndReceive {#fidl.test.emptystruct/EmptyProtocol.SendAndReceive}
+### SendAndReceive {#EmptyProtocol.SendAndReceive}
 
 
 #### Request

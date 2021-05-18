@@ -282,7 +282,7 @@ of having the client pass a forgeable debug name.
 [sysmem]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem
 [HeapType]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#HeapType
 [BufferMemorySettings]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferMemorySettings
-[SetName]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollection.SetName
+[SetName]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollection.SetName
 [inspect]: /docs/development/diagnostics/inspect
 [FEMU]: /docs/concepts/emulator/index.md
 [DRM]: https://en.wikipedia.org/wiki/Digital_rights_management

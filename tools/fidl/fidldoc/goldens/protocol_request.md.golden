@@ -13,7 +13,7 @@
 *Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=6)*
 
 
-### GetChild {#fidl.test.protocolrequest/Parent.GetChild}
+### GetChild {#Parent.GetChild}
 
 
 #### Request
@@ -32,7 +32,7 @@
             </td>
         </tr></table>
 
-### GetChildRequest {#fidl.test.protocolrequest/Parent.GetChildRequest}
+### GetChildRequest {#Parent.GetChildRequest}
 
 
 #### Request
@@ -51,7 +51,7 @@
             </td>
         </tr></table>
 
-### TakeChild {#fidl.test.protocolrequest/Parent.TakeChild}
+### TakeChild {#Parent.TakeChild}
 
 
 #### Request
@@ -66,7 +66,7 @@
 
 
 
-### TakeChildRequest {#fidl.test.protocolrequest/Parent.TakeChildRequest}
+### TakeChildRequest {#Parent.TakeChildRequest}
 
 
 #### Request

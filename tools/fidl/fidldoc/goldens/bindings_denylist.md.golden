@@ -13,7 +13,7 @@
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=38)*
 
 
-### LibfuzzerNeedsNonemptyProtocol {#fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol}
+### LibfuzzerNeedsNonemptyProtocol {#OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol}
 
 
 #### Request

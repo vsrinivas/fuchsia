@@ -26,7 +26,7 @@ There is no notion of installing a package in fuchsia and likewise no notion of
 deleting a package. Rather, garbage collection can be thought of as a means to
 reclaim space. Garbage collection can be triggered manually by running `pkgctl gc`
 or it can be triggered by the `system-updater`. The implementation of garbage
-collection uses the [`fuchsia.space/Manager` protocol](https://fuchsia.dev/reference/fidl/fuchsia.space?hl=en#fuchsia.space/Manager.Gc). The `system-updater` trigger
+collection uses the [`fuchsia.space/Manager` protocol](https://fuchsia.dev/reference/fidl/fuchsia.space#Manager.Gc). The `system-updater` trigger
 happens twice; once before a system update and once after fetching the [update package](update_pkg.md).
 
 The `pkgfs` garbage collector currently uses set differences to determine which

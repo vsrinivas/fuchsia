@@ -9,7 +9,7 @@
 *Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=7)*
 
 
-### foo {#fidl.test.inheritance/sub.foo}
+### foo {#sub.foo}
 
 
 #### Request
@@ -37,7 +37,7 @@
 *Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
 
 
-### foo {#fidl.test.inheritance/super.foo}
+### foo {#super.foo}
 
 
 #### Request
