@@ -83,13 +83,13 @@ impl FxVolume {
     }
 
     /// Marks the given directory deleted.
-    pub fn mark_directory_deleted(&self, object_id: u64) {
+    pub fn mark_directory_deleted(&self, object_id: u64, name: &str) {
         if let Some(node) = self.cache.get(object_id) {
             // It's possible that node is a placeholder, in which case we don't need to wait for it
             // to be resolved because it should be blocked behind the locks that are held by the
             // caller, and once they're dropped, it'll be found to be deleted via the tree.
             if let Ok(dir) = node.into_any().downcast::<FxDirectory>() {
-                dir.set_deleted(true);
+                dir.set_deleted(name);
             }
         }
     }
@@ -210,10 +210,13 @@ impl FilesystemRename for FxVolume {
         moved_node.set_parent(dst_dir.clone());
 
         if let Some(object_id) = old_dir_oid {
-            transaction.commit_with_callback(|| self.mark_directory_deleted(object_id)).await;
+            transaction.commit_with_callback(|| self.mark_directory_deleted(object_id, dst)).await;
+            dst_dir.did_remove(dst);
         } else {
             transaction.commit().await;
         }
+        src_dir.did_remove(src);
+        dst_dir.did_add(dst);
         Ok(())
     }
 }

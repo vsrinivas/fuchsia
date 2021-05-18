@@ -121,15 +121,18 @@ TEST_P(WatcherTest, Add) {
 }
 
 TEST_P(WatcherTest, Existing) {
+  // This test currently makes assumptions about the order in which entries are returned.  For now,
+  // it creates entries in alphabetical order, which happens to work on filesystems we currently
+  // support.
   ASSERT_EQ(mkdir(GetPath("dir").c_str(), 0666), 0);
   DIR* dir = opendir(GetPath("dir").c_str());
   ASSERT_NE(dir, nullptr);
 
   // Create a couple files in the directory
-  fbl::unique_fd fd(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT));
+  fbl::unique_fd fd(open(GetPath("dir/bar").c_str(), O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  fd.reset(open(GetPath("dir/bar").c_str(), O_RDWR | O_CREAT));
+  fd.reset(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
 
@@ -151,17 +154,17 @@ TEST_P(WatcherTest, Existing) {
 
   // The channel should see the contents of the directory
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, ".", fio::wire::kWatchEventExisting));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventExisting));
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "bar", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventExisting));
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "", fio::wire::kWatchEventIdle));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // Now, if we choose to add additional files, they'll show up separately
   // with an "ADD" event.
-  fd.reset(open(GetPath("dir/baz").c_str(), O_RDWR | O_CREAT));
+  fd.reset(open(GetPath("dir/goo").c_str(), O_RDWR | O_CREAT));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "baz", fio::wire::kWatchEventAdded));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "goo", fio::wire::kWatchEventAdded));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // If we create a secondary watcher with the "EXISTING" request, we'll
@@ -177,17 +180,17 @@ TEST_P(WatcherTest, Existing) {
   WatchBuffer wb2;
   memset(&wb2, 0, sizeof(wb2));
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, ".", fio::wire::kWatchEventExisting));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "foo", fio::wire::kWatchEventExisting));
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "bar", fio::wire::kWatchEventExisting));
-  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "baz", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "foo", fio::wire::kWatchEventExisting));
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "goo", fio::wire::kWatchEventExisting));
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb2, client2, "", fio::wire::kWatchEventIdle));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb2, client2));
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // Clean up
-  ASSERT_EQ(unlink(GetPath("dir/foo").c_str()), 0);
   ASSERT_EQ(unlink(GetPath("dir/bar").c_str()), 0);
-  ASSERT_EQ(unlink(GetPath("dir/baz").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir/foo").c_str()), 0);
+  ASSERT_EQ(unlink(GetPath("dir/goo").c_str()), 0);
 
   // There shouldn't be anything else sitting around on either channel
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
@@ -240,6 +243,55 @@ TEST_P(WatcherTest, Removed) {
   caller.release().release();
   ASSERT_EQ(closedir(dir), 0);
   ASSERT_EQ(rmdir(GetPath("dir").c_str()), 0) << errno;
+}
+
+TEST_P(WatcherTest, DirectoryDeleted) {
+  if (fs().GetTraits().name != "fxfs") {
+    // TODO(fxbug.dev/76762): Minfs and fatfs don't support WATCH_EVENT_DELETED
+    std::cout << "Skipping " << fs().GetTraits().name << std::endl;
+    return;
+  }
+  std::string dir_name = GetPath("dir");
+  ASSERT_EQ(mkdir(dir_name.c_str(), 0666), 0);
+  DIR* dir = opendir(dir_name.c_str());
+  ASSERT_NE(dir, nullptr);
+
+  {
+    zx::channel client, server;
+    ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+    fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+    auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
+                            .Watch(fio::wire::kWatchMaskDeleted, 0, std::move(server));
+    ASSERT_EQ(watch_result.status(), ZX_OK);
+    ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
+    std::string dir2_name = GetPath("dir2");
+    ASSERT_EQ(mkdir(dir2_name.c_str(), 0666), 0);
+
+    // Renaming over a directory should generate a deleted directory event.
+    ASSERT_EQ(rename(dir2_name.c_str(), dir_name.c_str()), 0);
+
+    WatchBuffer wb = {};
+    ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "dir", fio::wire::kWatchEventDeleted));
+  }
+
+  closedir(dir);
+  dir = opendir(dir_name.c_str());
+  ASSERT_NE(dir, nullptr);
+  zx::channel client, server;
+  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
+  auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
+                          .Watch(fio::wire::kWatchMaskDeleted, 0, std::move(server));
+  ASSERT_EQ(watch_result.status(), ZX_OK);
+  ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
+
+  // Unlinking a directory should generate a deleted directory event.
+  ASSERT_EQ(rmdir(dir_name.c_str()), 0);
+
+  WatchBuffer wb = {};
+  ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "dir", fio::wire::kWatchEventDeleted));
+
+  closedir(dir);
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, WatcherTest, testing::ValuesIn(AllTestFilesystems()),

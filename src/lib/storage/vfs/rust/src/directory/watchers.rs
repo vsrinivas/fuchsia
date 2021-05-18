@@ -20,7 +20,7 @@ use {fuchsia_async::Channel, slab::Slab, std::sync::Arc};
 /// Wraps all watcher connections observing one directory.  The directory is responsible for
 /// calling [`Self::add()`] and [`Self::send_event()`] method when appropriate to make sure
 /// watchers are observing a consistent view.
-pub struct Watchers(Slab<Controller>);
+pub struct Watchers(Slab<Arc<Controller>>);
 
 impl Watchers {
     /// Constructs a new Watchers instance with no connected watchers.
@@ -36,7 +36,7 @@ impl Watchers {
     /// Return value of `None` means the executor did not accept a new task, so the watcher has
     /// been dropped.
     ///
-    /// NOTE The reason `add` can not send both events on it's own by consuming an
+    /// NOTE The reason `add` can not send both events on its own by consuming an
     /// [`EventProducer`] is because a lazy directory needs async context to generate a list of
     /// it's entries.  Meaning we need a async version of the [`EventProducer`] - and that is a lot
     /// of additional managing of functions and state.  Traits do not support async methods yet, so
@@ -50,7 +50,7 @@ impl Watchers {
         directory: Arc<dyn Directory>,
         mask: u32,
         channel: Channel,
-    ) -> &mut Controller {
+    ) -> Arc<Controller> {
         let entry = self.0.vacant_entry();
         let key = entry.key();
 
@@ -60,8 +60,8 @@ impl Watchers {
             directory.unregister_watcher(key);
         };
 
-        let controller = watcher::new(scope, mask, channel, done);
-        entry.insert(controller)
+        let controller = Arc::new(watcher::new(scope, mask, channel, done));
+        entry.insert(controller).clone()
     }
 
     /// Informs all the connected watchers about the specified event.  While `mask` and `event`
@@ -77,7 +77,7 @@ impl Watchers {
         while producer.prepare_for_next_buffer() {
             let mut consumed_any = false;
 
-            for (_key, controller) in self.0.iter_mut() {
+            for (_key, controller) in self.0.iter() {
                 controller.send_buffer(producer.mask(), || {
                     consumed_any = true;
                     producer.buffer()

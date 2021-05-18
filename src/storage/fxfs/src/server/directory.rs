@@ -26,6 +26,7 @@ use {
     fidl_fuchsia_io::{
         self as fio, NodeAttributes, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
         OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
+        WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
@@ -45,6 +46,7 @@ use {
             entry_container::{AsyncGetEntry, Directory, MutableDirectory},
             mutable::connection::io1::MutableConnection,
             traversal_position::TraversalPosition,
+            watchers::{event_producers::SingleNameEventProducer, Watchers},
         },
         execution_scope::ExecutionScope,
         filesystem::Filesystem,
@@ -58,6 +60,7 @@ pub struct FxDirectory {
     parent: Option<Mutex<Arc<FxDirectory>>>,
     directory: object_store::Directory<FxVolume>,
     is_deleted: AtomicBool,
+    watchers: Mutex<Watchers>,
 }
 
 impl FxDirectory {
@@ -69,6 +72,7 @@ impl FxDirectory {
             parent: parent.map(|p| Mutex::new(p)),
             directory,
             is_deleted: AtomicBool::new(false),
+            watchers: Mutex::new(Watchers::new()),
         }
     }
 
@@ -88,8 +92,9 @@ impl FxDirectory {
         self.is_deleted.load(Ordering::Relaxed)
     }
 
-    pub fn set_deleted(&self, v: bool) {
-        self.is_deleted.store(v, Ordering::Relaxed);
+    pub fn set_deleted(&self, name: &str) {
+        self.is_deleted.store(true, Ordering::Relaxed);
+        self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::deleted(name));
     }
 
     /// Acquires a transaction with the appropriate locks to unlink |name|. Returns the transaction,
@@ -210,6 +215,7 @@ impl FxDirectory {
                         {
                             p.commit(&node);
                             transaction.commit().await;
+                            current_dir.did_add(name);
                         } else {
                             // We created a node, but the object ID was already used in the cache,
                             // which suggests a object ID was reused (which would either be a bug or
@@ -285,6 +291,16 @@ impl FxDirectory {
         Ok(None)
     }
 
+    /// Called to indicate a file or directory was removed from this directory.
+    pub(crate) fn did_remove(&self, name: &str) {
+        self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::removed(name));
+    }
+
+    /// Called to indicate a file or directory was added to this directory.
+    pub(crate) fn did_add(&self, name: &str) {
+        self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::added(name));
+    }
+
     // TODO(jfsulliv): Change the VFS to send in &Arc<Self> so we don't need this.
     async fn as_strong(&self) -> Arc<Self> {
         self.volume()
@@ -340,11 +356,12 @@ impl MutableDirectory for FxDirectory {
             this.replace_child(&mut transaction, name, None).await.map_err(map_to_status)?;
         if let Some(object_id) = existing_dir_oid {
             transaction
-                .commit_with_callback(|| self.volume().mark_directory_deleted(object_id))
+                .commit_with_callback(|| self.volume().mark_directory_deleted(object_id, name))
                 .await;
         } else {
             transaction.commit().await;
         }
+        self.did_remove(name);
         Ok(())
     }
 
@@ -514,16 +531,49 @@ impl Directory for FxDirectory {
 
     fn register_watcher(
         self: Arc<Self>,
-        _scope: ExecutionScope,
-        _mask: u32,
-        _channel: fasync::Channel,
+        scope: ExecutionScope,
+        mask: u32,
+        channel: fasync::Channel,
     ) -> Result<(), Status> {
-        // TODO(jfsulliv): Implement
-        Err(Status::NOT_SUPPORTED)
+        let controller =
+            self.watchers.lock().unwrap().add(scope.clone(), self.clone(), mask, channel);
+        if mask & WATCH_MASK_EXISTING != 0 && !self.is_deleted() {
+            scope.spawn(async move {
+                let layer_set = self.store().tree().layer_set();
+                let mut merger = layer_set.merger();
+                let mut iter = match self.directory.iter_from(&mut merger, "").await {
+                    Ok(iter) => iter,
+                    Err(e) => {
+                        log::error!(
+                            "encountered error {} whilst trying to iterate directory for watch",
+                            e
+                        );
+                        // TODO(csuter): This really should close the watcher connection with
+                        // an epitaph so that the watcher knows.
+                        return;
+                    }
+                };
+                // TODO(csuter): It is possible that we'll duplicate entries that are added as we
+                // iterate over directories.  I suspect fixing this might be non-trivial.
+                controller.send_event(&mut SingleNameEventProducer::existing("."));
+                while let Some((name, _, _)) = iter.get() {
+                    controller.send_event(&mut SingleNameEventProducer::existing(name));
+                    if let Err(e) = iter.advance().await {
+                        log::error!(
+                            "encountered error {} whilst trying to iterate directory for watch",
+                            e
+                        );
+                        return;
+                    }
+                }
+                controller.send_event(&mut SingleNameEventProducer::idle());
+            });
+        }
+        Ok(())
     }
 
-    fn unregister_watcher(self: Arc<Self>, _key: usize) {
-        // TODO(jfsulliv): Implement
+    fn unregister_watcher(self: Arc<Self>, key: usize) {
+        self.watchers.lock().unwrap().remove(key);
     }
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {

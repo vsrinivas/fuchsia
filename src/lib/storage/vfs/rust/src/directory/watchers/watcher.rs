@@ -71,7 +71,7 @@ impl Controller {
     /// Sends a buffer to the connected watcher.  `mask` specifies the type of the event the buffer
     /// is for.  If the watcher mask does not include the event specified by the `mask` then the
     /// buffer is not sent and `buffer` is not even invoked.
-    pub(crate) fn send_buffer(&mut self, mask: u32, buffer: impl FnOnce() -> Vec<u8>) {
+    pub(crate) fn send_buffer(&self, mask: u32, buffer: impl FnOnce() -> Vec<u8>) {
         if self.mask & mask == 0 {
             return;
         }
@@ -91,7 +91,7 @@ impl Controller {
     /// watcher mask does not specify that it needs to receive this event, then the producer is not
     /// used and `false` is returned.  If the producers mask and the watcher mask overlap, then
     /// `true` is returned (even if the producer did not generate a single buffer).
-    pub fn send_event(&mut self, producer: &mut dyn EventProducer) -> bool {
+    pub fn send_event(&self, producer: &mut dyn EventProducer) -> bool {
         if self.mask & producer.mask() == 0 {
             return false;
         }
@@ -115,7 +115,7 @@ impl Controller {
     /// immediately, after sending a command that still need to be processed by the watcher task.
     /// It is the responsibility of the watcher task to remove the controller from the list of
     /// controllers in the [`EntryContainer`] this controller was added to.
-    pub(crate) fn disconnect(&mut self) {
+    pub(crate) fn disconnect(&self) {
         if self.commands.unbounded_send(Command::Disconnect).is_ok() {
             return;
         }

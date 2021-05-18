@@ -184,6 +184,12 @@ impl SingleNameEventProducer {
         Self::new(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, name)
     }
 
+    /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
+    /// type `WATCH_EVENT_EXISTING`.
+    pub fn existing(name: &str) -> Self {
+        Self::new(WATCH_MASK_EXISTING, WATCH_EVENT_EXISTING, name)
+    }
+
     /// Constructs a new [`SingleNameEventProducer`] that will produce an `WATCH_EVENT_IDLE` event.
     pub fn idle() -> Self {
         Self::new(WATCH_MASK_IDLE, WATCH_EVENT_IDLE, "")
