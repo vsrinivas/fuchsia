@@ -5,15 +5,25 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-fuchsia_unittest_package("fdio-unittest-package") {
+fuchsia_unittest_component("fdio-gtest-component") {
+  deps = [ ":fdio-gtest" ]
+}
+
+fuchsia_unittest_component("fdio-zxtest-component") {
   manifest = "meta/fdio_test.cmx"
   deps = [
     ":accept-child",
     ":chroot-child",
-    ":fdio-gtest",
     ":fdio-test",
     ":hello-world",
     ":null-namespace-child",
+  ]
+}
+
+fuchsia_test_package("fdio-unittest-package") {
+  test_components = [
+    ":fdio-gtest-component",
+    ":fdio-zxtest-component",
   ]
 }
 
@@ -100,8 +110,8 @@ test("fdio-gtest") {
   sources = [ "fdio_socketpair.cc" ]
 
   deps = [
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]
 }
