@@ -417,20 +417,20 @@ pub fn spinel_packed(
 
 // `syn`-style datastructure for the input to the `spinel_write`.
 struct PackInput {
-    pub writer: syn::Expr,
-    pub comma_token1: Token![,],
-    pub format: syn::LitStr,
-    pub comma_token2: Token![,],
-    pub args: Punctuated<syn::Expr, Token![,]>,
+    writer: syn::Expr,
+    _comma_token1: Token![,],
+    format: syn::LitStr,
+    _comma_token2: Token![,],
+    args: Punctuated<syn::Expr, Token![,]>,
 }
 
 impl Parse for PackInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         Ok(PackInput {
             writer: input.parse()?,
-            comma_token1: input.parse()?,
+            _comma_token1: input.parse()?,
             format: input.parse()?,
-            comma_token2: input.parse()?,
+            _comma_token2: input.parse()?,
             args: Punctuated::parse_terminated(input)?,
         })
     }
@@ -496,16 +496,16 @@ pub fn spinel_write(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
 // `syn`-style datastructure for the input to the `spinel_write_len`.
 struct PackLenInput {
-    pub format: syn::LitStr,
-    pub comma_token: Token![,],
-    pub args: Punctuated<syn::Expr, Token![,]>,
+    format: syn::LitStr,
+    _comma_token: Token![,],
+    args: Punctuated<syn::Expr, Token![,]>,
 }
 
 impl Parse for PackLenInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         Ok(PackLenInput {
             format: input.parse()?,
-            comma_token: input.parse()?,
+            _comma_token: input.parse()?,
             args: Punctuated::parse_terminated(input)?,
         })
     }
@@ -566,20 +566,20 @@ pub fn spinel_write_len(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 
 // `syn`-style datastructure for the input to the `spinel_read`.
 struct UnpackInput {
-    pub reader: syn::Expr,
-    pub comma_token1: Token![,],
-    pub format: syn::LitStr,
-    pub comma_token2: Token![,],
-    pub args: Punctuated<syn::Expr, Token![,]>,
+    reader: syn::Expr,
+    _comma_token1: Token![,],
+    format: syn::LitStr,
+    _comma_token2: Token![,],
+    args: Punctuated<syn::Expr, Token![,]>,
 }
 
 impl Parse for UnpackInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         Ok(UnpackInput {
             reader: input.parse()?,
-            comma_token1: input.parse()?,
+            _comma_token1: input.parse()?,
             format: input.parse()?,
-            comma_token2: input.parse()?,
+            _comma_token2: input.parse()?,
             args: Punctuated::parse_terminated(input)?,
         })
     }
