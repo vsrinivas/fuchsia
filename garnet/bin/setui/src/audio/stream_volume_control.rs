@@ -44,6 +44,11 @@ pub struct StreamVolumeControl {
 impl Drop for StreamVolumeControl {
     fn drop(&mut self) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
+            // Do not signal exit if receiver is already closed.
+            if exit_tx.is_closed() {
+                return;
+            }
+
             // Consider panic! is likely to be abort in the drop method, only log info for
             // unbounded_send failure.
             exit_tx

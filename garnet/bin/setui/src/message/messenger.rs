@@ -145,6 +145,11 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Messenger<P,
     /// method to be used for immediate actions (forwarding, observing) and
     /// deferred actions as well (sending, replying).
     pub(super) fn transmit(&self, action: MessageAction<P, A, R>, beacon: Option<Beacon<P, A, R>>) {
+        // Do not transmit if the message hub has exited.
+        if self.action_tx.is_closed() {
+            return;
+        }
+
         // Log info. transmit is called by forward. However, forward might fail if there is no next
         // Messenger exists.
         self.action_tx

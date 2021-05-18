@@ -461,6 +461,11 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // Create fuse to delete Messenger.
                 let fuse = ActionFuseBuilder::new()
                     .add_action(Box::new(move || {
+                        // Do not send deletion request if other side is closed.
+                        if messenger_tx.is_closed() {
+                            return;
+                        }
+
                         // ActionFuse drop method might cause the send failed.
                         messenger_tx
                             .unbounded_send(MessengerAction::DeleteBySignature(signature))

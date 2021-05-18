@@ -206,14 +206,18 @@ where
         // This method has been called in drop methods. Only log warn in case the receiving end has
         // been dropped already.
         if let Some(exit_tx) = self.listen_exit_tx.take() {
-            exit_tx
-                .unbounded_send(())
-                .unwrap_or_else(|_| fx_log_warn!("exit_tx failed to send exit signal"));
+            if !exit_tx.is_closed() {
+                exit_tx
+                    .unbounded_send(())
+                    .unwrap_or_else(|_| fx_log_warn!("exit_tx failed to send exit signal"));
+            }
         }
 
-        self.command_tx
-            .unbounded_send(ListenCommand::Exit)
-            .unwrap_or_else(|_| fx_log_warn!("command_tx failed to send Exit command"));
+        if !self.command_tx.is_closed() {
+            self.command_tx
+                .unbounded_send(ListenCommand::Exit)
+                .unwrap_or_else(|_| fx_log_warn!("command_tx failed to send Exit command"));
+        }
     }
 
     /// Park a new hanging get in the handler
