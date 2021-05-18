@@ -33,7 +33,7 @@ form](rfc_process.md). It is also summarized below.
 
 ## Summary of the process (deck)
 
-<iframe src="//www.slideshare.net/slideshow/embed_code/key/9hgFMOmVfbDFsI" width="595" height="485" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe> <div style="margin-bottom:5px"> <strong> <a href="//www.slideshare.net/pascallouis/fuchsia-rfcs" title="Fuchsia RFCs" target="_blank">Fuchsia RFCs</a> </strong> from <strong><a href="https://www.slideshare.net/pascallouis" target="_blank">Pascal-Louis Perez</a></strong> </div>
+<iframe src="//www.slideshare.net/slideshow/embed_code/key/9hgFMOmVfbDFsI" frameborder="0" marginwidth="0" marginheight="0" scrolling="no" style="width: 595px; height: 375px; border:1px solid #CCC; border-width:1px; margin-bottom:5px; max-width: 100%;" allowfullscreen></iframe>
 
 ## Proposals
 
