@@ -3,7 +3,11 @@
     "additionalProperties": false,
     "definitions": {
         "array-type": {
+            "additionalProperties": false,
             "description": "Definition of array type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "element_count": {
                     "$ref": "#/definitions/count",
@@ -29,7 +33,11 @@
             "type": "object"
         },
         "attribute": {
+            "additionalProperties": false,
             "description": "Definition of an attribute list element",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "arguments": {
                     "$ref": "#/definitions/attribute-args-list",
@@ -55,7 +63,11 @@
             "type": "object"
         },
         "attribute-arg": {
+            "additionalProperties": false,
             "description": "Definition of an attribute argument",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -77,23 +89,35 @@
             "type": "object"
         },
         "attribute-args-list": {
+            "additionalProperties": false,
             "description": "Definition of an attributes argument list",
             "items": {
                 "$ref": "#/definitions/attribute-arg",
                 "description": "List of arguments"
             },
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "type": "array"
         },
         "attributes-list": {
+            "additionalProperties": false,
             "description": "Definition of an attribute list",
             "items": {
                 "$ref": "#/definitions/attribute",
                 "description": "List of attributes"
             },
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "type": "array"
         },
         "binary-operator-constant": {
+            "additionalProperties": false,
             "description": "Definition of a constant value (using a binary operator)",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "expression": {
                     "description": "Expression used in source code to define the constant",
@@ -119,7 +143,11 @@
             "type": "object"
         },
         "bits": {
+            "additionalProperties": false,
             "description": "Definition of a bits declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -163,7 +191,11 @@
             "type": "object"
         },
         "bits-member": {
+            "additionalProperties": false,
             "description": "Definition of an bits member",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -189,7 +221,11 @@
             "type": "object"
         },
         "compose": {
+            "additionalProperties": false,
             "description": "Compose member of a protocol declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -216,7 +252,11 @@
             "type": "string"
         },
         "const": {
+            "additionalProperties": false,
             "description": "Definition of a constant declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -270,6 +310,7 @@
             "type": "integer"
         },
         "declarations-map": {
+            "additionalProperties": false,
             "description": "Definition of declarations of a library",
             "patternProperties": {
                 ".*": {
@@ -291,7 +332,11 @@
             "type": "object"
         },
         "enum": {
+            "additionalProperties": false,
             "description": "Definition of an enum declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -334,7 +379,11 @@
             "type": "object"
         },
         "enum-member": {
+            "additionalProperties": false,
             "description": "Definition of an enum member",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -360,11 +409,16 @@
             "type": "object"
         },
         "external-declarations-map": {
+            "additionalProperties": false,
             "description": "Definition of declarations of an external library",
             "patternProperties": {
                 ".*": {
                     "oneOf": [
                         {
+                            "additionalProperties": false,
+                            "patternProperties": {
+                                "^experimental_": {}
+                            },
                             "properties": {
                                 "kind": {
                                     "enum": [
@@ -385,6 +439,10 @@
                             "type": "object"
                         },
                         {
+                            "additionalProperties": false,
+                            "patternProperties": {
+                                "^experimental_": {}
+                            },
                             "properties": {
                                 "kind": {
                                     "enum": [
@@ -410,7 +468,11 @@
             "type": "object"
         },
         "fieldshape": {
+            "additionalProperties": false,
             "description": "Definition of a field shape",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "offset": {
                     "$ref": "#/definitions/count",
@@ -463,7 +525,11 @@
             "type": "string"
         },
         "handle-type": {
+            "additionalProperties": false,
             "description": "Definition of a handle type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "kind": {
                     "description": "Selection of base type as handle type",
@@ -476,6 +542,10 @@
                     "description": "Flag indicating nullability of handle type",
                     "type": "boolean"
                 },
+                "obj_type": {
+                    "description": "Numeric representation of handle sub-type",
+                    "type": "integer"
+                },
                 "rights": {
                     "description": "Rights that must be present on a handle",
                     "type": "integer"
@@ -487,9 +557,10 @@
             },
             "required": [
                 "kind",
-                "subtype",
+                "nullable",
+                "obj_type",
                 "rights",
-                "nullable"
+                "subtype"
             ],
             "type": "object"
         },
@@ -499,7 +570,11 @@
             "type": "string"
         },
         "identifier-constant": {
+            "additionalProperties": false,
             "description": "Definition of a constant value (using an identifier)",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "expression": {
                     "description": "Expression used in source code to define the constant",
@@ -530,7 +605,11 @@
             "type": "object"
         },
         "identifier-type": {
+            "additionalProperties": false,
             "description": "Definition of an identifier type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "identifier": {
                     "$ref": "#/definitions/compound-identifier",
@@ -570,7 +649,11 @@
             "type": "string"
         },
         "interface": {
+            "additionalProperties": false,
             "description": "Definition of a protocol declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "composed_protocols": {
                     "description": "List of composed protocols",
@@ -606,7 +689,11 @@
             "type": "object"
         },
         "interface-method": {
+            "additionalProperties": false,
             "description": "Definition of a method or event",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "has_request": {
                     "description": "Flag indicating that protocol method has a request component",
@@ -635,6 +722,10 @@
                     },
                     "type": "array"
                 },
+                "maybe_request_payload": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Optional name of the request type"
+                },
                 "maybe_request_type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
@@ -645,6 +736,10 @@
                         "$ref": "#/definitions/interface-method-parameter"
                     },
                     "type": "array"
+                },
+                "maybe_response_payload": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Optional name of the response type"
                 },
                 "maybe_response_type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
@@ -669,7 +764,11 @@
             "type": "object"
         },
         "interface-method-parameter": {
+            "additionalProperties": false,
             "description": "Definition of parameter or return of a method or event",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "field_shape_v1": {
                     "$ref": "#/definitions/fieldshape",
@@ -700,7 +799,11 @@
             "type": "object"
         },
         "library": {
+            "additionalProperties": false,
             "description": "Definition of library",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "declarations": {
                     "$ref": "#/definitions/external-declarations-map",
@@ -723,7 +826,11 @@
             "type": "string"
         },
         "literal-constant": {
+            "additionalProperties": false,
             "description": "Definition of a constant value (using a literal)",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "expression": {
                     "description": "Expression used in source code to define the constant",
@@ -754,7 +861,11 @@
             "type": "object"
         },
         "literal-value": {
+            "additionalProperties": false,
             "description": "Definition of a literal constant value",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "expression": {
                     "description": "Original in source constant value, may be a const expression.",
@@ -783,6 +894,10 @@
             "type": "object"
         },
         "location": {
+            "additionalProperties": false,
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "column": {
                     "maximum": 4294967295,
@@ -836,7 +951,11 @@
             ]
         },
         "primitive-type": {
+            "additionalProperties": false,
             "description": "Definition of primitive type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "kind": {
                     "description": "Selection of base type as primitive type",
@@ -857,7 +976,11 @@
             "type": "object"
         },
         "request-type": {
+            "additionalProperties": false,
             "description": "Definition of a request type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "kind": {
                     "description": "Selection of base type as request type",
@@ -883,7 +1006,11 @@
             "type": "object"
         },
         "resource": {
+            "additionalProperties": false,
             "description": "Definition of a resource declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -917,8 +1044,16 @@
             "type": "object"
         },
         "resource-property": {
+            "additionalProperties": false,
             "description": "Definition of a resource property",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
                 "name": {
                     "$ref": "#/definitions/identifier",
                     "description": "Name of the property"
@@ -935,7 +1070,11 @@
             "type": "object"
         },
         "service": {
+            "additionalProperties": false,
             "description": "Definition of a service declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -965,7 +1104,11 @@
             "type": "object"
         },
         "service-member": {
+            "additionalProperties": false,
             "description": "Definition of a service member",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -992,7 +1135,11 @@
             "type": "object"
         },
         "string-type": {
+            "additionalProperties": false,
             "description": "Definition of string type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "kind": {
                     "description": "Selection of base type as string type",
@@ -1017,7 +1164,11 @@
             "type": "object"
         },
         "struct": {
+            "additionalProperties": false,
             "description": "Definition of a struct declaration",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "anonymous": {
                     "description": "Flag indicating that struct is anonymous",
@@ -1064,7 +1215,11 @@
             "type": "object"
         },
         "struct-member": {
+            "additionalProperties": false,
             "description": "Definition of a struct member",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "field_shape_v1": {
                     "$ref": "#/definitions/fieldshape",
@@ -1099,7 +1254,11 @@
             "type": "object"
         },
         "table": {
+            "additionalProperties": false,
             "description": "Definition of a table",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -1147,7 +1306,11 @@
             "type": "object"
         },
         "table-member": {
+            "additionalProperties": false,
             "description": "Definition of a table member",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "alignment": {
                     "$ref": "#/definitions/count",
@@ -1160,6 +1323,10 @@
                 "max_out_of_line": {
                     "$ref": "#/definitions/count",
                     "description": "Maximum size of the out-of-line payload"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of table member attributes"
                 },
                 "maybe_default_value": {
                     "$ref": "#/definitions/constant",
@@ -1230,7 +1397,11 @@
             ]
         },
         "type-constructor": {
+            "additionalProperties": false,
             "description": "Definition of a type constructor",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "args": {
                     "description": "List of arguments",
@@ -1238,6 +1409,10 @@
                         "$ref": "#/definitions/type-constructor"
                     },
                     "type": "array"
+                },
+                "handle_rights": {
+                    "$ref": "#/definitions/constant",
+                    "description": "Optional handle rights"
                 },
                 "maybe_handle_subtype": {
                     "$ref": "#/definitions/handle-subtype",
@@ -1264,11 +1439,19 @@
             "type": "object"
         },
         "type_alias": {
+            "additionalProperties": false,
             "description": "Definition of a type alias",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
                     "description": "Source location of the declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of type alias attributes"
                 },
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
@@ -1287,7 +1470,11 @@
             "type": "object"
         },
         "typeshape": {
+            "additionalProperties": false,
             "description": "Definition of a type shape",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "alignment": {
                     "$ref": "#/definitions/count",
@@ -1330,7 +1517,11 @@
             "type": "object"
         },
         "union": {
+            "additionalProperties": false,
             "description": "Definition of an extensible union",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -1378,7 +1569,11 @@
             "type": "object"
         },
         "union-member": {
+            "additionalProperties": false,
             "description": "Definition of an extensible union member",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -1420,7 +1615,11 @@
             "type": "object"
         },
         "vector-type": {
+            "additionalProperties": false,
             "description": "Definition of vector type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
             "properties": {
                 "element_type": {
                     "$ref": "#/definitions/type",
@@ -1456,6 +1655,9 @@
         }
     },
     "description": "See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/json-ir.md",
+    "patternProperties": {
+        "^experimental_": {}
+    },
     "properties": {
         "bits_declarations": {
             "description": "List of bits declarations",
