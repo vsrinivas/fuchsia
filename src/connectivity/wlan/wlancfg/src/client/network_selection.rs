@@ -308,17 +308,10 @@ impl NetworkSelector {
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<types::ConnectionCandidate> {
         self.perform_scan(iface_manager.clone()).await;
-        let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
-        let wpa3_supported =
-            iface_manager.lock().await.has_wpa3_capable_client().await.unwrap_or_else(|e| {
-                error!("Failed to determine WPA3 support. Assuming no WPA3 support. {}", e);
-                false
-            });
         let scan_result_guard = self.scan_result_cache.lock().await;
         let networks = merge_saved_networks_and_scan_data(
-            saved_networks,
+            &self.saved_network_manager,
             &scan_result_guard.results,
-            wpa3_supported,
             &self.hasher,
         )
         .await;
@@ -337,7 +330,6 @@ impl NetworkSelector {
         &self,
         sme_proxy: fidl_sme::ClientSmeProxy,
         network: types::NetworkIdentifier,
-        wpa3_supported: bool,
     ) -> Option<types::ConnectionCandidate> {
         // TODO: check if we have recent enough scan results that we can pull from instead?
         let scan_results =
@@ -346,12 +338,9 @@ impl NetworkSelector {
         match scan_results {
             Err(()) => None,
             Ok(scan_results) => {
-                let saved_networks =
-                    load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
                 let networks = merge_saved_networks_and_scan_data(
-                    saved_networks,
+                    &self.saved_network_manager,
                     &scan_results,
-                    wpa3_supported,
                     &self.hasher,
                 )
                 .await;
@@ -373,28 +362,35 @@ impl NetworkSelector {
 /// Merge the saved networks and scan results into a vector of BSSs that correspond to a saved
 /// network.
 async fn merge_saved_networks_and_scan_data<'a>(
-    saved_networks: HashMap<types::NetworkIdentifier, InternalSavedNetworkData>,
+    saved_network_manager: &SavedNetworksManager,
     scan_results: &'a Vec<types::ScanResult>,
-    wpa3_supported: bool,
     hasher: &WlanHasher,
 ) -> Vec<InternalBss<'a>> {
     let mut merged_networks = vec![];
     for scan_result in scan_results {
-        // TODO(fxbug.dev/70965): use detailed security type for this matching
-        if let Some(type_) =
-            security_from_sme_protection(scan_result.security_type_detailed, wpa3_supported)
+        for saved_config in saved_network_manager
+            .lookup_compatible(&scan_result.ssid, scan_result.security_type_detailed)
+            .await
         {
-            let id = types::NetworkIdentifier { ssid: scan_result.ssid.clone(), type_ };
-            if let Some(saved_network_info) = saved_networks.get(&id) {
-                let multiple_bss_candidates = scan_result.entries.len() > 1;
-                for bss in &scan_result.entries {
-                    merged_networks.push(InternalBss {
-                        bss_info: bss,
-                        multiple_bss_candidates,
-                        network_info: saved_network_info.clone(),
-                        hasher: hasher.clone(),
-                    });
-                }
+            let multiple_bss_candidates = scan_result.entries.len() > 1;
+            for bss in &scan_result.entries {
+                merged_networks.push(InternalBss {
+                    bss_info: bss,
+                    multiple_bss_candidates,
+                    network_info: InternalSavedNetworkData {
+                        network_id: types::NetworkIdentifier {
+                            ssid: saved_config.ssid.clone(),
+                            type_: saved_config.security_type.into(),
+                        },
+                        credential: saved_config.credential.clone(),
+                        has_ever_connected: saved_config.has_ever_connected,
+                        recent_failures: saved_config
+                            .perf_stats
+                            .failure_list
+                            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW),
+                    },
+                    hasher: hasher.clone(),
+                })
             }
         }
     }
@@ -957,6 +953,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn scan_results_merged_with_saved_networks() {
+        let test_values = test_setup().await;
+
+        // check there are 0 saved networks to start with
+        let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
+        assert_eq!(networks.len(), 0);
+
         // create some identifiers
         let test_ssid_1 = "foo".as_bytes().to_vec();
         let test_security_1 = types::SecurityTypeDetailed::Wpa3Personal;
@@ -970,6 +972,21 @@ mod tests {
         let test_id_2 =
             types::NetworkIdentifier { ssid: test_ssid_2.clone(), type_: types::SecurityType::Wpa };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
+
+        // insert the saved networks
+        assert!(test_values
+            .saved_network_manager
+            .store(test_id_1.clone().into(), credential_1.clone())
+            .await
+            .unwrap()
+            .is_none());
+
+        assert!(test_values
+            .saved_network_manager
+            .store(test_id_2.clone().into(), credential_2.clone())
+            .await
+            .unwrap()
+            .is_none());
 
         // build some scan results
         let mock_scan_results = vec![
@@ -987,43 +1004,51 @@ mod tests {
             },
         ];
 
-        // create some connect failures, 3 GeneralFailures for BSSID 1 and 1 CredentialsRejected
-        // for BSSID 2
         let bssid_1 = mock_scan_results[0].entries[0].bssid;
         let bssid_2 = mock_scan_results[0].entries[1].bssid;
-        let recent_failures = vec![
-            connect_failure_with_bssid(bssid_1),
-            connect_failure_with_bssid(bssid_1),
-            connect_failure_with_bssid(bssid_1),
-            ConnectFailure {
-                bssid: bssid_2,
-                time: zx::Time::get_monotonic(),
-                reason: FailureReason::CredentialRejected,
-            },
-        ];
 
-        // create the saved networks hashmap
-        let mut saved_networks = HashMap::new();
-        let _ = saved_networks.insert(
-            test_id_1.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_1.clone(),
-                credential: credential_1.clone(),
-                has_ever_connected: true,
-                recent_failures: recent_failures.clone(),
-            },
-        );
-        let _ = saved_networks.insert(
-            test_id_2.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_2.clone(),
-                credential: credential_2.clone(),
-                has_ever_connected: false,
-                recent_failures: Vec::new(),
-            },
-        );
+        // mark the first one as having connected
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                test_id_1.clone().into(),
+                &credential_1.clone(),
+                bssid_1,
+                fidl_sme::ConnectResultCode::Success,
+                None,
+            )
+            .await;
+
+        // mark the second one as having a failure
+        test_values
+            .saved_network_manager
+            .record_connect_result(
+                test_id_1.clone().into(),
+                &credential_1.clone(),
+                bssid_2,
+                fidl_sme::ConnectResultCode::CredentialRejected,
+                None,
+            )
+            .await;
 
         // build our expected result
+        let failure_time = test_values
+            .saved_network_manager
+            .lookup(test_id_1.clone().into())
+            .await
+            .get(0)
+            .expect("failed to get config")
+            .perf_stats
+            .failure_list
+            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
+            .get(0)
+            .expect("failed to get recent failure")
+            .time;
+        let recent_failures = vec![ConnectFailure {
+            bssid: bssid_2,
+            time: failure_time,
+            reason: FailureReason::CredentialRejected,
+        }];
         let hasher = WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes());
         let expected_internal_data_1 = InternalSavedNetworkData {
             network_id: test_id_1.clone(),
@@ -1064,9 +1089,12 @@ mod tests {
         ];
 
         // validate the function works
-        let result =
-            merge_saved_networks_and_scan_data(saved_networks, &mock_scan_results, true, &hasher)
-                .await;
+        let result = merge_saved_networks_and_scan_data(
+            &test_values.saved_network_manager,
+            &mock_scan_results,
+            &hasher,
+        )
+        .await;
         assert_eq!(result, expected_result);
     }
 
@@ -2402,11 +2430,8 @@ mod tests {
         drop(iface_manager_inner);
 
         // Kick off network selection
-        let network_selection_fut = network_selector.find_connection_candidate_for_network(
-            sme_proxy,
-            test_id_1.clone(),
-            true,
-        );
+        let network_selection_fut =
+            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1.clone());
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
@@ -2489,7 +2514,7 @@ mod tests {
 
         // Kick off network selection
         let network_selection_fut =
-            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1, true);
+            network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 

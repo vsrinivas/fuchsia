@@ -321,10 +321,9 @@ impl SavedNetworksManager {
     /// Return a list of network configs that could be used with the security type seen in a scan.
     /// This includes configs that have a lower security type that can be upgraded to match the
     /// provided detailed security type.
-    #[cfg(test)]
     pub async fn lookup_compatible(
         &self,
-        ssid: types::Ssid,
+        ssid: &types::Ssid,
         scan_security: types::SecurityTypeDetailed,
     ) -> Vec<NetworkConfig> {
         let mut saved_networks_guard = self.saved_networks.lock().await;
@@ -956,7 +955,7 @@ mod tests {
             .is_none());
 
         let results = saved_networks
-            .lookup_compatible(ssid.clone(), types::SecurityTypeDetailed::Wpa2Wpa3Personal)
+            .lookup_compatible(&ssid, types::SecurityTypeDetailed::Wpa2Wpa3Personal)
             .await;
         let expected_config_wpa2 = NetworkConfig::new(network_id_wpa2, credential_wpa2, false)
             .expect("Failed to create config");
@@ -1005,9 +1004,8 @@ mod tests {
         let expected_config_wpa3 =
             NetworkConfig::new(network_id_password, credential_password, false)
                 .expect("Failed to create configc");
-        let results = exec.run_singlethreaded(
-            saved_networks.lookup_compatible(ssid.clone(), wpa3_detailed_security),
-        );
+        let results = exec
+            .run_singlethreaded(saved_networks.lookup_compatible(&ssid, wpa3_detailed_security));
         assert_eq!(results, vec![expected_config_wpa3]);
     }
 

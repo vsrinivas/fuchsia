@@ -74,7 +74,6 @@ async fn create_client_state_machine(
     network_selector: Arc<NetworkSelector>,
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
     cobalt_api: CobaltSender,
-    wpa3_supported: bool,
 ) -> Result<
     (
         Box<dyn client_fsm::ClientApi + Send>,
@@ -104,7 +103,6 @@ async fn create_client_state_machine(
         connect_req,
         network_selector,
         cobalt_api,
-        wpa3_supported,
     );
 
     let metadata =
@@ -417,8 +415,6 @@ impl IfaceManagerService {
                 existing_csm.connect(connect_req, sender)?;
             }
             None => {
-                // Check if the iface supports WPA3
-                let wpa3_supported = wpa3_in_features(&client_iface.driver_features);
                 // Create the state machine and controller.
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
@@ -428,7 +424,6 @@ impl IfaceManagerService {
                     self.network_selector.clone(),
                     Some((connect_req, sender)),
                     self.cobalt_api.clone(),
-                    wpa3_supported,
                 )
                 .await?;
                 client_iface.client_state_machine = Some(new_client);
@@ -494,7 +489,6 @@ impl IfaceManagerService {
         iface_id: u16,
         connect_req: client_types::ConnectRequest,
     ) -> Result<(), Error> {
-        let wpa3_supported = self.has_wpa3_capable_client().await;
         for client in self.clients.iter_mut() {
             if client.iface_id == iface_id {
                 match client.client_state_machine.as_ref() {
@@ -516,7 +510,6 @@ impl IfaceManagerService {
                     self.network_selector.clone(),
                     Some((connect_req.clone(), sender)),
                     self.cobalt_api.clone(),
-                    wpa3_supported,
                 )
                 .await?;
 
@@ -548,7 +541,6 @@ impl IfaceManagerService {
                 }
 
                 let mut client_iface = self.get_client(Some(iface_id)).await?;
-                let wpa3_supported = self.has_wpa3_capable_client().await;
 
                 // Create the state machine and controller.  The state machine is setup with no
                 // initial network config.  This will cause it to quickly exit, notifying the
@@ -561,7 +553,6 @@ impl IfaceManagerService {
                     self.network_selector.clone(),
                     None,
                     self.cobalt_api.clone(),
-                    wpa3_supported,
                 )
                 .await?;
 

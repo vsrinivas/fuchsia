@@ -122,7 +122,6 @@ pub async fn serve(
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
-    wpa3_supported: bool,
 ) {
     let next_network = match connect_request {
         Some((req, sender)) => Some(ConnectingOptions {
@@ -145,7 +144,6 @@ pub async fn serve(
         saved_networks_manager: saved_networks_manager,
         network_selector,
         cobalt_api,
-        wpa3_supported,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -174,7 +172,6 @@ struct CommonStateOptions {
     saved_networks_manager: Arc<SavedNetworksManager>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
-    wpa3_supported: bool,
 }
 
 fn handle_none_request() -> Result<State, ExitReason> {
@@ -407,7 +404,6 @@ async fn connecting_state<'a>(
                 .find_connection_candidate_for_network(
                     common_options.proxy.clone(),
                     options.connect_request.target.network.clone(),
-                    common_options.wpa3_supported,
                 )
                 .map(|find_result| {
                     SmeOperation::ScanResult(
@@ -776,7 +772,6 @@ mod tests {
                 saved_networks_manager: saved_networks_manager,
                 network_selector,
                 cobalt_api,
-                wpa3_supported: true,
             },
             sme_req_stream,
             client_req_sender,
@@ -883,7 +878,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported: true,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1049,7 +1043,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported: true,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1165,13 +1158,9 @@ mod tests {
         );
     }
 
-    #[test_case(true, types::SecurityType::Wpa3)]
-    #[test_case(false, types::SecurityType::Wpa2)]
-    #[test_case(true, types::SecurityType::Wpa2)]
-    fn connecting_state_successfully_connects_wpa2wpa3(
-        wpa3_supported: bool,
-        type_: types::SecurityType,
-    ) {
+    #[test_case(types::SecurityType::Wpa3)]
+    #[test_case(types::SecurityType::Wpa2)]
+    fn connecting_state_successfully_connects_wpa2wpa3(type_: types::SecurityType) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         // Do test set up manually to get stash server
         set_logger_for_test();
@@ -1239,7 +1228,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1495,7 +1483,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported: true,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1664,7 +1651,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported: true,
         };
 
         let next_network_ssid = "bar";
@@ -1806,7 +1792,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported: true,
         };
 
         let next_network_ssid = "bar";
@@ -2813,7 +2798,6 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
-            wpa3_supported: true,
         };
         let initial_state = connected_state(common_options, connect_request.clone());
         let fut = run_state_machine(initial_state);
@@ -3256,7 +3240,6 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
-            true,
         );
         pin_mut!(fut);
 
@@ -3324,7 +3307,6 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
-            true,
         );
         pin_mut!(fut);
 
@@ -3383,7 +3365,6 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
-            true,
         );
         pin_mut!(fut);
 
@@ -3510,7 +3491,6 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
-            true,
         );
         pin_mut!(fut);
 
