@@ -4,6 +4,7 @@
 
 #include <cmdline.h>
 #include <inttypes.h>
+#include <lib/zbi/zbi.h>
 #include <stdio.h>
 #include <string.h>
 #include <xefi.h>
@@ -55,27 +56,6 @@ static void start_zircon(uint64_t entry, void* bootdata) {
 #error "add code for other arches here"
 #endif
   __builtin_unreachable();
-}
-
-static int add_bootdata(void** ptr, size_t* avail, zbi_header_t* bd, void* data) {
-  size_t len = ZBI_ALIGN(bd->length);
-  if ((sizeof(zbi_header_t) + len) > *avail) {
-    printf("boot: no room for bootdata type=%08x size=%08x\n", bd->type, bd->length);
-    return -1;
-  }
-  bd->flags |= ZBI_FLAG_VERSION;
-  bd->reserved0 = 0;
-  bd->reserved1 = 0;
-  bd->magic = ZBI_ITEM_MAGIC;
-  bd->crc32 = ZBI_ITEM_NO_CRC32;
-
-  memcpy(*ptr, bd, sizeof(zbi_header_t));
-  memcpy((*ptr) + sizeof(zbi_header_t), data, len);
-  len += sizeof(zbi_header_t);
-  (*ptr) += len;
-  (*avail) -= len;
-
-  return 0;
 }
 
 size_t image_getsize(void* image, size_t sz) {
@@ -245,32 +225,19 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     return -1;
   }
 
-  // osboot ensures we have FRONT_BYTES ahead of the
-  // ramdisk to prepend our own bootdata items.
-  void* bptr = ramdisk - FRONT_BYTES;
-  size_t blen = FRONT_BYTES;
-
-  // We create a new container header of the same size
-  // as the one at the start of the ramdisk
-  zbi_header_t hdr = ZBI_CONTAINER_HEADER(hdr0->length + FRONT_BYTES);
-  memcpy(bptr, &hdr, sizeof(hdr));
-  bptr += sizeof(hdr);
-
   // pass kernel commandline
-  hdr.type = ZBI_TYPE_CMDLINE;
-  hdr.length = csz;
-  hdr.extra = 0;
-  hdr.flags = ZBI_FLAG_VERSION;
-  if (add_bootdata(&bptr, &blen, &hdr, cmdline)) {
+  zbi_result_t result =
+      zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_CMDLINE, 0, 0, cmdline, csz);
+  if (result != ZBI_RESULT_OK) {
     return -1;
   }
 
   // pass ACPI root pointer
   uint64_t rsdp = find_acpi_root(img, sys);
   if (rsdp != 0) {
-    hdr.type = ZBI_TYPE_ACPI_RSDP;
-    hdr.length = sizeof(rsdp);
-    if (add_bootdata(&bptr, &blen, &hdr, &rsdp)) {
+    result =
+        zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_ACPI_RSDP, 0, 0, &rsdp, sizeof(rsdp));
+    if (result != ZBI_RESULT_OK) {
       return -1;
     }
   }
@@ -278,18 +245,18 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   // pass SMBIOS entry point pointer
   uint64_t smbios = find_smbios(img, sys);
   if (smbios != 0) {
-    hdr.type = ZBI_TYPE_SMBIOS;
-    hdr.length = sizeof(smbios);
-    if (add_bootdata(&bptr, &blen, &hdr, &smbios)) {
+    result =
+        zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_SMBIOS, 0, 0, &smbios, sizeof(smbios));
+    if (result != ZBI_RESULT_OK) {
       return -1;
     }
   }
 
   // pass EFI system table
   uint64_t addr = (uintptr_t)sys;
-  hdr.type = ZBI_TYPE_EFI_SYSTEM_TABLE;
-  hdr.length = sizeof(sys);
-  if (add_bootdata(&bptr, &blen, &hdr, &addr)) {
+  result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_EFI_SYSTEM_TABLE, 0, 0, &addr,
+                                         sizeof(addr));
+  if (result != ZBI_RESULT_OK) {
     return -1;
   }
 
@@ -304,9 +271,9 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
         .stride = gop->Mode->Info->PixelsPerScanLine,
         .format = get_zx_pixel_format(gop),
     };
-    hdr.type = ZBI_TYPE_FRAMEBUFFER;
-    hdr.length = sizeof(fb);
-    if (add_bootdata(&bptr, &blen, &hdr, &fb)) {
+    result =
+        zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_FRAMEBUFFER, 0, 0, &fb, sizeof(fb));
+    if (result != ZBI_RESULT_OK) {
       return -1;
     }
   }
@@ -347,31 +314,20 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   memcpy(scratch, &dsize, sizeof(uint64_t));
 
   // install memory map
-  hdr.type = ZBI_TYPE_EFI_MEMORY_MAP;
-  hdr.length = msize + sizeof(uint64_t);
-  if (add_bootdata(&bptr, &blen, &hdr, scratch)) {
+  result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_EFI_MEMORY_MAP, 0, 0, scratch,
+                                         msize + sizeof(uint64_t));
+  if (result != ZBI_RESULT_OK) {
     goto fail;
   }
 
   // obtain the last crashlog if we can
   size_t sz = get_last_crashlog(sys, scratch, 4096);
   if (sz > 0) {
-    hdr.type = ZBI_TYPE_CRASHLOG;
-    hdr.length = sz;
-    add_bootdata(&bptr, &blen, &hdr, scratch);
+    zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_CRASHLOG, 0, 0, scratch, sz);
   }
-
-  // fill the remaining gap between pre-data and ramdisk image
-  if ((blen < sizeof(hdr)) || (blen & 7)) {
-    goto fail;
-  }
-  hdr.type = ZBI_TYPE_DISCARD;
-  hdr.length = blen - sizeof(hdr);
-  hdr.flags = ZBI_FLAG_VERSION;
-  memcpy(bptr, &hdr, sizeof(hdr));
 
   // jump to the kernel
-  start_zircon(entry, ramdisk - FRONT_BYTES);
+  start_zircon(entry, ramdisk);
 
 fail:
   return -1;
@@ -395,7 +351,7 @@ int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
 
   // allocate space for the ramdisk
   efi_boot_services* bs = sys->BootServices;
-  size_t rsz = rlen + sizeof(zbi_header_t) + FRONT_BYTES;
+  size_t rsz = rlen + sizeof(zbi_header_t) + EXTRA_ZBI_ITEM_SPACE;
   size_t pages = BYTES_TO_PAGES(rsz);
   void* ramdisk = NULL;
   efi_status r =
@@ -405,8 +361,9 @@ int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
     return -1;
   }
 
-  ramdisk += FRONT_BYTES;
+  // Set up the header.
   *(zbi_header_t*)ramdisk = (zbi_header_t)ZBI_CONTAINER_HEADER(rlen);
+  // Copy in place the existing ramdisk and boot items.
   memcpy(ramdisk + sizeof(zbi_header_t), image + roff, rlen);
   rlen += sizeof(zbi_header_t);
 
@@ -418,17 +375,5 @@ int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
   zircon_kernel_t* kernel = image;
   kernel->hdr_file.length = sizeof(zbi_header_t) + klen;
 
-  return boot_zircon(img, sys, image, roff, ramdisk, rlen, cmdline, csz);
-}
-
-int boot_kernel(efi_handle img, efi_system_table* sys, void* image, size_t sz, void* ramdisk,
-                size_t rsz) {
-  size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
-
-  zbi_header_t* bd = image;
-  if ((bd->type == ZBI_TYPE_CONTAINER) && (bd->extra == ZBI_CONTAINER_MAGIC)) {
-    return boot_zircon(img, sys, image, sz, ramdisk, rsz, cmdline, csz);
-  } else {
-    return -1;
-  }
+  return boot_zircon(img, sys, image, roff, ramdisk, rsz, cmdline, csz);
 }
