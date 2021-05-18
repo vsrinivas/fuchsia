@@ -22,9 +22,31 @@
 // - Test program's injection -> Root Presenter -> Sound Player -> Test Assert
 //                                              -> Factory Reset -> Test Assert
 
-constexpr char kRootPresenter[] =
-    "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/root_presenter.cmx";
 constexpr zx::duration kTimeout = zx::min(1);
+
+// Common services for each test.
+const std::map<std::string, std::string> LocalServices() {
+  return {
+      {"fuchsia.ui.input.InputDeviceRegistry",
+       "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/root_presenter.cmx"},
+      {"fuchsia.ui.policy.Presenter",
+       "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/root_presenter.cmx"},
+      // Scenic protocols.
+      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.pointerinjector.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      // Misc protocols.
+      {"fuchsia.cobalt.LoggerFactory",
+       "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
+      {"fuchsia.hardware.display.Provider",
+       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
+  };
+}
+
+// Allow these global services from outside the test environment.
+const std::vector<std::string> GlobalServices() {
+  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator",
+          "fuchsia.scheduler.ProfileProvider"};
+}
 
 // A sound player used to fake a reset tone triggered by root presenter.
 class SoundsPlayerImpl : public fuchsia::media::sounds::Player {
@@ -108,9 +130,16 @@ class FactoryResetTest : public sys::testing::TestWithEnvironment {
     FX_CHECK(is_ok == ZX_OK);
 
     // Set up Root Presenter inside the test environment.
-    is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
-                                               fuchsia::ui::input::InputDeviceRegistry::Name_);
-    FX_CHECK(is_ok == ZX_OK);
+    for (const auto& [name, url] : LocalServices()) {
+      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
+      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
+    }
+
+    // Enable services from outside this test.
+    for (const auto& service : GlobalServices()) {
+      const zx_status_t is_ok = services->AllowParentService(service);
+      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
+    }
 
     test_env_ = CreateNewEnclosingEnvironment("factory_reset_test_env", std::move(services),
                                               {.inherit_parent_services = true});

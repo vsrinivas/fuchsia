@@ -45,24 +45,20 @@ void ChattyEventLog(const fuchsia::ui::input::InputEvent& event) {
 
 }  // namespace
 
-Presentation::Presentation(
-    inspect::Node inspect_node, sys::ComponentContext* component_context,
-    fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session, scenic::ResourceId compositor_id,
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fuchsia::ui::views::ViewRef client_view_ref,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-    SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
-    fit::function<void()> on_client_death,
-    fit::function<void(fuchsia::ui::views::ViewRef)> request_focus)
+Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* component_context,
+                           fuchsia::ui::scenic::Scenic* scenic,
+                           std::unique_ptr<scenic::Session> session,
+                           int32_t display_startup_rotation_adjustment,
+                           fit::function<void(fuchsia::ui::views::ViewRef)> request_focus)
     : inspect_node_(std::move(inspect_node)),
       input_report_inspector_(inspect_node_.CreateChild("input_reports")),
       input_event_inspector_(inspect_node_.CreateChild("input_events")),
-      scenic_(scenic),
-      session_(session),
-      compositor_id_(compositor_id),
-      layer_(session_),
-      renderer_(session_),
-      scene_(session_),
+      root_session_(std::move(session)),
+      compositor_(root_session_.get()),
+      layer_stack_(root_session_.get()),
+      layer_(root_session_.get()),
+      renderer_(root_session_.get()),
+      scene_(root_session_.get()),
       camera_(scene_),
       injector_session_(scenic),
       proxy_session_(scenic),
@@ -70,13 +66,17 @@ Presentation::Presentation(
       presentation_binding_(this),
       a11y_binding_(this),
       a11y_view_registry_binding_(this),
-      safe_presenter_(safe_presenter),
+      safe_presenter_root_(root_session_.get()),
       safe_presenter_injector_(&injector_session_),
       safe_presenter_proxy_(&proxy_session_),
-      weak_factory_(this) {
+      color_transform_handler_(component_context, compositor_.id(), root_session_.get(),
+                               &safe_presenter_root_),
+      request_focus_(std::move(request_focus)) {
   FX_DCHECK(component_context);
-  FX_DCHECK(compositor_id != 0);
-  FX_DCHECK(safe_presenter_);
+  component_context->outgoing()->AddPublicService(presenter_bindings_.GetHandler(this));
+
+  compositor_.SetLayerStack(layer_stack_);
+  layer_stack_.AddLayer(layer_);
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
 
@@ -87,9 +87,9 @@ Presentation::Presentation(
   // lights (either one or the other).  When directional light support is added
   // to PaperRenderer, the code here will result in over-brightening, and will
   // need to be adjusted at that time.
-  scenic::AmbientLight ambient_light(session_);
-  scenic::DirectionalLight directional_light(session_);
-  scenic::PointLight point_light(session_);
+  scenic::AmbientLight ambient_light(root_session_.get());
+  scenic::DirectionalLight directional_light(root_session_.get());
+  scenic::PointLight point_light(root_session_.get());
   scene_.AddLight(ambient_light);
   scene_.AddLight(directional_light);
   scene_.AddLight(point_light);
@@ -112,46 +112,43 @@ Presentation::Presentation(
 
   SetScenicDisplayRotation();
   {
-    fuchsia::ui::views::ViewRef root_view_ref, proxy_view_ref, injector_view_ref;
+    fuchsia::ui::views::ViewRef root_view_ref, injector_view_ref;
     {    // Set up views and view holders.
       {  // Set up the root view.
         auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
         auto [control_ref, view_ref] = scenic::ViewRefPair::New();
         fidl::Clone(view_ref, &root_view_ref);
-        root_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+        root_view_holder_.emplace(root_session_.get(), std::move(internal_view_holder_token),
                                   "Root View Holder");
-        root_view_.emplace(session_, std::move(internal_view_token), std::move(control_ref),
-                           std::move(view_ref), "Root View");
+        root_view_.emplace(root_session_.get(), std::move(internal_view_token),
+                           std::move(control_ref), std::move(view_ref), "Root View");
       }
-
       {  // Set up the injector view.
         auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
         auto [control_ref, view_ref] = scenic::ViewRefPair::New();
         fidl::Clone(view_ref, &injector_view_ref);
-        injector_view_holder_.emplace(session_, std::move(internal_view_holder_token),
+        injector_view_holder_.emplace(root_session_.get(), std::move(internal_view_holder_token),
                                       "Injector View Holder");
         injector_view_.emplace(&injector_session_, std::move(internal_view_token),
                                std::move(control_ref), std::move(view_ref), "Injector View");
       }
-
       {  // Set up the "proxy view"
         auto [internal_view_token, internal_view_holder_token] = scenic::ViewTokenPair::New();
         auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-        fidl::Clone(view_ref, &proxy_view_ref);
         proxy_view_holder_.emplace(&injector_session_, std::move(internal_view_holder_token),
                                    "Proxy View Holder");
         proxy_view_.emplace(&proxy_session_, std::move(internal_view_token), std::move(control_ref),
                             std::move(view_ref), "Proxy View");
       }
 
-      client_view_holder_.emplace(&proxy_session_, std::move(view_holder_token),
-                                  "Client View Holder");
-
       // Connect it all up.
       scene_.AddChild(root_view_holder_.value());
       root_view_->AddChild(injector_view_holder_.value());
       injector_view_->AddChild(proxy_view_holder_.value());
-      proxy_view_->AddChild(client_view_holder_.value());
+
+      safe_presenter_root_.QueuePresent([] {});
+      safe_presenter_injector_.QueuePresent([] {});
+      safe_presenter_proxy_.QueuePresent([] {});
     }
 
     injector_.emplace(component_context, /*context*/ fidl::Clone(root_view_ref),
@@ -162,40 +159,12 @@ Presentation::Presentation(
                                    /*target*/ std::move(injector_view_ref));
   }
 
-  // Link ourselves to the presentation interface once screen dimensions are
-  // available for us to present into.
-  FX_CHECK(!presentation_binding_.is_bound());
-  presentation_binding_.Bind(std::move(presentation_request));
-  scenic_->GetDisplayInfo(
-      [weak = weak_factory_.GetWeakPtr()](fuchsia::ui::gfx::DisplayInfo display_info) mutable {
-        if (weak) {
-          // Get display parameters and propagate values appropriately.
-          weak->InitializeDisplayModel(std::move(display_info));
-          weak->safe_presenter_->QueuePresent([weak] {
-            if (weak) {
-              weak->safe_presenter_injector_.QueuePresent([weak] {
-                if (weak) {
-                  weak->safe_presenter_proxy_.QueuePresent([weak] {
-                    if (weak) {
-                      weak->scene_initialized_ = true;
-                      weak->injector_->MarkSceneReady();
-                    }
-                  });
-                }
-              });
-            }
-          });
-        }
-      });
-
-  FX_DCHECK(root_view_holder_);
-  FX_DCHECK(root_view_);
-  FX_DCHECK(injector_view_holder_);
-  FX_DCHECK(injector_view_);
-  FX_DCHECK(proxy_view_holder_);
-  FX_DCHECK(proxy_view_);
-  FX_DCHECK(client_view_holder_);
-  FX_DCHECK(injector_);
+  scenic->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) mutable {
+    InitializeDisplayModel(std::move(display_info));
+    safe_presenter_root_.QueuePresent([] {});
+    safe_presenter_injector_.QueuePresent([] {});
+    safe_presenter_proxy_.QueuePresent([] {});
+  });
 
   proxy_session_.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "Proxy session closed unexpectedly with status: "
@@ -206,77 +175,60 @@ Presentation::Presentation(
                    << zx_status_get_string(status);
   });
 
-  proxy_session_.set_event_handler(
-      [this, on_client_death = std::move(on_client_death), request_focus = std::move(request_focus),
-       view_ref = std::move(client_view_ref), client_id = client_view_holder_->id()](
-          std::vector<fuchsia::ui::scenic::Event> events) mutable {
-        for (const auto& event : events) {
-          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx) {
-            if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
-              if (event.gfx().view_connected().view_holder_id == client_id) {
-                client_view_connected_to_viewholder_ = true;
-              }
-            } else if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected) {
-              FX_DCHECK(event.gfx().view_disconnected().view_holder_id == client_id);
-              FX_LOGS(WARNING) << "Client died, destroying presentation.";
-              on_client_death();  // This kills the Presentation, so exit immediately to be safe.
-              return;
-            } else if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
-              if (event.gfx().view_attached_to_scene().view_id == proxy_view_->id()) {
-                proxy_view_attached_to_scene_ = true;
-              }
-            }
-          }
-        }
+  {
+    // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
+    fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
 
-        // The client view is only focusable once the client has connected its
-        // view AND the proxy view is attached to the scene.
-        if (proxy_view_attached_to_scene_ && client_view_connected_to_viewholder_) {
-          FX_LOGS(INFO) << "Transfer focus to client";
-          request_focus(std::move(view_ref));
-        }
-      });
-}
+    component_context->svc()->Connect(magnifier_.NewRequest());
+    magnifier_->RegisterHandler(a11y_binding_.NewBinding());
+    a11y_binding_.set_error_handler([this](auto) { ResetClipSpaceTransform(); });
+  }
 
-Presentation::~Presentation() = default;
-
-void Presentation::RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier) {
-  // TODO(fxbug.dev/68206) Remove this and enable client-side FIDL errors.
-  fidl::internal::TransitoryProxyControllerClientSideErrorDisabler client_side_error_disabler_;
-
-  magnifier->RegisterHandler(a11y_binding_.NewBinding());
-  a11y_binding_.set_error_handler([this](auto) { ResetClipSpaceTransform(); });
+  FX_DCHECK(root_view_holder_);
+  FX_DCHECK(root_view_);
+  FX_DCHECK(injector_view_holder_);
+  FX_DCHECK(injector_view_);
+  FX_DCHECK(proxy_view_holder_);
+  FX_DCHECK(proxy_view_);
+  FX_DCHECK(injector_);
 }
 
 void Presentation::InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info) {
   FX_DCHECK(!display_model_initialized_);
+  display_model_initialized_ = true;
 
   // Initialize display model.
   display_configuration::InitializeModelForDisplay(display_info.width_in_px,
                                                    display_info.height_in_px, &display_model_);
 
-  display_model_initialized_ = true;
+  display_metrics_ = display_model_.GetMetrics();
+  display_configuration::LogDisplayMetrics(display_metrics_);
 
-  ApplyDisplayModelChanges(true, false);
+  // Today, a layer needs the display's physical dimensions to render correctly.
+  layer_.SetSize(static_cast<float>(display_metrics_.width_in_px()),
+                 static_cast<float>(display_metrics_.height_in_px()));
+
+  SetViewHolderProperties(display_metrics_);
+  UpdateViewport(display_metrics_);
 }
 
-bool Presentation::ApplyDisplayModelChanges(bool print_log, bool present_changes) {
-  bool updated = ApplyDisplayModelChangesHelper(print_log);
-
-  if (updated && present_changes) {
-    safe_presenter_->QueuePresent([] {});
-    safe_presenter_injector_.QueuePresent([] {});
-    safe_presenter_proxy_.QueuePresent([] {});
-  }
-  return updated;
-}
-
-void Presentation::SetViewHolderProperties() {
+void Presentation::SetViewHolderProperties(const DisplayMetrics& display_metrics) {
   const bool is_90_degree_rotation = abs(display_startup_rotation_adjustment_ % 180) == 90;
 
-  {  // Set a11y and client views' resolutions to pips.
-    float metrics_width = static_cast<float>(display_metrics_.width_in_pp());
-    float metrics_height = static_cast<float>(display_metrics_.height_in_pp());
+  // Layout size
+  {
+    // Set the root view to native resolution and orientation (i.e. no rotation) of the display.
+    // This lets us delegate touch coordinate transformations to Scenic.
+    const float raw_metrics_width = static_cast<float>(display_metrics.width_in_px());
+    const float raw_metrics_height = static_cast<float>(display_metrics.height_in_px());
+    FX_DCHECK(root_view_holder_);
+    root_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, raw_metrics_width,
+                                         raw_metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+  }
+
+  {  // Set all other views' resolutions to pips.
+    float metrics_width = static_cast<float>(display_metrics.width_in_pp());
+    float metrics_height = static_cast<float>(display_metrics.height_in_pp());
 
     // Swap metrics on left/right tilt.
     if (is_90_degree_rotation) {
@@ -284,20 +236,13 @@ void Presentation::SetViewHolderProperties() {
     }
 
     // Injector, a11y, proxy, and client views should all have the same dimensions.
-    if (injector_view_holder_) {
-      injector_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
-                                               metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-    }
+    FX_DCHECK(injector_view_holder_);
+    injector_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
+                                             metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
 
-    if (a11y_view_holder_) {
-      a11y_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
-                                           metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-    }
-
-    if (proxy_view_holder_) {
-      proxy_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
-                                            metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-    }
+    FX_DCHECK(proxy_view_holder_);
+    proxy_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
+                                          metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
 
     if (client_view_holder_) {
       client_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
@@ -311,8 +256,8 @@ void Presentation::SetViewHolderProperties() {
   // propagated down to the client view through the scene graph. The injector view holder is always
   // the root's child.
   {  // Scale a11y view to full device size.
-    float metrics_scale_x = display_metrics_.x_scale_in_px_per_pp();
-    float metrics_scale_y = display_metrics_.y_scale_in_px_per_pp();
+    float metrics_scale_x = display_metrics.x_scale_in_px_per_pp();
+    float metrics_scale_y = display_metrics.y_scale_in_px_per_pp();
     // Swap metrics on left/right tilt.
     if (is_90_degree_rotation) {
       std::swap(metrics_scale_x, metrics_scale_y);
@@ -330,8 +275,8 @@ void Presentation::SetViewHolderProperties() {
   }
 
   {  // Adjust a11y view position for rotation.
-    const float metrics_w = display_metrics_.width_in_px();
-    const float metrics_h = display_metrics_.height_in_px();
+    const float metrics_w = display_metrics.width_in_px();
+    const float metrics_h = display_metrics.height_in_px();
 
     float left_offset = 0;
     float top_offset = 0;
@@ -363,44 +308,84 @@ void Presentation::SetViewHolderProperties() {
   }
 }
 
-bool Presentation::ApplyDisplayModelChangesHelper(bool print_log) {
-  if (!display_model_initialized_)
-    return false;
-
-  DisplayMetrics metrics = display_model_.GetMetrics();
-
-  if (print_log) {
-    display_configuration::LogDisplayMetrics(metrics);
+void Presentation::PresentView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  if (presentation_binding_.is_bound()) {
+    FX_LOGS(ERROR) << "Support for multiple simultaneous presentations has been removed. To "
+                      "replace a view, use PresentOrReplaceView";
+    // Reject the request.
+    presentation_request.Close(ZX_ERR_ALREADY_BOUND);
+    return;
   }
 
-  if (display_metrics_ == metrics)
-    return true;
-
-  display_metrics_ = metrics;
-
-  // Layout size
-  {
-    // Set the root view to native resolution and orientation (i.e. no rotation) of the display.
-    // This lets us delegate touch coordinate transformations to Scenic.
-    const float raw_metrics_width = static_cast<float>(display_metrics_.width_in_px());
-    const float raw_metrics_height = static_cast<float>(display_metrics_.height_in_px());
-    root_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, raw_metrics_width,
-                                         raw_metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-  }
-
-  // Set properties for the a11y, proxy, and client view holders.
-  SetViewHolderProperties();
-
-  // Today, a layer needs the display's physical dimensions to render correctly.
-  layer_.SetSize(static_cast<float>(display_metrics_.width_in_px()),
-                 static_cast<float>(display_metrics_.height_in_px()));
-
-  UpdateViewport();
-
-  return true;
+  AttachClient(std::move(view_holder_token), {}, std::move(presentation_request));
 }
 
-void Presentation::UpdateViewport() {
+void Presentation::PresentOrReplaceView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  AttachClient(std::move(view_holder_token), {}, std::move(presentation_request));
+}
+
+void Presentation::PresentOrReplaceView2(
+    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  AttachClient(std::move(view_holder_token), std::move(view_ref), std::move(presentation_request));
+}
+
+void Presentation::AttachClient(
+    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  if (client_view_holder_) {
+    client_attached_ = false;
+    proxy_view_->DetachChild(client_view_holder_.value());
+  }
+
+  FX_DCHECK(!client_attached_);
+  client_view_holder_.emplace(&proxy_session_, std::move(view_holder_token), "Client View Holder");
+  proxy_view_->AddChild(client_view_holder_.value());
+
+  if (display_model_initialized_) {
+    SetViewHolderProperties(display_metrics_);
+  }
+
+  proxy_session_.set_event_handler(
+      [this, view_ref = std::move(view_ref), client_id = client_view_holder_->id()](
+          std::vector<fuchsia::ui::scenic::Event> events) mutable {
+        for (const auto& event : events) {
+          if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx)
+            continue;
+
+          const auto& gfx_event = event.gfx();
+          if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected &&
+              gfx_event.view_connected().view_holder_id == client_id) {
+            FX_LOGS(INFO) << "Transferring focus to client";
+            fuchsia::ui::views::ViewRef clone;
+            fidl::Clone(view_ref, &clone);
+            request_focus_(std::move(clone));
+          } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewDisconnected &&
+                     gfx_event.view_disconnected().view_holder_id == client_id) {
+            FX_LOGS(WARNING) << "Client View disconnected. Closing channel.";
+            proxy_view_->DetachChild(client_view_holder_.value());
+            client_view_holder_.reset();
+            safe_presenter_proxy_.QueuePresent([] {});
+
+            client_attached_ = false;
+            presentation_binding_.Unbind();
+            proxy_session_.set_event_handler([](auto) {});
+          }
+        }
+      });
+
+  presentation_binding_.Bind(std::move(presentation_request));
+  safe_presenter_proxy_.QueuePresent([this] {
+    client_attached_ = true;
+    injector_->MarkSceneReady();
+  });
+}
+
+void Presentation::UpdateViewport(const DisplayMetrics& display_metrics) {
   // Viewport should match the visible part of the display 1:1. To do this we need to match the
   // ClipSpaceTransform.
   //
@@ -417,8 +402,8 @@ void Presentation::UpdateViewport() {
   // directions (camera to scene vs context to viewport), all the transforms should be inverted
   // for the Viewport transform. This means an inverted scale and negative clip offsets.
   //
-  const float display_width = static_cast<float>(display_metrics_.width_in_px());
-  const float display_height = static_cast<float>(display_metrics_.height_in_px());
+  const float display_width = static_cast<float>(display_metrics.width_in_px());
+  const float display_height = static_cast<float>(display_metrics.height_in_px());
   const float inverted_scale = 1.f / clip_scale_;
   const float ndc_to_pixel_x = inverted_scale * display_width * 0.5f;
   const float ndc_to_pixel_y = inverted_scale * display_height * 0.5f;
@@ -512,13 +497,10 @@ void Presentation::SetClipSpaceTransform(float x, float y, float scale,
   camera_.SetClipSpaceTransform(clip_offset_x_, clip_offset_y_, clip_scale_);
   // The callback is used to throttle magnification transition animations and is expected to
   // approximate the framerate.
-  safe_presenter_->QueuePresent(
-      [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)] {
-        if (weak) {
-          weak->UpdateViewport();
-        }
-        callback();
-      });
+  safe_presenter_root_.QueuePresent([this, callback = std::move(callback)] {
+    UpdateViewport(display_metrics_);
+    callback();
+  });
 }
 
 void Presentation::ResetClipSpaceTransform() {
@@ -547,10 +529,10 @@ void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputRe
 void Presentation::SetScenicDisplayRotation() {
   fuchsia::ui::gfx::Command command;
   fuchsia::ui::gfx::SetDisplayRotationCmdHACK display_rotation_cmd;
-  display_rotation_cmd.compositor_id = compositor_id_;
+  display_rotation_cmd.compositor_id = compositor_.id();
   display_rotation_cmd.rotation_degrees = display_startup_rotation_adjustment_;
   command.set_set_display_rotation(std::move(display_rotation_cmd));
-  session_->Enqueue(std::move(command));
+  root_session_->Enqueue(std::move(command));
 }
 
 void Presentation::CreateAccessibilityViewHolder(
@@ -562,36 +544,39 @@ void Presentation::CreateAccessibilityViewHolder(
 
   // Detach client view from proxy view, and delete proxy view and view holder objects (which
   // frees the scenic resources).
-  proxy_view_->DetachChild(client_view_holder_.value());
+  if (client_view_holder_.has_value()) {
+    proxy_view_->DetachChild(client_view_holder_.value());
+  }
   proxy_view_.reset();
   proxy_view_holder_.reset();
-
-  // We will detach the proxy view on the next call to Present(), so mark it as
-  // detached.
-  proxy_view_attached_to_scene_ = false;
 
   // Generate new proxy view/view holder tokens, create a new proxy view.
   // Note that we do not create a new proxy view holder here, because the a11y
   // manager must own the new proxy view holder.
   auto [proxy_view_token, proxy_view_holder_token] = scenic::ViewTokenPair::New();
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-  proxy_view_.emplace(session_, std::move(proxy_view_token), std::move(control_ref),
+  proxy_view_.emplace(root_session_.get(), std::move(proxy_view_token), std::move(control_ref),
                       std::move(view_ref), "Proxy View");
 
   // Add the client view holder as a child of the new proxy view.
-  proxy_view_->AddChild(client_view_holder_.value());
+  if (client_view_holder_.has_value()) {
+    proxy_view_->AddChild(client_view_holder_.value());
+  }
 
   // Construct the a11y view holder.
-  a11y_view_holder_.emplace(session_, std::move(a11y_view_holder_token), "A11y View Holder");
+  proxy_view_holder_.emplace(&injector_session_, std::move(a11y_view_holder_token),
+                             "A11y View Holder");
 
   // Add the a11y view holder as a child of the injector view.
-  injector_view_->AddChild(a11y_view_holder_.value());
+  injector_view_->AddChild(proxy_view_holder_.value());
 
   // Update view holder properties. Changes are presented below.
-  SetViewHolderProperties();
+  if (display_model_initialized_) {
+    SetViewHolderProperties(display_metrics_);
+  }
 
   // All three sessions have changes, so queue present calls for all three.
-  safe_presenter_->QueuePresent([] {});
+  safe_presenter_root_.QueuePresent([] {});
   safe_presenter_injector_.QueuePresent([] {});
   safe_presenter_proxy_.QueuePresent([] {});
 
