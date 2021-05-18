@@ -368,6 +368,11 @@ struct [[gnu::packed]] boot_params {
   uint8_t pad9[276];
 };
 
+// This is not strictly part of the Linux protocol, but it is used in the
+// 16-bit BIOS calls required to populate boot_params in the 16-bit entry path.
+
+constexpr uint32_t kE820Magic = 0x534d4150;  // 'SMAP'
+
 }  // namespace linuxboot
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_LINUXBOOT_H_

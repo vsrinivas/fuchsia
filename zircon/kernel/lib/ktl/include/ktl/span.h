@@ -18,6 +18,9 @@ using std::as_writable_bytes;
 
 using std::dynamic_extent;
 
+using std::size;
+using std::ssize;
+
 }  // namespace ktl
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_SPAN_H_

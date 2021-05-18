@@ -143,8 +143,8 @@
 // This is close to the farthest the two-byte jump above can reach.
 // The boot loader enters at offset 512, which is that short jump here.
 .function Phys16Entry, nosection=nosection
-  // Make sure interrupts are disabled just in case and normalize the D flag.
-  cli
+  // Normalize flags that might affect the BIOS or instructions used here.
+  sti
   cld
 
   // To be safe, only trust %ds to have been set by the boot loader.
@@ -157,6 +157,64 @@
   mov $(setup_header - zero_page), %si
   mov $SIZEOF_SETUP_HEADER, %cx
   rep movsb
+
+  // boot_params::e820_table needs to be populated using the legacy BIOS ABI.
+  xor %ebx, %ebx    // Cleared for first BIOS call.
+  movb %bl, (boot_params + BOOT_PARAMS_E820_ENTRIES - zero_page)
+.Le820_loop:
+  // If you've been wondering where the name came from...
+  mov $0xe820, %eax
+
+  // %ebx is zero for the first iteration and is updated by the BIOS
+  // to new, unspecified, nonzero values with each iteration.
+
+  // This gives the buffer size: we read only one entry at a time.
+  mov $SIZEOF_E820ENTRY, %ecx
+
+  // This is a second magic number that must be set exactly.
+  mov $E820_MAGIC, %edx
+
+  // Use a single temporary buffer so as not to trust the BIOS to handle
+  // an address advancing through the table properly.
+  mov $(gE820Buffer - zero_page), %di
+
+  // Call the BIOS.  The carry flag indicates the call failed.
+  // Otherwise a few registers have results.
+  int $0x15
+  jc .Le820_end
+
+  // Ignore the whole table if the BIOS is not following the protocol.
+  cmp $E820_MAGIC, %eax
+  je 0f
+  movb $0, (boot_params + BOOT_PARAMS_E820_ENTRIES - zero_page)
+  jmp .Le820_end
+0:
+
+  // Copy the entry.
+  mov $SIZEOF_E820ENTRY, %cx
+  mov $(gE820Buffer - zero_page), %si
+  mov $(boot_params + BOOT_PARAMS_E820_TABLE - zero_page), %di
+  movb (boot_params + BOOT_PARAMS_E820_ENTRIES - zero_page), %al
+  mov %al, %dl
+  mul %cl
+  add %ax, %di
+  rep movsb
+
+  // Update the boot_params::e820_entries counter.
+  inc %dl
+  movb %dl, (boot_params + BOOT_PARAMS_E820_ENTRIES - zero_page)
+
+  // Bail out if the table is full.
+  cmpb $MAX_E820_TABLE_ENTRIES, %dl
+  jle .Le820_end
+
+  // The BIOS returns zero in %ebx when there are no more entries.
+  test %ebx, %ebx
+  jnz .Le820_loop
+.Le820_end:
+
+  // Make sure interrupts are disabled just in case.
+  cli
 
   // Materialize the linear address of the code below, which will be the
   // new PC in the flat 32-bit code segment.
@@ -208,7 +266,6 @@
 .function Protected32Entry, align=16, nosection=nosection
   // Reload all the segment registers (except %cs).  The Intel manual
   // recommends doing this immediately after jumping into the new %cs segment.
-  // But clearing a few registers first is always safe enough.
   mov $PHYS32_DATA32_SEL, %ax // Flat data segment for %ds, %es, and %ss.
   mov %ax, %ds
   mov %ax, %es
@@ -231,6 +288,10 @@
 .balign 16, 0
 .object boot_params, nosection=nosection
   .space SIZEOF_BOOT_PARAMS, 0
+.end_object
+
+.object gE820Buffer, align=4, nosection=nosection
+  .space SIZEOF_E820ENTRY, 0
 .end_object
 
 // Pad out to a whole number of 512-byte sectors and record that total size (in

@@ -4,27 +4,179 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/testing/zbi_test.gni")
 import("//build/unification/global_variables.gni")
+import("//zircon/kernel/phys/phys_executable.gni")
 
 # TODO(mcgrathr): declare_args() { qemu_boot_format = "multiboot"/"zeropage" }
 
-if (current_cpu == "x64") {
-  # Environment for building raw QEMU kernels.
-  # x86-64 QEMU loads 32-bit (i686) binaries (Multiboot or Linux zero page).
-  qemu_environment = "//zircon/kernel/arch/x86/phys:kernel.phys32"
-} else {
-  # Environment for building raw QEMU kernels (64-bit physical memory).
-  qemu_environment = "//zircon/kernel/phys:kernel.phys_$current_cpu"
-}
-
-if (toolchain.environment == "kernel.phys") {
-  # What to link into a raw QEMU kernel executable (direct physical memory).
-  qemu_deps = [ "//zircon/kernel/phys:qemu-header" ]
-} else if (current_cpu == "x64" &&
-           toolchain.environment == get_label_info(qemu_environment, "name")) {
-  # What to link into a raw QEMU kernel executable (x86-32 Multiboot).
-  qemu_deps = [ "//zircon/kernel/arch/x86/phys:multiboot" ]
-}
-
 # zbi_test() $timeout value for short-running tests launched via QEMU.
 qemu_short_timeout = 30
+
+# This lists the supported kernel image formats for direct booting by QEMU.
+#
+# Type: list(scope)
+#
+#   * environment
+#     - Required: Build environment to instantiate phys_executable() in.
+#     - Type: label_no_toolchain
+#
+#   * deps
+#     - Required: Added to deps of a phys_executable() to make it bootable.
+#       This reaches some source_set() and/or link magic via public_configs
+#       that make the binary image extracted by phys_executable() bootable
+#       via QEMU using this format.
+#     - Type: list(label)
+#
+#   * name
+#     - Required: Name of the format.
+#     - Type: string
+#
+#   * timeout
+#     - Optional: Passed along to zbi_test() for phys_qemu_test() tests.
+#       $qemu_short_timeout is a good default for QEMU boots of tiny tests.
+#     - Type: seconds
+#
+qemu_boot_formats = []
+
+if (current_cpu == "x64") {
+  qemu_boot_formats += [
+    {
+      name = "multiboot"
+      environment = "//zircon/kernel/arch/x86/phys:kernel.phys32"
+      deps = [ "//zircon/kernel/arch/x86/phys:multiboot" ]
+      timeout = qemu_short_timeout
+    },
+    {
+      name = "linuxboot"
+      environment = "//zircon/kernel/arch/x86/phys:kernel.phys32"
+      deps = [ "//zircon/kernel/arch/x86/phys:linuxboot" ]
+      timeout = qemu_short_timeout
+    },
+  ]
+} else {
+  # Environment for building raw QEMU kernels (64-bit physical memory).
+  qemu_boot_formats += [
+    {
+      name = "raw"
+      environment = "//zircon/kernel/phys:kernel.phys_$current_cpu"
+      deps = [ "//zircon/kernel/phys:qemu-header" ]
+      timeout = qemu_short_timeout
+    },
+  ]
+}
+
+# This is true when evaluated in one of the environments used by
+# a supported format in the $qemu_boot_formats list.
+in_qemu_environment = false
+foreach(qemu, qemu_boot_formats) {
+  if (toolchain_variant.base == qemu.environment) {
+    in_qemu_environment = true
+  }
+}
+
+# Build a test that runs directly as a QEMU kernel.  This is wired up as a
+# zbi_test() for infrastructure purposes though there is nothing in the ZBI.
+# This produces a hidden phys_executable() target and a public zbi_test()
+# target for each entry in the $qemu_boot_formats list.  Each zbi_test() is
+# named "$target_name.$format" where $format is the $name field an entry from
+# the $qemu_boot_formats list.  The overall $target_name is a group of all
+# those tests.
+#
+# Parameters
+#
+#   * output_dir, output_extension
+#
+#   * tags
+#     - Optional: Propagated to zbi_test(), which see.
+#     - Type: list(string)
+#
+# Other parameters are propagated to phys_executable(), which see.
+#
+template("phys_qemu_test") {
+  group_target = target_name
+
+  group(group_target) {
+    forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
+
+    deps = []
+    foreach(qemu, qemu_boot_formats) {
+      deps += [ ":$target_name.${qemu.name}" ]
+    }
+  }
+
+  foreach(qemu, qemu_boot_formats) {
+    test_target = "$group_target.${qemu.name}"
+
+    # Make this sub-target as public as the overall group target is.
+    # But make sure it also allows the group's deps to list it, and
+    # to itself for the environment redirect.
+    public_visibility = []
+    if (defined(invoker.visibility)) {
+      public_visibility = invoker.visibility + [
+                            ":$group_target",
+                            ":$test_target",
+                          ]
+    } else {
+      public_visibility = [ "*" ]
+    }
+
+    if (toolchain_variant.base == qemu.environment) {
+      executable_target = "_qemu_phys_test.$test_target.executable"
+
+      phys_executable(executable_target) {
+        testonly = true
+        visibility = [ ":*" ]
+        output_name = test_target
+        deps = []
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "output_dir",
+                                 "output_extension",
+                                 "output_name",
+                                 "tags",
+                                 "target_name",
+                                 "testonly",
+                                 "timeout",
+                                 "visibility",
+                               ])
+        deps += qemu.deps + [ "//zircon/kernel/phys/test:qemu-test-main" ]
+      }
+
+      zbi_test(test_target) {
+        visibility = public_visibility
+
+        # The ZBI is empty other than the boilerplate cmdline, and does not
+        # contain a ZBI-bootable kernel.
+        args = []
+        cpu = ""
+        deps = []
+        tags = [ "incomplete" ]
+        if (defined(invoker.tags)) {
+          tags += invoker.tags
+        }
+
+        # The special kernel is all that really matters for this test.
+        device_types = [ "QEMU" ]
+        qemu_kernel = ":$executable_target"
+
+        # Set a short timeout since the tests don't necessarily shut down QEMU
+        # after printing the success string.
+        if (defined(invoker.timeout)) {
+          forward_variables_from(invoker, [ "timeout" ])
+        } else {
+          forward_variables_from(qemu, [ "timeout" ])
+        }
+      }
+    } else {
+      group(test_target) {
+        visibility = public_visibility
+        testonly = true
+        public_deps = [ ":$test_target(${qemu.environment})" ]
+      }
+      not_needed(invoker, "*")
+    }
+  }
+}

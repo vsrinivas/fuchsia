@@ -8,7 +8,6 @@ import("//build/testing/zbi_test.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
 import("//zircon/kernel/phys/phys_executable.gni")
-import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 if (current_toolchain == default_toolchain) {
@@ -173,6 +172,22 @@ if (current_toolchain == default_toolchain) {
                          root_build_dir)
     }
 
+    source_set("legacy-boot") {
+      public = [ "legacy-boot.h" ]
+      public_deps = [
+        "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/lib/libc",
+      ]
+
+      sources = [ "legacy-boot.cc" ]
+      deps = [
+        "//zircon/kernel/phys:allocation",
+        "//zircon/kernel/phys:symbolize",
+        "//zircon/kernel/phys/lib/memalloc",
+        "//zircon/system/ulib/pretty",
+      ]
+    }
+
     # Just putting this in deps of a phys_executable() in the kernel.phys32
     # environment makes it a Multiboot-compatible kernel image.
     source_set("multiboot") {
@@ -181,7 +196,7 @@ if (current_toolchain == default_toolchain) {
         "multiboot-start.S",
       ]
       deps = [
-        ":multiboot-info",
+        ":multiboot-init",
         ":phys32",
         "//zircon/kernel/lib/arch",
       ]
@@ -192,9 +207,8 @@ if (current_toolchain == default_toolchain) {
     # This is a little library instead of a source_set() so it can be included
     # implicitly by phys_executable() without adding bloat to the tiny tests
     # that don't use it.
-    static_library("multiboot-info") {
-      public = [ "multiboot-info.h" ]
-      sources = [ "multiboot-info.cc" ]
+    static_library("multiboot-init") {
+      sources = [ "multiboot-init.cc" ]
       deps = [
         "//zircon/kernel/lib/arch",
         "//zircon/kernel/phys:allocation",
@@ -202,6 +216,7 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/phys/lib/memalloc",
       ]
       public_deps = [
+        ":legacy-boot",
         "//zircon/kernel/lib/ktl",
         "//zircon/kernel/lib/libc",
       ]
@@ -215,6 +230,7 @@ if (current_toolchain == default_toolchain) {
       libs = [ "./linuxboot.ld" ]
       deps = [
         ":linuxboot-asm",
+        ":linuxboot-init",
         ":phys32",
         ":phys32-header",
         "//zircon/kernel/lib/arch",
@@ -224,31 +240,28 @@ if (current_toolchain == default_toolchain) {
       # (and that would create a circular dependency here anyway).  It's just a
       # private helper for the linuxboot-header.S code.
       friend = [ ":linuxboot-asm" ]
+
+      allow_circular_includes_from = [ ":linuxboot-init" ]
     }
 
-    phys_executable("qemu-linuxboot-hello-world") {
-      testonly = true
+    # This is a little library instead of a source_set() so it can be included
+    # implicitly by phys_executable() without adding bloat to the tiny tests
+    # that don't use it.
+    static_library("linuxboot-init") {
+      visibility = [ ":linuxboot" ]
+      sources = [ "linuxboot-init.cc" ]
       deps = [
-        ":linuxboot",
-        "//zircon/kernel/phys/test:hello-world-test.source",
-        "//zircon/kernel/phys/test:qemu-test-main",
+        "//zircon/kernel/lib/arch",
+        "//zircon/kernel/phys:allocation",
+        "//zircon/kernel/phys:main",
+        "//zircon/kernel/phys:symbolize",
+        "//zircon/kernel/phys/lib/memalloc",
       ]
-    }
-
-    zbi_test("qemu-linuxboot-hello-world-test") {
-      # This is not a ZBI-bootable image.
-      cpu = ""
-      tags = [ "incomplete" ]
-
-      # The special kernel is all that really matters for this test.
-      qemu_kernel = ":qemu-linuxboot-hello-world"
-      deps = [ qemu_kernel ]
-
-      device_types = [ "QEMU" ]
-
-      # Set a short timeout since the tests don't necessarily shut down QEMU
-      # after printing the success string.
-      timeout = qemu_short_timeout
+      public_deps = [
+        ":legacy-boot",
+        "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/lib/libc",
+      ]
     }
   }
 
@@ -275,5 +288,4 @@ hwreg_asm_header("linuxboot-asm") {
 
 group("tests") {
   testonly = true
-  deps = [ ":qemu-linuxboot-hello-world-test(:kernel.phys32)" ]
 }

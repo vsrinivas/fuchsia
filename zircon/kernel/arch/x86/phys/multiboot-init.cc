@@ -4,8 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "multiboot-info.h"
-
 #include <inttypes.h>
 #include <lib/memalloc.h>
 #include <stdio.h>
@@ -16,13 +14,13 @@
 #include <phys/allocation.h>
 #include <phys/main.h>
 
-ktl::string_view gMultibootBootloader;
-ktl::string_view gMultibootCmdline;
-ktl::span<ktl::byte> gMultibootModule;
+#include "legacy-boot.h"
+
+LegacyBoot gLegacyBoot;
 
 // This populates the allocator and also collects other Multiboot information.
-void InitMemory(void* multiboot_info) {
-  const auto& info = *static_cast<const multiboot_info_t*>(multiboot_info);
+void InitMemory(void* bootloader_data) {
+  const auto& info = *static_cast<const multiboot_info_t*>(bootloader_data);
 
   auto& allocator = Allocation::GetAllocator();
   auto add_range = [&allocator](uint64_t base, uint64_t size, auto what) {
@@ -89,7 +87,7 @@ void InitMemory(void* multiboot_info) {
     for (const auto& m : mods) {
       uintptr_t base = m.mod_start, size = m.mod_end - m.mod_start;
       remove_range(base, size, "mod");
-      gMultibootModule = {reinterpret_cast<ktl::byte*>(base), size};
+      gLegacyBoot.ramdisk = {reinterpret_cast<ktl::byte*>(base), size};
     }
     if (mods.size() != 1) {
       printf("Multiboot mods @ %p count %zu != expected 1.\n", mods.data(), mods.size());
@@ -98,19 +96,25 @@ void InitMemory(void* multiboot_info) {
 
   // Remove the memory occupied by the Multiboot command line, if present.
   // It will be copied into the data ZBI, but that requires allocation.
-  if ((info.flags & MB_INFO_CMD_LINE) && info.cmdline != 0) {
-    gMultibootCmdline = reinterpret_cast<const char*>(info.cmdline);
-    if (!gMultibootCmdline.empty()) {
-      remove_range(info.cmdline, gMultibootCmdline.size() + 1, "cmdline");
+  // The same goes for the boot loader name, if present.
+
+  auto collect_string = [&](uintptr_t paddr, auto what) {
+    ktl::string_view result;
+    if (paddr != 0) {
+      result = reinterpret_cast<const char*>(paddr);
+      if (!result.empty()) {
+        remove_range(paddr, result.size() + 1, what);
+      }
     }
+    return result;
+  };
+
+  if (info.flags & MB_INFO_CMD_LINE) {
+    gLegacyBoot.cmdline = collect_string(info.cmdline, "cmdline");
   }
 
-  // Same goes for the boot loader name, if present.
-  if ((info.flags & MB_INFO_BOOT_LOADER) && info.boot_loader_name != 0) {
-    gMultibootBootloader = reinterpret_cast<const char*>(info.boot_loader_name);
-    if (!gMultibootBootloader.empty()) {
-      remove_range(info.boot_loader_name, gMultibootBootloader.size() + 1, "boot_loader_name");
-    }
+  if (info.flags & MB_INFO_BOOT_LOADER) {
+    gLegacyBoot.bootloader = collect_string(info.boot_loader_name, "boot_loader_name");
   }
 
   // Remove space occupied by the program itself.
