@@ -249,7 +249,11 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path str
 		}
 		c := fidl.InterfaceRequest(node).Channel
 		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
-		return pxy.OnOpen(int32(zxErr), &info)
+		// Failing to send this event is an error on the node that is being opened, not on this
+		// directory, so the error from this call is dropped (there is no where to send it).
+		// E.g. a client calling Directory.Open with an already closed channel should not cause this
+		// directory to stop serving.
+		pxy.OnOpen(int32(zxErr), &info)
 	}
 
 	return nil

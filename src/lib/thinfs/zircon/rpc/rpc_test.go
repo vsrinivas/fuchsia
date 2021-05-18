@@ -170,3 +170,41 @@ func TestReadDirents(t *testing.T) {
 		rootDirectory.dirents = append(rootDirectory.dirents, fileDirEnt(name))
 	}
 }
+
+func TestFailingToSendOnOpenEventDoesNotCloseParentDir(t *testing.T) {
+	c11, c12, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatalf("failed to create channel: %v", err)
+	}
+	defer c11.Close()
+	defer c12.Close()
+
+	proxy := &io.DirectoryWithCtxInterface{Channel: c11}
+
+	rootDirectory := &dummyDirectory{
+		dirents: []fs.Dirent{},
+	}
+	vfs, err := NewServer(&dummyFs{rootDir: rootDirectory}, c12)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+	defer vfs.fs.Close()
+
+	c21, c22, err := zx.NewChannel(0)
+	if err != nil {
+		t.Fatalf("failed to create channel: %v", err)
+	}
+	c21.Close()
+	defer c22.Close()
+
+	nodeReq := io.NodeWithCtxInterfaceRequest{Channel: c22}
+	err = proxy.Open(context.Background(), io.OpenFlagDescribe, 0, "", nodeReq)
+	if err != nil {
+		t.Fatalf("failed to open child node: %v", err)
+	}
+
+	_, err = proxy.Describe(context.Background())
+	if err != nil {
+		t.Fatalf("failed to describe parent node: %v", err)
+	}
+}
