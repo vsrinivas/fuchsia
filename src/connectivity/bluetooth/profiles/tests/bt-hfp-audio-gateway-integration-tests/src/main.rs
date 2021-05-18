@@ -203,11 +203,12 @@ async fn test_hfp_search_and_connect() {
 /// messages.
 #[track_caller]
 async fn expect_data(channel: &mut Channel, expected: Vec<at::Response>) {
-    let _expected_bytes: Vec<u8> = expected
+    let expected_bytes: Vec<u8> = expected
         .into_iter()
         .map(|exp| {
+            let exps = vec![exp];
             let mut bytes = Vec::new();
-            exp.serialize(&mut bytes).expect("serialization should succeed");
+            at::Response::serialize(&mut bytes, &exps).expect("serialization should succeed");
             bytes
         })
         .flatten()
@@ -219,13 +220,7 @@ async fn expect_data(channel: &mut Channel, expected: Vec<at::Response>) {
         .on_timeout(CHANNEL_TIMEOUT.after_now(), move || Err(fidl::Status::TIMED_OUT))
         .await;
     assert_matches!(read_result, Ok(_));
-
-    // TODO(fxbug.dev/73568): Uncomment and update this assert when AT library deserialization
-    // supports parsing multiple AT commands in the same buffer. We should change the assert
-    // to parse `actual_bytes` into at::Responses and compare them to `expected`. This will allow
-    // us to use assert_matches! to validate the _type_ of the response, but not necessarily the
-    // contents since that is implementation specific.
-    // assert_eq!(actual_bytes, expected_bytes);
+    assert_eq!(actual_bytes, expected_bytes);
 }
 
 /// Serializes and sends the provided AT `command` using the `channel` and then
@@ -238,12 +233,24 @@ async fn send_command_and_expect_response(
 ) {
     // Serialize and send.
     let mut bytes = Vec::new();
-    command.serialize(&mut bytes).expect("serialization should succeed");
+    let mut commands = vec![command];
+    at::Command::serialize(&mut bytes, &mut commands).expect("serialization should succeed");
     let _ = channel.as_ref().write(&bytes);
 
     // Expect the `expected` data as a response.
     expect_data(channel, expected).await;
 }
+
+// TODO(fxb/71668) Stop using raw bytes.
+const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
+(\"service\",(0,1)),\
+(\"call\",(0,1)),\
+(\"callsetup\",(0,3)),\
+(\"callheld\",(0,2)),\
+(\"signal\",(0,5)),\
+(\"roam\",(0,1)),\
+(\"battchg\",(0,5)\
+)";
 
 /// Tests that HFP correctly responds to the SLC Initialization procedure after the
 /// RFCOMM channel has been connected.
@@ -290,7 +297,7 @@ async fn test_hfp_full_slc_init_procedure() {
     send_command_and_expect_response(
         &mut remote,
         hf_features_cmd,
-        vec![at::success(at::Success::Brsf { features: 3955i64 }), at::Response::Ok],
+        vec![at::success(at::Success::Brsf { features: 3907i64 }), at::Response::Ok],
     )
     .await;
 
@@ -304,15 +311,7 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let indicator_test_cmd = at::Command::CindTest {};
-    let expected3 = at::success(at::Success::Cind {
-        service: true,
-        call: true,
-        callsetup: 0,
-        callheld: 0,
-        roam: true,
-        signal: 0,
-        battchg: 0,
-    });
+    let expected3 = at::Response::RawBytes(Vec::from(CIND_TEST_RESPONSE_BYTES));
     send_command_and_expect_response(
         &mut remote,
         indicator_test_cmd,
@@ -347,7 +346,15 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let call_hold_info_cmd = at::Command::ChldTest {};
-    let expected6 = at::success(at::Success::Chld { commands: vec![] });
+    let expected6 = at::success(at::Success::Chld {
+        commands: vec![
+            "0".to_string(),
+            "1".to_string(),
+            "1X".to_string(),
+            "2".to_string(),
+            "2X".to_string(),
+        ],
+    });
     send_command_and_expect_response(
         &mut remote,
         call_hold_info_cmd,
@@ -365,7 +372,12 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let peer_request_indicators_cmd = at::Command::BindTest {};
-    let expected8 = at::success(at::Success::BindList { indicators: vec![] });
+    let expected8 = at::success(at::Success::BindList {
+        indicators: vec![
+            at::BluetoothHFIndicator::EnhancedSafety,
+            at::BluetoothHFIndicator::BatteryLevel,
+        ],
+    });
     send_command_and_expect_response(
         &mut remote,
         peer_request_indicators_cmd,
@@ -374,14 +386,19 @@ async fn test_hfp_full_slc_init_procedure() {
     .await;
 
     let peer_request_ind_status_cmd = at::Command::BindRead {};
-    let expected9 = at::success(at::Success::BindStatus {
+
+    let expected_safety_off = at::success(at::Success::BindStatus {
+        anum: at::BluetoothHFIndicator::EnhancedSafety,
+        state: false,
+    });
+    let expected_battery_level_on = at::success(at::Success::BindStatus {
         anum: at::BluetoothHFIndicator::BatteryLevel,
         state: true,
     });
     send_command_and_expect_response(
         &mut remote,
         peer_request_ind_status_cmd,
-        vec![expected9, at::Response::Ok],
+        vec![expected_safety_off, expected_battery_level_on, at::Response::Ok],
     )
     .await;
 }

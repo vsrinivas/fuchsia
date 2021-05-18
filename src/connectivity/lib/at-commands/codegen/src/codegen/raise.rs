@@ -23,7 +23,7 @@ pub fn codegen<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definitio
 }
 
 fn codegen_commands<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Definition]) -> Result {
-    write_indented!(sink, indent, "pub fn raise_command(lowlevel: &lowlevel::Command) -> Result<highlevel::Command, DeserializeError> {{\n")?;
+    write_indented!(sink, indent, "pub fn raise_command(lowlevel: &lowlevel::Command) -> Result<highlevel::Command, DeserializeErrorCause> {{\n")?;
 
     // Increment indent
     {
@@ -44,7 +44,7 @@ fn codegen_commands<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Defi
             write_indented!(
                 sink,
                 indent,
-                "_ => Err(DeserializeError::UnknownCommand(lowlevel.clone())),\n"
+                "_ => Err(DeserializeErrorCause::UnknownCommand(lowlevel.clone())),\n"
             )?;
         }
 
@@ -109,7 +109,7 @@ fn codegen_responses<W: io::Write>(
     definitions: &[Definition],
 ) -> Result {
     write_indented!(sink, indent, "// Clients are responsible for ensuring this is only called with lowlevel::Result::Success.\n")?;
-    write_indented!(sink, indent, "pub fn raise_success(lowlevel: &lowlevel::Response) -> Result<highlevel::Success, DeserializeError> {{\n")?;
+    write_indented!(sink, indent, "pub fn raise_success(lowlevel: &lowlevel::Response) -> Result<highlevel::Success, DeserializeErrorCause> {{\n")?;
 
     // Increment indent
     {
@@ -144,7 +144,7 @@ fn codegen_responses<W: io::Write>(
             write_indented!(
                 sink,
                 indent,
-                "_ => Err(DeserializeError::UnknownResponse(lowlevel.clone())),\n"
+                "_ => Err(DeserializeErrorCause::UnknownResponse(lowlevel.clone())),\n"
             )?;
         }
 
@@ -268,7 +268,7 @@ fn codegen_extract_primitive<W: io::Write>(
             write_indented!(
                 sink,
                 indent,
-                "let {} = super::types::{}::from_i64({}_int).ok_or(DeserializeError::UnknownArguments(arguments.clone()))?;\n",
+                "let {} = super::types::{}::from_i64({}_int).ok_or(DeserializeErrorCause::UnknownArguments(arguments.clone()))?;\n",
                 dst_name,
                 type_name,
                 src_name
@@ -408,7 +408,7 @@ fn codegen_argument_vec_extraction<W: io::Write>(
         match &arg.typ {
             Type::PrimitiveType(typ) => {
                 write_indented!(sink, indent,
-                    "let {}_raw = arg_vec.get({}).ok_or(DeserializeError::UnknownArguments(arguments.clone()))?;\n",
+                    "let {}_raw = arg_vec.get({}).ok_or(DeserializeErrorCause::UnknownArguments(arguments.clone()))?;\n",
                     arg.name, i)?;
                 codegen_extract_primitive(
                     sink,
@@ -473,7 +473,7 @@ fn codegen_arguments_extraction<W: io::Write>(
                 let mut i = 0;
                 for arg_vec in arg_vec_vec {
                     write_indented!(sink, indent,
-                        "let arg_vec = arg_vec_vec.get({}).ok_or(DeserializeError::UnknownArguments(arguments.clone()))?;\n",
+                        "let arg_vec = arg_vec_vec.get({}).ok_or(DeserializeErrorCause::UnknownArguments(arguments.clone()))?;\n",
                          i
                     )?;
                     codegen_argument_vec_extraction(sink, indent, arg_vec)?;

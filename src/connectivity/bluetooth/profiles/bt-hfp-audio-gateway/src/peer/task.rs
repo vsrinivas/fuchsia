@@ -965,7 +965,7 @@ mod tests {
             value: expected_level as i64,
         };
         let mut buf = Vec::new();
-        battery_level_cmd.serialize(&mut buf).expect("serialization is ok");
+        at::Command::serialize(&mut buf, &vec![battery_level_cmd]).expect("serialization is ok");
         remote.as_ref().write(&buf[..]).expect("channel write is ok");
         // Run the main future - the spawned task should receive the HF indicator and report it.
         assert!(exec.run_until_stalled(&mut run_fut).is_pending());

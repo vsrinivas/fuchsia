@@ -69,6 +69,7 @@ copy("copy_sources") {
     "src/response.rs",
     "src/response_generated_tests.rs",
     "src/serde.rs",
+    "src/serde_tests.rs",
     "src/tests.rs",
     "src/translate_response.rs",
     "src/translate_util.rs",
@@ -131,6 +132,7 @@ group("tests") {
 rustc_test("lib_tests") {
   edition = "2018"
   deps = [
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:pest",
@@ -163,6 +165,7 @@ rustc_test("lib_tests") {
     "$target_gen_dir/src/response.rs",
     "$target_gen_dir/src/response_generated_tests.rs",
     "$target_gen_dir/src/serde.rs",
+    "$target_gen_dir/src/serde_tests.rs",
     "$target_gen_dir/src/tests.rs",
     "$target_gen_dir/src/translate_response.rs",
     "$target_gen_dir/src/translate_util.rs",

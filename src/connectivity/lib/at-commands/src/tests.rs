@@ -39,10 +39,10 @@ mod translate {
 
 mod parser {
     mod arguments_parser;
-    mod command_grammar;
+    pub mod command_grammar;
     pub mod command_parser;
     pub mod common;
-    mod response_grammar;
+    pub mod response_grammar;
     pub mod response_parser;
 
     // Tests
@@ -58,3 +58,4 @@ mod translate_util;
 // Tests
 mod command_generated_tests;
 mod response_generated_tests;
+mod serde_tests;

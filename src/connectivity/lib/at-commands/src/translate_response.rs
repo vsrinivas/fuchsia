@@ -8,12 +8,12 @@
 use crate::{
     generated::translate::{lower_success, raise_success},
     highlevel, lowlevel,
-    serde::DeserializeError,
+    serde::DeserializeErrorCause,
 };
 
 pub fn raise_response(
     lowlevel: &lowlevel::Response,
-) -> Result<highlevel::Response, DeserializeError> {
+) -> Result<highlevel::Response, DeserializeErrorCause> {
     let highlevel = match lowlevel {
         lowlevel::Response::Ok => highlevel::Response::Ok,
         lowlevel::Response::Error => highlevel::Response::Error,

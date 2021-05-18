@@ -48,7 +48,7 @@ pub fn codegen<W: io::Write>(
 
     write_indented!(translate_sink, indent, "use crate::lowlevel;\n")?;
     write_indented!(translate_sink, indent, "use crate::highlevel;\n")?;
-    write_indented!(translate_sink, indent, "use crate::serde::DeserializeError;\n")?;
+    write_indented!(translate_sink, indent, "use crate::serde::DeserializeErrorCause;\n")?;
     write_indented!(translate_sink, indent, "use crate::translate_util::*;\n")?;
     write_indented!(translate_sink, indent, "use num_traits::FromPrimitive;\n\n")?;
 

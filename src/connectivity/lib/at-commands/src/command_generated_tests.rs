@@ -10,7 +10,7 @@
 use {
     crate::{
         generated::translate, highlevel, lowlevel, lowlevel::write_to::WriteTo,
-        parser::command_parser, serde::SerDe,
+        parser::command_parser, serde::internal::SerDeOne,
     },
     std::{collections::HashMap, io::Cursor},
 };
@@ -45,14 +45,14 @@ fn test_roundtrips(highlevel: highlevel::Command, lowlevel: lowlevel::Command, s
     assert_eq!(string, string_from_lowlevel);
 
     // TEST II: highlevel -> bytes -> highlevel
-    // This should be identical to above assuming SerDe::serialize and
-    // SerDe::deserialize are implemented correctly.
+    // This should be identical to above assuming SerDe::serialize_one and
+    // SerDe::deserialize_one are implemented correctly.
     let mut bytes_from_highlevel = Vec::new();
 
     // Do round trip
-    highlevel.serialize(&mut bytes_from_highlevel).expect("Failed to serialize highlevel.");
+    highlevel.serialize_one(&mut bytes_from_highlevel).expect("Failed to serialize highlevel.");
     let highlevel_from_bytes =
-        highlevel::Command::deserialize(&mut Cursor::new(bytes_from_highlevel.clone()))
+        highlevel::Command::deserialize_one(&mut Cursor::new(bytes_from_highlevel.clone()))
             .expect("Failed to deserialize bytes.");
 
     // Convert to a String so errors are human readable, not just hex.
@@ -85,14 +85,17 @@ fn test_roundtrips(highlevel: highlevel::Command, lowlevel: lowlevel::Command, s
     assert_eq!(string, string_from_lowlevel);
 
     // TEST IV: bytes -> highlevel -> bytes
-    // This should be identical to above assuming SerDe::serialize and
-    // SerDe::deserialize are implemented correctly.
+    // This should be identical to above assuming SerDeOne::serialize_one and
+    // SerDeOne::deserialize_one are implemented correctly.
     let mut bytes_from_highlevel = Vec::new();
 
     // Do round trip
-    let highlevel_from_bytes = highlevel::Command::deserialize(&mut Cursor::new(string.clone()))
-        .expect("Failed to deserialize String.");
-    highlevel_from_bytes.serialize(&mut bytes_from_highlevel).expect("Failed to serialize bytes.");
+    let highlevel_from_bytes =
+        highlevel::Command::deserialize_one(&mut Cursor::new(string.clone()))
+            .expect("Failed to deserialize String.");
+    highlevel_from_bytes
+        .serialize_one(&mut bytes_from_highlevel)
+        .expect("Failed to serialize bytes.");
 
     // Convert to a String so errors are human readable, not just hex.
     let string_from_highlevel =

@@ -33,10 +33,10 @@ mod translate {
 
 mod parser {
     mod arguments_parser;
-    mod command_grammar;
+    pub mod command_grammar;
     pub mod command_parser;
     pub mod common;
-    mod response_grammar;
+    pub mod response_grammar;
     pub mod response_parser;
 }
 

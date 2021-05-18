@@ -4,7 +4,7 @@
 
 use {
     at_commands as at,
-    at_commands::SerDe,
+    at_commands::{DeserializeBytes, SerDe},
     core::{
         pin::Pin,
         task::{Context, Poll},
@@ -16,7 +16,7 @@ use {
         stream::{FusedStream, Stream, StreamExt},
         AsyncWrite, AsyncWriteExt,
     },
-    log::{info, warn},
+    log::{debug, info, warn},
     std::{collections::HashMap, collections::VecDeque, io::Cursor},
 };
 
@@ -235,6 +235,11 @@ pub struct ServiceLevelConnection {
     /// The receiver polled by the stream implementation producing requests for more information
     /// from the HFP component.
     receiver: Receiver<SlcRequest>,
+    /// The bytes that have been read from the RFCOMM connection to the remote peer but which
+    /// have not yet been parsed into AT Commands.
+    unparsed_bytes: DeserializeBytes,
+    /// The SlcRequests that have not yet been processed.
+    unprocessed_slc_requests: VecDeque<SlcRequest>,
 }
 
 impl ServiceLevelConnection {
@@ -248,6 +253,8 @@ impl ServiceLevelConnection {
             requests_pending_initialization: VecDeque::new(),
             sender,
             receiver,
+            unparsed_bytes: DeserializeBytes::new(),
+            unprocessed_slc_requests: VecDeque::new(),
         }
     }
 
@@ -308,15 +315,33 @@ impl ServiceLevelConnection {
         *self = Self::new();
     }
 
-    /// Adds the AT `message` to the queue of outgoing data packets.
+    /// Adds the sequence of AT `messages` to the queue of outgoing data packets, until there is
+    /// a serialization error..
     /// Returns Error if serialization fails, OK otherwise.
-    fn queue_message_to_peer(&mut self, message: at::Response) -> Result<(), at::SerializeError> {
+    fn queue_messages_to_peer_until_error(
+        &mut self,
+        messages: &[at::Response],
+    ) -> Result<(), at::SerializeError<at::Response>> {
         let mut bytes = Vec::new();
-        message.serialize(&mut bytes)?;
+        at::Response::serialize(&mut bytes, messages)?;
         if let Some(connection) = &mut self.connection {
             connection.queue_data(bytes);
         }
         Ok(())
+    }
+
+    /// Adds the sequence of AT `messages` to the queue of outgoing data packets, logging if
+    /// there is a serialization error.
+    fn queue_messages_to_peer(&mut self, mut messages: Vec<at::Response>) {
+        while !messages.is_empty() {
+            match self.queue_messages_to_peer_until_error(&messages) {
+                Ok(()) => break, // Successfully sent all messages.
+                Err(err) => {
+                    warn!("Unable to serialize AT response with {:?}, {:?}", err.cause, err.failed);
+                    messages = err.remaining;
+                }
+            }
+        }
     }
 
     /// Attempts to send any queued messages to the peer via the RFCOMM `connection`.
@@ -350,9 +375,7 @@ impl ServiceLevelConnection {
         // before the SLC is initialized may warrant complete channel shutdown. Fix this method
         // to make the error handling policy decisions.
         info!("Error in procedure update: {:?}", error);
-        if let Err(err) = self.queue_message_to_peer(at::Response::Error) {
-            warn!("Unable to serialize AT error response with {:}", err);
-        }
+        self.queue_messages_to_peer(vec![at::Response::Error])
     }
 
     /// Handle a procedure update.
@@ -367,11 +390,7 @@ impl ServiceLevelConnection {
             }
             ProcedureRequest::SendMessages(messages) => {
                 // Messages to be sent to the peer via the Service Level RFCOMM Connection.
-                for message in messages {
-                    if let Err(err) = self.queue_message_to_peer(message) {
-                        warn!("Unable to serialize AT response with {:}", err);
-                    }
-                }
+                self.queue_messages_to_peer(messages)
             }
             ProcedureRequest::Request(req) => return Some(req),
         }
@@ -418,34 +437,62 @@ impl ServiceLevelConnection {
     ///
     /// Returns the an optional request for more information if the SLC requires input
     /// from the HFP component.
-    fn receive_data(&mut self, bytes: &mut Vec<u8>) -> Option<SlcRequest> {
-        let request = self.receive_data_internal(bytes);
-        self.procedure_request(request)
+    fn receive_data(&mut self, bytes: &mut Vec<u8>) {
+        let procedure_requests = self.receive_data_internal(bytes);
+        let mut slc_requests = procedure_requests
+            .into_iter()
+            .map(|req| self.procedure_request(req))
+            .flatten()
+            .collect();
+        self.unprocessed_slc_requests.append(&mut slc_requests)
     }
 
     /// Consume bytes from the peer (HF), producing a parsed at::Command from the bytes and
     /// handling it. Internal helper method for `Self::receive_data`.
     ///
     /// Returns the request from handling the command.
-    fn receive_data_internal(&mut self, bytes: &mut Vec<u8>) -> ProcedureRequest {
-        // Parse the byte buffer into a HF message.
-        let parse_result = at::Command::deserialize(&mut Cursor::new(bytes));
+    fn receive_data_internal(&mut self, bytes: &[u8]) -> Vec<ProcedureRequest> {
+        let mut procedure_requests = Vec::new();
+        let mut cursor = Cursor::new(&bytes);
 
-        if let Err(err) = parse_result {
-            warn!("Received unparseable AT command: {:?}", err);
-            return ProcedureError::UnparsableHf(err).into();
+        // at::Command::deserialize will parse bytes until it runs out of parseable bytes or hits
+        // an error. Then it will return all parsed values with an optional error.  If there is an
+        // error, there may still be bytes to parse after the error is handled.  If there is no
+        // error, there are no more parseable bytes.  This outer loop repeatedly calls deserialize
+        // until there is no error.
+        'read_all_bytes: loop {
+            let parse_result =
+                at::Command::deserialize(&mut cursor, std::mem::take(&mut self.unparsed_bytes));
+            // Parse the byte buffer into a HF message.
+            self.unparsed_bytes = parse_result.remaining_bytes;
+
+            // This inner loop loops over parsed values and converts them to procedure requests.
+            'process_commands: for command in parse_result.values {
+                debug!("Received {:?}", command);
+                // Attempt to match the received command to a procedure.
+                let procedure_id = match self.match_command_to_procedure(&command) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        procedure_requests.push(e.into());
+                        continue 'process_commands;
+                    }
+                };
+
+                // Handle the received HF commend.
+                let procedure_request = self.handle_command(procedure_id, command.into());
+                procedure_requests.push(procedure_request);
+            }
+
+            if let Some(err) = parse_result.error {
+                warn!("Received unparseable AT command: {:?}", &err);
+                procedure_requests.push(ProcedureError::UnparsableHf(err).into());
+            } else {
+                // If there's no error and we're out of parsed values, we've done everything we can.
+                break 'read_all_bytes;
+            }
         }
 
-        let command = parse_result.unwrap();
-        info!("Received {:?}", command);
-
-        // Attempt to match the received command to a procedure.
-        let procedure_id = match self.match_command_to_procedure(&command) {
-            Ok(id) => id,
-            Err(e) => return e.into(),
-        };
-        // Handle the received HF commend.
-        self.handle_command(procedure_id, command.into())
+        procedure_requests
     }
 
     /// Handles the provided `command`:
@@ -565,16 +612,21 @@ impl ServiceLevelConnection {
         &mut self,
         cx: &mut Context<'_>,
     ) -> Poll<Option<<Self as Stream>::Item>> {
+        if let Some(slc_req) = self.unprocessed_slc_requests.pop_front() {
+            return Poll::Ready(Some(Ok(slc_req)));
+        }
+        // Otherwise loop until we have received all bytes and sent all responses.
         loop {
             if let Some(conn) = &mut self.connection {
                 match conn.poll_next_unpin(cx) {
                     Poll::Ready(Some(Ok(mut data))) => {
-                        let request = self.receive_data(&mut data);
+                        self.receive_data(&mut data);
+                        let request = self.unprocessed_slc_requests.pop_front();
                         // If the SLC requires more information, bubble it up.
                         // Otherwise, try to send any queued data as a result of self.receive_data()
                         // and continue the loop to register a waker for the next read.
                         match request {
-                            Some(info_req) => return Poll::Ready(Some(Ok(info_req))),
+                            Some(slc_req) => return Poll::Ready(Some(Ok(slc_req))),
                             None => {
                                 if let Some(conn) = &mut self.connection {
                                     if let Err(e) = conn.try_send_queued(cx) {
@@ -642,13 +694,19 @@ impl FusedStream for ServiceLevelConnection {
 pub(crate) mod tests {
     use {
         super::*,
-        crate::peer::indicators::{
-            AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX, CALL_INDICATOR_INDEX,
+        crate::peer::{
+            gain_control::Gain,
+            indicators::{
+                AgIndicator, BATT_CHG_INDICATOR_INDEX, CALL_HELD_INDICATOR_INDEX,
+                CALL_INDICATOR_INDEX,
+            },
+            procedure::dtmf::DtmfCode,
         },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
         futures::io::AsyncWriteExt,
         matches::assert_matches,
+        std::{convert::TryFrom, mem::Discriminant},
     };
 
     /// Builds and returns a connected service level connection. Returns the SLC and
@@ -677,9 +735,10 @@ pub(crate) mod tests {
         for expected_at in expected {
             let mut bytes = Vec::new();
             assert_matches!(remote.read_datagram(&mut bytes).await, Ok(_));
-            let actual =
-                at::Response::deserialize(&mut Cursor::new(bytes)).expect("valid response");
-            assert_eq!(actual, expected_at);
+            let actual_result =
+                at::Response::deserialize(&mut Cursor::new(bytes), DeserializeBytes::new());
+            let actual = actual_result.values.get(0).expect("valid response");
+            assert_eq!(actual, &expected_at);
         }
     }
 
@@ -721,11 +780,27 @@ pub(crate) mod tests {
         assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
     }
 
+    /// Expects the service level connection to be ready, and polls to check that it is.  Checks to make
+    /// sure that the returned SlcRequest is the correct variant. SlcRequests contain closures so cannot
+    /// be tested for equality directly.
+    #[track_caller]
+    fn expect_slc_ready(
+        exec: &mut fasync::TestExecutor,
+        slc: &mut ServiceLevelConnection,
+        expected_request_discriminant: Discriminant<SlcRequest>,
+    ) {
+        assert_matches!(
+            exec.run_until_stalled(&mut slc.next()),
+            Poll::Ready(Some(Ok(actual_request))) if
+                std::mem::discriminant(&actual_request) == expected_request_discriminant
+        );
+    }
+
     /// Serializes the AT Response into a byte buffer.
     #[track_caller]
     pub fn serialize_at_response(response: at::Response) -> Vec<u8> {
         let mut buf = Vec::new();
-        response.serialize(&mut buf).expect("serialization is ok");
+        at::Response::serialize(&mut buf, &vec![response]).expect("serialization is ok");
         buf
     }
 
@@ -773,6 +848,49 @@ pub(crate) mod tests {
         assert_matches!(slc.next().await, None);
         assert!(!slc.connected());
         assert!(slc.is_terminated());
+    }
+
+    #[test]
+    fn slc_handles_multipart_commands() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut slc, remote) = create_and_connect_slc();
+        // Bypass the SLCI procedure by setting the channel to initialized.
+        slc.set_initialized();
+
+        let set_speaker_gain_part_one = b"AT+VG";
+        let set_speaker_gain_part_two = b"S=1\r";
+
+        remote.as_ref().write(set_speaker_gain_part_one).expect("Sending part one.");
+        expect_slc_pending(&mut exec, &mut slc);
+
+        remote.as_ref().write(set_speaker_gain_part_two).expect("Sending part two.");
+        let slc_volume_request = SlcRequest::SpeakerVolumeSynchronization {
+            level: Gain::try_from(0 as u8).unwrap(),
+            response: Box::new(|| AgUpdate::Ok),
+        };
+        expect_slc_ready(&mut exec, &mut slc, std::mem::discriminant(&slc_volume_request));
+    }
+
+    #[test]
+    fn slc_handles_multiple_commands() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut slc, remote) = create_and_connect_slc();
+        // Bypass the SLCI procedure by setting the channel to initialized.
+        slc.set_initialized();
+
+        let set_speaker_gain_send_dtmf = b"AT+VGS=1\rAT+VTS=#\r";
+
+        remote.as_ref().write(set_speaker_gain_send_dtmf).expect("Sending.");
+
+        let slc_volume_request = SlcRequest::SpeakerVolumeSynchronization {
+            level: Gain::try_from(0 as u8).unwrap(),
+            response: Box::new(|| AgUpdate::Ok),
+        };
+        expect_slc_ready(&mut exec, &mut slc, std::mem::discriminant(&slc_volume_request));
+
+        let dtmf_request =
+            SlcRequest::SendDtmf { code: DtmfCode::One, response: Box::new(|| AgUpdate::Ok) };
+        expect_slc_ready(&mut exec, &mut slc, std::mem::discriminant(&dtmf_request));
     }
 
     // TODO(fxbug.dev/73027): Re-enable this test after error handling policies are implemented.
