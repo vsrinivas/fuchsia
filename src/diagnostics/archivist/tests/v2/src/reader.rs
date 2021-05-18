@@ -243,7 +243,6 @@ fn process_results_for_comparison(results: serde_json::Value) -> serde_json::Val
 
     string_result_array.sort();
     let sorted_results_json_string = format!("[{}]", string_result_array.join(","));
-    eprintln!("processed to {} bytes", sorted_results_json_string.len());
     serde_json::from_str(&sorted_results_json_string).unwrap()
 }
 

@@ -70,7 +70,7 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
                 Event::capability_requested("fuchsia.logger.LogSink"),
                 cm_rust::EventMode::Async,
             ),
-            source: RouteEndpoint::component("test"),
+            source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("test/archivist")],
         })?
         .add_route(CapabilityRoute {
@@ -87,6 +87,16 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
             capability: Capability::storage("data", "/data"),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("test/archivist")],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::component("test/archivist"),
+            targets: vec![RouteEndpoint::AboveRoot],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.Log"),
+            source: RouteEndpoint::component("test/archivist"),
+            targets: vec![RouteEndpoint::AboveRoot],
         })?;
     Ok(builder)
 }

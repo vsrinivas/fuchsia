@@ -14,6 +14,7 @@ use futures::StreamExt;
 use std::{collections::HashSet, iter::FromIterator, path::Path};
 
 mod constants;
+mod logs;
 mod reader;
 mod test_topology;
 
@@ -192,7 +193,10 @@ async fn log_attribution() {
     for log_str in &["This is a syslog message", "This is another syslog message"] {
         let log_record = result.next().await.expect("received log").expect("log is not an error");
 
-        assert_eq!(log_record.moniker, "child");
+        assert_eq!(
+            log_record.moniker,
+            format!("fuchsia_component_test_collection:{}/test/child", instance.root.child_name())
+        );
         assert_eq!(log_record.metadata.component_url, STUB_INSPECT_COMPONENT_URL);
         assert_eq!(log_record.metadata.severity, Severity::Info);
         assert_data_tree!(log_record.payload.unwrap(), root: contains {

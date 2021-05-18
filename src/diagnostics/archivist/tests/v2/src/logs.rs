@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::test_topology;
 use archivist_lib::logs::message::fx_log_packet_t;
-use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
-use fidl_fuchsia_sys::LauncherMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{connect_to_protocol, launch_with_options, App, LaunchOptions};
+use fuchsia_component_test::RealmInstance;
 use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
@@ -15,6 +14,13 @@ use futures::{channel::mpsc, StreamExt};
 
 #[fuchsia::test]
 async fn timestamp_sorting_for_batches() {
+    // launch archivist
+    let builder = test_topology::create(test_topology::Options::default())
+        .await
+        .expect("create base topology");
+
+    let instance = builder.build().create().await.expect("create instance");
+
     let message_times = [1_000, 5_000, 10_000, 15_000];
     let hare_times = (0, 2);
     let tort_times = (1, 3);
@@ -37,22 +43,11 @@ async fn timestamp_sorting_for_batches() {
             time: p.metadata.time,
             dropped_logs: 0,
             msg: "timing log".to_owned(),
-            tags: vec!["UNKNOWN".to_owned()],
+            tags: vec![format!("fuchsia_component_test_collection:{}", instance.root.child_name())],
             pid: p.metadata.pid,
             tid: p.metadata.tid,
         })
         .collect::<Vec<_>>();
-
-    // launch archivist-for-embedding.cmx
-    let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
-    let mut archivist = launch_with_options(
-        &launcher,
-        "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
-            .to_owned(),
-        Some(vec!["--disable-log-connector".to_owned()]),
-        LaunchOptions::new(),
-    )
-    .unwrap();
 
     {
         // there are two writers in this test, a "tortoise" and a "hare"
@@ -65,15 +60,15 @@ async fn timestamp_sorting_for_batches() {
         send_hare.write(packets[hare_times.0].as_bytes()).unwrap();
 
         // connect to log_sink and make sure we have a clean slate
-        let mut early_listener = listen_to_archivist(&archivist);
-        let log_sink = archivist.connect_to_protocol::<LogSinkMarker>().unwrap();
+        let mut early_listener = listen_to_archivist(&instance);
+        let log_sink = instance.root.connect_to_protocol_at_exposed_dir::<LogSinkMarker>().unwrap();
 
         // connect the tortoise's socket
         log_sink.connect(recv_tort).unwrap();
         let tort_expected = messages[tort_times.0].clone();
         let mut expected_dump = vec![tort_expected.clone()];
         assert_eq!(&early_listener.next().await.unwrap(), &tort_expected);
-        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&instance).await, &expected_dump);
 
         // connect hare's socket
         log_sink.connect(recv_hare).unwrap();
@@ -82,10 +77,10 @@ async fn timestamp_sorting_for_batches() {
         expected_dump.sort_by_key(|m| m.time);
 
         assert_eq!(&early_listener.next().await.unwrap(), &hare_expected);
-        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&instance).await, &expected_dump);
 
         // start a new listener and make sure it gets backlog reversed from early listener
-        let mut middle_listener = listen_to_archivist(&archivist);
+        let mut middle_listener = listen_to_archivist(&instance);
         assert_eq!(&middle_listener.next().await.unwrap(), &hare_expected);
         assert_eq!(&middle_listener.next().await.unwrap(), &tort_expected);
 
@@ -97,7 +92,7 @@ async fn timestamp_sorting_for_batches() {
 
         assert_eq!(&early_listener.next().await.unwrap(), &tort_expected2);
         assert_eq!(&middle_listener.next().await.unwrap(), &tort_expected2);
-        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&instance).await, &expected_dump);
 
         // send the second hare message and assert it's seen
         send_tort.write(packets[hare_times.1].as_bytes()).unwrap();
@@ -107,21 +102,15 @@ async fn timestamp_sorting_for_batches() {
 
         assert_eq!(&early_listener.next().await.unwrap(), &hare_expected2);
         assert_eq!(&middle_listener.next().await.unwrap(), &hare_expected2);
-        assert_eq!(&dump_from_archivist(&archivist).await, &expected_dump);
+        assert_eq!(&dump_from_archivist(&instance).await, &expected_dump);
 
         // listening after all messages were seen by archivist-for-embedding.cmx should be time-ordered
-        let mut final_listener = listen_to_archivist(&archivist);
+        let mut final_listener = listen_to_archivist(&instance);
         assert_eq!(&final_listener.next().await.unwrap(), &hare_expected);
         assert_eq!(&final_listener.next().await.unwrap(), &tort_expected);
         assert_eq!(&final_listener.next().await.unwrap(), &hare_expected2);
         assert_eq!(&final_listener.next().await.unwrap(), &tort_expected2);
     }
-
-    // connect to controller and call stop
-    let controller = archivist.connect_to_protocol::<ControllerMarker>().unwrap();
-    controller.stop().unwrap();
-
-    assert!(archivist.wait().await.unwrap().success());
 }
 
 struct Listener {
@@ -138,8 +127,8 @@ impl LogProcessor for Listener {
     }
 }
 
-async fn dump_from_archivist(archivist: &App) -> Vec<LogMessage> {
-    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
+async fn dump_from_archivist(instance: &RealmInstance) -> Vec<LogMessage> {
+    let log_proxy = instance.root.connect_to_protocol_at_exposed_dir::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, true, None).await.unwrap();
@@ -148,8 +137,8 @@ async fn dump_from_archivist(archivist: &App) -> Vec<LogMessage> {
     recv_logs.collect::<Vec<_>>().await
 }
 
-fn listen_to_archivist(archivist: &App) -> mpsc::UnboundedReceiver<LogMessage> {
-    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
+fn listen_to_archivist(instance: &RealmInstance) -> mpsc::UnboundedReceiver<LogMessage> {
+    let log_proxy = instance.root.connect_to_protocol_at_exposed_dir::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, false, None).await.unwrap();

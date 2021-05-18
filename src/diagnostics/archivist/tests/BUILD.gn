@@ -15,7 +15,6 @@ group("tests") {
     "logs-from-crash",
     "logs-lifecycle",
     "logs-redaction",
-    "logs-sorting",
     "logs-stop",
     "logs-unattributed-sinks",
     "logs/cpp:test-spec",
