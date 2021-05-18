@@ -83,13 +83,14 @@ To add an external crate, do the following:
          - Leave the **Owner** field blank.
             - The OSRB team meets regularly to review the issues.
             Please allow about a week for a response.
-         - Specify all of the crates that you want to add. Include the crate(s)
-         that you're adding as well as the dependency crates identified after
-         running `fx update-rustc-third-party`.
+         - Specify all of the crates that you want to **add** (no need to list
+           previously approved crates). Include the crate(s) that you're adding
+           as well as the dependency crates identified after running
+           `fx update-rustc-third-party`.
          - If there are any files in the source repository that are not included
-         when vendored, specify those files in your issue to the OSRB. For
-         example, font files that are only used for testing but are excluded
-         when the crate is vendored would need to be included in an OSRB issue.
+           when vendored, specify those files in your issue to the OSRB. For
+           example, font files that are only used for testing but are excluded
+           when the crate is vendored would need to be included in an OSRB issue.
 
       Note: As part of the OSRB review, you may be asked to import only a subset
       of the files in an external crate. See
