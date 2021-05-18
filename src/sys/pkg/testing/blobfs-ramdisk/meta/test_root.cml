@@ -5,7 +5,7 @@
     children: [
         {
             name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+            url: "fuchsia-pkg://fuchsia.com/blobfs-ramdisk-unit-tests#meta/isolated-devmgr.cm",
         },
         {
             name: "test_driver",

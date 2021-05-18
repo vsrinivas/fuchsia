@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_library("blobfs-ramdisk") {
   version = "0.1.0"
@@ -57,6 +58,10 @@ fuchsia_component("unit-tests-driver") {
   ]
 }
 
+isolated_devmgr_v2_component("isolated-devmgr-component") {
+  package_name = "blobfs-ramdisk-unit-tests"
+}
+
 fuchsia_test_package("unit-tests-package") {
   test_specs = {
     log_settings = {
@@ -65,7 +70,13 @@ fuchsia_test_package("unit-tests-package") {
   }
   package_name = "blobfs-ramdisk-unit-tests"
   test_components = [ ":unit-tests-root" ]
-  deps = [ ":unit-tests-driver" ]
+  deps = [
+    ":isolated-devmgr-component",
+    ":unit-tests-driver",
+
+    # For isolated-devmgr-component:
+    "//src/storage/testing:storage_drivers",
+  ]
 }
 
 group("tests") {
