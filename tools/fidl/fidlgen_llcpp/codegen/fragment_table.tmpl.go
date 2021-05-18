@@ -101,9 +101,12 @@ public:
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, {{ .Name }}* value)
+      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer, uint32_t backing_buffer_size,
+      {{ .Name }}* value)
       : message_(::fidl::OutgoingMessage::ConstructorArgs{
           .iovecs = iovecs_,
-          .iovec_capacity = ::fidl::internal::IovecBufferSize,
+          .iovec_capacity = iovec_capacity,
     {{- if gt .MaxHandles 0 }}
           .handles = handles_,
           .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
@@ -111,6 +114,7 @@ public:
           .backing_buffer = backing_buffer,
           .backing_buffer_capacity = backing_buffer_size,
         }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<{{ .Name }}>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -140,7 +144,12 @@ public:
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage({{ .Name }}* value)
-      : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+      : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point the input FIDL
+    // object, which is not owned by it.
+    explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned, {{ .Name }}* value)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

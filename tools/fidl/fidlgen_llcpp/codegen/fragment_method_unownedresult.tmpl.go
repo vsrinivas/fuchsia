@@ -86,7 +86,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
           "zx_txid_t(0)" .RequestArgs }});
 {{- else -}}
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
-      {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
+      {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "zx_txid_t(0)" .RequestArgs }});
 {{- end -}}
   auto& _outgoing = _request.GetOutgoingMessage();
 {{- if .HasResponse }}

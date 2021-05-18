@@ -35,7 +35,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     state->NextStep();  // End: Setup. Begin: Encode.
 
     {
-      ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
+      ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{},
+                                                    &aligned_value);
       if (!encoded.ok()) {
         std::cerr << "Unexpected error: " << encoded.error() << std::endl;
       }

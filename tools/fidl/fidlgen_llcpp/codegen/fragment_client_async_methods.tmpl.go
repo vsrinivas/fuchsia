@@ -41,7 +41,7 @@ The request and callback are allocated on the heap.
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ .WireRequest }}::OwnedEncodedMessage _request(
-    {{- RenderForwardParams "_context->Txid()" .RequestArgs -}}
+    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
@@ -64,7 +64,7 @@ The request and callback are allocated on the heap.
                              .RequestArgs }});
   {{- else }}
     {{ .WireRequest }}::OwnedEncodedMessage _request(
-      {{ RenderForwardParams "_context->Txid()" .RequestArgs }});
+      {{ RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" "_context->Txid()" .RequestArgs }});
   {{- end }}
   return _request.GetOutgoingMessage().Write(this, _context);
 }

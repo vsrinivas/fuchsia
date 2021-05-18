@@ -41,7 +41,7 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
 ::fidl::Result
 {{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
-    {{- RenderForwardParams .ResponseArgs -}}
+    {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
   };
   return {{ .WireCompleterBase }}::SendReply(&_response.GetOutgoingMessage());
 }

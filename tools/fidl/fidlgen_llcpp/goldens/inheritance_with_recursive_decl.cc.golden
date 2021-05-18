@@ -24,7 +24,8 @@ extern "C" const fidl_type_t
             request) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
-      _request(zx_txid_t(0), std::move(request));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(request));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);
@@ -204,7 +205,8 @@ extern "C" const fidl_type_t
             request) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Child::First>>
-      _request(zx_txid_t(0), std::move(request));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(request));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);
@@ -245,7 +247,8 @@ namespace fidl_test_inheritancewithrecursivedecl {
             request) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
-      _request(zx_txid_t(0), std::move(request));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0),
+               std::move(request));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);

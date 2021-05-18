@@ -34,8 +34,13 @@ class ResponseContext;
 
 // This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
 // the kernel.
-constexpr size_t IovecBufferSize = 16;
+constexpr uint32_t IovecBufferSize = 16;
 using IovecBuffer = zx_channel_iovec_t[IovecBufferSize];
+
+// Marker to allow references/pointers to the unowned input objects in OwnedEncodedMessage.
+// This enables iovec optimizations but requires the input objects to stay in scope until the
+// encoded result has been consumed.
+struct AllowUnownedInputRef {};
 
 }  // namespace internal
 

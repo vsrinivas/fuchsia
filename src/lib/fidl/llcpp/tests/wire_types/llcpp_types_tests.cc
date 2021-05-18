@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 using ::fidl_llcpp_types_test::TypesTest;
+using ::fidl_llcpp_types_test::wire::VectorStruct;
 using NonNullableChannelRequest = fidl::WireRequest<TypesTest::NonNullableChannel>;
 
 namespace {
@@ -196,6 +197,42 @@ TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
   // OwnedEncodedMessage size is smaller than 512 bytes.
   static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<TypesTest::RequestOf513Bytes>>) <
                 512);
+}
+
+// Ensure the encoded message with default number of iovecs can be decoded and accessed without
+// triggering ASAN errors, even after the initial encoded object goes out of scope.
+// A vector is used in this test because the encoder will typically use a dedicated iovec to
+// point directly into its body. This behavior could change, however, but is verified in the test.
+TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
+  constexpr uint32_t vector_view_count = 100;
+  std::unique_ptr<fidl::OwnedEncodedMessage<VectorStruct>> encoded;
+
+  {
+    fidl::FidlAllocator<vector_view_count * sizeof(uint32_t)> allocator;
+    VectorStruct vector_struct = {
+        .v = fidl::VectorView<uint32_t>(allocator, vector_view_count),
+    };
+    for (uint32_t i = 0; i < vector_view_count; i++) {
+      vector_struct.v[i] = i;
+    }
+
+    encoded = std::make_unique<fidl::OwnedEncodedMessage<VectorStruct>>(&vector_struct);
+    ASSERT_TRUE(encoded->ok());
+
+    auto encoded_with_iovecs = std::make_unique<fidl::OwnedEncodedMessage<VectorStruct>>(
+        fidl::internal::AllowUnownedInputRef{}, &vector_struct);
+    ASSERT_TRUE(encoded_with_iovecs->ok());
+    ASSERT_GT(encoded_with_iovecs->GetOutgoingMessage().iovec_actual(), 1u);
+  }
+
+  fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
+  ASSERT_TRUE(converted.ok());
+  fidl::DecodedMessage<VectorStruct> decoded(std::move(converted.incoming_message()));
+
+  ASSERT_EQ(vector_view_count, decoded.PrimaryObject()->v.count());
+  for (uint32_t i = 0; i < vector_view_count; i++) {
+    EXPECT_EQ(i, decoded.PrimaryObject()->v[i]);
+  }
 }
 
 }  // namespace

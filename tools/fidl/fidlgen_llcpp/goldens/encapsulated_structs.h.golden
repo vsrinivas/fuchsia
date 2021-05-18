@@ -74,15 +74,21 @@ struct NonInlineStructTestStruct {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           NonInlineStructTestStruct* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size,
+                          NonInlineStructTestStruct* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .handles = handles_,
               .handle_capacity =
                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<NonInlineStructTestStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -113,7 +119,13 @@ struct NonInlineStructTestStruct {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(NonInlineStructTestStruct* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        NonInlineStructTestStruct* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -192,12 +204,17 @@ struct Int8Int32 {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           Int8Int32* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, Int8Int32* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<Int8Int32>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -228,7 +245,12 @@ struct Int8Int32 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Int8Int32* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned, Int8Int32* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -303,12 +325,17 @@ struct Int16Int8 {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           Int16Int8* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, Int16Int8* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<Int16Int8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -339,7 +366,12 @@ struct Int16Int8 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Int16Int8* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned, Int16Int8* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -412,12 +444,17 @@ struct ArrayInt16Int8 {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           ArrayInt16Int8* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, ArrayInt16Int8* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<ArrayInt16Int8>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -448,7 +485,13 @@ struct ArrayInt16Int8 {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ArrayInt16Int8* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        ArrayInt16Int8* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -526,12 +569,18 @@ struct StructPaddingTestStruct {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           StructPaddingTestStruct* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size,
+                          StructPaddingTestStruct* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<StructPaddingTestStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -562,7 +611,13 @@ struct StructPaddingTestStruct {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(StructPaddingTestStruct* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        StructPaddingTestStruct* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -641,15 +696,20 @@ struct TopLevelStruct {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           TopLevelStruct* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, TopLevelStruct* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .handles = handles_,
               .handle_capacity =
                   std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<TopLevelStruct>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -680,7 +740,13 @@ struct TopLevelStruct {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(TopLevelStruct* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        TopLevelStruct* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

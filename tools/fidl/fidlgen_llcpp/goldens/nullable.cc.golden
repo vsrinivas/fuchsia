@@ -36,7 +36,7 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     int32_t a, int32_t b) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
-      _request(zx_txid_t(0), a, b);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), a, b);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
@@ -49,7 +49,7 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     int32_t a, int32_t b, zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
-      _request(zx_txid_t(0), a, b);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), a, b);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing
       .Call<::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
@@ -167,7 +167,8 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>::
-      OwnedEncodedMessage _request(_context->Txid(), a, b);
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid(), a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -253,7 +254,7 @@ fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::AddCompleterBase::Reply(
     int32_t sum) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>
-      _response{sum};
+      _response{::fidl::internal::AllowUnownedInputRef{}, sum};
   return ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
       AddCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }

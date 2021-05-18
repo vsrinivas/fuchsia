@@ -20,7 +20,7 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>>
-      _request(zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);
@@ -126,7 +126,7 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>>
-      _request(zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);

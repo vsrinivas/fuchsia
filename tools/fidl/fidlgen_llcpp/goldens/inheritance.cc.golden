@@ -17,7 +17,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
     ::fidl::StringView s) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
-      _request(zx_txid_t(0), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
       _client, bytes_.data(), bytes_.size());
@@ -29,7 +29,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
     ::fidl::StringView s, zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
-      _request(zx_txid_t(0), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
       _client, bytes_.data(), bytes_.size(), _deadline);
@@ -145,7 +145,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>::OwnedEncodedMessage
-      _request(_context->Txid(), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -226,7 +226,7 @@ fidl::WireServer<::fidl_test_inheritance::Super>::dispatch_message(
     ::fidl_test_inheritance::Super>::FooCompleterBase::Reply(int64_t y) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>
-      _response{y};
+      _response{::fidl::internal::AllowUnownedInputRef{}, y};
   return ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }
@@ -267,7 +267,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
     ::fidl::StringView s) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
-      _request(zx_txid_t(0), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
       _client, bytes_.data(), bytes_.size());
@@ -279,7 +279,7 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
     ::fidl::StringView s, zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
-      _request(zx_txid_t(0), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
       _client, bytes_.data(), bytes_.size(), _deadline);
@@ -394,7 +394,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>::OwnedEncodedMessage
-      _request(_context->Txid(), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -474,7 +474,7 @@ fidl::WireServer<::fidl_test_inheritance::Sub>::dispatch_message(
     ::fidl_test_inheritance::Sub>::FooCompleterBase::Reply(int64_t y) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>
-      _response{y};
+      _response{::fidl::internal::AllowUnownedInputRef{}, y};
   return ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }

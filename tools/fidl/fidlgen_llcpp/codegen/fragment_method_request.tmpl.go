@@ -59,9 +59,12 @@ struct {{ .WireRequest }} final {
   public:
   UnownedEncodedMessage(
     {{- RenderParams "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" "zx_txid_t _txid" .RequestArgs }})
+    : UnownedEncodedMessage({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "_backing_buffer" "_backing_buffer_size" "_txid" .RequestArgs }}) {}
+  UnownedEncodedMessage(
+    {{- RenderParams "uint32_t _iovec_capacity" "uint8_t* _backing_buffer" "uint32_t _backing_buffer_size" "zx_txid_t _txid" .RequestArgs }})
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
       .iovecs = iovecs_,
-      .iovec_capacity = ::fidl::internal::IovecBufferSize,
+      .iovec_capacity = _iovec_capacity,
   {{- if gt .Request.MaxHandles 0 }}
         .handles = handles_,
         .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
@@ -69,14 +72,18 @@ struct {{ .WireRequest }} final {
         .backing_buffer = _backing_buffer,
         .backing_buffer_capacity = _backing_buffer_size,
       }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     FIDL_ALIGNDECL {{ .WireRequest.Self }} _request({{ RenderForwardParams "_txid" .RequestArgs }});
     message_.Encode<{{ .WireRequest.Self }}>(&_request);
   }
   UnownedEncodedMessage(uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
                         {{ .WireRequest.Self }}* request)
+    : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, _backing_buffer, _backing_buffer_size, request) {}
+  UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer, uint32_t _backing_buffer_size,
+                        {{ .WireRequest.Self }}* request)
     : message_(::fidl::OutgoingMessage::ConstructorArgs{
         .iovecs = iovecs_,
-        .iovec_capacity = ::fidl::internal::IovecBufferSize,
+        .iovec_capacity = _iovec_capacity,
   {{- if gt .Request.MaxHandles 0 }}
         .handles = handles_,
         .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
@@ -84,6 +91,7 @@ struct {{ .WireRequest }} final {
         .backing_buffer = _backing_buffer,
         .backing_buffer_capacity = _backing_buffer_size,
       }) {
+    ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
     message_.Encode<{{ .WireRequest.Self }}>(request);
   }
   UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -118,9 +126,15 @@ struct {{ .WireRequest }} final {
   class OwnedEncodedMessage final {
   public:
     explicit OwnedEncodedMessage({{- RenderParams "zx_txid_t _txid" .RequestArgs }})
-      : message_({{ RenderForwardParams "backing_buffer_.data()" "backing_buffer_.size()" "_txid" .RequestArgs }}) {}
+      : message_({{ RenderForwardParams "1u" "backing_buffer_.data()" "backing_buffer_.size()" "_txid" .RequestArgs }}) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage({{- RenderParams "::fidl::internal::AllowUnownedInputRef allow_unowned" "zx_txid_t _txid" .RequestArgs }})
+      : message_({{ RenderForwardParams "::fidl::internal::IovecBufferSize" "backing_buffer_.data()" "backing_buffer_.size()" "_txid" .RequestArgs }}) {}
     explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
-      : message_(backing_buffer_.data(), backing_buffer_.size(), request) {}
+      : message_(1u, backing_buffer_.data(), backing_buffer_.size(), request) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned, {{ .WireRequest.Self }}* request)
+      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(), backing_buffer_.size(), request) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

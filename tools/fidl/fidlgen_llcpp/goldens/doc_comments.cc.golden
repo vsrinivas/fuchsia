@@ -33,7 +33,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
     ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
-      _request(zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);
@@ -201,7 +201,7 @@ zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
     const {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
-      _response{};
+      _response{::fidl::internal::AllowUnownedInputRef{}};
   _response.Write(server_end_);
   return _response.status();
 }

@@ -21,7 +21,7 @@ extern "C" const fidl_type_t
                    _client) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _request(zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
@@ -37,7 +37,7 @@ extern "C" const fidl_type_t
                zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _request(zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
@@ -59,7 +59,7 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
     : bytes_(_response_bytes) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _request(zx_txid_t(0));
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0));
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
@@ -172,7 +172,8 @@ zx_status_t fidl::WireResponseContext<
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-      OwnedEncodedMessage _request(_context->Txid());
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -185,7 +186,8 @@ zx_status_t fidl::WireResponseContext<
 
   ::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
-      OwnedEncodedMessage _request(_context->Txid());
+      OwnedEncodedMessage _request(::fidl::internal::AllowUnownedInputRef{},
+                                   _context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif  // __Fuchsia__
@@ -259,7 +261,7 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     GetFooCompleterBase::Reply(const ::bottom::wire::Foo& foo) {
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
-      _response{foo};
+      _response{::fidl::internal::AllowUnownedInputRef{}, foo};
   return ::fidl::WireServer<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       GetFooCompleterBase::SendReply(&_response.GetOutgoingMessage());

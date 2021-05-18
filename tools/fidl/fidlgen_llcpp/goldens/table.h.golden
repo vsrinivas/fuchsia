@@ -151,12 +151,17 @@ class SimpleTable final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           SimpleTable* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, SimpleTable* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<SimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -187,7 +192,15 @@ class SimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(SimpleTable* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+    // the input FIDL object, which is not owned by it.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        SimpleTable* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -413,12 +426,18 @@ class ReverseOrdinalTable final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           ReverseOrdinalTable* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size,
+                          ReverseOrdinalTable* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<ReverseOrdinalTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -449,7 +468,15 @@ class ReverseOrdinalTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(ReverseOrdinalTable* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+    // the input FIDL object, which is not owned by it.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        ReverseOrdinalTable* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -609,12 +636,17 @@ class OlderSimpleTable final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           OlderSimpleTable* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, OlderSimpleTable* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<OlderSimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -645,7 +677,15 @@ class OlderSimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(OlderSimpleTable* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+    // the input FIDL object, which is not owned by it.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        OlderSimpleTable* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -865,12 +905,17 @@ class NewerSimpleTable final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           NewerSimpleTable* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, NewerSimpleTable* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<NewerSimpleTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -901,7 +946,15 @@ class NewerSimpleTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(NewerSimpleTable* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+    // the input FIDL object, which is not owned by it.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        NewerSimpleTable* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
@@ -1032,12 +1085,17 @@ class EmptyTable final {
    public:
     UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size,
                           EmptyTable* value)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                backing_buffer, backing_buffer_size, value) {}
+    UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
+                          uint32_t backing_buffer_size, EmptyTable* value)
         : message_(::fidl::OutgoingMessage::ConstructorArgs{
               .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .iovec_capacity = iovec_capacity,
               .backing_buffer = backing_buffer,
               .backing_buffer_capacity = backing_buffer_size,
           }) {
+      ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
       message_.Encode<EmptyTable>(value);
     }
     UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
@@ -1068,7 +1126,14 @@ class EmptyTable final {
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(EmptyTable* value)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), value) {}
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), value) {}
+    // Construct a message using owned buffers.
+    // If |iovec_capacity>1|, then the message in OwnedEncodedMessage may point
+    // the input FIDL object, which is not owned by it.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned, EmptyTable* value)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), value) {}
     OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
     OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
     OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;

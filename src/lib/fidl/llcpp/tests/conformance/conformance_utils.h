@@ -78,7 +78,7 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
                    bool check_handle_rights) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
+  ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{}, value);
   if (!encoded.ok()) {
     std::cout << "Encoding failed: " << encoded.error() << std::endl;
     return false;
@@ -126,7 +126,7 @@ template <typename FidlType>
 bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
+  ::fidl::OwnedEncodedMessage<FidlType> encoded(fidl::internal::AllowUnownedInputRef{}, value);
   if (encoded.ok()) {
     std::cout << "Encoding unexpectedly succeeded" << std::endl;
     return false;

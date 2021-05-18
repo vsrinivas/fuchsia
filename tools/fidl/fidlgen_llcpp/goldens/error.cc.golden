@@ -26,7 +26,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
     ::fidl::StringView s) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
-      _request(zx_txid_t(0), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
       _client, bytes_.data(), bytes_.size());
@@ -38,7 +38,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
     ::fidl::StringView s, zx_time_t _deadline) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_error::Example::Foo>>
-      _request(zx_txid_t(0), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
       _client, bytes_.data(), bytes_.size(), _deadline);
@@ -151,7 +151,7 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawReply(
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   ::fidl::WireRequest<::fidl_test_error::Example::Foo>::OwnedEncodedMessage
-      _request(_context->Txid(), s);
+      _request(::fidl::internal::AllowUnownedInputRef{}, _context->Txid(), s);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
@@ -231,7 +231,7 @@ fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
     ::fidl_test_error::wire::ExampleFooResult result) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>>
-      _response{result};
+      _response{::fidl::internal::AllowUnownedInputRef{}, result};
   return ::fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::
       SendReply(&_response.GetOutgoingMessage());
 }

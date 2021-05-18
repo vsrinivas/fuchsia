@@ -14,6 +14,10 @@ resource struct MoveOnlyStruct {
     zx.handle? h;
 };
 
+struct VectorStruct {
+    vector<uint32> v;
+};
+
 /// Verifies that user code can manipulate these union payloads.
 resource union TestUnion {
     1: int32 primitive;

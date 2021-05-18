@@ -55,7 +55,7 @@ extern "C" const fidl_type_t
                const ::exampleusing::wire::Empty& arg) {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request(zx_txid_t(0), arg);
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), arg);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Write(_client);
   SetResult(_outgoing);
