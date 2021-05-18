@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -39,6 +40,9 @@ type Launcher interface {
 
 	// Stops the instance. This is allowed to take up to 3 seconds to return.
 	Kill() error
+
+	// Dump any available system or debug logs to `out`
+	GetLogs(out io.Writer) error
 }
 
 const successfulBootMarker = "{{{reset}}}"
@@ -61,6 +65,17 @@ type QemuLauncher struct {
 	timeout time.Duration
 }
 
+// qemuConfig contains all the configuration parameters that need to be passed
+// from the Launcher to the qemu invocation
+type qemuConfig struct {
+	binary  string
+	kernel  string
+	initrd  string
+	blk     string
+	logFile string
+	port    int
+}
+
 // NewQemuLauncher constructs a new QemuLauncher
 func NewQemuLauncher(build Build) *QemuLauncher {
 	return &QemuLauncher{build: build, timeout: qemuBootTimeout}
@@ -81,20 +96,20 @@ func getFreePort() (int, error) {
 }
 
 // Configure QEMU appropriately
-func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, error) {
+func getQemuInvocation(config qemuConfig) ([]string, error) {
 	qemuCmd := &qemu.QEMUCommandBuilder{}
 
-	qemuCmd.SetBinary(binary)
+	qemuCmd.SetBinary(config.binary)
 	qemuCmd.SetTarget(qemu.TargetEnum.X86_64, true /* KVM */)
-	qemuCmd.SetKernel(kernel)
-	qemuCmd.SetInitrd(initrd)
+	qemuCmd.SetKernel(config.kernel)
+	qemuCmd.SetInitrd(config.initrd)
 
 	qemuCmd.SetCPUCount(4)
 	qemuCmd.SetMemory(3072 /* MiB */)
 
 	qemuCmd.AddVirtioBlkPciDrive(qemu.Drive{
 		ID:   "d0",
-		File: blk,
+		File: config.blk,
 	})
 
 	network := qemu.Netdev{
@@ -104,7 +119,7 @@ func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, 
 			Network:   "192.168.3.0/24",
 			DHCPStart: "192.168.3.9",
 			Host:      "192.168.3.2",
-			Forwards:  []qemu.Forward{{HostPort: port, GuestPort: 22}},
+			Forwards:  []qemu.Forward{{HostPort: config.port, GuestPort: 22}},
 		},
 	}
 	network.Device.AddOption("mac", "52:54:00:63:5e:7b")
@@ -118,8 +133,18 @@ func getQemuInvocation(binary, kernel, initrd, blk string, port int) ([]string, 
 	qemuCmd.AddKernelArg("kernel.serial=legacy")
 
 	qemuCmd.SetFlag("-nographic")
-	qemuCmd.SetFlag("-serial", "stdio")
 	qemuCmd.SetFlag("-monitor", "none")
+
+	// Send serial to a log file, while also echoing to stdout (used during
+	// early boot). This is done by enabling the `logfile` option on the qemu
+	// chardev (which the qemu library constructs as a `stdio` device).
+	qemuCmd.AddSerial(
+		qemu.Chardev{
+			ID:      "char0",
+			Logfile: config.logFile,
+			Signal:  false,
+		},
+	)
 
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err == nil {
@@ -246,14 +271,18 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 		}
 	}()
 
-	invocation, err := getQemuInvocation(binary, kernel, q.initrd, q.extendedBlk, port)
+	invocation, err := getQemuInvocation(qemuConfig{
+		binary:  binary,
+		kernel:  kernel,
+		initrd:  q.initrd,
+		blk:     q.extendedBlk,
+		logFile: q.logPath(),
+		port:    port})
 	if err != nil {
 		return nil, fmt.Errorf("qemu configuration error: %s", err)
 	}
 
 	cmd := NewCommand(invocation[0], invocation[1:]...)
-
-	// TODO(fxbug.dev/45431): log qemu output to some global tempfile to match current CF behavior
 
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -363,6 +392,25 @@ func (q *QemuLauncher) Kill() error {
 	}
 
 	q.cleanup()
+
+	return nil
+}
+
+func (q *QemuLauncher) logPath() string {
+	return filepath.Join(q.TmpDir, "qemu.log")
+}
+
+// GetLogs writes any system logs from QEMU to `out`
+func (q *QemuLauncher) GetLogs(out io.Writer) error {
+	f, err := os.Open(q.logPath())
+	if err != nil {
+		return fmt.Errorf("error opening file: %s", err)
+	}
+	defer f.Close()
+
+	if _, err := io.Copy(out, f); err != nil {
+		return fmt.Errorf("error while dumping log file %q: %s", q.logPath(), err)
+	}
 
 	return nil
 }

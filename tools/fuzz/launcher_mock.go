@@ -4,7 +4,10 @@
 
 package fuzz
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 type mockLauncher struct {
 	running             bool
@@ -40,5 +43,10 @@ func (l *mockLauncher) Kill() error {
 		return fmt.Errorf("Kill called on stopped Launcher")
 	}
 	l.running = false
+	return nil
+}
+
+func (l *mockLauncher) GetLogs(out io.Writer) error {
+	io.WriteString(out, "system log\n")
 	return nil
 }

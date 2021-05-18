@@ -193,6 +193,14 @@ func TestQemuLauncher(t *testing.T) {
 		t.Fatalf("instance not alive when it should be")
 	}
 
+	var out bytes.Buffer
+	if err := launcher.GetLogs(&out); err != nil {
+		t.Fatalf("Error getting instance logs: %s", err)
+	}
+	if diff := cmp.Diff("qemu logs\n", out.String()); diff != "" {
+		t.Fatalf("Instance logs missing expected content (-want +got):\n%s", diff)
+	}
+
 	if err := launcher.Kill(); err != nil {
 		t.Fatalf("Error killing instance: %s", err)
 	}

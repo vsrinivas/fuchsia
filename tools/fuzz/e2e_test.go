@@ -62,6 +62,13 @@ func TestEndToEnd(t *testing.T) {
 
 	defer runCommand(t, "stop_instance", "-handle", handle)
 
+	// Fetch debug logs
+	out = runCommand(t, "get_logs", "-handle", handle)
+	glog.Info(out)
+	if !strings.Contains(out, "{{{reset}}}") {
+		t.Fatalf("Debug log missing expected content:\n%s", out)
+	}
+
 	fuzzer := "example-fuzzers/crash_fuzzer"
 	out = runCommand(t, "list_fuzzers", "-handle", handle)
 	if !strings.Contains(out, fuzzer) {

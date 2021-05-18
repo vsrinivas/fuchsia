@@ -154,6 +154,16 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("incorrect file put list: %v", got)
 	}
 
+	var logBuf bytes.Buffer
+	if err := i.GetLogs(&logBuf); err != nil {
+		t.Fatalf("error getting instance logs: %s", err)
+	}
+
+	log := logBuf.String()
+	if log != "system log\n" {
+		t.Fatalf("unexpected instance log: %q", log)
+	}
+
 	if err := i.Stop(); err != nil {
 		t.Fatalf("Error stopping instance: %s", err)
 	}

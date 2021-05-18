@@ -135,7 +135,10 @@ func NewLocalFuchsiaBuild() (Build, error) {
 		return nil, fmt.Errorf("failed to read %q: %s", fxBuildDir, err)
 	}
 
-	buildDir := filepath.Join(fuchsiaDir, strings.TrimSpace(string(contents)))
+	buildDir := strings.TrimSpace(string(contents))
+	if !filepath.IsAbs(buildDir) {
+		buildDir = filepath.Join(fuchsiaDir, buildDir)
+	}
 	prebuiltDir := filepath.Join(fuchsiaDir, "prebuilt")
 
 	platform, ok := Platforms[runtime.GOOS]

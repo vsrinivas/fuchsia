@@ -7,6 +7,7 @@ package fuzz
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -100,6 +101,25 @@ func TestDoProcessMock(t *testing.T) {
 		exitCode = 0
 	case "qemu-system-x86_64", "qemu-system-aarch64":
 		stayAlive = true
+		var logFile string
+		// Check for a logfile specified in a chardev parameter
+		for j, arg := range args[:len(args)-1] {
+			if arg != "-chardev" {
+				continue
+			}
+			params := strings.Split(args[j+1], ",")
+			for _, param := range params {
+				kv := strings.SplitN(param, "=", 2)
+				if kv[0] == "logfile" {
+					logFile = kv[1]
+				}
+			}
+		}
+		if logFile != "" {
+			if err := ioutil.WriteFile(logFile, []byte("qemu logs\n"), 0o600); err != nil {
+				t.Fatalf("error creating qemu log file: %s", err)
+			}
+		}
 		out = fmt.Sprintf("'%s'\n", successfulBootMarker)
 		exitCode = 0
 	case "ps":

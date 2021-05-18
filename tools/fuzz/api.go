@@ -26,6 +26,7 @@ const (
 	StopInstance  = "stop_instance"
 	ListFuzzers   = "list_fuzzers"
 	PrepareFuzzer = "prepare_fuzzer"
+	GetLogs       = "get_logs"
 	RunFuzzer     = "run_fuzzer"
 	GetData       = "get_data"
 	PutData       = "put_data"
@@ -37,6 +38,7 @@ var commandDesc = map[string]string{
 	StopInstance:  "Stop a Fuchsia instance",
 	ListFuzzers:   "List available fuzz targets on an instance",
 	PrepareFuzzer: "Prepare a fuzzer to be run",
+	GetLogs:       "Get debug logs from an instance",
 	RunFuzzer:     "Run a fuzz target on an instance (passing any extra args to libFuzzer)",
 	GetData:       "Copy files between an instance and a local path",
 	PutData:       "Copy files between a local path and an instance",
@@ -101,6 +103,8 @@ func (c *APICommand) Execute(out io.Writer) error {
 		}
 	case PrepareFuzzer:
 		return instance.PrepareFuzzer(c.fuzzer)
+	case GetLogs:
+		return instance.GetLogs(out)
 	case GetData:
 		return instance.Get(c.fuzzer, c.srcPath, c.dstPath)
 	case PutData:
@@ -131,7 +135,7 @@ func ParseArgs(args []string) (*APICommand, error) {
 
 	switch cmd.name {
 	case StartInstance, Version:
-	case StopInstance, ListFuzzers:
+	case StopInstance, ListFuzzers, GetLogs:
 		flagSet.StringVar(&cmd.handle, "handle", "", handleDesc)
 		requiredArgs = []*string{&cmd.handle}
 	case PrepareFuzzer:

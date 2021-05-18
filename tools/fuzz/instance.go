@@ -22,6 +22,7 @@ type Instance interface {
 	Get(fuzzerName, targetSrc, hostDst string) error
 	Put(fuzzerName, hostSrc, targetDst string) error
 	RunFuzzer(out io.Writer, name, hostArtifactDir string, args ...string) error
+	GetLogs(out io.Writer) error
 	PrepareFuzzer(name string) error
 	Handle() (Handle, error)
 	Close()
@@ -176,6 +177,11 @@ func (i *BaseInstance) PrepareFuzzer(name string) error {
 	}
 
 	return nil
+}
+
+// GetLogs writes any system logs for an instance to `out`
+func (i *BaseInstance) GetLogs(out io.Writer) error {
+	return i.Launcher.GetLogs(out)
 }
 
 // Get copies files from a fuzzer namespace on the Instance to the host
