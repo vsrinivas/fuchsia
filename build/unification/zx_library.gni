@@ -128,6 +128,8 @@ template("zx_library") {
   # `sdk_migrated` is only used by the Zircon build system.
   not_needed(invoker, [ "sdk_migrated" ])
 
+  not_needed(invoker, [ "sdk_name" ])
+
   if (zircon_toolchain != false) {
     _library_name = target_name
 
@@ -218,11 +220,15 @@ template("zx_library") {
     }
     if (shape == "source") {
       if (sdkable) {
+        name = target_name
+        if (defined(invoker.sdk_name)) {
+          name = invoker.sdk_name
+        }
         target_type = "sdk_source_set"
         extra_target_args = {
           category = sdk_category
           api = "//sdk/lib/$target_name/$target_name.api"
-          sdk_name = target_name
+          sdk_name = name
           build_as_static = true
         }
       } else {
@@ -258,9 +264,6 @@ template("zx_library") {
     }
 
     main_target_name = target_name
-    if (defined(invoker.sdk_name)) {
-      main_target_name = invoker.sdk_name
-    }
     config_target_name = "$target_name.config"
 
     config(config_target_name) {
