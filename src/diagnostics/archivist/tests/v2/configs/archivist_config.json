@@ -1,4 +1,5 @@
 {
+    "archive_path": "/data/archive",
     "logs": {
         "max_cached_original_bytes": 4194304
     },

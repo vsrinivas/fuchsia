@@ -9,7 +9,6 @@ group("tests") {
   testonly = true
   deps = [
     ":archivist-integration-tests",
-    "archive_path:test-spec",
     "logs-basic-integration",
     "logs-budget",
     "logs-connector",
@@ -29,7 +28,6 @@ group("tests") {
 fuchsia_package("archivist-integration-tests") {
   testonly = true
   deps = [
-    "archive_path",
     "logs/cpp",
     "logs/cpp:cpp-structured",
   ]

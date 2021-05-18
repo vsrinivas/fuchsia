@@ -7,6 +7,14 @@
     program: {
         binary: "bin/archivist_integration_tests",
     },
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
     offer: [
         {
             directory: "config-data",
@@ -14,6 +22,11 @@
             to: [ "#fuchsia_component_test_collection" ],
             rights: [ "r*" ],
             subdir: "archivist",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#fuchsia_component_test_collection" ],
         },
     ],
 }
