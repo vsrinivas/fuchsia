@@ -80,7 +80,7 @@ class Releasable {
 // base_device is a tag that default initializes the zx_protocol_device_t so the mixin classes
 // can fill in the table.
 template <class D, template <typename> class... Mixins>
-class base_device : private Mixins<D>... {
+class base_device : public Mixins<D>... {
  protected:
   explicit base_device(zx_device_t* parent) : parent_(parent) {}
 
