@@ -220,3 +220,88 @@ async fn download_blob_body_timeout() {
     let result = env.resolve_package("fuchsia-pkg://test/test").await;
     assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableBlob);
 }
+
+// Verify that the pkg-resolver stops downloading content blobs when a package fails to resolve.
+// Steps:
+//  1.  Resolve a package that has a lot more than double MAX_CONCURRENT_BLOB_FETCHES content blobs.
+//  2.  Have the blob server return the meta.far successfully, so that the pkg-resolver
+//      can enqueue all the content blobs.
+//  3.  Have the blob server fail to return any of the content blobs.
+//  4.  The first resolve should fail, since none of the content blobs are obtainable.
+//  5.  After the first resolve fails, only about MAX_CONCURRENT_BLOB_FETCHES blobs should have been
+//      removed from the fetch queue (unfortunately we cannot upper bound the number of blobs
+//      removed from the fetch queue, because the blob fetch queue fetches blobs concurrently with
+//      the resolve, so there is a window of time in between MAX_CONCURRENT_BLOB_FETCHES fetches
+//      failing and the pkg-resolver cancelling the PackageCache.Get in which the BlobFetchQueue
+//      could start another fetch. In practice, this does not happen.)
+//  6.  Reset the blob server's served blobs counter.
+//  7.  Assuming the original package had enough content blobs, there should still be more than
+//      MAX_CONCURRENT_BLOB_FETCHES blobs in the BlobFetchQueue.
+//  8.  Resolve a new package with a different meta.far. This forces the package resolver
+//      to add the meta.far to the BlobFetchQueue and wait for it to be processed.
+//  9.  Wait for the second resolve to finish. Because the BlobFetchQueue is FIFO and had more than
+//      MAX_CONCURRENT_BLOB_FETCHES elements, at least one more content blob from the original
+//      package has to have been processed.
+//  10. The blob server's served blob counter should be one (the meta.far for the second package),
+//      because processing the remaining content blobs should fail at the pkg-cache layer.
+#[fasync::run_singlethreaded(test)]
+async fn failed_resolve_stops_fetching_blobs() {
+    let pkg_many_failing_content_blobs = {
+        let mut pkg = PackageBuilder::new("many-blobs");
+        // Must be much larger than double MAX_CONCURRENT_BLOB_FETCHES.
+        for i in 0..40 {
+            pkg = pkg.add_resource_at(&format!("blob_{}", i), format!("contents_{}", i).as_bytes());
+        }
+        pkg.build().await.unwrap()
+    };
+    let pkg_only_meta_far_different_hash = PackageBuilder::new("different-hash")
+        .add_resource_at("meta/file", &b"random words"[..])
+        .build()
+        .await
+        .unwrap();
+    assert_ne!(
+        pkg_many_failing_content_blobs.meta_far_merkle_root(),
+        pkg_only_meta_far_different_hash.meta_far_merkle_root()
+    );
+
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg_many_failing_content_blobs)
+            .add_package(&pkg_only_meta_far_different_hash)
+            .build()
+            .await
+            .unwrap(),
+    );
+
+    let env = TestEnvBuilder::new().build().await;
+
+    let (record, history) = responder::Record::new();
+
+    let meta_far_http_path =
+        format!("/blobs/{}", pkg_many_failing_content_blobs.meta_far_merkle_root());
+    let fail_content_blobs = responder::Filter::new(
+        move |req: &hyper::Request<hyper::Body>| req.uri().path() != meta_far_http_path,
+        responder::StaticResponseCode::not_found(),
+    );
+    let should_fail = responder::AtomicToggle::new(true);
+    let fail_content_blobs = responder::Toggleable::new(&should_fail, fail_content_blobs);
+
+    let server = repo
+        .server()
+        .response_overrider(responder::ForPathPrefix::new("/blobs/", record))
+        .response_overrider(responder::ForPathPrefix::new("/blobs/", fail_content_blobs))
+        .start()
+        .expect("Starting server succeeds");
+    let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
+
+    let result = env.resolve_package("fuchsia-pkg://test/many-blobs").await;
+    history.take();
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableBlob);
+
+    should_fail.unset();
+
+    let _ = env.resolve_package("fuchsia-pkg://test/different-hash").await.unwrap();
+
+    assert_eq!(history.take().len(), 1);
+}

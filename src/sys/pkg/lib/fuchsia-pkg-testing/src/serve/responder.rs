@@ -700,6 +700,7 @@ impl<H: HttpResponder> OverrideNth<H> {
 }
 
 /// Information saved by Record for each request it handles.
+#[derive(Debug)]
 pub struct HistoryEntry {
     uri_path: PathBuf,
     headers: hyper::HeaderMap<hyper::header::HeaderValue>,

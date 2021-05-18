@@ -161,7 +161,7 @@ impl std::cmp::PartialEq for DeferredOpenBlob {
 
 impl std::cmp::Eq for DeferredOpenBlob {}
 
-/// A pending `fuchsia.pkg.PackageCache/Get()` request. Clients must, in order:
+/// A pending `fuchsia.pkg/PackageCache.Get()` request. Clients must, in order:
 /// 1. open/write the meta blob, if Some(NeededBlob) is provided by that API
 /// 2. enumerate all missing content blobs
 /// 3. open/write all missing content blobs, if Some(NeededBlob) is provided by that API
@@ -260,8 +260,13 @@ impl Get {
     }
 
     /// Aborts this caching operation for the package.
-    pub fn abort(self) -> impl Future<Output = ()> {
-        self.needed_blobs.abort().map(|_: Result<(), fidl::Error>| ())
+    pub async fn abort(self) {
+        self.needed_blobs.abort().map(|_: Result<(), fidl::Error>| ()).await;
+        // The package is not guaranteed to be removed from the dynamic index after abort
+        // returns, we have to wait until finish returns (to prevent a resolve retry from
+        // racing). The finish call will return an error that just tells us that we called
+        // abort, so we ignore it.
+        let _ = self.get_fut.await;
     }
 }
 
@@ -520,7 +525,9 @@ mod tests {
         PackageCacheGetResponder, PackageCacheMarker, PackageCacheOpenResponder,
         PackageCacheRequest, PackageCacheRequestStream,
     };
+    use futures::{future::Either, pin_mut};
     use matches::assert_matches;
+    use std::task::Poll;
 
     struct MockPackageCache {
         stream: PackageCacheRequestStream,
@@ -616,6 +623,12 @@ mod tests {
             self.stream.control_handle().shutdown_with_epitaph(Status::OK);
             self.responder.send(&mut Ok(())).unwrap();
             PackageDirProvider { stream: self.dir }
+        }
+
+        fn fail_the_get(self) {
+            self.responder
+                .send(&mut Err(Status::IO_INVALID.into_raw()))
+                .expect("client should be waiting");
         }
 
         async fn expect_open_meta_blob(
@@ -922,19 +935,35 @@ mod tests {
         .await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn needed_blobs_abort() {
-        let (get, pending_get) = PendingGet::new().await;
+    #[test]
+    fn needed_blobs_abort() {
+        let mut executor = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();
 
-        let ((), ()) = future::join(
-            async {
-                pending_get.expect_abort().await;
-            },
-            async {
-                get.abort().await;
-            },
-        )
-        .await;
+        let fut = async {
+            let (get, pending_get) = PendingGet::new().await;
+
+            let abort_fut = get.abort().boxed();
+            let expect_abort_fut = pending_get.expect_abort();
+            pin_mut!(expect_abort_fut);
+
+            match futures::future::select(abort_fut, expect_abort_fut).await {
+                Either::Left(((), _expect_abort_fut)) => {
+                    panic!("abort should wait for the get future to complete")
+                }
+                Either::Right((pending_get, abort_fut)) => (abort_fut, pending_get),
+            }
+        };
+        pin_mut!(fut);
+
+        let (mut abort_fut, pending_get) = match executor.run_until_stalled(&mut fut) {
+            Poll::Pending => panic!("should complete"),
+            Poll::Ready((abort_fut, pending_get)) => (abort_fut, pending_get),
+        };
+
+        // NeededBlobs.Abort should wait until PackageCache.Get returns
+        assert_matches!(executor.run_until_stalled(&mut abort_fut), Poll::Pending);
+        pending_get.fail_the_get();
+        assert_matches!(executor.run_until_stalled(&mut abort_fut), Poll::Ready(()));
     }
 
     struct MockNeededBlob {

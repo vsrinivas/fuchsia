@@ -253,8 +253,8 @@ async fn open<'a>(
 
 #[derive(thiserror::Error, Debug)]
 enum ServeNeededBlobsError {
-    #[error("protocol violation: request stream terminated unexpectedly")]
-    UnexpectedClose,
+    #[error("protocol violation: request stream terminated unexpectedly in {0}")]
+    UnexpectedClose(&'static str),
 
     #[error("protocol violation: expected {expected} request, got {received}")]
     UnexpectedRequest { received: &'static str, expected: &'static str },
@@ -390,7 +390,7 @@ async fn handle_open_meta_blob(
                     received: other.method_name(),
                     expected: "open_meta_blob",
                 }),
-                None => Err(ServeNeededBlobsError::UnexpectedClose),
+                None => Err(ServeNeededBlobsError::UnexpectedClose("handle_open_meta_blob")),
             }?;
 
         let file_stream = file.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
@@ -423,7 +423,7 @@ async fn handle_get_missing_blobs(
             received: other.method_name(),
             expected: "get_missing_blobs",
         }),
-        None => Err(ServeNeededBlobsError::UnexpectedClose),
+        None => Err(ServeNeededBlobsError::UnexpectedClose("handle_get_missing_blobs")),
     }?;
 
     let iter_stream = iterator.into_stream().map_err(ServeNeededBlobsError::ReceiveRequest)?;
@@ -518,7 +518,7 @@ async fn handle_open_blobs(
                 })
             }
             Event::Request(None) => {
-                return Err(ServeNeededBlobsError::UnexpectedClose);
+                return Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"));
             }
             Event::WriteBlobDone((_, Ok(()))) => {
                 continue;
@@ -1172,7 +1172,7 @@ mod serve_needed_blobs_tests {
                 &blobfs
             )
             .await,
-            Err(ServeNeededBlobsError::UnexpectedClose)
+            Err(ServeNeededBlobsError::UnexpectedClose("handle_open_meta_blob"))
         );
     }
 
@@ -1568,7 +1568,10 @@ mod serve_needed_blobs_tests {
         .await;
 
         drop(proxy);
-        assert_matches!(task.await, Err(ServeNeededBlobsError::UnexpectedClose));
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"))
+        );
         pkgfs_install.expect_done().await;
         pkgfs_needs.expect_done().await;
     }
@@ -1679,7 +1682,10 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        assert_matches!(task.await, Err(ServeNeededBlobsError::UnexpectedClose));
+        assert_matches!(
+            task.await,
+            Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"))
+        );
         pkgfs_install.expect_done().await;
         pkgfs_needs.expect_done().await;
     }

@@ -31,8 +31,8 @@ pub struct DynamicIndex {
 
 #[derive(thiserror::Error, Debug)]
 pub enum DynamicIndexError {
-    #[error("the blob being fulfilled ({0}) is not needed")]
-    FulfillNotNeededBlob(Hash),
+    #[error("the blob being fulfilled ({hash}) is not needed, dynamic index state in {state}")]
+    FulfillNotNeededBlob { hash: Hash, state: &'static str },
 
     #[error("the package is in an unexpected state: {0:?}")]
     UnexpectedPackageState(Option<Package>),
@@ -174,8 +174,16 @@ pub async fn fulfill_meta_far_blob(
     blobfs: &blobfs::Client,
     blob_hash: Hash,
 ) -> Result<(), DynamicIndexError> {
-    if index.lock().await.packages.get(&blob_hash) != Some(&Package::Pending) {
-        return Err(DynamicIndexError::FulfillNotNeededBlob(blob_hash));
+    if let Some(wrong_state) = match index.lock().await.packages.get(&blob_hash) {
+        Some(Package::Pending) => None,
+        None => Some("missing"),
+        Some(Package::Active { .. }) => Some("Active"),
+        Some(Package::WithMetaFar { .. }) => Some("WithMetaFar"),
+    } {
+        return Err(DynamicIndexError::FulfillNotNeededBlob {
+            hash: blob_hash,
+            state: wrong_state,
+        });
     }
 
     let (path, required_blobs) = {
@@ -681,7 +689,7 @@ mod tests {
 
         assert_matches!(
             fulfill_meta_far_blob(&dynamic_index, &blobfs, Hash::from([2; 32])).await,
-            Err(DynamicIndexError::FulfillNotNeededBlob(hash)) if hash == Hash::from([2; 32])
+            Err(DynamicIndexError::FulfillNotNeededBlob{hash, state}) if hash == Hash::from([2; 32]) && state == "missing"
         );
     }
 }

@@ -232,6 +232,7 @@ rustc_test("resolve_fails") {
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
+    "//third_party/rust_crates:hyper",
   ]
 
   sources = [ "src/resolve_fails.rs" ]

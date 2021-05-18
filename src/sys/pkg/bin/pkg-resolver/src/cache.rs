@@ -131,53 +131,61 @@ pub async fn cache_package<'a>(
     let meta_far_blob = BlobInfo { blob_id: merkle, length: 0 };
 
     let mut get = cache.get(meta_far_blob)?;
-    let mirrors = config.mirrors().to_vec().into();
 
-    // Fetch the meta.far.
-    blob_fetcher
-        .push(
-            merkle,
-            FetchBlobContext {
-                opener: get.make_open_meta_blob(),
-                mirrors: Arc::clone(&mirrors),
-                expected_len: size,
-                use_local_mirror: config.use_local_mirror(),
-            },
-        )
-        .await
-        .expect("processor exists")
-        .map_err(|e| CacheError::FetchMetaFar(e, merkle))?;
+    let blob_fetch_res = async {
+        let mirrors = config.mirrors().to_vec().into();
 
-    let missing_blobs = get.get_missing_blobs().await?;
-
-    // Fetch the missing content blobs with some amount of concurrency.
-    fx_log_info!(
-        "Fetching blobs for {}: {:#?}",
-        url,
-        DebugIter(missing_blobs.iter().map(|need| need.blob_id))
-    );
-    let () = blob_fetcher
-        .push_all(missing_blobs.into_iter().map(|need| {
-            (
-                need.blob_id,
+        // Fetch the meta.far.
+        blob_fetcher
+            .push(
+                merkle,
                 FetchBlobContext {
-                    opener: get.make_open_blob(need.blob_id),
+                    opener: get.make_open_meta_blob(),
                     mirrors: Arc::clone(&mirrors),
-                    expected_len: None,
+                    expected_len: size,
                     use_local_mirror: config.use_local_mirror(),
                 },
             )
-        }))
-        .collect::<FuturesUnordered<_>>()
-        .map(|res| res.expect("processor exists"))
-        .try_collect::<()>()
-        .map_err(|e| CacheError::FetchContentBlob(e, merkle))
-        .await?;
+            .await
+            .expect("processor exists")
+            .map_err(|e| CacheError::FetchMetaFar(e, merkle))?;
 
-    // Wait for the get request to return success/failure.
-    let dir = get.finish().await?;
+        let missing_blobs = get.get_missing_blobs().await?;
 
-    Ok((merkle, dir))
+        // Fetch the missing content blobs with some amount of concurrency.
+        fx_log_info!(
+            "Fetching blobs for {}: {:#?}",
+            url,
+            DebugIter(missing_blobs.iter().map(|need| need.blob_id))
+        );
+        let () = blob_fetcher
+            .push_all(missing_blobs.into_iter().map(|need| {
+                (
+                    need.blob_id,
+                    FetchBlobContext {
+                        opener: get.make_open_blob(need.blob_id),
+                        mirrors: Arc::clone(&mirrors),
+                        expected_len: None,
+                        use_local_mirror: config.use_local_mirror(),
+                    },
+                )
+            }))
+            .collect::<FuturesUnordered<_>>()
+            .map(|res| res.expect("processor exists"))
+            .try_collect::<()>()
+            .map_err(|e| CacheError::FetchContentBlob(e, merkle))
+            .await?;
+        Ok(())
+    }
+    .await;
+
+    match blob_fetch_res {
+        Ok(()) => Ok((merkle, get.finish().await?)),
+        Err(e) => {
+            get.abort().await;
+            Err(e)
+        }
+    }
 }
 
 /// Provides a Debug impl for an Iterator that produces a list of all elements in the iterator.
