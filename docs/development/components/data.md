@@ -156,25 +156,10 @@ config_data("workstation_fonts") {
 }{% endverbatim %}
 ```
 
-### Using `config_data()` with a v1 component
+### Using `config_data()` in your component
 
-Include the following in your component manifest (`.cmx`) file:
-
-```json
-{
-    "sandbox": {
-        "features": [
-            "config-data"
-        ]
-    }
-}
-```
-
-At runtime your component will be able to read the config files at the path
-`/config/data`. In the fonts example above, this assumes that your component
-launches from a package named `"fonts"`.
-
-### Using `config_data()` with a v2 component
+Note: If you are using [legacy components][legacy-components],
+see [configuration data][config-migration] in the components migration guide.
 
 Include the following in your component manifest (`.cml`) file:
 
@@ -215,8 +200,6 @@ For instance your parent may have a declaration that looks like this:
 }
 ```
 
-See also [configuration data in the v2 migration guide][config-migration].
-
 ### How `config_data()` works
 
 All `config_data()` targets that are defined in your build configuration collect
@@ -244,5 +227,6 @@ Due to the above, always prefer using `resource()` if possible.
 [build-components]: /docs/development/components/build.md
 [config-migration]: /docs/development/components/v2/migration.md#config-data
 [gn-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
+[legacy-components]: /docs/concepts/components/v1/README.md
 [metafar]: /docs/concepts/packages/package.md#metafar
 [resource]: /build/dist/resource.gni

@@ -1796,7 +1796,7 @@ using the directory capability `build-info` and path `/config/build-info`.
 [archive-dart]: /sdk/dart/fuchsia_inspect/lib/src/reader
 [archivist]: /docs/reference/diagnostics/inspect/tree.md#archivist
 [build-info-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.buildinfo#Provider
-[build-migration]: /docs/development/components/build.md#legacy-package-migration
+[build-migration]: /docs/development/components/package_migration.md
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [code-search]: https://cs.opensource.google/fuchsia

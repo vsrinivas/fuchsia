@@ -104,4 +104,4 @@ Reach out for questions or for status updates:
 
 [building-components]: /docs/development/components/build.md
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
-[migration-guide]: /docs/development/components/build.md#legacy-package-migration
+[migration-guide]: /docs/development/components/package_migration.md

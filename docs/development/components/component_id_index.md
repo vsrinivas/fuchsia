@@ -1,7 +1,6 @@
-# Define an index of components that use storage
+# Component storage index
 
-Note: This guide uses the [components v1](/docs/glossary.md#components-v1)
-architecture.
+<!-- TODO(fxbug,dev/77043): Update this guide for modern components -->
 
 ## Terminology
 

@@ -1,6 +1,4 @@
-# Troubleshooting components (Components v2) {#troubleshooting-components}
-
-<<../../../concepts/components/_v2_banner.md>>
+# Troubleshooting components {#troubleshooting-components}
 
 This document contains tips for troubleshooting the following kinds of problems
 when using the [component framework][doc-intro]:
@@ -238,7 +236,7 @@ not `echo_resp`.
 
 ## Test does not start {#troubleshoot-test}
 
-A Components v2 test is written using the [Test Runner Framework][doc-trf].
+You write component tests using the [Test Runner Framework][doc-trf].
 Sometimes, if one of the test components is configured incorrectly, this can
 result in the test failing to run.
 
