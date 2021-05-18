@@ -4,8 +4,11 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/testing/zbi_test.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+import("//zircon/kernel/phys/phys_executable.gni")
+import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 if (current_toolchain == default_toolchain) {
@@ -119,11 +122,11 @@ if (current_toolchain == default_toolchain) {
     }
 
     # This is used by phys_executable(), but we put nothing here so that
-    # each target has explicit deps for multiboot for zero-page.
+    # each target has explicit deps for multiboot for linuxboot.
     source_set("phys") {
     }
 
-    # This is common to multiboot and zero-page.
+    # This is common to multiboot and linuxboot.
     source_set("phys32") {
       sources = [
         "gdt32.cc",
@@ -170,6 +173,8 @@ if (current_toolchain == default_toolchain) {
                          root_build_dir)
     }
 
+    # Just putting this in deps of a phys_executable() in the kernel.phys32
+    # environment makes it a Multiboot-compatible kernel image.
     source_set("multiboot") {
       sources = [
         "multiboot-header.S",
@@ -202,7 +207,49 @@ if (current_toolchain == default_toolchain) {
       ]
     }
 
-    # TODO(mcgrathr): Linux zero-page support parallel to multiboot
+    # Just putting this in deps of a phys_executable() in the kernel.phys32
+    # environment makes it a Linux x86 (bzImage) compatible kernel image.
+    source_set("linuxboot") {
+      public = [ "linuxboot.h" ]
+      sources = [ "linuxboot-header.S" ]
+      libs = [ "./linuxboot.ld" ]
+      deps = [
+        ":linuxboot-asm",
+        ":phys32",
+        ":phys32-header",
+        "//zircon/kernel/lib/arch",
+      ]
+
+      # This does `#include "linuxboot.h"` but shouldn't link this stuff in
+      # (and that would create a circular dependency here anyway).  It's just a
+      # private helper for the linuxboot-header.S code.
+      friend = [ ":linuxboot-asm" ]
+    }
+
+    phys_executable("qemu-linuxboot-hello-world") {
+      testonly = true
+      deps = [
+        ":linuxboot",
+        "//zircon/kernel/phys/test:hello-world-test.source",
+        "//zircon/kernel/phys/test:qemu-test-main",
+      ]
+    }
+
+    zbi_test("qemu-linuxboot-hello-world-test") {
+      # This is not a ZBI-bootable image.
+      cpu = ""
+      tags = [ "incomplete" ]
+
+      # The special kernel is all that really matters for this test.
+      qemu_kernel = ":qemu-linuxboot-hello-world"
+      deps = [ qemu_kernel ]
+
+      device_types = [ "QEMU" ]
+
+      # Set a short timeout since the tests don't necessarily shut down QEMU
+      # after printing the success string.
+      timeout = qemu_short_timeout
+    }
   }
 
   # This is where code is actually loaded both for the Multiboot spec and for
@@ -218,4 +265,15 @@ hwreg_asm_header("phys32-header") {
   sources = [ "gdt32.cc" ]
   defines = [ "GENERATE" ]
   deps = [ "//zircon/kernel/lib/arch" ]
+}
+
+hwreg_asm_header("linuxboot-asm") {
+  visibility = [ ":linuxboot" ]
+  output_name = "linuxboot-asm.h"
+  sources = [ "linuxboot-asm-gen.cc" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":qemu-linuxboot-hello-world-test(:kernel.phys32)" ]
 }

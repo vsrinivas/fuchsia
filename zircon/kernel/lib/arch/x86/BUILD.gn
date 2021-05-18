@@ -29,8 +29,15 @@ zx_library("x86") {
       "random.cc",
       "standard-segments.cc",
     ]
-    if (toolchain.environment != "kernel.phys32") {
+
+    if (toolchain.environment == "kernel.phys32") {
+      sources += [ "zbi-boot.cc" ]
+    } else {
       sources += [ "descriptor-regs.S" ]
+    }
+
+    if (is_kernel) {
+      deps += [ "//zircon/kernel/lib/ktl" ]
     }
   }
 

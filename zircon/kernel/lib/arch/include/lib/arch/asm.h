@@ -14,8 +14,8 @@
 
 #ifdef __ASSEMBLER__  // clang-format off
 
-/// Defines an ELF symbol at the current assembly position, with specified
-/// scope and (optional) type.
+/// Defines an ELF symbol at the current assembly position (or with an
+/// arbitrary value), with specified scope and (optional) type.
 ///
 /// Parameters
 ///
@@ -36,9 +36,15 @@
 ///     and leave it the default `notype` only for labels within an entity.
 ///     - Default: `notype`
 ///
+///   * value
+///     - Optional: Expression for the value of the symbol.  Usually this is
+///     just `.` (the default if it's omitted), but it can be another value.
+///     - Default: `.`
+///
+///
 /// This is only really useful when the scope and/or type is set to a
 /// non-default value.  `.label name, local` is just `name:`.
-.macro .label name, scope=local, type=notype
+.macro .label name, scope=local, type=notype, value:vararg
   // Set ELF symbol type.
   .type \name, %\type
 
@@ -55,7 +61,11 @@
   .endif
 
   // Define the label itself.
-  \name\():
+  .ifb \value
+    \name\():
+  .else
+    \name = \value
+  .endif
 .endm  // .label
 
 /// Define a function that extends until `.end`.

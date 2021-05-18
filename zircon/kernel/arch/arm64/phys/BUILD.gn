@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/toolchain/variant.gni")
+import("//build/unification/global_variables.gni")
 
 # This has to be variant() rather than config() to be used in the toolchain
 # configs list.
@@ -12,32 +13,39 @@ variant("strict-align") {
   cflags = [ "-mstrict-align" ]
 }
 
-source_set("address-space") {
-  sources = [ "address-space.cc" ]
-  include_dirs = [ "//." ]
-  deps = [
-    "//zircon/kernel/lib/arch",
-    "//zircon/kernel/phys:arch-header",
-    "//zircon/kernel/phys/lib/memalloc",
-    "//zircon/system/ulib/zbitl",
-  ]
+if (toolchain.environment == "kernel.phys") {
+  source_set("address-space") {
+    sources = [ "address-space.cc" ]
+    include_dirs = [ "//." ]
+    deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys:arch-header",
+      "//zircon/kernel/phys/lib/memalloc",
+      "//zircon/system/ulib/zbitl",
+    ]
+  }
+
+  source_set("phys") {
+    sources = [
+      "setup.cc",
+      "start.S",
+    ]
+    include_dirs = [ "//zircon/.." ]
+    deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys:arch-header",
+      "//zircon/system/ulib/static-pie",
+    ]
+  }
+
+  config("qemu.config") {
+    # Like ZBI executables, direct QEMU phys executables can be loaded
+    # anywhere, so they are linked at 0.
+    configs = [ "//zircon/kernel/phys:load-pic" ]
+  }
 }
 
-source_set("phys") {
-  sources = [
-    "setup.cc",
-    "start.S",
-  ]
-  include_dirs = [ "//zircon/.." ]
-  deps = [
-    "//zircon/kernel/lib/arch",
-    "//zircon/kernel/phys:arch-header",
-    "//zircon/system/ulib/static-pie",
-  ]
-}
-
-config("qemu.config") {
-  # Like ZBI executables, direct QEMU phys executables can be loaded anywhere,
-  # so they are linked at 0.
-  configs = [ "//zircon/kernel/phys:load-pic" ]
+group("tests") {
+  testonly = true
+  deps = []
 }

@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/x86/descriptor.h>
+#include <lib/arch/x86/system.h>
 
 #include <array>
 
@@ -16,7 +17,7 @@ constexpr auto MakePhys32Gdt() {
   std::array<arch::Desc32, kNumEntries> gdt{};
 
   gdt[kCode32].MakeFlat().set_type(arch::Desc32::CODE_RX);
-  gdt[kCode64].MakeFlat().set_type(arch::Desc32::CODE_RX).set_long_mode(true);
+  gdt[kCode64].MakeCode64();
   gdt[kData32].MakeFlat().set_type(arch::Desc32::DATA_RW);
   gdt[kGs32].MakeFlat().set_type(arch::Desc32::DATA_RW);
 
@@ -50,6 +51,7 @@ int main(int argc, char** argv) {
       .Macro("PHYS32_DATA32_SEL", kData32 << 3)
       .Macro("PHYS32_GS32_SEL", kGs32 << 3)
       .Macro("PHYS32_CODE64_SEL", kCode64 << 3)
+      .Register<arch::X86Cr0>("X86_CR0_")
       .Main(argc, argv);
 }
 #endif

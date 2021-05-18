@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_X86_INCLUDE_LIB_ARCH_ZBI_BOOT_H_
 #define ZIRCON_KERNEL_LIB_ARCH_X86_INCLUDE_LIB_ARCH_ZBI_BOOT_H_
 
+#include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
 #include <cstdint>
@@ -26,6 +27,9 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
 // called with identity mappings in place that cover at least the kernel plus
 // its reserve_memory_size and the whole data ZBI.
 
+[[noreturn]] void ZbiBootRaw(uintptr_t entry, void* data);
+
+#ifdef __x86_64__
 [[noreturn]] inline void ZbiBootRaw(uintptr_t entry, void* data) {
   // Clear the stack and frame pointers so no misleading breadcrumbs are left.
   // Use a register constraint for the indirect jump operand so that it can't
@@ -44,10 +48,13 @@ constexpr uintptr_t kZbiBootDataAlignment = 1 << 12;
       : "cc", "memory");
   __builtin_unreachable();
 }
+#endif
 
 [[noreturn]] inline void ZbiBoot(zircon_kernel_t* kernel, zbi_header_t* zbi) {
   auto entry = reinterpret_cast<uintptr_t>(kernel) + kernel->data_kernel.entry;
-  ZbiBootRaw(entry, zbi);
+  uintptr_t raw_entry = static_cast<uintptr_t>(entry);
+  ZX_ASSERT(raw_entry == entry);
+  ZbiBootRaw(raw_entry, zbi);
 }
 
 }  // namespace arch

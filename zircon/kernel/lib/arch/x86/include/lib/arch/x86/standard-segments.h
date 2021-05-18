@@ -21,6 +21,11 @@ class X86StandardSegments {
   // (This is only provided on actual x86-64 hardware.)
   void Load();
 
+  // Install the new GDT and TSS and switch to the new 64-bit code segment at
+  // the given absolute entry point, with the argument value in %rsi.
+  // (This is only provided on actual x86 hardware, both 64-bit and 32-bit.)
+  [[noreturn]] void Load(uintptr_t entry, uintptr_t arg);
+
  private:
   struct Gdt64 {
     arch::Desc32 null;                // Null descriptor.

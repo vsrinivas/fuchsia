@@ -26,7 +26,7 @@ namespace arch {
 // specific registers with the right layout types.
 
 // [intel/vol3]: 2.5 Control Registers: CR0
-struct X86Cr0 : public SysRegBase<X86Cr0> {
+struct X86Cr0 : public SysRegBase<X86Cr0, uint64_t, hwreg::EnablePrinter> {
   DEF_RSVDZ_FIELD(63, 32);
   DEF_BIT(31, pg);  // Paging enabled
   DEF_BIT(30, cd);  // Cache disabled

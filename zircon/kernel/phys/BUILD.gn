@@ -272,6 +272,7 @@ group("tests") {
     "boot-shim:tests",
     "lib:tests",
     "test",
+    "//zircon/kernel/arch/$zircon_cpu/phys:tests",
   ]
 }
 
