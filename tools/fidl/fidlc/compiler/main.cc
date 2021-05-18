@@ -35,10 +35,7 @@ namespace {
 
 void Usage() {
   std::cout
-      << "usage: fidlc [--c-header HEADER_PATH]\n"
-         "             [--c-client CLIENT_PATH]\n"
-         "             [--c-server SERVER_PATH]\n"
-         "             [--tables TABLES_PATH]\n"
+      << "usage: fidlc [--tables TABLES_PATH]\n"
          "             [--json JSON_PATH]\n"
          "             [--convert-syntax CONVERTED_SYNTAX_PATH]\n"
          "             [--name LIBRARY_NAME]\n"
@@ -49,15 +46,6 @@ void Usage() {
          "             [--depfile DEPFILE_PATH]\n"
          "             [--files [FIDL_FILE...]...]\n"
          "             [--help]\n"
-         "\n"
-         " * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output\n"
-         "   a C header at the given path.\n"
-         "\n"
-         " * `--c-client CLIENT_PATH`. If present, this flag instructs `fidlc` to output\n"
-         "   the simple C client implementation at the given path.\n"
-         "\n"
-         " * `--c-server SERVER_PATH`. If present, this flag instructs `fidlc` to output\n"
-         "   the simple C server implementation at the given path.\n"
          "\n"
          " * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output\n"
          "   coding tables at the given path. The coding tables are required to encode and\n"
@@ -347,13 +335,13 @@ int main(int argc, char* argv[]) {
         FailWithUsage("Unknown value `%s` for flag `format`\n", format_value.data());
       }
       format = format_value;
-    } else if (behavior_argument == "--c-header") {
+    } else if (behavior_argument == "--deprecated-fuchsia-only-c-header") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCHeader, path));
-    } else if (behavior_argument == "--c-client") {
+    } else if (behavior_argument == "--deprecated-fuchsia-only-c-client") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCClient, path));
-    } else if (behavior_argument == "--c-server") {
+    } else if (behavior_argument == "--deprecated-fuchsia-only-c-server") {
       std::string path = args->Claim();
       outputs.emplace_back(std::make_pair(Behavior::kCServer, path));
     } else if (behavior_argument == "--tables") {

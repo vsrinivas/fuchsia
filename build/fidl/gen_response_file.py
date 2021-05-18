@@ -41,12 +41,14 @@ def main():
     parser.add_argument(
         "--tables", help="The path for the tables file to generate, if any")
     parser.add_argument(
-        "--c-client",
-        help="The path for the C simple client file to generate, if any")
+        "--deprecated-fuchsia-only-c-client",
+        help=
+        "The path for the C simple client file to generate, if any")
     parser.add_argument(
-        "--c-header", help="The path for the C header file to generate, if any")
+        "--deprecated-fuchsia-only-c-header",
+        help="The path for the C header file to generate, if any")
     parser.add_argument(
-        "--c-server",
+        "--deprecated-fuchsia-only-c-server",
         help="The path for the C simple server file to generate, if any")
     parser.add_argument(
         "--name", help="The name for the generated FIDL library, if any")
@@ -82,14 +84,20 @@ def main():
     if args.tables:
         response_file.append("--tables %s" % args.tables)
 
-    if args.c_client:
-        response_file.append("--c-client %s" % args.c_client)
+    if args.deprecated_fuchsia_only_c_client:
+        response_file.append(
+            "--deprecated-fuchsia-only-c-client %s" %
+            args.deprecated_fuchsia_only_c_client)
 
-    if args.c_header:
-        response_file.append("--c-header %s" % args.c_header)
+    if args.deprecated_fuchsia_only_c_header:
+        response_file.append(
+            "--deprecated-fuchsia-only-c-header %s" %
+            args.deprecated_fuchsia_only_c_header)
 
-    if args.c_server:
-        response_file.append("--c-server %s" % args.c_server)
+    if args.deprecated_fuchsia_only_c_server:
+        response_file.append(
+            "--deprecated-fuchsia-only-c-server %s" %
+            args.deprecated_fuchsia_only_c_server)
 
     if args.name:
         response_file.append("--name %s" % args.name)

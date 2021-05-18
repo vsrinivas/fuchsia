@@ -120,7 +120,7 @@ template("fidl_c_header") {
       args = [
         "--name",
         fidl_name,
-        "--c-header",
+        "--deprecated-fuchsia-only-c-header",
         rebase_path(header_file, root_build_dir),
         "--rsp-file",
         rebase_path(rsp_file, root_build_dir),

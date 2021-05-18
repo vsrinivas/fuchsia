@@ -2,10 +2,7 @@
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-usage: fidlc [--c-header HEADER_PATH]
-             [--c-client CLIENT_PATH]
-             [--c-server SERVER_PATH]
-             [--tables TABLES_PATH]
+usage: fidlc [--tables TABLES_PATH]
              [--json JSON_PATH]
              [--convert-syntax CONVERTED_SYNTAX_PATH]
              [--name LIBRARY_NAME]
@@ -15,12 +12,6 @@ usage: fidlc [--c-header HEADER_PATH]
              [--json-schema]
              [--files [FIDL_FILE...]...]
              [--help]
- * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output
-   a C header at the given path.
- * `--c-client CLIENT_PATH`. If present, this flag instructs `fidlc` to output
-   the simple C client implementation at the given path.
- * `--c-server SERVER_PATH`. If present, this flag instructs `fidlc` to output
-   the simple C server implementation at the given path.
  * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output
    coding tables at the given path. The coding tables are required to encode and
    decode messages from the C and C++ bindings.

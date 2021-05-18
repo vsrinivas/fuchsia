@@ -14,10 +14,6 @@ bindings for the library.
 
 The frontend is a command-line program named `fidlc`. The `fidlc` compiler has these flags:
 
-* `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output a C header at the
-  given path. The C header generation could have been implemented as a C backend, but for practical
-  reasons, the C header generation is integrated directly into the frontend.
-
 * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output coding tables at the
   given path. The coding tables are required to encode and decode messages from the C and C++
   bindings.

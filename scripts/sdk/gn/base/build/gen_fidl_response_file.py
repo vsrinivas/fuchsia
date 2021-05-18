@@ -44,9 +44,6 @@ def main(args_list=None):
     parser.add_argument(
         "--tables", help="The path for the tables file to generate, if any")
     parser.add_argument(
-        "--c-header",
-        help="The path for the C headers file to generate, if any")
-    parser.add_argument(
         "--name", help="The name for the generated FIDL library, if any")
     parser.add_argument(
         "--sources", help="List of FIDL source files", nargs="*")
@@ -75,9 +72,6 @@ def main(args_list=None):
 
     if args.tables:
         response_file.append("--tables %s" % args.tables)
-
-    if args.c_header:
-        response_file.append("--c-header %s" % args.c_header)
 
     if args.name:
         response_file.append("--name %s" % args.name)

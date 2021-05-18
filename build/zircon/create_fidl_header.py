@@ -16,7 +16,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', required=True, help='Fidl library name')
     parser.add_argument(
-        '--c-header', required=True, help='Path to output header file')
+        '--deprecated-fuchsia-only-c-header',
+        required=True,
+        help='Path to output header file')
     parser.add_argument(
         '--fidlc', required=True, help='Path to fidlc tool binary')
     parser.add_argument(
@@ -30,7 +32,8 @@ def main():
     # Run 'fidlc' to generate the header.
     subprocess.check_call(
         [
-            args.fidlc, '--c-header', args.c_header, '--name', args.name,
+            args.fidlc, '--deprecated-fuchsia-only-c-header',
+            args.deprecated_fuchsia_only_c_header, '--name', args.name,
             '@' + args.rsp_file
         ])
 
@@ -46,7 +49,8 @@ def main():
         files = list(itertools.chain(*files_parser.parse_args(command).files))
 
     with open(args.dep_file, 'w') as dep_file:
-        dep_file.write('%s: %s' % (args.c_header, ' '.join(files)))
+        dep_file.write(
+            '%s: %s' % (args.deprecated_fuchsia_only_c_header, ' '.join(files)))
 
     return 0
 
