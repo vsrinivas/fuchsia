@@ -115,7 +115,7 @@ TEST_femu_osx_networking() {
   # The mac address is computed with a hash function in fx emu based on the device name.
   # We test the generated mac address since other scripts hard code this to SSH into the device.
   gn-test-check-mock-partial -fuchsia
-  gn-test-check-mock-partial -netdev type=tap,ifname=fakenetwork,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh"
+  gn-test-check-mock-partial -netdev type=tap,ifname=fakenetwork,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh",downscript=no
   gn-test-check-mock-partial -device virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:95:03:66
   gn-test-check-mock-partial --unknown-arg1-to-qemu
   gn-test-check-mock-partial --unknown-arg2-to-qemu
@@ -143,7 +143,7 @@ TEST_femu_osx_fail_tuntap() {
     # The mac address is computed with a hash function in fx emu based on the device name.
     # We test the generated mac address since other scripts hard code this to SSH into the device.
     gn-test-check-mock-partial -fuchsia
-    gn-test-check-mock-partial -netdev type=tap,ifname=tap0,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh"
+    gn-test-check-mock-partial -netdev type=tap,ifname=tap0,id=net0,script="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/lib/emu-ifup-macos.sh",downscript=no
     gn-test-check-mock-partial -device virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:4d:27:96
   else
     # The tun/tap driver is not installed, so test if the execution fails the way we expect

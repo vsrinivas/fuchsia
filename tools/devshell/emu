@@ -61,6 +61,7 @@ HIDPI_SCALING=0
 AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=
+DOWNSCRIPT=no
 WINDOW_SIZE="1280x800"
 GRPC=
 RTCFPS="30"
@@ -472,7 +473,11 @@ if (( NET )); then
     echo "The upscript ${UPSCRIPT} is not a valid executable"
     exit 1
   fi
-  ARGS+=("-netdev" "type=tap,ifname=$IFNAME,id=net0${UPSCRIPT:+,script=${UPSCRIPT}}")
+  if [[ -n "${DOWNSCRIPT}" && "${DOWNSCRIPT}" != "no" && ! -x "${DOWNSCRIPT}" ]]; then
+    echo "The downscript ${DOWNSCRIPT} is not a valid executable"
+    exit 1
+  fi
+  ARGS+=("-netdev" "type=tap,ifname=$IFNAME,id=net0${UPSCRIPT:+,script=${UPSCRIPT}}${DOWNSCRIPT:+,downscript=${DOWNSCRIPT}}")
   HASH=$(echo $IFNAME | shasum)
   SUFFIX=$(for i in {0..2}; do echo -n ":${HASH:$(( 2 * i )):2}"; done)
   MAC=",mac=52:54:00$SUFFIX"
