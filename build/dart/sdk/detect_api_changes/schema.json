@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "$id": "http://fuchsia.com/build/dart/sdk/analyze/diff_api_schema.json",
+  "$id": "https://fuchsia.dev/schema/build/dart/sdk/analyze/diff_api_schema.json",
   "description": "The public API structure for a Dart package",
 
   "type": "object",

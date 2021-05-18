@@ -1,7 +1,7 @@
 {
   "type": "object",
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "$id": "https://fuchsia.dev/network_manager",
+  "$id": "https://fuchsia.dev/schema/src/connectivity/management/network-manager/data/device_schema.json",
   "title": "Network Manager Device Schema for configuration data.",
 
   "definitions": {

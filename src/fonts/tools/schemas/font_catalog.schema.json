@@ -1,5 +1,5 @@
 {
-  "$id": "http://fuchsia.com/src/fonts/tools/schemas/font_catalog.schema.json",
+  "$id": "https://fuchsia.dev/schema/src/fonts/tools/schemas/font_catalog.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "A manually written listing of font families and assets that can be used for generating a font manifest.\nRecommended extension: .font_catalog.json",
   "type": "object",

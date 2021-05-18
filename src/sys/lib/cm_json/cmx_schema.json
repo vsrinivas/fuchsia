@@ -1,5 +1,6 @@
 {
   "type": "object",
+  "$id": "https://fuchsia.dev/schema/sys/lib/cm_json/cmx_schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "required": [
     "program"
@@ -7,14 +8,12 @@
   "additionalProperties": false,
   "properties": {
     "program": {
-      "$id": "/properties/program",
       "type": "object",
       "additionalProperties": {
         "type": "string"
       },
       "properties": {
         "binary": {
-          "$id": "/properties/program/properties/binary",
           "type": "string",
           "title": "Program entry point for an Elf binary",
           "examples": [
@@ -22,7 +21,6 @@
           ]
         },
         "args": {
-          "$id": "/properties/program/properties/args",
           "type": "array",
           "title": "Arguments to provide to an Elf binary",
           "items": {
@@ -34,7 +32,6 @@
           ]
         },
         "env_vars": {
-          "$id": "/properties/program/properties/env_vars",
           "type": "array",
           "title": "Environment variables to provide to an Elf binary",
           "items": {
@@ -46,7 +43,6 @@
           ]
         },
         "data": {
-          "$id": "/properties/program/properties/data",
           "type": "string",
           "title": "Relative path for dart/flutter assets within /pkg/data",
           "examples": [
@@ -64,22 +60,18 @@
       ]
     },
     "sandbox": {
-      "$id": "/properties/sandbox",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "dev": {
-          "id": "/properties/sandbox/properties/dev",
           "title": "Device directories to provide to the component",
           "type": "array",
           "uniqueItems": true
         },
         "features": {
-          "$id": "/properties/sandbox/properties/features",
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$id": "/properties/sandbox/properties/features/items",
             "type": "string",
             "title": "Specific environment features",
             "enum": [
@@ -101,11 +93,9 @@
           }
         },
         "system": {
-          "$id": "/properties/sandbox/properties/system",
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$id": "/properties/sandbox/properties/system/items",
             "type": "string",
             "title": "Paths within the system package provided to the component",
             "allOf": [
@@ -136,11 +126,9 @@
           }
         },
         "pkgfs": {
-          "$id": "/properties/sandbox/properties/pkgfs",
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$id": "/properties/sandbox/properties/pkgfs/items",
             "type": "string",
             "title": "Paths within pkgfs provided to the component",
             "examples": [
@@ -149,11 +137,9 @@
           }
         },
         "boot": {
-          "$id": "/properties/sandbox/properties/boot",
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$id": "/properties/sandbox/properties/boot/items",
             "type": "string",
             "title": "Paths within the boot package provided to the component",
             "examples": [
@@ -162,11 +148,9 @@
           }
         },
         "services": {
-          "$id": "/properties/sandbox/properties/services",
           "type": "array",
           "uniqueItems": true,
           "items": {
-            "$id": "/properties/sandbox/properties/services/items",
             "type": "string",
             "title": "Services to provide",
             "examples": [
@@ -178,11 +162,9 @@
       }
     },
     "dev": {
-      "$id": "/properties/dev",
       "type": "array",
       "uniqueItems": true,
       "items": {
-        "$id": "/properties/dev/items",
         "type": "string",
         "title": "Device directories to provide",
         "examples": [
@@ -193,7 +175,6 @@
       }
     },
     "runner": {
-      "$id": "/properties/runner",
       "type": "string",
       "title": "Runner required to launch the component",
       "examples": [
@@ -202,7 +183,6 @@
       ]
     },
     "facets": {
-      "$id": "/properties/facets",
       "type": "object",
       "title": "Extra information about this component"
     }
