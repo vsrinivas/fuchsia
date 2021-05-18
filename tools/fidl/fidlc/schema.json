@@ -189,7 +189,7 @@
             "type": "object"
         },
         "compose": {
-            "description": "Compose member of an interface declaration",
+            "description": "Compose member of a protocol declaration",
             "properties": {
                 "location": {
                     "$ref": "#/definitions/location",
@@ -201,7 +201,7 @@
                 },
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
-                    "description": "Name of the composed interface"
+                    "description": "Name of the composed protocol"
                 }
             },
             "required": [
@@ -570,10 +570,10 @@
             "type": "string"
         },
         "interface": {
-            "description": "Definition of an interface declaration",
+            "description": "Definition of a protocol declaration",
             "properties": {
                 "composed_protocols": {
-                    "description": "List of composed interfaces",
+                    "description": "List of composed protocols",
                     "items": {
                         "$ref": "#/definitions/compose"
                     },
@@ -585,7 +585,7 @@
                 },
                 "maybe_attributes": {
                     "$ref": "#/definitions/attributes-list",
-                    "description": "Optional list of attributes of the interface declaration"
+                    "description": "Optional list of attributes of the protocol declaration"
                 },
                 "methods": {
                     "description": "List of methods and events",
@@ -596,7 +596,7 @@
                 },
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
-                    "description": "Name of the interface"
+                    "description": "Name of the protocol"
                 }
             },
             "required": [
@@ -609,11 +609,11 @@
             "description": "Definition of a method or event",
             "properties": {
                 "has_request": {
-                    "description": "Flag indicating that interface method has a request component",
+                    "description": "Flag indicating that protocol method has a request component",
                     "type": "boolean"
                 },
                 "has_response": {
-                    "description": "Flag indicating that interface method has a response component",
+                    "description": "Flag indicating that protocol method has a response component",
                     "type": "boolean"
                 },
                 "is_composed": {
@@ -629,7 +629,7 @@
                     "description": "Optional list of attributes of the method or event"
                 },
                 "maybe_request": {
-                    "description": "Optional list of interface method request parameters",
+                    "description": "Optional list of protocol method request parameters",
                     "items": {
                         "$ref": "#/definitions/interface-method-parameter"
                     },
@@ -640,7 +640,7 @@
                     "description": "Type shape of this declaration"
                 },
                 "maybe_response": {
-                    "description": "Optional list of interface method response parameters",
+                    "description": "Optional list of protocol method response parameters",
                     "items": {
                         "$ref": "#/definitions/interface-method-parameter"
                     },
@@ -652,11 +652,11 @@
                 },
                 "name": {
                     "$ref": "#/definitions/identifier",
-                    "description": "Name of the interface method"
+                    "description": "Name of the protocol method"
                 },
                 "ordinal": {
                     "$ref": "#/definitions/ordinal",
-                    "description": "Ordinal number of the interface method"
+                    "description": "Ordinal number of the protocol method"
                 }
             },
             "required": [
@@ -872,7 +872,7 @@
                 },
                 "subtype": {
                     "$ref": "#/definitions/compound-identifier",
-                    "description": "Interface name of request type"
+                    "description": "Protocol name of request type"
                 }
             },
             "required": [
@@ -1497,7 +1497,7 @@
             "type": "array"
         },
         "interface_declarations": {
-            "description": "List of interfaces",
+            "description": "List of protocols",
             "items": {
                 "$ref": "#/definitions/interface"
             },
