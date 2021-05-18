@@ -346,9 +346,11 @@ where
     ) -> Result<ConnectionState, Error> {
         match request {
             BaseDirectoryRequest::Clone { flags, object, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
             BaseDirectoryRequest::Close { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Close");
                 let status = match self.directory.close() {
                     Ok(()) => Status::OK,
                     Err(e) => e,
@@ -357,10 +359,12 @@ where
                 return Ok(ConnectionState::Closed);
             }
             BaseDirectoryRequest::Describe { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Describe");
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
             }
             BaseDirectoryRequest::GetAttr { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::GetAttr");
                 let (mut attrs, status) = match self.directory.get_attrs().await {
                     Ok(attrs) => (attrs, ZX_OK),
                     Err(status) => (
@@ -380,35 +384,45 @@ where
                 responder.send(status, &mut attrs)?;
             }
             BaseDirectoryRequest::GetFlags { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             BaseDirectoryRequest::SetFlags { flags: _, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::SetFlags");
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             BaseDirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "Directory::Open");
                 self.handle_open(flags, mode, path, object);
             }
-            BaseDirectoryRequest::AddInotifyFilter { .. } => {}
+            BaseDirectoryRequest::AddInotifyFilter { .. } => {
+                fuchsia_trace::duration!("storage", "Directory::AddInotifyFilter");
+            }
             BaseDirectoryRequest::AdvisoryLock { request: _, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             BaseDirectoryRequest::ReadDirents { max_bytes, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::ReadDirents");
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
                 })
                 .await?;
             }
             BaseDirectoryRequest::Rewind { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Rewind");
                 self.seek = Default::default();
                 responder.send(ZX_OK)?;
             }
             BaseDirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Link");
                 self.handle_link(src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
                 })
                 .await?;
             }
             BaseDirectoryRequest::Watch { mask, options, watcher, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Watch");
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {

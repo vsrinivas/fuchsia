@@ -243,9 +243,11 @@ impl<T: 'static + File> FileConnection<T> {
     async fn handle_request(&mut self, req: FileRequest) -> Result<ConnectionState, Error> {
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "File::Clone");
                 self.handle_clone(self.flags, flags, object);
             }
             FileRequest::Close { responder } => {
+                fuchsia_trace::duration!("storage", "File::Close");
                 let status = self.file.close().await.err().unwrap_or(Status::OK);
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
@@ -253,22 +255,27 @@ impl<T: 'static + File> FileConnection<T> {
                 return Ok(ConnectionState::Closed);
             }
             FileRequest::Describe { responder } => {
+                fuchsia_trace::duration!("storage", "File::Describe");
                 let mut info = NodeInfo::File(FileObject { event: None, stream: None });
                 responder.send(&mut info)?;
             }
             FileRequest::Sync { responder } => {
+                fuchsia_trace::duration!("storage", "File::Sync");
                 let status = self.file.sync().await.err().unwrap_or(Status::OK);
                 responder.send(status.into_raw())?;
             }
             FileRequest::GetAttr { responder } => {
+                fuchsia_trace::duration!("storage", "File::GetAttr");
                 let (status, mut attrs) = self.handle_get_attr().await;
                 responder.send(status.into_raw(), &mut attrs)?;
             }
             FileRequest::SetAttr { flags, attributes, responder } => {
+                fuchsia_trace::duration!("storage", "File::SetAttr");
                 let status = self.handle_set_attr(flags, attributes).await;
                 responder.send(status.into_raw())?;
             }
             FileRequest::Read { count, responder } => {
+                fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, range)) => {
                         responder.send(Status::OK.into_raw(), &buffer.as_slice()[range.clone()])?;
@@ -282,6 +289,12 @@ impl<T: 'static + File> FileConnection<T> {
                 self.seek += advance;
             }
             FileRequest::ReadAt { offset, count, responder } => {
+                fuchsia_trace::duration!(
+                    "storage",
+                    "File::ReadAt",
+                    "offset" => offset,
+                    "bytes" => count
+                );
                 match self.handle_read_at(offset, count).await {
                     Ok((buffer, range)) => {
                         responder.send(Status::OK.into_raw(), &buffer.as_slice()[range])?
@@ -290,40 +303,55 @@ impl<T: 'static + File> FileConnection<T> {
                 }
             }
             FileRequest::Write { data, responder } => {
+                fuchsia_trace::duration!("storage", "File::Write", "bytes" => data.len() as u64);
                 let (status, actual) = self.handle_write(&data).await;
                 responder.send(status.into_raw(), actual)?;
             }
             FileRequest::WriteAt { offset, data, responder } => {
+                fuchsia_trace::duration!(
+                    "storage",
+                    "File::WriteAt",
+                    "offset" => offset,
+                    "bytes" => data.len() as u64
+                );
                 let (status, actual) = self.handle_write_at(offset, &data).await;
                 responder.send(status.into_raw(), actual)?;
             }
             FileRequest::Seek { offset, start, responder } => {
+                fuchsia_trace::duration!("storage", "File::Seek");
                 let (status, seek) = self.handle_seek(offset, start).await;
                 responder.send(status.into_raw(), seek)?;
             }
             FileRequest::Truncate { length, responder } => {
+                fuchsia_trace::duration!("storage", "File::Truncate", "length" => length);
                 let status = self.handle_truncate(length).await;
                 responder.send(status.into_raw())?;
             }
             FileRequest::GetFlags { responder } => {
+                fuchsia_trace::duration!("storage", "File::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             FileRequest::NodeGetFlags { responder } => {
+                fuchsia_trace::duration!("storage", "File::NodeGetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
             }
             FileRequest::SetFlags { flags, responder } => {
+                fuchsia_trace::duration!("storage", "File::SetFlags");
                 self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }
             FileRequest::NodeSetFlags { flags, responder } => {
+                fuchsia_trace::duration!("storage", "File::NodeSetFlags");
                 self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }
             FileRequest::GetBuffer { flags, responder } => {
+                fuchsia_trace::duration!("storage", "File::GetBuffer");
                 let (status, mut buffer) = self.handle_get_buffer(flags).await;
                 responder.send(status.into_raw(), buffer.as_mut())?;
             }
             FileRequest::AdvisoryLock { request: _, responder } => {
+                fuchsia_trace::duration!("storage", "File::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
         }

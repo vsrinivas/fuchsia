@@ -47,6 +47,7 @@ struct FsckSubCommand {}
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().unwrap();
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let args: TopLevel = argh::from_env();
 
