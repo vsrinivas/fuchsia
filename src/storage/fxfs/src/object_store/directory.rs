@@ -333,12 +333,15 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
 ) -> Result<Option<(u64, ObjectDescriptor)>, Error> {
     let deleted_id_and_descriptor = dst.0.lookup(dst.1).await?;
     match deleted_id_and_descriptor {
-        Some((_, ObjectDescriptor::File)) => {}
+        Some((old_id, ObjectDescriptor::File)) => {
+            dst.0.store().adjust_refs(transaction, old_id, -1).await?;
+        }
         Some((old_id, ObjectDescriptor::Directory)) => {
             let dir = Directory::open(&dst.0.owner(), old_id).await?;
             if dir.has_children().await? {
                 bail!(FxfsError::NotEmpty);
             }
+            remove(transaction, &dst.0.store(), old_id);
         }
         Some((_, ObjectDescriptor::Volume)) => bail!(FxfsError::Inconsistent),
         None => {

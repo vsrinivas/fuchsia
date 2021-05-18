@@ -12,6 +12,7 @@ use {
         task::{Poll, Waker},
         vec::Vec,
     },
+    vfs::directory::entry::DirectoryEntry,
 };
 
 /// FxNode is a node in the filesystem hierarchy (either a file or directory).
@@ -20,6 +21,7 @@ pub trait FxNode: Any + Send + Sync + 'static {
     fn parent(&self) -> Option<Arc<FxDirectory>>;
     fn set_parent(&self, parent: Arc<FxDirectory>);
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static>;
+    fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>>;
 }
 
 struct PlaceholderInner {
@@ -42,6 +44,9 @@ impl FxNode for Placeholder {
     }
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self
+    }
+    fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
+        None
     }
 }
 
@@ -168,6 +173,7 @@ mod tests {
             },
             time::Duration,
         },
+        vfs::directory::entry::DirectoryEntry,
     };
 
     struct FakeNode(u64, Arc<NodeCache>);
@@ -183,6 +189,9 @@ mod tests {
         }
         fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
             self
+        }
+        fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
+            None
         }
     }
     impl Drop for FakeNode {

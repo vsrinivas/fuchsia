@@ -16,7 +16,7 @@ class FxfsFilesystem : public FilesystemImplWithDefaultMake<FxfsFilesystem> {
         .name = "fxfs",
         .can_unmount = true,
         .timestamp_granularity = zx::nsec(1),
-        .supports_hard_links = false,
+        .supports_hard_links = true,
         .supports_mmap = false,
         .supports_resize = true,
         // Technically, Fxfs's maximum file size is higher than this, but POSIX APIs take off_t, so

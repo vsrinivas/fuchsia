@@ -337,13 +337,13 @@ impl ObjectStore {
     }
 
     /// Adjusts the reference count for a given object.  If the reference count reaches zero, the
-    /// object is destroyed and any extents are deallocated.
+    /// object is moved into the graveyard and true is returned.
     pub async fn adjust_refs(
         &self,
         transaction: &mut Transaction<'_>,
         oid: u64,
         delta: i64,
-    ) -> Result<(), Error> {
+    ) -> Result<bool, Error> {
         let mut item = self.txn_get_object(transaction, oid).await?;
         let refs =
             if let ObjectValue::Object { kind: ObjectKind::File { ref mut refs, .. }, .. } =
@@ -355,43 +355,73 @@ impl ObjectStore {
                     refs.checked_add(delta as u64)
                 }
                 .ok_or(anyhow!("refs underflow/overflow"))?;
-                *refs
+                refs
             } else {
                 bail!(FxfsError::NotFile);
             };
-        if refs == 0 {
-            let layer_set = self.tree.layer_set();
-            let mut merger = layer_set.merger();
-            let allocator = self.allocator();
-            let mut iter = merger.seek(Bound::Included(&ObjectKey::attribute(oid, 0))).await?;
-            // Loop over all the extents and deallocate them.
-            // TODO(csuter): deal with overflowing a transaction.
-            while let Some(item) = iter.get() {
-                if item.key.object_id != oid {
-                    break;
-                }
-                if let Some((
-                    _,
-                    _,
-                    ExtentKey { range },
-                    ExtentValue { device_offset: Some(device_offset) },
-                )) = item.into()
-                {
-                    let range = *device_offset..*device_offset + (range.end - range.start);
-                    allocator.deallocate(transaction, range).await;
-                }
-                iter.advance().await?;
-            }
-            transaction.add(
+        if *refs == 0 {
+            // Move the object into the graveyard.
+            self.filesystem().object_manager().graveyard().unwrap().add(
+                transaction,
                 self.store_object_id,
-                Mutation::merge_object(ObjectKey::tombstone(oid), ObjectValue::None),
+                oid,
             );
+            // We might still need to adjust the reference count if delta was something other than
+            // -1.
+            if delta != -1 {
+                *refs = 1;
+                transaction.add(
+                    self.store_object_id,
+                    Mutation::replace_or_insert_object(item.key, item.value),
+                );
+            }
+            Ok(true)
         } else {
             transaction.add(
                 self.store_object_id,
                 Mutation::replace_or_insert_object(item.key, item.value),
             );
+            Ok(false)
         }
+    }
+
+    pub async fn tombstone(
+        &self,
+        transaction: &mut Transaction<'_>,
+        object_id: u64,
+    ) -> Result<(), Error> {
+        let layer_set = self.tree.layer_set();
+        let mut merger = layer_set.merger();
+        let allocator = self.allocator();
+        let mut iter = merger.seek(Bound::Included(&ObjectKey::attribute(object_id, 0))).await?;
+        // Loop over all the extents and deallocate them.
+        // TODO(csuter): deal with overflowing a transaction.
+        while let Some(item) = iter.get() {
+            if item.key.object_id != object_id {
+                break;
+            }
+            if let Some((
+                _,
+                _,
+                ExtentKey { range },
+                ExtentValue { device_offset: Some(device_offset) },
+            )) = item.into()
+            {
+                let range = *device_offset..*device_offset + (range.end - range.start);
+                allocator.deallocate(transaction, range).await;
+            }
+            iter.advance().await?;
+        }
+        transaction.add(
+            self.store_object_id,
+            Mutation::merge_object(ObjectKey::tombstone(object_id), ObjectValue::None),
+        );
+        // Remove the object from the graveyard.
+        self.filesystem().object_manager().graveyard().unwrap().remove(
+            transaction,
+            self.store_object_id,
+            object_id,
+        );
         Ok(())
     }
 
@@ -1791,20 +1821,34 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         let store = object.owner();
-        store
-            .adjust_refs(&mut transaction, object.object_id(), 1)
-            .await
-            .expect("adjust_refs failed");
+        assert_eq!(
+            store
+                .adjust_refs(&mut transaction, object.object_id(), 1)
+                .await
+                .expect("adjust_refs failed"),
+            false
+        );
         transaction.commit().await;
 
         let deallocated_before = allocator.deallocated();
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        store
-            .adjust_refs(&mut transaction, object.object_id(), -2)
-            .await
-            .expect("adjust_refs failed");
+        assert_eq!(
+            store
+                .adjust_refs(&mut transaction, object.object_id(), -2)
+                .await
+                .expect("adjust_refs failed"),
+            true
+        );
         transaction.commit().await;
+
+        assert_eq!(allocator.deallocated(), deallocated_before);
+
+        let mut transaction =
+            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        store.tombstone(&mut transaction, object.object_id).await.expect("purge failed");
+        transaction.commit().await;
+
         assert_eq!(allocator.deallocated() - deallocated_before, TEST_DEVICE_BLOCK_SIZE as usize);
 
         let layer_set = store.tree.layer_set();

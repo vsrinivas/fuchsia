@@ -24,12 +24,13 @@ use {
     either::{Left, Right},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, NodeAttributes, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
-        WATCH_MASK_EXISTING,
+        self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
+    futures::FutureExt,
     std::{
         any::Any,
         sync::{
@@ -269,26 +270,13 @@ impl FxDirectory {
         // we need appropriate locking in place to be able to check the file's open count.
         // TODO(jfsulliv): This results in an unnecessary second lookup; we could pass in object_id
         // and descriptor here, since we've already resolved them.
-        if let Some((existing_oid, descriptor)) = directory::replace_child(
+        Ok(directory::replace_child(
             transaction,
             replacement.map(|(dir, name)| (dir.directory(), name)),
             (self.directory(), name),
         )
         .await?
-        {
-            let store = self.store();
-            if let ObjectDescriptor::File = descriptor {
-                store.filesystem().object_manager().graveyard().unwrap().add(
-                    transaction,
-                    self.store().store_object_id(),
-                    existing_oid,
-                );
-            } else {
-                directory::remove(transaction, &store, existing_oid);
-                return Ok(Some(existing_oid));
-            }
-        }
-        Ok(None)
+        .map(|(existing_oid, _)| existing_oid))
     }
 
     /// Called to indicate a file or directory was removed from this directory.
@@ -323,25 +311,59 @@ impl FxNode for FxDirectory {
     fn object_id(&self) -> u64 {
         self.directory.object_id()
     }
+
     fn parent(&self) -> Option<Arc<FxDirectory>> {
         self.parent.as_ref().map(|p| p.lock().unwrap().clone())
     }
+
     fn set_parent(&self, parent: Arc<FxDirectory>) {
         match &self.parent {
             Some(p) => *p.lock().unwrap() = parent,
             None => panic!("Called set_parent on root node"),
         }
     }
+
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self
+    }
+
+    fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
+        Some(self)
     }
 }
 
 #[async_trait]
 impl MutableDirectory for FxDirectory {
-    async fn link(&self, _name: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
-        log::error!("link not implemented");
-        Err(Status::NOT_SUPPORTED)
+    async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+        let store = self.store();
+        let fs = store.filesystem().clone();
+        let mut transaction = fs
+            .new_transaction(&[LockKey::object(store.store_object_id(), self.object_id())])
+            .await
+            .map_err(map_to_status)?;
+        if self.is_deleted() {
+            return Err(Status::ACCESS_DENIED);
+        }
+        let entry_info = entry.entry_info();
+        if self.directory.lookup(&name).await.map_err(map_to_status)?.is_some() {
+            return Err(Status::ALREADY_EXISTS);
+        }
+        self.directory
+            .insert_child(
+                &mut transaction,
+                &name,
+                entry_info.inode(),
+                match entry_info.type_() {
+                    DIRENT_TYPE_FILE => ObjectDescriptor::File,
+                    DIRENT_TYPE_DIRECTORY => ObjectDescriptor::Directory,
+                    _ => panic!("Unexpected type: {}", entry_info.type_()),
+                },
+            )
+            .await
+            .map_err(map_to_status)?;
+        store.adjust_refs(&mut transaction, entry_info.inode(), 1).await.map_err(map_to_status)?;
+        transaction.commit().await;
+        Ok(())
     }
 
     async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
@@ -446,7 +468,7 @@ impl DirectoryEntry for FxDirectory {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(self.object_id(), fio::DIRENT_TYPE_DIRECTORY)
     }
 
     fn can_hardlink(&self) -> bool {
@@ -456,9 +478,16 @@ impl DirectoryEntry for FxDirectory {
 
 #[async_trait]
 impl Directory for FxDirectory {
-    fn get_entry(self: Arc<Self>, _name: String) -> AsyncGetEntry {
-        // TODO(jfsulliv): Implement
-        AsyncGetEntry::Immediate(Err(Status::NOT_FOUND))
+    fn get_entry(self: Arc<Self>, name: String) -> AsyncGetEntry {
+        AsyncGetEntry::Future(
+            async move {
+                self.lookup(0, 0, Path::validate_and_split(name)?)
+                    .await
+                    .map(|n| n.try_into_directory_entry().unwrap())
+                    .map_err(map_to_status)
+            }
+            .boxed(),
+        )
     }
 
     async fn read_dirents<'a>(

@@ -89,6 +89,10 @@ impl FxNode for FxFile {
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static> {
         self
     }
+
+    fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
+        Some(self)
+    }
 }
 
 impl DirectoryEntry for FxFile {
@@ -121,11 +125,11 @@ impl DirectoryEntry for FxFile {
     }
 
     fn entry_info(&self) -> EntryInfo {
-        EntryInfo::new(fio::INO_UNKNOWN, fio::DIRENT_TYPE_DIRECTORY)
+        EntryInfo::new(self.object_id(), fio::DIRENT_TYPE_FILE)
     }
 
     fn can_hardlink(&self) -> bool {
-        false
+        true
     }
 }
 
