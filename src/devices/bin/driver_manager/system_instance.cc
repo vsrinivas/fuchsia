@@ -13,6 +13,32 @@
 #include "src/devices/lib/log/log.h"
 #include "system_state_manager.h"
 
+DirectoryFilter::~DirectoryFilter() {
+  sync_completion_t done;
+  vfs_.Shutdown([&done](zx_status_t status) {
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to shutdown VFS: %s", zx_status_get_string(status));
+    }
+    sync_completion_signal(&done);
+  });
+  sync_completion_wait(&done, ZX_TIME_INFINITE);
+}
+
+zx_status_t DirectoryFilter::Initialize(zx::channel forwarding_directory,
+                                        fbl::Span<const char*> allow_filter) {
+  forwarding_dir_ = std::move(forwarding_directory);
+  for (const auto& name : allow_filter) {
+    zx_status_t status = root_dir_->AddEntry(
+        name, fbl::MakeRefCounted<fs::Service>([this, name](zx::channel request) {
+          return fdio_service_connect_at(forwarding_dir_.get(), name, request.release());
+        }));
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
                                                 zx::job* driver_host_job_out) {
   zx::job driver_host_job;
@@ -72,21 +98,6 @@ zx_status_t SystemInstance::clone_fshost_ldsvc(zx::channel* loader) {
     return status;
   }
   return fdio_service_connect("/svc/fuchsia.fshost.Loader", remote.release());
-}
-
-zx_status_t DirectoryFilter::Initialize(zx::channel forwarding_directory,
-                                        fbl::Span<const char*> allow_filter) {
-  forwarding_dir_ = std::move(forwarding_directory);
-  for (const auto& name : allow_filter) {
-    zx_status_t status = root_dir_->AddEntry(
-        name, fbl::MakeRefCounted<fs::Service>([this, name](zx::channel request) {
-          return fdio_service_connect_at(forwarding_dir_.get(), name, request.release());
-        }));
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  return ZX_OK;
 }
 
 zx::channel SystemInstance::CloneFs(const char* path) {

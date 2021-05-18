@@ -11,14 +11,15 @@
 #include <fbl/span.h>
 
 #include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 // Host's a vfs which forwards a subset of requests to a channel.
 class DirectoryFilter {
  public:
   DirectoryFilter(async_dispatcher_t* dispatcher)
       : root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()), vfs_(dispatcher) {}
+  ~DirectoryFilter();
 
   zx_status_t Initialize(zx::channel forwarding_dir, fbl::Span<const char*> allow_filter);
 
@@ -29,7 +30,7 @@ class DirectoryFilter {
  private:
   zx::channel forwarding_dir_;
   fbl::RefPtr<fs::PseudoDir> root_dir_;
-  fs::SynchronousVfs vfs_;
+  fs::ManagedVfs vfs_;
 };
 
 class SystemInstance : public FsProvider {
@@ -56,8 +57,8 @@ class SystemInstance : public FsProvider {
 
   // Hosts vfs which filters driver host svc requests to /svc provided by svchost.
   // Lazily initialized.
-  std::optional<DirectoryFilter> driver_host_svc_;
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
+  std::optional<DirectoryFilter> driver_host_svc_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_INSTANCE_H_
