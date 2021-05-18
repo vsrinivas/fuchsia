@@ -18,7 +18,7 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
             filesystem::{Filesystem, Mutations, ObjectFlush},
-            transaction::{AllocatorMutation, Mutation, Transaction},
+            transaction::{AllocatedBytesMutation, AllocatorMutation, Mutation, Transaction},
             HandleOptions, ObjectStore,
         },
     },
@@ -31,7 +31,6 @@ use {
     std::{
         any::Any,
         cmp::min,
-        convert::TryInto,
         ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
     },
@@ -123,6 +122,7 @@ pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 #[derive(Debug, Default, Deserialize, Serialize)]
 struct AllocatorInfo {
     layers: Vec<u64>,
+    allocated_bytes: i64,
 }
 
 const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131072;
@@ -150,7 +150,9 @@ struct Inner {
     // array of dropped_allocations and update reserved_allocations the next time we try to
     // allocate.
     dropped_allocations: Vec<AllocatorItem>,
-    bytes_allocated: u64,
+    // This value is the up-to-date count of the number of allocated bytes whereas the value in
+    // `info` is the value as it was when we last flushed.
+    allocated_bytes: i64,
 }
 
 impl SimpleAllocator {
@@ -167,7 +169,7 @@ impl SimpleAllocator {
                 info: AllocatorInfo::default(),
                 opened: false,
                 dropped_allocations: Vec::new(),
-                bytes_allocated: 0,
+                allocated_bytes: 0,
             }),
             allocation_lock: futures::lock::Mutex::new(()),
         }
@@ -223,16 +225,19 @@ impl SimpleAllocator {
                             .await?,
                     );
                 }
-                self.inner.lock().unwrap().info = info;
+                {
+                    let mut inner = self.inner.lock().unwrap();
+                    // After replaying, allocated_bytes should include all the deltas since the time
+                    // the allocator was last flushed, so here we just need to add whatever is
+                    // recorded in info.
+                    inner.allocated_bytes += info.allocated_bytes;
+                    inner.info = info;
+                }
                 self.tree.append_layers(handles.into_boxed_slice()).await?;
             }
         }
 
         self.inner.lock().unwrap().opened = true;
-
-        // TODO(csuter): The bytes allocated can be persisted to disk on clean unmount and read
-        // on mount to avoid loading all of allocation tree during mount.
-        self.compute_allocated_bytes().await?;
         Ok(())
     }
 
@@ -243,39 +248,24 @@ impl SimpleAllocator {
         self.inner.lock().unwrap().info.layers.clone()
     }
 
-    /// Updates number of allocated bytes available in the filesystem.
-    ///
-    /// This can be an expensive operation especially when filesystem is fragmented or needs a major
-    /// compaction.
-    async fn compute_allocated_bytes(&self) -> Result<(), Error> {
-        let mut layer_set = self.tree.empty_layer_set();
-        self.tree.add_all_layers_to_layer_set(&mut layer_set);
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await?;
-        let mut last_offset = 0;
-        let mut bytes_allocated = 0;
-        let device_size = self.device_size.try_into().unwrap();
-        while let Some(ItemRef { key: AllocatorKey { device_range, .. }, .. }) = iter.get() {
-            if last_offset >= device_size {
-                break;
-            }
-            bytes_allocated += device_range.length();
-            last_offset = device_range.end;
-            iter.advance().await?;
-        }
-
-        ensure!(last_offset <= device_size, FxfsError::Inconsistent);
-
-        self.inner.lock().unwrap().bytes_allocated = bytes_allocated;
-        Ok(())
+    /// Returns the number of allocated bytes.
+    #[cfg(test)]
+    pub fn get_allocated_bytes(&self) -> i64 {
+        self.inner.lock().unwrap().allocated_bytes
     }
 
-    /// Returns a number of allocated bytes. This can be used to return information needed by
-    /// caching subsystem and needed by df/du commands.
-    #[cfg(test)]
-    pub async fn get_bytes_allocated(&self) -> Result<u64, Error> {
-        self.ensure_open().await?;
-        Ok(self.inner.lock().unwrap().bytes_allocated)
+    // Updates the allocated_bytes delta within a transaction so that it includes `delta`.
+    fn update_allocated_bytes_delta(&self, transaction: &mut Transaction<'_>, mut delta: i64) {
+        if let Some(existing_delta) = transaction.get_allocated_bytes_delta(self.object_id()) {
+            delta += existing_delta;
+        }
+        if delta == 0 {
+            transaction
+                .remove(self.object_id(), Mutation::AllocatedBytes(AllocatedBytesMutation(0)));
+        } else {
+            transaction
+                .add(self.object_id(), Mutation::AllocatedBytes(AllocatedBytesMutation(delta)));
+        }
     }
 }
 
@@ -303,11 +293,6 @@ impl Allocator for SimpleAllocator {
             self.reserved_allocations.erase(item.as_item_ref()).await;
         }
 
-        // TODO(csuter): We can optimize performance of this section by
-        // - By extending compute_allocated_bytes to accept array dropped ranges so that it can
-        //   seek to a given range.
-        self.compute_allocated_bytes().await?;
-
         let result = {
             let tree = &self.tree;
             let mut layer_set = tree.empty_layer_set();
@@ -334,43 +319,45 @@ impl Allocator for SimpleAllocator {
                 iter.advance().await?;
             }
         };
+
         log::debug!("allocate {:?}", result);
-        self.inner.lock().unwrap().bytes_allocated += result.length();
         self.reserve(transaction, result.clone()).await;
         Ok(result)
     }
 
     async fn reserve(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
+        self.update_allocated_bytes_delta(transaction, device_range.length() as i64);
         let item = AllocatorItem::new(AllocatorKey { device_range }, AllocatorValue { delta: 1 });
         self.reserved_allocations.insert(item.clone()).await;
         transaction.add(self.object_id(), Mutation::allocation(item));
     }
 
-    async fn deallocate(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
-        log::debug!("deallocate {:?}", device_range);
+    async fn deallocate(&self, transaction: &mut Transaction<'_>, dealloc_range: Range<u64>) {
+        log::debug!("deallocate {:?}", dealloc_range);
         transaction.add(
             self.object_id(),
             Mutation::allocation(Item::new(
-                AllocatorKey { device_range: device_range.clone() },
+                AllocatorKey { device_range: dealloc_range.clone() },
                 AllocatorValue { delta: -1 },
             )),
         );
 
         // Update number of allocated bytes available in the filesystem after cleaning up dropped
         // allocations.
-        // We can avoid calling cleanup_dropped_allocation on every
-        // deallocate.  We need updated data either when we are running out of space or to provide
-        // current data about space utilization.
-        // TODO(csuter): This needs to be updated only when transaction succeeds.
-        let dealloc_range = device_range;
         let mut layer_set = self.tree.empty_layer_set();
         self.tree.add_all_layers_to_layer_set(&mut layer_set);
         let mut merger = layer_set.merger();
+        // The precise search key that we choose here is important.  We need to perform a full merge
+        // across all layers because we want the precise value of delta, so we must ensure that we
+        // query all layers, which is done by setting the lower bound to zero (the merger consults
+        // iterators until it encounters a key whose lower-bound is not greater than the search
+        // key).  The upper bound is used to search each individual layer, and we want to start with
+        // an extent that covers the first byte of the range we're deallocating.
         let mut iter = merger
-            .seek(Bound::Included(&AllocatorKey { device_range: dealloc_range.clone() }))
+            .seek(Bound::Included(&AllocatorKey { device_range: 0..dealloc_range.start + 1 }))
             .await
             .unwrap();
-        let mut deallocated_bytes = 0;
+        let mut allocated_bytes_delta = 0;
         while let Some(ItemRef {
             key: AllocatorKey { device_range, .. },
             value: AllocatorValue { delta, .. },
@@ -381,13 +368,14 @@ impl Allocator for SimpleAllocator {
             }
             if *delta == 1 {
                 if let Some(overlap) = dealloc_range.intersect(&device_range) {
-                    deallocated_bytes += overlap.length();
+                    allocated_bytes_delta -= overlap.length() as i64;
                 }
             }
             iter.advance().await.unwrap();
         }
-
-        self.inner.lock().unwrap().bytes_allocated -= deallocated_bytes;
+        if allocated_bytes_delta != 0 {
+            self.update_allocated_bytes_delta(transaction, allocated_bytes_delta);
+        }
     }
 
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
@@ -416,11 +404,32 @@ impl Mutations for SimpleAllocator {
                     self.inner.lock().unwrap().dropped_allocations.push(item);
                 }
             }
-            Mutation::TreeSeal => self.tree.seal().await,
+            // TODO(csuter): Since Seal and Compact are no longer being used for just trees, we
+            // should consider changing the names to something else, maybe FlushBegin and
+            // FlushCommit to match ObjectFlush, and maybe ObjectFlush::commit should be responsible
+            // for adding it to a transaction.
+            Mutation::TreeSeal => {
+                self.tree.seal().await;
+                // Transfer our running count for allocated_bytes so that it gets written to the new
+                // info file when flush completes.
+                let mut inner = self.inner.lock().unwrap();
+                inner.info.allocated_bytes = inner.allocated_bytes;
+            }
             Mutation::TreeCompact => {
                 if replay {
                     self.tree.reset_immutable_layers();
+                    // AllocatorInfo is written in the same transaction and will contain the count
+                    // at the point TreeSeal was applied, so we need to adjust allocated_bytes so
+                    // that it just covers the delta from that point.  Later, when we properly open
+                    // the allocator, we'll add this back.
+                    let mut inner = self.inner.lock().unwrap();
+                    inner.allocated_bytes -= inner.info.allocated_bytes;
                 }
+            }
+            Mutation::AllocatedBytes(AllocatedBytesMutation(delta)) => {
+                // TODO(csuter): If the volume is inconsistent, this has the potential to wrap; we
+                // should add checks somewhere to prevent that from happening here.
+                self.inner.lock().unwrap().allocated_bytes += delta;
             }
             _ => panic!("unexpected mutation! {:?}", mutation), // TODO(csuter): This can't panic
         }
@@ -456,6 +465,12 @@ impl Mutations for SimpleAllocator {
                 .await?;
         let object_id = layer_object_handle.object_id();
         graveyard.add(&mut transaction, root_store.store_object_id(), object_id);
+        // It's important that this transaction does not include any allocations because we use
+        // TreeSeal as a snapshot point for mutations to the tree: other allocator mutations within
+        // this transaction might get applied before seal (which would be OK), but they could
+        // equally get applied afterwards (since Transaction makes no guarantees about the order in
+        // which mutations are applied whilst committing), in which case they'd get lost on replay
+        // because the journal will only send mutations that follow this transaction.
         transaction.add_with_object(self.object_id(), Mutation::TreeSeal, &object_sync);
         transaction.commit().await;
 
@@ -492,6 +507,8 @@ impl Mutations for SimpleAllocator {
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
         object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
 
+        // It's important that TreeCompact is in the same transaction that we write AllocatorInfo,
+        // because we use TreeCompact to make the required adjustments to allocated_bytes.
         transaction.add(self.object_id(), Mutation::TreeCompact);
         graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
         transaction.commit().await;
@@ -830,8 +847,7 @@ mod tests {
         fs.object_manager().set_allocator(allocator.clone());
         let _store = ObjectStore::new_empty(None, 2, fs.clone());
         fs.object_manager().set_root_store_object_id(2);
-        let mut expected = 0;
-        assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
+        assert_eq!(allocator.get_allocated_bytes(), 0);
 
         // Verify allocated_bytes reflects allocation changes.
         const ALLOCATED_BYTES: u64 = 512;
@@ -842,38 +858,35 @@ mod tests {
                 .allocate(&mut transaction, ALLOCATED_BYTES)
                 .await
                 .expect("allocate failed");
-            let allocated_state = allocator.get_bytes_allocated().await.unwrap();
-            expected += ALLOCATED_BYTES;
-            assert_eq!(expected, allocated_state);
+            transaction.commit().await;
+            assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES as i64);
             range
         };
 
-        // Verify allocated_bytes reflects dropped allocations and re-allocations.
         {
-            assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
-            // After dropping the transaction and attempting to allocate again, we should end up
-            // with the same range because the reservation should have been released.
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            assert_eq!(
-                allocator.allocate(&mut transaction, 512).await.expect("allocate failed"),
-                allocated_range
-            );
-            assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
-            transaction.commit().await;
+            allocator.allocate(&mut transaction, 512).await.expect("allocate failed");
+
+            // Prior to commiiting, the count of allocated bytes shouldn't change.
+            assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES as i64);
         }
 
+        // After dropping the prior transaction, the allocated bytes still shouldn't have changed.
+        assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES as i64);
+
         // Verify allocated_bytes reflects deallocations.
-        {
-            // Deallocate a part of an allocation.
-            const DEALLOCATED_SIZE: u64 = ALLOCATED_BYTES - 40;
-            let deallocate_range = allocated_range.start + 20..allocated_range.end - 20;
-            let mut transaction = fs.clone().new_transaction(&[]).await.expect("new failed");
-            allocator.deallocate(&mut transaction, deallocate_range).await;
-            transaction.commit().await;
-            expected -= DEALLOCATED_SIZE;
-        }
-        assert_eq!(expected, allocator.get_bytes_allocated().await.unwrap());
+        let deallocate_range = allocated_range.start + 20..allocated_range.end - 20;
+        let mut transaction = fs.clone().new_transaction(&[]).await.expect("new failed");
+        allocator.deallocate(&mut transaction, deallocate_range).await;
+
+        // Before committing, there should be no change.
+        assert_eq!(allocator.get_allocated_bytes(), ALLOCATED_BYTES as i64);
+
+        transaction.commit().await;
+
+        // After committing, all but 40 bytes should remain allocated.
+        assert_eq!(allocator.get_allocated_bytes(), 40);
     }
 }
 

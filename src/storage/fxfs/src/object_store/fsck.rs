@@ -95,10 +95,13 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
     let mut actual = CoalescingIterator::new(Box::new(iter)).await?;
     let mut expected =
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
+    let mut allocated_bytes = 0;
     while let Some(actual_item) = actual.get() {
         match expected.get() {
             None => bail!("found extra allocation {:?}", actual_item),
             Some(expected_item) => {
+                let r = &expected_item.key.device_range;
+                allocated_bytes += (r.end - r.start) as i64;
                 if actual_item != expected_item {
                     bail!("mismatch: actual ({:?}) != expected ({:?})", actual_item, expected_item);
                 }
@@ -108,6 +111,13 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
     }
     if let Some(item) = expected.get() {
         bail!("missing allocation {:?}", item);
+    }
+    if allocated_bytes != allocator.get_allocated_bytes() {
+        bail!(
+            "allocated-bytes mismatch: actual: {} != expected: {}",
+            allocator.get_allocated_bytes(),
+            allocated_bytes
+        );
     }
     Ok(())
 }

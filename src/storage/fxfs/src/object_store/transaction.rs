@@ -71,6 +71,8 @@ pub enum Mutation {
     TreeSeal,
     // Discards all non-mutable layers.
     TreeCompact,
+    // A delta in the number of allocated bytes.
+    AllocatedBytes(AllocatedBytesMutation),
 }
 
 impl Mutation {
@@ -187,6 +189,29 @@ impl PartialEq for AllocatorMutation {
 }
 
 impl Eq for AllocatorMutation {}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AllocatedBytesMutation(pub i64);
+
+impl Ord for AllocatedBytesMutation {
+    fn cmp(&self, _: &Self) -> Ordering {
+        Ordering::Equal
+    }
+}
+
+impl PartialOrd for AllocatedBytesMutation {
+    fn partial_cmp(&self, _: &Self) -> Option<Ordering> {
+        Some(Ordering::Equal)
+    }
+}
+
+impl PartialEq for AllocatedBytesMutation {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for AllocatedBytesMutation {}
 
 /// When creating a transaction, locks typically need to be held to prevent two or more writers
 /// trying to make conflicting mutations at the same time.  LockKeys are used for this.
@@ -309,7 +334,12 @@ impl<'a> Transaction<'a> {
         self.mutations.replace(TxnMutation { object_id, mutation, associated_object: None });
     }
 
-    /// Adds a mutation with an assoicated object.
+    /// Removes a mutation that matches `mutation`.
+    pub fn remove(&mut self, object_id: u64, mutation: Mutation) {
+        self.mutations.remove(&TxnMutation { object_id, mutation, associated_object: None });
+    }
+
+    /// Adds a mutation with an associated object.
     pub fn add_with_object(
         &mut self,
         object_id: u64,
@@ -361,6 +391,22 @@ impl<'a> Transaction<'a> {
             associated_object: None,
         }) {
             Some(store_info)
+        } else {
+            None
+        }
+    }
+
+    /// Searches for an allocated bytes mutation and returns the delta if found.
+    pub fn get_allocated_bytes_delta(&self, object_id: u64) -> Option<i64> {
+        if let Some(TxnMutation {
+            mutation: Mutation::AllocatedBytes(AllocatedBytesMutation(delta)),
+            ..
+        }) = self.mutations.get(&TxnMutation {
+            object_id,
+            mutation: Mutation::AllocatedBytes(AllocatedBytesMutation(0)),
+            associated_object: None,
+        }) {
+            Some(*delta)
         } else {
             None
         }
