@@ -139,6 +139,15 @@ impl BlobfsRamdisk {
         Self::builder().start()
     }
 
+    /// Returns a new connection to blobfs using the blobfs::Client wrapper type.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn client(&self) -> blobfs::Client {
+        blobfs::Client::new(self.root_dir_proxy().unwrap())
+    }
+
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
     pub fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
@@ -411,11 +420,8 @@ fn mkblobfs_block(block_device: zx::Handle) -> Result<(), Error> {
 }
 
 fn wait_for_process(proc: fuchsia_zircon::Process, duration: zx::Duration) -> Result<(), Error> {
-    proc.wait_handle(
-        zx::Signals::PROCESS_TERMINATED,
-        zx::Time::after(duration),
-    )
-    .context("waiting for tool to terminate")?;
+    proc.wait_handle(zx::Signals::PROCESS_TERMINATED, zx::Time::after(duration))
+        .context("waiting for tool to terminate")?;
     let ret = proc.info().context("getting tool process info")?.return_code;
     if ret != 0 {
         return Err(format_err!("tool returned nonzero exit code {}", ret));

@@ -29,9 +29,13 @@ rustc_library("blobfs") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:rand",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/blob.rs",
+    "src/lib.rs",
+  ]
 }
 
 fuchsia_component("blobfs-lib-test") {
@@ -47,6 +51,11 @@ fuchsia_component("blobfs-lib-test") {
 
 fuchsia_test_package("blobfs-lib-test-package") {
   test_components = [ ":blobfs-lib-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

@@ -19,6 +19,8 @@ use {
     thiserror::Error,
 };
 
+pub mod blob;
+
 /// Blobfs client errors.
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
@@ -105,6 +107,14 @@ impl Client {
         .await
     }
 
+    /// Open a new blob for write.
+    pub async fn open_blob_for_write(
+        &self,
+        blob: &Hash,
+    ) -> Result<blob::Blob<blob::NeedsTruncate>, blob::CreateError> {
+        blob::create(&self.proxy, blob).await
+    }
+
     /// Returns whether blobfs has a blob with the given hash.
     pub async fn has_blob(&self, blob: &Hash) -> bool {
         let file = match io_util::directory::open_file_no_describe(
@@ -150,6 +160,23 @@ impl Client {
 }
 
 #[cfg(test)]
+impl Client {
+    /// Constructs a new [`Client`] connected to the provided [`BlobfsRamdisk`]. Tests in this
+    /// crate should use this constructor rather than [`BlobfsRamdisk::client`], which returns
+    /// the non-cfg(test) build of this crate's [`blobfs::Client`]. While tests could use the
+    /// [`blobfs::Client`] returned by [`BlobfsRamdisk::client`], it will be a different type than
+    /// [`super::Client`], and the tests could not access its private members or any cfg(test)
+    /// specific functionality.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error.
+    pub fn for_ramdisk(blobfs: &blobfs_ramdisk::BlobfsRamdisk) -> Self {
+        Self::new(blobfs.root_dir_proxy().unwrap())
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use {
         super::*, blobfs_ramdisk::BlobfsRamdisk, fidl_fuchsia_io::DirectoryRequest,
@@ -160,7 +187,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn list_known_blobs_empty() {
         let blobfs = BlobfsRamdisk::start().unwrap();
-        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+        let client = Client::for_ramdisk(&blobfs);
 
         assert_eq!(client.list_known_blobs().await.unwrap(), HashSet::new());
         blobfs.stop().await.unwrap();
@@ -173,7 +200,7 @@ mod tests {
             .with_blob(&b"blob 2"[..])
             .start()
             .unwrap();
-        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+        let client = Client::for_ramdisk(&blobfs);
 
         let expected = blobfs.list_blobs().unwrap().into_iter().collect();
         assert_eq!(client.list_known_blobs().await.unwrap(), expected);
@@ -187,7 +214,7 @@ mod tests {
             .with_blob(&b"blob 2"[..])
             .start()
             .unwrap();
-        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+        let client = Client::for_ramdisk(&blobfs);
 
         let merkle = MerkleTree::from_reader(&b"blob 1"[..]).unwrap().root();
         assert_matches!(client.delete_blob(&merkle).await, Ok(()));
@@ -200,7 +227,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn delete_non_existing_blob() {
         let blobfs = BlobfsRamdisk::start().unwrap();
-        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+        let client = Client::for_ramdisk(&blobfs);
         let blob_merkle = Hash::from([1; 32]);
 
         assert_matches!(
@@ -231,7 +258,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn has_blob() {
         let blobfs = BlobfsRamdisk::builder().with_blob(&b"blob 1"[..]).start().unwrap();
-        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+        let client = Client::for_ramdisk(&blobfs);
 
         assert_eq!(
             client.has_blob(&MerkleTree::from_reader(&b"blob 1"[..]).unwrap().root()).await,
@@ -245,7 +272,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn has_blob_return_false_if_blob_is_partially_written() {
         let blobfs = BlobfsRamdisk::start().unwrap();
-        let client = Client::new(blobfs.root_dir_proxy().unwrap());
+        let client = Client::for_ramdisk(&blobfs);
 
         let blob = [3; 1024];
         let hash = MerkleTree::from_reader(&blob[..]).unwrap().root();
