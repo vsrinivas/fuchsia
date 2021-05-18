@@ -19,9 +19,7 @@ class Dfu;
 using DfuBase = ddk::Device<Dfu, ddk::Messageable<fuchsia_hardware_usb_fwloader::Device>::Mixin,
                             ddk::Unbindable>;
 
-class Dfu : public DfuBase,
-            public fidl::WireServer<fuchsia_hardware_usb_fwloader::Device>,
-            public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
+class Dfu : public DfuBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
  public:
   Dfu(zx_device_t* parent, const usb_protocol_t& usb, uint8_t intf_num,
       const usb_dfu_func_desc_t& func_desc)

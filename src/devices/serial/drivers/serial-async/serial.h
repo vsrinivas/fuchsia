@@ -27,8 +27,7 @@ using DeviceType =
     ddk::Device<SerialDevice, ddk::Messageable<fuchsia_hardware_serial::NewDeviceProxy>::Mixin>;
 
 class SerialDevice : public DeviceType,
-                     public fidl::WireServer<fuchsia_hardware_serial::NewDevice>,
-                     public fidl::WireServer<fuchsia_hardware_serial::NewDeviceProxy> {
+                     public fidl::WireServer<fuchsia_hardware_serial::NewDevice> {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent) {}
 

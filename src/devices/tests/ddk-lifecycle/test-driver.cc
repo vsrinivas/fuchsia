@@ -27,7 +27,7 @@ class TestLifecycleDriver;
 using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable,
                                ddk::Messageable<TestDevice>::Mixin, ddk::ChildPreReleaseable>;
 
-class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevice> {
+class TestLifecycleDriver : public DeviceType {
  public:
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}

@@ -25,7 +25,6 @@ using DaiTestDeviceType =
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,
-                public fidl::WireServer<fuchsia_hardware_audio::Device>,
                 public ::fuchsia::hardware::audio::StreamConfig {
  public:
   explicit DaiTest(zx_device_t* parent, bool is_input);

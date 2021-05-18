@@ -25,8 +25,7 @@ using RamdiskControllerDeviceType =
     ddk::Device<RamdiskController,
                 ddk::Messageable<fuchsia_hardware_ramdisk::RamdiskController>::Mixin>;
 
-class RamdiskController : public RamdiskControllerDeviceType,
-                          public fidl::WireServer<fuchsia_hardware_ramdisk::RamdiskController> {
+class RamdiskController : public RamdiskControllerDeviceType {
  public:
   RamdiskController(zx_device_t* parent) : RamdiskControllerDeviceType(parent) {}
 

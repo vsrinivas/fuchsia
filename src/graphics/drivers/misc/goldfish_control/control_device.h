@@ -34,8 +34,7 @@ using ControlType = ddk::Device<Control, ddk::Unbindable,
                                 ddk::GetProtocolable>;
 
 class Control : public ControlType,
-                public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
-                public fidl::WireServer<fuchsia_hardware_goldfish::ControlDevice> {
+                public ddk::GoldfishControlProtocol<Control, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

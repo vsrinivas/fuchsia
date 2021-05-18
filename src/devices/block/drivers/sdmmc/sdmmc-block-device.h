@@ -92,9 +92,7 @@ class RpmbDevice;
 using RpmbDeviceType =
     ddk::Device<RpmbDevice, ddk::Messageable<fuchsia_hardware_rpmb::Rpmb>::Mixin>;
 
-class RpmbDevice : public RpmbDeviceType,
-                   public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol>,
-                   public fidl::WireServer<fuchsia_hardware_rpmb::Rpmb> {
+class RpmbDevice : public RpmbDeviceType, public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol> {
  public:
   // sdmmc_parent is owned by the SDMMC root device when the RpmbDevice object is created. Ownership
   // is transferred to devmgr shortly after, meaning it will outlive this object due to the

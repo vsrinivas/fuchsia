@@ -106,7 +106,6 @@ using EthDevType = ddk::Device<EthDev, ddk::Openable, ddk::Closable,
                                ddk::Messageable<fuchsia_hardware_ethernet::Device>::Mixin>;
 
 class EthDev : public EthDevType,
-               public fidl::WireServer<fuchsia_hardware_ethernet::Device>,
                public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERNET>,
                public fbl::DoublyLinkedListable<fbl::RefPtr<EthDev>>,
                public fbl::RefCounted<EthDev> {

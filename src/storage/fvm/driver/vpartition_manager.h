@@ -47,8 +47,7 @@ using ManagerDeviceType =
                 ddk::Messageable<fuchsia_hardware_block_volume::VolumeManager>::Mixin,
                 ddk::Unbindable>;
 
-class VPartitionManager : public ManagerDeviceType,
-                          public fidl::WireServer<fuchsia_hardware_block_volume::VolumeManager> {
+class VPartitionManager : public ManagerDeviceType {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VPartitionManager);
   static zx_status_t Bind(void*, zx_device_t* dev);

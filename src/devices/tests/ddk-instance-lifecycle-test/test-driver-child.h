@@ -52,8 +52,7 @@ using InstanceDeviceType =
     ddk::Device<TestLifecycleDriverChildInstance, ddk::Unbindable,
                 ddk::Messageable<InstanceDevice>::Mixin, ddk::Openable, ddk::Closable>;
 
-class TestLifecycleDriverChildInstance : public InstanceDeviceType,
-                                         public fidl::WireServer<InstanceDevice> {
+class TestLifecycleDriverChildInstance : public InstanceDeviceType {
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}

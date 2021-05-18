@@ -89,7 +89,7 @@ class InsntraceDevice;
 using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable,
                                ddk::Messageable<fuchsia_insntrace::Controller>::Mixin>;
 
-class InsntraceDevice : public DeviceType, public fidl::WireServer<fuchsia_insntrace::Controller> {
+class InsntraceDevice : public DeviceType {
  public:
   explicit InsntraceDevice(zx_device_t* parent, zx::bti bti)
       : DeviceType(parent), bti_(std::move(bti)) {}

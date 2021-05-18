@@ -65,8 +65,7 @@ std::string GetNewFirmwareVersion();
 class OtRadioDevice;
 using DeviceType = ddk::Device<OtRadioDevice, ddk::Unbindable,
                                ddk::Messageable<fuchsia_lowpan_spinel::DeviceSetup>::Mixin>;
-class OtRadioDevice : public DeviceType,
-                      public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
+class OtRadioDevice : public DeviceType {
  public:
   explicit OtRadioDevice(zx_device_t* device);
 

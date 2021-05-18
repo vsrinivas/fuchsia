@@ -24,9 +24,7 @@ using HciTestBase =
     ddk::Device<HciTest, ddk::Unbindable,
                 ddk::Messageable<fuchsia_hardware_usb_hcitest::Device>::Mixin, ddk::Initializable>;
 
-class HciTest : public HciTestBase,
-                public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST>,
-                public fidl::WireServer<fuchsia_hardware_usb_hcitest::Device> {
+class HciTest : public HciTestBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST> {
  public:
   HciTest(zx_device_t* parent, const ddk::UsbProtocolClient& usb)
       : HciTestBase(parent), usb_(usb) {}

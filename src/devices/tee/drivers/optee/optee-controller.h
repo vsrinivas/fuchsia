@@ -67,8 +67,7 @@ using DeviceType =
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
-                        public fidl::WireServer<fuchsia_tee::DeviceInfo>,
-                        public fidl::WireServer<fuchsia_hardware_tee::DeviceConnector> {
+                        public fidl::WireServer<fuchsia_tee::DeviceInfo> {
  public:
   explicit OpteeController(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}

@@ -52,9 +52,7 @@ using DeviceType =
     ddk::Device<Ft8201Device, ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin,
                 ddk::Unbindable>;
 
-class Ft8201Device : public DeviceType,
-                     public fidl::WireServer<fuchsia_input_report::InputDevice>,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
+class Ft8201Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   Ft8201Device(zx_device_t* parent, ddk::I2cChannel i2c) : Ft8201Device(parent, i2c, {}, {}) {}
 

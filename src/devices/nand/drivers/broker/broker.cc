@@ -62,7 +62,7 @@ using DeviceType =
     ddk::Device<Broker, ddk::Unbindable, ddk::Messageable<fuchsia_nand::Broker>::Mixin>;
 
 // Exposes a control device (nand-broker) for a nand protocol device.
-class Broker : public DeviceType, public fidl::WireServer<fuchsia_nand::Broker> {
+class Broker : public DeviceType {
  public:
   explicit Broker(zx_device_t* parent) : DeviceType(parent), nand_(parent) {}
   ~Broker() {}

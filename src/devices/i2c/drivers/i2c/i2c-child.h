@@ -27,9 +27,7 @@ class I2cChild;
 using I2cChildType =
     ddk::Device<I2cChild, ddk::Unbindable, ddk::Messageable<fidl_i2c::Device2>::Mixin>;
 
-class I2cChild : public I2cChildType,
-                 public ddk::I2cProtocol<I2cChild, ddk::base_protocol>,
-                 public fidl::WireServer<fidl_i2c::Device2> {
+class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::base_protocol> {
  public:
   I2cChild(zx_device_t* parent, fbl::RefPtr<I2cBus> bus, uint16_t address)
       : I2cChildType(parent), bus_(bus), address_(address) {}

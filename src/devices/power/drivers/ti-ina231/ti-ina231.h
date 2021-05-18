@@ -21,9 +21,7 @@ namespace power_sensor_fidl = fuchsia_hardware_power_sensor;
 class Ina231Device;
 using DeviceType = ddk::Device<Ina231Device, ddk::Messageable<power_sensor_fidl::Device>::Mixin>;
 
-class Ina231Device : public DeviceType,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_POWER_SENSOR>,
-                     public fidl::WireServer<power_sensor_fidl::Device> {
+class Ina231Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_POWER_SENSOR> {
  public:
   Ina231Device(zx_device_t* parent, uint32_t shunt_resistor_uohms, ddk::I2cChannel i2c)
       : DeviceType(parent), shunt_resistor_uohms_(shunt_resistor_uohms), i2c_(i2c) {}

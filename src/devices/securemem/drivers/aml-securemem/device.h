@@ -34,7 +34,6 @@ using AmlogicSecureMemDeviceBase =
                 ddk::Suspendable>;
 
 class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
-                               public fidl::WireServer<fuchsia_hardware_securemem::Device>,
                                public ddk::EmptyProtocol<ZX_PROTOCOL_SECURE_MEM> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* device);

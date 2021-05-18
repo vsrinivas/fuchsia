@@ -39,9 +39,7 @@ class AmlClock;
 using DeviceType =
     ddk::Device<AmlClock, ddk::Unbindable, ddk::Messageable<fuchsia_hardware_clock::Device>::Mixin>;
 
-class AmlClock : public DeviceType,
-                 public fidl::WireServer<fuchsia_hardware_clock::Device>,
-                 public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
+class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
   AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer dosbus_mmio,

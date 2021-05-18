@@ -37,9 +37,7 @@ class WlanInterface;
 using DeviceType =
     ::ddk::Device<Device, ddk::Initializable, ddk::Messageable<fuchsia_factory_wlan::Iovar>::Mixin>;
 
-class Device : public DeviceType,
-               public fidl::WireServer<fuchsia_factory_wlan::Iovar>,
-               public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
+class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
   virtual ~Device();
 

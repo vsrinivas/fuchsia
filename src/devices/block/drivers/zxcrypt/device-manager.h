@@ -28,9 +28,7 @@ class DeviceManager;
 using DeviceManagerType =
     ddk::Device<DeviceManager, ddk::Unbindable,
                 ddk::Messageable<fuchsia_hardware_block_encrypted::DeviceManager>::Mixin>;
-class DeviceManager final
-    : public DeviceManagerType,
-      public fidl::WireServer<fuchsia_hardware_block_encrypted::DeviceManager> {
+class DeviceManager final : public DeviceManagerType {
  public:
   explicit DeviceManager(zx_device_t* parent) : DeviceManagerType(parent), state_(kBinding) {}
   ~DeviceManager() = default;

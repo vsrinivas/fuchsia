@@ -34,8 +34,7 @@ using UsbVirtualBusType =
                 ddk::Messageable<fuchsia_hardware_usb_virtual_bus::Bus>::Mixin>;
 
 // This is the main class for the USB virtual bus.
-class UsbVirtualBus : public UsbVirtualBusType,
-                      public fidl::WireServer<fuchsia_hardware_usb_virtual_bus::Bus> {
+class UsbVirtualBus : public UsbVirtualBusType {
  public:
   explicit UsbVirtualBus(zx_device_t* parent) : UsbVirtualBusType(parent) {}
 

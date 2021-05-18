@@ -26,9 +26,7 @@ using fuchsia_device_restarttest::TestDevice;
 class TestDevhostDriver;
 using DeviceType = ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable,
                                ddk::Messageable<TestDevice>::Mixin>;
-class TestDevhostDriver : public DeviceType,
-                          public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
-                          public fidl::WireServer<TestDevice> {
+class TestDevhostDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST> {
  public:
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

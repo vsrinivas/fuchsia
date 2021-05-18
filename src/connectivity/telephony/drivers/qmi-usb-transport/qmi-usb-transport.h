@@ -119,8 +119,7 @@ constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4
 class Device;
 using DeviceType = ddk::Device<Device, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_telephony_transport::Qmi>::Mixin>;
-class Device : public DeviceType,
-               public fidl::WireServer<fuchsia_hardware_telephony_transport::Qmi> {
+class Device : public DeviceType {
  public:
   explicit Device(zx_device_t* parent);
 

@@ -26,8 +26,7 @@ class RamNandCtl;
 using RamNandCtlDeviceType =
     ddk::Device<RamNandCtl, ddk::Messageable<fuchsia_hardware_nand::RamNandCtl>::Mixin>;
 
-class RamNandCtl : public RamNandCtlDeviceType,
-                   public fidl::WireServer<fuchsia_hardware_nand::RamNandCtl> {
+class RamNandCtl : public RamNandCtlDeviceType {
  public:
   explicit RamNandCtl(zx_device_t* parent) : RamNandCtlDeviceType(parent) {}
 

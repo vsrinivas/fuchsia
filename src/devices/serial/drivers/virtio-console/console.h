@@ -72,8 +72,7 @@ using DeviceType =
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
                       public DeviceType,
-                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
-                      public fidl::WireServer<fuchsia_hardware_virtioconsole::Device> {
+                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;

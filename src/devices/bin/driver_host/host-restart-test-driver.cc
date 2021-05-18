@@ -27,7 +27,7 @@ class TestHostRestartDriver;
 using DeviceType =
     ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
-class TestHostRestartDriver : public DeviceType, public fidl::WireServer<TestDevice> {
+class TestHostRestartDriver : public DeviceType {
  public:
   explicit TestHostRestartDriver(zx_device_t* parent) : DeviceType(parent) {}
 

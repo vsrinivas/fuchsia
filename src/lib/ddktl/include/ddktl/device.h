@@ -265,29 +265,8 @@ class GetSizable : public base_mixin {
   static zx_off_t GetSize(void* ctx) { return static_cast<D*>(ctx)->DdkGetSize(); }
 };
 
-// We double implement to allow for soft transition.
-template <typename D, typename Protocol, bool>
-class MessageableInternal;
-
 template <typename D, typename Protocol>
-class MessageableInternal<D, Protocol, false> : public base_mixin {
- protected:
-  static constexpr void InitOp(zx_protocol_device_t* proto) { proto->message = Message; }
-
- private:
-  static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    static_assert(std::is_base_of_v<fidl::WireServer<Protocol>, D>,
-                  "Messageable<Protocol> classes must implement fidl::WireServer<Protocol>");
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<Protocol>(static_cast<D*>(ctx),
-                                 fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
-    return transaction.Status();
-  }
-};
-
-template <typename D, typename Protocol>
-class MessageableInternal<D, Protocol, true> : public fidl::WireServer<Protocol>,
-                                               public base_mixin {
+class MessageableInternal : public fidl::WireServer<Protocol>, public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) { proto->message = Message; }
 
@@ -300,13 +279,14 @@ class MessageableInternal<D, Protocol, true> : public fidl::WireServer<Protocol>
   }
 };
 
-template <typename Protocol, bool InheritServer = false>
+template <typename Protocol, bool InheritServer = true>
 struct Messageable {
+  static_assert(InheritServer == true);
   // This is necessary for currying as this mixin requires two type parameters, which are passed
   // at different times.
 
   template <typename D>
-  using Mixin = MessageableInternal<D, Protocol, InheritServer>;
+  using Mixin = MessageableInternal<D, Protocol>;
 };
 
 template <typename D>

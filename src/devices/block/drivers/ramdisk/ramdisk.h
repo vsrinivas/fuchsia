@@ -32,7 +32,6 @@ using RamdiskDeviceType =
                 ddk::Messageable<fuchsia_hardware_ramdisk::Ramdisk>::Mixin>;
 
 class Ramdisk : public RamdiskDeviceType,
-                public fidl::WireServer<fuchsia_hardware_ramdisk::Ramdisk>,
                 public ddk::BlockImplProtocol<Ramdisk, ddk::base_protocol>,
                 public ddk::BlockPartitionProtocol<Ramdisk> {
  public:

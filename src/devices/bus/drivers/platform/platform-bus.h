@@ -45,8 +45,7 @@ using PlatformBusType = ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Init
 // This is the main class for the platform bus driver.
 class PlatformBus : public PlatformBusType,
                     public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
-                    public ddk::IommuProtocol<PlatformBus>,
-                    public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
+                    public ddk::IommuProtocol<PlatformBus> {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 

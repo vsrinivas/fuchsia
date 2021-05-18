@@ -52,7 +52,6 @@ class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
                        public fbl::RefCounted<UsbAudioStream>,
                        public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>>,
-                       public fidl::WireServer<fuchsia_hardware_audio::Device>,
                        public fidl::WireServer<fuchsia_hardware_audio::RingBuffer> {
  public:
   class Channel : public fbl::RefCounted<Channel> {

@@ -121,7 +121,7 @@ class PerfmonDevice;
 using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable,
                                ddk::Messageable<fidl_perfmon::Controller>::Mixin>;
 
-class PerfmonDevice : public DeviceType, public fidl::WireServer<fidl_perfmon::Controller> {
+class PerfmonDevice : public DeviceType {
  public:
   // The page size we use.
   static constexpr uint32_t kLog2PageSize = 12;

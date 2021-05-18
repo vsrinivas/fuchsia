@@ -22,7 +22,7 @@ class DdkFidlDevice;
 using DeviceType =
     ddk::Device<DdkFidlDevice, ddk::Messageable<fuchsia_hardware_test::Device>::Mixin>;
 
-class DdkFidlDevice : public DeviceType, public fidl::WireServer<fuchsia_hardware_test::Device> {
+class DdkFidlDevice : public DeviceType {
  public:
   explicit DdkFidlDevice(zx_device_t* parent) : DeviceType(parent) {}
 

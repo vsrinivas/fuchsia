@@ -23,9 +23,7 @@ using fuchsia_device_power_test::TestDevice;
 class TestPowerDriver;
 using DeviceType = ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable,
                                ddk::Messageable<TestDevice>::Mixin>;
-class TestPowerDriver : public DeviceType,
-                        public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD>,
-                        public fidl::WireServer<TestDevice> {
+class TestPowerDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD> {
  public:
   TestPowerDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

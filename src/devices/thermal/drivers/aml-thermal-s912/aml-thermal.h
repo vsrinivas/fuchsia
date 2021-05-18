@@ -43,9 +43,7 @@ using DeviceType = ddk::Device<AmlThermal, ddk::Initializable,
                                ddk::Messageable<fthermal::Device>::Mixin, ddk::Unbindable>;
 
 // AmlThermal implements the s912 AmLogic thermal driver.
-class AmlThermal : public DeviceType,
-                   public fidl::WireServer<fthermal::Device>,
-                   public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
+class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
  public:
   AmlThermal(zx_device_t* device, const ddk::GpioProtocolClient& fan0_gpio,
              const ddk::GpioProtocolClient& fan1_gpio, const ddk::ScpiProtocolClient& scpi,

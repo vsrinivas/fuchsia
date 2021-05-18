@@ -28,7 +28,7 @@ class TapCtl;
 using DeviceType =
     ddk::Device<TapCtl, ddk::Messageable<fuchsia_hardware_ethertap::TapControl>::Mixin>;
 
-class TapCtl : public DeviceType, public fidl::WireServer<fuchsia_hardware_ethertap::TapControl> {
+class TapCtl : public DeviceType {
  public:
   TapCtl(zx_device_t* device);
 

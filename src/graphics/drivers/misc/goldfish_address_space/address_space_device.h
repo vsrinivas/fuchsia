@@ -35,8 +35,7 @@ using ChildDriverType =
 
 class AddressSpaceDevice
     : public DeviceType,
-      public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
-      public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice> {
+      public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol> {
   using fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
 
  public:
@@ -91,9 +90,7 @@ class AddressSpaceDevice
   DISALLOW_COPY_ASSIGN_AND_MOVE(AddressSpaceDevice);
 };
 
-class AddressSpaceChildDriver
-    : public ChildDriverType,
-      public fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceChildDriver> {
+class AddressSpaceChildDriver : public ChildDriverType {
  public:
   explicit AddressSpaceChildDriver(
       fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, AddressSpaceDevice* device,

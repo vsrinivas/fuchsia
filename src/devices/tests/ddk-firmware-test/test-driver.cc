@@ -27,7 +27,7 @@ class TestFirmwareDriver;
 using DeviceType =
     ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
-class TestFirmwareDriver : public DeviceType, public fidl::WireServer<TestDevice> {
+class TestFirmwareDriver : public DeviceType {
  public:
   explicit TestFirmwareDriver(zx_device_t* parent) : DeviceType(parent) {}
 

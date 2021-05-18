@@ -74,7 +74,7 @@ END_SUCCESS_CASE
 class TestMessageable;
 using MessageableDevice =
     ddk::Device<TestMessageable, ddk::Messageable<fuchsia_examples::Echo>::Mixin>;
-class TestMessageable : public MessageableDevice, public fidl::WireServer<fuchsia_examples::Echo> {
+class TestMessageable : public MessageableDevice {
  public:
   TestMessageable() : MessageableDevice(nullptr) {}
   void DdkRelease() {}

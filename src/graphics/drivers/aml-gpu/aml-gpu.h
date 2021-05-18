@@ -70,7 +70,6 @@ using DdkDeviceType =
                 ddk::GetProtocolable>;
 
 class AmlGpu final : public DdkDeviceType,
-                     public fidl::WireServer<fuchsia_hardware_gpu_clock::Clock>,
                      public ddk::ArmMaliProtocol<AmlGpu>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_GPU_THERMAL> {
  public:

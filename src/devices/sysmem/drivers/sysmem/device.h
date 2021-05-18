@@ -51,7 +51,6 @@ struct Settings {
 
 class Device final : public DdkDeviceType,
                      public ddk::SysmemProtocol<Device, ddk::base_protocol>,
-                     public fidl::WireServer<fuchsia_sysmem::DriverConnector>,
                      public MemoryAllocator::Owner {
  public:
   Device(zx_device_t* parent_device, Driver* parent_driver);
@@ -150,9 +149,7 @@ class Device final : public DdkDeviceType,
 
   [[nodiscard]] const Settings& settings() const { return settings_; }
 
-  void ResetThreadCheckerForTesting() {
-    loop_checker_.emplace(fit::thread_checker());
-  }
+  void ResetThreadCheckerForTesting() { loop_checker_.emplace(fit::thread_checker()); }
 
  private:
   class SecureMemConnection {

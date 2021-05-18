@@ -26,7 +26,7 @@ class TestEnvironmentDriver;
 using DeviceType =
     ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
-class TestEnvironmentDriver : public DeviceType, public fidl::WireServer<TestDevice> {
+class TestEnvironmentDriver : public DeviceType {
  public:
   explicit TestEnvironmentDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestEnvironmentDriver() {}
@@ -40,7 +40,6 @@ class TestEnvironmentDriver : public DeviceType, public fidl::WireServer<TestDev
   // Device message ops implementation.
   void GetServiceList(GetServiceListRequestView request,
                       GetServiceListCompleter::Sync& completer) override;
-
 };
 
 void TestEnvironmentDriver::GetServiceList(GetServiceListRequestView request,

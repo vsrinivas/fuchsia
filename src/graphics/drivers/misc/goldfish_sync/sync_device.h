@@ -44,8 +44,7 @@ using SyncDeviceType = ddk::Device<SyncDevice, ddk::Unbindable,
 class SyncTimeline;
 
 class SyncDevice : public SyncDeviceType,
-                   public ddk::GoldfishSyncProtocol<SyncDevice, ddk::base_protocol>,
-                   public fidl::WireServer<fuchsia_hardware_goldfish::SyncDevice> {
+                   public ddk::GoldfishSyncProtocol<SyncDevice, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

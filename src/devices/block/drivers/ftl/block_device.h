@@ -55,7 +55,6 @@ using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable,
 
 // Exposes the FTL library as a Fuchsia BlockDevice protocol.
 class BlockDevice : public DeviceType,
-                    public fidl::WireServer<fuchsia_hardware_block::Ftl>,
                     public ddk::BlockImplProtocol<BlockDevice, ddk::base_protocol>,
                     public ddk::BlockPartitionProtocol<BlockDevice>,
                     public ftl::FtlInstance {

@@ -43,9 +43,7 @@ class Tmp112Device;
 using DdkDeviceType =
     ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageable<temperature_fidl::Device>::Mixin>;
 
-class Tmp112Device : public DdkDeviceType,
-                     public fidl::WireServer<temperature_fidl::Device>,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
+class Tmp112Device : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
   Tmp112Device(zx_device_t* parent, ddk::I2cChannel i2c)
       : DdkDeviceType(parent), i2c_(std::move(i2c)) {}

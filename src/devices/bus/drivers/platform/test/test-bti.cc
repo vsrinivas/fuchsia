@@ -21,7 +21,7 @@ class TestBti;
 using DeviceType =
     ddk::Device<TestBti, ddk::Messageable<fuchsia_hardware_btitest::BtiDevice>::Mixin>;
 
-class TestBti : public DeviceType, public fidl::WireServer<fuchsia_hardware_btitest::BtiDevice> {
+class TestBti : public DeviceType {
  public:
   explicit TestBti(zx_device_t* parent) : DeviceType(parent) {}
 

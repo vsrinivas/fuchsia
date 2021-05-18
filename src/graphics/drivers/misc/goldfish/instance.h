@@ -29,8 +29,7 @@ using InstanceType =
 // This class implements a pipe instance device. By opening the pipe device,
 // an instance of this class will be created to service a new channel
 // to the virtual device.
-class Instance : public InstanceType,
-                 public fidl::WireServer<fuchsia_hardware_goldfish::PipeDevice> {
+class Instance : public InstanceType {
  public:
   explicit Instance(zx_device_t* parent);
   ~Instance();

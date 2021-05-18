@@ -46,10 +46,11 @@ using fuchsia_hardware_registers::wire::Metadata;
 using fuchsia_hardware_registers::wire::RegistersMetadataEntry;
 
 template <typename T>
-class Register : public fidl::WireServer<fuchsia_hardware_registers::Device>,
-                 public RegisterType<T>,
+class Register : public RegisterType<T>,
                  public ddk::RegistersProtocol<Register<T>, ddk::base_protocol>,
                  public fbl::RefCounted<Register<T>> {
+  using Device = fidl::WireServer<fuchsia_hardware_registers::Device>;
+
  public:
   explicit Register(zx_device_t* device, std::shared_ptr<MmioInfo> mmio)
       : RegisterType<T>(device), mmio_(mmio), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
@@ -64,36 +65,36 @@ class Register : public fidl::WireServer<fuchsia_hardware_registers::Device>,
 
   void RegistersConnect(zx::channel chan);
 
-  void ReadRegister8(ReadRegister8RequestView request,
-                     ReadRegister8Completer::Sync& completer) override {
+  void ReadRegister8(Device::ReadRegister8RequestView request,
+                     Device::ReadRegister8Completer::Sync& completer) override {
     ReadRegister(request->offset, request->mask, completer);
   }
-  void ReadRegister16(ReadRegister16RequestView request,
-                      ReadRegister16Completer::Sync& completer) override {
+  void ReadRegister16(Device::ReadRegister16RequestView request,
+                      Device::ReadRegister16Completer::Sync& completer) override {
     ReadRegister(request->offset, request->mask, completer);
   }
-  void ReadRegister32(ReadRegister32RequestView request,
-                      ReadRegister32Completer::Sync& completer) override {
+  void ReadRegister32(Device::ReadRegister32RequestView request,
+                      Device::ReadRegister32Completer::Sync& completer) override {
     ReadRegister(request->offset, request->mask, completer);
   }
-  void ReadRegister64(ReadRegister64RequestView request,
-                      ReadRegister64Completer::Sync& completer) override {
+  void ReadRegister64(Device::ReadRegister64RequestView request,
+                      Device::ReadRegister64Completer::Sync& completer) override {
     ReadRegister(request->offset, request->mask, completer);
   }
-  void WriteRegister8(WriteRegister8RequestView request,
-                      WriteRegister8Completer::Sync& completer) override {
+  void WriteRegister8(Device::WriteRegister8RequestView request,
+                      Device::WriteRegister8Completer::Sync& completer) override {
     WriteRegister(request->offset, request->mask, request->value, completer);
   }
-  void WriteRegister16(WriteRegister16RequestView request,
-                       WriteRegister16Completer::Sync& completer) override {
+  void WriteRegister16(Device::WriteRegister16RequestView request,
+                       Device::WriteRegister16Completer::Sync& completer) override {
     WriteRegister(request->offset, request->mask, request->value, completer);
   }
-  void WriteRegister32(WriteRegister32RequestView request,
-                       WriteRegister32Completer::Sync& completer) override {
+  void WriteRegister32(Device::WriteRegister32RequestView request,
+                       Device::WriteRegister32Completer::Sync& completer) override {
     WriteRegister(request->offset, request->mask, request->value, completer);
   }
-  void WriteRegister64(WriteRegister64RequestView request,
-                       WriteRegister64Completer::Sync& completer) override {
+  void WriteRegister64(Device::WriteRegister64RequestView request,
+                       Device::WriteRegister64Completer::Sync& completer) override {
     WriteRegister(request->offset, request->mask, request->value, completer);
   }
 

@@ -40,7 +40,6 @@ using DeviceType =
 
 class SocketDevice : public Device,
                      public DeviceType,
-                     public fidl::WireServer<vsock::Device>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   struct ConnectionKey;

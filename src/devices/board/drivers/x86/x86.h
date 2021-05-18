@@ -25,7 +25,7 @@ class X86;
 using DeviceType = ddk::Device<X86, ddk::Messageable<fuchsia_hardware_acpi::Acpi>::Mixin>;
 
 // This is the main class for the X86 platform bus driver.
-class X86 : public DeviceType, public fidl::WireServer<fuchsia_hardware_acpi::Acpi> {
+class X86 : public DeviceType {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus) : DeviceType(parent), pbus_(pbus) {}
   ~X86();

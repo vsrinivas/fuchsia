@@ -36,9 +36,7 @@ class Vs680Thermal;
 using DeviceType =
     ddk::Device<Vs680Thermal, ddk::Messageable<fuchsia_hardware_thermal::Device>::Mixin>;
 
-class Vs680Thermal : public DeviceType,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,
-                     public fidl::WireServer<fuchsia_hardware_thermal::Device> {
+class Vs680Thermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

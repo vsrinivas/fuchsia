@@ -18,8 +18,7 @@
 class IsolatedDevMgrTestDriver;
 using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable,
                                ddk::Messageable<fuchsia_device_manager_test::Metadata>::Mixin>;
-class IsolatedDevMgrTestDriver : public DeviceType,
-                                 public fidl::WireServer<fuchsia_device_manager_test::Metadata> {
+class IsolatedDevMgrTestDriver : public DeviceType {
  public:
   IsolatedDevMgrTestDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

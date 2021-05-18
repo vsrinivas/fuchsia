@@ -19,8 +19,7 @@ using DdkPerfCountDeviceType =
                 ddk::Messageable<fuchsia_gpu_magma::PerformanceCounterAccess>::Mixin>;
 
 class MagmaPerformanceCounterDevice
-    : public fidl::WireServer<fuchsia_gpu_magma::PerformanceCounterAccess>,
-      public DdkPerfCountDeviceType,
+    : public DdkPerfCountDeviceType,
       public ddk::EmptyProtocol<ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS> {
  public:
   explicit MagmaPerformanceCounterDevice(zx_device_t* parent);

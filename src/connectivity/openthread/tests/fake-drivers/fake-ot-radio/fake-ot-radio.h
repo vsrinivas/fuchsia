@@ -39,8 +39,7 @@ class FakeOtRadioDevice;
 using DeviceType = ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
                                ddk::Messageable<fuchsia_lowpan_spinel::DeviceSetup>::Mixin>;
 
-class FakeOtRadioDevice : public DeviceType,
-                          public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
+class FakeOtRadioDevice : public DeviceType {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
 

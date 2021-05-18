@@ -22,9 +22,7 @@ using fuchsia_device_inspect_test::TestInspect;
 
 class TestInspectDriver;
 using DeviceType = ddk::Device<TestInspectDriver, ddk::Messageable<TestInspect>::Mixin>;
-class TestInspectDriver : public DeviceType,
-                          public ddk::EmptyProtocol<ZX_PROTOCOL_TEST>,
-                          public fidl::WireServer<TestInspect> {
+class TestInspectDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
  public:
   TestInspectDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();

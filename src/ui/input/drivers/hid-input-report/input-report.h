@@ -25,7 +25,6 @@ using DeviceType = ddk::Device<InputReport, ddk::Unbindable,
                                ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin>;
 class InputReport : public DeviceType,
                     public InputReportBase,
-                    public fidl::WireServer<fuchsia_input_report::InputDevice>,
                     ddk::HidReportListenerProtocol<InputReport>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:

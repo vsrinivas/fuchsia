@@ -72,7 +72,6 @@ For instance for [SPI](/src/devices/spi/drivers/spi/spi.h):
 using SpiChildType =
     ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin>;
 class SpiChild : public SpiChildType,
-                 public fidl::WireServer<fuchsia_hardware_spi::Device>,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
 ...
   // FIDL methods.

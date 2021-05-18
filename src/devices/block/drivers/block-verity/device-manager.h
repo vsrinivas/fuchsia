@@ -35,9 +35,7 @@ using DeviceManagerType =
 // `fuchsia.hardware.block.verified`.  It manages the lifecycle of a child block
 // device which represents either a mutable or verified view of another block
 // device.
-class DeviceManager final
-    : public DeviceManagerType,
-      public fidl::WireServer<fuchsia_hardware_block_verified::DeviceManager> {
+class DeviceManager final : public DeviceManagerType {
  public:
   explicit DeviceManager(zx_device_t* parent)
       : DeviceManagerType(parent),

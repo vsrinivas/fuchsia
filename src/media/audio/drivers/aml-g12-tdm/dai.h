@@ -37,8 +37,7 @@ using AmlG12TdmDaiDeviceType =
 class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,
                      public ::fuchsia::hardware::audio::RingBuffer,
-                     public ::fuchsia::hardware::audio::Dai,
-                     public fidl::WireServer<fuchsia_hardware_audio::DaiConnect> {
+                     public ::fuchsia::hardware::audio::Dai {
  public:
   explicit AmlG12TdmDai(zx_device_t* parent);
 

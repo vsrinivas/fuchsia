@@ -53,8 +53,7 @@ class AmlHdmiDevice;
 using DeviceType = ddk::Device<AmlHdmiDevice, ddk::Messageable<fuchsia_hardware_hdmi::Hdmi>::Mixin,
                                ddk::Unbindable>;
 
-class AmlHdmiDevice : public fidl::WireServer<fuchsia_hardware_hdmi::Hdmi>,
-                      public DeviceType,
+class AmlHdmiDevice : public DeviceType,
                       public ddk::HdmiProtocol<AmlHdmiDevice, ddk::base_protocol>,
                       public HdmiIpBase,
                       public fbl::RefCounted<AmlHdmiDevice> {

@@ -38,8 +38,7 @@ using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable,
                                          ddk::Messageable<fuchsia_hardware_camera::Device>::Mixin>;
 
 class ControllerDevice : public ControllerDeviceType,
-                         public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA>,
-                         public fidl::WireServer<fuchsia_hardware_camera::Device> {
+                         public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ControllerDevice);
   explicit ControllerDevice(zx_device_t* parent, zx::event event)

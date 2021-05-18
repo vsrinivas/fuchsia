@@ -28,7 +28,7 @@ struct Pl031Regs {
   uint32_t icr;
 };
 
-class Pl031 : public fidl::WireServer<FidlRtc::Device>, public RtcDeviceType {
+class Pl031 : public RtcDeviceType {
  public:
   static zx_status_t Bind(void*, zx_device_t* dev);
 

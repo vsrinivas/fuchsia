@@ -47,9 +47,7 @@ using DeviceType =
     ddk::Device<Gt6853Device, ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin,
                 ddk::Unbindable>;
 
-class Gt6853Device : public DeviceType,
-                     public fidl::WireServer<fuchsia_input_report::InputDevice>,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
+class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   enum class Register : uint16_t {
     kDspMcuPower = 0x2010,

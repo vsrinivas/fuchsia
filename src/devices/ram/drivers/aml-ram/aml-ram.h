@@ -71,7 +71,7 @@ class AmlRam;
 using DeviceType =
     ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable<ram_metrics::Device>::Mixin>;
 
-class AmlRam : public DeviceType, public fidl::WireServer<ram_metrics::Device> {
+class AmlRam : public DeviceType {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlRam);
 

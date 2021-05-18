@@ -16,9 +16,7 @@ namespace clk {
 class MtkClk;
 using DeviceType = ddk::Device<MtkClk, ddk::Messageable<fuchsia_hardware_clock::Device>::Mixin>;
 
-class MtkClk : public DeviceType,
-               public fidl::WireServer<fuchsia_hardware_clock::Device>,
-               public ddk::ClockImplProtocol<MtkClk, ddk::base_protocol> {
+class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::base_protocol> {
  public:
   static zx_status_t Create(zx_device_t* parent);
 

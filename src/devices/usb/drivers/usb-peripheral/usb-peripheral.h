@@ -96,8 +96,7 @@ struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
 // one for each USB function in the peripheral role configuration.
 class UsbPeripheral : public UsbPeripheralType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
-                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
-                      public fidl::WireServer<fuchsia_hardware_usb_peripheral::Device> {
+                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral> {
  public:
   UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 

@@ -63,8 +63,7 @@ using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable<fuchsia_gpu_magma::D
 
 class Mt8167sGpu : public DeviceType,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,
-                   public ImgSysDevice,
-                   public fidl::WireServer<fuchsia_gpu_magma::Device> {
+                   public ImgSysDevice {
  public:
   Mt8167sGpu(zx_device_t* parent) : DeviceType(parent) {}
 

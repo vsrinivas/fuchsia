@@ -93,8 +93,7 @@ using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable,
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
-                   public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
-                   public fidl::WireServer<fuchsia_hardware_display::Provider> {
+                   public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
  public:
   Controller(zx_device_t* parent);
   ~Controller();

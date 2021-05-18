@@ -40,9 +40,7 @@ class SkipBlockDevice;
 using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_skipblock::SkipBlock>::Mixin>;
 
-class SkipBlockDevice : public DeviceType,
-                        public fidl::WireServer<fuchsia_hardware_skipblock::SkipBlock>,
-                        public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
+class SkipBlockDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
  public:
   // Spawns device node based on parent node.
   static zx_status_t Create(void*, zx_device_t* parent);

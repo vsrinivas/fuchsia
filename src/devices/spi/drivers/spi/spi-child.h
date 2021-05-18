@@ -23,7 +23,6 @@ using SpiChildType = ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi
 
 class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,
-                 public fidl::WireServer<fuchsia_hardware_spi::Device>,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
  public:
   SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, const spi_channel_t* channel,

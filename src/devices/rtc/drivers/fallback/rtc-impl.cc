@@ -26,9 +26,7 @@ using RtcDevice = ddk::Device<FallbackRtc, ddk::Messageable<fuchsia_hardware_rtc
 // it assumes that an external entity will set it to a approximately correct
 // time based on other sources, most likely the roughtime service which
 // runs at every boot.
-class FallbackRtc : public RtcDevice,
-                    public fidl::WireServer<fuchsia_hardware_rtc::Device>,
-                    public ddk::EmptyProtocol<ZX_PROTOCOL_RTC> {
+class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC> {
  public:
   FallbackRtc(zx_device_t* parent) : RtcDevice(parent), rtc_last_({}) {
     // We don't rely on the default value to be correct to any approximation

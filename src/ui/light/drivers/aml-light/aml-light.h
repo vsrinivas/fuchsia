@@ -55,9 +55,7 @@ class LightDevice {
   double value_ = 0;
 };
 
-class AmlLight : public AmlLightType,
-                 public fidl::WireServer<Light>,
-                 public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {
+class AmlLight : public AmlLightType, public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {
  public:
   explicit AmlLight(zx_device_t* parent) : AmlLightType(parent) {}
 

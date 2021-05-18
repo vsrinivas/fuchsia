@@ -25,8 +25,7 @@ using SdioFunctionDeviceType =
     ddk::Device<SdioFunctionDevice, ddk::Messageable<fuchsia_hardware_sdio::Device>::Mixin>;
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
-                           public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,
-                           public fidl::WireServer<fuchsia_hardware_sdio::Device> {
+                           public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol> {
  public:
   SdioFunctionDevice(zx_device_t* parent, SdioControllerDevice* sdio_parent)
       : SdioFunctionDeviceType(parent), sdio_parent_(sdio_parent) {}

@@ -40,9 +40,7 @@ namespace FidlBacklight = fuchsia_hardware_backlight;
 class Sgm37603a;
 using DeviceType = ddk::Device<Sgm37603a, ddk::Messageable<FidlBacklight::Device>::Mixin>;
 
-class Sgm37603a : public DeviceType,
-                  public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
-                  public fidl::WireServer<FidlBacklight::Device> {
+class Sgm37603a : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT> {
  public:
   virtual ~Sgm37603a() = default;
 

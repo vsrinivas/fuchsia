@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/dotmatrixdisplay/llcpp/fidl.h>
 #include <fuchsia/hardware/dotmatrixdisplay/cpp/banjo.h>
+#include <fuchsia/hardware/dotmatrixdisplay/llcpp/fidl.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>
@@ -21,7 +21,6 @@ using DeviceType =
     ddk::Device<Ssd1306, ddk::Unbindable,
                 ddk::Messageable<fuchsia_hardware_dotmatrixdisplay::DotmatrixDisplay>::Mixin>;
 class Ssd1306 : public DeviceType,
-                public fidl::WireServer<fuchsia_hardware_dotmatrixdisplay::DotmatrixDisplay>,
                 public ddk::DotmatrixDisplayProtocol<Ssd1306, ddk::base_protocol> {
  public:
   Ssd1306(zx_device_t* parent) : DeviceType(parent), frame_buffer_(), i2c_(parent) {}

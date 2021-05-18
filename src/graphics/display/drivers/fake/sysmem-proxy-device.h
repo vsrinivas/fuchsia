@@ -47,7 +47,6 @@ using DdkDeviceType2 =
 // image compositing, and then wishes to display the resulting image on the screen.  In order to do
 // so, it must allocate an image which is acceptable both to Vulkan and the display driver.
 class SysmemProxyDevice final : public DdkDeviceType2,
-                                public fidl::WireServer<fuchsia_sysmem::DriverConnector>,
                                 public ddk::SysmemProtocol<SysmemProxyDevice, ddk::base_protocol> {
  public:
   SysmemProxyDevice(zx_device_t* parent_device, sysmem_driver::Driver* parent_driver);

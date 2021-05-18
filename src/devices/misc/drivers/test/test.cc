@@ -29,9 +29,7 @@ class TestDevice;
 using TestDeviceType =
     ddk::Device<TestDevice, ddk::Messageable<fuchsia_device_test::Device>::Mixin, ddk::Unbindable>;
 
-class TestDevice : public TestDeviceType,
-                   public fidl::WireServer<fuchsia_device_test::Device>,
-                   public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
+class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
  public:
   TestDevice(zx_device_t* parent) : TestDeviceType(parent) {}
 
@@ -64,8 +62,7 @@ using TestRootDeviceType =
     ddk::Device<TestRootDevice, ddk::Messageable<fuchsia_device_test::RootDevice>::Mixin,
                 ddk::Unbindable>;
 
-class TestRootDevice : public TestRootDeviceType,
-                       public fidl::WireServer<fuchsia_device_test::RootDevice> {
+class TestRootDevice : public TestRootDeviceType {
  public:
   TestRootDevice(zx_device_t* parent) : TestRootDeviceType(parent) {}
 

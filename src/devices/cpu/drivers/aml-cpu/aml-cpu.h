@@ -25,9 +25,7 @@ class AmlCpu;
 using DeviceType = ddk::Device<AmlCpu, ddk::Messageable<fuchsia_cpuctrl::Device>::Mixin,
                                ddk::PerformanceTunable, ddk::AutoSuspendable>;
 
-class AmlCpu : public DeviceType,
-               public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
-               public fidl::WireServer<fuchsia_cpuctrl::Device> {
+class AmlCpu : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
   explicit AmlCpu(zx_device_t* parent, const ddk::ClockProtocolClient& plldiv16,

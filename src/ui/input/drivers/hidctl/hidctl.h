@@ -23,7 +23,7 @@ namespace hidctl {
 
 class HidCtl;
 using DeviceType = ddk::Device<HidCtl, ddk::Messageable<fuchsia_hardware_hidctl::Device>::Mixin>;
-class HidCtl : public DeviceType, public fidl::WireServer<fuchsia_hardware_hidctl::Device> {
+class HidCtl : public DeviceType {
  public:
   HidCtl(zx_device_t* device);
   static zx_status_t Create(void* ctx, zx_device_t* parent);

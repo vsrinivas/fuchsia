@@ -27,9 +27,7 @@ class ThermistorChannel;
 using DeviceType2 = ddk::Device<ThermistorChannel, ddk::Unbindable,
                                 ddk::Messageable<FidlTemperature::Device>::Mixin>;
 
-class ThermistorChannel : public DeviceType2,
-                          public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE>,
-                          public fidl::WireServer<FidlTemperature::Device> {
+class ThermistorChannel : public DeviceType2, public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
   ThermistorChannel(zx_device_t* device, fbl::RefPtr<AmlSaradcDevice> adc, uint32_t ch,
                     NtcInfo ntc_info, uint32_t pullup_ohms)
@@ -53,9 +51,7 @@ class RawChannel;
 using DeviceType3 =
     ddk::Device<RawChannel, ddk::Unbindable, ddk::Messageable<FidlAdc::Device>::Mixin>;
 
-class RawChannel : public DeviceType3,
-                   public ddk::EmptyProtocol<ZX_PROTOCOL_ADC>,
-                   public fidl::WireServer<FidlAdc::Device> {
+class RawChannel : public DeviceType3, public ddk::EmptyProtocol<ZX_PROTOCOL_ADC> {
  public:
   RawChannel(zx_device_t* device, fbl::RefPtr<AmlSaradcDevice> adc, uint32_t ch)
       : DeviceType3(device), adc_(adc), adc_channel_(ch) {}

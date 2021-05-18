@@ -31,7 +31,7 @@ using DeviceType =
     ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin,
                 ddk::Suspendable, ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable,
                 ddk::Initializable>;
-class TestPowerDriverChild : public DeviceType, public fidl::WireServer<TestDevice> {
+class TestPowerDriverChild : public DeviceType {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {
     zx::event::create(0, &suspend_completion_event_);

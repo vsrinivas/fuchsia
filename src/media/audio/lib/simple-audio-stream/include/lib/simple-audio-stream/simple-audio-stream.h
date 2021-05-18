@@ -67,7 +67,6 @@ using SimpleAudioStreamBase =
 class SimpleAudioStream : public SimpleAudioStreamBase,
                           public SimpleAudioStreamProtocol,
                           public fbl::RefCounted<SimpleAudioStream>,
-                          public fidl::WireServer<audio_fidl::Device>,
                           public fidl::WireServer<audio_fidl::RingBuffer> {
  public:
   // Create

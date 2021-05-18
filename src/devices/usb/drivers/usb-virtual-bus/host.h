@@ -25,9 +25,7 @@ class Device;
 using DeviceType =
     ddk::Device<Device, ddk::Unbindable,
                 ddk::Messageable<fuchsia_hardware_usb_virtualbustest::BusTest>::Mixin>;
-class Device : public DeviceType,
-               public fidl::WireServer<fuchsia_hardware_usb_virtualbustest::BusTest>,
-               public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
+class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
  public:
   explicit Device(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
   ~Device();

@@ -24,9 +24,7 @@ class Lp50xxLight;
 using Lp50xxLightType =
     ddk::Device<Lp50xxLight, ddk::Messageable<fuchsia_hardware_light::Light>::Mixin>;
 
-class Lp50xxLight : public Lp50xxLightType,
-                    public fidl::WireServer<fuchsia_hardware_light::Light>,
-                    public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {
+class Lp50xxLight : public Lp50xxLightType, public ddk::EmptyProtocol<ZX_PROTOCOL_LIGHT> {
  public:
   explicit Lp50xxLight(zx_device_t* parent) : Lp50xxLightType(parent) {}
 

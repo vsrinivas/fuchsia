@@ -54,9 +54,7 @@ using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, 
                                ddk::Messageable<fuchsia_hardware_nand::RamNand>::Mixin>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
-class NandDevice : public DeviceType,
-                   public fidl::WireServer<fuchsia_hardware_nand::RamNand>,
-                   public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
+class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:
   explicit NandDevice(const NandParams& params, zx_device_t* parent = nullptr);
   ~NandDevice();
