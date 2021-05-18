@@ -232,7 +232,7 @@ zx_status_t Parser::ParseVideo(const void* data, uint32_t len) {
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
       parser_input_ = nullptr;
-      DECODE_ERROR("Failed to create input file");
+      DECODE_ERROR("Failed to create parser input buffer");
       return ZX_ERR_NO_MEMORY;
     }
     SetIoBufferName(parser_input_.get(), "ParserInput");

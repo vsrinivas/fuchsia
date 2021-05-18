@@ -93,7 +93,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
  private:
   void QueueInputItem(CodecInputItem input_item, bool at_front = false);
   CodecInputItem DequeueInputItem();
-  std::vector<uint8_t> ParseAndDeliverCodecOobBytes();
+  std::vector<uint8_t> ParseCodecOobBytes();
   // If parsing something whose format depends on is_avcc_, use this method.
   //
   // The buffer pointer can be nullptr unless the VMO is a secure VMO.

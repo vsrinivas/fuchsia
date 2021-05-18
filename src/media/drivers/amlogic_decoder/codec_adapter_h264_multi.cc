@@ -778,8 +778,9 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ReadMoreInputD
 
     if (is_input_format_details_pending_) {
       is_input_format_details_pending_ = false;
-      std::vector<uint8_t> oob_bytes = ParseAndDeliverCodecOobBytes();
+      std::vector<uint8_t> oob_bytes = ParseCodecOobBytes();
       if (!oob_bytes.empty()) {
+        result.length = oob_bytes.size();
         result.data = std::move(oob_bytes);
         // Put packet back for next call to ReadMoreInputData().
         QueueInputItem(std::move(item), true);
@@ -814,7 +815,7 @@ bool CodecAdapterH264Multi::HasMoreInputData() {
   return !input_queue_.empty();
 }
 
-std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
+std::vector<uint8_t> CodecAdapterH264Multi::ParseCodecOobBytes() {
   // Our latest oob_bytes may contain SPS/PPS info.  If we have any
   // such info, the core codec needs it (possibly converted first).
 
@@ -881,17 +882,16 @@ std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
         OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
         return {};
       }
-      uint32_t stashed_pseudo_nal_length_bytes = ((*oob)[4] & 0x3) + 1;
-      // Temporarily, the pseudo_nal_length_field_bytes_ is 2 so we can
-      // ParseVideo() directly out of "oob".
-      pseudo_nal_length_field_bytes_ = 2;
+      // All pseudo-NALs in input packet payloads will use the
+      // parsed count of bytes of the length field. Convert SPS/PPS inline to AnnexB format so we
+      // can return it directly, as ParseVideo won't be called on this data.
+      pseudo_nal_length_field_bytes_ = ((*oob)[4] & 0x3) + 1;
       uint32_t sps_count = (*oob)[5] & 0x1F;
       uint32_t offset = 6;
       std::vector<uint8_t> accumulation;
       for (uint32_t i = 0; i < sps_count; ++i) {
         if (offset + 2 > oob->size()) {
           LOG(ERROR, "offset + 2 > oob->size()");
-          ;
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return {};
         }
@@ -901,10 +901,15 @@ std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return {};
         }
-        for (uint32_t i = 0; i < 2 + sps_length; i++) {
+        offset += 2;  // sps_bytes
+        accumulation.push_back(0);
+        accumulation.push_back(0);
+        accumulation.push_back(0);
+        accumulation.push_back(1);
+        for (uint32_t i = 0; i < sps_length; i++) {
           accumulation.push_back(oob->data()[offset + i]);
         }
-        offset += 2 + sps_length;
+        offset += sps_length;
       }
       if (offset + 1 > oob->size()) {
         LOG(ERROR, "offset + 1 > oob->size()");
@@ -924,14 +929,16 @@ std::vector<uint8_t> CodecAdapterH264Multi::ParseAndDeliverCodecOobBytes() {
           OnCoreCodecFailStream(fuchsia::media::StreamError::INVALID_INPUT_FORMAT_DETAILS);
           return {};
         }
-        for (uint32_t i = 0; i < 2 + pps_length; i++) {
+        offset += 2;  // pps_bytes
+        accumulation.push_back(0);
+        accumulation.push_back(0);
+        accumulation.push_back(0);
+        accumulation.push_back(1);
+        for (uint32_t i = 0; i < pps_length; i++) {
           accumulation.push_back(oob->data()[offset + i]);
         }
-        offset += 2 + pps_length;
+        offset += pps_length;
       }
-      // All pseudo-NALs in input packet payloads will use the
-      // parsed count of bytes of the length field.
-      pseudo_nal_length_field_bytes_ = stashed_pseudo_nal_length_bytes;
       return accumulation;
     }
     default:
