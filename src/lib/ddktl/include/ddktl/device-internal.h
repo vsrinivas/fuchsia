@@ -9,6 +9,7 @@
 
 #include <type_traits>
 
+#include <ddktl/fidl.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/resume-txn.h>
 #include <ddktl/suspend-txn.h>
@@ -302,6 +303,18 @@ constexpr void CheckMessageableOld() {
                              zx_status_t (D::*)(fidl_incoming_msg_t*, fidl_txn_t*)>::value,
                 "DdkMessage must be a public non-static member function with signature "
                 "'zx_status_t DdkMessage(fidl_incoming_msg_t*, fidl_txn_t*)'.");
+}
+
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_message_manual, DdkMessage);
+
+template <typename D>
+constexpr void CheckMessageableManual() {
+  static_assert(has_ddk_message_manual<D>::value,
+                "MessageableManual classes must implement DdkMessage");
+  static_assert(std::is_same<decltype(&D::DdkMessage),
+                             void (D::*)(fidl::IncomingMessage&&, DdkTransaction&)>::value,
+                "DdkMessage must be a public non-static member function with signature "
+                "'void DdkMessage(fidl::IncomingMessage&&, DdkTransaction&)'.");
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);

@@ -65,6 +65,9 @@
 // |                            |                                                    |
 // | ddk::Messageable<P>::Mixin | Methods defined by fidl::WireServer<P>             |
 // |                            |                                                    |
+// | ddk::MessageableManual     | zx_status_t DdkMessage(fidl::IncomingMessage&& msg,|
+// |                            |                        DdkTransaction& txn)        |
+// |                            |                                                    |
 // | ddk::Suspendable           | void DdkSuspend(ddk::SuspendTxn txn)               |
 // |                            |                                                    |
 // | ddk::Resumable             | zx_status_t DdkResume(uint8_t requested_state,     |
@@ -289,6 +292,22 @@ struct Messageable {
   // at different times.
   template <typename D>
   using Mixin = MessageableInternal<D, Protocol>;
+};
+
+template <typename D>
+class MessageableManual : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckMessageableManual<D>();
+    proto->message = Message;
+  }
+
+ private:
+  static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    static_cast<D*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg), transaction);
+    return transaction.Status();
+  }
 };
 
 template <typename D>
