@@ -5,20 +5,14 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_INSTANCE_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_SYSTEM_INSTANCE_H_
 
-#include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
-#include <lib/zx/vmo.h>
 
 #include <fbl/span.h>
 
-#include "coordinator.h"
-#include "fdio.h"
-#include "fuchsia/boot/llcpp/fidl.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-
-zx_status_t wait_for_file(const char* path, zx::time deadline);
 
 // Host's a vfs which forwards a subset of requests to a channel.
 class DirectoryFilter {

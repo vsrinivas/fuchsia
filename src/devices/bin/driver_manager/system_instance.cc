@@ -4,85 +4,14 @@
 
 #include "system_instance.h"
 
-#include <dirent.h>
-#include <fcntl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
-#include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
-#include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/spawn-actions.h>
-#include <lib/fdio/spawn.h>
-#include <lib/fdio/unsafe.h>
-#include <lib/fdio/watcher.h>
-#include <lib/zircon-internal/paths.h>
-#include <lib/zx/debuglog.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <zircon/boot/image.h>
-#include <zircon/errors.h>
 #include <zircon/status.h>
-#include <zircon/syscalls/log.h>
 #include <zircon/syscalls/policy.h>
-
-#include <vector>
-
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
 
 #include "devfs.h"
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
 #include "system_state_manager.h"
-
-struct ConsoleStarterArgs {
-  SystemInstance* instance;
-  fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args;
-};
-
-struct ServiceStarterArgs {
-  SystemInstance* instance;
-  Coordinator* coordinator;
-};
-
-// Wait for the requested file.  Its parent directory must exist.
-zx_status_t wait_for_file(const char* path, zx::time deadline) {
-  char path_copy[PATH_MAX];
-  if (strlen(path) >= PATH_MAX) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  strcpy(path_copy, path);
-
-  char* last_slash = strrchr(path_copy, '/');
-  // Waiting on the root of the fs or paths with no slashes is not supported by this function
-  if (last_slash == path_copy || last_slash == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  last_slash[0] = 0;
-  char* dirname = path_copy;
-  char* basename = last_slash + 1;
-
-  auto watch_func = [](int dirfd, int event, const char* fn, void* cookie) -> zx_status_t {
-    auto basename = static_cast<const char*>(cookie);
-    if (event != WATCH_EVENT_ADD_FILE) {
-      return ZX_OK;
-    }
-    if (!strcmp(fn, basename)) {
-      return ZX_ERR_STOP;
-    }
-    return ZX_OK;
-  };
-
-  fbl::unique_fd dirfd(open(dirname, O_RDONLY));
-  if (!dirfd.is_valid()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  zx_status_t status = fdio_watch_directory(dirfd.get(), watch_func, deadline.get(),
-                                            reinterpret_cast<void*>(basename));
-  if (status == ZX_ERR_STOP) {
-    return ZX_OK;
-  }
-  return status;
-}
 
 SystemInstance::SystemInstance() : launcher_(this) {}
 
