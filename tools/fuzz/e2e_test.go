@@ -6,6 +6,7 @@ package fuzz_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io/ioutil"
 	"os"
 	"path"
@@ -20,14 +21,18 @@ import (
 
 // Runs a command and returns stdout
 func runCommand(t *testing.T, args ...string) string {
+	return runCommandWithExpectation(t, true /* shouldSucceed */, args...)
+}
+
+func runCommandWithExpectation(t *testing.T, shouldSucceed bool, args ...string) string {
 	cmd, err := fuzz.ParseArgs(args)
 	if err != nil {
 		t.Fatalf("Error parsing args: %s", err)
 	}
 
 	var buf bytes.Buffer
-	if err := cmd.Execute(&buf); err != nil {
-		t.Fatalf("Error executing command: %s", err)
+	if err := cmd.Execute(&buf); (err == nil) != shouldSucceed {
+		t.Fatalf("Unexpected result executing command: %s", err)
 	}
 
 	return buf.String()
@@ -65,6 +70,34 @@ func TestEndToEnd(t *testing.T) {
 
 	// Make a tempdir for holding local files
 	dir := t.TempDir()
+
+	// Ensure put_data will succeed for prepared fuzzer, even if not yet run
+	out = runCommand(t, "prepare_fuzzer", "-handle", handle, "-fuzzer", fuzzer)
+	glog.Info(out)
+
+	tmpFile := path.Join(dir, "autoexec.bat")
+	if err := ioutil.WriteFile(tmpFile, []byte("something"), 0o600); err != nil {
+		t.Fatalf("error creating tempfile: %s", err)
+	}
+
+	out = runCommand(t, "put_data", "-handle", handle, "-fuzzer", fuzzer,
+		"-src", tmpFile, "-dst", "data/subdir/")
+	glog.Info(out)
+	os.Remove(tmpFile)
+
+	out = runCommand(t, "get_data", "-handle", handle, "-fuzzer", fuzzer,
+		"-src", "data/subdir/autoexec.bat", "-dst", dir)
+	glog.Info(out)
+
+	// Ensure a second call to prepare resets persistent data
+	out = runCommand(t, "prepare_fuzzer", "-handle", handle, "-fuzzer", fuzzer)
+	glog.Info(out)
+
+	out = runCommandWithExpectation(t, false, "get_data", "-handle", handle, "-fuzzer", fuzzer,
+		"-src", "data/subdir/autoexec.bat", "-dst", dir)
+	glog.Info(out)
+
+	// Test basic fuzzing run
 	artifactDir := filepath.Join(dir, "artifacts")
 	if err := os.Mkdir(artifactDir, 0o700); err != nil {
 		t.Fatal(err)
@@ -98,18 +131,58 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("artifact contents unexpected: %q", artifactData)
 	}
 
+	// Attempt repro, with ASAN crash
+	runCommand(t, "prepare_fuzzer", "-handle", handle, "-fuzzer",
+		"example-fuzzers/overflow_fuzzer")
+	reproFile := path.Join(dir, "crasher")
+	reproFileContents := make([]byte, 12)
+	binary.LittleEndian.PutUint64(reproFileContents, 2)
+	binary.LittleEndian.PutUint32(reproFileContents[8:], 0x41414141)
+	if err := ioutil.WriteFile(reproFile, reproFileContents, 0o600); err != nil {
+		t.Fatalf("error creating repro file: %s", err)
+	}
+	runCommand(t, "put_data", "-handle", handle, "-fuzzer", "example-fuzzers/overflow_fuzzer",
+		"-src", reproFile, "-dst", "data/")
+	os.Remove(reproFile)
+
+	out = runCommand(t, "run_fuzzer", "-handle", handle, "-fuzzer",
+		"example-fuzzers/overflow_fuzzer", "--", "data/crasher")
+	glog.Info(out)
+	if m, err := regexp.MatchString(`heap-buffer-overflow`, out); err != nil || !m {
+		t.Fatalf("output missing ASAN crash: %s", out)
+	}
+
+	// Attempt repro, that shouldn't crash
+	runCommand(t, "prepare_fuzzer", "-handle", handle, "-fuzzer",
+		"example-fuzzers/overflow_fuzzer")
+	binary.LittleEndian.PutUint64(reproFileContents, 8)
+	binary.LittleEndian.PutUint32(reproFileContents[8:], 0x41414141)
+	if err := ioutil.WriteFile(reproFile, reproFileContents, 0o600); err != nil {
+		t.Fatalf("error creating repro file: %s", err)
+	}
+	runCommand(t, "put_data", "-handle", handle, "-fuzzer", "example-fuzzers/overflow_fuzzer",
+		"-src", reproFile, "-dst", "data/")
+	os.Remove(reproFile)
+
+	out = runCommand(t, "run_fuzzer", "-handle", handle, "-fuzzer",
+		"example-fuzzers/overflow_fuzzer", "--", "data/crasher")
+	glog.Info(out)
+
+	// TODO(fxbug.dev/45425): check exit codes
+
+	// Test put/get
 	testFile := path.Join(dir, "test_file")
 	testFileContents := []byte("test file contents!")
 	if err := ioutil.WriteFile(testFile, testFileContents, 0o600); err != nil {
 		t.Fatalf("error creating test file: %s", err)
 	}
 	out = runCommand(t, "put_data", "-handle", handle, "-fuzzer", fuzzer,
-		"-src", testFile, "-dst", "/tmp/")
+		"-src", testFile, "-dst", "data/")
 	glog.Info(out)
 
 	os.Remove(testFile)
 	out = runCommand(t, "get_data", "-handle", handle, "-fuzzer", fuzzer,
-		"-src", "/tmp/test_file", "-dst", dir)
+		"-src", "data/test_file", "-dst", dir)
 	glog.Info(out)
 
 	retrievedContents, err := ioutil.ReadFile(testFile)

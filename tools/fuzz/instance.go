@@ -22,6 +22,7 @@ type Instance interface {
 	Get(fuzzerName, targetSrc, hostDst string) error
 	Put(fuzzerName, hostSrc, targetDst string) error
 	RunFuzzer(out io.Writer, name, hostArtifactDir string, args ...string) error
+	PrepareFuzzer(name string) error
 	Handle() (Handle, error)
 	Close()
 }
@@ -115,7 +116,7 @@ func (i *BaseInstance) Start() error {
 			success = true
 
 			if sc, ok := conn.(*SSHConnector); ok {
-				glog.Infof("Access via: ssh -i'%s' %s:%d", sc.Key, sc.Host, sc.Port)
+				glog.Infof("Access via: ssh -i %q -p %d %s", sc.Key, sc.Port, sc.Host)
 			}
 			break
 		}
@@ -150,6 +151,28 @@ func (i *BaseInstance) RunFuzzer(out io.Writer, name, hostArtifactDir string, ar
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+// PrepareFuzzer ensures the named fuzzer is ready to be used on the Instance.
+// This must be called before running the fuzzer or exchanging any data with
+// the fuzzer. If called for a fuzzer that has already been previously
+// prepared, it will reset the state of that fuzzer: clearing data directories,
+// etc.
+//
+// This method is explicitly separated from RunFuzzer and others to ensure that
+// any caller timeouts being enforced on fuzzer command execution are not
+// affected by unrelated setup delays such as package fetching over the network.
+func (i *BaseInstance) PrepareFuzzer(name string) error {
+	fuzzer, err := i.Build.Fuzzer(name)
+	if err != nil {
+		return err
+	}
+
+	if err := fuzzer.Prepare(i.Connector); err != nil {
+		return err
 	}
 
 	return nil

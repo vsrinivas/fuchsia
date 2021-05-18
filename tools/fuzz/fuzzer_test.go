@@ -53,6 +53,23 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestPrepare(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("foo/bar")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+
+	conn := &mockConnector{connected: true}
+	if err := f.Prepare(conn); err != nil {
+		t.Fatalf("failed to prepare fuzzer: %s", err)
+	}
+
+	if !reflect.DeepEqual(conn.CmdHistory, []string{"pkgctl", "rm"}) {
+		t.Fatalf("incorrect command history: %v", conn.CmdHistory)
+	}
+}
+
 const (
 	FuzzerNormal = iota
 	FuzzerSymbolizerFailure

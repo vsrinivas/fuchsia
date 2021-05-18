@@ -247,7 +247,7 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 			// filepath.Rel converts to host OS separators, while remote is always /
 			dst := path.Join(targetDst, filepath.ToSlash(relPath))
 
-			// Create remote directory if necessary
+			// Create remote subdirectory if necessary
 			if walker.Stat().IsDir() {
 				if _, err := c.sftpClient.Stat(dst); err == nil {
 					continue
@@ -255,25 +255,30 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 					return fmt.Errorf("error stat-ing remote directory %q: %s", dst, err)
 				}
 
-				if err := c.sftpClient.Mkdir(dst); err != nil {
+				if err := c.sftpClient.MkdirAll(dst); err != nil {
 					return fmt.Errorf("error creating remote directory %q: %s", dst, err)
 				}
 				continue
 			}
 
+			// Create containing directories for remote file if necessary
+			if err := c.sftpClient.MkdirAll(path.Dir(dst)); err != nil {
+				return fmt.Errorf("error creating remote directory %q: %s", dst, err)
+			}
+
 			glog.Infof("Copying %s to [remote]:%s", src, dst)
 
 			fin, err := os.Open(src)
-			defer fin.Close()
 			if err != nil {
 				return fmt.Errorf("error opening local file: %s", err)
 			}
+			defer fin.Close()
 
 			fout, err := c.sftpClient.Create(dst)
-			defer fout.Close()
 			if err != nil {
 				return fmt.Errorf("error creating remote file: %s", err)
 			}
+			defer fout.Close()
 			if _, err := io.Copy(fout, fin); err != nil {
 				return fmt.Errorf("error copying file: %s", err)
 			}
@@ -324,7 +329,7 @@ func writeSSHPrivateKeyFile(key *rsa.PrivateKey, path string) error {
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 
-	if err := ioutil.WriteFile(path, pemData, 0600); err != nil {
+	if err := ioutil.WriteFile(path, pemData, 0o600); err != nil {
 		return fmt.Errorf("error writing private key file: %s", err)
 	}
 
@@ -338,7 +343,7 @@ func writeSSHPublicKeyFile(key *rsa.PrivateKey, path string) error {
 		return fmt.Errorf("error generating public key: %s", err)
 	}
 	pubKeyData := ssh.MarshalAuthorizedKey(pubKey)
-	if err := ioutil.WriteFile(path, pubKeyData, 0644); err != nil {
+	if err := ioutil.WriteFile(path, pubKeyData, 0o644); err != nil {
 		return fmt.Errorf("error writing public key: %s", err)
 	}
 

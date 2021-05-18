@@ -82,7 +82,7 @@ func touchRandomFile(t *testing.T, path string) {
 	if _, err := rand.Read(contents); err != nil {
 		t.Fatalf("Error getting random contents: %s", err)
 	}
-	if err := ioutil.WriteFile(path, contents, 0600); err != nil {
+	if err := ioutil.WriteFile(path, contents, 0o600); err != nil {
 		t.Fatalf("Error touching file %q: %s", path, err)
 	}
 }

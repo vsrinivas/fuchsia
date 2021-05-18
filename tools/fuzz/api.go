@@ -21,11 +21,11 @@ const (
 )
 
 // Available subcommand names
-// TODO(fxbug.dev/47231): add resolve_fuzzer command
 const (
 	StartInstance = "start_instance"
 	StopInstance  = "stop_instance"
 	ListFuzzers   = "list_fuzzers"
+	PrepareFuzzer = "prepare_fuzzer"
 	RunFuzzer     = "run_fuzzer"
 	GetData       = "get_data"
 	PutData       = "put_data"
@@ -36,6 +36,7 @@ var commandDesc = map[string]string{
 	StartInstance: "Start a Fuchsia instance",
 	StopInstance:  "Stop a Fuchsia instance",
 	ListFuzzers:   "List available fuzz targets on an instance",
+	PrepareFuzzer: "Prepare a fuzzer to be run",
 	RunFuzzer:     "Run a fuzz target on an instance (passing any extra args to libFuzzer)",
 	GetData:       "Copy files between an instance and a local path",
 	PutData:       "Copy files between a local path and an instance",
@@ -98,6 +99,8 @@ func (c *APICommand) Execute(out io.Writer) error {
 		for _, name := range instance.ListFuzzers() {
 			fmt.Fprintf(out, "%s\n", name)
 		}
+	case PrepareFuzzer:
+		return instance.PrepareFuzzer(c.fuzzer)
 	case GetData:
 		return instance.Get(c.fuzzer, c.srcPath, c.dstPath)
 	case PutData:
@@ -128,12 +131,13 @@ func ParseArgs(args []string) (*APICommand, error) {
 
 	switch cmd.name {
 	case StartInstance, Version:
-	case StopInstance:
+	case StopInstance, ListFuzzers:
 		flagSet.StringVar(&cmd.handle, "handle", "", handleDesc)
 		requiredArgs = []*string{&cmd.handle}
-	case ListFuzzers:
+	case PrepareFuzzer:
 		flagSet.StringVar(&cmd.handle, "handle", "", handleDesc)
-		requiredArgs = []*string{&cmd.handle}
+		flagSet.StringVar(&cmd.fuzzer, "fuzzer", "", fuzzerDesc)
+		requiredArgs = []*string{&cmd.handle, &cmd.fuzzer}
 	case RunFuzzer:
 		flagSet.StringVar(&cmd.handle, "handle", "", handleDesc)
 		flagSet.StringVar(&cmd.fuzzer, "fuzzer", "", fuzzerDesc)

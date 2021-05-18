@@ -24,6 +24,7 @@ type Fuzzer struct {
 
 	pkg     string
 	cmx     string
+	pkgUrl  string
 	url     string
 	args    []string
 	options map[string]string
@@ -34,11 +35,12 @@ var expectedFuzzerReturnCodes = [...]int{0, 1, 77}
 // NewFuzzer constructs a fuzzer object with the given pkg/fuzzer name
 func NewFuzzer(build Build, pkg, fuzzer string) *Fuzzer {
 	return &Fuzzer{
-		build: build,
-		Name:  fmt.Sprintf("%s/%s", pkg, fuzzer),
-		pkg:   pkg,
-		cmx:   fmt.Sprintf("%s.cmx", fuzzer),
-		url:   fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", pkg, fuzzer),
+		build:  build,
+		Name:   fmt.Sprintf("%s/%s", pkg, fuzzer),
+		pkg:    pkg,
+		cmx:    fmt.Sprintf("%s.cmx", fuzzer),
+		pkgUrl: "fuchsia-pkg://fuchsia.com/" + pkg,
+		url:    fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", pkg, fuzzer),
 	}
 }
 
@@ -72,6 +74,19 @@ func (f *Fuzzer) Parse(args []string) {
 	}
 }
 
+// Fetch and echo the syslog for the given `pid` to `out`
+func dumpSyslog(pid int, conn Connector, out io.Writer) error {
+	if pid == 0 {
+		return fmt.Errorf("failed to fetch syslog: missing pid")
+	}
+	log, err := conn.GetSysLog(pid)
+	if err != nil {
+		return fmt.Errorf("failed to fetch syslog: %s", err)
+	}
+	io.WriteString(out, log+"\n")
+	return nil
+}
+
 func scanForPIDs(conn Connector, out io.WriteCloser, in io.Reader) chan error {
 	scanErr := make(chan error, 1)
 
@@ -91,41 +106,49 @@ func scanForPIDs(conn Connector, out io.WriteCloser, in io.Reader) chan error {
 		pid := 0
 		for scanner.Scan() {
 			line := scanner.Text()
-			if m := pidRegex.FindStringSubmatch(line); m != nil {
-				if sawPid {
-					glog.Warningf("Saw multiple PIDs")
-				}
-				sawPid = true
+			io.WriteString(out, line+"\n")
 
+			if m := pidRegex.FindStringSubmatch(line); m != nil {
 				pid, _ = strconv.Atoi(m[1]) // guaranteed parseable due to regex
 				glog.Infof("Found fuzzer PID: %d", pid)
+				if sawPid {
+					glog.Warningf("Saw multiple PIDs; ignoring")
+					continue
+				}
+				sawPid = true
 			}
+
 			if mutRegex.MatchString(line) {
+				glog.Infof("Found mutation sequence: %s", line)
 				if sawMut {
-					glog.Warningf("Saw multiple mutation sequences")
+					glog.Warningf("Saw multiple mutation sequences; ignoring")
+					continue
 				}
 				sawMut = true
-
-				glog.Infof("Found mutation sequence: %s", line)
-				if pid == 0 {
-					glog.Warningf("WARNING: failed to fetch syslog: missing pid")
+				if err := dumpSyslog(pid, conn, out); err != nil {
+					glog.Warning(err)
 					// Include this warning inline so it is visible in fuzzer logs
-					fmt.Fprintf(out, "WARNING: failed to fetch syslog: missing pid\n")
-				} else {
-					log, err := conn.GetSysLog(pid)
-					if err != nil {
-						glog.Warningf("WARNING: failed to fetch syslog: %s", err)
-						// Include this warning inline so it is visible in fuzzer logs
-						fmt.Fprintf(out, "WARNING: failed to fetch syslog: %s\n", err)
-					} else {
-						io.WriteString(out, log+"\n")
-					}
+					fmt.Fprintf(out, "WARNING: %s\n", err)
 				}
 			}
-			io.WriteString(out, line+"\n")
 		}
 
-		scanErr <- scanner.Err()
+		if err := scanner.Err(); err != nil {
+			scanErr <- err
+		}
+
+		// If we haven't already dumped the syslog inline, do it here now that
+		// the process has exited.  This will happen in non-fuzzing cases, such
+		// as repro runs.
+		if !sawMut {
+			if err := dumpSyslog(pid, conn, out); err != nil {
+				glog.Warning(err)
+				// Include this warning inline so it is visible in fuzzer logs
+				fmt.Fprintf(out, "WARNING: %s\n", err)
+			}
+		}
+
+		scanErr <- nil
 	}()
 
 	return scanErr
@@ -165,6 +188,24 @@ func scanForArtifacts(out io.WriteCloser, in io.Reader,
 	}()
 
 	return scanErr, artifactsCh
+}
+
+// PrepareFuzzer ensures the named fuzzer is ready to be used on the Instance.
+// This must be called before running the fuzzer or exchanging any data with
+// the fuzzer.
+func (f *Fuzzer) Prepare(conn Connector) error {
+	// TODO(fxbug.dev/61521): We shouldn't rely on executing these commands
+	if err := conn.Command("pkgctl", "resolve", f.pkgUrl).Run(); err != nil {
+		return fmt.Errorf("error resolving fuzzer package %q: %s", f.pkgUrl, err)
+	}
+
+	// Clear any persistent data in the fuzzer's namespace, resetting its state
+	dataPath := f.AbsPath("data/*")
+	if err := conn.Command("rm", "-rf", dataPath).Run(); err != nil {
+		return fmt.Errorf("error clear fuzzer data namespace %q: %s", dataPath, err)
+	}
+
+	return nil
 }
 
 // Run the fuzzer, sending symbolized output to `out` and returning a list of

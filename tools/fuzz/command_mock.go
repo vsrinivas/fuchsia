@@ -128,6 +128,10 @@ func (c *mockInstanceCmd) Start() error {
 			}
 		}()
 	}
+
+	// Record this command as having run
+	c.connector.CmdHistory = append(c.connector.CmdHistory, c.name)
+
 	return nil
 }
 

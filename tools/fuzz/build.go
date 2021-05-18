@@ -83,8 +83,8 @@ func NewClusterFuzzLegacyBuild() (Build, error) {
 	build := &BaseBuild{
 		Paths: map[string]string{
 			"zbi":             filepath.Join(targetDir, "fuchsia.zbi"),
-			"fvm":             filepath.Join(buildDir, "out", "default", "host_x64", "fvm"),
-			"zbitool":         filepath.Join(buildDir, "out", "default", "host_x64", "zbi"),
+			"fvm":             filepath.Join(buildDir, "out", "default.zircon", "tools", "fvm"),
+			"zbitool":         filepath.Join(buildDir, "out", "default.zircon", "tools", "zbi"),
 			"blk":             filepath.Join(targetDir, "fvm.blk"),
 			"qemu":            filepath.Join(bundleDir, "qemu-for-fuchsia", "bin", "qemu-system-x86_64"),
 			"kernel":          filepath.Join(targetDir, "multiboot.bin"),
@@ -95,6 +95,7 @@ func NewClusterFuzzLegacyBuild() (Build, error) {
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build_id"),
 			filepath.Join(buildDir, "out", "default", ".build-id"),
+			filepath.Join(buildDir, "out", "default.zircon", ".build-id"),
 		},
 	}
 	if err := build.LoadFuzzers(); err != nil {
@@ -135,7 +136,6 @@ func NewLocalFuchsiaBuild() (Build, error) {
 	}
 
 	buildDir := filepath.Join(fuchsiaDir, strings.TrimSpace(string(contents)))
-	zirconBuildDir := buildDir + ".zircon"
 	prebuiltDir := filepath.Join(fuchsiaDir, "prebuilt")
 
 	platform, ok := Platforms[runtime.GOOS]
@@ -196,7 +196,6 @@ func NewLocalFuchsiaBuild() (Build, error) {
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build-id"),
 			filepath.Join(buildDir, ".build-id"),
-			filepath.Join(zirconBuildDir, ".build-id"),
 		},
 	}
 	if err := build.LoadFuzzers(); err != nil {

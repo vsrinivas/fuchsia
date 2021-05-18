@@ -18,6 +18,9 @@ type mockConnector struct {
 	// Store history of Get/Put paths to enable basic checks
 	PathsGot []string
 	PathsPut []string
+
+	// Store history of commands run on this connection
+	CmdHistory []string
 }
 
 func (c *mockConnector) Connect() error {
