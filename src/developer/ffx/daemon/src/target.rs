@@ -15,7 +15,7 @@ use {
     ffx_daemon_core::events::{self, EventSynthesizer},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
-    fidl_fuchsia_developer_bridge::TargetState as FidlTargetState,
+    fidl_fuchsia_developer_bridge::TargetState,
     fidl_fuchsia_developer_remotecontrol::{
         IdentifyHostError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
     },
@@ -273,12 +273,6 @@ where
         .map(|e| e.addr.clone())
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(test, derive(PartialEq, Eq))]
-pub struct TargetState {
-    pub connection_state: ConnectionState,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildConfig {
     pub product_config: String,
@@ -292,7 +286,7 @@ struct TargetInner {
     // come from old Daemons, or other Daemons. The set should be used
     ids: RefCell<HashSet<u64>>,
     nodename: RefCell<Option<String>>,
-    state: RefCell<TargetState>,
+    state: RefCell<ConnectionState>,
     last_response: RefCell<DateTime<Utc>>,
     addrs: RefCell<BTreeSet<TargetAddrEntry>>,
     // ssh_port if set overrides the global default configuration for ssh port,
@@ -331,7 +325,7 @@ impl TargetInner {
             ids: RefCell::new(ids),
             nodename: RefCell::new(nodename),
             last_response: RefCell::new(Utc::now()),
-            state: RefCell::new(TargetState::default()),
+            state: RefCell::new(Default::default()),
             addrs: RefCell::new(BTreeSet::new()),
             ssh_port: RefCell::new(None),
             serial: RefCell::new(None),
@@ -429,7 +423,7 @@ impl TargetInner {
 #[async_trait(?Send)]
 impl EventSynthesizer<TargetEvent> for TargetInner {
     async fn synthesize_events(&self) -> Vec<TargetEvent> {
-        match self.state.borrow().connection_state {
+        match *self.state.borrow() {
             ConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
             _ => vec![],
         }
@@ -463,7 +457,7 @@ pub struct Target {
 
 impl Target {
     pub fn is_connected(&self) -> bool {
-        self.inner.state.borrow().connection_state.is_connected()
+        self.inner.state.borrow().is_connected()
     }
 
     pub fn downgrade(&self) -> WeakTarget {
@@ -611,8 +605,7 @@ impl Target {
     }
 
     fn rcs_state(&self) -> bridge::RemoteControlState {
-        let state = self.inner.state.borrow();
-        match (self.is_host_pipe_running(), &state.connection_state) {
+        match (self.is_host_pipe_running(), self.get_connection_state()) {
             (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
             (true, _) => bridge::RemoteControlState::Down,
             (_, _) => bridge::RemoteControlState::Unknown,
@@ -647,17 +640,17 @@ impl Target {
         self.inner.serial.borrow().clone()
     }
 
-    pub fn state(&self) -> TargetState {
+    pub fn state(&self) -> ConnectionState {
         self.inner.state.borrow().clone()
     }
 
     #[cfg(test)]
     pub fn set_state(&self, state: ConnectionState) {
-        self.inner.state.replace(TargetState { connection_state: state });
+        self.inner.state.replace(state);
     }
 
     pub fn get_connection_state(&self) -> ConnectionState {
-        self.inner.state.borrow().connection_state.clone()
+        self.inner.state.borrow().clone()
     }
 
     /// Allows a client to atomically update the connection state based on what
@@ -686,33 +679,32 @@ impl Target {
     where
         F: FnOnce(ConnectionState) -> ConnectionState + Sized,
     {
-        let former_state = self.inner.state.borrow().connection_state.clone();
-        let update = (func)(std::mem::replace(
-            &mut self.inner.state.borrow_mut().connection_state,
-            ConnectionState::Disconnected,
-        ));
-        self.inner.state.borrow_mut().connection_state = update;
-        if former_state != self.inner.state.borrow().connection_state {
-            if self.inner.state.borrow().connection_state.is_rcs() {
-                self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
-                    log::warn!("unable to enqueue RCS activation event: {:#}", err)
-                });
-            }
+        let former_state = self.get_connection_state();
+        let new_state = (func)(former_state.clone());
 
-            self.events
-                .push(TargetEvent::ConnectionStateChanged(
-                    former_state,
-                    self.inner.state.borrow().connection_state.clone(),
-                ))
-                .unwrap_or_else(|e| {
-                    log::error!("Failed to push state change for {:?}: {:?}", self, e)
-                });
+        if former_state == new_state {
+            return;
         }
+
+        self.inner.state.replace(new_state);
+
+        if self.get_connection_state().is_rcs() {
+            self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
+                log::warn!("unable to enqueue RCS activation event: {:#}", err)
+            });
+        }
+
+        self.events
+            .push(TargetEvent::ConnectionStateChanged(
+                former_state,
+                self.inner.state.borrow().clone(),
+            ))
+            .unwrap_or_else(|e| log::error!("Failed to push state change for {:?}: {:?}", self, e));
     }
 
     pub fn rcs(&self) -> Option<RcsConnection> {
-        match &self.inner.state.borrow().connection_state {
-            ConnectionState::Rcs(conn) => Some(conn.clone()),
+        match self.get_connection_state() {
+            ConnectionState::Rcs(conn) => Some(conn),
             _ => None,
         }
     }
@@ -998,7 +990,7 @@ impl Target {
 #[async_trait(?Send)]
 impl EventSynthesizer<DaemonEvent> for Target {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
-        if self.inner.state.borrow().connection_state.is_connected() {
+        if self.inner.state.borrow().is_connected() {
             vec![DaemonEvent::NewTarget(self.target_info())]
         } else {
             vec![]
@@ -1034,13 +1026,13 @@ impl From<Target> for bridge::Target {
             product_config,
             board_config,
             rcs_state: Some(target.rcs_state()),
-            target_state: Some(match target.state().connection_state {
-                ConnectionState::Disconnected => FidlTargetState::Disconnected,
+            target_state: Some(match target.state() {
+                ConnectionState::Disconnected => TargetState::Disconnected,
                 ConnectionState::Manual | ConnectionState::Mdns(_) | ConnectionState::Rcs(_) => {
-                    FidlTargetState::Product
+                    TargetState::Product
                 }
-                ConnectionState::Fastboot(_) => FidlTargetState::Fastboot,
-                ConnectionState::Zedboot(_) => FidlTargetState::Zedboot,
+                ConnectionState::Fastboot(_) => TargetState::Fastboot,
+                ConnectionState::Zedboot(_) => TargetState::Zedboot,
             }),
             ssh_address: target.ssh_address_info(),
             // TODO(awdavies): Gather more information here when possible.
@@ -1459,7 +1451,7 @@ impl TargetCollection {
 
             to_update.update_connection_state(|_| {
                 std::mem::replace(
-                    &mut new_target.inner.state.borrow_mut().connection_state,
+                    &mut new_target.inner.state.borrow_mut(),
                     ConnectionState::Disconnected,
                 )
             });
@@ -1908,15 +1900,13 @@ mod test {
                 t.run_host_pipe();
             }
             {
-                *t.inner.state.borrow_mut() = TargetState {
-                    connection_state: if test.rcs_is_some {
-                        ConnectionState::Rcs(RcsConnection::new_with_proxy(
-                            setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
-                            &NodeId { id: 123 },
-                        ))
-                    } else {
-                        ConnectionState::Disconnected
-                    },
+                *t.inner.state.borrow_mut() = if test.rcs_is_some {
+                    ConnectionState::Rcs(RcsConnection::new_with_proxy(
+                        setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
+                        &NodeId { id: 123 },
+                    ))
+                } else {
+                    ConnectionState::Disconnected
                 };
             }
             assert_eq!(t.rcs_state(), test.expected);
@@ -2134,7 +2124,7 @@ mod test {
 
             ConnectionState::Mdns(instant_clone)
         });
-        assert_eq!(ConnectionState::Mdns(instant), t.inner.state.borrow_mut().connection_state);
+        assert_eq!(ConnectionState::Mdns(instant), t.get_connection_state());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
