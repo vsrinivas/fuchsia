@@ -9,13 +9,12 @@
 #include <fuchsia/hardware/serialimpl/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/inout.h>
+#include <lib/ddk/metadata.h>
 #include <lib/uart/ns8250.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <algorithm>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/devices/serial/drivers/uart16550/uart16550_bind.h"
 
@@ -45,7 +44,7 @@ zx_status_t Uart16550::Create(void* /*ctx*/, zx_device_t* parent) {
 
   auto status = dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Init failed", __func__);
+    zxlogf(DEBUG, "%s: Init failed", __func__);
     return status;
   }
 
@@ -75,7 +74,7 @@ zx_status_t Uart16550::Init() {
   zx::resource io_port;
   auto status = acpi_.GetPio(kPioIndex, &io_port);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: acpi_.GetPio failed", __func__);
+    zxlogf(DEBUG, "%s: acpi_.GetPio failed", __func__);
     return status;
   }
 
