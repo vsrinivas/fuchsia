@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.power.sensor;
+using zx;
+
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+protocol PowerSensor {
+    /// Tells the driver to start listening for fuchsia.hardware.power.sensor messages on server.
+    /// See sdk/fidl/fuchsia.hardware.power.sensor/sensor.fidl.
+    ConnectServer(zx.handle:CHANNEL server) -> (zx.status status);
+};
