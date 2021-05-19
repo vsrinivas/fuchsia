@@ -290,9 +290,8 @@ impl Scene {
             self.mouse_cursor_raster = Some(create_mouse_cursor_raster(render_context));
         }
 
-        let layers: Vec<Layer> = self.layers(size, render_context);
         Self::update_composition(
-            layers.clone(),
+            self.layers(size, render_context),
             &context.mouse_cursor_position,
             &self.mouse_cursor_raster,
             &corner_knockouts,
