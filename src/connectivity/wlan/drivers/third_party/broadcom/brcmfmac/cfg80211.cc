@@ -699,8 +699,8 @@ void brcmf_enable_mpc(struct brcmf_if* ifp, int mpc) {
   }
   err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc, &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("fail to set mpc: %s, fw err %s", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
+    BRCMF_INFO("fail to set mpc: %s, fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
     return;
   }
   BRCMF_DBG(INFO, "MPC : %d", mpc);
