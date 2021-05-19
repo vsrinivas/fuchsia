@@ -89,8 +89,9 @@ pub struct VBMetaConfig {
 pub struct BootloaderEntry {
     /// The partition name to flash the bootloader.
     pub partition: String,
+    /// The name of the bootloader entry to add to the update manifest.
+    pub name: String,
     /// The type of the bootloader.
-    /// In the update package, the bootloader will be renamed to "firmware_<type>".
     #[serde(rename = "type")]
     pub bootloader_type: String,
     /// The path on the host to the bootloader.
@@ -255,6 +256,7 @@ mod tests {
               bootloaders: [
                 {
                   partition: "name",
+                  name: "name",
                   type: "bl2",
                   source: "path/to/file/on/host",
                 },

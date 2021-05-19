@@ -202,8 +202,7 @@ fn construct_update(
 
     // Add the bootloaders.
     for bootloader in &board.bootloaders {
-        update_pkg_builder
-            .add_file(&bootloader.source, format!("firmware_{}", bootloader.bootloader_type))?;
+        update_pkg_builder.add_file(&bootloader.source, &bootloader.name)?;
     }
 
     // Add the packages that need to be updated.
