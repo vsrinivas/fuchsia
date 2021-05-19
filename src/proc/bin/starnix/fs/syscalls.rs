@@ -92,12 +92,11 @@ pub fn sys_pread64(
     Ok(bytes.into())
 }
 
-pub fn sys_writev(
-    ctx: &SyscallContext<'_>,
-    fd: FdNumber,
+fn read_iovec(
+    task: &Task,
     iovec_addr: UserAddress,
     iovec_count: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<Vec<iovec_t>, Errno> {
     let iovec_count: usize = iovec_count.try_into().map_err(|_| EINVAL)?;
     if iovec_count > UIO_MAXIOV as usize {
         return Err(EINVAL);
@@ -107,7 +106,28 @@ pub fn sys_writev(
     iovecs.reserve(iovec_count); // TODO: try_reserve
     iovecs.resize(iovec_count, iovec_t::default());
 
-    ctx.task.mm.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
+    task.mm.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
+    Ok(iovecs)
+}
+
+pub fn sys_readv(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    iovec_addr: UserAddress,
+    iovec_count: i32,
+) -> Result<SyscallResult, Errno> {
+    let iovecs = read_iovec(&ctx.task, iovec_addr, iovec_count)?;
+    let file = ctx.task.files.get(fd)?;
+    Ok(file.ops().read(&file, &ctx.task, &iovecs)?.into())
+}
+
+pub fn sys_writev(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    iovec_addr: UserAddress,
+    iovec_count: i32,
+) -> Result<SyscallResult, Errno> {
+    let iovecs = read_iovec(&ctx.task, iovec_addr, iovec_count)?;
     let file = ctx.task.files.get(fd)?;
     Ok(file.ops().write(&file, &ctx.task, &iovecs)?.into())
 }
