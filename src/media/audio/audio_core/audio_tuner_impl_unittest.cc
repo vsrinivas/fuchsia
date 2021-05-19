@@ -364,6 +364,24 @@ TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfile) {
   ExpectEq(expected_pipeline, tuning_profile.pipeline());
 }
 
+TEST_F(AudioTunerTest, GetDefaultAudioDeviceProfileInvalidDeviceId) {
+  const auto kInvaildDeviceId = "invalid";
+  auto context = CreateContext(kDefaultProcessConfig);
+  AudioTunerImpl under_test(*context);
+  fuchsia::media::tuning::AudioDeviceTuningProfile tuning_profile;
+  under_test.GetDefaultAudioDeviceProfile(
+      kInvaildDeviceId,
+      [&tuning_profile](fuchsia::media::tuning::AudioDeviceTuningProfile profile) {
+        tuning_profile = std::move(profile);
+      });
+
+  VolumeCurve system_default_curve =
+      VolumeCurve::DefaultForMinGain(fuchsia::media::audio::MUTED_GAIN_DB);
+  PipelineConfig system_default_config = PipelineConfig::Default();
+  ExpectEq(system_default_curve, tuning_profile.volume_curve());
+  ExpectEq(system_default_config.root(), tuning_profile.pipeline());
+}
+
 TEST_F(AudioTunerTest, SetGetDeleteAudioDeviceProfile) {
   auto context = CreateContext();
   AudioTunerImpl under_test(*context);

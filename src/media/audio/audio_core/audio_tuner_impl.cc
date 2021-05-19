@@ -134,8 +134,17 @@ void AudioTunerImpl::SetAudioEffectConfig(std::string device_id,
 
 AudioTunerImpl::OutputDeviceSpecification AudioTunerImpl::GetDefaultDeviceSpecification(
     const std::string& device_id) {
-  auto unique_id = AudioDevice::UniqueIdFromString(device_id).take_value();
-  auto device_profile = context_.process_config().device_config().output_device_profile(unique_id);
+  auto unique_id_result = AudioDevice::UniqueIdFromString(device_id);
+  if (!unique_id_result.is_ok()) {
+    FX_LOGS(WARNING) << "GetDefaultDeviceSpecification: Default device id (" << device_id
+                     << ") not recognized; returning system default.";
+    return OutputDeviceSpecification{
+        .pipeline_config = PipelineConfig::Default(),
+        .volume_curve = VolumeCurve::DefaultForMinGain(fuchsia::media::audio::MUTED_GAIN_DB)};
+  }
+
+  auto device_profile = context_.process_config().device_config().output_device_profile(
+      unique_id_result.take_value());
   return OutputDeviceSpecification{.pipeline_config = device_profile.pipeline_config(),
                                    .volume_curve = device_profile.volume_curve()};
 }
