@@ -34,7 +34,9 @@ def main():
 
     pkgurls = []
     deps = []
-    for line in args.input_file:
+    lines = args.input_file.readlines()
+    lines.sort()
+    for line in lines:
         package, merkle_path = line.strip().split('=', 1)
         deps.append(merkle_path)
         with open(merkle_path, 'r') as merkle_file:
@@ -45,10 +47,12 @@ def main():
 
     args.depfile.write('{}: {}\n'.format(args.output_file.name, ' '.join(deps)))
 
-    args.output_file.write(json.dumps({
-        'version': 1,
-        'content': pkgurls,
-    }))
+    args.output_file.write(
+        json.dumps(
+            {
+                'version': '1',
+                'content': pkgurls,
+            }, separators=(',', ':')))
 
 
 if __name__ == '__main__':
