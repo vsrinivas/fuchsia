@@ -229,6 +229,8 @@ static uint64_t perfmon_max_programmable_counter_value = 0;
 
 // Number of entries we can write in an LBR record.
 static uint32_t perfmon_lbr_stack_size = 0;
+// Format of LBR MSRs
+static unsigned g_lbr_format = 0;
 
 // Counter bits in GLOBAL_STATUS to check on each interrupt.
 static uint64_t perfmon_counter_status_bits = 0;
@@ -401,9 +403,9 @@ static unsigned x86_perfmon_lbr_stack_size() {
       {X86_MICROARCH_INTEL_CANNONLAKE, 32},
   };
 
-  unsigned lbr_format = perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
+  unsigned g_lbr_format = perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
   // TODO(dje): KISS and only support these formats for now.
-  switch (lbr_format) {
+  switch (g_lbr_format) {
     case LBR_FORMAT_INFO:
       break;
     default:
@@ -420,6 +422,19 @@ static unsigned x86_perfmon_lbr_stack_size() {
 
 static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
   perfmon_lbr_stack_size = lbr_stack_size;
+}
+
+static void x86_perfmon_lbr_clear() {
+  switch (g_lbr_format) {
+    case LBR_FORMAT_INFO:
+      for (uint i = 0; i < perfmon_lbr_stack_size; i++) {
+        write_msr(SKL_LAST_BRANCH_FROM_0 + i, 0);
+        write_msr(SKL_LAST_BRANCH_TO_0 + i, 0);
+        write_msr(SKL_LAST_BRANCH_INFO_0 + i, 0);
+      }
+      write_msr(SKL_LAST_BRANCH_TOS, 0);
+      break;
+  }
 }
 
 static void x86_perfmon_init_once(uint level) {
@@ -1425,6 +1440,8 @@ static void x86_perfmon_start_cpu_task(void* raw_context) {
     write_msr(IA32_PERFEVTSEL_FIRST + i, state->programmable_hw_events[i]);
   }
 
+  x86_perfmon_lbr_clear();
+
   write_msr(IA32_DEBUGCTL, state->debug_ctrl);
 
   apic_pmi_unmask();
@@ -1594,6 +1611,7 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) {
   }
 
   x86_perfmon_clear_overflow_indicators();
+  x86_perfmon_lbr_clear();
 }
 
 void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
