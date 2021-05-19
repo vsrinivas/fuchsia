@@ -16,14 +16,11 @@ group("drivers") {
     "drivers/qemu-arm64",
     "drivers/sherlock:luis",
     "drivers/sherlock:luis-factory",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/sherlock:luis-factory-rndis",
+    "drivers/sherlock:luis-factory-rndis",
     "drivers/sherlock:sherlock",
     "drivers/sherlock:sherlock-factory",
+    "drivers/sherlock:sherlock-factory-rndis",
 
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/sherlock:sherlock-factory-rndis",
     # TODO(http://fxbug.dev/77082): Renable disabled drivers.
     #"drivers/vim2",
     "drivers/vim3",

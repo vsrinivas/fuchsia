@@ -7,6 +7,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fit/defer.h>
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>
 #include <string.h>
