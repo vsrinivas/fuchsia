@@ -88,6 +88,7 @@ fn no_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
     )
@@ -104,6 +105,7 @@ fn no_args_no_delimiter() {
             arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
     )
@@ -120,6 +122,7 @@ fn ext_no_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
     )
@@ -136,6 +139,7 @@ fn ext_no_args_no_delimiter() {
             arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
     )
@@ -154,6 +158,7 @@ fn one_int_arg_no_comma() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
+                terminator: None,
             },
         },
     )
@@ -172,6 +177,7 @@ fn one_int_arg_no_comma_no_delimiter() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
+                terminator: None,
             },
         },
     )
@@ -190,6 +196,7 @@ fn one_string_arg_no_comma() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::String(String::from("abc")),
                 )]),
+                terminator: None,
             },
         },
     )
@@ -209,6 +216,7 @@ fn one_kv_arg_no_comma() {
                     key: PrimitiveArgument::Integer(1),
                     value: PrimitiveArgument::String(String::from("abc")),
                 }]),
+                terminator: None,
             },
         },
     )
@@ -226,6 +234,7 @@ fn one_int_arg_with_comma() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
+                terminator: None,
             },
         },
     )
@@ -244,6 +253,7 @@ fn one_string_arg_with_comma() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::String(String::from("abc")),
                 )]),
+                terminator: None,
             },
         },
     )
@@ -263,6 +273,7 @@ fn one_kv_arg_with_comma() {
                     key: PrimitiveArgument::String(String::from("abc")),
                     value: PrimitiveArgument::Integer(1),
                 }]),
+                terminator: None,
             },
         },
     )
@@ -282,6 +293,7 @@ fn args_no_comma() {
                     Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
     )
@@ -301,6 +313,7 @@ fn args_with_comma() {
                     Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
     )
@@ -319,6 +332,7 @@ fn paren_args() {
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]]),
+                terminator: None,
             },
         },
     )
@@ -341,6 +355,7 @@ fn multiple_paren_args() {
                         Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     ],
                 ]),
+                terminator: None,
             },
         },
     )
@@ -369,6 +384,7 @@ fn multiple_paren_kv_args() {
                         },
                     ],
                 ]),
+                terminator: None,
             },
         },
     )

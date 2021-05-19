@@ -492,15 +492,19 @@ fn codegen_delimited_arguments_lowlevel_parameters<W: io::Write>(
     _indent: u64,
     arguments: &DelimitedArguments,
 ) -> Result {
-    let DelimitedArguments { delimiter, .. } = arguments;
+    let DelimitedArguments { delimiter, terminator, .. } = arguments;
     let delimiter_string = match delimiter {
         Some(del) => format!("Some(String::from(\"{}\"))", del),
         None => String::from("None"),
     };
+    let terminator_string = match terminator {
+        Some(term) => format!("Some(String::from(\"{}\"))", term),
+        None => String::from("None"),
+    };
     write!(
         sink,
-        ", arguments: lowlevel::DelimitedArguments {{ delimiter: {}, arguments }}",
-        delimiter_string
+        ", arguments: lowlevel::DelimitedArguments {{ delimiter: {}, arguments, terminator: {} }}",
+        delimiter_string, terminator_string
     )?;
 
     Ok(())

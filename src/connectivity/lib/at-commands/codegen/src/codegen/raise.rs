@@ -511,11 +511,11 @@ fn codegen_delimited_arguments_lowlevel_pattern<W: io::Write>(
     _indent: u64,
     arguments: &DelimitedArguments,
 ) -> Result {
-    let DelimitedArguments { delimiter: _, arguments } = arguments;
+    let DelimitedArguments { delimiter: _, arguments, terminator: _ } = arguments;
     if arguments.is_empty() {
         write!(sink, ", arguments: lowlevel::DelimitedArguments {{ delimiter, .. }}",)?;
     } else {
-        write!(sink, ", arguments: lowlevel::DelimitedArguments {{ delimiter, arguments }}",)?;
+        write!(sink, ", arguments: lowlevel::DelimitedArguments {{ delimiter, arguments, .. }}",)?;
     }
 
     Ok(())
@@ -526,7 +526,9 @@ fn codegen_delimited_arguments_lowlevel_match<W: io::Write>(
     indent: u64,
     arguments: &DelimitedArguments,
 ) -> Result {
-    let DelimitedArguments { arguments, delimiter } = arguments;
+    // The delimiter is needed here since commands can be distinguished by which delimiter they need--
+    // namely ATD> is different from ATD=.
+    let DelimitedArguments { arguments, delimiter, terminator: _ } = arguments;
     let delimiter_string = match delimiter {
         Some(del) => format!("&Some(String::from(\"{}\"))", del),
         None => String::from("&None"),

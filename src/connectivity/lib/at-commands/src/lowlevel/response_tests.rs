@@ -81,6 +81,7 @@ fn no_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
         cr_lf_delimit("TEST: "),
@@ -97,6 +98,7 @@ fn ext_no_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: "),
@@ -115,6 +117,7 @@ fn one_int_arg() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: 1"),
@@ -133,6 +136,7 @@ fn one_string_arg() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::String(String::from("abc")),
                 )]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: abc"),
@@ -152,6 +156,7 @@ fn one_kv_arg() {
                     key: PrimitiveArgument::Integer(1),
                     value: PrimitiveArgument::String(String::from("abc")),
                 }]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: 1=abc"),
@@ -171,6 +176,7 @@ fn args() {
                     Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: abc,1"),
@@ -189,6 +195,7 @@ fn paren_args() {
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: (1)"),
@@ -211,6 +218,7 @@ fn multiple_paren_args() {
                         Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     ],
                 ]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: (1)(2,abc)"),
@@ -239,6 +247,7 @@ fn multiple_paren_kv_args() {
                         },
                     ],
                 ]),
+                terminator: None,
             },
         },
         cr_lf_delimit("+TEST: (1=abc)(2,xyz=3)"),

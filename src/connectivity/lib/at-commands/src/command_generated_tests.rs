@@ -117,6 +117,7 @@ fn exec_no_args() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: None,
                 arguments: lowlevel::Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
         cr_terminate("ATTESTEX"),
@@ -134,6 +135,7 @@ fn exec_ext_no_args() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: None,
                 arguments: lowlevel::Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTEXEXT"),
@@ -153,6 +155,7 @@ fn exec_one_int_arg() {
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTEXEXTFI=1"),
@@ -174,6 +177,7 @@ fn exec_one_string_arg() {
                         String::from("abc"),
                     )),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTEXEXTFS=abc"),
@@ -193,9 +197,50 @@ fn exec_nonstandard_delimiter() {
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTNSD>1"),
+    )
+}
+
+// Extension execute command with one integer argument and a terminator ;
+#[test]
+fn exec_terminator() {
+    test_roundtrips(
+        highlevel::Command::Testnst { field: 1 },
+        lowlevel::Command::Execute {
+            name: String::from("TESTNST"),
+            is_extension: true,
+            arguments: lowlevel::DelimitedArguments {
+                delimiter: Some(String::from("=")),
+                arguments: lowlevel::Arguments::ArgumentList(vec![
+                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                ]),
+                terminator: Some(String::from(";")),
+            },
+        },
+        cr_terminate("AT+TESTNST=1;"),
+    )
+}
+
+// Extension execute command with one integer argument, a nonstandard delimiter > and a terminator ;
+#[test]
+fn exec_nonstandard_delimiter_terminator() {
+    test_roundtrips(
+        highlevel::Command::Testnsdnst { field: 1 },
+        lowlevel::Command::Execute {
+            name: String::from("TESTNSDNST"),
+            is_extension: true,
+            arguments: lowlevel::DelimitedArguments {
+                delimiter: Some(String::from(">")),
+                arguments: lowlevel::Arguments::ArgumentList(vec![
+                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                ]),
+                terminator: Some(String::from(";")),
+            },
+        },
+        cr_terminate("AT+TESTNSDNST>1;"),
     )
 }
 
@@ -212,6 +257,7 @@ fn exec_no_delimiter() {
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTNOD1"),
@@ -237,6 +283,7 @@ fn exec_one_kv_arg() {
                         value: lowlevel::PrimitiveArgument::String(String::from("abc")),
                     },
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTM=1=abc"),
@@ -257,6 +304,7 @@ fn exec_list() {
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(2)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTL=1,2"),
@@ -279,6 +327,7 @@ fn exec_args() {
                     )),
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTEXEXTFSI=abc,1"),
@@ -299,6 +348,7 @@ fn exec_optional_present() {
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(2)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTIO=1,2"),
@@ -318,6 +368,7 @@ fn exec_optional_absent() {
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTIO=1"),
@@ -337,6 +388,7 @@ fn paren_args() {
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
                 ]]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTP=(1)"),
@@ -366,6 +418,7 @@ fn multiple_paren_args() {
                         )),
                     ],
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTPP=(1)(2,abc)"),
@@ -402,6 +455,7 @@ fn multiple_paren_kv_args() {
                         ),
                     ],
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TESTPMPIL=(1=abc)(2,3,4)"),

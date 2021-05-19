@@ -24,6 +24,7 @@ static ARGUMENTS_PARSER: ArgumentsParser<Rule> = ArgumentsParser {
     arguments: Rule::arguments,
     optional_argument_delimiter: Rule::optional_argument_delimiter,
     argument_list: Rule::argument_list,
+    optional_argument_terminator: Rule::optional_argument_terminator,
     integer: Rule::integer,
     key_value_argument: Rule::key_value_argument,
     parenthesized_argument_lists: Rule::parenthesized_argument_lists,

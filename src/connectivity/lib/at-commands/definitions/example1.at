@@ -19,6 +19,12 @@ command { AT+TESTEXEXTFIC=field: Integer, }
 # Extension execute command with a nonstandard delimiter
 command { AT+TESTNSD>field: Integer, }
 
+# Extension execute command with a ; terminator
+command { AT+TESTNST=field: Integer; }
+
+# Extension execute command with a nonstandard delimiter and a ; delimiter
+command { AT+TESTNSDNST>field: Integer,; }
+
 # Extension execute command with no delimiter
 command { AT+TESTNODfield: Integer, }
 

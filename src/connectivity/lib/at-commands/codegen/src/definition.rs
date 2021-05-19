@@ -59,6 +59,7 @@ impl Command {
 pub struct DelimitedArguments {
     pub delimiter: Option<String>,
     pub arguments: Arguments,
+    pub terminator: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

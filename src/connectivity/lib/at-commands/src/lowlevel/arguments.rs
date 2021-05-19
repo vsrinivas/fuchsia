@@ -18,11 +18,14 @@ pub struct DelimitedArguments {
     pub delimiter: Option<String>,
     /// The actual arguments to the execute commmand.
     pub arguments: Arguments,
+    /// An optional terminator for the arguments to the command, such as the ";" used to
+    /// terminate ATD commands.
+    pub terminator: Option<String>,
 }
 
 impl WriteTo for DelimitedArguments {
     fn write_to<W: io::Write>(&self, sink: &mut W) -> io::Result<()> {
-        let DelimitedArguments { delimiter, arguments } = self;
+        let DelimitedArguments { delimiter, arguments, terminator } = self;
         if let Some(string) = delimiter {
             if string == ":" {
                 // Hack.  The parser ignores whitespace, but the colon in a response must be followed by a space, so special case this.
@@ -31,7 +34,12 @@ impl WriteTo for DelimitedArguments {
                 sink.write_all(string.as_bytes())?;
             }
         };
-        arguments.write_to(sink)
+        arguments.write_to(sink)?;
+        if let Some(terminator) = terminator {
+            sink.write_all(terminator.as_bytes())?
+        };
+
+        Ok(())
     }
 }
 /// The collection of arguments to a given command or response.

@@ -19,8 +19,9 @@ execute = { "AT" ~ optional_extension ~ command_name ~ delimited_arguments? }
 
 response = { "response" ~ optional_type_name ~ "{" ~ optional_extension ~ command_name ~ delimited_arguments ~ "}" }
 
-delimited_arguments = { optional_delimited_argument_delimiter ~ arguments }
+delimited_arguments = { optional_delimited_argument_delimiter ~ arguments ~ optional_delimited_argument_terminator}
 optional_delimited_argument_delimiter = { ("=" | ">" | ":")? }
+optional_delimited_argument_terminator = { ";"? }
 
 optional_type_name = { identifier? }
 

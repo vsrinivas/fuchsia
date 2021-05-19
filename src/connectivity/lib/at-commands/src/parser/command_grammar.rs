@@ -18,8 +18,9 @@ execute = { "AT" ~ optional_extension ~ command_name ~ delimited_arguments? }
 
 optional_extension = { "+"? }
 
-delimited_arguments = { optional_argument_delimiter ~ arguments }
+delimited_arguments = { optional_argument_delimiter ~ arguments ~ optional_argument_terminator }
 optional_argument_delimiter = { ("=" | ">")? }
+optional_argument_terminator = { ";"? }
 
 arguments = { parenthesized_argument_lists | argument_list }
 parenthesized_argument_lists = { ("(" ~ argument_list ~ ")")+ }
@@ -29,7 +30,7 @@ key_value_argument = { primitive_argument ~ "=" ~ primitive_argument }
 primitive_argument = { integer | string }
 
 command_name = @{ ASCII_ALPHA_UPPER+ }
-string = @{ (!(WHITE_SPACE | "," | "=" | ">" | ")") ~ ASCII)+ }
+string = @{ (!(WHITE_SPACE | "," | "=" | ">" | ")" | ";" ) ~ ASCII)+ }
 integer = @{ ASCII_DIGIT+ }
 
 WHITESPACE = _{ WHITE_SPACE }

@@ -182,9 +182,22 @@ fn parse_delimited_arguments(delimited_arguments: Pair<'_>) -> Result<DelimitedA
     let arguments = next_match(&mut delimited_arguments_elements, Rule::arguments)?;
     let parsed_arguments = parse_arguments(arguments)?;
 
+    let delimited_argument_terminator_option = next_match_option(
+        &mut delimited_arguments_elements,
+        Rule::optional_delimited_argument_terminator,
+    )?;
+    let parsed_delimited_argument_terminator_option = match delimited_argument_terminator_option {
+        Some(terminator) => {
+            let string = parse_string(terminator)?;
+            (!string.is_empty()).then(|| string)
+        }
+        None => None,
+    };
+
     Ok(DelimitedArguments {
         delimiter: parsed_delimited_argument_delimiter_option,
         arguments: parsed_arguments,
+        terminator: parsed_delimited_argument_terminator_option,
     })
 }
 

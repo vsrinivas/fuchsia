@@ -177,7 +177,7 @@ fn codegen_delimited_arguments<W: io::Write>(
     indent: u64,
     execute_arguments: &DelimitedArguments,
 ) -> Result {
-    let DelimitedArguments { delimiter: _, arguments } = execute_arguments;
+    let DelimitedArguments { delimiter: _, arguments, terminator: _ } = execute_arguments;
     codegen_arguments(sink, indent, arguments)
 }
 

@@ -188,8 +188,8 @@ command { AT+CHLD=command: String }
 
 # HF Initiated calls
 # HFP 1.8 4.34.2
-command AtdNumber { ATDnumber: String}
-command AtdMemory { ATD>location: String}
+command AtdNumber { ATDnumber: String;}
+command AtdMemory { ATD>location: String;}
 
 # HF Initiated redial last call
 # HFP 1.8 4.35

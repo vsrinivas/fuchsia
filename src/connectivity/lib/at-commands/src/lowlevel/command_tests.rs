@@ -33,6 +33,7 @@ fn exec_no_args() {
             arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
         cr_terminate("ATTEST"),
@@ -49,6 +50,7 @@ fn exec_ext_no_args() {
             arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST"),
@@ -67,6 +69,7 @@ fn exec_one_int_arg() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=1"),
@@ -85,6 +88,7 @@ fn exec_one_int_arg_nonstandard_delimiter() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
                 )]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST>1"),
@@ -102,6 +106,7 @@ fn exec_one_string_arg() {
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::String(String::from("abc")),
                 )]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=abc"),
@@ -121,6 +126,7 @@ fn exec_one_kv_arg() {
                     key: PrimitiveArgument::Integer(1),
                     value: PrimitiveArgument::String(String::from("abc")),
                 }]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=1=abc"),
@@ -140,6 +146,7 @@ fn exec_args() {
                     Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=abc,1"),
@@ -158,6 +165,7 @@ fn paren_args() {
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
                 ]]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=(1)"),
@@ -180,6 +188,7 @@ fn multiple_paren_args() {
                         Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
                     ],
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=(1)(2,abc)"),
@@ -208,6 +217,7 @@ fn multiple_paren_kv_args() {
                         },
                     ],
                 ]),
+                terminator: None,
             },
         },
         cr_terminate("AT+TEST=(1=abc)(2,xyz=3)"),

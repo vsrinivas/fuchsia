@@ -28,6 +28,7 @@ pub struct ArgumentsParser<Rule: RuleType> {
     pub argument: Rule,
     pub optional_argument_delimiter: Rule,
     pub arguments: Rule,
+    pub optional_argument_terminator: Rule,
     pub argument_list: Rule,
     pub integer: Rule,
     pub key_value_argument: Rule,
@@ -56,9 +57,23 @@ impl<Rule: RuleType> ArgumentsParser<Rule> {
         let arguments = next_match(&mut delimited_arguments_elements, self.arguments)?;
         let parsed_arguments = self.parse_arguments(arguments)?;
 
+        let delimited_argument_terminator_option = next_match_option(
+            &mut delimited_arguments_elements,
+            self.optional_argument_terminator,
+        )?;
+        let parsed_delimited_argument_terminator_option = match delimited_argument_terminator_option
+        {
+            Some(terminator) => {
+                let string = parse_string(terminator)?;
+                (!string.is_empty()).then(|| string)
+            }
+            None => None,
+        };
+
         Ok(DelimitedArguments {
             delimiter: parsed_delimited_argument_delimiter_option,
             arguments: parsed_arguments,
+            terminator: parsed_delimited_argument_terminator_option,
         })
     }
 
