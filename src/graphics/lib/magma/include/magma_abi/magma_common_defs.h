@@ -19,7 +19,7 @@ extern "C" {
 // TODO(fxbug.dev/13126): remove this
 #define MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED 2
 #define MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED 3
-#define MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS 4
+// 4 was MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS
 /// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
 #define MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS 5
 

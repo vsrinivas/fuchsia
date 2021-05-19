@@ -37,11 +37,6 @@ magma_status_t magma_query2(magma_device_t device, uint64_t id, uint64_t* value_
   if (!value_out)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
 
-  if (id == MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS) {
-    *value_out = magma::PlatformBuffer::MappingAddressRange::CreateDefault()->Base();
-    return MAGMA_STATUS_OK;
-  }
-
   auto platform_device_client = reinterpret_cast<magma::PlatformDeviceClient*>(device);
 
   if (!platform_device_client->Query(id, value_out))

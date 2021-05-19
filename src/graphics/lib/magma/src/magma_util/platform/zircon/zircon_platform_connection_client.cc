@@ -17,7 +17,6 @@ static_assert(static_cast<uint32_t>(QueryId::kVendorId) == MAGMA_QUERY_VENDOR_ID
 static_assert(static_cast<uint32_t>(QueryId::kDeviceId) == MAGMA_QUERY_DEVICE_ID, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::kIsTestRestartSupported) == MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::kIsTotalTimeSupported) == MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED, "mismatch");
-static_assert(static_cast<uint32_t>(QueryId::kMinimumMappableAddress) == MAGMA_QUERY_MINIMUM_MAPPABLE_ADDRESS, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::kMaximumInflightParams) == MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, "mismatch");
 // clang-format on
 

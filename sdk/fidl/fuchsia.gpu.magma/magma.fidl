@@ -12,7 +12,7 @@ enum QueryId {
     DEVICE_ID = 1;
     IS_TEST_RESTART_SUPPORTED = 2;
     IS_TOTAL_TIME_SUPPORTED = 3;
-    MINIMUM_MAPPABLE_ADDRESS = 4;
+    // 4 was MINIMUM_MAPPABLE_ADDRESS
     /// Upper 32bits: max inflight messages, lower 32bits: max inflight memory (MB)
     MAXIMUM_INFLIGHT_PARAMS = 5;
 };
