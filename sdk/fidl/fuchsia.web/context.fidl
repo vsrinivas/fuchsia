@@ -95,6 +95,16 @@ bits ContextFeatureFlags : uint64 {
 
     /// Report telemetry data to the [`fuchsia.legacymetrics/MetricsRecorder`].
     LEGACYMETRICS = 0x80;
+
+    /// Enables input events for keyboard keypresses.
+    /// Requires [`fuchsia.ui.input3/Keyboard`], from which the events are obtained.
+    KEYBOARD = 0x100;
+
+    /// Enables the use of onscreen virtual keyboards. The implementation will manage the state of
+    /// the keyboard in response to input/focus events in web content.
+    /// Requires the [`fuchsia.input.virtualkeyboard/ControllerCreator`] service and the
+    /// `KEYBOARD` ContextFeatureFlag.
+    VIRTUAL_KEYBOARD = 0x200;
 };
 
 /// Parameters specifying the configuration for a new [`Context`].
