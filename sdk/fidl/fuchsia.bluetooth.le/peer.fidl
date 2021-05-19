@@ -5,6 +5,35 @@
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
+using zx;
+
+/// Information obtained from advertising and scan response data broadcast by a peer.
+table ScanData {
+    /// The radio transmit power level reported by an advertising and/or scannable peer.
+    ///
+    /// NOTE: This field should NOT be confused with the "connection TX Power Level" of a peer that
+    /// is currently connected to the system obtained via the "Transmit Power reporting" feature.
+    1: int8 tx_power;
+
+    /// The appearance of the device.
+    2: bt.Appearance appearance;
+
+    /// Service UUIDs.
+    3: vector<bt.Uuid>:MAX service_uuids;
+
+    /// Service data entries.
+    4: vector<ServiceData>:MAX service_data;
+
+    /// Manufacturer-specific data entries.
+    5: vector<ManufacturerData>:MAX manufacturer_data;
+
+    /// String representing a URI to be advertised, as defined in [IETF STD 66](https://tools.ietf.org/html/std66).
+    /// Each entry should be a UTF-8 string including the scheme. For more information, see
+    /// https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml for allowed schemes;
+    /// NOTE: Bluetooth advertising compresses schemas over the air to save space. See
+    /// https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping.
+    6: vector<string:MAX_URI_LENGTH>:MAX uris;
+};
 
 /// Represents a Bluetooth Low Energy peer that may act in the broadcaster, peripheral, or central
 /// role. The peer's role depends on whether it is obtained from the Central or Peripheral protocol.
@@ -20,17 +49,43 @@ table Peer {
     /// This field is always present.
     2: bool connectable;
 
-    /// The last observed RSSI of this peer.
+    /// The last observed signal strength of this peer. This field is only present for a peer that
+    /// is broadcasting. The RSSI can be stale if the peer has not been advertising.
+    ///
+    /// NOTE: This field should NOT be confused with the "connection RSSI" of a peer that is currently
+    /// connected to the system.
     3: int8 rssi;
 
-    /// Advertising and scan response data broadcast by this peer. Present in broadcasters and
-    /// peripherals.
+    [Deprecated = "Use `data` instead"]
     4: AdvertisingData advertising_data;
+
+    /// The name of this peer. The name is often obtained during a scan procedure and can get
+    /// updated during the name discovery procedure following a connection.
+    ///
+    /// This field is present if the name is known.
+    5: bt.DeviceName name;
+
+    /// Information from advertising and scan response data broadcast by this peer. When present,
+    /// this contains the advertising data last received from the peer.
+    6: ScanData data;
+
+    /// Whether or not this peer is bonded.
+    ///
+    /// This field is always present.
+    7: bool bonded;
+
+    /// The value of the system monotonic clock, measured at the time this peer
+    /// was last updated (e.g. due to reception of an advertisement).
+    ///
+    /// This field is always present.
+    8: zx.time last_updated;
 };
 
 /// Protocol that represents the connection to a peer. This can be used to interact with GATT
 /// services and establish L2CAP channels.
+///
+/// This lifetime of this capability is tied to that of the LE connection it represents. Closing the
+/// channel results in a disconnection if no other clients hold a Connection to the same peer.
 protocol Connection {
-    // TODO(armansito): Introduce function to obtain gatt.Client handle when transitioning the
-    // Central protocol.
+    // TODO(fxbug.dev/1432): Support requesting a fuchsia.bluetooth.gatt/Client handle.
 };

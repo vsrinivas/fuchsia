@@ -6,20 +6,20 @@ library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
 
-[Deprecated]
+[Deprecated = "Use ServiceData instead"]
 struct ServiceDataEntry {
     bt.UuidString uuid;
     bytes data;
 };
 
-[Deprecated]
+[Deprecated = "Use ManufacturerData instead"]
 struct ManufacturerSpecificDataEntry {
     uint16 company_id;
     bytes data;
 };
 
 /// Represents advertising and scan response data advertised by a broadcaster or peripheral.
-[Deprecated]
+[Deprecated = "Use AdvertisingData instead"]
 struct AdvertisingDataDeprecated {
     /// Name of the device.
     bt.DeviceName? name;
@@ -50,7 +50,7 @@ struct AdvertisingDataDeprecated {
 
 /// Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
 /// broadcaster, or peripheral based on the API from which it was received.
-[Deprecated]
+[Deprecated = "Use Peer instead"]
 struct RemoteDevice {
     /// Identifier that uniquely identifies this device on the current system.
     bt.PeerIdString identifier;
@@ -69,7 +69,7 @@ struct RemoteDevice {
 /// Filter parameters for use during a scan. A discovered peripheral or broadcaster will be reported
 /// to applications only if it satisfies all of the provided filter parameters. Null fields will be
 /// ignored.
-[Deprecated]
+[Deprecated = "Use Filter instead"]
 struct ScanFilter {
     /// Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
     /// entries in `service_uuids` will satisfy this filter.
