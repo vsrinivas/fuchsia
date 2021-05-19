@@ -157,7 +157,7 @@ DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver)
     : driver_(std::move(driver)), wait_(this, driver_.channel().get(), ZX_CHANNEL_PEER_CLOSED) {}
 
 void DriverComponent::set_driver_ref(
-    fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref) {
+    fidl::ServerBindingRef<frunner::ComponentController> driver_ref) {
   driver_ref_.emplace(std::move(driver_ref));
 }
 
@@ -194,27 +194,29 @@ DriverHostComponent::DriverHostComponent(
                    std::make_shared<EventHandler>(this, driver_hosts)) {}
 
 zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
-    fidl::ClientEnd<fdf::Node> node, fidl::VectorView<fidl::StringView> offers,
-    fidl::VectorView<fdf::wire::NodeSymbol> symbols, fidl::StringView url,
-    fdata::wire::Dictionary program, fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns,
-    fidl::ServerEnd<fio::Directory> outgoing_dir, fidl::ClientEnd<fio::Directory> exposed_dir) {
+    fidl::ClientEnd<fdf::Node> client_end, const Node& node,
+    frunner::wire::ComponentStartInfo start_info) {
   auto endpoints = fidl::CreateEndpoints<fdf::Driver>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
   fidl::FidlAllocator allocator;
+  auto capabilities = node.CreateCapabilities(allocator);
+  if (capabilities.is_error()) {
+    return capabilities.take_error();
+  }
+  auto binary = start_args::ProgramValue(start_info.program(), "binary").value_or("");
   fdf::wire::DriverStartArgs args(allocator);
-  args.set_node(allocator, std::move(node))
-      .set_offers(allocator, std::move(offers))
-      .set_symbols(allocator, std::move(symbols))
-      .set_url(allocator, std::move(url))
-      .set_program(allocator, std::move(program))
-      .set_ns(allocator, std::move(ns))
-      .set_outgoing_dir(allocator, std::move(outgoing_dir))
-      .set_exposed_dir(allocator, std::move(exposed_dir));
+  args.set_node(allocator, std::move(client_end))
+      .set_symbols(allocator, node.symbols())
+      .set_url(allocator, std::move(start_info.resolved_url()))
+      .set_program(allocator, std::move(start_info.program()))
+      .set_ns(allocator, std::move(start_info.ns()))
+      .set_outgoing_dir(allocator, std::move(start_info.outgoing_dir()))
+      .set_capabilities(
+          allocator, fidl::VectorView<fdf::wire::DriverCapabilities>::FromExternal(*capabilities));
   auto start = driver_host_->Start(std::move(args), std::move(endpoints->server));
   if (!start.ok()) {
-    auto binary = start_args::ProgramValue(program, "binary").value_or("");
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
          start.FormatDescription().c_str());
     return zx::error(start.status());
@@ -242,15 +244,28 @@ const std::string& Node::name() const { return name_; }
 
 const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
-fidl::VectorView<fidl::StringView> Node::offers() {
-  return fidl::VectorView<fidl::StringView>::FromExternal(offers_);
+fidl::VectorView<fidl::StringView> Node::offers() const {
+  // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
+  return fidl::VectorView<fidl::StringView>::FromExternal(
+      const_cast<std::remove_const<decltype(offers_)>::type&>(offers_));
 }
 
-fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() {
-  return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols_);
+fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
+  auto primary_parent = PrimaryParent(parents_);
+  if (primary_parent != nullptr && primary_parent->driver_host_ == driver_host_) {
+    // If this node is colocated with its parent, then provide the symbols.
+    // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
+    return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
+        const_cast<std::remove_const<decltype(symbols_)>::type&>(symbols_));
+  }
+  return {};
 }
 
 DriverHostComponent* Node::driver_host() const { return *driver_host_; }
+
+void Node::set_driver_dir(fidl::ClientEnd<fio::Directory> driver_dir) {
+  driver_dir_ = std::move(driver_dir);
+}
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
@@ -265,12 +280,39 @@ void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> contro
 void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
   node_ref_.emplace(std::move(node_ref));
 }
+
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
   for (auto node = this; node != nullptr; node = PrimaryParent(node->parents_)) {
     names.push_front(node->name());
   }
   return fxl::JoinStrings(names, ".");
+}
+
+zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
+    fidl::AnyAllocator& allocator) const {
+  std::vector<fdf::wire::DriverCapabilities> capabilities;
+  capabilities.reserve(parents_.size());
+  for (const Node* parent : parents_) {
+    // Find a parent node with a driver bound to it, and get its driver_dir.
+    fidl::UnownedClientEnd<fio::Directory> driver_dir(ZX_HANDLE_INVALID);
+    for (auto driver_node = parent; !driver_dir && driver_node != nullptr;
+         driver_node = PrimaryParent(driver_node->parents_)) {
+      driver_dir = driver_node->driver_dir_;
+    }
+    // Clone the driver_dir.
+    auto dir = service::Clone(driver_dir);
+    if (dir.is_error()) {
+      return dir.take_error();
+    }
+    // If this is a composite node, then the offers come from the parent nodes.
+    auto parent_offers = parents_.size() == 1 ? offers() : parent->offers();
+    capabilities.emplace_back(allocator)
+        .set_node_name(allocator, fidl::StringView::FromExternal(parent->name()))
+        .set_offers(allocator, std::move(parent_offers))
+        .set_exposed_dir(allocator, std::move(*dir));
+  }
+  return zx::ok(std::move(capabilities));
 }
 
 bool Node::Unbind(std::unique_ptr<AsyncRemove>& async_remove) {
@@ -355,7 +397,7 @@ void Node::AddToParents() {
 
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
   if (driver_binder_ == nullptr) {
-    LOGF(ERROR, "Failed to add Node, as this Node '%s' was removed", name_.data());
+    LOGF(ERROR, "Failed to add Node, as this Node '%s' was removed", name().data());
     completer.ReplyError(fdf::wire::NodeError::kNodeRemoved);
     return;
   }
@@ -443,7 +485,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
 }
 
 DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
-                           fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
+                           fidl::ClientEnd<fdf::DriverIndex> driver_index,
                            inspect::Inspector& inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
       driver_index_(std::move(driver_index), dispatcher),
@@ -485,7 +527,8 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   if (create_result.is_error()) {
     return create_result.take_error();
   }
-  driver_args_.emplace(url, DriverArgs{node, std::move(*create_result)});
+  node.set_driver_dir(std::move(*create_result));
+  driver_args_.emplace(url, node);
   return zx::ok();
 }
 
@@ -498,13 +541,13 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
     completer.Close(ZX_ERR_UNAVAILABLE);
     return;
   }
-  auto driver_args = std::move(it->second);
+  auto& [_, node] = *it;
   driver_args_.erase(it);
-  auto symbols = driver_args.node.symbols();
+  auto symbols = node.symbols();
 
   // Launch a driver host, or use an existing driver host.
   if (start_args::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
-    if (&driver_args.node == root_node_.get()) {
+    if (&node == root_node_.get()) {
       LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate", url.size(),
            url.data());
       completer.Close(ZX_ERR_INVALID_ARGS);
@@ -519,7 +562,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
       completer.Close(result.error_value());
       return;
     }
-    driver_args.node.set_driver_host(result.value().get());
+    node.set_driver_host(result.value().get());
     driver_hosts_.push_back(std::move(*result));
   }
 
@@ -530,16 +573,13 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
     return;
   }
   auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-      dispatcher_, std::move(endpoints->server), &driver_args.node,
+      dispatcher_, std::move(endpoints->server), &node,
       [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
-  driver_args.node.set_node_ref(bind_node);
+  node.set_node_ref(bind_node);
 
   // Start the driver within the driver host.
-  auto start = driver_args.node.driver_host()->Start(
-      std::move(endpoints->client), driver_args.node.offers(), std::move(symbols),
-      std::move(request->start_info.resolved_url()), std::move(request->start_info.program()),
-      std::move(request->start_info.ns()), std::move(request->start_info.outgoing_dir()),
-      std::move(driver_args.exposed_dir));
+  auto start =
+      node.driver_host()->Start(std::move(endpoints->client), node, std::move(request->start_info));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;
@@ -549,8 +589,8 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   auto driver = std::make_unique<DriverComponent>(std::move(*start));
   auto bind_driver = fidl::BindServer<DriverComponent>(
       dispatcher_, std::move(request->controller), driver.get(),
-      [this, name = driver_args.node.TopoName(), collection = DriverCollection(url)](
-          DriverComponent* driver, auto, auto) {
+      [this, name = node.TopoName(), collection = DriverCollection(url)](DriverComponent* driver,
+                                                                         auto, auto) {
         drivers_.erase(*driver);
         auto destroy_callback = [name](fidl::WireResponse<fsys::Realm::DestroyChild>* response) {
           if (response->result.is_err()) {
@@ -567,7 +607,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
                destroy.FormatDescription().c_str());
         }
       });
-  driver_args.node.set_driver_ref(bind_driver);
+  node.set_driver_ref(bind_driver);
   driver->set_driver_ref(std::move(bind_driver));
   auto watch = driver->Watch(dispatcher_);
   if (watch.is_error()) {
@@ -618,16 +658,16 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
 
 zx::status<Node*> DriverRunner::CreateCompositeNode(
     Node& node, const fdf::wire::MatchedDriver& matched_driver) {
-  auto it = AddToCompositeArgs(node, matched_driver);
+  auto it = AddToCompositeArgs(node.name(), matched_driver);
   if (it.is_error()) {
     return it.take_error();
   }
   auto& [_, nodes] = **it;
 
+  std::vector<Node*> parents;
   // Store the node arguments inside the composite arguments.
   nodes[matched_driver.node_index()] = node.weak_from_this();
   // Check if we have all the nodes for the composite driver.
-  std::vector<Node*> parents;
   for (auto& node : nodes) {
     if (auto parent = node.lock()) {
       parents.push_back(parent.get());
@@ -637,6 +677,7 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
     }
   }
   composite_args_.erase(*it);
+
   // We have all the nodes, create a composite node for the composite driver.
   auto composite = std::make_shared<Node>("composite", std::move(parents), this, dispatcher_);
   composite->AddToParents();
@@ -645,14 +686,13 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
 }
 
 zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs(
-    Node& node, const fdf::wire::MatchedDriver& matched_driver) {
+    const std::string& name, const fdf::wire::MatchedDriver& matched_driver) {
   if (!matched_driver.has_node_index() || !matched_driver.has_num_nodes()) {
-    LOGF(ERROR, "Failed to match Node '%s', missing fields for composite driver",
-         node.name().data());
+    LOGF(ERROR, "Failed to match Node '%s', missing fields for composite driver", name.data());
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
   if (matched_driver.node_index() >= matched_driver.num_nodes()) {
-    LOGF(ERROR, "Failed to match Node '%s', the node index is out of range", node.name().data());
+    LOGF(ERROR, "Failed to match Node '%s', the node index is out of range", name.data());
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -663,8 +703,7 @@ zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs
   for (; it != end; ++it) {
     auto& [_, nodes] = *it;
     if (nodes.size() != matched_driver.num_nodes()) {
-      LOGF(ERROR, "Failed to match Node '%s', the number of nodes does not match",
-           node.name().data());
+      LOGF(ERROR, "Failed to match Node '%s', the number of nodes does not match", name.data());
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
     if (nodes[matched_driver.node_index()].expired()) {

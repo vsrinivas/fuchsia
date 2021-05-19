@@ -107,11 +107,19 @@ class TestDirectory : public fio::testing::Directory_TestBase {
   using OpenHandler =
       fit::function<void(std::string path, fidl::InterfaceRequest<fio::Node> object)>;
 
+  TestDirectory(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+  void Bind(fidl::InterfaceRequest<fio::Directory> request) {
+    bindings_.AddBinding(this, std::move(request), dispatcher_);
+  }
+
   void SetOpenHandler(OpenHandler open_handler) { open_handler_ = std::move(open_handler); }
 
  private:
   void Clone(uint32_t flags, fidl::InterfaceRequest<fio::Node> object) override {
     EXPECT_EQ(ZX_FS_FLAG_CLONE_SAME_RIGHTS, flags);
+    fidl::InterfaceRequest<fio::Directory> dir(object.TakeChannel());
+    Bind(std::move(dir));
   }
 
   void Open(uint32_t flags, uint32_t mode, std::string path,
@@ -123,6 +131,8 @@ class TestDirectory : public fio::testing::Directory_TestBase {
     printf("Not implemented: Directory::%s\n", name.data());
   }
 
+  async_dispatcher_t* dispatcher_;
+  fidl::BindingSet<fio::Directory> bindings_;
   OpenHandler open_handler_;
 };
 
@@ -174,7 +184,9 @@ class TestTransaction : public fidl::Transaction {
     return ZX_OK;
   }
 
-  void Close(zx_status_t epitaph) override { EXPECT_TRUE(close_); }
+  void Close(zx_status_t epitaph) override {
+    EXPECT_TRUE(close_) << "epitaph: " << zx_status_get_string(epitaph);
+  }
 
   bool close_;
 };
@@ -200,9 +212,8 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   inspect::Inspector& inspector() { return inspector_; }
   async::Loop& loop() { return loop_; }
   TestRealm& realm() { return realm_; }
-  TestDirectory& driver_host_dir() { return driver_host_dir_; }
+  TestDirectory& driver_dir() { return driver_dir_; }
   TestDriverHost& driver_host() { return driver_host_; }
-  fidl::Binding<fio::Directory>& driver_dir_binding() { return driver_dir_binding_; }
 
   fidl::ClientEnd<fuchsia_sys2::Realm> ConnectToRealm() {
     fsys::RealmPtr realm;
@@ -246,9 +257,9 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     realm().SetBindChildHandler([this, coll, name](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ(coll, child.collection.value_or(""));
       EXPECT_EQ(name, child.name);
-      EXPECT_EQ(ZX_OK, driver_host_dir_binding_.Bind(std::move(exposed_dir), loop_.dispatcher()));
+      driver_host_dir_.Bind(std::move(exposed_dir));
     });
-    driver_host_dir().SetOpenHandler([this](std::string path, auto object) {
+    driver_host_dir_.SetOpenHandler([this](std::string path, auto object) {
       EXPECT_EQ(fdf::DriverHost::Name_, path);
       EXPECT_EQ(ZX_OK, driver_host_binding_.Bind(object.TakeChannel(), loop_.dispatcher()));
     });
@@ -300,9 +311,9 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("root", child.name);
-      EXPECT_EQ(ZX_OK, driver_dir_binding_.Bind(std::move(exposed_dir), loop_.dispatcher()));
+      driver_dir_.Bind(std::move(exposed_dir));
     });
-    auto start = driver_runner.StartRootDriver(std::move(url));
+    auto start = driver_runner.StartRootDriver(url);
     if (start.is_error()) {
       return start.take_error();
     }
@@ -336,18 +347,17 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   }
 
  private:
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
+
   TestRealm realm_;
-  TestDirectory driver_host_dir_;
-  TestDirectory driver_dir_;
+  TestDirectory driver_host_dir_{loop_.dispatcher()};
+  TestDirectory driver_dir_{loop_.dispatcher()};
   TestDriverHost driver_host_;
   fidl::Binding<fsys::Realm> realm_binding_{&realm_};
-  fidl::Binding<fio::Directory> driver_host_dir_binding_{&driver_host_dir_};
-  fidl::Binding<fio::Directory> driver_dir_binding_{&driver_dir_};
   fidl::Binding<fdf::DriverHost> driver_host_binding_{&driver_host_};
   fidl::BindingSet<fdf::Driver> driver_bindings_;
 
   inspect::Inspector inspector_;
-  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   sys::testing::ComponentContextProvider provider_{loop_.dispatcher()};
 };
 
@@ -613,7 +623,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("root.second", child.name);
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -632,9 +642,6 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
             StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
-    auto& offers = start_args.offers();
-    EXPECT_EQ(1u, offers.size());
-    EXPECT_EQ("fuchsia.package.Protocol", offers[0]);
     EXPECT_TRUE(start_args.symbols().empty());
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
@@ -642,7 +649,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     EXPECT_EQ("driver/second-driver.so", entries[0].value->str());
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("false", entries[1].value->str());
-    EXPECT_TRUE(start_args.exposed_dir().is_valid());
+    auto& capabilities = start_args.capabilities();
+    EXPECT_EQ(1u, capabilities.size());
+    EXPECT_EQ("root", capabilities[0].node_name());
+    EXPECT_EQ(1u, capabilities[0].offers().size());
+    EXPECT_EQ("fuchsia.package.Protocol", capabilities[0].offers()[0]);
+    EXPECT_TRUE(capabilities[0].exposed_dir().is_valid());
   });
   StartDriverHost("driver_hosts", "driver_host-1");
   StartDriver(driver_runner, {
@@ -677,7 +689,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("root.second", child.name);
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -696,9 +708,6 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
             StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
-    auto& offers = start_args.offers();
-    EXPECT_EQ(1u, offers.size());
-    EXPECT_EQ("fuchsia.package.Protocol", offers[0]);
     auto& symbols = start_args.symbols();
     EXPECT_EQ(1u, symbols.size());
     EXPECT_EQ("sym", symbols[0].name());
@@ -709,7 +718,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     EXPECT_EQ("driver/second-driver.so", entries[0].value->str());
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("true", entries[1].value->str());
-    EXPECT_TRUE(start_args.exposed_dir().is_valid());
+    auto& capabilities = start_args.capabilities();
+    EXPECT_EQ(1u, capabilities.size());
+    EXPECT_EQ("root", capabilities[0].node_name());
+    EXPECT_EQ(1u, capabilities[0].offers().size());
+    EXPECT_EQ("fuchsia.package.Protocol", capabilities[0].offers()[0]);
+    EXPECT_TRUE(capabilities[0].exposed_dir().is_valid());
   });
   StartDriver(driver_runner, {
                                  .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -754,7 +768,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
       EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("root.second", child.name);
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -778,7 +792,6 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
     EXPECT_EQ("driver/second-driver.so", entries[0].value->str());
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("true", entries[1].value->str());
-    EXPECT_TRUE(start_args.exposed_dir().is_valid());
   });
   StartDriver(driver_runner, {
                                  .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -831,7 +844,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -891,7 +904,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -949,7 +962,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -972,7 +985,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
                                                           auto request) {
       realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
       realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-        EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+        driver_dir().Bind(std::move(exposed_dir));
       });
 
       fdf::NodePtr node;
@@ -1025,7 +1038,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   driver_host().SetStartHandler([this, &root_node](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr node;
@@ -1077,7 +1090,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -1129,7 +1142,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
@@ -1200,17 +1213,19 @@ TEST_F(DriverRunnerTest, StartCompositeDriver) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
     EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
     fdf::NodeAddArgs args;
     args.set_name("part-1");
+    args.mutable_offers()->emplace_back("fuchsia.package.ProtocolA");
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
     args.set_name("part-2");
+    args.mutable_offers()->emplace_back("fuchsia.package.ProtocolB");
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
                         [](auto result) { EXPECT_FALSE(result.is_err()); });
     BindDriver(std::move(request), std::move(root_node));
@@ -1225,6 +1240,16 @@ TEST_F(DriverRunnerTest, StartCompositeDriver) {
     EXPECT_EQ("driver/composite-driver.so", entries[0].value->str());
     EXPECT_EQ("colocate", entries[1].key);
     EXPECT_EQ("true", entries[1].value->str());
+    auto& capabilities = start_args.capabilities();
+    EXPECT_EQ(2u, capabilities.size());
+    EXPECT_EQ("part-1", capabilities[0].node_name());
+    EXPECT_EQ(1u, capabilities[0].offers().size());
+    EXPECT_EQ("fuchsia.package.ProtocolA", capabilities[0].offers()[0]);
+    EXPECT_TRUE(capabilities[0].exposed_dir().is_valid());
+    EXPECT_EQ("part-2", capabilities[1].node_name());
+    EXPECT_EQ(1u, capabilities[1].offers().size());
+    EXPECT_EQ("fuchsia.package.ProtocolB", capabilities[1].offers()[0]);
+    EXPECT_TRUE(capabilities[1].exposed_dir().is_valid());
   });
   StartDriver(driver_runner, {
                                  .url = "fuchsia-boot:///#meta/composite-driver.cm",
@@ -1245,7 +1270,7 @@ TEST_F(DriverRunnerTest, StartAndInspect) {
   driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+      driver_dir().Bind(std::move(exposed_dir));
     });
 
     fdf::NodePtr root_node;
