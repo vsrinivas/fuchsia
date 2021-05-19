@@ -154,7 +154,8 @@ pub mod hooks {
             if status == Status::OK {
                 Some(request)
             } else {
-                match request {
+                // Ignore errors from peers closing the channel early
+                let _ = match request {
                     paver::BootManagerRequest::QueryActiveConfiguration { responder, .. } => {
                         responder.send(&mut Err(status.into_raw()))
                     }
@@ -176,8 +177,7 @@ pub mod hooks {
                     paver::BootManagerRequest::Flush { responder } => {
                         responder.send(status.into_raw())
                     }
-                }
-                .expect("paver response to send");
+                };
                 None
             }
         }
@@ -190,7 +190,8 @@ pub mod hooks {
             if status == Status::OK {
                 Some(request)
             } else {
-                match request {
+                // Ignore errors from peers closing the channel early
+                let _ = match request {
                     paver::DataSinkRequest::WriteFirmware { responder, .. } => {
                         responder.send(&mut paver::WriteFirmwareResult::Status(status.into_raw()))
                     }
@@ -204,8 +205,7 @@ pub mod hooks {
                         responder.send(status.into_raw())
                     }
                     request => panic!("Unhandled method Paver::{}", request.method_name()),
-                }
-                .expect("paver response to send");
+                };
                 None
             }
         }
@@ -236,7 +236,8 @@ pub mod hooks {
                     responder,
                 } => {
                     let mut result = (self.0)(configuration).map_err(Status::into_raw);
-                    responder.send(&mut result).expect("paver response to send");
+                    // Ignore errors from peers closing the channel early
+                    let _ = responder.send(&mut result);
                     None
                 }
                 request => Some(request),
@@ -281,7 +282,8 @@ pub mod hooks {
                 } => {
                     let mut result =
                         (self.0)(configuration, firmware_type, read_mem_buffer(&payload));
-                    responder.send(&mut result).expect("paver response to send");
+                    // Ignore errors from peers closing the channel early
+                    let _ = responder.send(&mut result);
                     None
                 }
                 request => Some(request),
@@ -313,7 +315,8 @@ pub mod hooks {
                     let mut result = (self.0)(configuration, asset)
                         .map(write_mem_buffer)
                         .map_err(Status::into_raw);
-                    responder.send(&mut result).expect("paver response to send");
+                    // Ignore errors from peers closing the channel early
+                    let _ = responder.send(&mut result);
                     None
                 }
                 request => Some(request),
@@ -519,7 +522,8 @@ impl MockPaverService {
                 }
             }
 
-            match request {
+            // Ignore errors from peers closing the channel early
+            let _ = match request {
                 paver::DataSinkRequest::WriteAsset { mut payload, responder, .. } => {
                     verify_buffer(&mut payload);
                     responder.send(Status::OK.into_raw())
@@ -535,8 +539,7 @@ impl MockPaverService {
                     responder.send(&mut Ok(write_mem_buffer(vec![])))
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
-            }
-            .expect("paver response to send");
+            };
         }
 
         Ok(())
@@ -563,7 +566,8 @@ impl MockPaverService {
                 }
             }
 
-            match request {
+            // Ignore errors from peers closing the channel early
+            let _ = match request {
                 paver::BootManagerRequest::QueryActiveConfiguration { responder } => {
                     let mut result = if self.active_config == paver::Configuration::Recovery {
                         Err(Status::NOT_SUPPORTED.into_raw())
@@ -600,8 +604,7 @@ impl MockPaverService {
                 paver::BootManagerRequest::Flush { responder } => {
                     responder.send(Status::OK.into_raw())
                 }
-            }
-            .expect("paver response to send");
+            };
         }
 
         Ok(())
