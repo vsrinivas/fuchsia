@@ -5,6 +5,7 @@
 group("bin") {
   deps = [
     "ermine_testserver:ermine_testserver",
+    "settings:settings",
     "simple_browser:simple-browser",
   ]
 }

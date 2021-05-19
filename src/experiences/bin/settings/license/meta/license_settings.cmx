@@ -1,0 +1,13 @@
+{
+    "program": {
+        "data": "data/license_settings"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
