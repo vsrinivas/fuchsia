@@ -118,25 +118,6 @@ fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::In
   return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), txn);
 }
 
-// Dispatches the incoming message to one of the handlers functions in the protocol.
-//
-// This function should only be used in very low-level code, such as when manually
-// dispatching a message to a server implementation.
-//
-// If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning |fidl::DispatchResult::kNotFound|.
-//
-// This function takes a |const fidl_incoming_msg_t*| to aid interop with driver C APIs.
-// Prefer using the overload with |fidl::IncomingMessage&&| if possible.
-//
-// Ownership of handles in |msg| are always transferred to the callee.
-template <typename FidlProtocol>
-fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl,
-                                  const fidl_incoming_msg_t* msg, fidl::Transaction* txn) {
-  return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(
-      impl, fidl::IncomingMessage::FromEncodedCMessage(msg), txn);
-}
-
 // Attempts to dispatch the incoming message to a handler function in the server implementation.
 //
 // This function should only be used in very low-level code, such as when manually

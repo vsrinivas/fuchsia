@@ -34,7 +34,8 @@ zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = []() {
   sdt.message = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     IntelHDAStreamBase* thiz = static_cast<IntelHDAStreamBase*>(ctx);
     DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_audio::Device>(thiz, msg, &transaction);
+    fidl::WireDispatch<fuchsia_hardware_audio::Device>(
+        thiz, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
     return transaction.Status();
   };
   return sdt;

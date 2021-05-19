@@ -26,7 +26,8 @@ zx_status_t backlight_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* t
     fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
     ptr = static_cast<i915::display_ref_t*>(ctx)->display_device;
   }
-  fidl::WireDispatch<fuchsia_hardware_backlight::Device>(ptr, msg, &transaction);
+  fidl::WireDispatch<fuchsia_hardware_backlight::Device>(
+      ptr, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
   return transaction.Status();
 }
 

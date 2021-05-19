@@ -68,7 +68,8 @@ class AmlHdmiDevice : public DeviceType,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_hdmi::Hdmi>(this, msg, &transaction);
+    fidl::WireDispatch<fuchsia_hardware_hdmi::Hdmi>(
+        this, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
     return transaction.Status();
   }
   void DdkUnbind(ddk::UnbindTxn txn) {

@@ -805,7 +805,8 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_incoming_msg_t* msg, fidl_txn_t* tx
 
   TxnForwarder transaction(txn);
   ios->server_->set_current_dispatcher(dispatcher);
-  auto result = fidl::WireDispatch<fio::DirectoryAdmin>(ios->server_.get(), msg, &transaction);
+  auto result = fidl::WireDispatch<fio::DirectoryAdmin>(
+      ios->server_.get(), fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
   ios->server_->clear_current_dispatcher();
 
   return result == fidl::DispatchResult::kNotFound ? ZX_ERR_NOT_SUPPORTED : transaction.GetStatus();

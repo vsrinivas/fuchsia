@@ -97,7 +97,8 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
     auto self = static_cast<WlantapCtl*>(ctx);
 
     DdkTransaction transaction(txn);
-    fidl::WireDispatch<wlantap::WlantapCtl>(self, msg, &transaction);
+    fidl::WireDispatch<wlantap::WlantapCtl>(self, fidl::IncomingMessage::FromEncodedCMessage(msg),
+                                            &transaction);
     return transaction.Status();
   }
 
