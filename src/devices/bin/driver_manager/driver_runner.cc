@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 
 #include <deque>
+#include <forward_list>
 #include <stack>
 #include <unordered_set>
 
@@ -30,7 +31,7 @@ using InspectStack = std::stack<std::pair<inspect::Node*, Node*>>;
 namespace {
 
 void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
-  std::vector<inspect::Node> roots;
+  std::forward_list<inspect::Node> roots;
   while (!stack.empty()) {
     // Pop the current root and node to operate on.
     auto [root, node] = stack.top();
@@ -54,7 +55,7 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
 
     // Push children of this node onto the stack.
     for (auto& child : node->children()) {
-      auto& root_for_child = roots.emplace_back(root->CreateChild(child->name()));
+      auto& root_for_child = roots.emplace_front(root->CreateChild(child->name()));
       stack.emplace(&root_for_child, child.get());
     }
   }
