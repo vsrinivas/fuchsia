@@ -42,9 +42,15 @@ class StubDdkDevice : public Device {
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
   zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override;
+
+  async_dispatcher_t* GetDispatcher() override { return nullptr; }
+  DeviceInspect* GetInspect() override { return nullptr; }
+  void Init(ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
 };
 
-StubDdkDevice::StubDdkDevice(zx_device_t* device) : Device(device) { Device::Init(); }
+StubDdkDevice::StubDdkDevice(zx_device_t* device) : Device(device) {
+  Device::DdkInit(ddk::InitTxn(device));
+}
 
 StubDdkDevice::~StubDdkDevice() = default;
 
