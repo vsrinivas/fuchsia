@@ -105,9 +105,9 @@ constexpr bool IsPow2(uint64_t value) {
 
 // Test if the given value `value` is aligned to `size`.
 //
-// `value` must be a power of two.
+// `size` must be a power of two.
 constexpr bool IsAligned(uint64_t value, uint64_t size) {
-  ZX_DEBUG_ASSERT(IsPow2(value));
+  ZX_DEBUG_ASSERT(IsPow2(size));
   return (value & (size - 1)) == 0;
 }
 
