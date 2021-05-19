@@ -518,26 +518,12 @@ func TestLinkDown(t *testing.T) {
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, defaultLifetime)
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers := ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1NIC1) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr2NIC1) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr2NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr1NIC2) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC2, servers)
-	}
-	if !containsFullAddress(servers, addr3NIC2) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr3NIC2, servers)
-	}
-	if l := len(servers); l != 4 {
-		t.Errorf("got len(servers) = %d, want = 4; servers = %+v", l, servers)
-	}
-
-	// If the test already failed, we cannot go any further.
-	if t.Failed() {
-		t.FailNow()
+	{
+		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1, addr1NIC2, addr3NIC2}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	// Bring eth2 down and make sure the DNS servers learned from that NIC are
@@ -546,20 +532,12 @@ func TestLinkDown(t *testing.T) {
 		t.Fatalf("ifs2.Down(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1NIC1) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr2NIC1) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr2NIC1, servers)
-	}
-	if l := len(servers); l != 2 {
-		t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
-	}
-
-	// If the test already failed, we cannot go any further.
-	if t.Failed() {
-		t.FailNow()
+	{
+		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	// Bring eth2 up and make sure the DNS servers learned from that NIC do not
@@ -568,26 +546,39 @@ func TestLinkDown(t *testing.T) {
 		t.Fatalf("ifs2.Up(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1NIC1) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr2NIC1) {
-		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr2NIC1, servers)
-	}
-	if l := len(servers); l != 2 {
-		t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
+	{
+		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 
-func containsFullAddress(list []dns.Server, item tcpip.FullAddress) bool {
-	for _, i := range list {
-		if i.Address == item {
-			return true
+func dnsServersAddressesDiff(addresses []tcpip.FullAddress, servers []dns.Server) string {
+	// Map []dns.Server -> []tcpip.FullAddress. We'd prefer to use a cmp.Transformer here, but that
+	// doesn't work for contravariant (or simply different) types.
+	//
+	// See https://github.com/google/go-cmp/issues/261.
+	var serverAddresses []tcpip.FullAddress
+	if servers != nil {
+		serverAddresses = make([]tcpip.FullAddress, len(servers))
+		for i := range servers {
+			serverAddresses[i] = servers[i].Address
 		}
 	}
-
-	return false
+	return cmp.Diff(addresses, serverAddresses, cmpopts.SortSlices(func(left, right tcpip.FullAddress) bool {
+		if left, right := left.NIC, right.NIC; left != right {
+			return left < right
+		}
+		if left, right := left.Addr, right.Addr; left != right {
+			return left < right
+		}
+		if left, right := left.Port, right.Port; left != right {
+			return left < right
+		}
+		return false
+	}))
 }
 
 func TestRecursiveDNSServers(t *testing.T) {
@@ -634,67 +625,56 @@ func TestRecursiveDNSServers(t *testing.T) {
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, 0)
 	waitForEmptyQueue(ndpDisp)
-	servers := ns.dnsConfig.GetServersCache()
-	if l := len(servers); l != 0 {
-		t.Errorf("got len(servers) = %d, want = 0; servers = %+v", l, servers)
+	{
+		want := []tcpip.FullAddress(nil)
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1NIC1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr2NIC1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2NIC1, servers)
-	}
-	if l := len(servers); l != 2 {
-		t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
+	{
+		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1NIC1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr2NIC1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr1NIC2) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC2, servers)
-	}
-	if !containsFullAddress(servers, addr3NIC2) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3NIC2, servers)
-	}
-	if l := len(servers); l != 4 {
-		t.Errorf("got len(servers) = %d, want = 4; servers = %+v", l, servers)
+	{
+		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1, addr1NIC2, addr3NIC2}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, 0)
 	waitForEmptyQueue(ndpDisp)
-	servers = ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1NIC1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1NIC1, servers)
-	}
-	if !containsFullAddress(servers, addr2NIC1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2NIC1, servers)
-	}
-	if l := len(servers); l != 2 {
-		t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
+	{
+		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, shortLifetime)
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = ns.dnsConfig.GetServersCache()
-		if l := len(servers); l != 0 {
+		want := []tcpip.FullAddress(nil)
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
 			if elapsedTime < shortLifetimeTimeout {
 				continue
 			}
 
-			t.Fatalf("got len(servers) = %d, want = 0; servers = %+v", l, servers)
+			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 
 		break
@@ -738,23 +718,12 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	}
 	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr1.Addr, addr2.Addr, addr3.Addr}, newInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
-	servers := ns.dnsConfig.GetServersCache()
-	if !containsFullAddress(servers, addr1) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr1, servers)
-	}
-	if !containsFullAddress(servers, addr2) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
-	}
-	if !containsFullAddress(servers, addr3) {
-		t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
-	}
-	if l := len(servers); l != 3 {
-		t.Errorf("got len(servers) = %d, want = 3; servers = %+v", l, servers)
-	}
-
-	// If the test already failed, we cannot go any further.
-	if t.Failed() {
-		t.FailNow()
+	{
+		want := []tcpip.FullAddress{addr1, addr2, addr3}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
+		}
 	}
 
 	// All addresses to expire after middleLifetime.
@@ -764,56 +733,27 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = ns.dnsConfig.GetServersCache()
-		if !containsFullAddress(servers, addr2) {
+		want := []tcpip.FullAddress{addr2, addr3}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
 
-			t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
-		}
-		if !containsFullAddress(servers, addr3) {
-			if elapsedTime < middleLifetimeTimeout {
-				continue
-			}
-
-			t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
-		}
-		if l := len(servers); l != 2 {
-			if elapsedTime < middleLifetimeTimeout {
-				continue
-			}
-
-			t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
+			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 
 		break
-	}
-
-	// If the test already failed, we cannot go any further.
-	if t.Failed() {
-		t.FailNow()
 	}
 
 	// addr2 and addr3 should not expire after newInfiniteLifetime (since it
 	// represents infinity).
 	for elapsedTime := time.Duration(0); elapsedTime <= newInfiniteLifetimeTimeout; elapsedTime += incrementalTimeout {
 		time.Sleep(incrementalTimeout)
-		servers = ns.dnsConfig.GetServersCache()
-		if !containsFullAddress(servers, addr2) {
-			t.Errorf("expected %+v to be in the server cache, got = %+v", addr2, servers)
-		}
-		if !containsFullAddress(servers, addr3) {
-			t.Errorf("expected %+v to be in the server cache, got = %+v", addr3, servers)
-		}
-		if l := len(servers); l != 2 {
-			t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
-		}
-
-		// If the test failed in this iteration of the loop, we cannot go any
-		// further.
-		if t.Failed() {
-			t.FailNow()
+		want := []tcpip.FullAddress{addr2, addr3}
+		got := ns.dnsConfig.GetServersCache()
+		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
 }

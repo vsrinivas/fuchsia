@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"strings"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
@@ -740,7 +739,7 @@ func TestNetworkEndpointStatsInspectImpl(t *testing.T) {
 
 	children := impl.ListChildren()
 	if diff := cmp.Diff(expectedProtocols, children, cmpopts.SortSlices(func(a, b string) bool {
-		return strings.Compare(a, b) < 0
+		return a < b
 	})); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
@@ -788,7 +787,7 @@ func TestNeighborTableInspectImpl(t *testing.T) {
 	if diff := cmp.Diff([]string{
 		ipv4Addr.String(), ipv6Addr.String(),
 	}, children, cmpopts.SortSlices(func(a, b string) bool {
-		return strings.Compare(a, b) < 0
+		return a < b
 	})); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
