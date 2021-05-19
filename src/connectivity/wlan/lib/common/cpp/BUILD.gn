@@ -54,6 +54,7 @@ source_set("common") {
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
