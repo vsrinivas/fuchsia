@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/hw/usb.h>
 
 #include <fbl/alloc_checker.h>
 #include <usb/usb-request.h>
@@ -22,13 +23,13 @@ namespace usb_xhci {
 #define PRODUCT_STRING_2 2
 #define PRODUCT_STRING_3 3
 
-static const uint8_t xhci_language_list[] = {4, /* bLength */ USB_DT_STRING, 0x09, 0x04,
+static const uint8_t xhci_language_list[] = {4, /* b_length */ USB_DT_STRING, 0x09, 0x04,
                                              /* language ID */};
 static const uint8_t xhci_manufacturer_string[] =  // "Zircon"
-    {16, /* bLength */ USB_DT_STRING, 'Z', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'n', 0, 0, 0};
+    {16, /* b_length */ USB_DT_STRING, 'Z', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'n', 0, 0, 0};
 static const uint8_t xhci_product_string_2[] =  // "USB 2.0 Root Hub"
     {
-        36,  /* bLength */ USB_DT_STRING,
+        36,  /* b_length */ USB_DT_STRING,
         'U', 0,
         'S', 0,
         'B', 0,
@@ -49,7 +50,7 @@ static const uint8_t xhci_product_string_2[] =  // "USB 2.0 Root Hub"
 };
 static const uint8_t xhci_product_string_3[] =  // "USB 3.0 Root Hub"
     {
-        36,  /* bLength */ USB_DT_STRING,
+        36,  /* b_length */ USB_DT_STRING,
         'U', 0,
         'S', 0,
         'B', 0,
@@ -78,20 +79,20 @@ static const uint8_t* xhci_rh_string_table[] = {
 
 // device descriptor for USB 2.0 root hub
 static const usb_device_descriptor_t xhci_rh_device_desc_2 = {
-    .bLength = sizeof(usb_device_descriptor_t),
-    .bDescriptorType = USB_DT_DEVICE,
+    .b_length = sizeof(usb_device_descriptor_t),
+    .b_descriptor_type = USB_DT_DEVICE,
     .bcd_usb = htole16(0x0200),
-    .bDeviceClass = USB_CLASS_HUB,
+    .b_device_class = USB_CLASS_HUB,
     .b_device_sub_class = 0,
     .b_device_protocol = 1,  // Single TT
-    .bMaxPacketSize0 = 64,
+    .b_max_packet_size0 = 64,
     .id_vendor = htole16(0x18D1),
     .id_product = htole16(0xA002),
-    .bcdDevice = htole16(0x0100),
+    .bcd_device = htole16(0x0100),
     .i_manufacturer = MANUFACTURER_STRING,
     .i_product = PRODUCT_STRING_2,
-    .iSerialNumber = 0,
-    .bNumConfigurations = 1,
+    .i_serial_number = 0,
+    .b_num_configurations = 1,
 };
 
 // device descriptor for USB 3.1 root hub
@@ -102,14 +103,14 @@ static const usb_device_descriptor_t xhci_rh_device_desc_3 = {
     .b_device_class = USB_CLASS_HUB,
     .b_device_sub_class = 0,
     .b_device_protocol = 1,  // Single TT
-    .bMaxPacketSize0 = 64,
+    .b_max_packet_size0 = 64,
     .id_vendor = htole16(0x18D1),
     .id_product = htole16(0xA003),
-    .bcdDevice = htole16(0x0100),
+    .bcd_device = htole16(0x0100),
     .i_manufacturer = MANUFACTURER_STRING,
     .i_product = PRODUCT_STRING_3,
-    .iSerialNumber = 0,
-    .bNumConfigurations = 1,
+    .i_serial_number = 0,
+    .b_num_configurations = 1,
 };
 
 // device descriptors for our virtual root hub devices
@@ -281,8 +282,8 @@ static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index
 
   int port_index = xhci->rh_port_map[rh_port_index];
   usb_port_status_t* status = &rh->port_status[port_index];
-  status->wPortStatus |= USB_PORT_RESET;
-  status->wPortChange |= USB_C_PORT_RESET;
+  status->w_port_status |= USB_PORT_RESET;
+  status->w_port_change |= USB_C_PORT_RESET;
 }
 
 zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
@@ -414,10 +415,10 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
       // return hub descriptor
       usb_hub_descriptor_t desc;
       memset(&desc, 0, sizeof(desc));
-      desc.bDescLength = sizeof(desc);
-      desc.bDescriptorType = static_cast<uint8_t>(value >> 8);
-      desc.bNbrPorts = rh->num_ports;
-      desc.bPowerOn2PwrGood = 0;
+      desc.b_desc_length = sizeof(desc);
+      desc.b_descriptor_type = static_cast<uint8_t>(value >> 8);
+      desc.b_nbr_ports = rh->num_ports;
+      desc.b_power_on2_pwr_good = 0;
       // TODO - fill in other stuff. But usb-hub driver doesn't need anything else at this point.
 
       if (length > sizeof(desc))
@@ -437,17 +438,17 @@ static zx_status_t xhci_rh_get_descriptor(xhci_t* xhci, uint8_t request_type, xh
 // handles control requests for virtual root hub devices
 static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_t* setup,
                                    usb_request_t* req) {
-  uint8_t request_type = setup->bmRequestType;
-  uint8_t request = setup->bRequest;
-  uint16_t value = le16toh(setup->wValue);
-  uint16_t index = le16toh(setup->wIndex);
+  uint8_t request_type = setup->bm_request_type;
+  uint8_t request = setup->b_request;
+  uint16_t value = le16toh(setup->w_value);
+  uint16_t index = le16toh(setup->w_index);
   xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
 
   zxlogf(TRACE, "xhci_rh_control type: 0x%02X req: %d value: %d index: %d length: %d", request_type,
-         request, value, index, le16toh(setup->wLength));
+         request, value, index, le16toh(setup->w_length));
 
   if ((request_type & USB_DIR_MASK) == USB_DIR_IN && request == USB_REQ_GET_DESCRIPTOR) {
-    return xhci_rh_get_descriptor(xhci, request_type, rh, value, index, le16toh(setup->wLength),
+    return xhci_rh_get_descriptor(xhci, request_type, rh, value, index, le16toh(setup->w_length),
                                   req);
   } else if ((request_type & ~USB_DIR_MASK) == (USB_TYPE_CLASS | USB_RECIP_PORT)) {
     // index is 1-based port number
@@ -469,7 +470,7 @@ static zx_status_t xhci_rh_control(xhci_t* xhci, xhci_root_hub_t* rh, usb_setup_
         return ZX_OK;
       }
     } else if (request == USB_REQ_CLEAR_FEATURE) {
-      auto* change_bits = &rh->port_status[port_index].wPortChange;
+      auto* change_bits = &rh->port_status[port_index].w_port_change;
 
       switch (value) {
         case USB_FEATURE_C_PORT_CONNECTION:
@@ -527,7 +528,7 @@ static void xhci_rh_handle_intr_req(xhci_t* xhci, xhci_root_hub_t* rh, usb_reque
 
   for (uint32_t i = 0; i < rh->num_ports; i++) {
     usb_port_status_t* status = &rh->port_status[i];
-    if (status->wPortChange) {
+    if (status->w_port_change) {
       *ptr |= static_cast<uint8_t>(1 << bit);
       have_status = true;
     }
@@ -601,35 +602,35 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
         // connect status change
         zxlogf(DEBUG, "port %d PORTSC_CSC connected: %d", i, connected);
         if (connected) {
-          status->wPortStatus |= USB_PORT_CONNECTION;
+          status->w_port_status |= USB_PORT_CONNECTION;
         } else {
-          if (status->wPortStatus & USB_PORT_ENABLE) {
-            status->wPortChange |= USB_C_PORT_ENABLE;
+          if (status->w_port_status & USB_PORT_ENABLE) {
+            status->w_port_change |= USB_C_PORT_ENABLE;
           }
-          status->wPortStatus = 0;
+          status->w_port_status = 0;
         }
-        status->wPortChange |= USB_C_PORT_CONNECTION;
+        status->w_port_change |= USB_C_PORT_CONNECTION;
       }
       if (portsc & PORTSC_PRC) {
         // port reset change
         zxlogf(DEBUG, "port %d PORTSC_PRC enabled: %d", i, enabled);
         if (enabled) {
-          status->wPortStatus &= static_cast<uint16_t>(~USB_PORT_RESET);
-          status->wPortChange |= USB_C_PORT_RESET;
-          if (!(status->wPortStatus & USB_PORT_ENABLE)) {
-            status->wPortStatus |= USB_PORT_ENABLE;
-            status->wPortChange |= USB_C_PORT_ENABLE;
+          status->w_port_status &= static_cast<uint16_t>(~USB_PORT_RESET);
+          status->w_port_change |= USB_C_PORT_RESET;
+          if (!(status->w_port_status & USB_PORT_ENABLE)) {
+            status->w_port_status |= USB_PORT_ENABLE;
+            status->w_port_change |= USB_C_PORT_ENABLE;
           }
 
           if (speed == USB_SPEED_LOW) {
-            status->wPortStatus |= USB_PORT_LOW_SPEED;
+            status->w_port_status |= USB_PORT_LOW_SPEED;
           } else if (speed == USB_SPEED_HIGH) {
-            status->wPortStatus |= USB_PORT_HIGH_SPEED;
+            status->w_port_status |= USB_PORT_HIGH_SPEED;
           }
         }
       }
 
-      if (status->wPortChange) {
+      if (status->w_port_change) {
         usb_request_t* req;
         if (xhci_remove_from_list_head(xhci, &rh->pending_intr_reqs, &req)) {
           xhci_rh_handle_intr_req(xhci, rh, req);

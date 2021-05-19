@@ -40,7 +40,7 @@ void xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req, 
 
   usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : nullptr);
   if (setup) {
-    state->direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
+    state->direction = setup->bm_request_type & USB_ENDPOINT_DIR_MASK;
     state->needs_status = true;
   } else {
     state->direction = req->header.ep_address & USB_ENDPOINT_DIR_MASK;

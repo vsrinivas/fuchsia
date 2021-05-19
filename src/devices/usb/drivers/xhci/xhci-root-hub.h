@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <fuchsia/hardware/usb/request/c/banjo.h>
+#include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 
 #include <fbl/array.h>

@@ -211,11 +211,11 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     xhci_clear_trb(trb);
 
     XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQ_TYPE_START, SETUP_TRB_REQ_TYPE_BITS,
-                    setup->bmRequestType);
+                    setup->bm_request_type);
     XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_REQUEST_START, SETUP_TRB_REQUEST_BITS,
-                    setup->bRequest);
-    XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_VALUE_START, SETUP_TRB_VALUE_BITS, setup->wValue);
-    XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_INDEX_START, SETUP_TRB_INDEX_BITS, setup->wIndex);
+                    setup->b_request);
+    XHCI_SET_BITS32(&trb->ptr_low, SETUP_TRB_VALUE_START, SETUP_TRB_VALUE_BITS, setup->w_value);
+    XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_INDEX_START, SETUP_TRB_INDEX_BITS, setup->w_index);
     XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_LENGTH_START, SETUP_TRB_LENGTH_BITS, length);
     XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, 8);
     XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
@@ -569,11 +569,11 @@ zx_status_t xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request
   }
 
   usb_setup_t* setup = &req->setup;
-  setup->bmRequestType = request_type;
-  setup->bRequest = request;
-  setup->wValue = value;
-  setup->wIndex = index;
-  setup->wLength = length;
+  setup->bm_request_type = request_type;
+  setup->b_request = request;
+  setup->w_value = value;
+  setup->w_index = index;
+  setup->w_length = length;
   req->header.device_id = slot_id;
 
   bool out = !!((request_type & USB_DIR_MASK) == USB_DIR_OUT);

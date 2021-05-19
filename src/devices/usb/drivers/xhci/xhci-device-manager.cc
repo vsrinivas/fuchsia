@@ -5,6 +5,7 @@
 #include "xhci-device-manager.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/usb/hci/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+#include <usb/usb.h>
 
 #include "xhci-root-hub.h"
 #include "xhci-transfer-common.h"
@@ -219,7 +221,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         // try again
         continue;
       }
-      switch (device_desc.bMaxPacketSize0) {
+      switch (device_desc.b_max_packet_size0) {
         case 8:
         case 16:
         case 32:
@@ -238,7 +240,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         continue;
       }
       XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS,
-                      device_desc.bMaxPacketSize0);
+                      device_desc.b_max_packet_size0);
       zx_nanosleep(zx_deadline_after(ZX_USEC(1000)));
       status =
           xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys, (slot_id << TRB_SLOT_ID_START));
@@ -344,7 +346,7 @@ static zx_status_t xhci_setup_slot(xhci_t* xhci, uint32_t slot_id, uint32_t hub_
   }
 
   int mps;
-  mps = device_descriptor.bMaxPacketSize0;
+  mps = device_descriptor.b_max_packet_size0;
   // enforce correct max packet size for ep0
   switch (speed) {
     case USB_SPEED_LOW:
@@ -359,7 +361,7 @@ static zx_status_t xhci_setup_slot(xhci_t* xhci, uint32_t slot_id, uint32_t hub_
       mps = 64;
       break;
     case USB_SPEED_SUPER:
-      // bMaxPacketSize0 is an exponent for superspeed devices
+      // b_max_packet_size0 is an exponent for superspeed devices
       mps = 1 << mps;
       break;
     default:
@@ -764,7 +766,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
   int max_burst = 0;
   if (speed == USB_SPEED_SUPER) {
     if (ss_comp_desc != nullptr) {
-      max_burst = ss_comp_desc->bMaxBurst;
+      max_burst = ss_comp_desc->b_max_burst;
     }
   } else if (speed == USB_SPEED_HIGH) {
     if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
@@ -877,10 +879,10 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     return ZX_ERR_INVALID_ARGS;
 
   xhci_slot_t* slot = &xhci->slots[slot_id];
-  uint32_t num_ports = descriptor->bNbrPorts;
+  uint32_t num_ports = descriptor->b_nbr_ports;
   uint32_t ttt = 0;
   if (speed == USB_SPEED_HIGH) {
-    ttt = (descriptor->wHubCharacteristics >> 5) & 3;
+    ttt = (descriptor->w_hub_characteristics >> 5) & 3;
   }
   // TODO: Check for MTT. Needs a hook for calling set_interface from usb layer.
   {
