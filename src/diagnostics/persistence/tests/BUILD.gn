@@ -17,7 +17,6 @@ rustc_test("test-bin") {
     "//src/diagnostics/sampler/tests/fidl:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/reader/rust",
-    "//src/lib/diagnostics/testing/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

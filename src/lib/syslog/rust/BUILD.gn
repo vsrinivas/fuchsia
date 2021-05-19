@@ -41,7 +41,6 @@ rustc_test("syslog-tests") {
     "//src/diagnostics/archivist:lib",
     "//src/lib/diagnostics/data/rust:lib",
     "//src/lib/diagnostics/hierarchy/rust",
-    "//src/lib/diagnostics/testing",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",

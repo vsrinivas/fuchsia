@@ -466,8 +466,7 @@ mod test {
     use archivist_lib::{
         container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
     };
-    use diagnostics_data::Severity;
-    use diagnostics_testing::assert_data_tree;
+    use diagnostics_data::{assert_data_tree, Severity};
     use log::{debug, error, info, trace, warn};
     use std::fs::File;
     use std::io::Read;

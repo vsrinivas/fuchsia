@@ -15,6 +15,10 @@ group("tests") {
 }
 
 rustc_library("lib") {
+  visibility = [
+    "//src/diagnostics/iquery/*",
+    "//src/lib/diagnostics/testing/*",
+  ]
   name = "diagnostics_testing"
   with_unit_tests = true
 

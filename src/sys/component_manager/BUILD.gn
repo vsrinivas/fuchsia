@@ -229,7 +229,6 @@ template("component_manager") {
       # binary and allows depending on 'testonly' targets.
       deps += [
         "//src/lib/diagnostics/hierarchy/rust",
-        "//src/lib/diagnostics/testing",
         "//src/lib/process_builder:test-util-fidl-rustc",
         "//src/sys/lib/directory_broker",
         "//src/sys/lib/library_loader",
