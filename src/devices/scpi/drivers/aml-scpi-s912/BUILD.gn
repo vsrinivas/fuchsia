@@ -52,6 +52,7 @@ driver_module("aml-scpi-s912.mailbox") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
