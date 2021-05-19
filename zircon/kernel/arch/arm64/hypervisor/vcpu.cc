@@ -63,7 +63,7 @@ static void gich_maybe_interrupt(GichState* gich_state, IchState* ich_state) {
   // If interrupts are of the same priority, we can choose whatever ordering
   // we prefer when populating the LRs.
   for (uint64_t elrsr = ich_state->elrsr; elrsr != 0;) {
-    uint32_t vector;
+    uint32_t vector = 0;
     hypervisor::InterruptType type = gich_state->Pop(&vector);
     if (type == hypervisor::InterruptType::INACTIVE) {
       // There are no more pending interrupts.
