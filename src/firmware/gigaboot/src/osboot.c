@@ -710,7 +710,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         append_avb_zbi_items(img, sys, kernel_b, ksz_b, "-b");
         print_cmdline();
 
-        if (kernel != NULL) {
+        if (kernel_b != NULL) {
           zbi_boot(img, sys, kernel_b, ksz_b);
         }
         goto fail;
