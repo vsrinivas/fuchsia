@@ -12,7 +12,7 @@ use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::{PackageManifest, PackagePath};
 use std::fs::{File, OpenOptions};
-use std::io::BufReader;
+use std::io::{BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use vbmeta::Salt;
 use zbi::ZbiBuilder;
@@ -88,6 +88,7 @@ fn construct_base_package(
     let _ = base_pkg_builder
         .build(gendir, &mut base_package)
         .context("Failed to build the base package")?;
+    base_package.seek(SeekFrom::Start(0))?;
     Ok(base_package)
 }
 
