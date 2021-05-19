@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::target::WeakTarget,
+    crate::target::Target,
     anyhow::{anyhow, bail, Context, Result},
     async_channel::bounded,
     diagnostics_data::{LogsData, Timestamp},
@@ -22,6 +22,7 @@ use {
     selectors::parse_selector,
     std::convert::TryInto,
     std::future::Future,
+    std::rc::Weak,
     std::sync::Arc,
     std::time::SystemTime,
     streamer::GenericDiagnosticsStreamer,
@@ -277,20 +278,20 @@ impl SymbolizerConfig {
 }
 
 pub struct Logger {
-    target: WeakTarget,
+    target: Weak<Target>,
     enabled: Option<bool>,
     streamer: Option<Arc<dyn GenericDiagnosticsStreamer>>,
     symbolizer: Option<SymbolizerConfig>,
 }
 
 impl Logger {
-    pub fn new(target: WeakTarget) -> Self {
+    pub fn new(target: Weak<Target>) -> Self {
         return Self { target: target, enabled: None, streamer: None, symbolizer: None };
     }
 
     #[cfg(test)]
     pub fn new_with_streamer_and_config(
-        target: WeakTarget,
+        target: Weak<Target>,
         streamer: impl GenericDiagnosticsStreamer + 'static,
         enabled: bool,
         symbolizer: SymbolizerConfig,
@@ -691,7 +692,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_disabled() -> Result<()> {
         let target = make_default_target(vec![]).await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let streamer = FakeDiagnosticsStreamer::new(1, Arc::new(Mutex::new(vec![])));
         let logger =
@@ -713,7 +715,8 @@ mod test {
             ]),
         ])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
         let streamer = FakeDiagnosticsStreamer::new(0, log_buf.clone());
@@ -754,7 +757,8 @@ mod test {
             ]),
         ])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 
@@ -789,7 +793,8 @@ mod test {
             FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log2)?]),
         ])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 
@@ -817,7 +822,8 @@ mod test {
             FakeArchiveIteratorResponse::new_with_values(vec![serde_json::to_string(&log2)?]),
         ])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 
@@ -850,7 +856,8 @@ mod test {
             FakeArchiveIteratorResponse::new_with_fidl_error(),
         ])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 
@@ -877,7 +884,8 @@ mod test {
     async fn test_fidl_error_with_no_real_logs() -> Result<()> {
         let target =
             make_default_target(vec![FakeArchiveIteratorResponse::new_with_fidl_error()]).await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 
@@ -899,7 +907,8 @@ mod test {
             serde_json::to_string(&log1)?,
         ])])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 
@@ -937,7 +946,8 @@ mod test {
             ]),
         ])
         .await;
-        let t = target.downgrade();
+        let t = Rc::downgrade(&target);
+        ();
 
         let log_buf = Arc::new(Mutex::new(vec![]));
 

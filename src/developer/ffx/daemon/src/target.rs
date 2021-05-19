@@ -33,7 +33,7 @@ use {
     std::fmt::{Debug, Display},
     std::hash::{Hash, Hasher},
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
-    std::rc::{Rc, Weak},
+    std::rc::Rc,
     std::sync::Arc,
     std::time::{Duration, Instant},
     timeout::{timeout, TimeoutError},
@@ -429,22 +429,6 @@ impl EventSynthesizer<TargetEvent> for TargetInner {
         }
     }
 }
-
-#[derive(Clone)]
-pub struct WeakTarget {
-    pub events: events::Queue<TargetEvent>,
-    inner: Weak<TargetInner>,
-}
-
-impl WeakTarget {
-    /// attempts to upgrade to a target with a null task manager.
-    pub fn upgrade(&self) -> Option<Target> {
-        let inner = self.inner.upgrade()?;
-        let events = self.events.clone();
-        Some(Target { inner, events, host_pipe: Default::default(), logger: Default::default() })
-    }
-}
-
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
@@ -457,10 +441,6 @@ pub struct Target {
 impl Target {
     pub fn is_connected(&self) -> bool {
         self.inner.state.borrow().is_connected()
-    }
-
-    pub fn downgrade(&self) -> WeakTarget {
-        WeakTarget { events: self.events.clone(), inner: Rc::downgrade(&self.inner) }
     }
 
     fn from_inner(inner: Rc<TargetInner>) -> Rc<Self> {
@@ -902,7 +882,7 @@ impl Target {
     pub fn run_host_pipe(self: &Rc<Self>) {
         if self.host_pipe.borrow().is_none() {
             let host_pipe = Rc::downgrade(&self.host_pipe);
-            let weak_target = self.downgrade();
+            let weak_target = Rc::downgrade(self);
             self.host_pipe.replace(Some(Task::local(async move {
                 let r = HostPipeConnection::new(weak_target).await;
                 // XXX(raggi): decide what to do with this log data:
@@ -919,7 +899,7 @@ impl Target {
     pub fn run_logger(self: &Rc<Self>) {
         if self.logger.borrow().is_none() {
             let logger = Rc::downgrade(&self.logger);
-            let weak_target = self.downgrade();
+            let weak_target = Rc::downgrade(self);
             self.logger.replace(Some(Task::local(async move {
                 let r = Logger::new(weak_target).start().await;
                 // XXX(raggi): decide what to do with this log data:

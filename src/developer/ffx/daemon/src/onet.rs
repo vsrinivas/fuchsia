@@ -5,7 +5,7 @@
 use {
     crate::constants::RETRY_DELAY,
     crate::ssh::build_ssh_command,
-    crate::target::{ConnectionState, TargetAddr, WeakTarget},
+    crate::target::{ConnectionState, Target, TargetAddr},
     anyhow::{anyhow, Context, Result},
     async_io::Async,
     fuchsia_async::{Task, Timer},
@@ -18,6 +18,7 @@ use {
     std::future::Future,
     std::io,
     std::process::{Child, Stdio},
+    std::rc::Weak,
     std::time::Duration,
 };
 
@@ -156,12 +157,12 @@ impl Drop for HostPipeChild {
 pub struct HostPipeConnection {}
 
 impl HostPipeConnection {
-    pub fn new(target: WeakTarget) -> impl Future<Output = Result<(), String>> {
+    pub fn new(target: Weak<Target>) -> impl Future<Output = Result<(), String>> {
         HostPipeConnection::new_with_cmd(target, HostPipeChild::new, RETRY_DELAY)
     }
 
     async fn new_with_cmd<F>(
-        target: WeakTarget,
+        target: Weak<Target>,
         cmd_func: impl FnOnce(Vec<TargetAddr>, Option<u16>, u64) -> F + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> Result<(), String>
@@ -213,6 +214,7 @@ fn overnet_pipe(overnet_instance: &dyn OvernetInstance) -> Result<fidl::AsyncSoc
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::rc::Rc;
 
     const ERR_CTX: &'static str = "running fake host-pipe command for test";
 
@@ -259,7 +261,7 @@ mod test {
     async fn test_host_pipe_start_and_stop_normal_operation() {
         let target = crate::target::Target::new("flooooooooberdoober");
         let _conn = HostPipeConnection::new_with_cmd(
-            target.downgrade(),
+            Rc::downgrade(&target),
             start_child_normal_operation,
             Duration::default(),
         );
@@ -271,7 +273,7 @@ mod test {
         // TODO(awdavies): Verify the error matches.
         let target = crate::target::Target::new("flooooooooberdoober");
         let conn = HostPipeConnection::new_with_cmd(
-            target.downgrade(),
+            Rc::downgrade(&target),
             start_child_internal_failure,
             Duration::default(),
         );
