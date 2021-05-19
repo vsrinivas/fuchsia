@@ -45,12 +45,16 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:memchr",
+      "//third_party/rust_crates:once_cell",
       "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:paste",
       "//third_party/rust_crates:rand",
     ]
 
-    test_deps = [ "//garnet/lib/rust/io_util" ]
+    test_deps = [
+      "//garnet/lib/rust/io_util",
+      "//src/lib/fuchsia",
+    ]
 
     sources = [
       "auth.rs",
