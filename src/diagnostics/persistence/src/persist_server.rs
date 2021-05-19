@@ -22,6 +22,11 @@ use {
 // The capability name for the Inspect reader
 const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor";
 
+// Keys for JSON per-tag metadata to be persisted and published
+const TIMESTAMPS_KEY: &str = "@timestamps";
+const ERROR_KEY: &str = ":error";
+const ERROR_DESCRIPTION_KEY: &str = "description";
+
 pub struct PersistServer {
     // Service name that this persist server is hosting.
     service_name: String,
@@ -106,9 +111,28 @@ struct Fetcher {
     tag: String,
 }
 
-fn string_to_save(inspect_data: &str) -> String {
+#[derive(serde::Serialize)]
+struct Timestamps {
+    before_monotonic: i64,
+    before_utc: i64,
+    after_monotonic: i64,
+    after_utc: i64,
+}
+
+fn string_to_save(inspect_data: &str, timestamps: &Timestamps, max_save_length: usize) -> String {
+    fn compose_error(timestamps: &Timestamps, description: String) -> Value {
+        json!({
+            TIMESTAMPS_KEY: timestamps,
+            ERROR_KEY: {
+                ERROR_DESCRIPTION_KEY: description
+            }
+        })
+    }
+
     let json_inspect: Value = serde_json::from_str(&inspect_data).expect("parsing json failed.");
-    match json_inspect {
+    let json_timestamps = json!(timestamps);
+    let timestamps_length = TIMESTAMPS_KEY.len() + json_timestamps.to_string().len() + 4;
+    let mut save_string = match json_inspect {
         Value::Array(items) => {
             let mut entries = Map::new();
             items
@@ -133,14 +157,22 @@ fn string_to_save(inspect_data: &str) -> String {
                     }
                 })
                 .for_each(drop);
+            entries.insert(TIMESTAMPS_KEY.to_string(), json_timestamps);
             Value::Object(entries)
         }
         _ => {
-            error!("Inspect wasn't an array: {}", json_inspect);
-            json!("{}")
+            error!("Inspect wasn't an array");
+            compose_error(timestamps, "Internal error: Inspect wasn't an array".to_string())
         }
     }
-    .to_string()
+    .to_string();
+    let data_length = save_string.len() - timestamps_length;
+    if data_length > max_save_length {
+        let error_description =
+            format!("Data too big: {} > max length {}", data_length, max_save_length,);
+        save_string = compose_error(timestamps, error_description).to_string();
+    }
+    save_string
 }
 
 struct FetcherArgs {
@@ -149,6 +181,11 @@ struct FetcherArgs {
     max_save_length: usize,
     service_name: String,
     tag: String,
+}
+
+fn utc_now() -> i64 {
+    let now_utc = chrono::prelude::Utc::now(); // Consider using SystemTime::now()?
+    now_utc.timestamp() * 1_000_000_000 + now_utc.timestamp_subsec_nanos() as i64
 }
 
 impl Fetcher {
@@ -162,15 +199,14 @@ impl Fetcher {
         fasync::Task::spawn(async move {
             loop {
                 if let Some(_) = receiver.next().await {
+                    let before_utc = utc_now();
+                    let before_monotonic = zx::Time::get_monotonic().into_nanos();
                     source.fetch().await.ok().map(|data| {
-                        let mut save_string = string_to_save(&data);
-                        if save_string.len() > max_save_length {
-                            save_string = format!(
-                                "\"Data too big: {} > max length {}\"",
-                                save_string.len(),
-                                max_save_length
-                            );
-                        }
+                        let after_utc = utc_now();
+                        let after_monotonic = zx::Time::get_monotonic().into_nanos();
+                        let timestamps =
+                            Timestamps { before_utc, before_monotonic, after_utc, after_monotonic };
+                        let save_string = string_to_save(&data, &timestamps, max_save_length);
                         file_handler::write(&service_name_copy, &tag_copy, &save_string);
                     });
                 } else {
