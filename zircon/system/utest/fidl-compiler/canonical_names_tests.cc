@@ -140,8 +140,6 @@ protocol Example {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-// TODO(fxbug.dev/71536): Convert tests after implementing client/server end in
-//  the new syntax
 TEST(CanonicalNamesTests, GoodServiceMembers) {
   TestLibrary library(R"FIDL(
 library example;
@@ -153,7 +151,7 @@ service Example {
   P f_o_o_b_a_r;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(CanonicalNamesTests, GoodUpperAcronym) {

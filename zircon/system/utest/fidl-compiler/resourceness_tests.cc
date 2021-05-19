@@ -751,17 +751,14 @@ struct Boros {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bad_member");
 }
 
-// TODO(fxbug.dev/75374): Correctly convert this FIDL
 TEST(ResourcenessTests, GoodStrictResourceOrderIndependent) {
-  std::string fidl_library = R"FIDL(
+  TestLibrary library(R"FIDL(
 library example;
 
 strict resource union SR { 1: bool b; };
 resource strict union RS { 1: bool b; };
-)FIDL";
-
-  TestLibrary library(fidl_library);
-  ASSERT_TRUE(library.Compile());
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   const auto strict_resource = library.LookupUnion("SR");
   EXPECT_EQ(strict_resource->strictness, fidl::types::Strictness::kStrict);

@@ -969,14 +969,14 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
   ASSERT_TRUE(all_passed, "At least one test case failed");
 }
 
-TEST(SpanTests, ParseTest) {
+TEST(SpanTests, GoodParseTest) {
   RunParseTests(new_syntax_test_cases, "", "", fidl::utils::Syntax::kNew);
   RunParseTests(new_syntax_test_cases, " ", "", fidl::utils::Syntax::kNew);
   RunParseTests(new_syntax_test_cases, "", " ", fidl::utils::Syntax::kNew);
   RunParseTests(new_syntax_test_cases, " ", " ", fidl::utils::Syntax::kNew);
 }
 
-TEST(SpanTests, ParseTestOld) {
+TEST(SpanTests, GoodParseTestOld) {
   RunParseTests(test_cases, "", "", fidl::utils::Syntax::kOld);
   RunParseTests(test_cases, " ", "", fidl::utils::Syntax::kOld);
   RunParseTests(test_cases, "", " ", fidl::utils::Syntax::kOld);

@@ -162,7 +162,6 @@ type Foo = table {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
-// TODO(fxbug.dev/72924): implement attributes
 TEST(TableTests, GoodAttributesOnFields) {
   TestLibrary library("test.fidl", R"FIDL(
 library fidl.test.tables;
@@ -174,10 +173,9 @@ table Foo {
     2: bool bar;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-// TODO(fxbug.dev/72924): implement attributes
 TEST(TableTests, GoodAttributesOnTables) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
@@ -188,7 +186,7 @@ table Foo {
     2: bool please;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 // TODO(fxbug.dev/72924): implement attributes

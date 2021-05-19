@@ -147,9 +147,7 @@ flexible enum FlexibleFoo {
   EXPECT_EQ(library.LookupEnum("DefaultStrictFoo")->strictness, fidl::types::Strictness::kStrict);
 }
 
-// TODO(fxbug.dev/73392): disallow flexible in the new syntax, and add a
-// FlexibleEnumReudundant test
-TEST(StrictnessTests, GoodFlexibleEnumRedundantOld) {
+TEST(StrictnessTests, GoodFlexibleEnum) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -157,12 +155,10 @@ flexible enum Foo {
   BAR = 1;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-// TODO(fxbug.dev/73392): disallow flexible in the new syntax, and add a
-// FlexibleBitsRedundant test
-TEST(StrictnessTests, GoodFlexibleBitsRedundantOld) {
+TEST(StrictnessTests, GoodFlexibleBitsRedundant) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -170,7 +166,7 @@ flexible bits Foo {
   BAR = 0x1;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(StrictnessTests, BadStrictnessStruct) {

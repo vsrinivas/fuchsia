@@ -124,7 +124,7 @@ struct Vectors {
             type1_vector->element_memcpy_compatibility);
 }
 
-TEST(CodedTypesGeneratorTests, VectorEncodeMightMutate) {
+TEST(CodedTypesGeneratorTests, GoodVectorEncodeMightMutate) {
   auto library = WithLibraryZx(R"FIDL(
 library example;
 

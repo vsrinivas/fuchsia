@@ -172,6 +172,7 @@ service X {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+// TODO(fxbug.dev/77063): update this test
 TEST(ConverterTests, AttributesSingletonsUnofficial) {
   std::string old_version = R"FIDL(
 [NoDoc2]
@@ -204,6 +205,7 @@ protocol P1 {
 
 [ForDeprecatedCBindings2]
 protocol P2 {
+  [OnCompose] compose P1;
   [Selector2 = "Bar"] M2();
 };
 
@@ -250,6 +252,7 @@ protocol P1 {
 
 @for_deprecated_c_bindings2
 protocol P2 {
+  [OnCompose] compose P1;
   @selector2("Bar") M2();
 };
 
