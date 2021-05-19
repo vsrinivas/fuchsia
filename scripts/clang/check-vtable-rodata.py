@@ -273,7 +273,10 @@ def check_fuchsia_main(args):
       continue
 
     path = os.path.join(args.build, binary["debug"])
-    check_vtables_in_file(path, args.readelf, excludes)
+    if os.path.exists(path):
+      check_vtables_in_file(path, args.readelf, excludes)
+    else:
+      print(f"Skipping {path}. This path does not exist.")
 
   return 0
 
