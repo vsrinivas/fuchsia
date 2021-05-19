@@ -118,6 +118,14 @@ variant("profile") {
 # work with other cases that do not expect the stripped prefix.
 variant("coverage-rust") {
   rustflags = [ "-Zinstrument-coverage" ]
+
+  # TODO: Update this once rust updates its LLVM to version 13.
+  if (is_fuchsia) {
+    rustflags += [ "-Clink-arg=-znostart-stop-gc" ]
+  } else {
+    rustflags += [ "-Clink-arg=-Wl,-z,nostart-stop-gc" ]
+  }
+
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
