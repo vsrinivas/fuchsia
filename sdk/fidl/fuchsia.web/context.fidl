@@ -78,9 +78,10 @@ bits ContextFeatureFlags : uint64 {
     /// - [`fuchsia.mediacodec/CodecFactory`]
     HARDWARE_VIDEO_DECODER = 0x8;
 
-    /// Disables all software video decoders. Videos will be rendered only if they can be decoded
-    /// in hardware using [`fuchsia.mediacodec/CodecFactory`]. Requires the
-    /// `HARDWARE_VIDEO_DECODER` flag.
+    /// Disables video codecs that cannot be decoded in hardware.
+    /// Software decoders will only be used as fallbacks for hardware decoders, such as when
+    /// insufficient resources are available.
+    /// Requires the `HARDWARE_VIDEO_DECODER` flag.
     HARDWARE_VIDEO_DECODER_ONLY = 0x10;
 
     /// Enables Widevine CDM modules for EME API. `VULKAN` feature must be enabled as well.
