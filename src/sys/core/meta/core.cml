@@ -21,6 +21,11 @@
             startup: "eager",
         },
         {
+            name: "system-updater",
+            url: "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cm",
+            startup: "eager",
+        },
+        {
             name: "last_reboot",
             url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cm",
         },
@@ -206,6 +211,11 @@
             to: "#appmgr",
         },
         {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "#system-updater",
+            to: "#appmgr",
+        },
+        {
             protocol: [
                 "fuchsia.ui.activity.control.Control",
                 "fuchsia.ui.activity.Provider",
@@ -260,18 +270,28 @@
             to: [
                 "#last_reboot",
                 "#sampler",
+                "#system-updater",
             ],
             dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#pkg-resolver",
-            to: "#universe-resolver",
+            to: [
+                "#system-updater",
+                "#universe-resolver",
+            ],
         },
         {
             directory: "pkgfs",
             from: "parent",
             to: "#pkg-cache",
+        },
+        {
+            directory: "system",
+            from: "parent",
+            as: "pkgfs-system",
+            to: "#system-updater",
         },
         {
             directory: "blob",
@@ -298,7 +318,10 @@
                 "fuchsia.space.Manager",
             ],
             from: "#pkg-cache",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#system-updater",
+            ],
         },
         {
             protocol: [
@@ -485,6 +508,7 @@
                 "#stash_secure",
                 "#system-metrics-logger",
                 "#system-update-committer",
+                "#system-updater",
                 "#temperature-logger",
                 "#test_manager",
                 "#universe-resolver",
@@ -512,6 +536,14 @@
             ],
             from: "parent",
             to: "#test_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.paver.Paver",
+            ],
+            from: "parent",
+            to: "#system-updater",
         },
         {
             storage: "tmp",
@@ -717,6 +749,11 @@
             subdir: "class/thermal",
         },
         {
+            directory: "build-info",
+            from: "parent",
+            to: "#system-updater",
+        },
+        {
             directory: "root-ssl-certificates",
             from: "parent",
             to: [
@@ -839,6 +876,16 @@
                 "#appmgr",
                 "#remote-control",
             ],
+        },
+        {
+            directory: "deprecated-misc-storage",
+            from: "parent",
+            to: "#system-updater",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#system-updater",
         },
         {
             storage: "cache",

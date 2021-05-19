@@ -6,16 +6,17 @@
 use {
     self::SystemUpdaterInteraction::{BlobfsSync, Gc, PackageResolve, Paver, Reboot},
     anyhow::{anyhow, Context as _, Error},
-    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_paver as paver,
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::PackageResolverRequestStream,
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy},
     fidl_fuchsia_update_installer_ext::{
         start_update, Initiator, Options, UpdateAttempt, UpdateAttemptError,
     },
     fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        RealmInstance,
     },
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
     fuchsia_zircon::Status,
@@ -115,11 +116,8 @@ impl TestEnvBuilder {
         self
     }
 
-    fn build(self) -> TestEnv {
+    async fn build(self) -> TestEnv {
         let Self { paver_service_builder, blocked_protocols, mount_data, history } = self;
-
-        // A buffer to store all the interactions the system-updater has with external services.
-        let interactions = Arc::new(Mutex::new(vec![]));
 
         let test_dir = TempDir::new().expect("create test tempdir");
 
@@ -141,10 +139,29 @@ impl TestEnvBuilder {
             .unwrap()
         }
 
-        // Set up system-updater to run in --oneshot false code path.
-        let system_updater_builder =
-            system_updater_app_builder(&data_path, &build_info_path, &misc_path, mount_data);
+        let mut fs = ServiceFs::new();
+        let data = io_util::directory::open_in_namespace(
+            data_path.to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
+        let build_info = io_util::directory::open_in_namespace(
+            build_info_path.to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )
+        .unwrap();
+        let misc = io_util::directory::open_in_namespace(
+            misc_path.to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+        .unwrap();
 
+        fs.add_remote("data", data);
+        fs.dir("config").add_remote("build-info", build_info);
+        fs.add_remote("misc", misc);
+
+        // A buffer to store all the interactions the system-updater has with external services.
+        let interactions = Arc::new(Mutex::new(vec![]));
         let interactions_paver_clone = Arc::clone(&interactions);
         let paver_service = Arc::new(
             paver_service_builder
@@ -153,9 +170,6 @@ impl TestEnvBuilder {
                 })
                 .build(),
         );
-
-        let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
 
         let resolver = {
             let interactions = Arc::clone(&interactions);
@@ -189,7 +203,7 @@ impl TestEnvBuilder {
             let should_register = |protocol: Protocol| !blocked_protocols.contains(&protocol);
 
             if should_register(Protocol::PackageResolver) {
-                fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
+                fs.dir("svc").add_fidl_service(move |stream: PackageResolverRequestStream| {
                     fasync::Task::spawn(
                         Arc::clone(&resolver)
                             .run_resolver_service(stream)
@@ -199,7 +213,7 @@ impl TestEnvBuilder {
                 });
             }
             if should_register(Protocol::Paver) {
-                fs.add_fidl_service(move |stream| {
+                fs.dir("svc").add_fidl_service(move |stream| {
                     fasync::Task::spawn(
                         Arc::clone(&paver_service)
                             .run_paver_service(stream)
@@ -209,7 +223,7 @@ impl TestEnvBuilder {
                 });
             }
             if should_register(Protocol::Reboot) {
-                fs.add_fidl_service(move |stream| {
+                fs.dir("svc").add_fidl_service(move |stream| {
                     fasync::Task::spawn(
                         Arc::clone(&reboot_service)
                             .run_reboot_service(stream)
@@ -219,7 +233,7 @@ impl TestEnvBuilder {
                 });
             }
             if should_register(Protocol::PackageCache) {
-                fs.add_fidl_service(move |stream| {
+                fs.dir("svc").add_fidl_service(move |stream| {
                     fasync::Task::spawn(
                         Arc::clone(&cache_service)
                             .run_cache_service(stream)
@@ -229,7 +243,7 @@ impl TestEnvBuilder {
                 });
             }
             if should_register(Protocol::Cobalt) {
-                fs.add_fidl_service(move |stream| {
+                fs.dir("svc").add_fidl_service(move |stream| {
                     fasync::Task::spawn(
                         Arc::clone(&logger_factory)
                             .run_logger_factory(stream)
@@ -239,7 +253,7 @@ impl TestEnvBuilder {
                 });
             }
             if should_register(Protocol::SpaceManager) {
-                fs.add_fidl_service(move |stream| {
+                fs.dir("svc").add_fidl_service(move |stream| {
                     fasync::Task::spawn(
                         Arc::clone(&space_service)
                             .run_space_service(stream)
@@ -250,16 +264,85 @@ impl TestEnvBuilder {
             }
         }
 
-        let env = fs
-            .create_salted_nested_environment("systemupdater_env")
-            .expect("nested environment to create successfully");
-        fasync::Task::spawn(fs.collect()).detach();
+        let fs_holder = Mutex::new(Some(fs));
+        let mut builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
+        builder
+            .add_eager_component("system_updater", ComponentSource::url("fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cm")).await.unwrap()
+            .add_component("fake_capabilities", ComponentSource::mock(move |mock_handles| {
+                let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+                async {
+                    rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                    fasync::Task::spawn(rfs.collect()).detach();
+                    Ok(())
+                }.boxed()
+            })).await.unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("system_updater"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.installer.Installer"),
+                source: RouteEndpoint::component("system_updater"),
+                targets: vec![ RouteEndpoint::AboveRoot ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.paver.Paver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageCache"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageResolver"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.space.Manager"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec![ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("deprecated-misc-storage", "/misc", fio2::RW_STAR_DIR),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec! [ RouteEndpoint::component("system_updater") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("build-info", "/config/build-info", fio2::R_STAR_DIR),
+                source: RouteEndpoint::component("fake_capabilities"),
+                targets: vec! [ RouteEndpoint::component("system_updater") ],
+            }).unwrap();
 
-        let system_updater =
-            system_updater_builder.spawn(env.launcher()).expect("system updater to launch");
+        if mount_data {
+            builder
+                .add_route(CapabilityRoute {
+                    capability: Capability::directory("data", "/data", fio2::RW_STAR_DIR),
+                    source: RouteEndpoint::component("fake_capabilities"),
+                    targets: vec![RouteEndpoint::component("system_updater")],
+                })
+                .unwrap();
+        }
+
+        let realm_instance = builder.build().create().await.unwrap();
 
         TestEnv {
-            _env: env,
+            realm_instance,
             resolver,
             _paver_service: paver_service,
             _reboot_service: reboot_service,
@@ -271,13 +354,12 @@ impl TestEnvBuilder {
             build_info_path,
             misc_path,
             interactions,
-            system_updater,
         }
     }
 }
 
 struct TestEnv {
-    _env: NestedEnvironment,
+    realm_instance: RealmInstance,
     resolver: Arc<MockResolverService>,
     _paver_service: Arc<MockPaverService>,
     _reboot_service: Arc<MockRebootService>,
@@ -289,12 +371,11 @@ struct TestEnv {
     build_info_path: PathBuf,
     misc_path: PathBuf,
     interactions: SystemUpdaterInteractions,
-    system_updater: App,
 }
 
 impl TestEnv {
-    fn new() -> Self {
-        Self::builder().build()
+    async fn new() -> Self {
+        Self::builder().build().await
     }
 
     fn builder() -> TestEnvBuilder {
@@ -393,7 +474,7 @@ impl TestEnv {
 
     /// Opens a connection to the installer fidl service.
     fn installer_proxy(&self) -> InstallerProxy {
-        self.system_updater.connect_to_protocol::<InstallerMarker>().unwrap()
+        self.realm_instance.root.connect_to_protocol_at_exposed_dir::<InstallerMarker>().unwrap()
     }
 
     async fn get_ota_metrics(&self) -> OtaMetrics {
@@ -403,33 +484,6 @@ impl TestEnv {
         let events = logger.cobalt_events.lock().clone();
         OtaMetrics::from_events(events)
     }
-}
-
-fn system_updater_app_builder(
-    data_path: &PathBuf,
-    build_info_path: &PathBuf,
-    misc_path: &PathBuf,
-    mount_data: bool,
-) -> AppBuilder {
-    let data_dir = File::open(data_path).expect("open data dir");
-    let build_info_dir = File::open(build_info_path).expect("open config dir");
-    let misc_dir = File::open(misc_path).expect("open misc dir");
-
-    let mut system_updater = AppBuilder::new(
-        "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cmx",
-    )
-    .add_dir_to_namespace("/config/build-info".to_string(), build_info_dir)
-    .expect("/config/build-info to mount")
-    .add_dir_to_namespace("/misc".to_string(), misc_dir)
-    .expect("/misc to mount");
-
-    if mount_data {
-        system_updater = system_updater
-            .add_dir_to_namespace("/data".to_string(), data_dir)
-            .expect("/data to mount");
-    }
-
-    system_updater
 }
 
 struct MockCacheService {

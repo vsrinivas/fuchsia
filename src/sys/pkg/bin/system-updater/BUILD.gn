@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-import("//src/sys/pkg/sysmgr_config.gni")
 import("epoch/generate_epoch.gni")
 
 base_epoch_file = "$target_out_dir/epoch.json"
@@ -97,28 +96,33 @@ rustc_binary("bin") {
 }
 
 fuchsia_package_with_single_component("system-updater") {
-  manifest = "meta/system-updater.cmx"
+  component_name = "system-updater"
+  manifest = "meta/system-updater.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_unittest_package("system-updater-tests") {
-  deps = [ ":bin_test" ]
-  manifest = "meta/system-updater-bin-test.cmx"
+  manifest = "meta/system-updater-bin-test.cml"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
     }
   }
+  deps = [ ":bin_test" ]
 }
 
+# omaha-client integration tests must be ported before this can be migrated.
+# fxbug.dev/76629
 fuchsia_component("isolated") {
   component_name = "system-updater-isolated"
   manifest = "meta/system-updater-isolated.cmx"
-  deps = [ "//src/sys/pkg/bin/system-updater:bin" ]
+  deps = [ ":bin" ]
 }
 
-sysmgr_config("config") {
-  source = "sysmgr.config"
+fuchsia_component("isolated-v2") {
+  component_name = "system-updater-isolated"
+  manifest = "meta/system-updater-isolated.cml"
+  deps = [ ":bin" ]
 }
 
 group("tests") {

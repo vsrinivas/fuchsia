@@ -310,6 +310,10 @@
             path: "/svc_for_sys/fuchsia.update.CommitStatusProvider",
         },
         {
+            protocol: "fuchsia.update.installer.Installer",
+            path: "/svc_for_sys/fuchsia.update.installer.Installer",
+        },
+        {
             protocol: "fuchsia.developer.remotecontrol.RemoteControl",
             path: "/svc_for_sys/fuchsia.developer.remotecontrol.RemoteControl",
         },

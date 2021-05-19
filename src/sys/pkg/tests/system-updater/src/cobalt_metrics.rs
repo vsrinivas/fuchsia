@@ -8,7 +8,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
     error: fidl_fuchsia_pkg::ResolveError,
     expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
 ) {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     let pkg_url = "fuchsia-pkg://fuchsia.com/failure/0?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
 
@@ -73,7 +73,7 @@ async fn reports_network() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_metrics_fail_to_send() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build();
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build().await;
 
     env.resolver
         .register_package("update", "upd4t3")

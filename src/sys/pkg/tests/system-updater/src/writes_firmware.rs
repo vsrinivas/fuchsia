@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_bootloader() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -59,7 +59,7 @@ async fn writes_bootloader() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_firmware() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -112,7 +112,7 @@ async fn writes_firmware() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_multiple_firmware_types() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -179,7 +179,8 @@ async fn skips_unsupported_firmware_type() {
                 paver::WriteFirmwareResult::Unsupported(true)
             }))
         })
-        .build();
+        .build()
+        .await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -239,7 +240,8 @@ async fn fails_on_firmware_write_error() {
                 paver::WriteFirmwareResult::Status(Status::INTERNAL.into_raw())
             }))
         })
-        .build();
+        .build()
+        .await;
 
     env.resolver
         .register_package("update", "upd4t3")

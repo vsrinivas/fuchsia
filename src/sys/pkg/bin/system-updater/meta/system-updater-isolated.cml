@@ -1,0 +1,51 @@
+// This file can be removed once mockable storage is supported by the
+// TestRealmBuilder.
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/system_updater",
+    },
+    capabilities: [
+        { protocol: "fuchsia.update.installer.Installer" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.paver.Paver",
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.space.Manager",
+            ],
+        },
+
+        // Storage is not currently mockable with the RealmBuilder. Instead
+        // a directory is injected for tests.
+        {
+            directory: "data",
+            rights: [ "rw*" ],
+            path: "/data",
+        },
+        {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/config/build-info",
+        },
+        {
+            directory: "deprecated-misc-storage",
+            rights: [ "rw*" ],
+            path: "/misc",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "self",
+        },
+    ],
+}

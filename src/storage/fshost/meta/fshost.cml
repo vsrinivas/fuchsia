@@ -78,6 +78,11 @@
             path: "/delayed/fs/pkgfs/packages/build-info/0/data",
         },
         {
+            directory: "deprecated-misc-storage",
+            rights: [ "rw*" ],
+            path: "/fs/data/misc",
+        },
+        {
             directory: "system",
             rights: [ "rx*" ],
             path: "/fs/system",
@@ -200,6 +205,10 @@
         },
         {
             directory: "build-info",
+            from: "self",
+        },
+        {
+            directory: "deprecated-misc-storage",
             from: "self",
         },
         {

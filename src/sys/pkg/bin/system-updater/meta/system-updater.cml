@@ -1,0 +1,53 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/system_updater",
+    },
+    capabilities: [
+        { protocol: "fuchsia.update.installer.Installer" },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.paver.Paver",
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.space.Manager",
+            ],
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "pkgfs-system",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/pkgfs/system",
+        },
+        {
+            directory: "build-info",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/build-info",
+        },
+        {
+            directory: "deprecated-misc-storage",
+            from: "parent",
+            rights: [ "rw*" ],
+            path: "/misc",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "self",
+        },
+    ],
+}
