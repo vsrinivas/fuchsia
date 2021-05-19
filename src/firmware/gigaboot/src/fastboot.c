@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <xefi.h>
+#include <zircon.h>
 #include <zircon/hw/gpt.h>
 
 // Constants.
@@ -26,7 +27,7 @@
 #define FB_PROTOCOL_VERSION 4
 #define INIT_PKT_SIZE (FB_HDR_SIZE + 4)
 #define INITIAL_SEQ_NUM 0x55aa
-#define NUM_COMMANDS 8
+#define NUM_COMMANDS 9
 #define NUM_VARIABLES 14
 #define PAGE_SIZE 4096
 #define PARTITION_OFFSET 0
@@ -108,6 +109,7 @@ void fb_getvar(char *cmd);
 void fb_set_active(char *cmd);
 void fb_boot(char *cmd);
 void fb_continue(char *cmd);
+void fb_staged_bootloader_file(char *cmd);
 
 // Fastboot variable functions. These functions retreive a variable and return
 // the value as a null terminated string. They are responsible for sending
@@ -167,6 +169,10 @@ static fb_cmd_t cmdlist[NUM_COMMANDS] = {
     {
         .name = "continue",
         .func = fb_continue,
+    },
+    {
+        .name = "oem add-staged-bootloader-file",
+        .func = fb_staged_bootloader_file,
     },
 };
 
@@ -715,6 +721,21 @@ void fb_boot(char *cmd) {
 // resumes boot.
 void fb_continue(char *cmd) {
   fb_poll_action = CONTINUE_BOOT;
+  fb_send_okay("");
+}
+
+// stage a file to be added to the ZBI.
+void fb_staged_bootloader_file(char *cmd) {
+  // throw away "oem add-staged-bootloader-file"
+  strtok(cmd, " ");
+  strtok(NULL, " ");
+  char *name = strtok(NULL, " ");
+  if (!name) {
+    fb_send_fail("No file name given");
+    return;
+  }
+
+  zircon_stage_zbi_file(name, curr_img.data, curr_img.size);
   fb_send_okay("");
 }
 

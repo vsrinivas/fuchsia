@@ -19,6 +19,7 @@
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
 static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
 
+static int add_staged_zbi_files(zbi_header_t* zbi, size_t capacity);
 static size_t get_last_crashlog(efi_system_table* sys, void* ptr, size_t max) {
   efi_runtime_services* rs = sys->RuntimeServices;
 
@@ -278,6 +279,8 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     }
   }
 
+  add_staged_zbi_files(ramdisk, rsz);
+
   memcpy((void*)kernel_zone_base, image, isz);
 
   // Obtain the system memory map
@@ -368,6 +371,8 @@ int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
   rlen += sizeof(zbi_header_t);
 
   printf("ramdisk @ %p\n", ramdisk);
+  zbi_result_t r2 = zbi_check(ramdisk, NULL);
+  printf("check result %d\n", r2);
 
   size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
 
@@ -376,4 +381,59 @@ int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
   kernel->hdr_file.length = sizeof(zbi_header_t) + klen;
 
   return boot_zircon(img, sys, image, roff, ramdisk, rsz, cmdline, csz);
+}
+
+// Buffer to keep staged ZBI files.
+// We store them in their own ZBI container, so we lose a little bit of extra space, but makes
+// copying to the final ZBI trivial.
+//
+// We have enough space for 3 SSH keys.
+static uint8_t zbi_files[4096] __attribute__((aligned(ZBI_ALIGNMENT)));
+static bool zbi_files_initialized = false;
+
+int zircon_stage_zbi_file(const char* name, const uint8_t* data, size_t data_len) {
+  size_t name_len = strlen(name);
+  if (name_len > UINT8_MAX) {
+    printf("ZBI filename too long");
+    return -1;
+  }
+  // Payload = (name_length_byte + name + data), size must fit in a uint32_t.
+  size_t payload_length = 1 + name_len + data_len;
+  if (payload_length > UINT32_MAX || payload_length < data_len) {
+    printf("ZBI file data too large");
+    return -1;
+  }
+  if (!zbi_files_initialized) {
+    zbi_result_t result = zbi_init(zbi_files, sizeof(zbi_files));
+    if (result != ZBI_RESULT_OK) {
+      printf("Failed to initialize zbi_files: %d\n", result);
+      return -1;
+    }
+    zbi_files_initialized = true;
+  }
+  void* payload_as_void = NULL;
+  zbi_result_t result = zbi_create_entry(zbi_files, sizeof(zbi_files), ZBI_TYPE_BOOTLOADER_FILE, 0,
+                                         0, payload_length, &payload_as_void);
+  if (result != ZBI_RESULT_OK) {
+    printf("Failed to create ZBI file entry: %d\n", result);
+    return -1;
+  }
+  uint8_t* payload = payload_as_void;
+  payload[0] = name_len;
+  memcpy(&payload[1], name, name_len);
+  memcpy(&payload[1 + name_len], data, data_len);
+  return 0;
+}
+
+static int add_staged_zbi_files(zbi_header_t* zbi, size_t capacity) {
+  if (!zbi_files_initialized) {
+    return 0;
+  }
+  zbi_result_t result = zbi_extend(zbi, capacity, zbi_files);
+  if (result != ZBI_RESULT_OK) {
+    printf("Failed to add staged ZBI files: %d\n", result);
+    return -1;
+  }
+  printf("Added staged ZBI files with total ZBI size %u\n", ((zbi_header_t*)zbi_files)->length);
+  return 0;
 }
