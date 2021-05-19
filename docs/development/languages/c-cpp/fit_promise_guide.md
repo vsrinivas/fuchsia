@@ -191,8 +191,7 @@ auto ConcatenateImportantThingsDoneInParallel() {
 }
 ```
 
-### `return fit::make_promise()`: Chaining or branching by returning new
-promises
+### `return fit::make_promise()`: Chaining or branching by returning new promises
 
 It may become useful to defer the decision of which promises to chain together
 until runtime. This method is in contrast with chaining that is performed
