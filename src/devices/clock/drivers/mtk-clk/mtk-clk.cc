@@ -4,7 +4,6 @@
 
 #include "mtk-clk.h"
 
-#include <fuchsia/hardware/clock/c/fidl.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/platform-defs.h>
