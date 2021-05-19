@@ -32,10 +32,17 @@ namespace {
 
 void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
   std::forward_list<inspect::Node> roots;
+  std::unordered_set<Node*> unique_nodes;
   while (!stack.empty()) {
     // Pop the current root and node to operate on.
     auto [root, node] = stack.top();
     stack.pop();
+
+    auto [_, inserted] = unique_nodes.insert(node);
+    if (!inserted) {
+      // Only insert unique nodes from the DAG.
+      continue;
+    }
 
     // Populate root with data from node.
     if (auto offers = node->offers(); !offers.empty()) {
@@ -53,10 +60,13 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
       root->CreateString("symbols", fxl::JoinStrings(strings, ", "), &inspector);
     }
 
-    // Push children of this node onto the stack.
-    for (auto& child : node->children()) {
-      auto& root_for_child = roots.emplace_front(root->CreateChild(child->name()));
-      stack.emplace(&root_for_child, child.get());
+    // Push children of this node onto the stack. We do this in reverse order to
+    // ensure the children are handled in order, from first to last.
+    auto& children = node->children();
+    for (auto child = children.rbegin(), end = children.rend(); child != end; ++child) {
+      auto& name = (*child)->name();
+      auto& root_for_child = roots.emplace_front(root->CreateChild(name));
+      stack.emplace(&root_for_child, child->get());
     }
   }
 

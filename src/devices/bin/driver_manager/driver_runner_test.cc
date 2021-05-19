@@ -1202,6 +1202,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
   EXPECT_THAT(indices, ElementsAre(1, 0));
 }
 
+// Start a composite driver.
 TEST_F(DriverRunnerTest, StartCompositeDriver) {
   auto driver_index = CreateDriverIndex();
   auto driver_index_client = driver_index.Connect();
@@ -1293,11 +1294,79 @@ TEST_F(DriverRunnerTest, StartAndInspect) {
   EXPECT_THAT(
       Inspect(driver_runner),
       AllOf(NodeMatches(NameMatches("root")),
-            ChildrenMatch(UnorderedElementsAre(AllOf(
+            ChildrenMatch(ElementsAre(AllOf(
                 NodeMatches(NameMatches("root")),
-                ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
+                ChildrenMatch(ElementsAre(AllOf(NodeMatches(AllOf(
                     NameMatches("second"),
                     PropertyList(UnorderedElementsAre(
                         StringIs("offers", "fuchsia.package.ProtocolA, fuchsia.package.ProtocolB"),
                         StringIs("symbols", "symbol-A, symbol-B")))))))))))));
+}
+
+// Start a composite driver and inspect the driver runner.
+TEST_F(DriverRunnerTest, StartAndInspect_CompositeDriver) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
+  DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
+                             loop().dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
+    realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {});
+    realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
+      driver_dir().Bind(std::move(exposed_dir));
+    });
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("part-1");
+    args.mutable_offers()->emplace_back("fuchsia.package.ProtocolA");
+    fdf::NodeControllerPtr node_controller;
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
+                        [](auto result) { EXPECT_FALSE(result.is_err()); });
+    args.set_name("part-2");
+    args.mutable_offers()->emplace_back("fuchsia.package.ProtocolB");
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
+                        [](auto result) { EXPECT_FALSE(result.is_err()); });
+    BindDriver(std::move(request), std::move(root_node));
+  });
+  ASSERT_EQ(ZX_OK,
+            StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
+
+  driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
+    fdf::NodePtr composite_node;
+    EXPECT_EQ(ZX_OK,
+              composite_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.set_name("child");
+    fdf::NodeControllerPtr node_controller;
+    composite_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {},
+                             [](auto result) { EXPECT_FALSE(result.is_err()); });
+    BindDriver(std::move(request), std::move(composite_node));
+  });
+  StartDriver(driver_runner, {
+                                 .url = "fuchsia-boot:///#meta/composite-driver.cm",
+                                 .binary = "driver/composite-driver.so",
+                                 .colocate = true,
+                             });
+
+  EXPECT_THAT(
+      Inspect(driver_runner),
+      AllOf(NodeMatches(NameMatches("root")),
+            ChildrenMatch(ElementsAre(AllOf(
+                NodeMatches(NameMatches("root")),
+                ChildrenMatch(UnorderedElementsAre(
+                    AllOf(NodeMatches(AllOf(NameMatches("part-1"),
+                                            PropertyList(ElementsAre(
+                                                StringIs("offers", "fuchsia.package.ProtocolA"))))),
+                          ChildrenMatch(ElementsAre(AllOf(
+                              NodeMatches(NameMatches("composite")),
+                              ChildrenMatch(ElementsAre(NodeMatches(NameMatches("child")))))))),
+                    AllOf(NodeMatches(AllOf(NameMatches("part-2"),
+                                            PropertyList(ElementsAre(
+                                                StringIs("offers", "fuchsia.package.ProtocolB"))))),
+                          ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("composite")),
+                                                          ChildrenMatch(IsEmpty()))))))))))));
 }
