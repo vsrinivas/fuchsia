@@ -8,7 +8,7 @@ use fuchsia_pkg::{CreationManifest, MetaPackage, PackageManifest, PackagePath};
 use fuchsia_url::pkg_url::PkgUrl;
 use serde::{Deserialize, Serialize};
 use serde_json::ser;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
@@ -23,7 +23,10 @@ pub struct UpdatePackageBuilder {
 impl UpdatePackageBuilder {
     /// Construct a new UpdatePackageBuilder.
     pub fn new() -> Self {
-        UpdatePackageBuilder { contents: BTreeMap::new(), packages: PackageList::V1(vec![]) }
+        UpdatePackageBuilder {
+            contents: BTreeMap::new(),
+            packages: PackageList::V1(BTreeSet::new()),
+        }
     }
 
     /// Add a file to be updated.
@@ -91,7 +94,7 @@ impl UpdatePackageBuilder {
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
 enum PackageList {
     #[serde(rename = "1")]
-    V1(Vec<PkgUrl>),
+    V1(BTreeSet<PkgUrl>),
 }
 
 impl PackageList {
@@ -101,8 +104,8 @@ impl PackageList {
             PkgUrl::new_package("fuchsia.com".to_string(), path.as_ref().to_string(), Some(merkle))
                 .context(format!("Failed to create package url for {}", path.as_ref()))?;
         match self {
-            PackageList::V1(contents) => contents.push(url),
-        }
+            PackageList::V1(contents) => contents.insert(url),
+        };
         Ok(())
     }
 }
@@ -120,7 +123,7 @@ mod tests {
 
     #[test]
     fn package_list() {
-        let mut list = PackageList::V1(vec![]);
+        let mut list = PackageList::V1(BTreeSet::new());
         list.insert("/one/0", [0u8; 32].into()).unwrap();
         let out = serde_json::to_value(&list).unwrap();
         assert_eq!(
