@@ -14,6 +14,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fit/defer.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -191,4 +192,3 @@ static zx_driver_ops_t driver_ops = []() {
 
 // clang-format off
 ZIRCON_DRIVER(dw_spi, spi::driver_ops, "zircon", "0.1");
-
