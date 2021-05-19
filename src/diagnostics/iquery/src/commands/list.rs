@@ -2,16 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    commands::{types::*, utils},
-    types::{Error, ToText},
+use {
+    crate::{
+        commands::types::*,
+        types::{Error, ToText},
+    },
+    argh::FromArgs,
+    async_trait::async_trait,
+    diagnostics_data::{Lifecycle, LifecycleData, LifecycleType},
+    serde::{Serialize, Serializer},
+    std::{cmp::Ordering, collections::BTreeSet},
 };
-use argh::FromArgs;
-use async_trait::async_trait;
-use diagnostics_data::LifecycleType;
-use diagnostics_reader::{ArchiveReader, Lifecycle};
-use serde::{Serialize, Serializer};
-use std::{cmp::Ordering, collections::BTreeSet};
+
+#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Serialize)]
+pub struct MonikerWithUrl {
+    pub moniker: String,
+    pub component_url: String,
+}
 
 #[derive(Debug, Eq, PartialEq, Ord)]
 pub enum ListResponseItem {
@@ -42,12 +49,6 @@ impl PartialOrd for ListResponseItem {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Serialize)]
-pub struct MonikerWithUrl {
-    moniker: String,
-    component_url: String,
-}
-
 impl Serialize for ListResponseItem {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
@@ -69,6 +70,45 @@ impl ToText for Vec<ListResponseItem> {
             .collect::<Vec<_>>()
             .join("\n")
     }
+}
+
+pub fn components_from_lifecycle_data(lifecycle_data: Vec<LifecycleData>) -> Vec<MonikerWithUrl> {
+    let mut result = vec![];
+    for value in lifecycle_data {
+        // TODO(fxbug.dev/55118): when we can filter on metadata on a StreamDiagnostics
+        // request, this manual filtering won't be necessary.
+        if value.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady {
+            result.push(MonikerWithUrl {
+                moniker: value.moniker,
+                component_url: value.metadata.component_url.clone(),
+            });
+        }
+    }
+    result
+}
+
+pub fn list_response_items_from_components(
+    manifest: &Option<String>,
+    with_url: bool,
+    components: Vec<MonikerWithUrl>,
+) -> Vec<ListResponseItem> {
+    components
+        .into_iter()
+        .filter(|result| match manifest {
+            None => true,
+            Some(manifest) => result.component_url.contains(manifest),
+        })
+        .map(|result| {
+            if with_url {
+                ListResponseItem::MonikerWithUrl(result)
+            } else {
+                ListResponseItem::Moniker(result.moniker)
+            }
+        })
+        // Collect as btreeset to sort and remove potential duplicates.
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
 }
 
 /// Lists all components (relative to the scope where the archivist receives events from) of
@@ -99,43 +139,67 @@ pub struct ListCommand {
 impl Command for ListCommand {
     type Result = Vec<ListResponseItem>;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
-        let results = get_ready_components(&self.accessor_path)
-            .await?
-            .into_iter()
-            .filter(|result| match &self.manifest {
-                None => true,
-                Some(manifest) => result.component_url.contains(manifest),
-            })
-            .map(|result| {
-                if self.with_url {
-                    ListResponseItem::MonikerWithUrl(result)
-                } else {
-                    ListResponseItem::Moniker(result.moniker)
-                }
-            })
-            // Collect as btreeset to sort and remove potential duplicates.
-            .collect::<BTreeSet<_>>();
-        Ok(results.into_iter().collect::<Vec<_>>())
+    async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
+        let lifecycle = provider.snapshot::<Lifecycle>(&self.accessor_path, &[]).await?;
+        let components = components_from_lifecycle_data(lifecycle);
+        let results =
+            list_response_items_from_components(&self.manifest, self.with_url, components);
+        Ok(results)
     }
 }
 
-async fn get_ready_components(
-    accessor_path: &Option<String>,
-) -> Result<Vec<MonikerWithUrl>, Error> {
-    let archive = utils::connect_to_archive_accessor(accessor_path).await?;
-    let reader = ArchiveReader::new().with_archive(archive);
-    let values = reader.snapshot::<Lifecycle>().await.map_err(|e| Error::Fetch(e))?;
-    let mut result = vec![];
-    for value in values {
-        // TODO(fxbug.dev/55118): when we can filter on metadata on a StreamDiagnostics
-        // request, this manual filtering won't be necessary.
-        if value.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady {
-            result.push(MonikerWithUrl {
-                moniker: value.moniker,
-                component_url: value.metadata.component_url.clone(),
-            });
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use diagnostics_data::Timestamp;
+
+    #[test]
+    fn components_from_lifecycle_data_uses_diagnostics_ready() {
+        let lifecycle_data = vec![
+            LifecycleData::for_lifecycle_event(
+                "some_moniker",
+                LifecycleType::Started,
+                None,
+                "fake-url",
+                Timestamp::from(123456789800i64),
+                vec![],
+            ),
+            LifecycleData::for_lifecycle_event(
+                "other_moniker",
+                LifecycleType::Started,
+                None,
+                "other-fake-url",
+                Timestamp::from(123456789900i64),
+                vec![],
+            ),
+            LifecycleData::for_lifecycle_event(
+                "some_moniker",
+                LifecycleType::DiagnosticsReady,
+                None,
+                "fake-url",
+                Timestamp::from(123456789910i64),
+                vec![],
+            ),
+            LifecycleData::for_lifecycle_event(
+                "different_moniker",
+                LifecycleType::Running,
+                None,
+                "different-fake-url",
+                Timestamp::from(123456790900i64),
+                vec![],
+            ),
+            LifecycleData::for_lifecycle_event(
+                "different_moniker",
+                LifecycleType::DiagnosticsReady,
+                None,
+                "different-fake-url",
+                Timestamp::from(123456790990i64),
+                vec![],
+            ),
+        ];
+
+        let components = components_from_lifecycle_data(lifecycle_data);
+
+        assert_eq!(components.len(), 2);
     }
-    Ok(result)
 }

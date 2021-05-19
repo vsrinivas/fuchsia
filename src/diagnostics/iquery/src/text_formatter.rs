@@ -4,7 +4,7 @@
 
 use {
     diagnostics_data::InspectData,
-    fuchsia_inspect::reader::{ArrayContent, DiagnosticsHierarchy, Property},
+    diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     nom::HexDisplay,
     num_traits::Bounded,
     std::{

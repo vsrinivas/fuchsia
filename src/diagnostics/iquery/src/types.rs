@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow, diagnostics_reader as reader, serde_json, std::str::FromStr, thiserror::Error};
+use {anyhow, serde_json, std::str::FromStr, thiserror::Error};
+
+#[cfg(target_os = "fuchsia")]
+use diagnostics_reader as reader;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[cfg(target_os = "fuchsia")]
     #[error("Error while fetching data: {0}")]
     Fetch(reader::Error),
 

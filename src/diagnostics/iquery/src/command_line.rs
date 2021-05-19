@@ -35,11 +35,11 @@ pub struct CommandLine {
 // Once Generic Associated types are implemented we could have something along the lines of
 // `type Result = Box<T: Serialize>` and not rely on this macro.
 macro_rules! execute_and_format {
-    ($self:ident, [$($command:ident),*]) => {
+    ($self:ident, $provider:ident, [$($command:ident),*]) => {
         match &$self.command {
             $(
                 SubCommand::$command(command) => {
-                    let result = command.execute().await?;
+                    let result = command.execute($provider).await?;
                     match $self.format {
                         Format::Json => {
                             serde_json::to_string_pretty(&result)
@@ -59,7 +59,11 @@ macro_rules! execute_and_format {
 impl Command for CommandLine {
     type Result = String;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
-        execute_and_format!(self, [List, ListAccessors, ListFiles, Logs, Selectors, Show, ShowFile])
+    async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
+        execute_and_format!(
+            self,
+            provider,
+            [List, ListAccessors, ListFiles, Logs, Selectors, Show, ShowFile]
+        )
     }
 }

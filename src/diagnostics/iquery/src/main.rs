@@ -3,17 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{command_line::CommandLine, commands::Command},
     anyhow::Error,
     argh, fuchsia_async as fasync,
+    iquery::{command_line::CommandLine, commands::ArchiveAccessorProvider, commands::Command},
 };
-
-mod command_line;
-mod commands;
-mod constants;
-mod location;
-mod text_formatter;
-mod types;
 
 #[cfg(test)]
 #[macro_use]
@@ -22,7 +15,8 @@ mod tests;
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let command_line: CommandLine = argh::from_env();
-    match command_line.execute().await {
+    let provider = ArchiveAccessorProvider::default();
+    match command_line.execute(&provider).await {
         Ok(result) => {
             println!("{}", result);
         }

@@ -9,6 +9,7 @@ use {
     },
     argh::FromArgs,
     async_trait::async_trait,
+    diagnostics_data::{Inspect, InspectData},
     diagnostics_hierarchy::DiagnosticsHierarchy,
     selectors,
 };
@@ -42,24 +43,25 @@ pub struct SelectorsCommand {
 impl Command for SelectorsCommand {
     type Result = Vec<String>;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
+    async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
         if self.selectors.is_empty() && self.manifest.is_none() {
             return Err(Error::invalid_arguments("Expected 1 or more selectors. Got zero."));
         }
-        let selectors =
-            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.accessor_path)
-                .await?;
-        let mut result = utils::fetch_data(&selectors, &self.accessor_path)
-            .await?
-            .into_iter()
-            .filter_map(|schema| {
-                let moniker = schema.moniker;
-                schema.payload.map(|hierarchy| get_selectors(moniker, hierarchy))
-            })
-            .flat_map(|results| results)
-            .collect::<Vec<_>>();
-        result.sort();
-        Ok(result)
+        let selectors = utils::get_selectors_for_manifest(
+            &self.manifest,
+            &self.selectors,
+            &self.accessor_path,
+            provider,
+        )
+        .await?;
+        let selectors = utils::expand_selectors(selectors)?;
+        let mut results = provider.snapshot::<Inspect>(&self.accessor_path, &selectors).await?;
+        for result in results.iter_mut() {
+            if let Some(hierarchy) = &mut result.payload {
+                hierarchy.sort();
+            }
+        }
+        Ok(inspect_to_selectors(results))
     }
 }
 
@@ -77,4 +79,17 @@ fn get_selectors(component_selector: String, hierarchy: DiagnosticsHierarchy) ->
             format!("{}:{}:{}", component_selector, node_selector, property_selector)
         })
         .collect()
+}
+
+fn inspect_to_selectors(inspect_data: Vec<InspectData>) -> Vec<String> {
+    let mut result = inspect_data
+        .into_iter()
+        .filter_map(|schema| {
+            let moniker = schema.moniker;
+            schema.payload.map(|hierarchy| get_selectors(moniker, hierarchy))
+        })
+        .flat_map(|results| results)
+        .collect::<Vec<_>>();
+    result.sort();
+    result
 }

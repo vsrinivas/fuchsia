@@ -5,8 +5,9 @@
 #![cfg(test)]
 
 use {
-    crate::{assert_command, commands::expand_paths, tests::utils, types::Error},
+    crate::{assert_command, tests::utils},
     diagnostics_testing::{EnvWithDiagnostics, Launched},
+    iquery::{commands::expand_paths, types::Error},
     matches::assert_matches,
     std::path::Path,
     tempfile::tempdir,

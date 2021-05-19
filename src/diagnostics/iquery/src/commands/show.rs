@@ -11,33 +11,10 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
-    diagnostics_data::InspectData,
+    diagnostics_data::{Inspect, InspectData},
     serde::Serialize,
     std::{cmp::Ordering, ops::Deref},
 };
-
-/// Prints the inspect hierarchies that match the given selectors.
-#[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "show")]
-pub struct ShowCommand {
-    #[argh(option)]
-    /// the name of the manifest file that we are interested in. If this is provided, the output
-    /// will only contain monikers for components whose url contains the provided name.
-    pub manifest: Option<String>,
-
-    #[argh(positional)]
-    /// selectors for which the selectors should be queried. If no selectors are provided, inspect
-    /// data for the whole system will be returned. If `--manifest` is provided then the selectors
-    /// should be tree selectors, otherwise component selectors or full selectors.
-    pub selectors: Vec<String>,
-
-    #[argh(option)]
-    /// the path from where to get the ArchiveAccessor connection. If the given path is a
-    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
-    /// If the given path is a service file, the command will attempt to connect to it as an
-    /// ArchiveAccessor.
-    pub accessor_path: Option<String>,
-}
 
 #[derive(Derivative, Serialize, PartialEq)]
 #[derivative(Eq)]
@@ -72,21 +49,54 @@ impl ToText for Vec<ShowCommandResultItem> {
     }
 }
 
+/// Prints the inspect hierarchies that match the given selectors.
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "show")]
+pub struct ShowCommand {
+    #[argh(option)]
+    /// the name of the manifest file that we are interested in. If this is provided, the output
+    /// will only contain monikers for components whose url contains the provided name.
+    pub manifest: Option<String>,
+
+    #[argh(positional)]
+    /// selectors for which the selectors should be queried. If no selectors are provided, inspect
+    /// data for the whole system will be returned. If `--manifest` is provided then the selectors
+    /// should be tree selectors, otherwise component selectors or full selectors.
+    pub selectors: Vec<String>,
+
+    #[argh(option)]
+    /// the path from where to get the ArchiveAccessor connection. If the given path is a
+    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
+    /// If the given path is a service file, the command will attempt to connect to it as an
+    /// ArchiveAccessor.
+    pub accessor_path: Option<String>,
+}
+
 #[async_trait]
 impl Command for ShowCommand {
     type Result = Vec<ShowCommandResultItem>;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
-        let selectors =
-            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.accessor_path)
-                .await?;
-        let mut results = utils::fetch_data(&selectors, &self.accessor_path)
-            .await?
+    async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
+        let selectors = utils::get_selectors_for_manifest(
+            &self.manifest,
+            &self.selectors,
+            &self.accessor_path,
+            provider,
+        )
+        .await?;
+        let selectors = utils::expand_selectors(selectors)?;
+        let mut inspect_data =
+            provider.snapshot::<Inspect>(&self.accessor_path, &selectors).await?;
+        for data in inspect_data.iter_mut() {
+            if let Some(hierarchy) = &mut data.payload {
+                hierarchy.sort();
+            }
+        }
+        let mut results = inspect_data
             .into_iter()
             .map(|schema| ShowCommandResultItem(schema))
             .collect::<Vec<_>>();
         results.sort();
-
         Ok(results)
     }
 }

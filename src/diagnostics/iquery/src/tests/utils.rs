@@ -5,7 +5,6 @@
 #![cfg(test)]
 
 use {
-    crate::{command_line::CommandLine, commands::*, types::Error},
     anyhow::format_err,
     argh::FromArgs,
     difference::{Changeset, Difference},
@@ -16,6 +15,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     futures::StreamExt,
+    iquery::{command_line::CommandLine, commands::*, types::Error},
     regex::Regex,
 };
 
@@ -54,8 +54,9 @@ pub async fn start_test_component(
 
 /// Execute a command: [command, flags, and, args]
 pub async fn execute_command(command: &[&str]) -> Result<String, Error> {
+    let provider = ArchiveAccessorProvider::default();
     let command_line = CommandLine::from_args(&["iquery"], command).expect("create command line");
-    command_line.execute().await
+    command_line.execute(&provider).await
 }
 
 /// Validates that a command result matches the expected json string

@@ -48,7 +48,7 @@ impl ToText for Vec<ShowFileResultItem> {
 impl Command for ShowFileCommand {
     type Result = Vec<ShowFileResultItem>;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
+    async fn execute<P: DiagnosticsProvider>(&self, _provider: &P) -> Result<Self::Result, Error> {
         if self.paths.is_empty() {
             return Err(Error::invalid_arguments("Expected 1 or more paths. Got zero."));
         }

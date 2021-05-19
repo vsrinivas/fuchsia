@@ -4,13 +4,12 @@
 
 use {
     crate::{
-        commands::{types::*, utils::connect_to_archive_accessor},
+        commands::types::*,
         types::{Error, ToText},
     },
     argh::FromArgs,
     async_trait::async_trait,
-    diagnostics_data::LogsData,
-    diagnostics_reader::{ArchiveReader, Logs},
+    diagnostics_data::{Logs, LogsData},
 };
 
 /// Prints the logs.
@@ -35,10 +34,8 @@ impl ToText for Vec<LogsData> {
 impl Command for LogsCommand {
     type Result = Vec<LogsData>;
 
-    async fn execute(&self) -> Result<Self::Result, Error> {
-        let archive = connect_to_archive_accessor(&self.accessor_path).await?;
-        let reader = ArchiveReader::new().with_archive(archive).retry_if_empty(false);
-        let mut results = reader.snapshot::<Logs>().await.unwrap();
+    async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
+        let mut results = provider.snapshot::<Logs>(&self.accessor_path, &[]).await?;
         for result in results.iter_mut() {
             if let Some(hierarchy) = &mut result.payload {
                 hierarchy.sort();
