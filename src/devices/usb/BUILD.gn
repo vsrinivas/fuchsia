@@ -6,9 +6,7 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-usb-phy-v2",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/as370-usb-phy",
+    "drivers/as370-usb-phy",
     "drivers/dwc2",
     "drivers/mt-musb-host",
 

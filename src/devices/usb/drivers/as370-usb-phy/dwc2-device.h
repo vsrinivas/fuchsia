@@ -7,6 +7,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <fbl/macros.h>
 
 namespace as370_usb_phy {
 
