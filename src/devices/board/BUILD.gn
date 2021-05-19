@@ -20,9 +20,7 @@ group("drivers") {
     "drivers/sherlock:sherlock",
     "drivers/sherlock:sherlock-factory",
     "drivers/sherlock:sherlock-factory-rndis",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/vim2",
+    "drivers/vim2",
     "drivers/vim3",
 
     # TODO(http://fxbug.dev/77082): Renable disabled drivers.
