@@ -10,6 +10,7 @@
 #include <lib/zx/time.h>
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include "fuchsia/intl/l10n/cpp/fidl.h"
@@ -49,6 +50,12 @@ class ScreenReaderMessageGenerator {
       const std::vector<std::string>& arg_names = std::vector<std::string>(),
       const std::vector<std::string>& arg_values = std::vector<std::string>());
 
+  // Returns an utterance that describes a character to be used when spelling a word or entering
+  // text. For example, the symbol '.' may be described as 'dot', if the current language is
+  // English. If the symbol is not known, the symbol itself is returned. Note that a string is the
+  // parameter here because not all UTF-8 grapheme clusters can be represented in a char.
+  virtual UtteranceAndContext FormatCharacterForSpelling(const std::string& character);
+
  protected:
   // Constructor for mock only.
   ScreenReaderMessageGenerator() = default;
@@ -67,6 +74,8 @@ class ScreenReaderMessageGenerator {
   UtteranceAndContext DescribeToggleSwitch(const fuchsia::accessibility::semantics::Node* node);
 
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
+
+  std::unordered_map<std::string, fuchsia::intl::l10n::MessageIds> character_to_message_id_;
 };
 
 }  // namespace a11y

@@ -54,7 +54,57 @@ bool NodeIsClickable(const Node* node) {
 
 ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
     std::unique_ptr<i18n::MessageFormatter> message_formatter)
-    : message_formatter_(std::move(message_formatter)) {}
+    : message_formatter_(std::move(message_formatter)) {
+  character_to_message_id_.insert({"!", MessageIds::EXCLAMATION_SYMBOL_NAME});
+  character_to_message_id_.insert({"?", MessageIds::QUESTION_MARK_SYMBOL_NAME});
+  character_to_message_id_.insert({"_", MessageIds::UNDERSCORE_SYMBOL_NAME});
+  character_to_message_id_.insert({"/", MessageIds::FORWARD_SLASH_SYMBOL_NAME});
+  character_to_message_id_.insert({",", MessageIds::COMMA_SYMBOL_NAME});
+  character_to_message_id_.insert({".", MessageIds::PERIOD_SYMBOL_NAME});
+  character_to_message_id_.insert({"<", MessageIds::LESS_THAN_SYMBOL_NAME});
+  character_to_message_id_.insert({">", MessageIds::GREATER_THAN_SYMBOL_NAME});
+  character_to_message_id_.insert({"@", MessageIds::AT_SYMBOL_NAME});
+  character_to_message_id_.insert({"#", MessageIds::POUND_SYMBOL_NAME});
+  character_to_message_id_.insert({"$", MessageIds::DOLLAR_SYMBOL_NAME});
+  character_to_message_id_.insert({"%", MessageIds::PERCENT_SYMBOL_NAME});
+  character_to_message_id_.insert({"&", MessageIds::AMPERSAND_SYMBOL_NAME});
+  character_to_message_id_.insert({"-", MessageIds::DASH_SYMBOL_NAME});
+  character_to_message_id_.insert({"+", MessageIds::PLUS_SYMBOL_NAME});
+  character_to_message_id_.insert({"=", MessageIds::EQUALS_SYMBOL_NAME});
+  character_to_message_id_.insert({"(", MessageIds::LEFT_PARENTHESIS_SYMBOL_NAME});
+  character_to_message_id_.insert({")", MessageIds::RIGHT_PARENTHESIS_SYMBOL_NAME});
+  character_to_message_id_.insert({"\\", MessageIds::BACKSLASH_SYMBOL_NAME});
+  character_to_message_id_.insert({"*", MessageIds::ASTERISK_SYMBOL_NAME});
+  character_to_message_id_.insert({"\"", MessageIds::DOUBLE_QUOTATION_MARK_SYMBOL_NAME});
+  character_to_message_id_.insert({"'", MessageIds::SINGLE_QUOTATION_MARK_SYMBOL_NAME});
+  character_to_message_id_.insert({":", MessageIds::COLON_SYMBOL_NAME});
+  character_to_message_id_.insert({";", MessageIds::SEMICOLON_SYMBOL_NAME});
+  character_to_message_id_.insert({"~", MessageIds::TILDE_SYMBOL_NAME});
+  character_to_message_id_.insert({"`", MessageIds::GRAVE_ACCENT_SYMBOL_NAME});
+  character_to_message_id_.insert({"|", MessageIds::VERTICAL_LINE_SYMBOL_NAME});
+  character_to_message_id_.insert({"√", MessageIds::SQUARE_ROOT_SYMBOL_NAME});
+  character_to_message_id_.insert({"•", MessageIds::BULLET_SYMBOL_NAME});
+  character_to_message_id_.insert({"✕", MessageIds::MULTIPLICATION_SYMBOL_NAME});
+  character_to_message_id_.insert({"÷", MessageIds::DIVISION_SYMBOL_NAME});
+  character_to_message_id_.insert({"¶", MessageIds::PILCROW_SYMBOL_NAME});
+  character_to_message_id_.insert({"π", MessageIds::PI_SYMBOL_NAME});
+  character_to_message_id_.insert({"∆", MessageIds::DELTA_SYMBOL_NAME});
+  character_to_message_id_.insert({"£", MessageIds::BRITISH_POUND_SYMBOL_NAME});
+  character_to_message_id_.insert({"¢", MessageIds::CENT_SYMBOL_NAME});
+  character_to_message_id_.insert({"€", MessageIds::EURO_SYMBOL_NAME});
+  character_to_message_id_.insert({"¥", MessageIds::YEN_SYMBOL_NAME});
+  character_to_message_id_.insert({"^", MessageIds::CARET_SYMBOL_NAME});
+  character_to_message_id_.insert({"°", MessageIds::DEGREE_SYMBOL_NAME});
+  character_to_message_id_.insert({"{", MessageIds::LEFT_CURLY_BRACKET_SYMBOL_NAME});
+  character_to_message_id_.insert({"}", MessageIds::RIGHT_CURLY_BRACKET_SYMBOL_NAME});
+  character_to_message_id_.insert({"©", MessageIds::COPYRIGHT_SYMBOL_NAME});
+  character_to_message_id_.insert({"®", MessageIds::REGISTERED_TRADEMARK_SYMBOL_NAME});
+  character_to_message_id_.insert({"™", MessageIds::TRADEMARK_SYMBOL_NAME});
+  character_to_message_id_.insert({"[", MessageIds::LEFT_SQUARE_BRACKET_SYMBOL_NAME});
+  character_to_message_id_.insert({"]", MessageIds::RIGHT_SQUARE_BRACKET_SYMBOL_NAME});
+  character_to_message_id_.insert({"¡", MessageIds::INVERTED_EXCLAMATION_POINT_SYMBOL_NAME});
+  character_to_message_id_.insert({"¿", MessageIds::INVERTED_QUESTION_MARK_SYMBOL_NAME});
+}
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
@@ -190,6 +240,18 @@ ScreenReaderMessageGenerator::DescribeToggleSwitch(
                                         {name_value});
   }
   return GenerateUtteranceByMessageId(message_id);
+}
+
+ScreenReaderMessageGenerator::UtteranceAndContext
+ScreenReaderMessageGenerator::FormatCharacterForSpelling(const std::string& character) {
+  const auto it = character_to_message_id_.find(character);
+  if (it == character_to_message_id_.end()) {
+    UtteranceAndContext utterance;
+    utterance.utterance.set_message(character);
+    return utterance;
+  }
+
+  return GenerateUtteranceByMessageId(it->second);
 }
 
 }  // namespace a11y

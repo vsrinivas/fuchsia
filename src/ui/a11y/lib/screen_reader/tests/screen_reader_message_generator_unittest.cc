@@ -375,5 +375,18 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchMessageFormatterReturns
   ASSERT_FALSE(result[0].utterance.has_message());
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, FormatCharacterForSpelling) {
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::PERIOD_SYMBOL_NAME), "dot");
+  auto result = screen_reader_message_generator_->FormatCharacterForSpelling(".");
+  ASSERT_TRUE(result.utterance.has_message());
+  ASSERT_EQ(result.utterance.message(), "dot");
+
+  // Sends a character that does not have a special spelling.
+  auto result2 = screen_reader_message_generator_->FormatCharacterForSpelling("a");
+  ASSERT_TRUE(result2.utterance.has_message());
+  ASSERT_EQ(result2.utterance.message(), "a");
+}
+
 }  // namespace
 }  // namespace accessibility_test
