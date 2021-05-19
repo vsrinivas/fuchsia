@@ -120,25 +120,17 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 			continue
 		}
 
+		// StrictAnalysis means don't rely on a project-level license. Verify that all source files
+		// include license information in their headers.
 		// TODO(jcecil): a file named LICENSE in the fuchsia tree will be
 		// entirely skipped when running in strict analysis mode, since it
 		// doesn't have a valid text extension. We should still analyze
 		// these files, even if we don't add them as SingleLicenseFiles.
 		if hasLowerPrefix(entry.Name(), config.SingleLicenseFiles) && !ft.StrictAnalysis {
+			// Add project-level license files (e.g. LICENSE.txt, NOTICE.txt) to the SingleLicenseFiles map.
 			metrics.increment("num_single_license_files")
 			ft.SingleLicenseFiles[path] = []*License{}
 			continue
-		}
-
-		// StrictAnalysis means don't rely on a project-level license. Verify that all source files
-		// include license information in their headers.
-		if !ft.StrictAnalysis {
-			// Add project-level license files (e.g. LICENSE.txt, NOTICE.txt) to the SingleLicenseFiles map.
-			if hasLowerPrefix(entry.Name(), config.SingleLicenseFiles) {
-				metrics.increment("num_single_license_files")
-				ft.SingleLicenseFiles[path] = []*License{}
-				continue
-			}
 		}
 
 		if newFile.shouldProcess(ft.StrictAnalysis, config) {
@@ -177,22 +169,6 @@ func (ft *FileTree) propagateProjectLicenses(config *Config) {
 	for _, child := range ft.Children {
 		child.propagateProjectLicenses(config)
 	}
-}
-
-// Search the FileTree for a tree that matches the given path.
-func (ft *FileTree) findChild(path string) *FileTree {
-	if !strings.HasPrefix(ft.Path, path) {
-		return nil
-	}
-	if ft.Path == path {
-		return ft
-	}
-	for _, child := range ft.Children {
-		if strings.HasPrefix(child.Path, path) {
-			return child.findChild(path)
-		}
-	}
-	return nil
 }
 
 func (ft *FileTree) getFileTreeIterator() <-chan *FileTree {
