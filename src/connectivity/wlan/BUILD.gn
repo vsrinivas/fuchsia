@@ -15,7 +15,9 @@ group("drivers") {
     "drivers/testing:wlanphy-testdev",
     "drivers/third_party/atheros/ath10k:ath10k_driver",
     "drivers/third_party/broadcom/brcmfmac:driver_module",
-    "drivers/third_party/broadcom/brcmfmac:test_driver_module",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/third_party/broadcom/brcmfmac:test_driver_module",
     "drivers/third_party/intel/iwlwifi:iwlwifi_driver",
     "drivers/wlan:wlan_driver",
     "drivers/wlanif:wlanif_driver",

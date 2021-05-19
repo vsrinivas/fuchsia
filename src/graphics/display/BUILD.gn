@@ -16,7 +16,9 @@ group("drivers") {
     "drivers/goldfish-display",
     "drivers/intel-i915",
     "drivers/mt8167s-display",
-    "drivers/ssd1306:ssd1306_driver",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/ssd1306:ssd1306_driver",
     "drivers/vim-display",
   ]
 }

@@ -16,13 +16,20 @@ group("drivers") {
     "drivers/qemu-arm64",
     "drivers/sherlock:luis",
     "drivers/sherlock:luis-factory",
-    "drivers/sherlock:luis-factory-rndis",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/sherlock:luis-factory-rndis",
     "drivers/sherlock:sherlock",
     "drivers/sherlock:sherlock-factory",
-    "drivers/sherlock:sherlock-factory-rndis",
-    "drivers/vim2",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/sherlock:sherlock-factory-rndis",
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/vim2",
     "drivers/vim3",
-    "drivers/vs680-evk",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/vs680-evk",
   ]
 
   if (current_cpu == "x64") {

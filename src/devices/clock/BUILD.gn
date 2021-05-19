@@ -8,7 +8,9 @@ group("drivers") {
     "drivers/as370-clk",
     "drivers/clock",
     "drivers/msm8x53-clk",
-    "drivers/mtk-clk",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/mtk-clk",
     "drivers/vs680-clk",
   ]
 }

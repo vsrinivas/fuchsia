@@ -13,7 +13,9 @@ group("drivers") {
     "drivers/ethertap",
     "drivers/realtek-8211f",
     "drivers/rndis-function",
-    "drivers/rndis-host:driver",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/rndis-host:driver",
     "drivers/usb-cdc-ecm",
     "drivers/usb-cdc-function",
     "drivers/virtio:virtio_ethernet",

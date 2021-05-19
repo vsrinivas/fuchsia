@@ -5,7 +5,8 @@
 group("drivers") {
   testonly = true
   deps = [
-    "drivers/aml-scpi-s912:aml-scpi-s912.mailbox",
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/aml-scpi-s912:aml-scpi-s912.mailbox",
     "drivers/aml-scpi-s912:scpi",
   ]
 }

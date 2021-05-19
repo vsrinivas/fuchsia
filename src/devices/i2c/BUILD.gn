@@ -6,7 +6,9 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-i2c",
-    "drivers/dw-i2c",
+
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"drivers/dw-i2c",
     "drivers/i2c",
     "drivers/intel-i2c",
     "drivers/mt8167-i2c",

@@ -184,7 +184,8 @@ group("diagnostics-eng") {
 group("drivers-build-only") {
   testonly = true
   deps = [
-    "//examples/drivers/fifo:demo-fifo",
+    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
+    #"//examples/drivers/fifo:demo-fifo",
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
     "//src/devices/bundles:drivers",
