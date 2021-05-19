@@ -200,9 +200,14 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
          const fbl::Array<size_t>& extent_lengths);
   zx_status_t LoadBitmap();
 
-  // Read data from block |bno| into the block cache. If the block cache already contains data from
-  // the specified bno, nothing happens. Cannot read while a dirty block is pending.
+  zx_status_t LoadNodeMap();
+
+  // Read data from block |bno| into the block cache.
+  // If the block cache already contains data from the specified bno, nothing happens.
   zx_status_t ReadBlock(size_t bno);
+
+  // Read for inode |node_index| for |length| blocks from local |bno| into |data|.
+  zx_status_t ReadBlocksForInode(uint32_t node_index, size_t bno, size_t length, uint8_t* data);
 
   // Write |block_count| blocks of |data| at block number starting at |block_number|.
   zx_status_t WriteBlocks(size_t block_number, uint64_t block_count, const void* data);
@@ -213,12 +218,13 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx_status_t ResetCache();
 
   zx_status_t LoadAndVerifyBlob(uint32_t node_index);
-  fit::result<std::vector<uint8_t>, std::string> LoadAndVerifyBlob(Inode& inode);
+  fit::result<std::vector<uint8_t>, std::string> LoadDataAndVerifyBlob(uint32_t inode_index);
 
   RawBitmap block_map_{};
 
+  std::unique_ptr<Inode[]> nodes_;
+
   fbl::unique_fd blockfd_;
-  bool dirty_ = false;
   off_t offset_;
 
   size_t block_map_start_block_;

@@ -46,6 +46,8 @@
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/fsck_host.h"
+#include "src/storage/blobfs/iterator/allocated_extent_iterator.h"
+#include "src/storage/blobfs/iterator/block_iterator.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
@@ -624,6 +626,10 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
     FX_LOGS(ERROR) << "Failed to load bitmaps";
     return status;
   }
+  if ((status = fs->LoadNodeMap()) != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to load node map";
+    return status;
+  }
 
   *out = std::move(fs);
   return ZX_OK;
@@ -648,6 +654,19 @@ zx_status_t Blobfs::LoadBitmap() {
       return status;
     } else {
       memcpy(bmdata, cache_.blk, kBlobfsBlockSize);
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t Blobfs::LoadNodeMap() {
+  const size_t nodes_to_load = fbl::round_up(Info().inode_count, kBlobfsInodesPerBlock);
+  nodes_ = std::make_unique<Inode[]>(nodes_to_load);
+  for (size_t i = 0; i < nodes_to_load / kBlobfsInodesPerBlock; i++) {
+    if (zx_status_t s = ReadBlockOffset(blockfd_.get(), node_map_start_block_ + i, offset_,
+                                        &nodes_[i * kBlobfsInodesPerBlock]);
+        s != ZX_OK) {
+      return s;
     }
   }
   return ZX_OK;
@@ -688,18 +707,8 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
   }
 
   size_t bno = (ino / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
-  zx_status_t status;
-  if ((status = ReadBlock(bno)) != ZX_OK) {
-    FX_LOGS(ERROR) << "ReadBlock failed " << status;
-    return status;
-  }
+  std::unique_ptr<InodeBlock> ino_block(new InodeBlock(bno, &nodes_[ino], digest));
 
-  Inode* inodes = reinterpret_cast<Inode*>(cache_.blk);
-
-  std::unique_ptr<InodeBlock> ino_block(
-      new InodeBlock(bno, &inodes[ino % kBlobfsInodesPerBlock], digest));
-
-  dirty_ = true;
   info_.alloc_inode_count++;
   *out = std::move(ino_block);
   return ZX_OK;
@@ -730,12 +739,9 @@ zx_status_t Blobfs::WriteBitmap(size_t nblocks, size_t start_block) {
 }
 
 zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
-  if (ino_block->GetBno() != cache_.bno) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
-  dirty_ = false;
-  return WriteBlock(cache_.bno, cache_.blk);
+  size_t inode_block_index =
+      (ino_block->GetBno() - NodeMapStartBlock(info_)) * kBlobfsInodesPerBlock;
+  return WriteBlock(ino_block->GetBno(), &nodes_[inode_block_index]);
 }
 
 zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
@@ -779,10 +785,6 @@ zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void*
 zx_status_t Blobfs::WriteInfo() { return WriteBlock(0, info_block_); }
 
 zx_status_t Blobfs::ReadBlock(size_t bno) {
-  if (dirty_) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
   zx_status_t status;
   if ((cache_.bno != bno) &&
       ((status = ReadBlockOffset(blockfd_.get(), bno, offset_, &cache_.blk)) != ZX_OK)) {
@@ -803,10 +805,6 @@ zx_status_t Blobfs::WriteBlock(size_t bno, const void* data) {
 }
 
 zx_status_t Blobfs::ResetCache() {
-  if (dirty_) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
   if (cache_.bno != 0) {
     memset(cache_.blk, 0, kBlobfsBlockSize);
     cache_.bno = 0;
@@ -818,19 +816,51 @@ zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
   if (index >= info_.inode_count) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  size_t bno = node_map_start_block_ + index / kBlobfsInodesPerBlock;
-  if (zx_status_t status = ReadBlock(bno); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to read block: " << status;
-    return zx::error(status);
-  }
-
-  auto iblock = reinterpret_cast<Inode*>(cache_.blk);
-  return zx::ok(InodePtr(&iblock[index % kBlobfsInodesPerBlock], InodePtrDeleter(this)));
+  return zx::ok(InodePtr(&nodes_[index], InodePtrDeleter(this)));
 }
 
-fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadAndVerifyBlob(Inode& inode) {
-  size_t blob_start_block = data_start_block_ + inode.extents[0].Start();
-  uint32_t block_size = GetBlockSize();
+zx_status_t Blobfs::ReadBlocksForInode(uint32_t node_index, size_t bno, size_t length,
+                                       uint8_t* data) {
+  zx::status<AllocatedExtentIterator> extent_iterator_or =
+      AllocatedExtentIterator::Create(this, node_index);
+  if (extent_iterator_or.is_error()) {
+    return extent_iterator_or.error_value();
+  }
+  BlockIterator iter(
+      std::make_unique<AllocatedExtentIterator>(std::move(extent_iterator_or.value())));
+  if (zx_status_t status = IterateToBlock(&iter, bno); status != ZX_OK) {
+    return status;
+  }
+  std::vector<std::pair<uint64_t, uint32_t>> ranges;
+  zx_status_t status =
+      StreamBlocks(&iter, length, [&ranges](int64_t, uint64_t start, uint32_t length) {
+        ranges.push_back(std::make_pair(start, length));
+        return ZX_OK;
+      });
+  if (status != ZX_OK) {
+    return status;
+  }
+  size_t offset = 0;
+  for (auto range : ranges) {
+    for (uint64_t i = 0; i < range.second; i++) {
+      status = ReadBlockOffset(blockfd_.get(), data_start_block_ + range.first + i, offset_,
+                               &data[offset++ * GetBlockSize()]);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  }
+  return ZX_OK;
+}
+
+fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlob(uint32_t node_index) {
+  auto inode_ptr = GetNode(node_index);
+  if (inode_ptr.is_error()) {
+    return fit::error("Failed to get Inode index " + std::to_string(node_index) + ": " +
+                      std::to_string(inode_ptr.status_value()));
+  }
+  Inode inode = *inode_ptr.value();
+  const uint32_t block_size = GetBlockSize();
   zx_status_t status;
   auto make_error = [&](std::string error) {
     digest::Digest digest(inode.merkle_root_hash);
@@ -847,22 +877,23 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadAndVerifyBlob(Inode& 
                       std::to_string(blob_layout.status_value()));
   }
 
-  // Read in the Merkle tree.
-  uint32_t merkle_tree_block_count = blob_layout->MerkleTreeBlockCount();
-  uint32_t merkle_tree_block_offset = blob_layout->MerkleTreeBlockOffset();
   std::vector<uint8_t> merkle_tree_blocks(blob_layout->MerkleTreeBlockAlignedSize(), 0);
-  for (uint32_t block = 0; block < merkle_tree_block_count; ++block) {
-    ReadBlock(blob_start_block + merkle_tree_block_offset + block);
-    memcpy(&merkle_tree_blocks[block * block_size], cache_.blk, block_size);
-  }
-
-  // Read in the data.
-  uint32_t data_block_count = blob_layout->DataBlockCount();
-  uint32_t data_block_offset = blob_layout->DataBlockOffset();
   std::vector<uint8_t> data_blocks(blob_layout->DataBlockAlignedSize(), 0);
-  for (uint32_t block = 0; block < data_block_count; ++block) {
-    ReadBlock(blob_start_block + data_block_offset + block);
-    memcpy(&data_blocks[block * block_size], cache_.blk, block_size);
+  if (blob_layout->MerkleTreeBlockAlignedSize() > 0) {
+    if (zx_status_t status = ReadBlocksForInode(node_index, blob_layout->MerkleTreeBlockOffset(),
+                                                blob_layout->MerkleTreeBlockCount(),
+                                                reinterpret_cast<uint8_t*>(&merkle_tree_blocks[0]));
+        status != ZX_OK) {
+      return make_error("Failed to read in merkle tree blocks: " + std::to_string(status));
+    }
+  }
+  if (blob_layout->DataBlockAlignedSize() > 0) {
+    if (zx_status_t status = ReadBlocksForInode(node_index, blob_layout->DataBlockOffset(),
+                                                blob_layout->DataBlockCount(),
+                                                reinterpret_cast<uint8_t*>(&data_blocks[0]));
+        status != ZX_OK) {
+      return make_error("Failed to read in data blocks: " + std::to_string(status));
+    }
   }
 
   // Decompress the data if necessary.
@@ -904,13 +935,13 @@ fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadAndVerifyBlob(Inode& 
 }
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
-  auto inode_ptr = GetNode(node_index);
-  if (inode_ptr.is_error()) {
-    return inode_ptr.status_value();
+  auto load_result = LoadDataAndVerifyBlob(node_index);
+  if (load_result.is_ok()) {
+    return ZX_OK;
+  } else {
+    FX_LOGS(ERROR) << load_result.error();
+    return ZX_ERR_INTERNAL;
   }
-  Inode inode = *inode_ptr.value();
-  auto load_result = LoadAndVerifyBlob(inode);
-  return load_result.is_ok() ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
 uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
@@ -931,7 +962,7 @@ fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
     // of |cache_.blk| where inode_ptr comes from.
     Inode inode = *inode_ptr.value();
     allocated_nodes++;
-    auto load_result = LoadAndVerifyBlob(inode);
+    auto load_result = LoadDataAndVerifyBlob(inode_index);
     if (load_result.is_error()) {
       return load_result.take_error_result();
     }
