@@ -26,6 +26,7 @@ use {
     },
     lazy_static::lazy_static,
     std::fs::read,
+    std::rc::Rc,
     std::{collections::HashSet, convert::TryInto},
     usb_bulk::{AsyncInterface as Interface, InterfaceInfo, Open},
 };
@@ -45,7 +46,7 @@ const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 pub(crate) struct Fastboot(pub(crate) FastbootImpl<Interface>);
 
 impl Fastboot {
-    pub(crate) fn new(target: Target) -> Self {
+    pub(crate) fn new(target: Rc<Target>) -> Self {
         Self(FastbootImpl::new(target, Box::new(UsbFactory { serial: None })))
     }
 }

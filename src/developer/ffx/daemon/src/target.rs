@@ -445,7 +445,6 @@ impl WeakTarget {
     }
 }
 
-#[derive(Clone)]
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
@@ -464,12 +463,12 @@ impl Target {
         WeakTarget { events: self.events.clone(), inner: Rc::downgrade(&self.inner) }
     }
 
-    fn from_inner(inner: Rc<TargetInner>) -> Self {
+    fn from_inner(inner: Rc<TargetInner>) -> Rc<Self> {
         let events = events::Queue::new(&inner);
-        Self { inner, events, host_pipe: Default::default(), logger: Default::default() }
+        Rc::new(Self { inner, events, host_pipe: Default::default(), logger: Default::default() })
     }
 
-    pub fn new<S>(nodename: S) -> Self
+    pub fn new<S>(nodename: S) -> Rc<Self>
     where
         S: Into<String>,
     {
@@ -477,7 +476,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn new_with_boot_timestamp<S>(nodename: S, boot_timestamp_nanos: u64) -> Self
+    pub fn new_with_boot_timestamp<S>(nodename: S, boot_timestamp_nanos: u64) -> Rc<Self>
     where
         S: Into<String>,
     {
@@ -486,7 +485,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn new_with_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Self
+    pub fn new_with_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
     where
         S: Into<String>,
     {
@@ -494,7 +493,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub(crate) fn new_with_addr_entries<S, I>(nodename: Option<S>, entries: I) -> Self
+    pub(crate) fn new_with_addr_entries<S, I>(nodename: Option<S>, entries: I) -> Rc<Self>
     where
         S: Into<String>,
         I: Iterator<Item = TargetAddrEntry>,
@@ -507,7 +506,7 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn new_with_netsvc_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Self
+    pub fn new_with_netsvc_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
     where
         S: Into<String>,
     {
@@ -517,14 +516,14 @@ impl Target {
         target
     }
 
-    pub fn new_with_serial(serial: &str) -> Self {
+    pub fn new_with_serial(serial: &str) -> Rc<Self> {
         let inner = Rc::new(TargetInner::new_with_serial(serial));
         let target = Self::from_inner(inner);
         target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
         target
     }
 
-    pub fn from_target_info(mut t: TargetInfo) -> Self {
+    pub fn from_target_info(mut t: TargetInfo) -> Rc<Self> {
         if let Some(s) = t.serial {
             Self::new_with_serial(&s)
         } else {
@@ -532,7 +531,7 @@ impl Target {
         }
     }
 
-    pub fn from_netsvc_target_info(mut t: TargetInfo) -> Self {
+    pub fn from_netsvc_target_info(mut t: TargetInfo) -> Rc<Self> {
         Self::new_with_netsvc_addrs(t.nodename.take(), t.addresses.drain(..).collect())
     }
 
@@ -599,7 +598,7 @@ impl Target {
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
-    pub fn new_with_time<S: Into<String>>(nodename: S, time: DateTime<Utc>) -> Self {
+    pub fn new_with_time<S: Into<String>>(nodename: S, time: DateTime<Utc>) -> Rc<Self> {
         let inner = Rc::new(TargetInner::new_with_time(nodename.into(), time));
         Self::from_inner(inner)
     }
@@ -783,7 +782,7 @@ impl Target {
     }
 
     #[cfg(test)]
-    pub fn new_autoconnected(n: &str) -> Self {
+    pub fn new_autoconnected(n: &str) -> Rc<Self> {
         let s = Self::new(n);
         s.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
@@ -845,7 +844,7 @@ impl Target {
         }
     }
 
-    pub fn from_identify(identify: IdentifyHostResponse) -> Result<Self, Error> {
+    pub fn from_identify(identify: IdentifyHostResponse) -> Result<Rc<Self>, Error> {
         // TODO(raggi): allow targets to truly be created without a nodename.
         let nodename = match identify.nodename {
             Some(n) => n,
@@ -881,7 +880,7 @@ impl Target {
         Ok(target)
     }
 
-    pub async fn from_rcs_connection(rcs: RcsConnection) -> Result<Self, RcsConnectionError> {
+    pub async fn from_rcs_connection(rcs: RcsConnection) -> Result<Rc<Self>, RcsConnectionError> {
         let identify_result =
             timeout(Duration::from_millis(IDENTIFY_HOST_TIMEOUT_MILLIS), rcs.proxy.identify_host())
                 .await
@@ -900,7 +899,7 @@ impl Target {
         Ok(target)
     }
 
-    pub fn run_host_pipe(&self) {
+    pub fn run_host_pipe(self: &Rc<Self>) {
         if self.host_pipe.borrow().is_none() {
             let host_pipe = Rc::downgrade(&self.host_pipe);
             let weak_target = self.downgrade();
@@ -917,7 +916,7 @@ impl Target {
         self.host_pipe.borrow().is_some()
     }
 
-    pub fn run_logger(&self) {
+    pub fn run_logger(self: &Rc<Self>) {
         if self.logger.borrow().is_none() {
             let logger = Rc::downgrade(&self.logger);
             let weak_target = self.downgrade();
@@ -934,7 +933,7 @@ impl Target {
         self.logger.borrow().is_some()
     }
 
-    pub async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
+    pub async fn init_remote_proxy(self: &Rc<Self>) -> Result<RemoteControlProxy> {
         // Ensure auto-connect has at least started.
         self.run_host_pipe();
         match self.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
@@ -998,8 +997,8 @@ impl EventSynthesizer<DaemonEvent> for Target {
     }
 }
 
-impl From<Target> for bridge::Target {
-    fn from(target: Target) -> Self {
+impl From<&Target> for bridge::Target {
+    fn from(target: &Target) -> Self {
         let (product_config, board_config) = target
             .build_config()
             .map(|b| (Some(b.product_config), Some(b.board_config)))
@@ -1205,40 +1204,6 @@ pub trait MatchTarget {
         TQ: Into<TargetQuery>;
 }
 
-// It's unclear why this definition has to exist, but the compiler complains
-// if invoking this either directly on `iter()` or if invoking on
-// `iter().into_iter()` about there being unmet trait constraints. With this
-// definition there are no compilation complaints.
-impl<'a> MatchTarget for std::slice::Iter<'_, &'a Target> {
-    fn match_target<TQ>(self, t: TQ) -> Option<Target>
-    where
-        TQ: Into<TargetQuery>,
-    {
-        let t: TargetQuery = t.into();
-        for target in self {
-            if t.matches(&target) {
-                return Some((*target).clone());
-            }
-        }
-        None
-    }
-}
-
-impl<'a, T: Iterator<Item = &'a Target>> MatchTarget for &'a mut T {
-    fn match_target<TQ>(self, t: TQ) -> Option<Target>
-    where
-        TQ: Into<TargetQuery>,
-    {
-        let t: TargetQuery = t.into();
-        for target in self {
-            if t.matches(&target) {
-                return Some(target.clone());
-            }
-        }
-        None
-    }
-}
-
 #[derive(Debug)]
 pub enum TargetQuery {
     /// Attempts to match the nodename, falling back to serial (in that order).
@@ -1328,7 +1293,7 @@ impl From<TargetAddr> for TargetQuery {
 }
 
 pub struct TargetCollection {
-    targets: RefCell<HashMap<u64, Target>>,
+    targets: RefCell<HashMap<u64, Rc<Target>>>,
     events: RefCell<Option<events::Queue<DaemonEvent>>>,
 }
 
@@ -1364,7 +1329,7 @@ impl TargetCollection {
         self.events.replace(Some(q));
     }
 
-    pub fn targets(&self) -> Vec<Target> {
+    pub fn targets(&self) -> Vec<Rc<Target>> {
         self.targets.borrow().values().cloned().collect()
     }
 
@@ -1377,7 +1342,7 @@ impl TargetCollection {
         }
     }
 
-    fn find_matching_target(&self, new_target: &Target) -> Option<Target> {
+    fn find_matching_target(&self, new_target: &Target) -> Option<Rc<Target>> {
         // Look for a target by primary ID first
         let new_ids = new_target.ids();
         let mut to_update =
@@ -1419,7 +1384,7 @@ impl TargetCollection {
         to_update
     }
 
-    pub fn merge_insert(&self, new_target: Target) -> Target {
+    pub fn merge_insert(&self, new_target: Rc<Target>) -> Rc<Target> {
         // Drop non-manual loopback address entries, as matching against
         // them could otherwise match every target in the collection.
         new_target.drop_loopback_addrs();
@@ -1449,12 +1414,7 @@ impl TargetCollection {
             to_update.addrs_extend(new_target.addrs());
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
-            to_update.update_connection_state(|_| {
-                std::mem::replace(
-                    &mut new_target.inner.state.borrow_mut(),
-                    ConnectionState::Disconnected,
-                )
-            });
+            to_update.update_connection_state(|_| new_target.get_connection_state());
 
             to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
                 log::warn!("unable to enqueue rediscovered event: {:#}", err)
@@ -1480,7 +1440,7 @@ impl TargetCollection {
     /// several targets in the collection when the query starts, a
     /// DaemonError::TargetAmbiguous error is returned. The matcher is converted to a
     /// TargetQuery for matching, and follows the TargetQuery semantics.
-    pub async fn wait_for_match(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
+    pub async fn wait_for_match(&self, matcher: Option<String>) -> Result<Rc<Target>, DaemonError> {
         // If there's nothing to match against, unblock on the first target.
         let target_query = TargetQuery::from(matcher.clone());
 
@@ -1531,7 +1491,7 @@ impl TargetCollection {
         self.get_connected(matcher).ok_or(DaemonError::TargetNotFound)
     }
 
-    pub fn get_connected<TQ>(&self, tq: TQ) -> Option<Target>
+    pub fn get_connected<TQ>(&self, tq: TQ) -> Option<Rc<Target>>
     where
         TQ: Into<TargetQuery>,
     {
@@ -1546,12 +1506,17 @@ impl TargetCollection {
             .next()
     }
 
-    pub fn get<TQ>(&self, t: TQ) -> Option<Target>
+    pub fn get<TQ>(&self, t: TQ) -> Option<Rc<Target>>
     where
         TQ: Into<TargetQuery>,
     {
-        let t: TargetQuery = t.into();
-        self.targets.borrow().values().match_target(t)
+        let query: TargetQuery = t.into();
+        self.targets
+            .borrow()
+            .values()
+            // TODO(raggi): cleanup query matching so that targets can match themselves against a query
+            .find(|target| query.match_info(&target.target_info()))
+            .map(Clone::clone)
     }
 }
 
@@ -1570,7 +1535,7 @@ mod test {
     const DEFAULT_BOARD_CONFIG: &str = "x64";
     const TEST_SERIAL: &'static str = "test-serial";
 
-    fn clone_target(t: &Target) -> Target {
+    fn clone_target(t: &Target) -> Rc<Target> {
         let inner = Rc::new(TargetInner::clone(&t.inner));
         Target::from_inner(inner)
     }
@@ -1617,8 +1582,8 @@ mod test {
         let nodename = String::from("what");
         let t = Target::new_with_time(&nodename, fake_now());
         tc.merge_insert(clone_target(&t));
-        let other_target = &tc.get(nodename.clone()).unwrap();
-        assert_eq!(other_target, &t);
+        let other_target = tc.get(nodename.clone()).unwrap();
+        assert_eq!(other_target, t);
         match tc.get_connected(nodename.clone()) {
             Some(_) => panic!("string lookup should return None"),
             _ => (),
@@ -1640,8 +1605,8 @@ mod test {
         let tc = TargetCollection::new_with_queue();
         let nodename = String::from("what");
         let t = Target::new_with_time(&nodename, fake_now());
-        tc.merge_insert(clone_target(&t));
-        assert_eq!(&tc.get(nodename.clone()).unwrap(), &t);
+        tc.merge_insert(t.clone());
+        assert_eq!(tc.get(nodename.clone()).unwrap(), t);
         match tc.get("oihaoih") {
             Some(_) => panic!("string lookup should return None"),
             _ => (),
@@ -1663,8 +1628,8 @@ mod test {
         tc.merge_insert(clone_target(&t2));
         tc.merge_insert(clone_target(&t1));
         let merged_target = tc.get(nodename.clone()).unwrap();
-        assert_ne!(&merged_target, &t1);
-        assert_ne!(&merged_target, &t2);
+        assert_ne!(merged_target, t1);
+        assert_ne!(merged_target, t2);
         assert_eq!(merged_target.addrs().len(), 2);
         assert_eq!(*merged_target.inner.last_response.borrow(), fake_elapsed());
         assert!(merged_target.addrs().contains(&(a1, 1).into()));
@@ -1927,7 +1892,7 @@ mod test {
         t.addrs_insert((a1, 1).into());
         t.addrs_insert((a2, 1).into());
 
-        let t_conv: bridge::Target = t.clone().into();
+        let t_conv: bridge::Target = t.as_ref().into();
         assert_eq!(t.nodename().unwrap(), t_conv.nodename.unwrap().to_string());
         let addrs = t.addrs();
         let conv_addrs = t_conv.addresses.unwrap();
@@ -2306,7 +2271,7 @@ mod test {
         tc.merge_insert(t1);
         tc.merge_insert(t2);
 
-        let mut targets = tc.targets().into_iter().collect::<Vec<Target>>();
+        let mut targets = tc.targets().into_iter().collect::<Vec<Rc<Target>>>();
 
         assert_eq!(targets.len(), 2);
 
@@ -2342,7 +2307,7 @@ mod test {
         tc.merge_insert(t1);
         tc.merge_insert(t2);
 
-        let mut targets = tc.targets().into_iter().collect::<Vec<Target>>();
+        let mut targets = tc.targets().into_iter().collect::<Vec<Rc<Target>>>();
 
         assert_eq!(targets.len(), 2);
 

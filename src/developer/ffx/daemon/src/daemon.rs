@@ -386,7 +386,7 @@ impl Daemon {
 
     /// get_target attempts to get the target that matches the match string if
     /// provided, otherwise the default target from the target collection.
-    async fn get_target(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
+    async fn get_target(&self, matcher: Option<String>) -> Result<Rc<Target>, DaemonError> {
         #[cfg(not(test))]
         const GET_TARGET_TIMEOUT: Duration = Duration::from_secs(8);
         #[cfg(test)]
@@ -480,7 +480,7 @@ impl Daemon {
                                 .map(|t| {
                                     async move {
                                         if t.is_connected() {
-                                            Some(t.into())
+                                            Some(t.as_ref().into())
                                         } else {
                                             None
                                         }
@@ -490,7 +490,7 @@ impl Daemon {
                                 .collect(),
                             _ => match self.target_collection.get_connected(value) {
                                 Some(t) => {
-                                    vec![async move { Some(t.into()) }.boxed_local()]
+                                    vec![async move { Some(t.as_ref().into()) }.boxed_local()]
                                 }
                                 None => vec![],
                             },

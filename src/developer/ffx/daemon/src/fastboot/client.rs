@@ -21,6 +21,7 @@ use {
     futures::io::{AsyncRead, AsyncWrite},
     futures::prelude::*,
     futures::try_join,
+    std::rc::Rc,
     std::time::Duration,
 };
 
@@ -33,7 +34,7 @@ pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin> {
 }
 
 pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Unpin> {
-    pub(crate) target: Target,
+    pub(crate) target: Rc<Target>,
     pub(crate) usb: Option<T>,
     pub(crate) usb_factory: Box<dyn InterfaceFactory<T>>,
     remote_proxy: Once<RemoteControlProxy>,
@@ -41,7 +42,7 @@ pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Unpin> {
 }
 
 impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
-    pub(crate) fn new(target: Target, usb_factory: Box<dyn InterfaceFactory<T>>) -> Self {
+    pub(crate) fn new(target: Rc<Target>, usb_factory: Box<dyn InterfaceFactory<T>>) -> Self {
         Self { target, usb: None, usb_factory, remote_proxy: Once::new(), admin_proxy: Once::new() }
     }
 
@@ -385,7 +386,7 @@ mod test {
         async fn close(&self) {}
     }
 
-    async fn setup(replies: Vec<Reply>) -> (Target, FastbootProxy) {
+    async fn setup(replies: Vec<Reply>) -> (Rc<Target>, FastbootProxy) {
         ffx_config::init_config_test().unwrap();
 
         let target = Target::new("scooby-dooby-doo");

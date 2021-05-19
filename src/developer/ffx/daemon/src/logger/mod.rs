@@ -400,6 +400,7 @@ mod test {
         },
         fidl_fuchsia_diagnostics::DataType,
         futures::TryStreamExt,
+        std::rc::Rc,
         streamer::SessionStream,
     };
 
@@ -664,7 +665,7 @@ mod test {
         .build()
     }
 
-    async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Target {
+    async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Rc<Target> {
         let conn = RcsConnection::new_with_proxy(
             setup_fake_remote_control_service(Arc::new(expected_logs)),
             &NodeId { id: 1234 },

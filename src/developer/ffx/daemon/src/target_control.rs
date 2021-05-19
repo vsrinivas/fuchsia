@@ -19,19 +19,20 @@ use {
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, RebootReason},
     futures::prelude::*,
     futures::try_join,
+    std::rc::Rc,
 };
 
 const ADMIN_SELECTOR: &str = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin";
 
 pub(crate) struct TargetControl {
-    target: Target,
+    target: Rc<Target>,
     remote_proxy: Once<RemoteControlProxy>,
     fastboot_proxy: Once<FastbootProxy>,
     admin_proxy: Once<AdminProxy>,
 }
 
 impl TargetControl {
-    pub(crate) fn new(target: Target) -> Self {
+    pub(crate) fn new(target: Rc<Target>) -> Self {
         Self {
             target,
             remote_proxy: Once::new(),
@@ -307,7 +308,7 @@ mod test {
         proxy
     }
 
-    async fn setup() -> (Target, TargetControlProxy) {
+    async fn setup() -> (Rc<Target>, TargetControlProxy) {
         let target = Target::new("scooby-dooby-doo");
         let fastboot_proxy = Once::new();
         let _ = fastboot_proxy.get_or_init(setup_fastboot()).await;
