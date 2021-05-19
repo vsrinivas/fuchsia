@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -45,4 +45,33 @@ rustc_library("netstack_testing_common") {
     "src/lib.rs",
   ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
+
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of uses of the common integration test library.
+  # A migration is in progress to use netemul-v2, which is compatible
+  # with v2 of the Component Framework.
+  #
+  # TODO(https://fxbug.dev/70187): once all integration tests are migrated to
+  # CFv2, remove this allowlist.
+  visibility = [
+    "//src/connectivity/network/tests/integration/dhcp",
+    "//src/connectivity/network/tests/integration/dns",
+    "//src/connectivity/network/tests/integration/fidl",
+    "//src/connectivity/network/tests/integration/filter",
+    "//src/connectivity/network/tests/integration/inspect",
+    "//src/connectivity/network/tests/integration/ipv4",
+    "//src/connectivity/network/tests/integration/ipv6",
+    "//src/connectivity/network/tests/integration/management",
+    "//src/connectivity/network/tests/integration/neighbor",
+    "//src/connectivity/network/tests/integration/reachability",
+    "//src/connectivity/network/tests/integration/routes",
+    "//src/connectivity/network/tests/integration/socket",
+  ]
 }

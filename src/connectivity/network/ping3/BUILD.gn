@@ -35,7 +35,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
-    "//src/connectivity/network/testing/netemul/rust:lib",
+    "//src/connectivity/network/testing/netemul/rust-v1:lib",
   ]
 
   sources = [
