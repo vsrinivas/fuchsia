@@ -14,9 +14,7 @@ group("drivers") {
     "drivers/usb-bus",
     "drivers/usb-composite",
     "drivers/usb-dfu",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/usb-hub",
+    "drivers/usb-hub",
     "drivers/usb-hub-rewrite",
     "drivers/usb-peripheral",
     "drivers/usb-peripheral-test",

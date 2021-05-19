@@ -84,7 +84,7 @@ static zx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, port_status
 
   zxlogf(DEBUG, "usb_hub_get_port_status port %d ", port);
 
-  uint16_t port_change = status.wPortChange;
+  uint16_t port_change = status.w_port_change;
   if (port_change & USB_C_PORT_CONNECTION) {
     zxlogf(DEBUG, "USB_C_PORT_CONNECTION ");
     usb_clear_feature(&hub->usb, USB_RECIP_PORT, USB_FEATURE_C_PORT_CONNECTION, port,
@@ -125,7 +125,7 @@ static zx_status_t usb_hub_get_port_status(usb_hub_t* hub, int port, port_status
   }
   zxlogf(DEBUG, "");
 
-  *out_status = status.wPortStatus;
+  *out_status = status.w_port_status;
   return ZX_OK;
 }
 
@@ -316,7 +316,7 @@ static int usb_hub_thread(void* arg) {
     zxlogf(ERROR, "get hub descriptor failed: %d", result);
     device_init_reply(hub->zxdev, result, NULL);
     return result;
-  } else if (hub_desc.bDescLength != out_length) {
+  } else if (hub_desc.b_desc_length != out_length) {
     zxlogf(ERROR, "usb_hub_descriptor_t.bDescLength != out_length");
     result = ZX_ERR_BAD_STATE;
     device_init_reply(hub->zxdev, result, NULL);
@@ -395,7 +395,7 @@ static int usb_hub_thread(void* arg) {
     return result;
   }
 
-  int num_ports = hub_desc.bNbrPorts;
+  int num_ports = hub_desc.b_nbr_ports;
 
   if (num_ports > 127) {
     zxlogf(ERROR, "malformed descriptor: usb_hub_descriptor_t.bNbrPorts > 127");
@@ -413,7 +413,7 @@ static int usb_hub_thread(void* arg) {
   }
 
   // power on delay in microseconds
-  hub->power_on_delay = hub_desc.bPowerOn2PwrGood * 2 * 1000;
+  hub->power_on_delay = hub_desc.b_power_on2_pwr_good * 2 * 1000;
   if (hub->power_on_delay < 100 * 1000) {
     // USB 2.0 spec section 9.1.2 recommends at least 100ms delay after power on
     hub->power_on_delay = 100 * 1000;
