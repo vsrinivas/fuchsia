@@ -101,16 +101,10 @@ executable("fidl_codec_test_bin") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("fidl-codec-tests") {
   deps = [ ":fidl_codec_test_bin" ]
-
-  # TODO(fxbug.dev/76527): Remove when this test passes as a v2 test.
-  v2 = false
 }
 
 group("tests") {

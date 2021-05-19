@@ -73,14 +73,17 @@ class WireObjectTest : public ::testing::Test {
 class TableValueWithNullFields : public TableValue {
  public:
   TableValueWithNullFields(LibraryLoader* loader) : TableValue(GetTableDefinition(loader)) {
-    AddMember("first_int16", std::make_unique<IntegerValue>(1000, true));
-    AddMember("third_union", nullptr);
+    bool added_first_int16 = AddMember("first_int16", std::make_unique<IntegerValue>(1000, true));
+    FX_DCHECK(added_first_int16);
+    bool added_third_union = AddMember("third_union", nullptr);
+    FX_DCHECK(added_third_union);
   }
 
  private:
   const Table& GetTableDefinition(LibraryLoader* loader) {
     Library* library = loader->GetLibraryFromName("test.fidlcodec.examples");
     FX_DCHECK(library != nullptr);
+    library->DecodeAll();
     const Table* table = library->GetTable("test.fidlcodec.examples/ValueTable");
     FX_DCHECK(table != nullptr);
     return *table;

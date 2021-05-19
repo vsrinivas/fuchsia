@@ -56,6 +56,9 @@ LibraryLoader* InitLoader() {
   fidl_codec_test::FidlcodecExamples examples;
   for (const auto& element : examples.map()) {
     loader->AddContent(element.second, &err);
+    if (err.value != LibraryReadError::kOk) {
+      return nullptr;
+    }
   }
   return loader;
 }
@@ -437,9 +440,9 @@ std::vector<std::string> TwoStringVectorFromVals(const std::string& v1, const st
 }
 
 std::vector<uint8_t> VectorUint8() {
-  const int kItemCount = 40;
+  const uint8_t kItemCount = 40;
   std::vector<std::uint8_t> result;
-  for (int i = 0; i <= kItemCount; ++i) {
+  for (uint8_t i = 0; i <= kItemCount; ++i) {
     result.push_back(i);
   }
   return result;

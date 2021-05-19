@@ -57,8 +57,8 @@ class DecodedMessage {
 
   // Decodes a message and fill all the fields. Returns true if we can display something.
   bool DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
-                     zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
-                     const zx_handle_disposition_t* handles, uint32_t num_handles,
+                     zx_handle_t handle, const uint8_t* bytes, size_t num_bytes,
+                     const zx_handle_disposition_t* handles, size_t num_handles,
                      SyscallFidlType type, std::ostream& error_stream);
 
  private:
@@ -123,7 +123,7 @@ class MessageDecoderDispatcher {
 class MessageDecoder {
  public:
   MessageDecoder(const uint8_t* bytes, uint64_t num_bytes, const zx_handle_disposition_t* handles,
-                 uint32_t num_handles, std::ostream& error_stream);
+                 size_t num_handles, std::ostream& error_stream);
   MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
 
