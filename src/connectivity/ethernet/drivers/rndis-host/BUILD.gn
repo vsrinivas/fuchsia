@@ -43,6 +43,7 @@ driver_module("driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
   ]
 }
 
