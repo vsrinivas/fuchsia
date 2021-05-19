@@ -1,3 +1,5 @@
 include /src/sys/component_manager/OWNERS
+# For the time being, anyone can add allowlist entries.
+per-file BUILD.gn = *
 
 # COMPONENT: ComponentFramework>Tools
