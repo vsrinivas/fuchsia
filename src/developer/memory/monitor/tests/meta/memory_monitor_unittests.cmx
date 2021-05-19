@@ -19,8 +19,7 @@
         ],
         "services": [
             "fuchsia.kernel.RootJobForInspect",
-            "fuchsia.kernel.Stats",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.kernel.Stats"
         ]
     }
 }
