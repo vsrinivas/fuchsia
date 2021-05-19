@@ -182,11 +182,12 @@
                 }
             },
             "required": [
-                "name",
-                "type",
+                "location",
                 "mask",
                 "members",
-                "strict"
+                "name",
+                "strict",
+                "type"
             ],
             "type": "object"
         },
@@ -215,6 +216,7 @@
                 }
             },
             "required": [
+                "location",
                 "name",
                 "value"
             ],
@@ -241,8 +243,8 @@
                 }
             },
             "required": [
-                "name",
-                "location"
+                "location",
+                "name"
             ],
             "type": "object"
         },
@@ -280,6 +282,7 @@
                 }
             },
             "required": [
+                "location",
                 "name",
                 "type",
                 "value"
@@ -371,10 +374,11 @@
                 }
             },
             "required": [
-                "name",
-                "type",
+                "location",
                 "members",
-                "strict"
+                "name",
+                "strict",
+                "type"
             ],
             "type": "object"
         },
@@ -403,6 +407,7 @@
                 }
             },
             "required": [
+                "location",
                 "name",
                 "value"
             ],
@@ -683,8 +688,9 @@
                 }
             },
             "required": [
-                "name",
-                "methods"
+                "location",
+                "methods",
+                "name"
             ],
             "type": "object"
         },
@@ -755,11 +761,12 @@
                 }
             },
             "required": [
-                "ordinal",
-                "name",
                 "has_request",
                 "has_response",
-                "is_composed"
+                "is_composed",
+                "location",
+                "name",
+                "ordinal"
             ],
             "type": "object"
         },
@@ -792,9 +799,10 @@
                 }
             },
             "required": [
-                "type",
+                "field_shape_v1",
+                "location",
                 "name",
-                "field_shape_v1"
+                "type"
             ],
             "type": "object"
         },
@@ -1037,8 +1045,8 @@
                 }
             },
             "required": [
-                "name",
                 "location",
+                "name",
                 "type"
             ],
             "type": "object"
@@ -1064,8 +1072,9 @@
                 }
             },
             "required": [
-                "type",
-                "name"
+                "location",
+                "name",
+                "type"
             ],
             "type": "object"
         },
@@ -1097,9 +1106,9 @@
                 }
             },
             "required": [
-                "name",
                 "location",
-                "members"
+                "members",
+                "name"
             ],
             "type": "object"
         },
@@ -1128,9 +1137,9 @@
                 }
             },
             "required": [
-                "type",
+                "location",
                 "name",
-                "location"
+                "type"
             ],
             "type": "object"
         },
@@ -1207,8 +1216,9 @@
                 }
             },
             "required": [
-                "name",
+                "location",
                 "members",
+                "name",
                 "resource",
                 "type_shape_v1"
             ],
@@ -1247,9 +1257,10 @@
                 }
             },
             "required": [
-                "type",
+                "field_shape_v1",
+                "location",
                 "name",
-                "field_shape_v1"
+                "type"
             ],
             "type": "object"
         },
@@ -1297,11 +1308,12 @@
                 }
             },
             "required": [
-                "name",
+                "location",
                 "members",
-                "type_shape_v1",
+                "name",
+                "resource",
                 "strict",
-                "resource"
+                "type_shape_v1"
             ],
             "type": "object"
         },
@@ -1358,6 +1370,7 @@
                 }
             },
             "required": [
+                "location",
                 "ordinal",
                 "reserved"
             ],
@@ -1463,8 +1476,8 @@
                 }
             },
             "required": [
-                "name",
                 "location",
+                "name",
                 "partial_type_ctor"
             ],
             "type": "object"
@@ -1560,11 +1573,12 @@
                 }
             },
             "required": [
-                "name",
+                "location",
                 "members",
-                "type_shape_v1",
+                "name",
+                "resource",
                 "strict",
-                "resource"
+                "type_shape_v1"
             ],
             "type": "object"
         },
@@ -1609,6 +1623,7 @@
                 }
             },
             "required": [
+                "location",
                 "ordinal",
                 "reserved"
             ],
