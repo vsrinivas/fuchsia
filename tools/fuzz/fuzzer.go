@@ -30,7 +30,15 @@ type Fuzzer struct {
 	options map[string]string
 }
 
-var expectedFuzzerReturnCodes = [...]int{0, 1, 77}
+// 1 is the default `exitcode` from SanitizerCommonFlags
+// 7x are from compiler-rt/lib/fuzzer/FuzzerOptions.h
+var expectedFuzzerReturnCodes = []int{
+	0,  // no crash
+	1,  // sanitizer error
+	70, // libFuzzer timeout
+	71, // libFuzzer OOM
+	77, // libFuzzer crash
+}
 
 // NewFuzzer constructs a fuzzer object with the given pkg/fuzzer name
 func NewFuzzer(build Build, pkg, fuzzer string) *Fuzzer {
