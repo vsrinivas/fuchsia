@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 #include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>
@@ -38,7 +38,7 @@ zx_status_t Vs680Evk::ClockInit() {
   const pbus_metadata_t clock_metadata[] = {
       {
           .type = DEVICE_METADATA_CLOCK_IDS,
-          .data_buffer = reinterpet_cast<const uint8_t*>(&clock_ids),
+          .data_buffer = reinterpret_cast<const uint8_t*>(&clock_ids),
           .data_size = sizeof(clock_ids),
       },
   };

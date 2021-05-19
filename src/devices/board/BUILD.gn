@@ -22,9 +22,7 @@ group("drivers") {
     "drivers/sherlock:sherlock-factory-rndis",
     "drivers/vim2",
     "drivers/vim3",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/vs680-evk",
+    "drivers/vs680-evk",
   ]
 
   if (current_cpu == "x64") {
