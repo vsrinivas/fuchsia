@@ -279,9 +279,8 @@ class MessageableInternal : public fidl::WireServer<Protocol>, public base_mixin
   }
 };
 
-template <typename Protocol, bool InheritServer = true>
+template <typename Protocol>
 struct Messageable {
-  static_assert(InheritServer == true);
   // This is necessary for currying as this mixin requires two type parameters, which are passed
   // at different times.
 
