@@ -24,6 +24,7 @@
 #include <soc/mt8167/mt8167-usb-phy.h>
 #include <soc/mt8167/mt8167-usb.h>
 #include <usb/usb-request.h>
+#include <usb/usb.h>
 
 #include "src/devices/usb/drivers/mt-musb-peripheral/mt_usb_bind.h"
 
@@ -227,34 +228,36 @@ zx_status_t MtUsb::HandleEp0() {
           return ZX_ERR_IO_INVALID;
         }
         zxlogf(DEBUG, "SETUP bmRequestType %x bRequest %u wValue %u wIndex %u wLength %u",
-               setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex, setup->wLength);
+               setup->bm_request_type, setup->b_request, setup->w_value, setup->w_index,
+               setup->w_length);
 
-        if (setup->wLength > 0 && (setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT) {
+        if (setup->w_length > 0 && (setup->bm_request_type & USB_DIR_MASK) == USB_DIR_OUT) {
           ep0_state_ = EP0_READ;
           ep0_data_offset_ = 0;
-          ep0_data_length_ = setup->wLength;
+          ep0_data_length_ = setup->w_length;
           csr0.ReadFrom(mmio).set_serviced_rxpktrdy(1).set_dataend(0).WriteTo(mmio);
           break;
         } else {
           size_t actual = 0;
 
           // Handle some special setup requests in this driver.
-          if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
-              setup->bRequest == USB_REQ_SET_ADDRESS) {
+          if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
+              setup->b_request == USB_REQ_SET_ADDRESS) {
             // We save our new address and set it to the FADDR register
             // when we get our next interrupt.
             // We must defer it until after this setup request has completed.
-            address_ = static_cast<uint8_t>(setup->wValue);
+            address_ = static_cast<uint8_t>(setup->w_value);
             set_address_ = true;
-          } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
-                     setup->bRequest == USB_REQ_SET_CONFIGURATION) {
+          } else if (setup->bm_request_type ==
+                         (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
+                     setup->b_request == USB_REQ_SET_CONFIGURATION) {
             configuration_ = 0;
             auto status = dci_intf_->Control(setup, nullptr, 0, nullptr, 0, &actual);
             if (status != ZX_OK) {
               zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION Control returned %d", __func__, status);
               return status;
             }
-            configuration_ = static_cast<uint8_t>(setup->wValue);
+            configuration_ = static_cast<uint8_t>(setup->w_value);
             if (configuration_) {
               StartEndpoints();
             }

@@ -9,9 +9,7 @@ group("drivers") {
     "drivers/as370-usb-phy",
     "drivers/dwc2",
     "drivers/mt-musb-host",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/mt-musb-peripheral",
+    "drivers/mt-musb-peripheral",
     "drivers/nelson-usb-phy",
     "drivers/usb-bus",
     "drivers/usb-composite",
