@@ -43,6 +43,12 @@ if (toolchain.environment == "kernel.phys") {
     # anywhere, so they are linked at 0.
     configs = [ "//zircon/kernel/phys:load-pic" ]
   }
+
+  source_set("linuxboot") {
+    sources = [ "linuxboot-header.S" ]
+    deps = [ "//zircon/kernel/lib/arch" ]
+    libs = [ "./linuxboot.ld" ]
+  }
 }
 
 group("tests") {
