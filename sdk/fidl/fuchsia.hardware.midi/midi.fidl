@@ -4,8 +4,9 @@
 
 library fuchsia.hardware.midi;
 
+using zx;
+
 /// Describes what type of MIDI device an implementation of Device represents
-[ForDeprecatedCBindings]
 struct Info {
     /// Whether or not this device is a MIDI sink
     bool is_sink;
@@ -13,8 +14,17 @@ struct Info {
     bool is_source;
 };
 
-[ForDeprecatedCBindings]
+const uint32 READ_SIZE = 3;
+
 protocol Device {
     /// Get information about the type of MIDI device
     GetInfo() -> (Info info);
+
+    /// Reads data from the midi device. Only applicable if GetInfo returns
+    /// is_source.
+    Read() -> (vector<uint8>:READ_SIZE event) error zx.status;
+
+    /// Writes data to the midi device. Only applicable if GetInfo returns
+    /// is_sink.
+    Write(vector<uint8>:MAX data) -> () error zx.status;
 };

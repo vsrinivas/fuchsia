@@ -5,11 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_EXAMPLES_TONES_MIDI_KEYBOARD_H_
 #define SRC_MEDIA_AUDIO_EXAMPLES_TONES_MIDI_KEYBOARD_H_
 
+#include <fuchsia/hardware/midi/llcpp/fidl.h>
+#include <lib/async/default.h>
+
 #include <memory>
-
-#include <fbl/unique_fd.h>
-
-#include "src/lib/fsl/tasks/fd_waiter.h"
 
 namespace examples {
 
@@ -23,16 +22,14 @@ class MidiKeyboard {
  private:
   friend std::unique_ptr<MidiKeyboard>::deleter_type;
 
-  MidiKeyboard(Tones* owner, fbl::unique_fd dev) : owner_(owner), dev_(std::move(dev)) {}
-  ~MidiKeyboard();
+  MidiKeyboard(Tones* owner, fidl::ClientEnd<fuchsia_hardware_midi::Device> dev)
+      : owner_(owner), dev_(std::move(dev), async_get_default_dispatcher()) {}
 
-  void Wait();
-  void HandleEvent();
+  void IssueRead();
+  void HandleRead(const fuchsia_hardware_midi::wire::DeviceReadResponse& response);
 
   Tones* const owner_;
-  const fbl::unique_fd dev_;
-  fsl::FDWaiter fd_waiter_;
-  bool waiting_ = false;
+  fidl::Client<fuchsia_hardware_midi::Device> dev_;
 };
 
 }  // namespace examples

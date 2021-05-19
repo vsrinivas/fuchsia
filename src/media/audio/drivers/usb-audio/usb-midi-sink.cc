@@ -23,19 +23,6 @@ constexpr size_t WRITE_REQ_COUNT = 20;
 namespace audio {
 namespace usb {
 
-void UsbMidiSink::UpdateSignals() {
-  zx_signals_t new_signals = 0;
-  if (dead_) {
-    new_signals |= (DEV_STATE_WRITABLE | DEV_STATE_ERROR);
-  } else if (!free_write_reqs_.is_empty()) {
-    new_signals |= DEV_STATE_WRITABLE;
-  }
-  if (new_signals != signals_) {
-    ClearAndSetState(signals_ & ~new_signals, new_signals & ~signals_);
-    signals_ = new_signals;
-  }
-}
-
 void UsbMidiSink::WriteComplete(usb_request_t* req) {
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     usb_request_release(req);
@@ -45,14 +32,12 @@ void UsbMidiSink::WriteComplete(usb_request_t* req) {
   fbl::AutoLock lock(&mutex_);
   free_write_reqs_.push(UsbRequest(req, parent_req_size_));
   sync_completion_signal(&free_write_completion_);
-  UpdateSignals();
 }
 
 void UsbMidiSink::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock al(&mutex_);
   dead_ = true;
 
-  UpdateSignals();
   sync_completion_signal(&free_write_completion_);
   txn.Reply();
 }
@@ -80,8 +65,7 @@ zx_status_t UsbMidiSink::DdkClose(uint32_t flags) {
   return ZX_OK;
 }
 
-zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offset,
-                                  size_t* actual) {
+zx_status_t UsbMidiSink::WriteInternal(const uint8_t* src, size_t length) {
   {
     fbl::AutoLock al(&mutex_);
     if (dead_) {
@@ -90,9 +74,6 @@ zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offs
   }
 
   zx_status_t status = ZX_OK;
-  size_t out_actual = length;
-
-  auto src = static_cast<const uint8_t*>(data);
 
   while (length > 0) {
     sync_completion_wait(&free_write_completion_, ZX_TIME_INFINITE);
@@ -114,8 +95,6 @@ zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offs
 
     if (!req) {
       // shouldn't happen!
-      fbl::AutoLock al(&mutex_);
-      UpdateSignals();
       return ZX_ERR_INTERNAL;
     }
 
@@ -143,11 +122,6 @@ zx_status_t UsbMidiSink::DdkWrite(const void* data, size_t length, zx_off_t offs
     length -= message_length;
   }
 
-  fbl::AutoLock al(&mutex_);
-  UpdateSignals();
-  if (status == ZX_OK) {
-    *actual = out_actual;
-  }
   return status;
 }
 
@@ -157,6 +131,19 @@ void UsbMidiSink::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& co
       .is_source = false,
   };
   completer.Reply(info);
+}
+
+void UsbMidiSink::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
+void UsbMidiSink::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  auto status = WriteInternal(request->data.data(), request->data.count());
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
 }
 
 zx_status_t UsbMidiSink::Create(zx_device_t* parent, const UsbDevice& usb, int index,

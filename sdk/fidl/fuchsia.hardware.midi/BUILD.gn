@@ -6,4 +6,5 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.midi") {
   sources = [ "midi.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

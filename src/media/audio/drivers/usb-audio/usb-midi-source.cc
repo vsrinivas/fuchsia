@@ -22,19 +22,6 @@ namespace usb {
 
 constexpr size_t READ_REQ_COUNT = 20;
 
-void UsbMidiSource::UpdateSignals() {
-  zx_signals_t new_signals = 0;
-  if (dead_) {
-    new_signals |= (DEV_STATE_READABLE | DEV_STATE_ERROR);
-  } else if (!completed_reads_.is_empty()) {
-    new_signals |= DEV_STATE_READABLE;
-  }
-  if (new_signals != signals_) {
-    ClearAndSetState(signals_ & ~new_signals, new_signals & ~signals_);
-    signals_ = new_signals;
-  }
-}
-
 void UsbMidiSource::ReadComplete(usb_request_t* req) {
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     usb_request_release(req);
@@ -45,6 +32,7 @@ void UsbMidiSource::ReadComplete(usb_request_t* req) {
 
   if (req->response.status == ZX_OK && req->response.actual > 0) {
     completed_reads_.push(UsbRequest(req, parent_req_size_));
+    read_ready_.Signal();
   } else {
     usb_request_complete_callback_t complete = {
         .callback = [](void* ctx,
@@ -53,15 +41,13 @@ void UsbMidiSource::ReadComplete(usb_request_t* req) {
     };
     usb_.RequestQueue(req, &complete);
   }
-
-  UpdateSignals();
 }
 
 void UsbMidiSource::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock al(&mutex_);
   dead_ = true;
 
-  UpdateSignals();
+  read_ready_.Signal();
   txn.Reply();
 }
 
@@ -102,7 +88,7 @@ zx_status_t UsbMidiSource::DdkClose(uint32_t flags) {
   return ZX_OK;
 }
 
-zx_status_t UsbMidiSource::DdkRead(void* data, size_t len, zx_off_t off, size_t* actual) {
+zx_status_t UsbMidiSource::ReadInternal(void* data, size_t len, size_t* actual) {
   {
     fbl::AutoLock al(&mutex_);
     if (dead_) {
@@ -110,17 +96,19 @@ zx_status_t UsbMidiSource::DdkRead(void* data, size_t len, zx_off_t off, size_t*
     }
   }
 
-  zx_status_t status = ZX_OK;
   if (len < 3) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
   fbl::AutoLock lock(&mutex_);
 
+  // Block until read is ready.
   auto req = completed_reads_.pop();
   if (!req.has_value()) {
-    UpdateSignals();
-    return ZX_ERR_SHOULD_WAIT;
+    read_ready_.Wait(&mutex_);
+
+    req = completed_reads_.pop();
+    ZX_ASSERT(req.has_value());
   }
 
   // MIDI events are 4 bytes. We can ignore the zeroth byte
@@ -139,8 +127,7 @@ zx_status_t UsbMidiSource::DdkRead(void* data, size_t len, zx_off_t off, size_t*
     usb_.RequestQueue(req->take(), &complete);
   }
 
-  UpdateSignals();
-  return status;
+  return ZX_OK;
 }
 
 void UsbMidiSource::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
@@ -149,6 +136,21 @@ void UsbMidiSource::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& 
       .is_source = true,
   };
   completer.Reply(info);
+}
+
+void UsbMidiSource::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+  std::array<uint8_t, fuchsia_hardware_midi::wire::kReadSize> buffer;
+  size_t actual = 0;
+  auto status = ReadInternal(buffer.data(), buffer.size(), &actual);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void UsbMidiSource::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t UsbMidiSource::Create(zx_device_t* parent, const UsbDevice& usb, int index,
@@ -178,6 +180,7 @@ zx_status_t UsbMidiSource::Init(int index, const usb_interface_descriptor_t* int
       return status;
     }
     req->request()->header.length = packet_size;
+    fbl::AutoLock al(&mutex_);
     free_read_reqs_.push(std::move(*req));
   }
 

@@ -19,9 +19,8 @@ namespace audio {
 namespace usb {
 
 class UsbMidiSink;
-using UsbMidiSinkBase =
-    ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable, ddk::Closable, ddk::Writable,
-                ddk::Messageable<fuchsia_hardware_midi::Device>::Mixin>;
+using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable, ddk::Closable,
+                                    ddk::Messageable<fuchsia_hardware_midi::Device>::Mixin>;
 
 class UsbMidiSink : public UsbMidiSinkBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MIDI> {
  public:
@@ -41,16 +40,18 @@ class UsbMidiSink : public UsbMidiSinkBase, public ddk::EmptyProtocol<ZX_PROTOCO
   void DdkRelease();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
 
   // FIDL methods.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
 
  private:
   zx_status_t Init(int index, const usb_interface_descriptor_t* intf,
                    const usb_endpoint_descriptor_t* ep);
-  void UpdateSignals() TA_REQ(mutex_);
   void WriteComplete(usb_request_t* req);
+
+  zx_status_t WriteInternal(const uint8_t* src, size_t length);
 
   UsbDevice usb_;
 
@@ -64,8 +65,6 @@ class UsbMidiSink : public UsbMidiSinkBase, public ddk::EmptyProtocol<ZX_PROTOCO
   bool open_ TA_GUARDED(mutex_) = false;
   bool dead_ TA_GUARDED(mutex_) = false;
 
-  // the last signals we reported
-  zx_signals_t signals_ TA_GUARDED(mutex_);
   uint64_t parent_req_size_;
 };
 

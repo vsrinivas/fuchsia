@@ -10,6 +10,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>
 #include <usb/usb.h>
@@ -18,9 +19,8 @@ namespace audio {
 namespace usb {
 
 class UsbMidiSource;
-using UsbMidiSourceBase =
-    ddk::Device<UsbMidiSource, ddk::Unbindable, ddk::Openable, ddk::Closable, ddk::Readable,
-                ddk::Messageable<fuchsia_hardware_midi::Device>::Mixin>;
+using UsbMidiSourceBase = ddk::Device<UsbMidiSource, ddk::Unbindable, ddk::Openable, ddk::Closable,
+                                      ddk::Messageable<fuchsia_hardware_midi::Device>::Mixin>;
 
 class UsbMidiSource : public UsbMidiSourceBase, public ddk::EmptyProtocol<ZX_PROTOCOL_MIDI> {
  public:
@@ -40,31 +40,36 @@ class UsbMidiSource : public UsbMidiSourceBase, public ddk::EmptyProtocol<ZX_PRO
   void DdkRelease();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 
   // FIDL methods.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
 
  private:
   zx_status_t Init(int index, const usb_interface_descriptor_t* intf,
                    const usb_endpoint_descriptor_t* ep);
-  void UpdateSignals() TA_REQ(mutex_);
   void ReadComplete(usb_request_t* req);
+
+  zx_status_t ReadInternal(void* data, size_t len, size_t* actual);
 
   UsbDevice usb_;
 
-  // pool of free USB requests
-  UsbRequestQueue free_read_reqs_;
-  // list of received packets not yet read by upper layer
-  UsbRequestQueue completed_reads_;
   // mutex for synchronizing access to free_read_reqs, completed_reads and open
   fbl::Mutex mutex_;
+
+  // pool of free USB requests
+  UsbRequestQueue free_read_reqs_ TA_GUARDED(mutex_);
+  // list of received packets not yet read by upper layer
+  UsbRequestQueue completed_reads_ TA_GUARDED(mutex_);
 
   bool open_ TA_GUARDED(mutex_) = false;
   bool dead_ TA_GUARDED(mutex_) = false;
 
+  // Signals when completed_reads_ is non-empty.
+  fbl::ConditionVariable read_ready_ TA_GUARDED(mutex_);
+
   // the last signals we reported
-  zx_signals_t signals_ TA_GUARDED(mutex_);
   size_t parent_req_size_;
 };
 
