@@ -143,6 +143,9 @@ VKAPI_ATTR void VKAPI_CALL vk_icdInitializeOpenInNamespaceCallback(PFN_vkOpenInN
 
 VKAPI_ATTR __attribute__((visibility("default"))) void VKAPI_CALL
 vk_icdInitializeOpenInNamespaceCallback(PFN_vkOpenInNamespaceAddr open_in_namespace_addr) {
+  // Disable until loader with ConnectDeviceFs support has rolled.
+  // TODO(fxbug.dev/77112): Re-enable.
+#if defined(ENABLE_DEVICE_FS_TEST)
   zx::channel server_end, client_end;
   zx::channel::create(0, &server_end, &client_end);
 
@@ -166,6 +169,7 @@ vk_icdInitializeOpenInNamespaceCallback(PFN_vkOpenInNamespaceAddr open_in_namesp
     fprintf(stderr, "fdio_bind_to_fd failed\n");
     return;
   }
+#endif
 
   open_in_namespace_callback_initialized = true;
 }
