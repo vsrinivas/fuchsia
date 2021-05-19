@@ -36,7 +36,7 @@ function fx-flash {
     return 1
   fi
 
-  ffx_flash_args=("fuchsia" "--oem-stage" "add-staged-bootloader-file ssh.authorized_keys,$(get-ssh-authkeys)") || {
+  ffx_flash_args=("fuchsia" "--ssh-key" "$(get-ssh-authkeys)") || {
     fx-warn "Cannot find a valid authorized keys file. Recovery will be flashed."
     ffx_flash_args=("recovery")
   }
