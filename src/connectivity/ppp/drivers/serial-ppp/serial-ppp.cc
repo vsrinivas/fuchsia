@@ -455,8 +455,8 @@ void SerialPpp::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf
         if (buffer.data_count != 1) {
           return ZX_ERR_NOT_SUPPORTED;
         }
-        auto& data = *buffer.data_list;
-        auto* stored_vmo = vmos_.GetVmo(buffer.vmo);
+        const buffer_region_t& data = *buffer.data_list;
+        auto* stored_vmo = vmos_.GetVmo(data.vmo);
         if (!stored_vmo) {
           return ZX_ERR_INVALID_ARGS;
         }
@@ -505,9 +505,9 @@ void SerialPpp::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list,
           return true;
         }
 
-        auto* vmo = vmos_.GetVmo(buffer.vmo);
+        auto* vmo = vmos_.GetVmo(data.vmo);
         if (!vmo) {
-          zxlogf(WARNING, "ignoring rx buffer with invalid VMO id: %d", buffer.vmo);
+          zxlogf(WARNING, "ignoring rx buffer with invalid VMO id: %d", data.vmo);
           return true;
         }
 

@@ -21,14 +21,14 @@ zx::status<std::vector<uint8_t>> TxBuffer::GetData(const VmoProvider& vmo_provid
   if (buffer_.data_count != 1) {
     return zx::error(ZX_ERR_INTERNAL);
   }
-  zx::unowned_vmo vmo = vmo_provider(buffer_.vmo);
+  const buffer_region_t& region = buffer_.data_list[0];
+  zx::unowned_vmo vmo = vmo_provider(region.vmo);
   if (!vmo->is_valid()) {
     return zx::error(ZX_ERR_INTERNAL);
   }
   std::vector<uint8_t> copy;
-  copy.resize(buffer_.data_list[0].length);
-  zx_status_t status =
-      vmo->read(copy.data(), buffer_.data_list[0].offset, buffer_.data_list[0].length);
+  copy.resize(region.length);
+  zx_status_t status = vmo->read(copy.data(), region.offset, region.length);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -42,7 +42,7 @@ zx_status_t RxBuffer::WriteData(fbl::Span<const uint8_t> data, const VmoProvider
   if (data.size() > space_.region.length) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx::unowned_vmo vmo = vmo_provider(space_.vmo);
+  zx::unowned_vmo vmo = vmo_provider(space_.region.vmo);
   return_part_.length = static_cast<uint32_t>(data.size());
   return vmo->write(data.begin(), space_.region.offset, data.size());
 }

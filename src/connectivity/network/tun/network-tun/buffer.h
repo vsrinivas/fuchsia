@@ -130,7 +130,6 @@ class Buffer {
  protected:
   struct BufferPart {
     uint32_t buffer_id;
-    uint8_t vmo_id;
     buffer_region_t region;
   };
 
@@ -177,7 +176,6 @@ class RxBuffer : public Buffer {
     for (BufferPart& part : parts()) {
       fn(rx_space_buffer_t{
           .id = part.buffer_id,
-          .vmo = part.vmo_id,
           .region = part.region,
       });
     }

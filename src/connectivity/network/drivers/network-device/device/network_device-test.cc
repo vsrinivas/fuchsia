@@ -313,7 +313,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
     std::unique_ptr rx = buffers.pop_back();
     ASSERT_TRUE(rx);
     const rx_space_buffer_t& space = rx->space();
-    ASSERT_EQ(space.vmo, want_vmo);
+    ASSERT_EQ(space.region.vmo, want_vmo);
     buffer_descriptor_t* descriptor = session.descriptor(descriptor_setup.descriptor);
     ASSERT_EQ(space.region.offset, descriptor->offset + descriptor->head_length);
     ASSERT_EQ(space.region.length, descriptor->data_length + descriptor->tail_length);
@@ -1384,7 +1384,7 @@ TEST_F(NetworkDeviceTest, RxCrossSessionChaining) {
   rx_space_buffer_t space_b = buffer_b->space();
 
   // Space from each buffer must've come from different VMOs.
-  ASSERT_NE(buffer_a->space().vmo, buffer_b->space().vmo);
+  ASSERT_NE(buffer_a->space().region.vmo, buffer_b->space().region.vmo);
   // Return both buffers as a single chained rx frame.
   buffer_a->return_part().length = 0xdead;
   buffer_b->return_part().length = 0xbeef;
@@ -1413,7 +1413,7 @@ TEST_F(NetworkDeviceTest, RxCrossSessionChaining) {
   std::unique_ptr buffer_b_again = impl_.PopRxBuffer();
   ASSERT_TRUE(buffer_b_again);
   const rx_space_buffer_t& space = buffer_b_again->space();
-  EXPECT_EQ(space.vmo, space_b.vmo);
+  EXPECT_EQ(space.region.vmo, space_b.region.vmo);
   EXPECT_EQ(space.region.offset, space_b.region.offset);
   EXPECT_EQ(space.region.length, space_b.region.length);
   {

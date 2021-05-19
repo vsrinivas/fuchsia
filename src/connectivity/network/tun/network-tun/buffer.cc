@@ -73,7 +73,7 @@ zx_status_t Buffer::Read(std::vector<uint8_t>& vec) {
   auto inserter = std::back_inserter(vec);
   for (const BufferPart& part : parts()) {
     size_t len = part.region.length;
-    zx_status_t status = vmo_store_->Read(part.vmo_id, part.region.offset, len, inserter);
+    zx_status_t status = vmo_store_->Read(part.region.vmo, part.region.offset, len, inserter);
     if (status != ZX_OK) {
       return status;
     }
@@ -88,7 +88,7 @@ zx_status_t Buffer::Write(const uint8_t* data, size_t count) {
       break;
     }
     size_t len = std::min(count, part.region.length);
-    zx_status_t status = vmo_store_->Write(part.vmo_id, part.region.offset, len, data);
+    zx_status_t status = vmo_store_->Write(part.region.vmo, part.region.offset, len, data);
     if (status != ZX_OK) {
       return status;
     }
@@ -129,8 +129,8 @@ zx::status<size_t> Buffer::CopyFrom(Buffer& other) {
     uint64_t wr = len_o > len_me ? len_me : len_o;
 
     zx_status_t status =
-        VmoStore::Copy(*other.vmo_store_, part_o->vmo_id, part_o->region.offset + offset_other,
-                       *vmo_store_, part_me->vmo_id, part_me->region.offset + offset_me, wr);
+        VmoStore::Copy(*other.vmo_store_, part_o->region.vmo, part_o->region.offset + offset_other,
+                       *vmo_store_, part_me->region.vmo, part_me->region.offset + offset_me, wr);
     if (status != ZX_OK) {
       FX_LOGF(ERROR, "tun", "Buffer: failed to copy between buffers: %s",
               zx_status_get_string(status));
@@ -160,7 +160,6 @@ TxBuffer::TxBuffer(const tx_buffer_t& tx, bool get_meta, VmoStore* vmo_store)
   for (const buffer_region_t& region : fbl::Span(tx.data_list, tx.data_count)) {
     PushPart(BufferPart{
         .buffer_id = tx.id,
-        .vmo_id = tx.vmo,
         .region = region,
     });
   }
@@ -179,7 +178,6 @@ TxBuffer::TxBuffer(const tx_buffer_t& tx, bool get_meta, VmoStore* vmo_store)
 void RxBuffer::PushRxSpace(const rx_space_buffer_t& space) {
   PushPart(BufferPart{
       .buffer_id = space.id,
-      .vmo_id = space.vmo,
       .region = space.region,
   });
 }

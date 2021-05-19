@@ -122,12 +122,12 @@ class SerialPppHarness : public zxtest::Test {
           fbl::Span<const uint8_t> data) {
     std::copy(data.begin(), data.end(), vmo_data().subspan(offset).begin());
     buffer_region_t part = {
+        .vmo = kVmoId,
         .offset = offset,
         .length = data.size(),
     };
     tx_buffer_t buffer = {
         .id = id,
-        .vmo = kVmoId,
         .data_list = &part,
         .data_count = 1,
         .meta =
@@ -145,7 +145,14 @@ class SerialPppHarness : public zxtest::Test {
 
   void PushRxSpace(uint32_t id, uint64_t offset, uint64_t length = kDefaultBufferReservation) {
     rx_space_buffer_t space = {
-        .id = id, .vmo = kVmoId, .region = {.offset = offset, .length = length}};
+        .id = id,
+        .region =
+            {
+                .vmo = kVmoId,
+                .offset = offset,
+                .length = length,
+            },
+    };
     device_->NetworkDeviceImplQueueRxSpace(&space, 1);
   }
 

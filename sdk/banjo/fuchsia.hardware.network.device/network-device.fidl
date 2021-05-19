@@ -115,11 +115,13 @@ alias buffer_id = uint32;
 /// Port identifiers are always in the range [0, [`MAX_PORTS`]).
 alias port_id = uint8;
 
-/// A contiguous memory region.
+/// A contiguous memory region in a VMO.
 ///
 /// Note that a `BufferRegion` is only contiguous in terms of the VMO it references, it does not
 /// necessarily translate into contiguous physical memory.
 struct BufferRegion {
+    /// VMO backing this region.
+    vmo_id vmo;
     /// Offset, in bytes, of data chunk in VMO.
     uint64 offset;
     /// Length, in bytes, of data chunk in VMO.
@@ -161,8 +163,6 @@ struct BufferMetadata {
 struct TxBuffer {
     /// Unique buffer identifier.
     buffer_id id;
-    /// Identifier of VMO backing the data in this buffer.
-    vmo_id vmo;
     /// Regions of VMO holding frame data.
     vector<BufferRegion>:MAX_BUFFER_PARTS data;
     /// Metadata associated with this buffer.
@@ -182,8 +182,6 @@ struct TxBuffer {
 struct RxSpaceBuffer {
     /// Unique buffer identifier.
     buffer_id id;
-    /// Identifier of VMO backing the data in this buffer.
-    vmo_id vmo;
     /// VMO region where buffer space is located.
     BufferRegion region;
 };

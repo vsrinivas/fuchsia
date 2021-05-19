@@ -447,7 +447,6 @@ zx_status_t Session::FetchTx() {
     }
 
     *buffer = {
-        .vmo = vmo_id_,
         .data_list = buffer->data_list,
         .data_count = 0,
         .meta =
@@ -475,12 +474,13 @@ zx_status_t Session::FetchTx() {
       auto* cur = const_cast<buffer_region_t*>(&buffer->data_list[buffer->data_count]);
       if (add_head_space) {
         *cur = {
+            .vmo = vmo_id_,
             .offset = desc->offset + skip_front,
             .length = desc->data_length + buffer->head_length,
-
         };
       } else {
         *cur = {
+            .vmo = vmo_id_,
             .offset = desc->offset + desc->head_length,
             .length = desc->data_length,
         };
@@ -780,9 +780,9 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
   }
   *buff = {
       .id = buff->id,
-      .vmo = vmo_id_,
       .region =
           {
+              .vmo = vmo_id_,
               .offset = desc->offset + desc->head_length,
               .length = desc->data_length + desc->tail_length,
           },

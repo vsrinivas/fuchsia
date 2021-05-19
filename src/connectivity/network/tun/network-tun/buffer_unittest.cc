@@ -37,6 +37,7 @@ class BufferTest : public ::testing::Test {
   std::vector<uint8_t> ReadVmo(const buffer_region_t& region) {
     std::vector<uint8_t> ret;
     ret.reserve(region.length);
+    EXPECT_EQ(region.vmo, kVmoId);
     EXPECT_OK(vmos_.Read(kVmoId, region.offset, region.length, std::back_inserter(ret)));
     return ret;
   }
@@ -47,15 +48,14 @@ class BufferTest : public ::testing::Test {
 
 TEST_F(BufferTest, TestBufferBuildTx) {
   buffer_region_t regions[] = {
-      {.offset = 10, .length = 5},
-      {.offset = 100, .length = 3},
+      {.vmo = kVmoId, .offset = 10, .length = 5},
+      {.vmo = kVmoId, .offset = 100, .length = 3},
   };
   for (const buffer_region_t& region : regions) {
     MintVmo(region);
   }
   tx_buffer_t tx = {
       .id = 1,
-      .vmo = kVmoId,
       .data_list = regions,
       .data_count = std::size(regions),
       .meta =
@@ -81,18 +81,18 @@ TEST_F(BufferTest, TestBufferBuildTx) {
 TEST_F(BufferTest, TestBufferBuildRx) {
   const rx_space_buffer_t space_1 = {
       .id = 1,
-      .vmo = kVmoId,
       .region =
           {
+              .vmo = kVmoId,
               .offset = 10,
               .length = 5,
           },
   };
   const rx_space_buffer_t space_2 = {
       .id = 2,
-      .vmo = kVmoId,
       .region =
           {
+              .vmo = kVmoId,
               .offset = 100,
               .length = 3,
           },
@@ -107,16 +107,15 @@ TEST_F(BufferTest, TestBufferBuildRx) {
 
 TEST_F(BufferTest, CopyBuffer) {
   buffer_region_t tx_parts[3] = {
-      {.offset = 0, .length = 5},
-      {.offset = 10, .length = 3},
-      {.offset = 20, .length = 2},
+      {.vmo = kVmoId, .offset = 0, .length = 5},
+      {.vmo = kVmoId, .offset = 10, .length = 3},
+      {.vmo = kVmoId, .offset = 20, .length = 2},
   };
   for (const buffer_region_t& region : tx_parts) {
     MintVmo(region);
   }
   tx_buffer_t tx = {
       .id = 1,
-      .vmo = kVmoId,
       .data_list = tx_parts,
       .data_count = std::size(tx_parts),
   };
@@ -124,9 +123,9 @@ TEST_F(BufferTest, CopyBuffer) {
   TxBuffer b_tx = vmos_.MakeTxBuffer(tx, false);
 
   rx_space_buffer_t rx_space[3] = {
-      {.id = 2, .vmo = kVmoId, .region = {.offset = 100, .length = 3}},
-      {.id = 3, .vmo = kVmoId, .region = {.offset = 110, .length = 5}},
-      {.id = 4, .vmo = kVmoId, .region = {.offset = 120, .length = 100}},
+      {.id = 2, .region = {.vmo = kVmoId, .offset = 100, .length = 3}},
+      {.id = 3, .region = {.vmo = kVmoId, .offset = 110, .length = 5}},
+      {.id = 4, .region = {.vmo = kVmoId, .offset = 120, .length = 100}},
   };
 
   RxBuffer b_rx = vmos_.MakeEmptyRxBuffer();
@@ -141,6 +140,7 @@ TEST_F(BufferTest, CopyBuffer) {
   EXPECT_EQ(ReadVmo(rx_space[0].region), std::vector<uint8_t>({0x00, 0x01, 0x02}));
   EXPECT_EQ(ReadVmo(rx_space[1].region), std::vector<uint8_t>({0x03, 0x04, 0x00, 0x01, 0x02}));
   EXPECT_EQ(ReadVmo(buffer_region_t{
+                .vmo = kVmoId,
                 .offset = rx_space[2].region.offset,
                 .length = 2,
             }),
@@ -152,8 +152,12 @@ TEST_F(BufferTest, WriteFailure) {
     // Write more than buffer's length is invalid.
     RxBuffer b = vmos_.MakeRxSpaceBuffer(rx_space_buffer_t{
         .id = 1,
-        .vmo = kVmoId,
-        .region = {.offset = 10, .length = 3},
+        .region =
+            {
+                .vmo = kVmoId,
+                .offset = 10,
+                .length = 3,
+            },
     });
     ASSERT_EQ(b.Write({0x01, 0x02, 0x03, 0x04}), ZX_ERR_OUT_OF_RANGE);
   }
@@ -161,8 +165,12 @@ TEST_F(BufferTest, WriteFailure) {
     // A buffer that doesn't fit its VMO is invalid.
     RxBuffer b = vmos_.MakeRxSpaceBuffer(rx_space_buffer_t{
         .id = 1,
-        .vmo = kVmoId,
-        .region = {.offset = kVmoSize, .length = 3},
+        .region =
+            {
+                .vmo = kVmoId,
+                .offset = kVmoSize,
+                .length = 3,
+            },
     });
     ASSERT_EQ(b.Write({0x01}), ZX_ERR_OUT_OF_RANGE);
   }
@@ -170,8 +178,12 @@ TEST_F(BufferTest, WriteFailure) {
     // A buffer with an invalid vmo_id is invalid.
     RxBuffer b = vmos_.MakeRxSpaceBuffer(rx_space_buffer_t{
         .id = 1,
-        .vmo = kVmoId + 1,
-        .region = {.offset = 10, .length = 3},
+        .region =
+            {
+                .vmo = kVmoId + 1,
+                .offset = 10,
+                .length = 3,
+            },
     });
     ASSERT_EQ(b.Write({0x01}), ZX_ERR_NOT_FOUND);
   }
@@ -181,11 +193,10 @@ TEST_F(BufferTest, ReadFailure) {
   std::vector<uint8_t> data;
   {
     // A buffer that doesn't fit its VMO is invalid.
-    buffer_region_t part = {.offset = kVmoSize, .length = 10};
+    buffer_region_t part = {.vmo = kVmoId, .offset = kVmoSize, .length = 10};
     TxBuffer b = vmos_.MakeTxBuffer(
         tx_buffer_t{
             .id = 1,
-            .vmo = kVmoId,
             .data_list = &part,
             .data_count = 1,
         },
@@ -194,11 +205,10 @@ TEST_F(BufferTest, ReadFailure) {
   }
   {
     // A buffer with an invalid vmo_id is invalid.
-    buffer_region_t part = {.length = 10};
+    buffer_region_t part = {.vmo = kVmoId + 1, .length = 10};
     TxBuffer b = vmos_.MakeTxBuffer(
         tx_buffer_t{
             .id = 1,
-            .vmo = kVmoId + 1,
             .data_list = &part,
             .data_count = 1,
         },
