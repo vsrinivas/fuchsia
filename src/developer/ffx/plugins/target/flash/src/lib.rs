@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        file::{ArchiveResolver, FileResolver, Resolver},
+        file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
         manifest::{Flash, FlashManifest},
     },
     anyhow::{Context, Result},
@@ -65,6 +65,9 @@ pub async fn flash(
         Some(ext) => {
             if ext == "zip" {
                 let r = ArchiveResolver::new(&mut writer, path)?;
+                flash_impl(&mut writer, r, fastboot_proxy, cmd).await
+            } else if ext == "tgz" || ext == "tar.gz" || ext == "tar" {
+                let r = TarResolver::new(&mut writer, path)?;
                 flash_impl(&mut writer, r, fastboot_proxy, cmd).await
             } else {
                 flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await

@@ -6,11 +6,14 @@ use {
     crate::manifest::done_time,
     anyhow::{anyhow, bail, Context, Result},
     chrono::Utc,
-    ffx_core::ffx_bail,
+    ffx_core::{ffx_bail, ffx_error},
+    flate2::read::GzDecoder,
     std::fs::{create_dir_all, File},
     std::io::{copy, Write},
     std::path::{Path, PathBuf},
+    tar::Archive,
     tempfile::{tempdir, TempDir},
+    walkdir::WalkDir,
     zip::read::ZipArchive,
 };
 
@@ -65,10 +68,10 @@ pub(crate) struct ArchiveResolver {
 impl ArchiveResolver {
     pub(crate) fn new<W: Write + Send>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
-        let file =
-            File::open(path.clone()).map_err(|e| anyhow!("Could not open archive file: {}", e))?;
+        let file = File::open(path.clone())
+            .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
         let mut archive =
-            ZipArchive::new(file).map_err(|e| anyhow!("Could not read archive: {}", e))?;
+            ZipArchive::new(file).map_err(|e| ffx_error!("Could not read archive: {}", e))?;
         let mut internal_manifest_path = None;
         let mut manifest_path = None;
 
@@ -110,7 +113,7 @@ impl ArchiveResolver {
             (Some(i), Some(m)) => {
                 Ok(Self { temp_dir, manifest_path: m, internal_manifest_path: i, archive })
             }
-            _ => ffx_bail!("Could not locate `flash.json` in archive: {}", path.display()),
+            _ => ffx_bail!("Could not locate flash manifest in archive: {}", path.display()),
         }
     }
 }
@@ -159,5 +162,57 @@ impl FileResolver for ArchiveResolver {
         let duration = Utc::now().signed_duration_since(time);
         done_time(writer, duration)?;
         Ok(outpath.to_str().ok_or(anyhow!("invalid temp file name"))?.to_owned())
+    }
+}
+
+pub(crate) struct TarResolver {
+    _temp_dir: TempDir,
+    manifest_path: PathBuf,
+}
+
+impl TarResolver {
+    pub(crate) fn new<W: Write + Send>(writer: &mut W, path: PathBuf) -> Result<Self> {
+        let temp_dir = tempdir()?;
+        let file = File::open(path.clone())
+            .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
+        let mut archive = Archive::new(GzDecoder::new(file));
+        let time = Utc::now();
+        write!(writer, "Extracting {} to {}... ", path.display(), temp_dir.path().display())?;
+        writer.flush()?;
+        // Tarballs can't do per file extraction well like Zip, so just unpack it all.
+        archive.unpack(temp_dir.path())?;
+        let duration = Utc::now().signed_duration_since(time);
+        done_time(writer, duration)?;
+
+        let manifest_path = WalkDir::new(temp_dir.path())
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .find(|e| e.file_name() == "flash.json" || e.file_name() == "flash-manifest.manifest");
+
+        match manifest_path {
+            Some(m) => Ok(Self { _temp_dir: temp_dir, manifest_path: m.into_path() }),
+            _ => ffx_bail!("Could not locate flash manifest in archive: {}", path.display()),
+        }
+    }
+}
+
+impl FileResolver for TarResolver {
+    fn manifest(&self) -> &Path {
+        self.manifest_path.as_path()
+    }
+
+    fn get_file<W: Write + Send>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+        if let Some(p) = self.manifest().parent() {
+            let mut parent = p.to_path_buf();
+            parent.push(file);
+            if let Some(f) = parent.to_str() {
+                Ok(f.to_string())
+            } else {
+                ffx_bail!("Only UTF-8 strings are currently supported in the flash manifest")
+            }
+        } else {
+            // Should not get here, the parent of the manifest file SHOULD AT LEAST be the temp dir.
+            bail!("Could not get file to upload");
+        }
     }
 }

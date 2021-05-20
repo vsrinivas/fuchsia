@@ -14,11 +14,14 @@ ffx_plugin("ffx_flash") {
   deps = [
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:flate2",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tar",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:walkdir",
     "//third_party/rust_crates:zip",
   ]
 
