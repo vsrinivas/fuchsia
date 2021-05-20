@@ -79,7 +79,7 @@ fn explore(
 pub struct ElfRuntime {
     pub job_id: u32,
     pub process_id: u32,
-    pub process_start_time: i64,
+    pub process_start_time: Option<i64>,
     pub process_start_time_utc_estimate: Option<String>,
 }
 
@@ -124,9 +124,9 @@ impl Execution {
                                 .expect("parse(`process_id`) failed!");
 
                             let process_start_time = process_start_time
-                                .expect("read_file(`process_start_time`) failed!")
-                                .parse::<i64>()
-                                .expect("parse(`process_start_time`) failed!");
+                                .ok()
+                                .map(|time_string| time_string.parse::<i64>().ok())
+                                .flatten();
 
                             let process_start_time_utc_estimate =
                                 process_start_time_utc_estimate.ok();
@@ -199,16 +199,22 @@ impl Execution {
     fn print_details(&self) {
         if let Some(runtime) = &self.elf_runtime {
             println!("Job ID: {}", runtime.job_id);
+
             println!("Process ID: {}", runtime.process_id);
-            println!("Process Start Time (ticks): {}", runtime.process_start_time);
-            let process_start_time_utc_estimate = if let Some(process_start_time_utc_estimate) =
-                runtime.process_start_time_utc_estimate.as_ref()
-            {
-                process_start_time_utc_estimate.clone()
-            } else {
-                "(not available)".to_string()
-            };
-            println!("Process Start Time (estimate): {}", process_start_time_utc_estimate);
+            println!(
+                "Process Start Time (ticks): {}",
+                runtime
+                    .process_start_time
+                    .map(|val| val.to_string())
+                    .unwrap_or("(not available)".to_string())
+            );
+            println!(
+                "Process Start Time (estimate): {}",
+                runtime
+                    .process_start_time_utc_estimate
+                    .as_ref()
+                    .unwrap_or(&"(not available)".to_string())
+            );
         }
 
         if let Some(merkle_root) = &self.merkle_root {
@@ -576,7 +582,7 @@ mod tests {
             ElfRuntime {
                 job_id: 12345,
                 process_id: 67890,
-                process_start_time: 11121314,
+                process_start_time: Some(11121314),
                 process_start_time_utc_estimate: Some("who knows?".to_string())
             }
         );
@@ -1147,7 +1153,7 @@ mod tests {
             ElfRuntime {
                 job_id: 12345,
                 process_id: 67890,
-                process_start_time: 11121314,
+                process_start_time: Some(11121314),
                 process_start_time_utc_estimate: Some("bleep".to_string())
             }
         );
@@ -1206,7 +1212,7 @@ mod tests {
             ElfRuntime {
                 job_id: 12345,
                 process_id: 67890,
-                process_start_time: 11121314,
+                process_start_time: Some(11121314),
                 process_start_time_utc_estimate: None
             }
         );
