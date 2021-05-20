@@ -131,7 +131,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
                inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
 
-  fit::promise<inspect::Inspector> Inspect();
+  fit::promise<inspect::Inspector> Inspect() const;
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> StartRootDriver(std::string_view name);
 

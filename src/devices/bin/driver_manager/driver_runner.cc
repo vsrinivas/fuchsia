@@ -26,13 +26,13 @@ namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 namespace fsys = fuchsia_sys2;
 
-using InspectStack = std::stack<std::pair<inspect::Node*, Node*>>;
+using InspectStack = std::stack<std::pair<inspect::Node*, const Node*>>;
 
 namespace {
 
 void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
   std::forward_list<inspect::Node> roots;
-  std::unordered_set<Node*> unique_nodes;
+  std::unordered_set<const Node*> unique_nodes;
   while (!stack.empty()) {
     // Pop the current root and node to operate on.
     auto [root, node] = stack.top();
@@ -506,7 +506,7 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
 
-fit::promise<inspect::Inspector> DriverRunner::Inspect() {
+fit::promise<inspect::Inspector> DriverRunner::Inspect() const {
   inspect::Inspector inspector;
   auto root = inspector.GetRoot().CreateChild(root_node_->name());
   InspectStack stack{{std::make_pair(&root, root_node_.get())}};
