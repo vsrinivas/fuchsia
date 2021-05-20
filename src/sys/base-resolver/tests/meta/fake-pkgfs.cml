@@ -9,14 +9,14 @@
     },
     capabilities: [
         {
-            directory: "pkgfs",
+            directory: "pkgfs-packages",
             rights: [ "rx*" ],
-            path: "/pkgfs",
+            path: "/pkgfs/packages",
         },
     ],
     expose: [
         {
-            directory: "pkgfs",
+            directory: "pkgfs-packages",
             from: "self",
         },
     ],

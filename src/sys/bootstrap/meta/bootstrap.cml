@@ -815,19 +815,9 @@
 
         // -- End Archivist offers --
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs-packages-delayed",
             from: "#fshost",
             to: "#base_resolver",
-
-            // Marking this offer as weak solves the following cycle:
-            // base_resolver -> fshost -> driver_manager -> power_manager -> base_resolver.
-            // TODO(fxbug.dev/64587): Make this strong once power_manager is in ZBI.
-            dependency: "weak_for_migration",
-        },
-        {
-            resolver: "base_resolver",
-            from: "#base_resolver",
-            to: "#driver_manager",
         },
     ],
     expose: [

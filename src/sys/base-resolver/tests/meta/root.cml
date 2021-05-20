@@ -22,9 +22,9 @@
             // which blocks open requests until pkgfs is ready and serving. We use the
             // same capability name here so that the production base-resolver manifest can
             // be used, even though the pkgfs directory is being mocked.
-            directory: "pkgfs",
+            directory: "pkgfs-packages",
             from: "#fake_pkgfs",
-            as: "pkgfs-delayed",
+            as: "pkgfs-packages-delayed",
             to: "#base_resolver",
         },
         {

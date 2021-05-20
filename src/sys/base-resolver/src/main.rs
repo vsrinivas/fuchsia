@@ -35,15 +35,15 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
-    let pkgfs_dir = io_util::open_directory_in_namespace(
-        "/pkgfs",
+    let packages_dir = io_util::open_directory_in_namespace(
+        "/pkgfs/packages",
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
     .context("failed to open /pkgfs")?;
     while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
-        match resolve_component(&component_url, &pkgfs_dir).await {
+        match resolve_component(&component_url, &packages_dir).await {
             Ok(result) => responder.send(&mut Ok(result)),
             Err(err) => {
                 error!("failed to resolve component URL {}: {}", &component_url, &err);
@@ -57,13 +57,13 @@ async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()>
 
 async fn resolve_component(
     component_url: &str,
-    pkgfs_dir: &DirectoryProxy,
+    packages_dir: &DirectoryProxy,
 ) -> Result<fsys::Component, ResolverError> {
     let package_url = PkgUrl::parse(component_url)?;
     let cm_path = package_url
         .resource()
         .ok_or_else(|| ResolverError::InvalidUrl(PkgUrlParseError::InvalidResourcePath))?;
-    let package_dir = resolve_package(&package_url, pkgfs_dir).await?;
+    let package_dir = resolve_package(&package_url, packages_dir).await?;
 
     // Read the component manifest (.cm file) from the package directory.
     let cm_file = io_util::directory::open_file(&package_dir, cm_path, fio::OPEN_RIGHT_READABLE)
@@ -97,7 +97,7 @@ async fn resolve_component(
 
 async fn resolve_package(
     package_url: &PkgUrl,
-    pkgfs_dir: &DirectoryProxy,
+    packages_dir: &DirectoryProxy,
 ) -> Result<DirectoryProxy, ResolverError> {
     let root_url = package_url.root_url();
     if root_url.host() != "fuchsia.com" {
@@ -106,8 +106,8 @@ async fn resolve_package(
     let package_name = io_util::canonicalize_path(root_url.path());
     // Package contents are available at `packages/$PACKAGE_NAME/0`.
     let dir = io_util::directory::open_directory(
-        pkgfs_dir,
-        &format!("packages/{}/0", package_name),
+        packages_dir,
+        &format!("{}/0", package_name),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
     .await
@@ -202,15 +202,11 @@ mod tests {
             .expect("failed to create test PkgUrl");
         let flag_verifier =
             Arc::new(FlagVerifier(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE));
-        let pkgfs_dir =
-            serve_pkgfs(Arc::new(MockDir::new().add_entry(
-                "packages",
-                Arc::new(MockDir::new().add_entry(
-                    "test-package",
-                    Arc::new(MockDir::new().add_entry("0", flag_verifier)),
-                )),
-            )))
-            .expect("failed to serve pkgfs");
+        let pkgfs_dir = serve_pkgfs(Arc::new(
+            MockDir::new()
+                .add_entry("test-package", Arc::new(MockDir::new().add_entry("0", flag_verifier))),
+        ))
+        .expect("failed to serve pkgfs");
 
         let package =
             resolve_package(&pkg_url, &pkgfs_dir).await.expect("failed to resolve package");
@@ -301,28 +297,20 @@ mod tests {
             .expect("failed to encode ComponentDecl FIDL");
         Arc::new(
             MockDir::new().add_entry(
-                "packages",
+                "test-package",
                 Arc::new(
                     MockDir::new().add_entry(
-                        "test-package",
+                        "0",
                         Arc::new(
                             MockDir::new().add_entry(
-                                "0",
+                                "meta",
                                 Arc::new(
-                                    MockDir::new().add_entry(
-                                        "meta",
-                                        Arc::new(
-                                            MockDir::new()
-                                                .add_entry(
-                                                    "foo.cm",
-                                                    Arc::new(MockFile::new(cm_bytes.clone())),
-                                                )
-                                                .add_entry(
-                                                    "vmo.cm",
-                                                    Arc::new(MockFile::new(cm_bytes)),
-                                                ),
-                                        ),
-                                    ),
+                                    MockDir::new()
+                                        .add_entry(
+                                            "foo.cm",
+                                            Arc::new(MockFile::new(cm_bytes.clone())),
+                                        )
+                                        .add_entry("vmo.cm", Arc::new(MockFile::new(cm_bytes))),
                                 ),
                             ),
                         ),

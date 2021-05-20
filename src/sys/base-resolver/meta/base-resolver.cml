@@ -16,9 +16,9 @@
     ],
     use: [
         {
-            directory: "pkgfs-delayed",
+            directory: "pkgfs-packages-delayed",
             rights: [ "rx*" ],
-            path: "/pkgfs",
+            path: "/pkgfs/packages",
         },
     ],
     expose: [
