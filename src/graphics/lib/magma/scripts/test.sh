@@ -11,7 +11,7 @@ fx-config-read
 case "$1" in
 intel)
   fx-command-run test --no-build --simple -o \
-    magma_unit_tests \
+    magma_nonhardware_tests \
     msd_intel_gen_nonhardware_tests \
     mesa_unit_tests \
     state_pool \
@@ -27,20 +27,20 @@ intel)
   ;;
 mali)
   fx-command-run test --no-build --simple -o \
-    magma_unit_tests \
+    magma_nonhardware_tests \
     msd_arm_mali_nonhardware_tests \
     magma-abi-conformance-tests-arm \
-    msd_arm_mali_integration_tests \
     icd_load \
     vkreadback \
     vkloop \
     vkext_protected \
     vkext_unprotected \
-    vk_timer_query_tests
+    vk_timer_query \
+    msd-arm-mali-integration-tests
   ;;
 pvr)
   fx-command-run test --no-build --simple -o \
-    magma_unit_tests \
+    magma_nonhardware_tests \
     msd_img_rgx_nonhardware_tests \
     magma-abi-conformance-tests \
     msd_img_rgx_integration_tests \
@@ -48,7 +48,7 @@ pvr)
   ;;
 vsi)
   fx-command-run test --simple -o \
-    magma_unit_tests \
+    magma_nonhardware_tests \
     msd_vsi_vip_nonhardware_tests \
     magma-abi-conformance-tests-vsi \
     msd-vsi-vip-integration-tests \
