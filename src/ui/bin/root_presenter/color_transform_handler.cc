@@ -50,6 +50,7 @@ ColorTransformHandler::ColorTransformHandler(sys::ComponentContext* component_co
 ColorTransformHandler::~ColorTransformHandler() {
   component_context_->outgoing()
       ->RemovePublicService<fuchsia::ui::brightness::ColorAdjustmentHandler>();
+  component_context_->outgoing()->RemovePublicService<fuchsia::ui::policy::DisplayBacklight>();
 }
 
 void ColorTransformHandler::SetColorTransformConfiguration(
