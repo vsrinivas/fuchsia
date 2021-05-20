@@ -134,6 +134,11 @@ type buildInfo struct {
 // The returned virtual device is compatible with the image manifest produced by a Fuchsia
 // build for the specified architecture.
 func DefaultVirtualDevice(arch string) *fvdpb.VirtualDevice {
+	var arch_kernel_args []string
+	// legacy is only supported for x64 arch.
+	if arch == "x64" {
+		arch_kernel_args = append(arch_kernel_args, "kernel.serial=legacy")
+	}
 	return &fvdpb.VirtualDevice{
 		Name:   "default",
 		Kernel: "qemu-kernel",
@@ -145,16 +150,14 @@ func DefaultVirtualDevice(arch string) *fvdpb.VirtualDevice {
 			CpuCount:  8,
 			EnableKvm: arch == "x64",
 		},
-		KernelArgs: []string{
-			"kernel.serial=legacy",
+		KernelArgs: append(arch_kernel_args,
 			"kernel.entropy-mixin=1420bb81dc0396b37cc2d0aa31bb2785dadaf9473d0780ecee1751afb5867564",
 			"kernel.halt-on-panic=true",
 			// Disable lockup detector heartbeats. In emulated environments, virtualized CPUs
 			// may be starved or fail to execute in a timely fashion, resulting in apparent
 			// lockups. See fxbug.dev/65990.
 			"kernel.lockup-detector.heartbeat-period-ms=0",
-			"kernel.lockup-detector.heartbeat-age-threshold-ms=0",
-		},
+			"kernel.lockup-detector.heartbeat-age-threshold-ms=0"),
 	}
 }
 

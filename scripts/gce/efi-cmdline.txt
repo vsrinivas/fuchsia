@@ -1,2 +1,0 @@
-bootloader.timeout=0
-bootloader.default=local

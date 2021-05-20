@@ -174,6 +174,7 @@ func (q *QEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 			q.SetFlag("-cpu", "max")
 		}
 	case TargetEnum.X86_64:
+		q.AddKernelArg("kernel.serial=legacy")
 		q.SetFlag("-machine", "q35")
 		if kvm {
 			q.SetFlag("-cpu", "host")

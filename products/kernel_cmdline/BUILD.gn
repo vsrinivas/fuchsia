@@ -56,11 +56,6 @@ kernel_cmdline("kernel.oom.behavior--reboot") {
   args = [ "kernel.oom.behavior=reboot" ]
 }
 
-kernel_cmdline("kernel.serial--legacy") {
-  args = [ "kernel.serial=legacy" ]
-  deps = [ "//build/validate:non_production_tag" ]
-}
-
 kernel_cmdline("kernel.serial--acpi") {
   args = [ "kernel.serial=acpi" ]
   deps = [ "//build/validate:non_production_tag" ]
@@ -98,4 +93,12 @@ kernel_cmdline("virtcon.keep-log-visible--true") {
 
 kernel_cmdline("ktrace.grpmask-0") {
   args = [ "ktrace.grpmask=0" ]
+}
+
+# Should only be visible on x64.
+if (target_cpu == "x64") {
+  kernel_cmdline("kernel.serial--legacy") {
+    args = [ "kernel.serial=legacy" ]
+    deps = [ "//build/validate:non_production_tag" ]
+  }
 }

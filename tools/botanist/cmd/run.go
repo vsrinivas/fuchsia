@@ -134,13 +134,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// logs will be streamed from.
 	t0 := targets[0]
 
-	// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
-	// arm64 devices should already be enabling kernel.serial at compile time.
-	// We need to pass this in to all devices (even those without a serial line)
-	// to prevent race conditions that only occur when the option isn't present.
-	// TODO (fxbug.dev/10480): Move this back to being invoked in the if clause.
-	r.zirconArgs = append(r.zirconArgs, "kernel.serial=legacy")
-
 	// Disable usb mass storage to determine if it affects NUC stability.
 	// TODO(rudymathu): Remove this once stability is achieved.
 	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")

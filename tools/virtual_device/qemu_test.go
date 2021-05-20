@@ -64,6 +64,8 @@ func TestQEMUCommand(t *testing.T) {
 			"Haswell,+smap,-check,-fsgsbase",
 			"-net",
 			"none",
+			"-append",
+			"kernel.serial=legacy",
 		}
 
 		if diff := cmp.Diff(gotArgs, wantArgs); diff != "" {
