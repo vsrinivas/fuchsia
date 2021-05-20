@@ -74,7 +74,7 @@ pub struct RunCommand {
 
     /// when set, output test results to the specified directory.
     #[argh(option)]
-    pub experimental_output_directory: Option<String>,
+    pub output_directory: Option<String>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -97,4 +97,8 @@ pub struct ListCommand {
     description = "Manage test results",
     note = "Inspect and manage the results from previous test runs"
 )]
-pub struct ResultCommand {}
+pub struct ResultCommand {
+    /// when set, display the results of the specified directory.
+    #[argh(option)]
+    pub directory: Option<String>,
+}
