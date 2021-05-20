@@ -244,9 +244,11 @@ class VmCowPages final
   // Discard all the pages from a discardable vmo in the |kReclaimable| state. For this call to
   // succeed, the vmo should have been in the reclaimable state for at least
   // |min_duration_since_reclaimable|. If successful, the |discardable_state_| is set to
-  // |kDiscarded|, and the vmo is moved from the reclaim candidates list. Returns the number of
-  // pages freed.
-  uint64_t DiscardPages(zx_duration_t min_duration_since_reclaimable)
+  // |kDiscarded|, and the vmo is moved from the reclaim candidates list. The pages are removed /
+  // discarded from the vmo and appended to the |freed_list| passed in; the caller takes ownership
+  // of the removed pages and is responsible for freeing them. Returns the number of pages
+  // discarded.
+  uint64_t DiscardPages(zx_duration_t min_duration_since_reclaimable, list_node_t* freed_list)
       TA_EXCL(DiscardableVmosLock::Get()) TA_EXCL(lock_);
 
   struct DiscardablePageCounts {
@@ -261,12 +263,14 @@ class VmCowPages final
   static DiscardablePageCounts DebugDiscardablePageCounts() TA_EXCL(DiscardableVmosLock::Get());
 
   // Walks through the LRU reclaimable list of discardable vmos and discards pages from each, until
-  // |target_pages| have been freed, or the list of candidates is exhausted. Only vmos that have
+  // |target_pages| have been discarded, or the list of candidates is exhausted. Only vmos that have
   // become reclaimable more than |min_duration_since_reclaimable| in the past will be discarded;
-  // this prevents discarding reclaimable vmos that were recently accessed. Returns the total number
-  // of pages freed.
+  // this prevents discarding reclaimable vmos that were recently accessed. The discarded pages are
+  // appended to the |freed_list| passed in; the caller takes ownership of the discarded pages and
+  // is responsible for freeing them. Returns the total number of pages discarded.
   static uint64_t ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
-                                                  zx_duration_t min_duration_since_reclaimable)
+                                                  zx_duration_t min_duration_since_reclaimable,
+                                                  list_node_t* freed_list)
       TA_EXCL(DiscardableVmosLock::Get());
 
  private:
@@ -290,16 +294,19 @@ class VmCowPages final
   zx_status_t AddPageLocked(VmPageOrMarker* p, uint64_t offset, bool do_range_update = true)
       TA_REQ(lock_);
 
-  // Unmaps a range and frees up all the committed pages. Called from DecommitRangeLocked() to
-  // perform the actual decommit action after some of the initial sanity checks have succeeded.
-  // Also called from DetachSourceLocked() when a VMO is detached from the page source.
+  // Unmaps and removes all the committed pages in the specified range.
+  // Called from DecommitRangeLocked() to perform the actual decommit action after some of the
+  // initial sanity checks have succeeded. Also called from DetachSourceLocked() when a VMO is
+  // detached from the page source, and from DiscardPages() to reclaim pages from a discardable VMO.
+  // Upon success the removed pages are placed in |freed_list|. The caller has ownership of these
+  // pages and is responsible for freeing them.
   //
   // Unlike DecommitRangeLocked(), this function only operates on |this| node, which must have no
   // parent.
   // |offset| must be page aligned. |len| must be less than or equal to |size_ - offset|. If |len|
   // is less than |size_ - offset| it must be page aligned.
-  // Optionally returns the number of pages freed if |pages_freed_out| is not null.
-  zx_status_t UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
+  // Optionally returns the number of pages removed if |pages_freed_out| is not null.
+  zx_status_t UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len, list_node_t* freed_list,
                                         uint64_t* pages_freed_out = nullptr) TA_REQ(lock_);
 
   // internal check if any pages in a range are pinned

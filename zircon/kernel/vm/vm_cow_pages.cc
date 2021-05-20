@@ -148,9 +148,15 @@ class BatchPQRemove {
   void Flush() {
     if (count_ > 0) {
       pmm_page_queues()->RemoveArrayIntoList(pages_, count_, freed_list_);
+      freed_count_ += count_;
       count_ = 0;
     }
   }
+
+  // Returns the number of pages that were added to |freed_list_| by calls to Flush(). The
+  // |freed_count_| counter keeps a running count of freed pages as they are removed and added to
+  // |freed_list_|, avoiding having to walk |freed_list_| to compute its length.
+  size_t freed_count() const { return freed_count_; }
 
   // Produces a callback suitable for passing to VmPageList::RemovePages that will |Push| any pages
   auto RemovePagesCallback() {
@@ -171,6 +177,7 @@ class BatchPQRemove {
   static constexpr size_t kMaxPages = 64;
 
   size_t count_ = 0;
+  size_t freed_count_ = 0;
   vm_page_t* pages_[kMaxPages];
   list_node_t* freed_list_ = nullptr;
 };
@@ -2006,10 +2013,21 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return UnmapAndRemovePagesLocked(offset, new_len);
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+
+  zx_status_t status = UnmapAndRemovePagesLocked(offset, new_len, &freed_list);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  pmm_free(&freed_list);
+
+  return status;
 }
 
 zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
+                                                  list_node_t* freed_list,
                                                   uint64_t* pages_freed_out) {
   // TODO(teisenbe): Allow decommitting of pages pinned by
   // CommitRangeContiguous
@@ -2034,19 +2052,14 @@ zx_status_t VmCowPages::UnmapAndRemovePagesLocked(uint64_t offset, uint64_t len,
   // unmap all of the pages in this range on all the mapping regions
   RangeChangeUpdateLocked(offset, len, RangeChangeOp::Unmap);
 
-  list_node_t freed_list;
-  list_initialize(&freed_list);
-
-  __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
+  __UNINITIALIZED BatchPQRemove page_remover(freed_list);
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), offset, offset + len);
   page_remover.Flush();
 
   if (pages_freed_out) {
-    *pages_freed_out = list_length(&freed_list);
+    *pages_freed_out = page_remover.freed_count();
   }
-
-  pmm_free(&freed_list);
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   return ZX_OK;
@@ -2894,8 +2907,13 @@ void VmCowPages::DetachSourceLocked() {
   DEBUG_ASSERT(page_source_);
   page_source_->Detach();
 
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+
   // Remove committed pages so that all future page faults on this VMO and its clones can fail.
-  UnmapAndRemovePagesLocked(0, size_);
+  zx_status_t status = UnmapAndRemovePagesLocked(0, size_, &freed_list);
+  DEBUG_ASSERT(status == ZX_OK);
+  pmm_free(&freed_list);
 
   IncrementHierarchyGenerationCountLocked();
 }
@@ -3529,7 +3547,8 @@ VmCowPages::DiscardablePageCounts VmCowPages::DebugDiscardablePageCounts() {
   return total_counts;
 }
 
-uint64_t VmCowPages::DiscardPages(zx_duration_t min_duration_since_reclaimable) {
+uint64_t VmCowPages::DiscardPages(zx_duration_t min_duration_since_reclaimable,
+                                  list_node_t* freed_list) {
   canary_.Assert();
 
   Guard<Mutex> guard{&lock_};
@@ -3550,9 +3569,10 @@ uint64_t VmCowPages::DiscardPages(zx_duration_t min_duration_since_reclaimable) 
   // We've verified that the state is |kReclaimable|, so the lock count should be zero.
   DEBUG_ASSERT(lock_count_ == 0);
 
-  // Free all pages.
   uint64_t pages_freed = 0;
-  zx_status_t status = UnmapAndRemovePagesLocked(0, size_, &pages_freed);
+
+  // Remove all pages.
+  zx_status_t status = UnmapAndRemovePagesLocked(0, size_, freed_list, &pages_freed);
 
   if (status != ZX_OK) {
     printf("Failed to remove pages from discardable vmo %p: %d\n", this, status);
@@ -3568,7 +3588,8 @@ uint64_t VmCowPages::DiscardPages(zx_duration_t min_duration_since_reclaimable) 
 }
 
 uint64_t VmCowPages::ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
-                                                     zx_duration_t min_duration_since_reclaimable) {
+                                                     zx_duration_t min_duration_since_reclaimable,
+                                                     list_node_t* freed_list) {
   uint64_t total_pages_discarded = 0;
   Guard<Mutex> guard{DiscardableVmosLock::Get()};
 
@@ -3593,9 +3614,9 @@ uint64_t VmCowPages::ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
       // the |DiscardableVmosLock|. This preserves lock ordering constraints between the two locks
       // - |DiscardableVmosLock| can be acquired while holding the VmCowPages |lock_|, but not the
       // other way around.
-      guard.CallUnlocked([&total_pages_discarded, min_duration_since_reclaimable,
+      guard.CallUnlocked([&total_pages_discarded, min_duration_since_reclaimable, &freed_list,
                           cow_ref = ktl::move(cow_ref)]() mutable {
-        total_pages_discarded += cow_ref->DiscardPages(min_duration_since_reclaimable);
+        total_pages_discarded += cow_ref->DiscardPages(min_duration_since_reclaimable, freed_list);
 
         // Explicitly reset the RefPtr to force any destructor to run right now and not in the
         // cleanup of the lambda, which might happen after the |DiscardableVmosLock| has been

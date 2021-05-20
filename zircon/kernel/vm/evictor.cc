@@ -140,11 +140,7 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
     // Free pager backed memory to get to |pages_to_free|.
     uint64_t pages_to_free_pager_backed = pages_to_free - pages_freed;
 
-    list_node_t free_list;
-    list_initialize(&free_list);
-    uint64_t pages_freed_pager_backed =
-        EvictPagerBacked(pages_to_free_pager_backed, level, &free_list);
-    pmm_free(&free_list);
+    uint64_t pages_freed_pager_backed = EvictPagerBacked(pages_to_free_pager_backed, level);
     total_evicted_counts.pager_backed += pages_freed_pager_backed;
     total_pages_freed += pages_freed_pager_backed;
 
@@ -163,20 +159,27 @@ uint64_t Evictor::EvictDiscardable(uint64_t target_pages) const {
   if (!IsEvictionEnabled()) {
     return 0;
   }
+
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+
   // Reclaim |target_pages| from discardable vmos that have been reclaimable for at least 10
   // seconds.
-  uint64_t count = VmCowPages::ReclaimPagesFromDiscardableVmos(target_pages, ZX_SEC(10));
+  uint64_t count =
+      VmCowPages::ReclaimPagesFromDiscardableVmos(target_pages, ZX_SEC(10), &freed_list);
+  pmm_free(&freed_list);
 
   discardable_pages_evicted.Add(count);
   return count;
 }
 
-uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level,
-                                   list_node_t* free_list) const {
+uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level) const {
   if (!IsEvictionEnabled()) {
     return 0;
   }
   uint64_t count = 0;
+  list_node_t freed_list;
+  list_initialize(&freed_list);
 
   while (count < target_pages) {
     // Avoid evicting from the newest queue to prevent thrashing.
@@ -188,13 +191,15 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
         continue;
       }
       if (backlink->cow->EvictPage(backlink->page, backlink->offset)) {
-        list_add_tail(free_list, &backlink->page->queue_node);
+        list_add_tail(&freed_list, &backlink->page->queue_node);
         count++;
       }
     } else {
       break;
     }
   }
+
+  pmm_free(&freed_list);
 
   pager_backed_pages_evicted.Add(count);
   return count;

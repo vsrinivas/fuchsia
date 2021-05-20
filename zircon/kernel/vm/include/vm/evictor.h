@@ -90,12 +90,11 @@ class Evictor {
   // number of pages evicted. This may acquire arbitrary vmo and aspace locks.
   uint64_t EvictDiscardable(uint64_t target_pages) const TA_EXCL(lock_);
 
-  // Evict the requested number of |target_pages| from pager-backed vmos. Evicted pages are placed
-  // in the passed |free_list| and become owned by the caller, with the return value being the
-  // number of free pages. The |eviction_level| is a rough control that maps to how old a page needs
-  // to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
-  uint64_t EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level,
-                            list_node_t* free_list) const TA_EXCL(lock_);
+  // Evict the requested number of |target_pages| from pager-backed vmos. The return value is the
+  // number of pages evicted. The |eviction_level| is a rough control that maps to how old a page
+  // needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
+  uint64_t EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level) const
+      TA_EXCL(lock_);
 
   // Targets for one-shot eviction.
   EvictionTarget one_shot_eviction_target_ TA_GUARDED(lock_) = {};

@@ -1570,8 +1570,13 @@ static bool vmo_discardable_states_test() {
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
 
+  // List to collect any pages freed during the test, and free them to the PMM before exiting.
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+  auto cleanup_freed_list = fit::defer([&freed_list]() { pmm_free(&freed_list); });
+
   // Cannot discard when locked.
-  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
 
   // Unlock.
   EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
@@ -1580,7 +1585,7 @@ static bool vmo_discardable_states_test() {
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
 
   // Should be able to discard now.
-  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsDiscarded());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
@@ -1627,12 +1632,12 @@ static bool vmo_discardable_states_test() {
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
 
   // Cannot discard if recently unlocked.
-  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(ZX_TIME_INFINITE));
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(ZX_TIME_INFINITE, &freed_list));
   EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsReclaimable());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsDiscarded());
 
-  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_TRUE(vmo->DebugGetCowPages()->DebugIsDiscarded());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsUnreclaimable());
   EXPECT_FALSE(vmo->DebugGetCowPages()->DebugIsReclaimable());
@@ -1658,8 +1663,13 @@ static bool vmo_discard_test() {
   EXPECT_EQ(kSize, vmo->size());
   EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
 
+  // List to collect any pages freed during the test, and free them to the PMM before exiting.
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+  auto cleanup_freed_list = fit::defer([&freed_list]() { pmm_free(&freed_list); });
+
   // Cannot discard when locked.
-  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
 
   // Unlock.
@@ -1667,7 +1677,7 @@ static bool vmo_discard_test() {
   EXPECT_EQ(kSize, vmo->size());
 
   // Should be able to discard now.
-  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_EQ(0u, vmo->AttributedPages());
   // Verify that the size is not affected.
   EXPECT_EQ(kSize, vmo->size());
@@ -1690,13 +1700,13 @@ static bool vmo_discard_test() {
   EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kNewSize));
 
   // Cannot discard a vmo with pinned pages.
-  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_EQ(kNewSize, vmo->size());
   EXPECT_EQ(kSize / PAGE_SIZE, vmo->AttributedPages());
 
   // Unpin the pages. Should be able to discard now.
   vmo->Unpin(0, kSize);
-  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_EQ(kNewSize, vmo->size());
   EXPECT_EQ(0u, vmo->AttributedPages());
 
@@ -1706,7 +1716,7 @@ static bool vmo_discard_test() {
   EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kNewSize));
 
   // Cannot discard if recently unlocked.
-  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(ZX_TIME_INFINITE));
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(ZX_TIME_INFINITE, &freed_list));
   EXPECT_EQ(kNewSize / PAGE_SIZE, vmo->AttributedPages());
 
   // Cannot discard a non-discardable vmo.
@@ -1714,7 +1724,7 @@ static bool vmo_discard_test() {
   status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, kSize, &vmo);
   ASSERT_EQ(ZX_OK, status);
   ASSERT_EQ(0u, vmo->DebugGetCowPages()->DebugGetLockCount());
-  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(0u, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
 
   END_TEST;
 }
@@ -1770,9 +1780,14 @@ static bool vmo_discard_failure_test() {
   fill_region_user(0x88, uptr, kMapSize);
   EXPECT_TRUE(test_region_user(0x88, uptr, kMapSize));
 
+  // List to collect any pages freed during the test, and free them to the PMM before exiting.
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+  auto cleanup_freed_list = fit::defer([&freed_list]() { pmm_free(&freed_list); });
+
   // Unlock and discard.
   EXPECT_EQ(ZX_OK, vmo->UnlockRange(0, kSize));
-  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0));
+  EXPECT_EQ(kSize / PAGE_SIZE, vmo->DebugGetCowPages()->DiscardPages(0, &freed_list));
   EXPECT_EQ(0u, vmo->AttributedPages());
   EXPECT_EQ(kSize, vmo->size());
 
@@ -1847,7 +1862,12 @@ static bool vmo_discardable_counts_test() {
 
   VmCowPages::DiscardablePageCounts expected = {};
 
-  // Lock all vmos. Unlock a few. And dicard a few unlocked ones.
+  // List to collect any pages freed during the test, and free them to the PMM before exiting.
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+  auto cleanup_freed_list = fit::defer([&freed_list]() { pmm_free(&freed_list); });
+
+  // Lock all vmos. Unlock a few. And discard a few unlocked ones.
   // Compute the expected page counts as a result of these operations.
   for (int i = 0; i < kNumVmos; i++) {
     EXPECT_EQ(ZX_OK, vmos[i]->TryLockRange(0, (i + 1) * PAGE_SIZE));
@@ -1858,7 +1878,8 @@ static bool vmo_discardable_counts_test() {
 
       if (rand() % 2) {
         // Discarded pages won't show up under locked or unlocked counts.
-        EXPECT_EQ(static_cast<uint64_t>(i + 1), vmos[i]->DebugGetCowPages()->DiscardPages(0));
+        EXPECT_EQ(static_cast<uint64_t>(i + 1),
+                  vmos[i]->DebugGetCowPages()->DiscardPages(0, &freed_list));
       } else {
         // Unlocked but not discarded.
         expected.unlocked += (i + 1);
