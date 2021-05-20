@@ -16,6 +16,9 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
     "-o ServerAliveInterval=1",
     "-o ServerAliveCountMax=10",
     "-o LogLevel=ERROR",
+    // FIXME(http://fxbug.dev/77015): Temporarily create a reverse tunnel for port 8084, which will
+    // be used by `ffx repository` to serve packages to a target device.
+    "-R 8084:localhost:8084",
 ];
 
 pub async fn build_ssh_command(
