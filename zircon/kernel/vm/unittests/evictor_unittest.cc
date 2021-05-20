@@ -14,16 +14,27 @@ namespace vm_unittest {
 // is not possible with the global pmm node.
 class TestPmmNode {
  public:
-  TestPmmNode() : evictor_(&node_, pmm_page_queues()) {}
+  TestPmmNode() : evictor_(&node_, pmm_page_queues()) { evictor_.EnableEviction(); }
 
   ~TestPmmNode() {
     // Pages that were evicted are being held in |node_|'s free list.
     // Return them to the global pmm node before exiting.
+    DecrementFreePages(node_.CountFreePages());
+    ASSERT(node_.CountFreePages() == 0);
+  }
+
+  // Reduce free pages in |node_| by |num_pages|.
+  void DecrementFreePages(uint64_t num_pages) {
     uint64_t free_count = node_.CountFreePages();
+    if (free_count < num_pages) {
+      num_pages = free_count;
+    }
     list_node list = LIST_INITIAL_VALUE(list);
-    zx_status_t status = node_.AllocPages(free_count, 0, &list);
+    zx_status_t status = node_.AllocPages(num_pages, 0, &list);
     ASSERT(status == ZX_OK);
 
+    // Return these pages to the global pmm. Our goal is to just reduce the free count of |node_|,
+    // we do not intend to use the allocated pages for anything.
     vm_page_t* page;
     list_for_every_entry (&list, page, vm_page_t, queue_node) {
       page->set_state(vm_page_state::ALLOC);
@@ -517,6 +528,139 @@ static bool evictor_free_target_test() {
   END_TEST;
 }
 
+// Test that pages are evicted when continuous eviction is enabled, and not evicted when disabled.
+static bool evictor_continuous_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager backed vmo to evict pages from.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  static constexpr size_t kNumPages = 44;
+  ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
+
+  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
+  vmo->PromoteForReclamation();
+
+  TestPmmNode node;
+
+  // Evict every 10 milliseconds.
+  node.evictor()->SetContinuousEvictionInterval(ZX_MSEC(10));
+  // Enable eviction. Min pages target is 20 pages. Free mem target is 10 pages.
+  node.evictor()->EnableContinuousEviction(20u * PAGE_SIZE, 10u * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+
+  // Poll the node's free count, relying on the test timeout to kill us if something goes wrong.
+  // The free target was 10 and min pages target was 20. We should see 20 pages freed.
+  while (node.FreePages() < 20) {
+    printf("polling free count (case 1) ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), 20u);
+
+  // Get rid of all free pages and wait for eviction to happen again.
+  node.DecrementFreePages(node.FreePages());
+  // The free target is 10 pages. So we should see 10 pages evicted now.
+  while (node.FreePages() < 10) {
+    printf("polling free count (case 2) ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), 10u);
+
+  // No more pages should be evicted even though eviction is enabled, since we've already met our
+  // free target. Wait twice the eviction interval just to be sure.
+  Thread::Current::SleepRelative(ZX_MSEC(20));
+  EXPECT_EQ(node.FreePages(), 10u);
+
+  // No pages evicted after disabling eviction.
+  node.evictor()->DisableContinuousEviction();
+  Thread::Current::SleepRelative(ZX_MSEC(20));
+  node.DecrementFreePages(node.FreePages());
+  Thread::Current::SleepRelative(ZX_MSEC(20));
+  EXPECT_EQ(node.FreePages(), 0u);
+
+  END_TEST;
+}
+
+// Test that pages are evicted as expected when continuous eviction is enabled and disabled
+// repeatedly.
+static bool evictor_continuous_repeated_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager backed vmo to evict pages from.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  static constexpr size_t kNumPages = 44;
+  ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
+
+  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
+  vmo->PromoteForReclamation();
+
+  TestPmmNode node;
+
+  // Evict every 10 milliseconds.
+  node.evictor()->SetContinuousEvictionInterval(ZX_MSEC(10));
+  const uint64_t free_target = 20;
+  // Enable eviction. Min pages target is 5 pages. Free mem target is 20 pages.
+  node.evictor()->EnableContinuousEviction(5u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+
+  // Poll the node's free count, relying on the test timeout to kill us if something goes wrong.
+  // The free target was 20 and min pages target was 5. We should see 20 pages freed.
+  uint64_t expected_free_count = free_target;
+  while (node.FreePages() < expected_free_count) {
+    printf("polling free count (case 1) ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), expected_free_count);
+  EXPECT_GE(node.FreePages(), free_target);
+
+  // Enable eviction again with a different min pages target.
+  node.evictor()->EnableContinuousEviction(7u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+  expected_free_count += 7;
+  // We should see another 7 pages freed.
+  while (node.FreePages() < expected_free_count) {
+    printf("polling free count (case 2) ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), expected_free_count);
+  EXPECT_GE(node.FreePages(), free_target);
+
+  // Verify that we can disable and re-enable eviction.
+  node.evictor()->DisableContinuousEviction();
+  node.evictor()->EnableContinuousEviction(3u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+  expected_free_count += 3;
+  // We should see another 3 pages freed.
+  while (node.FreePages() < expected_free_count) {
+    printf("polling free count (case 3) ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), expected_free_count);
+  EXPECT_GE(node.FreePages(), free_target);
+
+  // Verify that two successive calls to enable combine the min page targets.
+  node.evictor()->DisableContinuousEviction();
+  node.evictor()->EnableContinuousEviction(2u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+  node.evictor()->EnableContinuousEviction(8u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+  expected_free_count += 10;
+  // We should see another 10 pages freed.
+  while (node.FreePages() < expected_free_count) {
+    printf("polling free count (case 4) ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), expected_free_count);
+  EXPECT_GE(node.FreePages(), free_target);
+
+  // Make sure eviction is disabled so that the TestPmmNode destructor can clean up freed pages.
+  node.evictor()->DisableContinuousEviction();
+  Thread::Current::SleepRelative(ZX_MSEC(20));
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(evictor_tests)
 VM_UNITTEST(evictor_set_target_test)
 VM_UNITTEST(evictor_combine_targets_test)
@@ -524,6 +668,8 @@ VM_UNITTEST(evictor_pager_backed_test)
 VM_UNITTEST(evictor_discardable_test)
 VM_UNITTEST(evictor_pager_backed_and_discardable_test)
 VM_UNITTEST(evictor_free_target_test)
+VM_UNITTEST(evictor_continuous_test)
+VM_UNITTEST(evictor_continuous_repeated_test)
 UNITTEST_END_TESTCASE(evictor_tests, "evictor", "Evictor tests")
 
 }  // namespace vm_unittest

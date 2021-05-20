@@ -243,6 +243,12 @@ in addition to the default behavior, which is to evict at the Critical and OOM
 states.
 )""")
 
+DEFINE_OPTION("kernel.oom.evict-continuous", bool, oom_evict_continuous, {false}, R"""(
+This option configures kernel eviction to run continually in the background to try and
+keep the system out of memory pressure, as opposed to triggering one-shot eviction only at
+memory pressure level transitions.
+)""")
+
 DEFINE_OPTION("kernel.oom.hysteresis-seconds", uint64_t, oom_hysteresis_seconds, {10}, R"""(
 This option specifies the hysteresis interval (in seconds) between memory
 pressure state transitions. Note that hysteresis is only applicable for
@@ -454,6 +460,16 @@ When `never`, page tables are never evicted.
 
 When `always`, Unused page tables are always evicted every time the
 scanner runs.
+)""")
+
+DEFINE_OPTION("kernel.page-scanner.eviction-interval-seconds", uint32_t,
+              page_scanner_eviction_interval_seconds, {10}, R"""(
+This option specifies the periodic interval (in seconds) at which kernel eviction
+will run in the background to try and keep the system out of memory pressure.
+This will only take effect if continuous eviction is enabled with
+`kernel.oom.evict-continuous`. If this value is lower than the page queue
+rotation / aging interval (10s by default), it will be ignored and the eviction
+interval will instead be set equal to the page queue rotation interval.
 )""")
 
 // Machine-specific options are included here for all the kernel places.

@@ -87,6 +87,12 @@ class MemoryWatchdog {
   // pressure signal first.
   Timer eviction_trigger_;
 
+  // OneShot eviction strategy only triggers eviction events at memory pressure state transitions.
+  // Continuous eviction strategy enables continuous background eviction as long the system remains
+  // under memory pressure (i.e. at a memory pressure level that is eligible for eviction).
+  enum EvictionStrategy : uint8_t { OneShot, Continuous };
+  EvictionStrategy eviction_strategy_ = EvictionStrategy::OneShot;
+
   Executor* executor_;
 };
 

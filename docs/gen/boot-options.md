@@ -245,6 +245,13 @@ This option triggers eviction of file pages at the Warning pressure state,
 in addition to the default behavior, which is to evict at the Critical and OOM
 states.
 
+### kernel.oom.evict-continuous=\<bool>
+**Default:** `false`
+
+This option configures kernel eviction to run continually in the background to try and
+keep the system out of memory pressure, as opposed to triggering one-shot eviction only at
+memory pressure level transitions.
+
 ### kernel.oom.hysteresis-seconds=\<uint64_t>
 **Default:** `0xa`
 
@@ -475,6 +482,16 @@ When `never`, page tables are never evicted.
 
 When `always`, Unused page tables are always evicted every time the
 scanner runs.
+
+### kernel.page-scanner.eviction-interval-seconds=\<uint32_t>
+**Default:** `0xa`
+
+This option specifies the periodic interval (in seconds) at which kernel eviction
+will run in the background to try and keep the system out of memory pressure.
+This will only take effect if continuous eviction is enabled with
+`kernel.oom.evict-continuous`. If this value is lower than the page queue
+rotation / aging interval (10s by default), it will be ignored and the eviction
+interval will instead be set equal to the page queue rotation interval.
 
 
 ## Options available only on arm64 machines

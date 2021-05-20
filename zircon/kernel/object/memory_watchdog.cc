@@ -75,9 +75,16 @@ void MemoryWatchdog::EvictionTriggerCallback(Timer* timer, zx_time_t now, void* 
 void MemoryWatchdog::EvictionTrigger() {
   // This runs from a timer interrupt context, as such we do not want to be performing synchronous
   // eviction and blocking some random thread. Therefore we use the asynchronous eviction trigger
-  // that will cause the scanner thread to perform the actual eviction work.
-  scanner_trigger_asynchronous_evict(min_free_target_, free_mem_target_,
-                                     Evictor::EvictionLevel::OnlyOldest, Evictor::Output::Print);
+  // that will cause the eviction thread to perform the actual eviction work.
+  if (eviction_strategy_ == EvictionStrategy::Continuous) {
+    pmm_evictor()->EnableContinuousEviction(min_free_target_, free_mem_target_,
+                                            Evictor::EvictionLevel::OnlyOldest,
+                                            Evictor::Output::Print);
+  } else {
+    pmm_evictor()->EvictOneShotAsynchronous(min_free_target_, free_mem_target_,
+                                            Evictor::EvictionLevel::OnlyOldest,
+                                            Evictor::Output::Print);
+  }
 }
 
 // Helper called by the memory pressure thread when OOM state is entered.
@@ -221,6 +228,15 @@ void MemoryWatchdog::WorkerThread() {
             EvictionTriggerCallback, this);
         printf("memory-pressure: set target memory to evict %zuMB (free memory is %zuMB)\n",
                min_free_target_ / MB, free_mem / MB);
+      } else if (eviction_strategy_ == EvictionStrategy::Continuous && idx > max_eviction_level_) {
+        // If we're out of the max configured eviction-eligible memory pressure level, disable
+        // continuous eviction.
+
+        // Cancel any outstanding eviction trigger, so that eviction is not accidentally enabled
+        // *after* we disable it here.
+        eviction_trigger_.Cancel();
+        // Disable continuous eviction.
+        pmm_evictor()->DisableContinuousEviction();
       }
 
       // Unsignal the last event that was signaled.
@@ -318,6 +334,14 @@ void MemoryWatchdog::Init(Executor* executor) {
 
     printf("memory-pressure: eviction trigger level - %s\n",
            PressureLevelToString(max_eviction_level_));
+
+    if (gBootOptions->oom_evict_continuous) {
+      eviction_strategy_ = EvictionStrategy::Continuous;
+      printf("memory-pressure: eviction strategy - continuous\n");
+    } else {
+      eviction_strategy_ = EvictionStrategy::OneShot;
+      printf("memory-pressure: eviction strategy - one-shot\n");
+    }
 
     printf("memory-pressure: hysteresis interval - %ld seconds\n", hysteresis_seconds_ / ZX_SEC(1));
 

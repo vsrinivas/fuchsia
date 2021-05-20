@@ -49,6 +49,7 @@ class Evictor {
     // A minimum amount of pages we want to evict, regardless of how much free memory is available.
     uint64_t min_pages_to_free = 0;
     EvictionLevel level = EvictionLevel::OnlyOldest;
+    bool print_counts = false;
   };
 
   struct EvictedPageCounts {
@@ -58,11 +59,14 @@ class Evictor {
 
   explicit Evictor(PmmNode *node);
   Evictor() = delete;
-  ~Evictor() = default;
+  ~Evictor();
 
   // Called from the scanner with kernel cmdline values.
-  void SetEvictionEnabled(bool eviction_enabled);
   void SetDiscardableEvictionsPercent(uint32_t discardable_percent);
+  void SetContinuousEvictionInterval(zx_time_t eviction_interval);
+  // Called from the scanner to enable eviction if required. Creates an eviction thread to process
+  // asynchronous eviction requests (both one-shot and continuous).
+  void EnableEviction();
 
   // Set |one_shot_eviction_target_| to the specified |target|. The previous values are overridden.
   void SetOneShotEvictionTarget(EvictionTarget target);
@@ -76,12 +80,40 @@ class Evictor {
   // and aspace locks.
   EvictedPageCounts EvictOneShotFromPreloadedTarget();
 
-  // Performs a synchronous request to evict the requested amount of memory (in bytes). The return
-  // value is the number of pages evicted. The |eviction_level| is a rough control that maps to how
-  // old a page needs to be for being considered for eviction. This may acquire arbitrary vmo and
-  // aspace locks.
-  uint64_t EvictOneShotSynchronous(uint64_t min_mem_to_free, EvictionLevel eviction_level,
-                                   Output output);
+  // Performs a synchronous request to evict |min_mem_to_free| (in bytes). The return value is the
+  // number of pages evicted. The |eviction_level| is a rough control that maps to how old a page
+  // needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
+  uint64_t EvictOneShotSynchronous(uint64_t min_mem_to_free,
+                                   EvictionLevel eviction_level = EvictionLevel::OnlyOldest,
+                                   Output output = Output::NoPrint);
+
+  // Reclaim memory until free memory equals the |free_mem_target| (in bytes) and at least
+  // |min_mem_to_free| (in bytes) has been reclaimed. Reclamation will happen asynchronously on the
+  // eviction thread and this function returns immediately. Once the target is reached, or there is
+  // no more memory that can be reclaimed, this process will stop and the free memory target will be
+  // cleared. The |eviction_level| is a rough control on how hard to try and evict. Multiple calls
+  // to EvictOneShotAsynchronous will cause all the targets to get merged by adding together
+  // |min_mem_to_free|, taking the max of |free_mem_target| and the highest or most aggressive of
+  // any |eviction_level|.
+  void EvictOneShotAsynchronous(uint64_t min_mem_to_free, uint64_t free_mem_target,
+                                EvictionLevel eviction_level = EvictionLevel::OnlyOldest,
+                                Output output = Output::NoPrint);
+
+  // Enable continuous eviction on the eviction thread. Pages are evicted until the free memory
+  // level is restored to |free_mem_target| (in bytes) and at least |min_mem_to_free| (in bytes) has
+  // been evicted. The eviction thread will re-evaluate these two conditions at a fixed cadence of
+  // |default_eviction_interval_| (controlled by the kernel cmdline option
+  // `kernel.page-scanner.eviction-interval-seconds`), and continue to evict pages if required,
+  // until eviction is explicitly disabled with DisableContinuousEviction(). The |eviction_level| is
+  // a rough control that maps to how old a page needs to be for being considered for eviction. The
+  // |output| controls whether the eviction thread prints its progress each time it frees pages.
+  void EnableContinuousEviction(uint64_t min_mem_to_free, uint64_t free_mem_target,
+                                EvictionLevel eviction_level = EvictionLevel::OnlyOldest,
+                                Output output = Output::NoPrint);
+
+  // Disable continuous eviction on the eviction thread. Use EnableContinuousEviction() to re-enable
+  // eviction when required.
+  void DisableContinuousEviction();
 
   // Whether any eviction (one-shot and continuous) can occur.
   bool IsEvictionEnabled() const;
@@ -113,7 +145,15 @@ class Evictor {
   uint64_t EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level) const
       TA_EXCL(lock_);
 
-  // Targets for one-shot eviction.
+  // The main loop for the eviction thread.
+  int EvictionThreadLoop() TA_EXCL(lock_);
+
+  // Control parameters for continuous eviction.
+  EvictionTarget continuous_eviction_target_ TA_GUARDED(lock_) = {};
+  zx_time_t next_eviction_interval_ TA_GUARDED(lock_) = ZX_TIME_INFINITE;
+
+  // Targets for one-shot eviction, kept separate from the continuous eviction control parameters
+  // above.
   EvictionTarget one_shot_eviction_target_ TA_GUARDED(lock_) = {};
 
   // Event that enforces only one eviction attempt to be active at any time. This prevents us from
@@ -121,6 +161,14 @@ class Evictor {
   AutounsignalEvent no_ongoing_eviction_{true};
 
   mutable DECLARE_SPINLOCK(Evictor) lock_;
+
+  // The eviction thread used to process asynchronous requests (both one-shot and continuous).
+  // Created only if eviction is enabled i.e. |eviction_enabled_| is set to true.
+  Thread *eviction_thread_ = nullptr;
+  ktl::atomic<bool> eviction_thread_exiting_ = false;
+
+  // Used by the eviction thread to wait for eviction requests.
+  AutounsignalEvent eviction_signal_;
 
   // The PmmNode whose free level the Evictor monitors, and frees pages to.
   PmmNode *const pmm_node_;
@@ -140,7 +188,7 @@ class Evictor {
 
   // These parameters are initialized later from kernel cmdline options.
   // Whether eviction is enabled.
-  bool eviction_enabled_ TA_GUARDED(lock_) = true;
+  bool eviction_enabled_ TA_GUARDED(lock_) = false;
   // A rough percentage of page evictions that should be satisfied from discardable vmos (as opposed
   // to pager-backed vmos). Will require tuning when discardable vmos start being used. Currently
   // sets the number of discardable pages to evict to 0, putting all the burden of eviction on
@@ -148,6 +196,9 @@ class Evictor {
   uint32_t discardable_evictions_percent_ TA_GUARDED(lock_) = 0;
   // The minimum interval a discardable VMO has to be unlocked for to be considered for eviction.
   zx_time_t min_discardable_age_ TA_GUARDED(lock_) = ZX_SEC(10);
+  // Default continuous eviction interval. Set to 10s to match the scanner aging interval, since we
+  // won't find any new pages to evict before the next aging round.
+  zx_time_t default_eviction_interval_ TA_GUARDED(lock_) = ZX_SEC(10);
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_EVICTOR_H_

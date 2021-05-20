@@ -30,7 +30,6 @@ constexpr uint32_t kScannerOpEnable = 1u << 2;
 constexpr uint32_t kScannerOpDump = 1u << 3;
 constexpr uint32_t kScannerOpReclaimAll = 1u << 4;
 constexpr uint32_t kScannerOpRotateQueues = 1u << 5;
-constexpr uint32_t kScannerOpReclaim = 1u << 6;
 constexpr uint32_t kScannerOpHarvestAccessed = 1u << 7;
 constexpr uint32_t kScannerOpEnablePTReclaim = 1u << 8;
 constexpr uint32_t kScannerOpDisablePTReclaim = 1u << 9;
@@ -145,21 +144,9 @@ int scanner_request_thread(void *) {
           .pending = true,
           .free_pages_target = UINT64_MAX,
           .level = Evictor::EvictionLevel::IncludeNewest,
+          .print_counts = print,
       });
-    }
-    if ((op & kScannerOpReclaim) || reclaim_all) {
-      op &= ~kScannerOpReclaim;
-      if (print) {
-        printf("[SCAN]: Free memory before eviction is %zuMB\n",
-               pmm_count_free_pages() * PAGE_SIZE / MB);
-      }
-      auto evicted_counts = pmm_evictor()->EvictOneShotFromPreloadedTarget();
-      if (print) {
-        printf("[SCAN]: Evicted %lu user pager backed pages\n", evicted_counts.pager_backed);
-        printf("[SCAN]: Evicted %lu pages from discardable vmos\n", evicted_counts.discardable);
-        printf("[SCAN]: Free memory after eviction is %zuMB\n",
-               pmm_count_free_pages() * PAGE_SIZE / MB);
-      }
+      pmm_evictor()->EvictOneShotFromPreloadedTarget();
     }
     if (op & kScannerOpDump) {
       op &= ~kScannerOpDump;
@@ -222,25 +209,6 @@ void scanner_dump_info() {
 }
 
 }  // namespace
-
-void scanner_trigger_asynchronous_evict(uint64_t min_free_target, uint64_t free_mem_target,
-                                        Evictor::EvictionLevel eviction_level,
-                                        Evictor::Output output) {
-  if (!pmm_evictor()->IsEvictionEnabled()) {
-    return;
-  }
-  pmm_evictor()->CombineOneShotEvictionTarget(Evictor::EvictionTarget{
-      .pending = true,
-      .free_pages_target = free_mem_target / PAGE_SIZE,
-      .min_pages_to_free = min_free_target / PAGE_SIZE,
-      .level = eviction_level,
-  });
-
-  const uint32_t op =
-      kScannerOpReclaim | (output == Evictor::Output::Print ? kScannerFlagPrint : 0);
-  scanner_operation.fetch_or(op);
-  scanner_request_event.Signal();
-}
 
 uint64_t scanner_do_zero_scan(uint64_t limit) {
   uint64_t deduped = 0;
@@ -320,9 +288,14 @@ static void scanner_init_func(uint level) {
   }
   page_table_reclaim_policy = gBootOptions->page_scanner_page_table_eviction_policy;
 
-  pmm_evictor()->SetEvictionEnabled(gBootOptions->page_scanner_enable_eviction);
+  if (gBootOptions->page_scanner_enable_eviction) {
+    pmm_evictor()->EnableEviction();
+  }
   pmm_evictor()->SetDiscardableEvictionsPercent(
       gBootOptions->page_scanner_discardable_evictions_percent);
+  zx_time_t eviction_interval = ZX_SEC(gBootOptions->page_scanner_eviction_interval_seconds);
+  pmm_evictor()->SetContinuousEvictionInterval(
+      (eviction_interval < kQueueRotateTime) ? kQueueRotateTime : eviction_interval);
 
   thread->Resume();
 }
@@ -374,7 +347,7 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
       eviction_level = Evictor::EvictionLevel::OnlyOldest;
     }
     const uint64_t bytes = argv[2].u * MB;
-    scanner_trigger_asynchronous_evict(bytes, 0, eviction_level, Evictor::Output::Print);
+    pmm_evictor()->EvictOneShotAsynchronous(bytes, 0, eviction_level, Evictor::Output::Print);
   } else if (!strcmp(argv[1].str, "pt_reclaim")) {
     if (argc < 3) {
       goto usage;

@@ -28,19 +28,6 @@ void scanner_pop_disable_count();
 // debugging and other code to use.
 uint64_t scanner_do_zero_scan(uint64_t limit);
 
-// Instructs the scanner to reclaim memory until free memory equals the |free_mem_target| and at
-// least |min_free_target| has been reclaimed. Reclamation will happen asynchronously and this
-// function returns immediately. Once the target is reached, or there is no more memory that can be
-// reclaimed, this process will stop and the free memory target will be cleared. The eviction_level
-// is a rough control on how hard to try and evict. Multiple calls to
-// scanner_trigger_asynchronous_evict will cause all the targets to get merged by adding together
-// |min_free_target|, taking the max of |free_mem_target| and the highest or most aggressive of any
-// eviction_level.
-void scanner_trigger_asynchronous_evict(
-    uint64_t min_free_target, uint64_t free_mem_target,
-    Evictor::EvictionLevel eviction_level = Evictor::EvictionLevel::OnlyOldest,
-    Evictor::Output output = Evictor::Output::NoPrint);
-
 // Sets the scanner to reclaim page tables when harvesting accessed bits in the future, unless
 // page table reclamation was explicitly disabled on the command line. Repeatedly enabling does not
 // stack.
