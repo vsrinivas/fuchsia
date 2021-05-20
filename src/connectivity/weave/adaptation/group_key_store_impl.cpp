@@ -8,15 +8,10 @@
 // clang-format on
 #include <lib/syslog/cpp/macros.h>
 
-using namespace ::nl;
-using namespace ::nl::Weave;
-using namespace ::nl::Weave::Profiles::Security::AppKeys;
-
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 namespace {
+using Profiles::Security::AppKeys::kWeaveAppGroupKeySize;
+
 constexpr char kGroupKeyNamePrefix[] = "gk-";
 constexpr size_t kGroupKeyNamePrefixSize = sizeof(kGroupKeyNamePrefix);
 constexpr size_t kGroupKeyNameSuffixSize = 8;  // length of uint32_t hex.
@@ -32,14 +27,16 @@ WEAVE_ERROR GroupKeyStoreImpl::Init() {
 
   key_index_.clear();
   error = EnvironmentConfig::ReadConfigValueBin(EnvironmentConfig::kConfigKey_GroupKeyIndex,
-                                                (uint8_t*)key_index_raw, sizeof(key_index_raw),
-                                                index_size);
+                                                reinterpret_cast<uint8_t*>(key_index_raw),
+                                                sizeof(key_index_raw), index_size);
   if (error == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     index_size = 0;
     return WEAVE_NO_ERROR;
-  } else if (error != WEAVE_NO_ERROR) {
+  }
+  if (error != WEAVE_NO_ERROR) {
     return error;
-  } else if (index_size % sizeof(uint32_t) != 0) {
+  }
+  if (index_size % sizeof(uint32_t) != 0) {
     return WEAVE_ERROR_DATA_NOT_ALIGNED;
   }
 
@@ -99,7 +96,8 @@ WEAVE_ERROR GroupKeyStoreImpl::StoreGroupKey(const WeaveGroupKey& key) {
   memset(key_data, 0, sizeof(key_data));
   memcpy(key_data, key.Key, key.KeyLen);
   if (key.KeyId != WeaveKeyId::kFabricSecret) {
-    memcpy(key_data + kWeaveAppGroupKeySize, (const void*)&key.StartTime, sizeof(uint32_t));
+    memcpy(key_data + kWeaveAppGroupKeySize, reinterpret_cast<const void*>(&key.StartTime),
+           sizeof(uint32_t));
     key_data_len += sizeof(uint32_t);
   }
 
@@ -177,9 +175,9 @@ WEAVE_ERROR GroupKeyStoreImpl::EnumerateGroupKeys(uint32_t key_type, uint32_t* k
   return WEAVE_NO_ERROR;
 }
 
-WEAVE_ERROR GroupKeyStoreImpl::Clear(void) { return DeleteGroupKeysOfAType(WeaveKeyId::kNone); }
+WEAVE_ERROR GroupKeyStoreImpl::Clear() { return DeleteGroupKeysOfAType(WeaveKeyId::kNone); }
 
-WEAVE_ERROR GroupKeyStoreImpl::RetrieveLastUsedEpochKeyId(void) {
+WEAVE_ERROR GroupKeyStoreImpl::RetrieveLastUsedEpochKeyId() {
   WEAVE_ERROR error = EnvironmentConfig::ReadConfigValue(
       EnvironmentConfig::kConfigKey_LastUsedEpochKeyId, LastUsedEpochKeyId);
   if (error == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
@@ -189,7 +187,7 @@ WEAVE_ERROR GroupKeyStoreImpl::RetrieveLastUsedEpochKeyId(void) {
   return error;
 }
 
-WEAVE_ERROR GroupKeyStoreImpl::StoreLastUsedEpochKeyId(void) {
+WEAVE_ERROR GroupKeyStoreImpl::StoreLastUsedEpochKeyId() {
   return EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_LastUsedEpochKeyId,
                                              LastUsedEpochKeyId);
 }
@@ -223,13 +221,10 @@ WEAVE_ERROR GroupKeyStoreImpl::RemoveKeyFromIndex(uint32_t key_id) {
   return WEAVE_NO_ERROR;
 }
 
-WEAVE_ERROR GroupKeyStoreImpl::StoreKeyIndex(void) {
+WEAVE_ERROR GroupKeyStoreImpl::StoreKeyIndex() {
   return EnvironmentConfig::WriteConfigValueBin(EnvironmentConfig::kConfigKey_GroupKeyIndex,
-                                                (uint8_t*)(key_index_.data()),
+                                                reinterpret_cast<uint8_t*>(key_index_.data()),
                                                 sizeof(uint32_t) * key_index_.size());
 }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal

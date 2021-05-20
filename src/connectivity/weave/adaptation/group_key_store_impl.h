@@ -13,10 +13,7 @@
 
 #include "src/connectivity/weave/adaptation/environment_config.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 
 /**
  * An implementation of the Weave GroupKeyStoreBase API for the Fuchsia.
@@ -53,9 +50,6 @@ class GroupKeyStoreImpl final : public ::nl::Weave::Profiles::Security::AppKeys:
   std::vector<uint32_t> key_index_;
 };
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
 
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_GROUP_KEY_STORE_IMPL_H_
