@@ -26,8 +26,6 @@ declare_args() {
   # automatically when the driver starts.
   magma_enable_developer_build = false
 
-  prebuilt_libvulkan_arm_path = ""
-
   # The path to a prebuilt libvulkan.so for an IMG GPU.
   prebuilt_libvulkan_img_path = ""
 
@@ -36,12 +34,13 @@ declare_args() {
 
   # The path to an OpenVX implementation
   magma_openvx_package = ""
+
+  # Driver developers can set this to true if they are manually including a Mali package. This will
+  # change test environments so Vulkan tests run on boards with Mali GPUs.
+  have_libvulkan_arm_mali = false
 }
 
 declare_args() {
-  # Targets that will be built as mali vulkan ICDS.
-  build_libvulkan_arm_mali = []
-
   # Targets that will be built as verisilicon vulkan ICDS.
   build_libvulkan_vsi_vip = []
 
@@ -55,12 +54,10 @@ declare_args() {
   board_has_libvulkan_arm_mali = false
 }
 
-have_prebuilt_libvulkan_arm = prebuilt_libvulkan_arm_path != ""
 have_prebuilt_libvulkan_img = prebuilt_libvulkan_img_path != ""
-build_libvulkan = build_libvulkan_arm_mali + build_libvulkan_vsi_vip +
-                  build_libvulkan_qcom_adreno + build_libvulkan_img_rgx
-have_libvulkan = build_libvulkan != [] || have_prebuilt_libvulkan_arm ||
-                 have_prebuilt_libvulkan_img
+build_libvulkan = build_libvulkan_vsi_vip + build_libvulkan_qcom_adreno +
+                  build_libvulkan_img_rgx
+have_libvulkan = build_libvulkan != [] || have_prebuilt_libvulkan_img
 
 # Target environments with an Intel GPU.
 intel_gpu_envs = [ nuc_env ]
@@ -78,8 +75,7 @@ magma_hardware_envs = intel_gpu_envs + arm_gpu_envs
 magma_libvulkan_hardware_envs = intel_gpu_envs
 
 magma_libvulkan_arm_hardware_envs = []
-if (build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm ||
-    board_has_libvulkan_arm_mali) {
+if (have_libvulkan_arm_mali || board_has_libvulkan_arm_mali) {
   magma_libvulkan_arm_hardware_envs += arm_gpu_envs
 }
 

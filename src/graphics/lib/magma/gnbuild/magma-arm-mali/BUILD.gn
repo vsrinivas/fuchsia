@@ -7,31 +7,8 @@ import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-# Only including packages built inside this file.
-have_libvulkan_mali =
-    build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm
-
-group("magma-vulkan-system") {
-  if (!magma_enable_developer_build) {
-    public_deps = [
-      ":magma-arm-mali",
-      ":msd-arm-mali",
-    ]
-  }
-}
-
-group("magma-vulkan-config") {
-  if (!magma_enable_developer_build && have_libvulkan_mali) {
-    public_deps = [ ":magma-arm-mali-config" ]
-  }
-}
-
-group("magma-dev") {
-  testonly = true
-  public_deps = [ ":magma-arm-mali" ]
-  if (have_libvulkan_mali) {
-    public_deps += [ ":magma-arm-mali-config" ]
-  }
+group("msd-system") {
+  public_deps = [ ":msd-arm-mali" ]
 }
 
 group("test-driver") {
@@ -40,13 +17,6 @@ group("test-driver") {
     ":msd-arm-mali-test",
     "//src/graphics/lib/magma/tests/unit_tests:testing_firmware_file",
   ]
-}
-
-if (have_prebuilt_libvulkan_arm) {
-  resource("prebuilt_libvulkan_arm") {
-    sources = [ prebuilt_libvulkan_arm_path ]
-    outputs = [ "lib/libvulkan_arm.so" ]
-  }
 }
 
 fuchsia_system_package("msd-arm-mali-test") {
@@ -59,39 +29,6 @@ fuchsia_system_package("msd-arm-mali") {
 
   # This package is reachable from //garnet/packages:all
   allowed_in_extra_deps = true
-}
-
-fuchsia_system_package("magma-arm-mali") {
-  deps = build_libvulkan_arm_mali
-  if (have_prebuilt_libvulkan_arm) {
-    deps += [ ":prebuilt_libvulkan_arm" ]
-  }
-
-  # This package is reachable from //garnet/packages:all
-  allowed_in_extra_deps = true
-}
-
-if (have_libvulkan_mali) {
-  icd_config_data("magma-arm-mali-config") {
-    icds = []
-    foreach(icd, build_libvulkan_arm_mali) {
-      icd_name = get_label_info(icd, "name")
-      icds += [
-        {
-          lib = "${icd_name}.so"
-          manifest = "$target_gen_dir/vulkan/icd.d/${icd_name}.json"
-        },
-      ]
-    }
-    if (have_prebuilt_libvulkan_arm) {
-      icds += [
-        {
-          lib = "libvulkan_arm.so"
-          manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_arm.json"
-        },
-      ]
-    }
-  }
 }
 
 fuchsia_unittest_package("msd_arm_mali_nonhardware_tests") {
