@@ -43,32 +43,14 @@ constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 // configurations may wish to tune this higher (or lower) as needed.
 constexpr uint64_t kDefaultZeroPageScansPerSecond = 20000;
 
-uint32_t discardable_evictions_percent = 0;
-
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
 uint64_t zero_page_scans_per_second = 0;
-
-// Eviction is globally enabled/disabled on startup through the kernel cmdline.
-bool eviction_enabled = false;
 
 PageTableEvictionPolicy page_table_reclaim_policy = PageTableEvictionPolicy::kAlways;
 
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
-
-// Eviction target state is grouped together behind a lock to allow different threads to safely
-// trigger and perform the eviction.
-struct EvictionTarget {
-  bool pending = false;
-  // The desired value to get pmm_count_free_pages() to
-  uint64_t free_target_pages = 0;
-  // A minimum amount of pages we want to evict, regardless of how much free memory is available.
-  uint64_t min_pages_free = 0;
-  scanner::EvictionLevel level = scanner::EvictionLevel::OnlyOldest;
-};
-DECLARE_SINGLETON_SPINLOCK(scanner_eviction_target_lock);
-EvictionTarget scanner_eviction_target TA_GUARDED(scanner_eviction_target_lock::Get()) = {};
 
 // Event to signal the scanner thread to wake up and perform work.
 AutounsignalEvent scanner_request_event;
@@ -83,8 +65,6 @@ KCOUNTER(zero_scan_requests, "vm.scanner.zero_scan.requests")
 KCOUNTER(zero_scan_ends_empty, "vm.scanner.zero_scan.queue_emptied")
 KCOUNTER(zero_scan_pages_scanned, "vm.scanner.zero_scan.total_pages_considered")
 KCOUNTER(zero_scan_pages_deduped, "vm.scanner.zero_scan.pages_deduped")
-
-KCOUNTER(eviction_pages_evicted, "vm.scanner.eviction.pages_evicted")
 
 void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
@@ -108,112 +88,6 @@ void scanner_print_stats(zx_duration_t time_till_queue_rotate) {
 zx_time_t calc_next_zero_scan_deadline(zx_time_t current) {
   return zero_page_scans_per_second > 0 ? zx_time_add_duration(current, ZX_SEC(1))
                                         : ZX_TIME_INFINITE;
-}
-
-// Performs a synchronous request to evict the requested number of pager-backed pages. Evicted pages
-// are placed in the passed |free_list| and become owned by the caller, with the return value being
-// the number of free pages. The |eviction_level| is a rough control that maps to how old a page
-// needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
-uint64_t scanner_evict_pager_backed(uint64_t max_pages, scanner::EvictionLevel eviction_level,
-                                    list_node_t *free_list) {
-  if (!eviction_enabled) {
-    return 0;
-  }
-
-  uint64_t count = 0;
-
-  while (count < max_pages) {
-    // Avoid evicting from the newest queue to prevent thrashing.
-    const size_t lowest_evict_queue = eviction_level == scanner::EvictionLevel::IncludeNewest
-                                          ? 1
-                                          : PageQueues::kNumPagerBacked - 1;
-    if (ktl::optional<PageQueues::VmoBacklink> backlink =
-            pmm_page_queues()->PeekPagerBacked(lowest_evict_queue)) {
-      if (!backlink->cow) {
-        continue;
-      }
-      if (backlink->cow->EvictPage(backlink->page, backlink->offset)) {
-        list_add_tail(free_list, &backlink->page->queue_node);
-        count++;
-      }
-    } else {
-      break;
-    }
-  }
-
-  eviction_pages_evicted.Add(count);
-  return count;
-}
-
-// Performs a synchronous request to evict the requested number of pages from discardable vmos. The
-// return value is the number of pages evicted. This may acquire arbitrary vmo and aspace locks.
-uint64_t scanner_evict_discardable_vmos(uint64_t max_pages) {
-  if (!eviction_enabled) {
-    return 0;
-  }
-
-  // Reclaim |max_pages| from discardable vmos that have been reclaimable for at least 10 seconds.
-  return VmCowPages::ReclaimPagesFromDiscardableVmos(max_pages, ZX_SEC(10));
-}
-
-void scanner_do_evict(uint64_t *pages_freed_pager_backed_out,
-                      uint64_t *pages_freed_discardable_out) {
-  // Create a local copy of the eviction target to operate against.
-  EvictionTarget target;
-  {
-    Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
-    target = scanner_eviction_target;
-    scanner_eviction_target = {};
-  }
-  if (!target.pending) {
-    return;
-  }
-
-  DEBUG_ASSERT(pages_freed_pager_backed_out);
-  DEBUG_ASSERT(pages_freed_discardable_out);
-  *pages_freed_pager_backed_out = 0;
-  *pages_freed_discardable_out = 0;
-
-  uint64_t total_pages_freed = 0;
-
-  do {
-    const uint64_t free_mem = pmm_count_free_pages();
-    uint64_t pages_to_free = 0;
-    if (total_pages_freed < target.min_pages_free) {
-      pages_to_free = target.min_pages_free - total_pages_freed;
-    } else if (free_mem < target.free_target_pages) {
-      pages_to_free = target.free_target_pages - free_mem;
-    } else {
-      break;
-    }
-
-    DEBUG_ASSERT(discardable_evictions_percent <= 100);
-
-    // Compute the desired number of discardable pages to free (vs pager-backed).
-    uint64_t pages_to_free_discardable = pages_to_free * discardable_evictions_percent / 100;
-
-    uint64_t pages_freed = scanner_evict_discardable_vmos(pages_to_free_discardable);
-    *pages_freed_discardable_out += pages_freed;
-    total_pages_freed += pages_freed;
-
-    // Free pager backed memory to get to |pages_to_free|.
-    uint64_t pages_to_free_pager_backed = pages_to_free - pages_freed;
-
-    list_node_t free_list;
-    list_initialize(&free_list);
-    uint64_t pages_freed_pager_backed =
-        scanner_evict_pager_backed(pages_to_free_pager_backed, target.level, &free_list);
-    pmm_free(&free_list);
-    *pages_freed_pager_backed_out += pages_freed_pager_backed;
-    total_pages_freed += pages_freed_pager_backed;
-
-    pages_freed += pages_freed_pager_backed;
-
-    // Should we fail to free any pages then we give up and consider the eviction request complete.
-    if (pages_freed == 0) {
-      break;
-    }
-  } while (1);
 }
 
 int scanner_request_thread(void *) {
@@ -267,22 +141,22 @@ int scanner_request_thread(void *) {
     if (op & kScannerOpReclaimAll) {
       op &= ~kScannerOpReclaimAll;
       reclaim_all = true;
-      Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
-      scanner_eviction_target.pending = true;
-      scanner_eviction_target.level = scanner::EvictionLevel::IncludeNewest;
-      scanner_eviction_target.free_target_pages = UINT64_MAX;
+      pmm_evictor()->SetOneShotEvictionTarget(Evictor::EvictionTarget{
+          .pending = true,
+          .free_pages_target = UINT64_MAX,
+          .level = Evictor::EvictionLevel::IncludeNewest,
+      });
     }
     if ((op & kScannerOpReclaim) || reclaim_all) {
       op &= ~kScannerOpReclaim;
-      uint64_t pager_backed = 0, discardable = 0;
       if (print) {
         printf("[SCAN]: Free memory before eviction is %zuMB\n",
                pmm_count_free_pages() * PAGE_SIZE / MB);
       }
-      scanner_do_evict(&pager_backed, &discardable);
+      auto evicted_counts = pmm_evictor()->EvictOneShotFromPreloadedTarget();
       if (print) {
-        printf("[SCAN]: Evicted %lu user pager backed pages\n", pager_backed);
-        printf("[SCAN]: Evicted %lu pages from discardable vmos\n", discardable);
+        printf("[SCAN]: Evicted %lu user pager backed pages\n", evicted_counts.pager_backed);
+        printf("[SCAN]: Evicted %lu pages from discardable vmos\n", evicted_counts.discardable);
         printf("[SCAN]: Free memory after eviction is %zuMB\n",
                pmm_count_free_pages() * PAGE_SIZE / MB);
       }
@@ -319,7 +193,7 @@ int scanner_request_thread(void *) {
       // Accessed information for page mappings for VMOs impacts page eviction and page table
       // reclamation. For page table reclamation it is only needed if we do not have non-terminal
       // accessed flags.
-      if (pt_reclaim_harvest_terminal || eviction_enabled) {
+      if (pt_reclaim_harvest_terminal || pmm_evictor()->IsEvictionEnabled()) {
         VmObject::HarvestAllAccessedBits();
       }
     }
@@ -350,51 +224,22 @@ void scanner_dump_info() {
 }  // namespace
 
 void scanner_trigger_asynchronous_evict(uint64_t min_free_target, uint64_t free_mem_target,
-                                        scanner::EvictionLevel eviction_level,
-                                        scanner::Output output) {
-  if (!eviction_enabled) {
+                                        Evictor::EvictionLevel eviction_level,
+                                        Evictor::Output output) {
+  if (!pmm_evictor()->IsEvictionEnabled()) {
     return;
   }
-  {
-    Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
-    scanner_eviction_target.pending = true;
-    scanner_eviction_target.level = ktl::max(scanner_eviction_target.level, eviction_level);
-    // Convert the targets from bytes to pages and combine with any existing requests.
-    scanner_eviction_target.min_pages_free += min_free_target / PAGE_SIZE;
-    scanner_eviction_target.free_target_pages =
-        ktl::max(scanner_eviction_target.free_target_pages, free_mem_target / PAGE_SIZE);
-  }
+  pmm_evictor()->CombineOneShotEvictionTarget(Evictor::EvictionTarget{
+      .pending = true,
+      .free_pages_target = free_mem_target / PAGE_SIZE,
+      .min_pages_to_free = min_free_target / PAGE_SIZE,
+      .level = eviction_level,
+  });
 
   const uint32_t op =
-      kScannerOpReclaim | (output == scanner::Output::Print ? kScannerFlagPrint : 0);
+      kScannerOpReclaim | (output == Evictor::Output::Print ? kScannerFlagPrint : 0);
   scanner_operation.fetch_or(op);
   scanner_request_event.Signal();
-}
-
-uint64_t scanner_synchronous_evict(uint64_t min_pages_to_evict,
-                                   scanner::EvictionLevel eviction_level, scanner::Output output) {
-  if (!eviction_enabled) {
-    return 0;
-  }
-  {
-    Guard<SpinLock, IrqSave> guard{scanner_eviction_target_lock::Get()};
-    scanner_eviction_target.pending = true;
-    // For synchronous eviction, set the eviction level and min target as requested.
-    scanner_eviction_target.level = eviction_level;
-    scanner_eviction_target.min_pages_free = min_pages_to_evict;
-    // No target free pages to get to. Evict based only on the min pages requested to evict.
-    scanner_eviction_target.free_target_pages = 0;
-  }
-
-  uint64_t pager_backed = 0, discardable = 0;
-  scanner_do_evict(&pager_backed, &discardable);
-  if (output == scanner::Output::Print && pager_backed > 0) {
-    printf("[SCAN]: Evicted %lu user pager backed pages\n", pager_backed);
-  }
-  if (output == scanner::Output::Print && discardable > 0) {
-    printf("[SCAN]: Evicted %lu pages from discardable vmos\n", discardable);
-  }
-  return pager_backed + discardable;
 }
 
 uint64_t scanner_do_zero_scan(uint64_t limit) {
@@ -462,7 +307,6 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
-  eviction_enabled = gBootOptions->page_scanner_enable_eviction;
   zero_page_scans_per_second = gCmdline.GetUInt64(kernel_option::kPageScannerZeroPageScansPerSecond,
                                                   kDefaultZeroPageScansPerSecond);
   if (!gCmdline.GetBool(kernel_option::kPageScannerStartAtBoot, true)) {
@@ -476,10 +320,9 @@ static void scanner_init_func(uint level) {
   }
   page_table_reclaim_policy = gBootOptions->page_scanner_page_table_eviction_policy;
 
-  uint32_t discardable_evictions = gBootOptions->page_scanner_discardable_evictions_percent;
-  if (discardable_evictions <= 100) {
-    discardable_evictions_percent = discardable_evictions;
-  }
+  pmm_evictor()->SetEvictionEnabled(gBootOptions->page_scanner_enable_eviction);
+  pmm_evictor()->SetDiscardableEvictionsPercent(
+      gBootOptions->page_scanner_discardable_evictions_percent);
 
   thread->Resume();
 }
@@ -522,16 +365,16 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     if (argc < 3) {
       goto usage;
     }
-    if (!eviction_enabled) {
+    if (!pmm_evictor()->IsEvictionEnabled()) {
       printf("%s is false, reclamation request will have no effect\n",
              kPageScannerEnableEvictionName.data());
     }
-    scanner::EvictionLevel eviction_level = scanner::EvictionLevel::IncludeNewest;
+    Evictor::EvictionLevel eviction_level = Evictor::EvictionLevel::IncludeNewest;
     if (argc >= 4 && !strcmp(argv[3].str, "only_old")) {
-      eviction_level = scanner::EvictionLevel::OnlyOldest;
+      eviction_level = Evictor::EvictionLevel::OnlyOldest;
     }
     const uint64_t bytes = argv[2].u * MB;
-    scanner_trigger_asynchronous_evict(bytes, 0, eviction_level, scanner::Output::Print);
+    scanner_trigger_asynchronous_evict(bytes, 0, eviction_level, Evictor::Output::Print);
   } else if (!strcmp(argv[1].str, "pt_reclaim")) {
     if (argc < 3) {
       goto usage;

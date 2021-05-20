@@ -135,6 +135,8 @@ uint64_t pmm_count_total_bytes() { return pmm_node.CountTotalBytes(); }
 
 PageQueues* pmm_page_queues() { return pmm_node.GetPageQueues(); }
 
+Evictor* pmm_evictor() { return pmm_node.GetEvictor(); }
+
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
                                  uint64_t debounce, void* context,
                                  mem_avail_state_updated_callback_t callback) {
@@ -314,8 +316,8 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     // classified as evictable, and then evict anything that is already considered.
     printf("Disabling VM scanner\n");
     scanner_push_disable_count();
-    uint64_t pages_evicted = scanner_synchronous_evict(
-        UINT64_MAX, scanner::EvictionLevel::IncludeNewest, scanner::Output::NoPrint);
+    uint64_t pages_evicted = pmm_evictor()->EvictOneShotSynchronous(
+        UINT64_MAX, Evictor::EvictionLevel::IncludeNewest, Evictor::Output::NoPrint);
     if (pages_evicted > 0) {
       printf("Leaked %" PRIu64 " pages from eviction\n", pages_evicted);
     }

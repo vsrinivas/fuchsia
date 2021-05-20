@@ -11,6 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <vm/evictor.h>
 #include <vm/page.h>
 #include <vm/page_queues.h>
 #include <vm/page_request.h>
@@ -103,6 +104,9 @@ uint64_t pmm_count_total_bytes();
 
 // Return the PageQueues.
 PageQueues* pmm_page_queues();
+
+// Return the Evictor.
+Evictor* pmm_evictor();
 
 // virtual to physical
 paddr_t vaddr_to_paddr(const void* va);

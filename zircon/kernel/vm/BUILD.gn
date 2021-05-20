@@ -11,6 +11,7 @@ zx_library("vm") {
   sources = [
     "bootalloc.cc",
     "bootreserve.cc",
+    "evictor.cc",
     "kstack.cc",
     "page.cc",
     "page_queues.cc",

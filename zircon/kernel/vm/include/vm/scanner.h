@@ -7,20 +7,10 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
 
-#include <fbl/macros.h>
+#include <sys/types.h>
 
-// TODO: Convert the scanner to be a proper singleton object and use that to namespace these enums
-// instead.
-namespace scanner {
-enum class EvictionLevel : uint8_t {
-  OnlyOldest = 0,
-  IncludeNewest = 1,
-};
-enum class Output : bool {
-  Print = true,
-  NoPrint = false,
-};
-}  // namespace scanner
+#include <fbl/macros.h>
+#include <vm/evictor.h>
 
 // Increase the disable count of the scanner. This may need to block until the scanner finishes any
 // current work and so should not be called with other locks held that may conflict with the
@@ -48,14 +38,8 @@ uint64_t scanner_do_zero_scan(uint64_t limit);
 // eviction_level.
 void scanner_trigger_asynchronous_evict(
     uint64_t min_free_target, uint64_t free_mem_target,
-    scanner::EvictionLevel eviction_level = scanner::EvictionLevel::OnlyOldest,
-    scanner::Output output = scanner::Output::NoPrint);
-
-// Performs a synchronous request to evict the requested number of pages. The return value is the
-// number of pages evicted. The |eviction_level| is a rough control that maps to how old a page
-// needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
-uint64_t scanner_synchronous_evict(uint64_t min_pages_to_evict,
-                                   scanner::EvictionLevel eviction_level, scanner::Output output);
+    Evictor::EvictionLevel eviction_level = Evictor::EvictionLevel::OnlyOldest,
+    Evictor::Output output = Evictor::Output::NoPrint);
 
 // Sets the scanner to reclaim page tables when harvesting accessed bits in the future, unless
 // page table reclamation was explicitly disabled on the command line. Repeatedly enabling does not

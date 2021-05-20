@@ -113,6 +113,8 @@ class PmmNode {
 
   static int64_t get_alloc_failed_count();
 
+  Evictor* GetEvictor() { return &evictor_; }
+
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);
@@ -182,6 +184,8 @@ class PmmNode {
   ktl::atomic<bool> request_thread_live_ = true;
 
   PageQueues page_queues_;
+
+  Evictor evictor_;
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;
   PmmChecker checker_ TA_GUARDED(lock_);

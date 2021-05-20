@@ -77,7 +77,7 @@ void MemoryWatchdog::EvictionTrigger() {
   // eviction and blocking some random thread. Therefore we use the asynchronous eviction trigger
   // that will cause the scanner thread to perform the actual eviction work.
   scanner_trigger_asynchronous_evict(min_free_target_, free_mem_target_,
-                                     scanner::EvictionLevel::OnlyOldest, scanner::Output::Print);
+                                     Evictor::EvictionLevel::OnlyOldest, Evictor::Output::Print);
 }
 
 // Helper called by the memory pressure thread when OOM state is entered.
@@ -174,8 +174,8 @@ void MemoryWatchdog::WorkerThread() {
       // Keep trying to perform eviction for as long as we are evicting non-zero pages and we remain
       // in the out of memory state.
       while (mem_event_idx_ == PressureLevel::kOutOfMemory) {
-        uint64_t evicted_pages = scanner_synchronous_evict(
-            MB * 10 / PAGE_SIZE, scanner::EvictionLevel::IncludeNewest, scanner::Output::Print);
+        uint64_t evicted_pages = pmm_evictor()->EvictOneShotSynchronous(
+            MB * 10, Evictor::EvictionLevel::IncludeNewest, Evictor::Output::Print);
         if (evicted_pages == 0) {
           printf("memory-pressure: found no pages to evict\n");
           break;
