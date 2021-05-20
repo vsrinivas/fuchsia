@@ -77,7 +77,11 @@ impl CapabilityProvider for HubCapabilityProvider {
 
 /// Hub state on an instance of a component.
 struct Instance {
+    // TODO(fxbug.dev/77068): Remove this attribute.
+    #[allow(dead_code)]
     pub abs_moniker: AbsoluteMoniker,
+    // TODO(fxbug.dev/77068): Remove this attribute.
+    #[allow(dead_code)]
     pub component_url: String,
     pub execution: Option<Execution>,
     pub has_resolved_directory: bool, // the existence of the resolved directory.
@@ -88,7 +92,11 @@ struct Instance {
 
 /// The execution state for a component that has started running.
 struct Execution {
+    // TODO(fxbug.dev/77068): Remove this attribute.
+    #[allow(dead_code)]
     pub resolved_url: String,
+    // TODO(fxbug.dev/77068): Remove this attribute.
+    #[allow(dead_code)]
     pub directory: Directory,
 }
 

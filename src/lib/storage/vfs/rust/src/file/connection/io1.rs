@@ -840,7 +840,6 @@ mod tests {
     }
 
     struct TestEnv {
-        pub fs: Arc<MockFilesystem>,
         pub file: Arc<MockFile>,
         pub proxy: FileProxy,
         pub scope: ExecutionScope,
@@ -848,7 +847,7 @@ mod tests {
 
     fn init_mock_file(callback: MockCallbackType, flags: u32) -> TestEnv {
         let fs = Arc::new(MockFilesystem::new());
-        let file = MockFile::new(fs.clone(), callback);
+        let file = MockFile::new(fs, callback);
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<FileMarker>().expect("Create proxy to succeed");
 
@@ -863,7 +862,7 @@ mod tests {
             true,
         );
 
-        TestEnv { fs, file, proxy, scope }
+        TestEnv { file, proxy, scope }
     }
 
     #[fasync::run_singlethreaded(test)]

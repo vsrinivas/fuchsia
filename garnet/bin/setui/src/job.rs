@@ -369,8 +369,12 @@ pub(super) mod execution {
     /// [Details] represent the final result of an execution.
     pub(super) struct Details {
         /// The time at which the job execution started.
+        // TODO(fxbug.dev/77068): Remove this attribute.
+        #[allow(dead_code)]
         pub start_time: zx::Time,
         /// The time at which the job execution ended.
+        // TODO(fxbug.dev/77068): Remove this attribute.
+        #[allow(dead_code)]
         pub end_time: zx::Time,
     }
 }

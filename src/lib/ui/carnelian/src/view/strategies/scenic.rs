@@ -34,8 +34,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 struct Plumber {
     pub size: UintSize,
+    // TODO(fxbug.dev/77068): Remove this attribute.
+    #[allow(dead_code)]
     pub buffer_count: usize,
     pub collection_id: u32,
+    // TODO(fxbug.dev/77068): Remove this attribute.
+    #[allow(dead_code)]
     pub first_image_id: u64,
     pub frame_set: FrameSet,
     pub image_indexes: BTreeMap<ImageId, u32>,

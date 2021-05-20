@@ -511,6 +511,8 @@ mod tests {
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
         pub connect_succeeds: bool,
+        // TODO(fxbug.dev/77068): Remove this attribute.
+        #[allow(dead_code)]
         pub client_connections_enabled: bool,
         pub disconnected_ifaces: Vec<u16>,
         command_sender: mpsc::Sender<IfaceManagerRequest>,
