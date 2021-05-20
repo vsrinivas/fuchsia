@@ -7,10 +7,7 @@
 
 #include <Weave/DeviceLayer/internal/GenericNetworkProvisioningServerImpl.h>
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 
 /**
  * Concrete implementation of the NetworkProvisioningServer singleton object for the Fuchsia
@@ -71,7 +68,7 @@ class NL_DLL_EXPORT NetworkProvisioningServerImpl final
 
   // Gets the delegate currently in use. This may return nullptr if no delegate
   // was set on this class.
-  Delegate* GetDelegate();
+  Delegate* GetDelegate() { return delegate_.get(); }
 
   void SetWlanNetworkConfigProvider(
       ::fidl::InterfaceHandle<class ::fuchsia::weave::WlanNetworkConfigProvider> provider);
@@ -79,7 +76,7 @@ class NL_DLL_EXPORT NetworkProvisioningServerImpl final
  private:
   // ===== Members that implement the NetworkProvisioningServer public interface.
 
-  WEAVE_ERROR _Init(void);
+  WEAVE_ERROR _Init();
   void _OnPlatformEvent(const WeaveDeviceEvent* event);
 
   // NOTE: Other public interface methods are implemented by GenericNetworkProvisioningServerImpl<>.
@@ -88,20 +85,23 @@ class NL_DLL_EXPORT NetworkProvisioningServerImpl final
   //       operations.
 
   WEAVE_ERROR GetWiFiStationProvision(NetworkInfo& net_info, bool include_credentials);
-  WEAVE_ERROR SetWiFiStationProvision(const NetworkInfo& net_info);
-  WEAVE_ERROR ClearWiFiStationProvision(void);
-  WEAVE_ERROR InitiateWiFiScan(void);
-  void HandleScanDone(void);
-  static NetworkProvisioningServerImpl& Instance(void);
+  WEAVE_ERROR SetWiFiStationProvision(const NetworkInfo& net_info) { return WEAVE_NO_ERROR; }
+  WEAVE_ERROR ClearWiFiStationProvision() { return WEAVE_NO_ERROR; }
+  WEAVE_ERROR InitiateWiFiScan() { return WEAVE_NO_ERROR; }
+  void HandleScanDone() {}
+  static bool IsSupportedWiFiSecurityType(WiFiSecurityType_t wifi_sec_type) { return false; }
+
+#if WEAVE_DEVICE_CONFIG_WIFI_SCAN_COMPLETION_TIMEOUT
   static void HandleScanTimeOut(::nl::Weave::System::Layer* a_layer, void* a_app_state,
-                                ::nl::Weave::System::Error a_error);
-  static bool IsSupportedWiFiSecurityType(WiFiSecurityType_t wifi_sec_type);
+                                ::nl::Weave::System::Error a_error) {}
+#endif
+
+  static NetworkProvisioningServerImpl& Instance();
 
   // ===== Members for internal use by the following friends.
 
-  friend ::nl::Weave::DeviceLayer::Internal::NetworkProvisioningServer& NetworkProvisioningSvr(
-      void);
-  friend NetworkProvisioningServerImpl& NetworkProvisioningSvrImpl(void);
+  friend ::nl::Weave::DeviceLayer::Internal::NetworkProvisioningServer& NetworkProvisioningSvr();
+  friend NetworkProvisioningServerImpl& NetworkProvisioningSvrImpl();
 
   static NetworkProvisioningServerImpl sInstance;
 
@@ -115,7 +115,7 @@ class NL_DLL_EXPORT NetworkProvisioningServerImpl final
  * Internal components should use this to access features of the NetworkProvisioningServer object
  * that are common to all platforms.
  */
-inline NetworkProvisioningServer& NetworkProvisioningSvr(void) {
+inline NetworkProvisioningServer& NetworkProvisioningSvr() {
   return NetworkProvisioningServerImpl::sInstance;
 }
 
@@ -125,13 +125,10 @@ inline NetworkProvisioningServer& NetworkProvisioningSvr(void) {
  * Internal components can use this to gain access to features of the NetworkProvisioningServer
  * that are specific to the Fuchsia platform.
  */
-inline NetworkProvisioningServerImpl& NetworkProvisioningSvrImpl(void) {
+inline NetworkProvisioningServerImpl& NetworkProvisioningSvrImpl() {
   return NetworkProvisioningServerImpl::sInstance;
 }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
 
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_NETWORK_PROVISIONING_SERVER_IMPL_H_

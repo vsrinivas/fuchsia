@@ -17,18 +17,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-using namespace ::nl;
-using namespace ::nl::Weave;
-using namespace ::nl::Weave::Profiles::Common;
-using namespace ::nl::Weave::Profiles::NetworkProvisioning;
-using namespace ::nl::Weave::TLV;
+// using namespace ::nl;
+// using namespace ::nl::Weave;
+// using namespace ::nl::Weave::Profiles::Common;
+// using namespace ::nl::Weave::Profiles::NetworkProvisioning;
+// using namespace ::nl::Weave::TLV;
 
-using Profiles::kWeaveProfile_Common;
+// using Profiles::kWeaveProfile_Common;
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 
 WEAVE_ERROR NetworkProvisioningServerDelegateImpl::Init() { return WEAVE_NO_ERROR; }
 
@@ -124,7 +121,4 @@ NetworkProvisioningServerDelegateImpl::ConvertToWiFiSecurityType(
   }
 }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
