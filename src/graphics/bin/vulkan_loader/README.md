@@ -86,14 +86,17 @@ metadata.json is a single JSON file that describes the ICD to the loader. Exampl
 {
     "file_path": "lib/libvulkan_example.so",
     "library_path": "libvulkan_example.so",
-    "version": 1
+    "version": 1,
+    "manifest_path": "data/icd.d/libvulkan_example.json"
 }
 ```
 
 * `version` must be 1 for this metadata version.
-* `file_path` is the location of the ICD shared library relative the exposed `contents` directory.
+* `file_path` is the location of the ICD shared library relative to the exposed `contents` directory.
 * `library_path` matches to value of `library_path` in the [Khronos ICD
     manifest json][loaderinterface].
+* `manifest_path` is the location of the [Khronos ICD manifest json file][loaderinterface] relative
+    to the exposed `contents` directory.
 
 `library_path` can be an arbitrary string, but must be unique between all ICDs on
 the system. It is only temporary and will be removed once libvulkan.so has

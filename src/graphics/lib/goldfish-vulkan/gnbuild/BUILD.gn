@@ -44,30 +44,38 @@ if (have_libvulkan) {
     outputs = [ "data/metadata.json" ]
   }
 
+  manifest_filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
+
+  # api_version must be present but is unused
+  icd_data = [
+    "{",
+    "\"file_format_version\": \"1.0.0\",",
+    "\"ICD\": {",
+    "\"library_path\": \"$icd_name.so\",",
+    "\"api_version\": \"1.1.0\"",
+    "}",
+    "}",
+  ]
+  write_file(manifest_filename, icd_data)
+
+  resource("vulkan_manifest_json") {
+    sources = [ manifest_filename ]
+    outputs = [ "data/icd.d/$icd_name.json" ]
+  }
+
   fuchsia_package_with_single_component("goldfish") {
     package_name = "libvulkan_goldfish"
     component_name = "vulkan"
     deps = [
       ":libvulkan_goldfish",
+      ":vulkan_manifest_json",
       ":vulkan_metadata",
     ]
     manifest = "meta/vulkan.cml"
   }
 
   config_data("goldfish-config") {
-    # api_version must be present but is unused
-    icd_data = [
-      "{",
-      "\"file_format_version\": \"1.0.0\",",
-      "\"ICD\": {",
-      "\"library_path\": \"$icd_name.so\",",
-      "\"api_version\": \"1.1.0\"",
-      "}",
-      "}",
-    ]
-    filename = "$target_gen_dir/vulkan/icd.d/$icd_name.json"
-    write_file(filename, icd_data)
-    sources = [ rebase_path(filename) ]
+    sources = [ rebase_path(manifest_filename) ]
 
     for_pkg = "vulkan-icd"
     outputs = [ "icd.d/{{source_file_part}}" ]

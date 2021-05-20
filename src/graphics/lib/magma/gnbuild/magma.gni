@@ -152,12 +152,38 @@ template("magma_vulkan_icd") {
   }
 }
 
+# Generate an ICD manifest and config packages for a set of ICDs.
+#
+# Parameters
+#
+#   icds (required)
+#     [list of scopes] List of ICDs to generate config files for.
+#
+#     Entries in scope:
+#
+#       lib (required)
+#         [string] Filename of ICD shared library.
+#
+#       manifest (optional)
+#         [string] Path to output manifest to.
+#
+#       manifest_name (optional)
+#         [string] Name of manifest file. One of |manifest| or |manifest_name| must be specified.
+#
+#   resource_target_name (optional):
+#     [label] Name of a "resource" target to output that includes the manifest files.
+
 template("icd_config_data") {
   assert(defined(invoker.icds))
   manifest_files = []
   manifest_targets = []
   foreach(entry, invoker.icds) {
-    manifest_file = entry.manifest
+    if (defined(entry.manifest)) {
+      assert(!defined(entry.manifest_name))
+      manifest_file = entry.manifest
+    } else {
+      manifest_file = "$target_gen_dir/vulkan/icd.d/${entry.manifest_name}"
+    }
     manifest_target = "${target_name}_${entry.lib}_gen"
     action(manifest_target) {
       script = "//src/graphics/lib/magma/scripts/gen_icd_manifest.sh"
@@ -169,6 +195,13 @@ template("icd_config_data") {
     }
     manifest_files += [ rebase_path(manifest_file) ]
     manifest_targets += [ ":${manifest_target}" ]
+  }
+  if (defined(invoker.resource_target_name)) {
+    resource_target_name = invoker.resource_target_name
+    resource(resource_target_name) {
+      sources = manifest_files
+      outputs = [ "data/icd.d/{{source_file_part}}" ]
+    }
   }
   config_data(target_name) {
     forward_variables_from(invoker, "*")

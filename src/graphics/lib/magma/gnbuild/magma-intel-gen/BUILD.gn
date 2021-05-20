@@ -58,6 +58,7 @@ if (target_cpu == "x64") {
   fuchsia_package_with_single_component("libvulkan_intel_gen") {
     component_name = "vulkan"
     deps = [
+      ":magma-intel-gen-config-resource",
       ":vulkan_metadata",
       "//third_party/mesa:magma_vulkan",
     ]
@@ -71,6 +72,7 @@ if (target_cpu == "x64") {
         manifest = "$target_gen_dir/vulkan/icd.d/libvulkan_intel.json"
       },
     ]
+    resource_target_name = "magma-intel-gen-config-resource"
   }
 
   fuchsia_test_component("msd_intel_gen_nonhardware_tests") {

@@ -1,5 +1,6 @@
 {
     "file_path": "lib/libvulkan_goldfish.so",
     "library_path": "libvulkan_goldfish.so",
+    "manifest_path": "data/icd.d/libvulkan_goldfish.json",
     "version": 1
 }
