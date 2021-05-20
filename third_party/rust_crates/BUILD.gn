@@ -656,10 +656,8 @@ group("serde_json5") {
   deps = [ ":serde_json5-v0_1_0" ]
 }
 
-if (current_os == "fuchsia") {
-  group("serde_repr") {
-    deps = [ ":serde_repr-v0_1_3($host_toolchain)" ]
-  }
+group("serde_repr") {
+  deps = [ ":serde_repr-v0_1_3($host_toolchain)" ]
 }
 
 if (!(current_os == "fuchsia")) {

@@ -73,5 +73,8 @@ fuchsia_unittest_package("omaha-client-lib-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":omaha-client-lib-tests" ]
+  deps = [
+    ":omaha-client-lib-tests",
+    ":omaha-client_test($host_toolchain)",
+  ]
 }

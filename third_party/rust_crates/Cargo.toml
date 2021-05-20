@@ -126,6 +126,7 @@ serde_cbor = "0.11.1"
 serde_derive = "1.0.116"
 serde_json = "1.0.59"
 serde_json5 = { path = "../rust-mirrors/serde_json5" }
+serde_repr = "0.1.3"
 slab = "0.4"
 socket2 = { version = "0.4.0", features = ["all"] }
 splines = "2.2.0"
@@ -194,7 +195,6 @@ rust_icu_udata = { version = "1.0.0", default-features = false, features = ["ren
 rust_icu_uenum = { version = "1.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
 rust_icu_uloc = { version = "1.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "1.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
-serde_repr = "0.1.3"
 smallvec = "1.2"
 time = "0.1"
 tokio-rustls = "0.13.0"
