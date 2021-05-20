@@ -20,8 +20,14 @@
 #include <vm/scanner.h>
 #include <vm/vm_cow_pages.h>
 
+#include "pmm_node.h"
+
 KCOUNTER(pager_backed_pages_evicted, "vm.reclamation.pages_evicted_pager_backed")
 KCOUNTER(discardable_pages_evicted, "vm.reclamation.pages_evicted_discardable")
+
+Evictor::Evictor(PmmNode* node) : pmm_node_(node), page_queues_(node->GetPageQueues()) {}
+
+Evictor::Evictor(PmmNode* node, PageQueues* queues) : pmm_node_(node), page_queues_(queues) {}
 
 bool Evictor::IsEvictionEnabled() const {
   Guard<SpinLock, IrqSave> guard{&lock_};
@@ -38,6 +44,16 @@ void Evictor::SetDiscardableEvictionsPercent(uint32_t discardable_percent) {
   if (discardable_percent <= 100) {
     discardable_evictions_percent_ = discardable_percent;
   }
+}
+
+void Evictor::DebugSetMinDiscardableAge(zx_time_t age) {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  min_discardable_age_ = age;
+}
+
+Evictor::EvictionTarget Evictor::DebugGetOneShotEvictionTarget() const {
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  return one_shot_eviction_target_;
 }
 
 void Evictor::SetOneShotEvictionTarget(EvictionTarget target) {
@@ -113,8 +129,10 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
 
   uint64_t total_pages_freed = 0;
 
+  DEBUG_ASSERT(pmm_node_);
+
   while (true) {
-    const uint64_t free_pages = pmm_count_free_pages();
+    const uint64_t free_pages = pmm_node_->CountFreePages();
     uint64_t pages_to_free = 0;
     if (total_pages_freed < min_pages_to_evict) {
       pages_to_free = min_pages_to_evict - total_pages_freed;
@@ -137,6 +155,11 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
     total_evicted_counts.discardable += pages_freed;
     total_pages_freed += pages_freed;
 
+    // If we've already met the current target, continue to the next iteration of the loop.
+    if (pages_freed >= pages_to_free) {
+      continue;
+    }
+    DEBUG_ASSERT(pages_to_free > pages_freed);
     // Free pager backed memory to get to |pages_to_free|.
     uint64_t pages_to_free_pager_backed = pages_to_free - pages_freed;
 
@@ -163,11 +186,17 @@ uint64_t Evictor::EvictDiscardable(uint64_t target_pages) const {
   list_node_t freed_list;
   list_initialize(&freed_list);
 
-  // Reclaim |target_pages| from discardable vmos that have been reclaimable for at least 10
-  // seconds.
-  uint64_t count =
-      VmCowPages::ReclaimPagesFromDiscardableVmos(target_pages, ZX_SEC(10), &freed_list);
-  pmm_free(&freed_list);
+  // Reclaim |target_pages| from discardable vmos that have been reclaimable for at least
+  // |min_discardable_age_|.
+  zx_time_t min_age;
+  {
+    Guard<SpinLock, IrqSave> guard{&lock_};
+    min_age = min_discardable_age_;
+  }
+  uint64_t count = VmCowPages::ReclaimPagesFromDiscardableVmos(target_pages, min_age, &freed_list);
+
+  DEBUG_ASSERT(pmm_node_);
+  pmm_node_->FreeList(&freed_list);
 
   discardable_pages_evicted.Add(count);
   return count;
@@ -177,16 +206,18 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
   if (!IsEvictionEnabled()) {
     return 0;
   }
+
   uint64_t count = 0;
   list_node_t freed_list;
   list_initialize(&freed_list);
 
+  DEBUG_ASSERT(page_queues_);
   while (count < target_pages) {
     // Avoid evicting from the newest queue to prevent thrashing.
     const size_t lowest_evict_queue =
         eviction_level == EvictionLevel::IncludeNewest ? 1 : PageQueues::kNumPagerBacked - 1;
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
-            pmm_page_queues()->PeekPagerBacked(lowest_evict_queue)) {
+            page_queues_->PeekPagerBacked(lowest_evict_queue)) {
       if (!backlink->cow) {
         continue;
       }
@@ -199,7 +230,8 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
     }
   }
 
-  pmm_free(&freed_list);
+  DEBUG_ASSERT(pmm_node_);
+  pmm_node_->FreeList(&freed_list);
 
   pager_backed_pages_evicted.Add(count);
   return count;

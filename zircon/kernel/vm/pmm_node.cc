@@ -62,8 +62,8 @@ void PmmNode::AsanUnpoisonPage(vm_page_t* p) {
 #endif  // __has_feature(address_sanitizer)
 }
 
-PmmNode::PmmNode() {
-  // Initialize the reclaimation watermarks such that system never
+PmmNode::PmmNode() : evictor_(this) {
+  // Initialize the reclamation watermarks such that system never
   // falls into a low memory state.
   uint64_t default_watermark = 0;
   InitReclamation(&default_watermark, 1, 0, nullptr, noop_callback);

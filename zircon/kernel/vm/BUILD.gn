@@ -86,6 +86,7 @@ config("suppress-nonheap-warning") {
 source_set("tests") {
   sources = [
     "unittests/aspace_unittest.cc",
+    "unittests/evictor_unittest.cc",
     "unittests/pmm_unittest.cc",
     "unittests/test_helper.cc",
     "unittests/vmo_unittest.cc",

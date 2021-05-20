@@ -14,6 +14,13 @@
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 
+class PmmNode;
+class PageQueues;
+
+namespace vm_unittest {
+class TestPmmNode;
+}
+
 // Implements page eviction logic to free pages belonging to a PmmNode under memory pressure.
 // Provides APIs for
 // 1) one-shot eviction, which involves arming an eviction target and triggering eviction
@@ -37,7 +44,7 @@ class Evictor {
   // trigger and perform the eviction.
   struct EvictionTarget {
     bool pending = false;
-    // The desired value to get pmm_count_free_pages() to
+    // The desired value to get |pmm_node_|'s free page count to
     uint64_t free_pages_target = 0;
     // A minimum amount of pages we want to evict, regardless of how much free memory is available.
     uint64_t min_pages_to_free = 0;
@@ -49,7 +56,8 @@ class Evictor {
     uint64_t discardable = 0;
   };
 
-  Evictor() = default;
+  explicit Evictor(PmmNode *node);
+  Evictor() = delete;
   ~Evictor() = default;
 
   // Called from the scanner with kernel cmdline values.
@@ -79,6 +87,15 @@ class Evictor {
   bool IsEvictionEnabled() const;
 
  private:
+  // Private constructor for test code to specify |queues| not owned by |node|.
+  Evictor(PmmNode *node, PageQueues *queues);
+
+  // Helpers for testing.
+  EvictionTarget DebugGetOneShotEvictionTarget() const;
+  void DebugSetMinDiscardableAge(zx_time_t age);
+
+  friend class vm_unittest::TestPmmNode;
+
   // Evict until |min_pages_to_evict| have been evicted and there are at least |free_pages_target|
   // free pages on the system. Note that the eviction operation here is one-shot, i.e. as soon as
   // the targets are met, eviction will stop and the function will return. Returns the number of
@@ -105,6 +122,22 @@ class Evictor {
 
   mutable DECLARE_SPINLOCK(Evictor) lock_;
 
+  // The PmmNode whose free level the Evictor monitors, and frees pages to.
+  PmmNode *const pmm_node_;
+
+  // The set of PageQueues that the Evictor evicts pages from.
+  //
+  // This is technically not needed and is mostly for the benefit of unit tests. The Evictor can
+  // just call pmm_node_->GetPageQueues() to get the right set of page queues to work on. However,
+  // the VMO side code is currently PmmNode agnostic, and until there exists a way for VMOs to
+  // allocate from (and free to) a particular PmmNode, we'll need to track the PageQueues separately
+  // in order to write meaningful tests.
+  //
+  // This is set to pmm_node_->GetPageQueues() by the public constructor that passes in the PmmNode
+  // associated with this evictor. The private constructor which also passes in PageQueues (not
+  // necessarily owned by the PmmNode) is only used in test code.
+  PageQueues *const page_queues_;
+
   // These parameters are initialized later from kernel cmdline options.
   // Whether eviction is enabled.
   bool eviction_enabled_ TA_GUARDED(lock_) = true;
@@ -113,6 +146,8 @@ class Evictor {
   // sets the number of discardable pages to evict to 0, putting all the burden of eviction on
   // pager-backed pages.
   uint32_t discardable_evictions_percent_ TA_GUARDED(lock_) = 0;
+  // The minimum interval a discardable VMO has to be unlocked for to be considered for eviction.
+  zx_time_t min_discardable_age_ TA_GUARDED(lock_) = ZX_SEC(10);
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_EVICTOR_H_
