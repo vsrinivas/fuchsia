@@ -8,7 +8,6 @@ use {
         client::types,
         config_management::{SavedNetworksManager, ScanResultType},
         mode_management::iface_manager_api::IfaceManagerApi,
-        util::sme_conversion::security_from_sme_protection,
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -352,6 +351,32 @@ fn network_bss_map_to_scan_result(
     return scan_results;
 }
 
+/// Convert the protection type we receive from the SME in scan results to the Policy layer
+/// security type. This function should only be used when converting to results for the public
+/// FIDL API, and not for internal use within Policy, where we should prefer the detailed SME
+/// security types.
+fn fidl_security_from_sme_protection(
+    protection: fidl_sme::Protection,
+    wpa3_supported: bool,
+) -> Option<fidl_policy::SecurityType> {
+    use fidl_policy::SecurityType;
+    use fidl_sme::Protection::*;
+    match protection {
+        Wpa3Enterprise | Wpa3Personal | Wpa2Wpa3Personal => {
+            Some(if wpa3_supported { SecurityType::Wpa3 } else { SecurityType::Wpa2 })
+        }
+        Wpa2Enterprise
+        | Wpa2Personal
+        | Wpa1Wpa2Personal
+        | Wpa2PersonalTkipOnly
+        | Wpa1Wpa2PersonalTkipOnly => Some(SecurityType::Wpa2),
+        Wpa1 => Some(SecurityType::Wpa),
+        Wep => Some(SecurityType::Wep),
+        Open => Some(SecurityType::None),
+        Unknown => None,
+    }
+}
+
 fn scan_result_to_policy_scan_result(
     internal_results: &Vec<types::ScanResult>,
     wpa3_supported: bool,
@@ -360,7 +385,7 @@ fn scan_result_to_policy_scan_result(
         .iter()
         .filter_map(|internal| {
             if let Some(security) =
-                security_from_sme_protection(internal.security_type_detailed, wpa3_supported)
+                fidl_security_from_sme_protection(internal.security_type_detailed, wpa3_supported)
             {
                 Some(fidl_policy::ScanResult {
                     id: Some(types::NetworkIdentifier {
@@ -2343,12 +2368,48 @@ mod tests {
         panic!("Need to reach into location sensor and check it got data")
     }
 
-    fn create_saved_networks_manager(
-        exec: &mut fasync::TestExecutor,
-    ) -> Arc<SavedNetworksManager> {
+    fn create_saved_networks_manager(exec: &mut fasync::TestExecutor) -> Arc<SavedNetworksManager> {
         let saved_networks_manager = exec
             .run_singlethreaded(SavedNetworksManager::new_for_test())
             .expect("failed to create saved networks manager");
         Arc::new(saved_networks_manager)
+    }
+
+    #[test]
+    fn sme_protection_converts_to_policy_security() {
+        use {super::fidl_sme::Protection, super::types::SecurityType};
+        let wpa3_supported = true;
+        let wpa3_not_supported = false;
+        let test_pairs = vec![
+            // Below are pairs when WPA3 is supported.
+            (Protection::Wpa3Enterprise, wpa3_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa3Personal, wpa3_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa2Wpa3Personal, wpa3_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa2Enterprise, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Personal, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2Personal, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2PersonalTkipOnly, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2PersonalTkipOnly, wpa3_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1, wpa3_supported, Some(SecurityType::Wpa)),
+            (Protection::Wep, wpa3_supported, Some(SecurityType::Wep)),
+            (Protection::Open, wpa3_supported, Some(SecurityType::None)),
+            (Protection::Unknown, wpa3_supported, None),
+            // Below are pairs when WPA3 is not supported.
+            (Protection::Wpa3Enterprise, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Enterprise, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa2PersonalTkipOnly, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1Wpa2PersonalTkipOnly, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa1, wpa3_not_supported, Some(SecurityType::Wpa)),
+            (Protection::Wep, wpa3_not_supported, Some(SecurityType::Wep)),
+            (Protection::Open, wpa3_not_supported, Some(SecurityType::None)),
+            (Protection::Unknown, wpa3_not_supported, None),
+        ];
+        for (input, wpa3_capable, output) in test_pairs {
+            assert_eq!(fidl_security_from_sme_protection(input, wpa3_capable), output);
+        }
     }
 }

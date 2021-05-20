@@ -103,7 +103,6 @@ rustc_binary("bin") {
     "src/util/listener/mod.rs",
     "src/util/logger.rs",
     "src/util/mod.rs",
-    "src/util/sme_conversion.rs",
     "src/util/state_machine.rs",
     "src/util/testing/cobalt.rs",
     "src/util/testing/generate_struct.rs",
