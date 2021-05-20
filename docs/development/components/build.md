@@ -28,7 +28,7 @@ these files to the device.
 Fuchsia. All software on Fuchsia except for the kernel image and usermode
 bootstrap program is defined as a component.
 
-A component is declared by a
+A component is defined by a
 **[component manifest][glossary-component-manifest]**. Components typically
 include additional files, such as executables and data assets that they need at
 runtime.
@@ -53,8 +53,8 @@ the **[`fuchsia-pkg://` scheme][glossary-fuchsia-pkg-url]**.
 
 A component manifest is a file that encodes a component declaration, usually
 distributed as part of a package. The binary format is a persisted FIDL file
-mapping one-to-one onto the component declaration. The manifest declares
-information about the component's program binary and required capabilities.
+containing the component declaration. The manifest declares information about
+the component's program binary and required capabilities.
 
 Below is an example manifest file for a simple "Hello, World" component:
 
@@ -502,7 +502,7 @@ group("tests") {
 Note the following details:
 
 *   This example defines `"my_test_component"`, which is assumed to implement
-    tests written using some commontesting framework such as C++ Googletest,
+    tests written using some common testing framework such as C++ Googletest,
     Rust Cargo test, etc.
 *   The test is packaged with a dependent component,
     `"my_other_component_under_test"`. This could be a mock service provider
@@ -613,10 +613,6 @@ GN templates:
   a single `fuchsia_unittest_component()` target paired with a
   `fuchsia_test_package()`.
 
-Note: By default these templates generate Components V2 (.cml) manifests. You may pass
-`v2 = false` to either `fuchsia_unittest_component` or `fuchsia_unittest_package`
-to generate a V1 (.cmx) manifest instead.
-
 #### Unit tests with manifests {#unit-tests-with-manifests}
 
 The examples below demonstrate building a test executable and defining a
@@ -712,7 +708,6 @@ for us.
    }
 
    fuchsia_unittest_package("rot13_test") {
-     v2 = true
      deps = [ ":rot13_test" ]
    }
    ```
@@ -726,7 +721,6 @@ for us.
    rustc_test("rot13_test") {}
 
    fuchsia_unittest_package("rot13_test") {
-     v2 = true
      deps = [ ":rot13_test" ]
    }
    ```
@@ -740,10 +734,13 @@ for us.
    go_test("rot13_test") {}
 
    fuchsia_unittest_package("rot13_test") {
-     v2 = true
      deps = [ ":rot13_test" ]
    }
    ```
+
+Note: By default these templates generate Components V2 (.cml) manifests.
+You may pass `v2 = false` to either `fuchsia_unittest_component` or
+`fuchsia_unittest_package` to generate a V1 (.cmx) manifest instead.
 
 The generated component manifest file can be found with the following command:
 
