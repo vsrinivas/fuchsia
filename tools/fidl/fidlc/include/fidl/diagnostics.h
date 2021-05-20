@@ -305,6 +305,7 @@ constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
+
 // old style
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParameterizeAlias(
@@ -328,6 +329,7 @@ constexpr ErrorDef<flat::Name> ErrLayoutCannotBeParameterized("{} cannot be para
 constexpr ErrorDef<> ErrCannotConstrainInLayoutDecl(
     "cannot add constraints in this position; constraints must be added at the use-site");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
+
 // new style
 constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
@@ -349,10 +351,13 @@ constexpr ErrorDef<> ErrBoxedTypeCannotBeNullable(
     "no double optionality, boxes are already optional");
 constexpr ErrorDef<flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");
+
 // other
 constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
     "handle subtype {} is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
+// TODO(fxbug.dev/75112): add these errors back by adding support in ResolveAs for
+// storing errors
 constexpr ErrorDef<flat::Name> ErrResourceMissingSubtypeProperty(
     "resource {} expected to have the subtype property, but it was missing");
 constexpr ErrorDef<flat::Name> ErrResourceMissingRightsProperty(

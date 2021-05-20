@@ -5621,12 +5621,12 @@ bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant
 
   auto rights_property = resource->LookupProperty("rights");
   if (!rights_property) {
-    return Fail(ErrResourceMissingRightsProperty, resource->name);
+    return false;
   }
 
   Decl* rights_decl = LookupDeclByName(GetName(rights_property->type_ctor));
   if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
-    return Fail(ErrResourceRightsPropertyMustReferToBits, resource->name);
+    return false;
   }
 
   if (!GetType(rights_property->type_ctor)) {
@@ -5653,23 +5653,23 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
   // - the single property element must be a reference to an enum
   // - the single property must be named "subtype".
   if (constant->kind != Constant::Kind::kIdentifier) {
-    return Fail(ErrHandleSubtypeMustReferToResourceSubtype, constant->span);
+    return false;
   }
   auto identifier_constant = static_cast<IdentifierConstant*>(constant.get());
   const Name& handle_subtype_identifier = identifier_constant->name;
 
   if (!IsTypeConstructorDefined(resource->subtype_ctor) ||
       GetName(resource->subtype_ctor).full_name() != "uint32") {
-    return Fail(ErrResourceMustBeUint32Derived, resource->name);
+    return false;
   }
   auto subtype_property = resource->LookupProperty("subtype");
   if (!subtype_property) {
-    return Fail(ErrResourceMissingSubtypeProperty, resource->name);
+    return false;
   }
 
   Decl* subtype_decl = LookupDeclByName(GetName(subtype_property->type_ctor));
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
-    return Fail(ErrResourceSubtypePropertyMustReferToEnum, resource->name);
+    return false;
   }
 
   if (!GetType(subtype_property->type_ctor)) {

@@ -149,7 +149,7 @@ struct EmptyWithOtherThings {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto empty_with_other_things = test_library.LookupStruct("EmptyWithOtherThings");
   ASSERT_NOT_NULL(empty_with_other_things);
@@ -213,7 +213,7 @@ struct BoolAndU64 {
   uint64 u;
 };
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_bool = test_library.LookupStruct("OneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -281,7 +281,7 @@ resource struct ThreeHandlesOneOptional {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_handle = test_library.LookupStruct("OneHandle");
   ASSERT_NOT_NULL(one_handle);
@@ -335,7 +335,7 @@ bits BitsImplicit {
     VALUE = 1;
 };
 )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto bits16 = test_library.LookupBits("Bits16");
   ASSERT_NOT_NULL(bits16);
@@ -379,7 +379,7 @@ table TableWithBoolAndU64 {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto no_members = test_library.LookupTable("TableWithNoMembers");
   ASSERT_NOT_NULL(no_members);
@@ -470,7 +470,7 @@ table OneReserved {
   1: reserved;
 };
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto some_reserved = test_library.LookupTable("SomeReserved");
   ASSERT_NOT_NULL(some_reserved);
@@ -538,7 +538,7 @@ resource table TableWithOneHandle {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_handle = test_library.LookupTable("TableWithOneHandle");
   ASSERT_NOT_NULL(one_handle);
@@ -593,7 +593,7 @@ struct OptionalBoolAndU64 {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_bool = test_library.LookupStruct("OptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -713,7 +713,7 @@ table TableWithOptionalTableWithBoolAndU64 {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_bool = test_library.LookupTable("TableWithOptionalOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -839,7 +839,7 @@ table TableWithOptionalUnion {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto union_with_out_of_line = test_library.LookupUnion("UnionWithOutOfLine");
   ASSERT_NO_FAILURES(CheckTypeShape(union_with_out_of_line,
@@ -951,7 +951,7 @@ resource union ManyHandleUnion {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_handle_union = test_library.LookupUnion("OneHandleUnion");
   ASSERT_NOT_NULL(one_handle_union);
@@ -1085,7 +1085,7 @@ table TableWithUnboundedVectors {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto padded_vector = test_library.LookupStruct("PaddedVector");
   ASSERT_NOT_NULL(padded_vector);
@@ -1211,7 +1211,7 @@ resource table TableWithHandleStructVector {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto handle_vector = test_library.LookupStruct("HandleVector");
   ASSERT_NOT_NULL(handle_vector);
@@ -1319,7 +1319,7 @@ table TableWithUnboundedString {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto short_string = test_library.LookupStruct("ShortString");
   ASSERT_NOT_NULL(short_string);
@@ -1387,7 +1387,7 @@ table TableWithAnInt32ArrayNoPadding {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto an_array = test_library.LookupStruct("AnArray");
   ASSERT_NOT_NULL(an_array);
@@ -1458,7 +1458,7 @@ resource table TableWithNullableHandleArray {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto handle_array = test_library.LookupStruct("HandleArray");
   ASSERT_NOT_NULL(handle_array);
@@ -1547,7 +1547,7 @@ flexible union PaddingCheck {
   2: array<uint8>:5 five;
 };
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto one_bool = test_library.LookupUnion("XUnionWithOneBool");
   ASSERT_NOT_NULL(one_bool);
@@ -1717,7 +1717,7 @@ strict union StrictXUnionOfFlexibleTable {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto strict_xunion = test_library.LookupUnion("StrictLeafXUnion");
   ASSERT_NOT_NULL(strict_xunion);
@@ -1886,7 +1886,7 @@ resource struct UsingOptRequestSomeProtocol {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto using_some_protocol = test_library.LookupStruct("UsingSomeProtocol");
   ASSERT_NOT_NULL(using_some_protocol);
@@ -1951,7 +1951,7 @@ struct ExternalSimpleStruct {
 };
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto ext_struct = test_library.LookupStruct("ExternalSimpleStruct");
   ASSERT_NOT_NULL(ext_struct);
@@ -1999,7 +1999,7 @@ library example;
 
 struct Empty {};
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto empty = library.LookupStruct("Empty");
   ASSERT_NOT_NULL(empty);
@@ -2033,7 +2033,7 @@ protocol MessagePort {
   PostMessage(WebMessage message) -> (bool success);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2088,7 +2088,7 @@ protocol MessagePort {
   PostMessage(WebMessage message) -> (bool success);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2138,7 +2138,7 @@ protocol MessagePort {
   PostMessage(WebMessage message) -> (bool success);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2188,7 +2188,7 @@ protocol MessagePort {
   PostMessage(WebMessage message) -> (bool success);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto web_message = library.LookupStruct("WebMessage");
   ASSERT_NOT_NULL(web_message);
@@ -2234,7 +2234,7 @@ struct TheStruct {
   TheStruct? opt_one_more;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NOT_NULL(the_struct);
@@ -2257,7 +2257,7 @@ resource struct TheStruct {
   TheStruct? opt_one_more;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto the_struct = library.LookupStruct("TheStruct");
   ASSERT_NOT_NULL(the_struct);
@@ -2291,7 +2291,7 @@ struct B {
     A? bar;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);
@@ -2331,7 +2331,7 @@ resource struct B {
     A? bar;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);
@@ -2370,7 +2370,7 @@ struct Bar {
     Foo? f;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto struct_foo = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(struct_foo);
@@ -2420,7 +2420,7 @@ enum Priority {
     LAZY = 1;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto buffer = library.LookupStruct("Buffer");
   ASSERT_NOT_NULL(buffer);
@@ -2504,7 +2504,7 @@ struct Sandwich {
     uint32 after;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -2567,7 +2567,7 @@ struct Sandwich {
     int32 after;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -2635,7 +2635,7 @@ struct Sandwich {
     uint32 after;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);
@@ -2698,7 +2698,7 @@ struct Sandwich {
     uint32 after;
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto sandwich = library.LookupStruct("Sandwich");
   ASSERT_NOT_NULL(sandwich);

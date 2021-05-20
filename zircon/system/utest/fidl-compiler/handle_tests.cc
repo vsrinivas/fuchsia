@@ -318,6 +318,7 @@ resource struct MyStruct {
       fidl::flat::kHandleSameRights);
 }
 
+// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -343,10 +344,8 @@ type MyStruct = resource struct {
 )FIDL",
                       std::move(experimental_flags));
 
-  // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
-  // possible interpretations.
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingRightsProperty,
-                                      fidl::ErrUnexpectedConstraint);
+  // TODO(fxbug.dev/75112): should include ErrResourceMissingRightsProperty
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTestOld) {
@@ -373,8 +372,7 @@ resource struct MyStruct {
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingRightsProperty,
-                                      fidl::ErrCouldNotResolveHandleRights);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleRights);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -398,10 +396,8 @@ type MyStruct = resource struct {
 )FIDL",
                       std::move(experimental_flags));
 
-  // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
-  // possible interpretations.
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingSubtypeProperty,
-                                      fidl::ErrUnexpectedConstraint);
+  // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTestOld) {
@@ -423,8 +419,170 @@ resource struct MyStruct {
 )FIDL",
                       std::move(experimental_flags));
 
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrResourceMissingSubtypeProperty,
-                                      fidl::ErrCouldNotResolveHandleSubtype);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
+}
+
+// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
+TEST(HandleTests, BadResourceSubtypeNotEnum) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = struct {};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+    };
+};
+
+type MyStruct = resource struct {
+    h handle:<VMO, 1>;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  // TODO(fxbug.dev/75112): should include ErrResourceSubtypePropertyMustReferToEnum
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+}
+
+TEST(HandleTests, BadResourceSubtypeNotEnumOld) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct obj_type {};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+resource struct MyStruct {
+    handle:<VMO, 1> h;
+};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleSubtype);
+}
+
+TEST(HandleTests, BadNonIdentifierSubtype) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+    };
+};
+
+type MyStruct = resource struct {
+    h handle:<1, optional>;
+};
+)FIDL",
+                      experimental_flags);
+
+  // TODO(fxbug.dev/75112): should include ErrHandleSubtypeMustReferToResourceSubtype
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+}
+
+TEST(HandleTests, BadNonIdentifierSubtypeOld) {
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+resource struct MyStruct {
+    handle:1? h;
+};
+)FIDL");
+
+  // NOTE(fxbug.dev/72924): This is just a parse error in the old syntax, since
+  // we only allow identifiers as rights. Hence why
+  // ErrHandleSubtypeMustReferToResourceSubtype is only relevant in the new syntax.
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+}
+
+// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
+TEST(HandleTests, BadResourceDefinitionNonBitsRights) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type obj_type = enum : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        subtype obj_type;
+        rights string;
+    };
+};
+
+type MyStruct = resource struct {
+    h handle:<VMO, "hello">;
+};
+)FIDL",
+                      experimental_flags);
+
+  // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+}
+
+TEST(HandleTests, BadResourceDefinitionNonBitsRightsOld) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+        string rights;
+    };
+};
+
+resource struct MyStruct {
+    handle:<VMO, "hello"> h;
+};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveHandleRights);
 }
 
 TEST(HandleTests, BadBareHandleNoConstraints) {
