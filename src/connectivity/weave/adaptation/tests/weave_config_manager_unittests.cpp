@@ -12,8 +12,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 
-namespace nl::Weave::DeviceLayer::Internal {
-namespace testing {
+namespace nl::Weave::DeviceLayer::Internal::testing {
 namespace {
 constexpr char kWeaveConfigStoreTestPath[] = "/data/config.json";
 constexpr char kWeaveConfigStoreReadOnlyTestPath[] = "/pkg/data/config.json";
@@ -30,15 +29,15 @@ class WeaveConfigManagerTest : public ::gtest::TestLoopFixture {
  public:
   WeaveConfigManagerTest() : weave_config_manager_(kWeaveConfigStoreTestPath) {}
 
-  void SetUp() override { TestLoopFixture::SetUp(); }
-
   void TearDown() override {
     EXPECT_EQ(WeaveConfigMgr().FactoryResetConfig(), WEAVE_NO_ERROR);
     EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreTestPath, false));
     TestLoopFixture::TearDown();
   }
 
- protected:
+  WeaveConfigManager& weave_config_manager() { return weave_config_manager_; }
+
+ private:
   WeaveConfigManager weave_config_manager_;
 };
 
@@ -64,10 +63,10 @@ TEST_F(WeaveConfigManagerTest, ReadWriteBool) {
   constexpr bool kTestValBool = true;
   constexpr char kTestConfigStoreContents[] = "{\"test-key-bool\":true}";
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
 
   bool read_value = false;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValBool);
 
   std::string file_contents;
@@ -80,10 +79,10 @@ TEST_F(WeaveConfigManagerTest, ReadWriteUint) {
   constexpr uint32_t kTestValUint = 123456789U;
   constexpr char kTestConfigStoreContents[] = "{\"test-key-uint\":123456789}";
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyUint, kTestValUint), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyUint, kTestValUint), WEAVE_NO_ERROR);
 
   uint32_t read_value = 0U;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValUint);
 
   std::string file_contents;
@@ -96,10 +95,10 @@ TEST_F(WeaveConfigManagerTest, ReadUint16InvalidSize) {
   constexpr uint32_t kTestValUint = UINT16_MAX + 1;
   constexpr char kTestConfigStoreContents[] = "{\"test-key-uint16\":65536}";
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyUint16, kTestValUint), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyUint16, kTestValUint), WEAVE_NO_ERROR);
 
   uint16_t read_value = 0U;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint16, &read_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint16, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 
   std::string file_contents;
@@ -112,10 +111,11 @@ TEST_F(WeaveConfigManagerTest, ReadWriteUint64) {
   constexpr uint64_t kTestValUint64 = 123456789U;
   constexpr char kTestConfigStoreContents[] = "{\"test-key-uint64\":123456789}";
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyUint64, kTestValUint64), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyUint64, kTestValUint64),
+            WEAVE_NO_ERROR);
 
   uint64_t read_value = 0U;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint64, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint64, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValUint64);
 
   std::string file_contents;
@@ -134,11 +134,11 @@ TEST_F(WeaveConfigManagerTest, ReadFailOnNegativeValues) {
                                strlen(kTestConfigStoreContents)));
 
   uint64_t read_value = 0U;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint, &read_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint16, &read_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint16, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint64, &read_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint64, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
   EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreAltTestPath, false));
 }
@@ -149,26 +149,26 @@ TEST_F(WeaveConfigManagerTest, ReadWriteString) {
   constexpr size_t kTestValStringSize = sizeof(kTestValString);
   constexpr char kTestConfigStoreContents[] = "{\"test-key-string\":\"test-val-string\\u0000\"}";
 
-  EXPECT_EQ(
-      weave_config_manager_.WriteConfigValueStr(kTestKeyString, kTestValString, kTestValStringSize),
-      WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValueStr(kTestKeyString, kTestValString,
+                                                       kTestValStringSize),
+            WEAVE_NO_ERROR);
 
   char read_value[256];
   size_t read_value_size = 0;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyString, nullptr, 0, &read_value_size),
+  EXPECT_EQ(weave_config_manager().ReadConfigValueStr(kTestKeyString, nullptr, 0, &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_EQ(read_value_size, kTestValStringSize);
 
   // Reset read_value_size to confirm it gets verified again in the following check.
   read_value_size = 0;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestKeyString, read_value, kTestValStringSize,
-                                                     &read_value_size),
+  EXPECT_EQ(weave_config_manager().ReadConfigValueStr(kTestKeyString, read_value,
+                                                      kTestValStringSize, &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_EQ(read_value_size, kTestValStringSize);
   EXPECT_EQ(memcmp(kTestValString, read_value, read_value_size), 0);
 
   EXPECT_EQ(
-      weave_config_manager_.ReadConfigValueStr(kTestKeyString, read_value, 0, &read_value_size),
+      weave_config_manager().ReadConfigValueStr(kTestKeyString, read_value, 0, &read_value_size),
       WEAVE_ERROR_BUFFER_TOO_SMALL);
 
   std::string file_contents;
@@ -182,26 +182,26 @@ TEST_F(WeaveConfigManagerTest, ReadWriteBinary) {
   constexpr size_t kTestValBinarySize = sizeof(kTestValBinary);
   constexpr char kTestConfigStoreContents[] = "{\"test-key-binary\":\"3q2+7w==\"}";
 
-  EXPECT_EQ(
-      weave_config_manager_.WriteConfigValueBin(kTestKeyBinary, kTestValBinary, kTestValBinarySize),
-      WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValueBin(kTestKeyBinary, kTestValBinary,
+                                                       kTestValBinarySize),
+            WEAVE_NO_ERROR);
 
   uint8_t read_value[256];
   size_t read_value_size = 0;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, nullptr, 0, &read_value_size),
+  EXPECT_EQ(weave_config_manager().ReadConfigValueBin(kTestKeyBinary, nullptr, 0, &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_EQ(read_value_size, kTestValBinarySize);
 
   // Reset read_value_size to confirm it gets verified again in the following check.
   read_value_size = 0;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, read_value, kTestValBinarySize,
-                                                     &read_value_size),
+  EXPECT_EQ(weave_config_manager().ReadConfigValueBin(kTestKeyBinary, read_value,
+                                                      kTestValBinarySize, &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_EQ(read_value_size, kTestValBinarySize);
   EXPECT_EQ(memcmp(kTestValBinary, read_value, read_value_size), 0);
 
   EXPECT_EQ(
-      weave_config_manager_.ReadConfigValueBin(kTestKeyBinary, read_value, 0, &read_value_size),
+      weave_config_manager().ReadConfigValueBin(kTestKeyBinary, read_value, 0, &read_value_size),
       WEAVE_ERROR_BUFFER_TOO_SMALL);
 
   std::string file_contents;
@@ -215,13 +215,13 @@ TEST_F(WeaveConfigManagerTest, Erasure) {
   constexpr bool kTestValBool = true;
 
   bool read_value = false;
-  weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool);
-  weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value);
+  weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool);
+  weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value);
 
-  EXPECT_EQ(weave_config_manager_.ClearConfigValue(kTestKeyBool), WEAVE_NO_ERROR);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value),
+  EXPECT_EQ(weave_config_manager().ClearConfigValue(kTestKeyBool), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-  EXPECT_EQ(weave_config_manager_.ClearConfigValue(kTestKeyNonExistent), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ClearConfigValue(kTestKeyNonExistent), WEAVE_NO_ERROR);
 
   std::string file_contents;
   EXPECT_TRUE(files::ReadFileToString(kWeaveConfigStoreTestPath, &file_contents));
@@ -232,11 +232,11 @@ TEST_F(WeaveConfigManagerTest, Existence) {
   constexpr char kTestKeyBool[] = "test-key-bool";
   constexpr bool kTestValBool = true;
 
-  EXPECT_FALSE(weave_config_manager_.ConfigValueExists(kTestKeyBool));
-  weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool);
-  EXPECT_TRUE(weave_config_manager_.ConfigValueExists(kTestKeyBool));
-  weave_config_manager_.ClearConfigValue(kTestKeyBool);
-  EXPECT_FALSE(weave_config_manager_.ConfigValueExists(kTestKeyBool));
+  EXPECT_FALSE(weave_config_manager().ConfigValueExists(kTestKeyBool));
+  weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool);
+  EXPECT_TRUE(weave_config_manager().ConfigValueExists(kTestKeyBool));
+  weave_config_manager().ClearConfigValue(kTestKeyBool);
+  EXPECT_FALSE(weave_config_manager().ConfigValueExists(kTestKeyBool));
 }
 
 TEST_F(WeaveConfigManagerTest, FactoryReset) {
@@ -244,20 +244,20 @@ TEST_F(WeaveConfigManagerTest, FactoryReset) {
   constexpr char kTestKeyB[] = "test-key-b";
   constexpr bool kTestValBool = true;
 
-  weave_config_manager_.WriteConfigValue(kTestKeyA, kTestValBool);
-  weave_config_manager_.WriteConfigValue(kTestKeyB, kTestValBool);
-  EXPECT_TRUE(weave_config_manager_.ConfigValueExists(kTestKeyA));
-  EXPECT_TRUE(weave_config_manager_.ConfigValueExists(kTestKeyB));
+  weave_config_manager().WriteConfigValue(kTestKeyA, kTestValBool);
+  weave_config_manager().WriteConfigValue(kTestKeyB, kTestValBool);
+  EXPECT_TRUE(weave_config_manager().ConfigValueExists(kTestKeyA));
+  EXPECT_TRUE(weave_config_manager().ConfigValueExists(kTestKeyB));
 
-  EXPECT_EQ(weave_config_manager_.FactoryResetConfig(), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().FactoryResetConfig(), WEAVE_NO_ERROR);
 
-  EXPECT_FALSE(weave_config_manager_.ConfigValueExists(kTestKeyA));
-  EXPECT_FALSE(weave_config_manager_.ConfigValueExists(kTestKeyB));
+  EXPECT_FALSE(weave_config_manager().ConfigValueExists(kTestKeyA));
+  EXPECT_FALSE(weave_config_manager().ConfigValueExists(kTestKeyB));
 
   bool read_value = false;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyA, &read_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyA, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyB, &read_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyB, &read_value),
             WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 
   std::string file_contents;
@@ -269,15 +269,15 @@ TEST_F(WeaveConfigManagerTest, Consistency) {
   constexpr char kTestKeyBool[] = "test-key-bool";
   constexpr bool kTestValBool = true;
 
-  weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool);
+  weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool);
 
   bool read_value = false;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValBool);
   // Check the first key again. The underlying library used to marshal JSON
   // prefers move semantics, so verify that reading a variable out of the store
   // does not invalidate its state.
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValBool);
 }
 
@@ -294,11 +294,12 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
   constexpr char kTestValString[] = "test-string-val";
   std::vector<std::string> kTestValArray = {"test1", "test2"};
 
-  weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool);
-  weave_config_manager_.WriteConfigValue(kTestKeyUint, kTestValUint);
-  weave_config_manager_.WriteConfigValue(kTestKeyUint64, kTestValUint64);
-  weave_config_manager_.WriteConfigValueStr(kTestKeyString, kTestValString, sizeof(kTestValString));
-  weave_config_manager_.WriteConfigValueArray(kTestKeyArray, kTestValArray);
+  weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool);
+  weave_config_manager().WriteConfigValue(kTestKeyUint, kTestValUint);
+  weave_config_manager().WriteConfigValue(kTestKeyUint64, kTestValUint64);
+  weave_config_manager().WriteConfigValueStr(kTestKeyString, kTestValString,
+                                             sizeof(kTestValString));
+  weave_config_manager().WriteConfigValueArray(kTestKeyArray, kTestValArray);
 
   bool read_bool_value = false;
   uint32_t read_uint_value = 0U;
@@ -308,17 +309,17 @@ TEST_F(WeaveConfigManagerTest, FailOnMismatchedTypes) {
   std::vector<std::string> read_array_value;
 
   // Every key is mapped to an incompatible type.
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_uint_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_uint_value),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyUint, &read_bool_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyUint, &read_bool_value),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
   EXPECT_EQ(
-      weave_config_manager_.ReadConfigValueStr(kTestKeyUint64, read_string_value,
-                                               sizeof(read_string_value), &read_string_value_size),
+      weave_config_manager().ReadConfigValueStr(kTestKeyUint64, read_string_value,
+                                                sizeof(read_string_value), &read_string_value_size),
       WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyString, &read_uint64_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyString, &read_uint64_value),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueArray(kTestKeyUint64, read_array_value),
+  EXPECT_EQ(weave_config_manager().ReadConfigValueArray(kTestKeyUint64, read_array_value),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH);
 }
 
@@ -327,11 +328,11 @@ TEST_F(WeaveConfigManagerTest, OverwriteKeys) {
   constexpr bool kTestValBool = true;
   constexpr char kTestConfigStoreContents[] = "{\"test-key-bool\":true}";
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyBool, !kTestValBool), WEAVE_NO_ERROR);
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyBool, !kTestValBool), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
 
   bool read_value = false;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValBool);
 
   std::string file_contents;
@@ -357,29 +358,29 @@ TEST_F(WeaveConfigManagerTest, SetDefaultConfiguration) {
 
   // From the factory reset state, setting the default configuration should
   // reflect immediately after a read.
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath,
-                                                   kWeaveConfigDefaultStoreSchemaPath,
-                                                   /*should_replace*/ false),
+  EXPECT_EQ(weave_config_manager().SetConfiguration(kWeaveConfigDefaultStorePath,
+                                                    kWeaveConfigDefaultStoreSchemaPath,
+                                                    /*should_replace*/ false),
             WEAVE_NO_ERROR);
 
   bool read_value = true;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, false);
 
   read_value = false;
-  EXPECT_EQ(weave_config_manager_.WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().WriteConfigValue(kTestKeyBool, kTestValBool), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValBool);
 
   // If a value already exists in the configuration, setting the default
   // configuration does not modify it.
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath,
-                                                   kWeaveConfigDefaultStoreSchemaPath,
-                                                   /*should_replace*/ false),
+  EXPECT_EQ(weave_config_manager().SetConfiguration(kWeaveConfigDefaultStorePath,
+                                                    kWeaveConfigDefaultStoreSchemaPath,
+                                                    /*should_replace*/ false),
             WEAVE_NO_ERROR);
 
   read_value = false;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, kTestValBool);
 
   std::string file_contents;
@@ -389,18 +390,19 @@ TEST_F(WeaveConfigManagerTest, SetDefaultConfiguration) {
 
 TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationMissingFiles) {
   constexpr char kInvalidPath[] = "/pkg/data/missing_file.json";
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kInvalidPath, kWeaveConfigDefaultStoreSchemaPath,
-                                                   /*should_replace*/ false),
-            WEAVE_ERROR_PERSISTED_STORAGE_FAIL);
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath, kInvalidPath,
-                                                   /*should_replace*/ false),
+  EXPECT_EQ(
+      weave_config_manager().SetConfiguration(kInvalidPath, kWeaveConfigDefaultStoreSchemaPath,
+                                              /*should_replace*/ false),
+      WEAVE_ERROR_PERSISTED_STORAGE_FAIL);
+  EXPECT_EQ(weave_config_manager().SetConfiguration(kWeaveConfigDefaultStorePath, kInvalidPath,
+                                                    /*should_replace*/ false),
             WEAVE_ERROR_PERSISTED_STORAGE_FAIL);
 }
 
 TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationInvalidConfig) {
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigInvalidDefaultStorePath,
-                                                   kWeaveConfigDefaultStoreSchemaPath,
-                                                   /*should_replace*/ false),
+  EXPECT_EQ(weave_config_manager().SetConfiguration(kWeaveConfigInvalidDefaultStorePath,
+                                                    kWeaveConfigDefaultStoreSchemaPath,
+                                                    /*should_replace*/ false),
             WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_INVALID);
 }
 
@@ -415,35 +417,35 @@ TEST_F(WeaveConfigManagerTest, SetDefaultConfigurationReplace) {
 
   // From the factory reset state, setting the default configuration should
   // reflect immediately after a read.
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kWeaveConfigDefaultStorePath,
-                                                   kWeaveConfigDefaultStoreSchemaPath,
-                                                   /*should_replace*/ false),
+  EXPECT_EQ(weave_config_manager().SetConfiguration(kWeaveConfigDefaultStorePath,
+                                                    kWeaveConfigDefaultStoreSchemaPath,
+                                                    /*should_replace*/ false),
             WEAVE_NO_ERROR);
 
   bool read_value = true;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, false);
 
   uint16_t vendor_id = 0;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyVendorId, &vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyVendorId, &vendor_id), WEAVE_NO_ERROR);
   EXPECT_EQ(vendor_id, kTestVendorIdVal1);
 
   // Replace the existing configuration.
-  EXPECT_EQ(weave_config_manager_.SetConfiguration(kDeviceInfoPath, kDeviceInfoSchemaPath,
-                                                   /*should_replace*/ true),
+  EXPECT_EQ(weave_config_manager().SetConfiguration(kDeviceInfoPath, kDeviceInfoSchemaPath,
+                                                    /*should_replace*/ true),
             WEAVE_NO_ERROR);
 
   char read_value_str[256] = {'\0'};
   size_t read_value_size = 0;
   read_value = true;
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyBool, &read_value), WEAVE_NO_ERROR);
   EXPECT_EQ(read_value, false);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueStr(kTestSerialNumber, read_value_str,
-                                                     kTestSerialNumberValSize, &read_value_size),
+  EXPECT_EQ(weave_config_manager().ReadConfigValueStr(kTestSerialNumber, read_value_str,
+                                                      kTestSerialNumberValSize, &read_value_size),
             WEAVE_NO_ERROR);
   EXPECT_STREQ(kTestSerialNumberVal, read_value_str);
 
-  EXPECT_EQ(weave_config_manager_.ReadConfigValue(kTestKeyVendorId, &vendor_id), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValue(kTestKeyVendorId, &vendor_id), WEAVE_NO_ERROR);
   EXPECT_EQ(vendor_id, kTestVendorIdVal2);
 }
 
@@ -452,9 +454,9 @@ TEST_F(WeaveConfigManagerTest, ReadArray) {
   std::vector<std::string> write_value = {"applet1", "applet2", "applet3"};
   std::vector<std::string> read_value;
 
-  EXPECT_EQ(weave_config_manager_.WriteConfigValueArray(kTestKeyArray, write_value),
+  EXPECT_EQ(weave_config_manager().WriteConfigValueArray(kTestKeyArray, write_value),
             WEAVE_NO_ERROR);
-  EXPECT_EQ(weave_config_manager_.ReadConfigValueArray(kTestKeyArray, read_value), WEAVE_NO_ERROR);
+  EXPECT_EQ(weave_config_manager().ReadConfigValueArray(kTestKeyArray, read_value), WEAVE_NO_ERROR);
 
   EXPECT_EQ(write_value.size(), read_value.size());
 
@@ -477,5 +479,4 @@ TEST_F(WeaveConfigManagerTest, ReadInvalidArray) {
   EXPECT_TRUE(files::DeletePath(kWeaveConfigStoreAltTestPath, false));
 }
 
-}  // namespace testing
-}  // namespace nl::Weave::DeviceLayer::Internal
+}  // namespace nl::Weave::DeviceLayer::Internal::testing

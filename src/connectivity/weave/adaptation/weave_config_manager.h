@@ -64,7 +64,7 @@ class WeaveConfigWriter {
 //
 class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
  public:
-  explicit WeaveConfigManager(const std::string& path);
+  explicit WeaveConfigManager(std::string path);
 
   ~WeaveConfigManager() = default;
   WeaveConfigManager(const WeaveConfigManager&) = delete;

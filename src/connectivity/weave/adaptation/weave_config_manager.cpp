@@ -18,10 +18,7 @@
 #include "third_party/modp_b64/modp_b64.h"
 #include "weave_device_platform_error.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 
 NL_DLL_EXPORT
 const char kEnvironmentStorePath[] = "/data/environment.json";
@@ -33,7 +30,7 @@ WeaveConfigManager& WeaveConfigManager::GetInstance() {
 
 WeaveConfigManager::WeaveConfigManager() : WeaveConfigManager(kEnvironmentStorePath) {}
 
-WeaveConfigManager::WeaveConfigManager(const std::string& path) : config_store_path_(path) {
+WeaveConfigManager::WeaveConfigManager(std::string path) : config_store_path_(std::move(path)) {
   json::JSONParser json_parser_;
   if (files::IsFile(config_store_path_)) {
     config_ = json_parser_.ParseFromFile(config_store_path_);
@@ -49,7 +46,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, bool* va
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
-  } else if (!config_value.IsBool()) {
+  }
+  if (!config_value.IsBool()) {
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   *value = config_value.GetBool();
@@ -61,10 +59,11 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint16_t
   WEAVE_ERROR error = ReadConfigValue(key, &int_value);
   if (error != WEAVE_NO_ERROR) {
     return error;
-  } else if (int_value > UINT16_MAX) {
+  }
+  if (int_value > UINT16_MAX) {
     return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
   }
-  *value = (uint16_t)int_value;
+  *value = static_cast<uint16_t>(int_value);
   return WEAVE_NO_ERROR;
 }
 
@@ -73,7 +72,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint32_t
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
-  } else if (!config_value.IsUint()) {
+  }
+  if (!config_value.IsUint()) {
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   *value = config_value.GetUint();
@@ -85,7 +85,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValue(const std::string& key, uint64_t
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
-  } else if (!config_value.IsUint64()) {
+  }
+  if (!config_value.IsUint64()) {
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   *value = config_value.GetUint64();
@@ -98,14 +99,16 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueStr(const std::string& key, char*
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
-  } else if (!config_value.IsString()) {
+  }
+  if (!config_value.IsString()) {
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   const std::string string_value(config_value.GetString());
   *out_size = string_value.size() + 1;
   if (value == nullptr) {
     return WEAVE_NO_ERROR;
-  } else if (value_size < *out_size) {
+  }
+  if (value_size < *out_size) {
     return WEAVE_ERROR_BUFFER_TOO_SMALL;
   }
   strncpy(value, string_value.c_str(), *out_size);
@@ -118,7 +121,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
-  } else if (!config_value.IsString()) {
+  }
+  if (!config_value.IsString()) {
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
   std::string string_value(config_value.GetString());
@@ -126,7 +130,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueBin(const std::string& key, uint8
   *out_size = decoded_value.size();
   if (value == nullptr) {
     return WEAVE_NO_ERROR;
-  } else if (value_size < *out_size) {
+  }
+  if (value_size < *out_size) {
     return WEAVE_ERROR_BUFFER_TOO_SMALL;
   }
   memcpy(value, decoded_value.c_str(), decoded_value.size());
@@ -139,7 +144,8 @@ WEAVE_ERROR WeaveConfigManager::ReadConfigValueArray(const std::string& key,
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   if ((error = ReadKVPair(key, config_value)) != WEAVE_NO_ERROR) {
     return error;
-  } else if (!config_value.IsArray()) {
+  }
+  if (!config_value.IsArray()) {
     return WEAVE_DEVICE_PLATFORM_ERROR_CONFIG_TYPE_MISMATCH;
   }
 
@@ -176,7 +182,7 @@ WEAVE_ERROR WeaveConfigManager::WriteConfigValueStr(const std::string& key, cons
 
 WEAVE_ERROR WeaveConfigManager::WriteConfigValueBin(const std::string& key, const uint8_t* value,
                                                     size_t value_size) {
-  std::string binary_string((const char*)value, value_size);
+  std::string binary_string(reinterpret_cast<const char*>(value), value_size);
   std::string encoded_string(modp_b64_encode(binary_string));
   return WriteConfigValueStr(key, encoded_string.c_str(), encoded_string.size());
 }
@@ -186,9 +192,9 @@ WEAVE_ERROR WeaveConfigManager::WriteConfigValueArray(const std::string& key,
   rapidjson::Value array_value(rapidjson::kArrayType);
   {
     const std::lock_guard<std::mutex> write_lock(config_mutex_);
-    for (size_t i = 0; i < value.size(); i++) {
+    for (auto& config_value : value) {
       rapidjson::Value string_value;
-      string_value.SetString(value[i].c_str(), value[i].size(), config_.GetAllocator());
+      string_value.SetString(config_value.c_str(), config_value.size(), config_.GetAllocator());
       array_value.PushBack(string_value, config_.GetAllocator());
     }
   }
@@ -240,9 +246,8 @@ WEAVE_ERROR WeaveConfigManager::CommitKVPairs() {
   config_.Accept(writer);
 
   const std::string output(buffer.GetString());
-  return files::WriteFile(config_store_path_.c_str(), output.c_str(), output.size())
-             ? WEAVE_NO_ERROR
-             : WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
+  return files::WriteFile(config_store_path_, output) ? WEAVE_NO_ERROR
+                                                      : WEAVE_ERROR_PERSISTED_STORAGE_FAIL;
 }
 
 WEAVE_ERROR WeaveConfigManager::SetConfiguration(const std::string& path,
@@ -293,7 +298,4 @@ WEAVE_ERROR WeaveConfigManager::SetConfiguration(const std::string& path,
   return CommitKVPairs();
 }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
