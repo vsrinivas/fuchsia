@@ -83,7 +83,7 @@ func (ex ruleTestCase) runOverTokens(t *testing.T, instantiator func(core.Report
 			t.Errorf("expected %d warning(s), found %d warning(s)", numExpected, numActual)
 		}
 		for ; i < numExpected && i < numActual; i++ {
-			if diff := cmp.Diff(expected[i], recorder.actual[i]); diff != "" {
+			if diff := cmp.Diff(expected[i], actual[i]); diff != "" {
 				t.Errorf("#%d: expected at %d:%d (`%q`), found at %d:%d (`%q`)", i,
 					expected[i].Ln, expected[i].Col, expected[i].TokContent,
 					actual[i].Ln, actual[i].Col, actual[i].TokContent)
@@ -134,15 +134,24 @@ func splitMarkdownAndExpectations(raw string) (string, []warning) {
 				Col:        col,
 				TokContent: marker.String(),
 			})
+			for _, mr := range marker.String() {
+				switch mr {
+				case '\n':
+					col = 1
+					ln++
+				default:
+					col++
+				}
+			}
 			inMarker = false
 			marker.Reset()
 		case '\n':
-			// TODO(fxbug.dev/62964): Add support for markers with newlines.
 			if inMarker {
-				panic("newline disallowed within marker")
+				marker.WriteRune(r)
+			} else {
+				col = 1
+				ln++
 			}
-			col = 1
-			ln++
 			buf.WriteRune(r)
 		default:
 			if inMarker {

@@ -25,6 +25,8 @@ go_library("gopkg") {
     "rules/casing_of_anchors_test.go",
     "rules/mdhelpers.go",
     "rules/mdhelpers_test.go",
+    "rules/no_extra_space_at_start_of_doc.go",
+    "rules/no_extra_space_at_start_of_doc_test.go",
     "rules/no_extra_space_on_right.go",
     "rules/no_extra_space_on_right_test.go",
     "rules/respect_col_length.go",
