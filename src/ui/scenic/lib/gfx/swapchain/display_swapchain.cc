@@ -429,9 +429,19 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_i
       outstanding_frame_count_--;
     }
   }
-  FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id
-                   << " matches_checked=" << matches_checked
-                   << " presented_frame_idx_=" << presented_frame_idx_;
+
+  // It is possible that the image ID doesn't match any images imported by
+  // this DisplaySwapchain instance, for example, it could be from another
+  // DisplayCompositor. Thus we just ignore these OnVsync events with "invalid"
+  // image handles.
+  // TODO(fxbug.dev/77160): Instead of allowing all unmatched image handles,
+  // we should Use BufferPool to filter image handles created by this
+  // DisplaySwapchain instance.
+  if (!match) {
+    FX_DLOGS(WARNING) << "Unhandled vsync image_id=" << image_id
+                      << " matches_checked=" << matches_checked
+                      << " presented_frame_idx_=" << presented_frame_idx_;
+  }
 }
 
 void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,
