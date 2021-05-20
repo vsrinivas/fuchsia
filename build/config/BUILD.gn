@@ -594,7 +594,6 @@ config("Wno-conversion") {
     "//sdk/lib/ui/scenic/cpp/*",
     "//sdk/lib/vfs/cpp/*",
     "//sdk/lib/virtualization/*",
-    "//sdk/lib/zxio/*",
     "//src/bringup/bin/bootsvc/*",
     "//src/bringup/bin/netsvc/*",
     "//src/bringup/bin/ptysvc/*",
