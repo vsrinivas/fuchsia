@@ -159,6 +159,15 @@ fn construct_vbmeta(
     board: &BoardConfig,
     zbi: impl AsRef<Path>,
 ) -> Result<PathBuf> {
+    // Generate the salt, or use one provided by the board.
+    let salt = match &board.vbmeta.salt {
+        Some(salt_path) => {
+            let salt_str = std::fs::read_to_string(salt_path)?;
+            Salt::decode_hex(&salt_str)?
+        }
+        _ => Salt::random()?,
+    };
+
     // Sign the image and construct a VBMeta.
     let (vbmeta, _salt) = crate::vbmeta::sign(
         &board.vbmeta.kernel_partition,
@@ -166,7 +175,7 @@ fn construct_vbmeta(
         &board.vbmeta.key,
         &board.vbmeta.key_metadata,
         board.vbmeta.additional_descriptor.clone(),
-        Salt::random()?,
+        salt,
         &RealFilesystemProvider {},
     )?;
 
