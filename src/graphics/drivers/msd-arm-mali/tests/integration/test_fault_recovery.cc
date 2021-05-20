@@ -220,8 +220,7 @@ TEST(FaultRecovery, TestProtected) {
   std::unique_ptr<TestConnection> test;
   test.reset(new TestConnection());
   if (!test->SupportsProtectedMode()) {
-    printf("Protected mode not supported, skipping\n");
-    return;
+    GTEST_SKIP();
   }
   test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
   test.reset(new TestConnection());
