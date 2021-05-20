@@ -51,40 +51,50 @@ class BLEManagerImpl final : public BLEManager,
 
   // ===== Members that implement the BLEManager internal interface.
 
-  WEAVE_ERROR _Init(void);
-  WoBLEServiceMode _GetWoBLEServiceMode(void);
+  WEAVE_ERROR _Init();
+  WoBLEServiceMode _GetWoBLEServiceMode();
   WEAVE_ERROR _SetWoBLEServiceMode(WoBLEServiceMode service_mode);
-  bool _IsAdvertisingEnabled(void);
+  bool _IsAdvertisingEnabled();
   WEAVE_ERROR _SetAdvertisingEnabled(bool advertising_enable);
-  bool _IsFastAdvertisingEnabled(void);
+  bool _IsFastAdvertisingEnabled();
   WEAVE_ERROR _SetFastAdvertisingEnabled(bool fast_advertising_enable);
-  bool _IsAdvertising(void);
+  bool _IsAdvertising();
   WEAVE_ERROR _GetDeviceName(char *device_name, size_t device_name_size);
   WEAVE_ERROR _SetDeviceName(const char *device_name);
-  uint16_t _NumConnections(void);
-  void _OnPlatformEvent(const WeaveDeviceEvent *event);
-  ::nl::Ble::BleLayer *_GetBleLayer(void) const;
+  uint16_t _NumConnections() { return 0; }
+  static void _OnPlatformEvent(const WeaveDeviceEvent *event);
+  ::nl::Ble::BleLayer *_GetBleLayer() const;
 
   // ===== Members that implement virtual methods on BlePlatformDelegate.
 
   bool SubscribeCharacteristic(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID *svcId,
-                               const WeaveBleUUID *charId) override;
+                               const WeaveBleUUID *charId) override {
+    return false;
+  }
   bool UnsubscribeCharacteristic(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID *svcId,
-                                 const WeaveBleUUID *charId) override;
-  bool CloseConnection(BLE_CONNECTION_OBJECT conId) override;
-  uint16_t GetMTU(BLE_CONNECTION_OBJECT conId) const override;
+                                 const WeaveBleUUID *charId) override {
+    return false;
+  }
+  bool CloseConnection(BLE_CONNECTION_OBJECT conId) override { return false; }
+  uint16_t GetMTU(BLE_CONNECTION_OBJECT conId) const override { return 0; }
   bool SendIndication(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID *svcId,
-                      const WeaveBleUUID *charId, PacketBuffer *pBuf) override;
+                      const WeaveBleUUID *charId, PacketBuffer *data) override;
   bool SendWriteRequest(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID *svcId,
-                        const WeaveBleUUID *charId, PacketBuffer *pBuf) override;
+                        const WeaveBleUUID *charId, PacketBuffer *pBuf) override {
+    return false;
+  }
   bool SendReadRequest(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID *svcId,
-                       const WeaveBleUUID *charId, PacketBuffer *pBuf) override;
+                       const WeaveBleUUID *charId, PacketBuffer *pBuf) override {
+    return false;
+  }
   bool SendReadResponse(BLE_CONNECTION_OBJECT conId, BLE_READ_REQUEST_CONTEXT requestContext,
-                        const WeaveBleUUID *svcId, const WeaveBleUUID *charId) override;
+                        const WeaveBleUUID *svcId, const WeaveBleUUID *charId) override {
+    return false;
+  };
 
   // ===== Members that implement virtual methods on BleApplicationDelegate.
 
-  void NotifyWeaveConnectionClosed(BLE_CONNECTION_OBJECT conId) override;
+  void NotifyWeaveConnectionClosed(BLE_CONNECTION_OBJECT conId) override {}
 
   // ===== Members that implement virtual methods on LocalServiceDelegate
 
@@ -93,7 +103,7 @@ class BLEManagerImpl final : public BLEManager,
   void OnReadValue(uint64_t id, int32_t offset, OnReadValueCallback callback) override;
   void OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint8_t> value,
                     OnWriteValueCallback callback) override;
-  void OnWriteWithoutResponse(uint64_t id, uint16_t offset, std::vector<uint8_t> value) override;
+  void OnWriteWithoutResponse(uint64_t id, uint16_t offset, std::vector<uint8_t> value) override {}
 
   // Drives the global |BLEManagerImpl| instance's BLE state.
   // This method will be scheduled on and called from platform manager's event loop.

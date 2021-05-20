@@ -15,16 +15,8 @@
 
 #define MAX_CHARACTERISTIC_UUID_SIZE 40
 
-using namespace ::nl;
-using namespace ::nl::Ble;
-
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
-
+namespace nl::Weave::DeviceLayer::Internal {
 namespace {
-
 using nl::Weave::WeaveInspector;
 
 /// UUID of weave service obtained from SIG, in canonical 8-4-4-4-12 string format.
@@ -62,7 +54,7 @@ BLEManagerImpl BLEManagerImpl::sInstance;
 BLEManagerImpl::BLEManagerImpl() : woble_connection_(this), gatt_binding_(this) {
   // BleLayer does not initialize this callback, set it NULL to avoid accessing location pointed by
   // garbage value when not set explicitly.
-  OnWeaveBleConnectReceived = NULL;
+  OnWeaveBleConnectReceived = nullptr;
 }
 
 WEAVE_ERROR BLEManagerImpl::_Init() {
@@ -145,7 +137,7 @@ WEAVE_ERROR BLEManagerImpl::_SetDeviceName(const char* device_name) {
   if (service_mode_ == ConnectivityManager::kWoBLEServiceMode_NotSupported) {
     return WEAVE_ERROR_UNSUPPORTED_WEAVE_FEATURE;
   }
-  if (device_name != NULL && device_name[0] != 0) {
+  if (device_name != nullptr && device_name[0] != 0) {
     if (strlen(device_name) >= kMaxDeviceNameLength) {
       return WEAVE_ERROR_INVALID_ARGUMENT;
     }
@@ -161,7 +153,7 @@ WEAVE_ERROR BLEManagerImpl::_SetDeviceName(const char* device_name) {
 void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
   BLEManagerImpl* instance;
   WoBLEConState* connection_state;
-  if (event == NULL) {
+  if (event == nullptr) {
     // Ignore null weave device event.
     return;
   }
@@ -169,10 +161,10 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
   switch (event->Type) {
     case DeviceEventType::kWoBLESubscribe:
       connection_state = static_cast<WoBLEConState*>(event->WoBLESubscribe.ConId);
-      ZX_ASSERT_MSG(connection_state != NULL,
+      ZX_ASSERT_MSG(connection_state != nullptr,
                     "Received WoBLE subscribe event without connection state");
       instance = connection_state->instance;
-      ZX_ASSERT_MSG(instance != NULL, "Received WoBLE subscribe event with NULL instance");
+      ZX_ASSERT_MSG(instance != nullptr, "Received WoBLE subscribe event with NULL instance");
       instance->HandleSubscribeReceived(
           event->WoBLESubscribe.ConId, &WEAVE_BLE_SVC_ID,
           &kWeaveBleChars[WeaveBleChar::kWeaveBleCharIndicate].weave_uuid);
@@ -186,10 +178,10 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
 
     case DeviceEventType::kWoBLEUnsubscribe:
       connection_state = static_cast<WoBLEConState*>(event->WoBLEUnsubscribe.ConId);
-      ZX_ASSERT_MSG(connection_state != NULL,
+      ZX_ASSERT_MSG(connection_state != nullptr,
                     "Received WoBLE unsubscribe event without connection state");
       instance = connection_state->instance;
-      ZX_ASSERT_MSG(instance != NULL, "Received WoBLE unsubscribe event with NULL instance");
+      ZX_ASSERT_MSG(instance != nullptr, "Received WoBLE unsubscribe event with NULL instance");
       instance->HandleUnsubscribeReceived(
           event->WoBLEUnsubscribe.ConId, &WEAVE_BLE_SVC_ID,
           &kWeaveBleChars[WeaveBleChar::kWeaveBleCharIndicate].weave_uuid);
@@ -197,20 +189,20 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
       break;
     case DeviceEventType::kWoBLEWriteReceived:
       connection_state = static_cast<WoBLEConState*>(event->WoBLEWriteReceived.ConId);
-      ZX_ASSERT_MSG(connection_state != NULL,
+      ZX_ASSERT_MSG(connection_state != nullptr,
                     "Received WoBLE write event without connection state");
       instance = connection_state->instance;
-      ZX_ASSERT_MSG(instance != NULL, "Received WoBLE write event with NULL instance");
+      ZX_ASSERT_MSG(instance != nullptr, "Received WoBLE write event with NULL instance");
       instance->HandleWriteReceived(event->WoBLEWriteReceived.ConId, &WEAVE_BLE_SVC_ID,
                                     &kWeaveBleChars[WeaveBleChar::kWeaveBleCharWrite].weave_uuid,
                                     event->WoBLEWriteReceived.Data);
       break;
     case DeviceEventType::kWoBLEIndicateConfirm:
       connection_state = static_cast<WoBLEConState*>(event->WoBLEIndicateConfirm.ConId);
-      ZX_ASSERT_MSG(connection_state != NULL,
+      ZX_ASSERT_MSG(connection_state != nullptr,
                     "Received WoBLE indication confirmation event without connection state");
       instance = connection_state->instance;
-      ZX_ASSERT_MSG(instance != NULL,
+      ZX_ASSERT_MSG(instance != nullptr,
                     "Received WoBLE indication confirmation event with NULL instance");
       instance->HandleIndicationConfirmation(
           event->WoBLEIndicateConfirm.ConId, &WEAVE_BLE_SVC_ID,
@@ -218,9 +210,9 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
       break;
     case DeviceEventType::kWoBLEConnectionError:
       connection_state = static_cast<WoBLEConState*>(event->WoBLEConnectionError.ConId);
-      ZX_ASSERT(connection_state != NULL);
+      ZX_ASSERT(connection_state != nullptr);
       instance = connection_state->instance;
-      ZX_ASSERT(instance != NULL);
+      ZX_ASSERT(instance != nullptr);
       instance->HandleConnectionError(event->WoBLEConnectionError.ConId,
                                       event->WoBLEConnectionError.Reason);
       break;
@@ -229,23 +221,6 @@ void BLEManagerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
       break;
   }
 }
-
-uint16_t BLEManagerImpl::_NumConnections(void) { return 0; }
-
-bool BLEManagerImpl::SubscribeCharacteristic(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID* svcId,
-                                             const WeaveBleUUID* charId) {
-  return false;
-}
-
-bool BLEManagerImpl::UnsubscribeCharacteristic(BLE_CONNECTION_OBJECT conId,
-                                               const WeaveBleUUID* svcId,
-                                               const WeaveBleUUID* charId) {
-  return false;
-}
-
-bool BLEManagerImpl::CloseConnection(BLE_CONNECTION_OBJECT conId) { return false; }
-
-uint16_t BLEManagerImpl::GetMTU(BLE_CONNECTION_OBJECT conId) const { return 0; }
 
 bool BLEManagerImpl::SendIndication(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID* svcId,
                                     const WeaveBleUUID* charId, PacketBuffer* data) {
@@ -268,7 +243,7 @@ bool BLEManagerImpl::SendIndication(BLE_CONNECTION_OBJECT conId, const WeaveBleU
 
   // Save a reference to the buffer until we get a indication for the notification.
   connection_state->pending_ind_buf = data;
-  data = NULL;
+  data = nullptr;
 
   // TODO(fxbug.dev/53070, fxbug.dev/53966): The peer confirmation currently isn't returned to the
   // caller. Proceed as if the confirmation is received, to avoid closing the connection. When the
@@ -283,24 +258,6 @@ bool BLEManagerImpl::SendIndication(BLE_CONNECTION_OBJECT conId, const WeaveBleU
 
   return true;
 }
-
-bool BLEManagerImpl::SendWriteRequest(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID* svcId,
-                                      const WeaveBleUUID* charId, PacketBuffer* pBuf) {
-  return false;
-}
-
-bool BLEManagerImpl::SendReadRequest(BLE_CONNECTION_OBJECT conId, const WeaveBleUUID* svcId,
-                                     const WeaveBleUUID* charId, PacketBuffer* pBuf) {
-  return false;
-}
-
-bool BLEManagerImpl::SendReadResponse(BLE_CONNECTION_OBJECT conId,
-                                      BLE_READ_REQUEST_CONTEXT requestContext,
-                                      const WeaveBleUUID* svcId, const WeaveBleUUID* charId) {
-  return false;
-}
-
-void BLEManagerImpl::NotifyWeaveConnectionClosed(BLE_CONNECTION_OBJECT conId) {}
 
 void BLEManagerImpl::DriveBLEState() {
   if (service_mode_ != ConnectivityManager::kWoBLEServiceMode_Enabled) {
@@ -350,8 +307,8 @@ void BLEManagerImpl::DriveBLEState() {
                                  service_.NewRequest(), &out_status);
     if (out_status.error) {
       FX_LOGS(ERROR) << "Failed to publish GATT service for Weave. Error: "
-                     << (bool)out_status.error->error_code << " (" << out_status.error->description
-                     << "). Disabling WoBLE service";
+                     << static_cast<bool>(out_status.error->error_code) << " ("
+                     << out_status.error->description << "). Disabling WoBLE service";
       service_mode_ = ConnectivityManager::kWoBLEServiceMode_Disabled;
       return;
     }
@@ -379,7 +336,7 @@ void BLEManagerImpl::DriveBLEState() {
         FX_LOGS(ERROR) << "Failed to get BLE device name prefix: " << err;
       }
       snprintf(device_name_, sizeof(device_name_), "%s%04" PRIX32, device_name_prefix,
-               (uint32_t)FabricState.LocalNodeId);
+               static_cast<uint32_t>(FabricState.LocalNodeId));
       device_name_[kMaxDeviceNameLength] = 0;
     }
     advertising_data.set_name(device_name_);
@@ -393,8 +350,8 @@ void BLEManagerImpl::DriveBLEState() {
                                   &advertising_result);
 
     if (advertising_result.is_err()) {
-      FX_LOGS(ERROR) << "Failed to advertise WoBLE service, Error: "
-                     << (uint32_t)advertising_result.err() << ". Disabling WoBLE service";
+      FX_LOGS(ERROR) << "Failed to advertise WoBLE service, disabling WoBLE: "
+                     << static_cast<uint32_t>(advertising_result.err());
       service_mode_ = ConnectivityManager::kWoBLEServiceMode_Disabled;
       return;
     }
@@ -437,7 +394,7 @@ void BLEManagerImpl::OnReadValue(uint64_t id, int32_t offset, OnReadValueCallbac
 
 void BLEManagerImpl::OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint8_t> value,
                                   OnWriteValueCallback callback) {
-  PacketBuffer* buf = NULL;
+  PacketBuffer* buf = nullptr;
   FX_LOGS(INFO) << "Write request received for characteristic id " << id << " at offset " << offset
                 << " length " << value.size();
   if (id != kWeaveBleCharWrite) {
@@ -471,17 +428,11 @@ void BLEManagerImpl::OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint
   event.WoBLEWriteReceived.ConId = static_cast<void*>(&woble_connection_);
   event.WoBLEWriteReceived.Data = buf;
   PlatformMgr().PostEvent(&event);
-  buf = NULL;
+  buf = nullptr;
 
   callback(fuchsia::bluetooth::gatt::ErrorCode::NO_ERROR);
 }
 
-void BLEManagerImpl::OnWriteWithoutResponse(uint64_t id, uint16_t offset,
-                                            std::vector<uint8_t> value) {}
-
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
 
 #endif  // WEAVE_DEVICE_CONFIG_ENABLE_WOBLE

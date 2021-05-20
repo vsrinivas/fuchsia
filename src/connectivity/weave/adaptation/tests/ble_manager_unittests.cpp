@@ -21,13 +21,11 @@
 #include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
-namespace nl::Weave::DeviceLayer::Internal {
-namespace testing {
+namespace nl::Weave::DeviceLayer::Internal::testing {
 namespace {
 using nl::Weave::DeviceLayer::ConnectivityManager;
 using nl::Weave::DeviceLayer::Internal::BLEManager;
 using nl::Weave::DeviceLayer::Internal::BLEManagerImpl;
-using nl::Weave::DeviceLayer::Internal::BLEMgr;
 }  // namespace
 
 class FakeGATTLocalService : public fuchsia::bluetooth::gatt::testing::LocalService_TestBase {
@@ -85,7 +83,7 @@ class FakeGATTService : public fuchsia::bluetooth::gatt::testing::Server_TestBas
     local_service_delegate_->OnCharacteristicConfiguration(1, "123456", false, true);
   }
 
-  bool WeaveConnectionConfirmed() { return local_service_.gatt_subscribe_confirmed_; }
+  bool WeaveConnectionConfirmed() const { return local_service_.gatt_subscribe_confirmed_; }
 
  private:
   fidl::Binding<fuchsia::bluetooth::gatt::Server> binding_{this};
@@ -104,7 +102,7 @@ class FakeBLEPeripheral : public fuchsia::bluetooth::le::testing::Peripheral_Tes
                         StartAdvertisingCallback callback) override {
     fuchsia::bluetooth::le::Peripheral_StartAdvertising_Response resp;
     fuchsia::bluetooth::le::Peripheral_StartAdvertising_Result result;
-    result.set_response(std::move(resp));
+    result.set_response(resp);
     adv_handle_ = std::move(handle);
     FX_LOGS(INFO) << "Sending fake StartAdvertising response";
     callback(std::move(result));
@@ -134,7 +132,7 @@ class BLEManagerTest : public WeaveTestFixture<> {
         fake_ble_peripheral_.GetHandler(dispatcher()));
   }
 
-  void SetUp() {
+  void SetUp() override {
     WeaveTestFixture<>::SetUp();
     WeaveTestFixture<>::RunFixtureLoop();
 
@@ -150,7 +148,8 @@ class BLEManagerTest : public WeaveTestFixture<> {
     ble_mgr_ = std::make_unique<BLEManagerImpl>();
     InitBleMgr();
   }
-  void TearDown() {
+
+  void TearDown() override {
     event_loop_.Quit();
     WeaveTestFixture<>::StopFixtureLoop();
     WeaveTestFixture<>::TearDown();
@@ -161,8 +160,6 @@ class BLEManagerTest : public WeaveTestFixture<> {
   }
 
  protected:
-  std::unique_ptr<BLEManagerImpl> ble_mgr_;
-
   void InitBleMgr() {
     EXPECT_EQ(ble_mgr_->_Init(), WEAVE_NO_ERROR);
     event_loop_.RunUntilIdle();
@@ -217,6 +214,7 @@ class BLEManagerTest : public WeaveTestFixture<> {
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
+  std::unique_ptr<BLEManagerImpl> ble_mgr_;
 
   FakeGATTService fake_gatt_server_;
   FakeBLEPeripheral fake_ble_peripheral_;
@@ -248,5 +246,4 @@ TEST_F(BLEManagerTest, EnableAndDisableAdvertising) {
 
 TEST_F(BLEManagerTest, TestWeaveConnect) { WeaveConnect(); }
 
-}  // namespace testing
-}  // namespace nl::Weave::DeviceLayer::Internal
+}  // namespace nl::Weave::DeviceLayer::Internal::testing
