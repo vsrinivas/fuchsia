@@ -670,6 +670,9 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     FX_LOGS(ERROR) << "Failed to create child VMO: " << zx_status_get_string(status);
     return status;
   }
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  DidClonePagedVmo();
+#endif
 
   // Only add exec right to VMO if explictly requested.  (Saves a syscall if we're just going to
   // drop the right back again in replace() call below.)
@@ -829,15 +832,15 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
 zx_status_t Blob::LoadPagedVmosFromDisk() {
   ZX_ASSERT_MSG(!IsDataLoaded(), "Data VMO is not loaded.");
 
-  // If there is an overriden cache policy for pager-backed blobs, apply it now. Otherwise the
+  // If there is an overridden cache policy for pager-backed blobs, apply it now. Otherwise the
   // system-wide default will be used.
   std::optional<CachePolicy> cache_policy = blobfs_->pager_backed_cache_policy();
   if (cache_policy) {
     set_overridden_cache_policy(*cache_policy);
   }
 
-  zx::status<BlobLoader::PagedLoadResult> load_result =
-      blobfs_->loader().LoadBlobPaged(map_index_, &blobfs_->blob_corruption_notifier());
+  zx::status<BlobLoader::LoadResult> load_result =
+      blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
   if (load_result.is_error())
     return load_result.error_value();
 
@@ -845,8 +848,6 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
   if (auto status = EnsureCreatePagedVmo(load_result->layout->FileBlockAlignedSize());
       status.is_error())
     return status.error_value();
-
-  EnsurePagedVmoRegistered();
 
   // Commit the other load information.
   pager_info_ = std::move(load_result->pager_info);
@@ -978,15 +979,18 @@ zx_status_t Blob::Verify() {
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
 void Blob::OnNoPagedVmoClones() {
+  // Override the default behavior of PagedVnode to avoid clearing the paged_vmo. We keep this
+  // alive for caching purposes as long as this object is alive, and this object's lifetime is
+  // managed by the BlobCache.
   if (!HasReferences()) {
-    // No more references to this node. It may still be kept alive for caching purposes, so mark
-    // the necessary things as unused.
+    // Mark the name to help identify the VMO is unused.
     SetPagedVmoName(false);
 
-    // Unregister for paging notifications to release the reference to this class owned by the
-    // PagedVfs. This keeps the vmo alive for caching, its lifetime is handled separately from
-    // the lifetime of the memory mappings.
-    EnsurePagedVmoUnregistered();
+    // This might have been the last reference to a deleted blob, so try purging it.
+    if (zx_status_t status = TryPurge(); status != ZX_OK) {
+      FX_LOGS(WARNING) << "Purging blob " << digest()
+                       << " failed: " << zx_status_get_string(status);
+    }
   }
 }
 #endif
@@ -1285,13 +1289,6 @@ zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
     // opened" state would mean checking for no mappings which bundles this code more tightly to
     // the HasReferences() implementation that is better avoided.
     SetPagedVmoName(true);
-
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-    // The paged vmo is keps alive as long as this object for caching purposes, but we will have
-    // unregistered for pager notifications (to release the Vfs owning reference to this class)
-    // when there are no references. In the re-opening case we will need to re-register.
-    EnsurePagedVmoRegistered();
-#endif
   }
   return ZX_OK;
 }
@@ -1301,12 +1298,8 @@ zx_status_t Blob::CloseNode() {
 
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kClose);
 
-  if (paged_vmo() && !HasReferences()) {
+  if (paged_vmo() && !HasReferences())
     SetPagedVmoName(false);
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-    EnsurePagedVmoUnregistered();
-#endif
-  }
 
   // Attempt purge in case blob was unlinked prior to close.
   return TryPurge();

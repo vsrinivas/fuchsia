@@ -20,19 +20,18 @@ namespace fs {
 //  - Implement Vnode::GetVmo().
 //     - Use PagedVnode::EnsureCreateVmo() to create the data mapping. This will create it in such a
 //       way that it's registered with the paging system for callbacks.
-//     - Do vmo().create_child() to clone the VMO backing this node.
+//     - Do paged_vmo().create_child() to clone the VMO backing this node.
 //     - Set the rights on the cloned VMO with the rights passed to GetVmo().
-//     - Call EnsurePagedVmoRegistered() to route paging requests to this class.
+//     - Call DidCloneVmo() to start tracking the clone.
 //     - Populate the GetVmo() out parameter with the child VMO.
 //  - Implement VmoRead() to fill the VMO data when requested.
 //
 // To unregister from pager requests:
 //
-//  - This class will be automatically kept in scope as long as there are memory mappings, and
-//    this reference and the VMO will be automatically freed when there are no more mappings.
-//  - You can override this behavior by overriding OnNoPagedVmoClones().
-//     - Always call EnsurePagedVmoUnregistered() to free the reference forcing this class alive.
-//     - Cache the VMO as desired, freeing with FreePagedVmo()
+//  - This class will be automatically kept in scope by has_clones_reference_ as long as there are
+//    memory mappings.
+//  - The VMO will be automatically freed when there are no more mappings.
+//     - You can override this behavior by overriding OnNoPagedVmoClones().
 class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
  public:
   // Required for memory management, see the class comment above Vnode for more.
@@ -49,9 +48,11 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   //
   // Note that offset + length will be page-aligned so can extend beyond the end of the file.
   //
-  // Since pager registration and unregistration is not synchronized between this class and the
-  // PagedVfs, this function can be called after the VMO has been unregistered and possibly
-  // destroyed. The implementation should be prepared to fail in these cases.
+  // Since the OnNoPagedVmoClones() is not synchronized with page requests, these requests can come
+  // in after there are no clones. If the paged VMO is destroyed the requests should be dropped
+  // silently (even reporting a failure to the kernel will fail). But if the VMO could be used in
+  // the future (even if it isn't cloned now), page requests should be fulfilled to the extent
+  // possible to avoid accumulating failed state in the kernel (See OnNoPagedVmoClones() for more).
   virtual void VmoRead(uint64_t offset, uint64_t length) = 0;
 
  protected:
@@ -87,46 +88,41 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   const zx::vmo& paged_vmo() const __TA_REQUIRES_SHARED(mutex_) { return paged_vmo_info_.vmo; }
 
   // Returns true if there are clones of the VMO alive that have been given out.
-  bool has_clones() const __TA_REQUIRES_SHARED(mutex_) { return has_clones_; }
+  bool has_clones() const __TA_REQUIRES_SHARED(mutex_) { return !!has_clones_reference_; }
 
   // Populates the paged_vmo() if necessary. Does nothing if it already exists. Access the created
-  // vmo with this class' paged_vmo() getter.
+  // vmo with this class' paged_vmo() getter. This will register with the PagedVfs and will start
+  // serving kernel page requests.
   //
   // When a mapping is requested, the derived class should call this function, create a
-  // clone of this VMO with the desired flags, and then call EnsurePagedVmoRegistered() to register
-  // for callbacks and watch for "no clones" messages.
+  // clone of the paged_vmo_ with the desired flags, and then call DidCloneVmo().
   zx::status<> EnsureCreatePagedVmo(uint64_t size) __TA_REQUIRES(mutex_);
 
-  // Ensure the paged VMO is registered with the PagedVfs after a clone of the paged vmo is
-  // created. These will do nothing if the desired state is already present or if the VFS is torn
-  // down, but registration requires the paged vmo exists -- see EnsureCreateVmo().
-  //
-  // Registration will route pager requests to this node from the PagedVfs and also start watching
-  // for the "no clones" notification so the node knows when to unregister. The PagedVfs will
-  // hold a reference to this object when it is registered to keep it alive on behalf of the
-  // kernel and users of the mappings.
-  //
-  // Unregistering a node can cause it to be freed if the pager reference is the only thing keeping
-  // this node alive. This is bad enough, but since the lock is required to be held during this
-  // call, the subsequent unlock in the calling frame will be on freed memory. Because this is
-  // very difficult to implement properly, the PagedVfs will post its owning reference to the
-  // message loop to ensure the Vnode is freed outside of this call stack.
-  void EnsurePagedVmoRegistered() __TA_REQUIRES(mutex_);
-  void EnsurePagedVmoUnregistered() __TA_REQUIRES(mutex_);
+  // Call after successfully creating a paged_vmo() clone. This will ensure that the tracking
+  // information for clones is set up:
+  //   - The has_clones_reference_ keeps this object alive as long as there are clones.
+  //   - The clone_watcher_ will notice when there are no clones, send notifications, and clean up
+  //     the has_clones_reference_.
+  void DidClonePagedVmo() __TA_REQUIRES(mutex_);
 
-  // Releases the vmo_ and unregisters for paging notifications from the PagedVfs. If this causes
-  // the Vnode to be freed, it will be destructed from a subsequent run of the message loop (see
-  // EnsurePagedVmoUnregistered() above).
+  // Releases the vmo_ and unregisters for paging notifications from the PagedVfs. This must not
+  // be called if this node has_clones(). In that case, the paged vmo must be "detached" from the
+  // pager first before being destroyed or we will keep getting paging requests for the VMO (even
+  // though we have no references to it).
+  //
+  // TODO(fxbug.dev/77019) Implement detaching properly and describe here what to do instead.
   void FreePagedVmo() __TA_REQUIRES(mutex_);
 
   // Implementors of this class can override this function to response to the event that there
   // are no more clones of the vmo_. The default implementation calls FreePagedVmo().
   //
-  // Some implementations may want to cache the vmo object so avoid calling FreePagedVmo(), but
-  // they will all want to unregister via EnsurePagedVmoUnregistered() because that will release
-  // the reference to this class held by the PagedVfs which can cause this class to leak.
-  // Unlike re-creating the vmo, registration is very lightweight so there is no consideration to
-  // cache it.
+  // Some implementations may want to cache the vmo object and therefore avoid calling
+  // FreePagedVmo().
+  //
+  // Note that it is important to continue serving page requests for as long as the VMO could
+  // re-used. If a race causes a page request to be delivered after the "no clones" message, failing
+  // or dropping the request will accumulate that state in the kernel for the VMO which can affect
+  // future clones of the VMO.
   virtual void OnNoPagedVmoClones() __TA_REQUIRES(mutex_);
 
  private:
@@ -148,11 +144,9 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   // processes will be children of this VMO.
   PagedVfs::VmoCreateInfo paged_vmo_info_ __TA_GUARDED(mutex_);
 
-  // Set when this class is registered with the PagedVfs for pager requests.
-  bool is_registered_with_pager_ __TA_GUARDED(mutex_) = false;
-
-  // Set when there are clones of the vmo_.
-  bool has_clones_ __TA_GUARDED(mutex_) = false;
+  // Set when there are clones of the vmo_ to keep this object in scope. Since there is no
+  // connection owning a reference to this class we need to handle the memory management ourselves.
+  fbl::RefPtr<PagedVnode> has_clones_reference_ __TA_GUARDED(mutex_);
 
   // Watches any clones of "paged_vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN
   // signal. See WatchForZeroChildren().

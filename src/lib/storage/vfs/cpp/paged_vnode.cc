@@ -19,7 +19,7 @@ zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size) {
   if (!paged_vfs())
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
 
-  auto info_or = paged_vfs()->CreatePagedNodeVmo(size);
+  auto info_or = paged_vfs()->CreatePagedNodeVmo(this, size);
   if (info_or.is_error())
     return info_or.take_error();
   paged_vmo_info_ = std::move(info_or).value();
@@ -27,36 +27,37 @@ zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size) {
   return zx::ok();
 }
 
-void PagedVnode::EnsurePagedVmoRegistered() {
-  // The paged VMO must have been created before registering for notifications.
-  ZX_DEBUG_ASSERT(paged_vmo());
+void PagedVnode::DidClonePagedVmo() {
+  // Ensure that there is an owning reference to this vnode that goes along with the VMO clones.
+  // This ensures that we can continue serving page requests even if all FIDL connections are
+  // closed. This reference will be released when there are no more clones.
+  if (!has_clones_reference_) {
+    has_clones_reference_ = fbl::RefPtr<PagedVnode>(this);
 
-  if (is_registered_with_pager_)
-    return;
-
-  WatchForZeroVmoClones();
-  paged_vfs()->RegisterPagedVmo(paged_vmo_info_.id, fbl::RefPtr<PagedVnode>(this));
-  is_registered_with_pager_ = true;
-}
-
-void PagedVnode::EnsurePagedVmoUnregistered() {
-  if (!is_registered_with_pager_ || !paged_vfs())
-    return;
-
-  StopWatchingForZeroVmoClones();
-  paged_vfs()->UnregisterPagedVmo(paged_vmo_info_.id);
-  is_registered_with_pager_ = false;
+    // Watch the VMO for the presence of no children. The VMO currently has no children because we
+    // just created it, but the signal will be edge-triggered.
+    WatchForZeroVmoClones();
+  }
 }
 
 void PagedVnode::FreePagedVmo() {
   if (!paged_vmo_info_.vmo.is_valid())
     return;
 
-  if (paged_vfs() && is_registered_with_pager_)
+  // The paged VMO must not be freed while there are clones alive. Otherwise, paging requests for
+  // these clones will hang forever. Instead, the paged vmo must be "detached" from the pager and
+  // then freed.
+  //
+  // TODO(fxbug.dev/77019) Implement detaching properly and describe here what to do instead.
+  ZX_DEBUG_ASSERT(!has_clones());
+
+  if (paged_vfs() && paged_vmo())
     paged_vfs()->UnregisterPagedVmo(paged_vmo_info_.id);
 
   paged_vmo_info_.vmo.reset();
   paged_vmo_info_.id = 0;
+
+  StopWatchingForZeroVmoClones();
 }
 
 void PagedVnode::OnNoPagedVmoClones() {
@@ -67,43 +68,49 @@ void PagedVnode::OnNoPagedVmoClones() {
 
 void PagedVnode::OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                            zx_status_t status, const zx_packet_signal_t* signal) {
-  std::lock_guard lock(mutex_);
+  // Our clone reference must be freed, but we need to do that outside of the lock.
+  fbl::RefPtr<PagedVnode> clone_reference;
 
-  ZX_DEBUG_ASSERT(has_clones_);
+  {
+    std::lock_guard lock(mutex_);
 
-  if (!paged_vfs())
-    return;  // Called during tear-down.
+    ZX_DEBUG_ASSERT(has_clones());
 
-  // The kernel signal delivery could have raced with us creating a new clone. Validate that there
-  // are still no clones before tearing down.
-  zx_info_vmo_t info;
-  if (paged_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) != ZX_OK)
-    return;  // Something wrong with the VMO, don't try to tear down.
-  if (info.num_children > 0) {
-    // Race with new VMO. Re-arm the clone watcher and continue as if the signal was not sent.
-    WatchForZeroVmoClones();
-    return;
+    if (!paged_vfs())
+      return;  // Called during tear-down.
+
+    // The kernel signal delivery could have raced with us creating a new clone. Validate that there
+    // are still no clones before tearing down.
+    zx_info_vmo_t info;
+    if (paged_vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) != ZX_OK)
+      return;  // Something wrong with the VMO, don't try to tear down.
+    if (info.num_children > 0) {
+      // Race with new VMO. Re-arm the clone watcher and continue as if the signal was not sent.
+      WatchForZeroVmoClones();
+      return;
+    }
+
+    // Move our reference for releasing outside of the lock. Clearing the member will also allow the
+    // OnNoPagedVmoClones() observer to see "has_clones() == false" which is the new state.
+    clone_reference = std::move(has_clones_reference_);
+
+    StopWatchingForZeroVmoClones();
+    OnNoPagedVmoClones();
   }
 
-  StopWatchingForZeroVmoClones();
-  OnNoPagedVmoClones();
+  // Release the reference to this class. This could be the last reference keeping it alive which
+  // can cause it to be freed.
+  clone_reference = nullptr;
+
+  // THIS OBJECT IS NOW POSSIBLY DELETED.
 }
 
 void PagedVnode::WatchForZeroVmoClones() {
-  if (!has_clones_) {
-    has_clones_ = true;
-
-    clone_watcher_.set_object(paged_vmo().get());
-    clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
-    clone_watcher_.Begin(paged_vfs()->dispatcher());
-  }
+  clone_watcher_.set_object(paged_vmo().get());
+  clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
+  clone_watcher_.Begin(paged_vfs()->dispatcher());
 }
 
-void PagedVnode::StopWatchingForZeroVmoClones() {
-  if (has_clones_) {
-    has_clones_ = false;
-    clone_watcher_.set_object(ZX_HANDLE_INVALID);
-  }
-}
+void PagedVnode::StopWatchingForZeroVmoClones() { clone_watcher_.set_object(ZX_HANDLE_INVALID); }
 
 }  // namespace fs
