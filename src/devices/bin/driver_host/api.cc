@@ -298,6 +298,14 @@ __EXPORT zx_handle_t get_root_resource() {
   return internal::ContextForApi()->root_resource().get();
 }
 
+__EXPORT zx_status_t load_firmware_deprecated(zx_device_t* dev, const char* path, zx_handle_t* fw,
+                                              size_t* size) {
+  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
+  fbl::RefPtr<zx_device_t> dev_ref(dev);
+  // TODO(bwb): Can we propogate zx::vmo further up?
+  return internal::ContextForApi()->LoadFirmware(dev_ref, path, fw, size);
+}
+
 __EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
                                    size_t* size) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());

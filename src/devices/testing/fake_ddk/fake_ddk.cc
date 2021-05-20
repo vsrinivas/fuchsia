@@ -58,8 +58,8 @@ bool Bind::Ok() {
   return add_called_ &&
          // We do not check the actual value of |init_reply_|, as the test may wish to test
          // scenarios where the init failure is handled.
-         has_init_hook_ == init_reply_.has_value() &&
-         remove_called_ && !bad_parent_ && !bad_device_;
+         has_init_hook_ == init_reply_.has_value() && remove_called_ && !bad_parent_ &&
+         !bad_device_;
 }
 
 zx_status_t Bind::WaitUntilInitComplete() {
@@ -549,6 +549,14 @@ void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* 
   result->EnableNextDispatch();
   auto new_ddk_txn = fake_ddk::MakeDdkInternalTransaction(std::move(result));
   *new_txn = *new_ddk_txn.DeviceFidlTxn();
+}
+
+__EXPORT __WEAK zx_status_t load_firmware_deprecated(zx_device_t* device, const char* path,
+                                                     zx_handle_t* fw, size_t* size) {
+  // This is currently a no-op.
+  *fw = ZX_HANDLE_INVALID;
+  *size = fake_ddk::kFakeFWSize;
+  return ZX_OK;
 }
 
 __EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
