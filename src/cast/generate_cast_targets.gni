@@ -57,7 +57,7 @@ template("generate_cast_targets") {
 
     # Config data arguments.
     for_pkg = "appmgr"
-    sources = [ "config/cast_scheme_map.config" ]
+    sources = [ "//src/cast/config/cast_scheme_map.config" ]
     outputs = [ "scheme_map/cast.config" ]
   }
 }

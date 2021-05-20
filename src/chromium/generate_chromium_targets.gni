@@ -86,7 +86,7 @@ template("generate_chromium_targets") {
 
     # Config data arguments.
     for_pkg = "sysmgr"
-    sources = [ rebase_path("config/web_context_provider.config") ]
+    sources = [ "//src/chromium/config/web_context_provider.config" ]
   }
 
   icu_tzdata_config_data("tzdata_for_web_engine") {
@@ -128,7 +128,7 @@ template("generate_chromium_targets") {
 
     # Config data arguments.
     for_pkg = "appmgr"
-    sources = [ rebase_path("config/http_scheme_map.config") ]
+    sources = [ "//src/chromium/config/http_scheme_map.config" ]
     outputs = [ "scheme_map/http.config" ]
   }
 
