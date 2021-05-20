@@ -19,8 +19,11 @@ mod sys;
 
 /// Represents a device node.
 pub struct Device {
-    path: PathBuf,
-    node: File,
+    /// Represents the path to the device.
+    pub path: PathBuf,
+
+    /// File representing the device handle.
+    pub node: File,
 }
 
 impl Device {

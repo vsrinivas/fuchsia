@@ -23,6 +23,7 @@ where
     inner: Mutex<Inner<K, V>>,
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum MapEvent<K, V>
 where
@@ -78,6 +79,7 @@ where
     }
 
     /// Take a snapshot and push it to the queue
+    #[cfg(test)]
     pub fn request_snapshot(&self) {
         let inner = self.inner.lock();
         inner
@@ -91,6 +93,7 @@ where
         self.inner.lock().map.clone()
     }
 
+    #[cfg(test)]
     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<Arc<V>>
     where
         K: ::std::borrow::Borrow<Q>,

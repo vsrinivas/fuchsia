@@ -3,19 +3,22 @@
 // found in the LICENSE file.
 
 use {
+    crate::device::PhyMap,
     anyhow::{Context, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceMonitorRequest},
     fuchsia_zircon as zx,
     futures::TryStreamExt,
+    std::sync::Arc,
 };
 
 pub(crate) async fn serve_monitor_requests(
     mut req_stream: fidl_svc::DeviceMonitorRequestStream,
+    phys: Arc<PhyMap>,
 ) -> Result<(), Error> {
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         match req {
-            DeviceMonitorRequest::ListPhys { responder } => responder.send(&mut vec![]),
+            DeviceMonitorRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
             DeviceMonitorRequest::GetDevPath { phy_id: _, responder } => responder.send(None),
             DeviceMonitorRequest::GetSupportedMacRoles { phy_id: _, responder } => {
                 responder.send(None)
@@ -44,35 +47,53 @@ pub(crate) async fn serve_monitor_requests(
     Ok(())
 }
 
+fn list_phys(phys: &PhyMap) -> Vec<u16> {
+    phys.get_snapshot().iter().map(|(phy_id, _)| *phy_id).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::{device::PhyDevice, watchable_map},
         fidl::endpoints::{create_proxy, Proxy},
         fidl_fuchsia_wlan_device as fidl_dev, fuchsia_async as fasync,
-        futures::task::Poll,
+        futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
         wlan_common::assert_variant,
+        wlan_dev::DeviceEnv,
     };
 
     struct TestValues {
         proxy: fidl_svc::DeviceMonitorProxy,
         req_stream: fidl_svc::DeviceMonitorRequestStream,
+        phys: Arc<PhyMap>,
+        _phy_events: mpsc::UnboundedReceiver<watchable_map::MapEvent<u16, PhyDevice>>,
     }
 
     fn test_setup() -> TestValues {
         let (proxy, requests) = create_proxy::<fidl_svc::DeviceMonitorMarker>()
             .expect("failed to create DeviceMonitor proxy");
         let req_stream = requests.into_stream().expect("failed to create request stream");
+        let (phys, _phy_events) = PhyMap::new();
 
-        TestValues { proxy, req_stream }
+        TestValues { proxy, req_stream, phys: Arc::new(phys), _phy_events }
+    }
+
+    fn fake_phy(path: &str) -> (PhyDevice, fidl_dev::PhyRequestStream) {
+        let (proxy, server) =
+            create_proxy::<fidl_dev::PhyMarker>().expect("fake_phy: create_proxy() failed");
+        let device = wlan_dev::RealDeviceEnv::device_from_path(path)
+            .expect(&format!("fake_phy: failed to open {}", path));
+        let stream = server.into_stream().expect("fake_phy: failed to create stream");
+        (PhyDevice { proxy, device }, stream)
     }
 
     #[test]
     fn test_list_phys() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys.clone());
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -86,19 +107,49 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // The future to list the PHYs should complete and no PHYs should be present.
-        assert_variant!(
-            exec.run_until_stalled(&mut list_fut),
-            Poll::Ready(Ok(phys)) => {
-                assert!(phys.is_empty())
-            }
-        );
+        assert_variant!(exec.run_until_stalled(&mut list_fut),Poll::Ready(Ok(phys)) => {
+            assert!(phys.is_empty())
+        });
+
+        // Add a PHY to the PhyMap.
+        let (phy, _req_stream) = fake_phy("/dev/null");
+        test_values.phys.insert(0, phy);
+
+        // Request the list of available PHYs.
+        let list_fut = test_values.proxy.list_phys();
+        pin_mut!(list_fut);
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
+
+        // Progress the service loop.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // The future to list the PHYs should complete and the PHY should be present.
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Ready(Ok(phys)) => {
+            assert_eq!(vec![0u16], phys);
+        });
+
+        // Remove the PHY from the map.
+        test_values.phys.remove(&0);
+
+        // Request the list of available PHYs.
+        let list_fut = test_values.proxy.list_phys();
+        pin_mut!(list_fut);
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
+
+        // Progress the service loop.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // The future to list the PHYs should complete and no PHYs should be present.
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Ready(Ok(phys)) => {
+            assert!(phys.is_empty())
+        });
     }
 
     #[test]
     fn test_get_dev_path() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -119,7 +170,7 @@ mod tests {
     fn test_query_phy() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -140,7 +191,7 @@ mod tests {
     fn test_watch_devices() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -175,7 +226,7 @@ mod tests {
     fn test_get_country() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -201,7 +252,7 @@ mod tests {
     fn test_set_country() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -229,7 +280,7 @@ mod tests {
     fn test_clear_country() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -256,7 +307,7 @@ mod tests {
     fn test_create_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -287,7 +338,7 @@ mod tests {
     fn test_destroy_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let service_fut = serve_monitor_requests(test_values.req_stream);
+        let service_fut = serve_monitor_requests(test_values.req_stream, test_values.phys);
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
