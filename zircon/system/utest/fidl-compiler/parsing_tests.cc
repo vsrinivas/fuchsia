@@ -730,24 +730,6 @@ protocol Example {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
 }
 
-TEST(ParsingTests, BadRecoverableParamListParsing) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library("example.fidl", R"FIDL(
-library example;
-
-protocol Example {
-  Method(/// Doc comment
-      { b bool; }) -> (/// Doc comment
-      struct  { b bool; });
-};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters,
-                                      fidl::ErrDocCommentOnParameters);
-}
-
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;

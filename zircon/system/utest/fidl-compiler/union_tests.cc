@@ -514,14 +514,12 @@ TEST(UnionTests, BadNoSelector) {
 library example;
 
 type Foo = strict union {
-  [Selector = "v2"] 1: v string;
+  @selector("v2") 1: v string;
 };
 
 )FIDL",
-                      std::move(experimental_flags));
-  // TODO(fxbug.dev/72924): this should become ErrInvalidAttributePlacement
-  // as before once attributes are implemented.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType);
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
 }
 
 // TODO(fxbug.dev/70247): as we clean up the migration, it will probably have

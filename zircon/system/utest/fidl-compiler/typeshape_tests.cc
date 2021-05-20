@@ -100,7 +100,7 @@ library example;
 struct Empty {};
 
     )FIDL");
-  ASSERT_COMPILED(test_library);
+  ASSERT_COMPILED_AND_CONVERT(test_library);
 
   auto empty = test_library.LookupStruct("Empty");
   ASSERT_NOT_NULL(empty);
@@ -2466,7 +2466,8 @@ protocol Parent {
 };
 )FIDL",
                              &shared);
-  ASSERT_TRUE(parent_library.Compile());
+  TestLibrary converted_parent;
+  ASSERT_COMPILED_AND_CONVERT_INTO(parent_library, converted_parent);
 
   TestLibrary child_library("child.fidl", R"FIDL(
 library child;
@@ -2479,7 +2480,42 @@ protocol Child {
 )FIDL",
                             &shared);
   ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
-  ASSERT_TRUE(child_library.Compile());
+  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(child_library, converted_parent);
+
+  auto child = child_library.LookupProtocol("Child");
+  ASSERT_NOT_NULL(child);
+  ASSERT_EQ(child->all_methods.size(), 1);
+  auto& sync_with_info = child->all_methods[0];
+  auto sync_request = sync_with_info.method->maybe_request_payload;
+  EXPECT_EQ(sync_with_info.method->has_request, true);
+  ASSERT_NULL(sync_request);
+}
+
+TEST(TypeshapeTests, GoodProtocolChildAndParentWithOldDep) {
+  SharedAmongstLibraries shared;
+  TestLibrary parent_library("parent.fidl", R"FIDL(
+library parent;
+
+protocol Parent {
+  Sync() -> ();
+};
+)FIDL",
+                             &shared);
+  TestLibrary cloned_parent;
+  ASSERT_COMPILED_AND_CLONE_INTO(parent_library, cloned_parent);
+
+  TestLibrary child_library("child.fidl", R"FIDL(
+library child;
+
+using parent;
+
+protocol Child {
+  compose parent.Parent;
+};
+)FIDL",
+                            &shared);
+  ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
+  ASSERT_COMPILED_AND_CONVERT_WITH_DEP(child_library, cloned_parent);
 
   auto child = child_library.LookupProtocol("Child");
   ASSERT_NOT_NULL(child);
@@ -2757,7 +2793,7 @@ resource struct A {
 };
 
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto struct_a = library.LookupStruct("A");
   ASSERT_NOT_NULL(struct_a);

@@ -253,9 +253,27 @@ struct MyStruct {
   EXPECT_TRUE(library.errors()[0]->msg.find("ZIPPY") != std::string::npos);
 }
 
-TEST(HandleTests, BadDisallowOldHandlesOld) {
+TEST(HandleTests, BadDisallowOldHandles) {
   fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  auto library = WithLibraryZx(R"FIDL(
+library example;
 
+using zx;
+
+type MyStruct = struct {
+    h handle<vmo>;
+};
+)FIDL",
+                               experimental_flags);
+  // TODO(fxbug.dev/77101): provide a less confusing error
+  // NOTE(fxbug.dev/72924): the old syntax returns a different error because
+  // it tries to resolve the parameters before checking that handle points to
+  // a resource definition
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
+}
+
+TEST(HandleTests, BadDisallowOldHandlesOld) {
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -264,9 +282,9 @@ using zx;
 struct MyStruct {
     handle<vmo> h;
 };
-)FIDL",
-                               std::move(experimental_flags));
-
+)FIDL");
+  // This looks like it's returning the correct error, but it's not - the unknown
+  // type here refers to `vmo` not `handle`
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
 }
 
@@ -597,7 +615,7 @@ type MyStruct = resource struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleNoConstraintsOld) {
@@ -608,7 +626,7 @@ resource struct MyStruct {
     handle h;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsOld) {
@@ -619,7 +637,7 @@ resource struct MyStruct {
     handle:VMO h;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraints) {
@@ -633,7 +651,7 @@ type MyStruct = resource struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAliasOld) {
@@ -649,7 +667,7 @@ resource struct MyStruct {
   // NOTE(fxbug.dev/72924): The old syntax fails in a different way because of the way it parses
   // handles, assuming that it's a size bound since it doesn't match "handle" exactly.
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound,
-                                      fidl::ErrHandleSubtypeNotResource);
+                                      fidl::ErrHandleNotResource);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAlias) {
@@ -665,7 +683,7 @@ type MyStruct = resource struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleSubtypeNotResource);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleNotResource);
 }
 
 }  // namespace

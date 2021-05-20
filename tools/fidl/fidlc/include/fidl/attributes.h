@@ -5,6 +5,7 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_ATTRIBUTES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_ATTRIBUTES_H_
 
+#include <iostream>
 #include <set>
 #include <vector>
 

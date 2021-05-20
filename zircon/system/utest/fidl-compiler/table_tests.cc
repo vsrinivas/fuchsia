@@ -105,6 +105,8 @@ type Foo = table {
 };
 )FIDL",
                       std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): difference in parser implementation, the old syntax
+  // checks for this case specifically.
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMissingOrdinalBeforeType)
 }
 
@@ -189,19 +191,6 @@ table Foo {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-// TODO(fxbug.dev/72924): implement attributes
-TEST(TableTests, BadAttributesOnReserved) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    [Foo]
-    1: reserved;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
-}
-
 TEST(TableTests, GoodKeywordsAsFieldNames) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
@@ -254,7 +243,7 @@ type OptionalTableContainer = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
-TEST(TableTests, BadMultipleConstraints) {
+TEST(TableTests, BadTableMultipleConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -302,6 +291,12 @@ type OptionalTableContainer = union {
 };
 )FIDL",
                       std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): this pair of tests aims to document a behavior
+  // difference between the old and new syntaxes: in the old, we check for
+  // ErrNullableTableMember first before determining if the type itself can be
+  // nullable. This is not the case in the new syntax (we need to compile the
+  // type first to determine if it is nullable). The nullable union member
+  // error is tested in UnionTests.BadNoNullableMembers
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
@@ -362,11 +357,6 @@ type Foo = table {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
 }
 
-// NOTE(fxbug.dev/72924): this pair of tests aims to document a behavior
-// difference between the old and new syntaxes: in the old, we check for
-// ErrNullableTableMember first before determining if the type itself can be
-// nullable. This is not the case in the new syntax (we need to compile the
-// type first to determine if it is nullable).
 TEST(TableTests, BadOptionalNonNullableTableMemberOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
@@ -389,6 +379,11 @@ type Foo = table {
 };
 )FIDL",
                       std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): this pair of tests aims to document a behavior
+  // difference between the old and new syntaxes: in the old, we check for
+  // ErrNullableTableMember first before determining if the type itself can be
+  // nullable. This is not the case in the new syntax (we need to compile the
+  // type first to determine if it is nullable).
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 

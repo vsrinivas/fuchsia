@@ -32,7 +32,7 @@ alias alias_of_int16 = int16;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameCollision);
 }
 
-TEST(AliasTests, BadDuplicateAliasAndUsingOld) {
+TEST(AliasTests, BadDuplicateAliasOld) {
   TestLibrary library(R"FIDL(
 library example;
 

@@ -7,7 +7,6 @@ example usage: `./tools/fidl/scripts/syntax_coverage_check.py`
 """
 
 from collections import namedtuple
-from enum import Enum
 from pathlib import Path
 from pprint import pprint
 import re
@@ -50,11 +49,64 @@ GOOD_TEST_ALLOWLIST = {
     TestCase('TypesTests', 'GoodRights'),
     # only applies to the new syntax
     TestCase('ParsingTests', 'GoodSingleConstraint'),
+    # only applies to old syntax
+    TestCase('AttributesTests', 'GoodAttributeCaseNormalizedOldSyntax'),
+}
+
+# failure tests that aren't a Foo/FooOld pair
+BAD_TEST_ALLOWLIST = {
+    # old syntax only: no parameter lists in new syntax
+    'BadRecoverToNextParameterInList',
+    # new syntax only: can't specify multiple constraints on array
+    'BadMultipleConstraintsOnArray',
+    # old syntax only: these bugs are fixed in new syntax
+    'BadHandleAlias',
+    'BadBoundsOnRequestType',
+    'BadBoundsOnArray',
+    # new syntax only (constraints)
+    'BadMultipleConstraintsOnPrimitive',
+    'BadNoOptionalOnAliasedPrimitive',
+    'BadMissingConstraintBrackets',
+    'BadEnumMultipleConstraints',
+    'BadTableMultipleConstraints',
+    'BadBitsMultipleConstraints',
+    # this is a pair of old/new syntax tests, they just don't have matching names
+    'BadFinalMemberMissingTypeAndSemicolon',
+    'BadFinalMemberMissingNameAndSemicolon',
+    # new syntax only: can't specify top level request/response type attributes in old
+    'BadRecoverableParamListParsing',
+    # new syntax only (client/server_end, box)
+    'BadParameterizedTypedChannel',
+    'BadTooManyConstraintsTypedChannel',
+    'BadBoxCannotBeNullable',
+    'BadBoxedTypeCannotBeNullable',
+    'BadTypeCannotBeBoxed',
+    # old syntax only: (going to be removed soon)
+    'BadDeprecatedXUnionError',
+}
+
+# TODO: add notes so that they don't need to be entered here
+ERROR_MISMATCH_ALLOWLIST = {
+    # new syntax does the right thing, old syntax does not
+    'BadBareHandleWithConstraintsThroughAlias',
+    # doesn't apply in new syntax, so we get a syntax error
+    'BadAliasResourceness',
+    'BadProtocolResourceness',
+    'BadConstResourceness',
+    # these return the same underlying error, they just have different names
+    'BadNoAttributeOnUsingNotEventDoc',
+    # type constraint error differences
+    'BadResourceDefinitionMissingRightsPropertyTest',
+    'BadResourceSubtypeNotEnum',
+    'BadResourceDefinitionNonBitsRights',
+    'BadResourceDefinitionMissingSubtypePropertyTest',
+    'BadNonIdentifierSubtype',
 }
 
 FUCHSIA_DIR = os.environ['FUCHSIA_DIR']
 
 WHITE = '\033[1;37m'
+YELLOW = '\033[1;33m'
 NC = '\033[0m'
 
 ALLOWED_PREFIXES = ['Good', 'Bad', 'Warn']
@@ -92,12 +144,14 @@ if __name__ == '__main__':
                         if not is_converted and current not in GOOD_TEST_ALLOWLIST:
                             print(f'  {current.name}')
                             # pass
-                    elif current.name.startswith('Bad'):
+                    # TODO: check that tests with imports have 3 copies
+                    elif current.name.startswith(
+                            'Bad') and not current.name.endswith('WithOldDep'):
                         lookup = old_to_errors if current.name.endswith(
                             'Old') else new_to_errors
                         lookup[current.name] = errors
                         if note:
-                            test_to_notes[current.name] = '\n'.join(note)
+                            test_to_notes[current.name] = ' '.join(note)
 
                     # reset test case state
                     suite = line[line.find('(') + 1:line.find(',')]
@@ -115,19 +169,21 @@ if __name__ == '__main__':
                 if 'ASSERT_COMPILED_AND_CONVERT(' in line or 'ASSERT_COMPILED_AND_CONVERT_WITH_DEP(' in line:
                     assert not current.name.startswith('Bad')
                     is_converted = True
+                    continue
+
+                if 'NOTE(fxbug.dev/72924)' in line:
+                    assert not current.name.startswith('Good')
+                    note.append(line.strip().lstrip('// '))
+                    in_note = True
                 elif in_note:
                     assert not current.name.startswith('Good')
                     if line.lstrip().startswith('// '):
-                        note.append(line.strip())
+                        note.append(line.strip().lstrip('// '))
                     else:
                         in_note = False
-                elif 'NOTE(fxbug.dev/72924)' in line:
-                    assert not current.name.startswith('Good')
-                    note.append(line.strip())
-                    in_note = True
-                else:
-                    errors.extend(re.findall('fidl::(Err\w+)', line))
-                    errors.extend(re.findall('fidl::(Warn\w+)', line))
+
+                errors.extend(re.findall('fidl::(Err\w+)', line))
+                errors.extend(re.findall('fidl::(Warn\w+)', line))
 
             # handle the last test
             if current.name.startswith('Good'):
@@ -142,13 +198,29 @@ if __name__ == '__main__':
                     test_to_notes[current.name] = '\n'.join(note)
 
         # strip the Old suffix first
-        # old_tests = set(t[:-3] for t in old_to_errors.keys())
-        # new_tests = set(t for t in new_to_errors.keys())
-        # for test_name in old_tests | new_tests:
-        #     if test_name not in old_tests:
-        #         print(f' missing old: {test_name}Old')
-        #     elif test_name not in new_tests:
-        #         print(f' missing new: {test_name}')
+        old_tests = set(t[:-3] for t in old_to_errors.keys())
+        new_tests = set(t for t in new_to_errors.keys())
+        for test_name in old_tests | new_tests:
+            if test_name in BAD_TEST_ALLOWLIST:
+                continue
+            if test_name not in old_tests:
+                print(f' missing old: {test_name}Old')
+                continue
+            elif test_name not in new_tests:
+                print(f' missing new: {test_name}')
+                continue
+
+            old_errors = old_to_errors[test_name + 'Old']
+            new_errors = new_to_errors[test_name]
+            if old_errors != new_errors:
+                if test_name not in test_to_notes and test_name not in ERROR_MISMATCH_ALLOWLIST:
+                    # if test_name not in ERROR_MISMATCH_ALLOWLIST:
+                    print_color(
+                        f'  error mismatch for {test_name}: {old_errors} (old) vs {new_errors} (new)',
+                        YELLOW)
+                # if test_name in test_to_notes:
+                #     print('justification:')
+                #     print(test_to_notes[test_name])
 
     if unlabeled_tests:
         print('found unlabeled tests:')

@@ -1503,18 +1503,6 @@ class StepBase {
   bool done_;
 };
 
-// The input to the consume step (raw::File) stores the syntax that it is written
-// in. This syntax needs to get propagated through the two paths that the consume
-// step consists of:
-// * decls that go through RegisterDecl
-// * flat::TypeConstructors that get created in ConsumeTypeConstructor
-// To do so, ConsumeFile passes the raw::File's syntax to the ConsumeStep class,
-// which then passes it through to the various ConsumeFooDecl as necessary. Note
-// that only the Consume functions that correspond to nodes present in both the
-// old and new syntax (e.g. Service, Resource) need the extra Syntax parameter -
-// nodes that only appear in the old or new syntax (e.g. UnionDeclaration for
-// old, Layout for new), don't need the parameter because they can hardcode the
-// syntax inside the implementation.
 class ConsumeStep : public StepBase {
  public:
   ConsumeStep(Library* library, fidl::utils::Syntax syntax) : StepBase(library) {}

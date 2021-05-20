@@ -170,6 +170,20 @@ flexible bits Foo {
 }
 
 TEST(StrictnessTests, BadStrictnessStruct) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = strict struct {
+    i int32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
+}
+
+TEST(StrictnessTests, BadStrictnessStructOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -181,11 +195,22 @@ strict struct Foo {
 }
 
 TEST(StrictnessTests, BadStrictnessTable) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library("table", R"FIDL(
 library example;
 
-strict table StrictFoo {
-};
+type StrictFoo = strict table {};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
+}
+
+TEST(StrictnessTests, BadStrictnessTableOld) {
+  TestLibrary library("table", R"FIDL(
+library example;
+
+strict table StrictFoo {};
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifyModifier);
 }

@@ -980,7 +980,7 @@ class HandleTypeTemplate final : public TypeTemplate {
                    Resource** out_resource) const override {
     Decl* handle_decl = lib.LookupDeclByName(name);
     if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-      return Fail(ErrHandleSubtypeNotResource, name);
+      return Fail(ErrHandleNotResource, name);
     }
 
     auto* resource = static_cast<Resource*>(handle_decl);
@@ -996,14 +996,15 @@ class HandleTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    size_t num_params = !unresolved_args.parameters->items.empty();
-    if (num_params)
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
-                  num_params);
-
     Resource* handle_resource_decl = nullptr;
     if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
       return false;
+
+    size_t num_params = !unresolved_args.parameters->items.empty();
+    if (num_params) {
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+                  num_params);
+    }
 
     HandleType type(name_, handle_resource_decl);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);

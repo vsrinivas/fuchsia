@@ -17,21 +17,18 @@ TEST(RecoverableCompilationTests, BadRecoverInLibraryConsume) {
 library example;
 
 protocol P {};
-protocol P {};         // Error: name collision
+protocol P {};              // Error: name collision
 
-type Union = union {
-    1: b bool;
-}:optional;            // Error: cannot constraint in declaration
-
-type NewType = Union;  // Error: new types not allowed
+@foo
+@foo("foo")                 // Error: attribute name collision
+type Foo = struct {};
 )FIDL",
                       experimental_flags);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 3);
-  ASSERT_ERR(errors[0], fidl::ErrNameCollision);
-  ASSERT_ERR(errors[1], fidl::ErrCannotConstrainInLayoutDecl);
-  ASSERT_ERR(errors[2], fidl::ErrNewTypesNotAllowed);
+  ASSERT_EQ(errors.size(), 2);
+  EXPECT_ERR(errors[0], fidl::ErrNameCollision);
+  EXPECT_ERR(errors[1], fidl::ErrDuplicateAttribute);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryConsumeOld) {
@@ -41,20 +38,14 @@ library example;
 protocol P {};
 protocol P {};      // Error: name collision
 
-table Table {
-    1: string? s;   // Error: nullable table member
-};
-
-union Union {
-    1: string? s;   // Error: nullable union member
-};
+[Foo, Foo = "foo"]  // Error: attribute name collision
+struct Foo {};
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 3);
-  ASSERT_ERR(errors[0], fidl::ErrNameCollision);
-  ASSERT_ERR(errors[1], fidl::ErrNullableTableMember);
-  ASSERT_ERR(errors[2], fidl::ErrNullableUnionMember);
+  ASSERT_EQ(errors.size(), 2);
+  EXPECT_ERR(errors[0], fidl::ErrNameCollision);
+  EXPECT_ERR(errors[1], fidl::ErrDuplicateAttribute);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryCompile) {

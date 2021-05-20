@@ -466,7 +466,27 @@ protocol Special {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ClashTwo_");
 }
 
-// TODO(fxbug.dev/68792), TODO(fxbug.dev/72924): support attributes in the new syntax
+TEST(ProtocolTests, BadSimpleConstraintAppliesToComposedMethodsToo) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol NotSimple {
+    Complex(struct { arg vector<uint64>; });
+};
+
+@for_deprecated_c_bindings
+protocol YearningForSimplicity {
+    compose NotSimple;
+    Simple();
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberMustBeSimple);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "arg");
+}
+
 TEST(ProtocolTests, BadSimpleConstraintAppliesToComposedMethodsTooOld) {
   TestLibrary library(R"FIDL(
 library example;
