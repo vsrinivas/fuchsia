@@ -18,6 +18,7 @@ var (
 		"fvm":                   "fvm",
 		"blobfs":                "blobfs",
 		"mtd-redundant-storage": "mtd-redundant-storage",
+		"encipher":              "encipher",
 		// TODO(fxbug.dev/38517): We can remove this different destination
 		// name once the go bootserver has replaced the old c bootserver
 		// and is called bootserver instead of bootserver_new.
