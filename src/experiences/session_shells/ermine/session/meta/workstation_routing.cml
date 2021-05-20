@@ -95,7 +95,10 @@
             from: "#workstation_session",
         },
         {
-            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            protocol: [
+              "fuchsia.input.injection.InputDeviceRegistry",
+              "fuchsia.input.keymap.Configuration",
+            ],
             from: "#scene_manager",
         },
     ],
