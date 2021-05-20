@@ -26,6 +26,36 @@ pub async fn expect_dir_listing(path: &str, mut expected_listing: Vec<&str>) {
     assert_eq!(expected_listing.len(), 0);
 }
 
+pub async fn expect_dir_listing_with_optionals(
+    path: &str,
+    mut must_have: Vec<&str>,
+    mut may_have: Vec<&str>,
+) {
+    info!("{} should contain {:?}", path, must_have);
+    info!("{} may contain {:?}", path, may_have);
+    let dir_proxy = open_directory_in_namespace(path, io_util::OPEN_RIGHT_READABLE).unwrap();
+    let mut actual_listing = readdir(&dir_proxy).await.unwrap();
+
+    actual_listing.retain(|actual_entry| {
+        if let Some(index) =
+            must_have.iter().position(|must_entry| *must_entry == actual_entry.name)
+        {
+            must_have.remove(index);
+            return false;
+        }
+        if let Some(index) = may_have.iter().position(|may_entry| *may_entry == actual_entry.name) {
+            may_have.remove(index);
+            return false;
+        }
+        return true;
+    });
+
+    // All must_haves are present
+    assert_eq!(must_have.len(), 0);
+    // No actuals are unexpected
+    assert_eq!(actual_listing.len(), 0);
+}
+
 pub async fn expect_file_content(path: &str, expected_file_content: &str) {
     info!("{} should contain \"{}\"", path, expected_file_content);
     let file_proxy = open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE).unwrap();

@@ -33,9 +33,11 @@ async fn main() {
     )
     .await;
 
-    expect_dir_listing(
+    expect_dir_listing_with_optionals(
         "/parent_hub/children/reporter/exec/in/svc",
         vec!["fidl.examples.routing.echo.Echo", "fuchsia.logger.LogSink"],
+        // Coverage builds also use DebugData
+        vec!["fuchsia.debugdata.DebugData"],
     )
     .await;
 
