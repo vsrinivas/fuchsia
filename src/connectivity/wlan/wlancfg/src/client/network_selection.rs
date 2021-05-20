@@ -12,7 +12,6 @@ use {
             self, ConnectFailure, Credential, FailureReason, SavedNetworksManager,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
-        util::sme_conversion::security_from_sme_protection,
     },
     async_trait::async_trait,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
@@ -26,7 +25,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::{debug, error, info, trace, warn},
+    log::{debug, error, info, trace},
     rand::Rng,
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
     wlan_common::{channel::Channel, hasher::WlanHasher},
@@ -209,12 +208,12 @@ impl NetworkSelector {
         }
     }
 
-    pub fn generate_scan_result_updater(&self, wpa3_supported: bool) -> NetworkSelectorScanUpdater {
+    pub fn generate_scan_result_updater(&self) -> NetworkSelectorScanUpdater {
         NetworkSelectorScanUpdater {
             scan_result_cache: Arc::clone(&self.scan_result_cache),
             saved_network_manager: Arc::clone(&self.saved_network_manager),
             cobalt_api: Arc::clone(&self.cobalt_api),
-            wpa3_supported,
+            hasher: self.hasher.clone(),
         }
     }
 
@@ -264,7 +263,7 @@ impl NetworkSelector {
                 iface_manager,
                 self.saved_network_manager.clone(),
                 None,
-                self.generate_scan_result_updater(wpa3_supported),
+                self.generate_scan_result_updater(),
                 scan::LocationSensorUpdater { wpa3_supported },
                 |_| {
                     let active_scan_request_count_metric =
@@ -397,67 +396,11 @@ async fn merge_saved_networks_and_scan_data<'a>(
     merged_networks
 }
 
-/// Insert all saved networks into a hashmap with this module's internal data representation
-async fn load_saved_networks(
-    saved_network_manager: Arc<SavedNetworksManager>,
-) -> HashMap<types::NetworkIdentifier, InternalSavedNetworkData> {
-    let mut networks: HashMap<types::NetworkIdentifier, InternalSavedNetworkData> = HashMap::new();
-    for saved_network in saved_network_manager.get_networks().await.into_iter() {
-        let recent_failures = saved_network
-            .perf_stats
-            .failure_list
-            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW);
-
-        trace!(
-            "Adding saved network to hashmap{}",
-            if recent_failures.len() > 0 { " with some failures" } else { "" }
-        );
-        let id = types::NetworkIdentifier {
-            ssid: saved_network.ssid.clone(),
-            type_: saved_network.security_type.into(),
-        };
-        // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
-        if let Some(security_type) = upgrade_security(&saved_network.security_type) {
-            if let Some(_) = networks.insert(
-                types::NetworkIdentifier { ssid: saved_network.ssid.clone(), type_: security_type },
-                InternalSavedNetworkData {
-                    network_id: id.clone(),
-                    credential: saved_network.credential.clone(),
-                    has_ever_connected: saved_network.has_ever_connected,
-                    recent_failures: recent_failures.clone(),
-                },
-            ) {
-                warn!("Replaced saved network with automatically upgrade security version");
-            };
-        }
-        if let Some(_) = networks.insert(
-            id.clone(),
-            InternalSavedNetworkData {
-                network_id: id,
-                credential: saved_network.credential,
-                has_ever_connected: saved_network.has_ever_connected,
-                recent_failures: recent_failures,
-            },
-        ) {
-            warn!("Duplicate saved network found");
-        };
-    }
-    networks
-}
-
-pub fn upgrade_security(security: &config_management::SecurityType) -> Option<types::SecurityType> {
-    match security {
-        config_management::SecurityType::Wpa => Some(types::SecurityType::Wpa2),
-        config_management::SecurityType::Wpa2 => Some(types::SecurityType::Wpa3),
-        _ => None,
-    }
-}
-
 pub struct NetworkSelectorScanUpdater {
     scan_result_cache: Arc<Mutex<ScanResultCache>>,
     saved_network_manager: Arc<SavedNetworksManager>,
     cobalt_api: Arc<Mutex<CobaltSender>>,
-    wpa3_supported: bool,
+    hasher: WlanHasher,
 }
 #[async_trait]
 impl ScanResultUpdate for NetworkSelectorScanUpdater {
@@ -470,10 +413,15 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
         drop(scan_result_guard);
 
         // Record metrics for this scan
-        let saved_networks = load_saved_networks(Arc::clone(&self.saved_network_manager)).await;
+        let merged_networks = merge_saved_networks_and_scan_data(
+            &self.saved_network_manager,
+            scan_results,
+            &self.hasher,
+        )
+        .await;
         let mut cobalt_api_guard = self.cobalt_api.lock().await;
         let cobalt_api = &mut *cobalt_api_guard;
-        record_metrics_on_scan(scan_results, saved_networks, cobalt_api, self.wpa3_supported);
+        record_metrics_on_scan(merged_networks, cobalt_api);
         drop(cobalt_api_guard);
     }
 }
@@ -599,44 +547,34 @@ async fn augment_bss_with_active_scan(
 }
 
 fn record_metrics_on_scan(
-    scan_results: &Vec<types::ScanResult>,
-    saved_networks: HashMap<types::NetworkIdentifier, InternalSavedNetworkData>,
+    mut merged_networks: Vec<InternalBss<'_>>,
     cobalt_api: &mut CobaltSender,
-    wpa3_supported: bool,
 ) {
-    let mut num_saved_networks_observed = 0;
+    let mut merged_network_map: HashMap<types::NetworkIdentifier, Vec<InternalBss<'_>>> =
+        HashMap::new();
+    for bss in merged_networks.drain(..) {
+        merged_network_map.entry(bss.network_info.network_id.clone()).or_default().push(bss);
+    }
+
+    let num_saved_networks_observed = merged_network_map.len();
     let mut num_actively_scanned_networks = 0;
+    for (_network_id, bsss) in merged_network_map {
+        // Record how many BSSs are visible in the scan results for this saved network.
+        let num_bss = match bsss.len() {
+            0 => unreachable!(), // The ::Zero enum exists, but we shouldn't get a scan result with no BSS
+            1 => SavedNetworkInScanResultMetricDimensionBssCount::One,
+            2..=4 => SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour,
+            5..=10 => SavedNetworkInScanResultMetricDimensionBssCount::FiveToTen,
+            11..=20 => SavedNetworkInScanResultMetricDimensionBssCount::ElevenToTwenty,
+            21..=usize::MAX => SavedNetworkInScanResultMetricDimensionBssCount::TwentyOneOrMore,
+            _ => unreachable!(),
+        };
+        cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
 
-    for scan_result in scan_results {
-        // TODO(fxbug.dev/70965): use detailed security type for this matching
-        if let Some(type_) =
-            security_from_sme_protection(scan_result.security_type_detailed, wpa3_supported)
-        {
-            let id = types::NetworkIdentifier { ssid: scan_result.ssid.clone(), type_ };
-            if let Some(_) = saved_networks.get(&id) {
-                // This saved network was present in scan results.
-                num_saved_networks_observed += 1;
-
-                // Check if the network was found via active scan.
-                if scan_result.entries.iter().any(|bss| bss.observed_in_passive_scan == false) {
-                    num_actively_scanned_networks += 1;
-                };
-
-                // Record how many BSSs are visible in the scan results for this saved network.
-                let num_bss = match scan_result.entries.len() {
-                    0 => unreachable!(), // The ::Zero enum exists, but we shouldn't get a scan result with no BSS
-                    1 => SavedNetworkInScanResultMetricDimensionBssCount::One,
-                    2..=4 => SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour,
-                    5..=10 => SavedNetworkInScanResultMetricDimensionBssCount::FiveToTen,
-                    11..=20 => SavedNetworkInScanResultMetricDimensionBssCount::ElevenToTwenty,
-                    21..=usize::MAX => {
-                        SavedNetworkInScanResultMetricDimensionBssCount::TwentyOneOrMore
-                    }
-                    _ => unreachable!(),
-                };
-                cobalt_api.log_event(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID, num_bss);
-            }
-        }
+        // Check if the network was found via active scan.
+        if bsss.iter().any(|bss| bss.bss_info.observed_in_passive_scan == false) {
+            num_actively_scanned_networks += 1;
+        };
     }
 
     let saved_network_count_metric = match num_saved_networks_observed {
@@ -839,95 +777,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn saved_networks_are_loaded() {
-        let test_values = test_setup().await;
-
-        // check there are 0 saved networks to start with
-        let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
-        assert_eq!(networks.len(), 0);
-
-        // create some identifiers
-        let test_id_1 = types::NetworkIdentifier {
-            ssid: "foo".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
-        };
-        let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let bssid_1 = [0; 6];
-        let ssid_2 = "bar".as_bytes().to_vec();
-        let test_id_2 =
-            types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa };
-        let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
-        let bssid_2 = [1, 2, 3, 4, 5, 6];
-
-        // insert some new saved networks
-        assert!(test_values
-            .saved_network_manager
-            .store(test_id_1.clone().into(), credential_1.clone())
-            .await
-            .unwrap()
-            .is_none());
-
-        assert!(test_values
-            .saved_network_manager
-            .store(test_id_2.clone().into(), credential_2.clone())
-            .await
-            .unwrap()
-            .is_none());
-
-        // mark the first one as having connected
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                test_id_1.clone().into(),
-                &credential_1.clone(),
-                bssid_1,
-                fidl_sme::ConnectResultCode::Success,
-                None,
-            )
-            .await;
-
-        // mark the second one as having a failure
-        test_values
-            .saved_network_manager
-            .record_connect_result(
-                test_id_2.clone().into(),
-                &credential_2.clone(),
-                bssid_2,
-                fidl_sme::ConnectResultCode::CredentialRejected,
-                None,
-            )
-            .await;
-
-        // check these networks were loaded
-        let mut expected_hashmap = HashMap::new();
-        let _ = expected_hashmap.insert(
-            test_id_1.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_1,
-                credential: credential_1,
-                has_ever_connected: true,
-                recent_failures: Vec::new(),
-            },
-        );
-        let connect_failures =
-            get_connect_failures(test_id_2.clone(), &test_values.saved_network_manager).await;
-        let internal_data_2 = InternalSavedNetworkData {
-            network_id: test_id_2.clone(),
-            credential: credential_2.clone(),
-            has_ever_connected: false,
-            recent_failures: connect_failures,
-        };
-        let _ = expected_hashmap.insert(test_id_2.clone(), internal_data_2.clone());
-        // Networks saved as WPA can be used to auto connect to WPA2 networks
-        let _ = expected_hashmap.insert(
-            types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa2 },
-            internal_data_2.clone(),
-        );
-        let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
-        assert_eq!(networks, expected_hashmap);
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn scan_results_are_stored() {
         let mut test_values = test_setup().await;
         let network_selector = test_values.network_selector;
@@ -939,7 +788,7 @@ mod tests {
 
         // provide some new scan results
         let mock_scan_results = vec![generate_random_scan_result(), generate_random_scan_result()];
-        let mut updater = network_selector.generate_scan_result_updater(true);
+        let mut updater = network_selector.generate_scan_result_updater();
         updater.update_scan_results(&mock_scan_results).await;
 
         // check that the scan results are stored
@@ -954,10 +803,6 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn scan_results_merged_with_saved_networks() {
         let test_values = test_setup().await;
-
-        // check there are 0 saved networks to start with
-        let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
-        assert_eq!(networks.len(), 0);
 
         // create some identifiers
         let test_ssid_1 = "foo".as_bytes().to_vec();
@@ -2360,7 +2205,7 @@ mod tests {
             }],
             compatibility: types::Compatibility::Supported,
         }];
-        let mut updater = network_selector.generate_scan_result_updater(true);
+        let mut updater = network_selector.generate_scan_result_updater();
         exec.run_singlethreaded(updater.update_scan_results(&mixed_scan_results));
 
         // Set the scan cache's "updated_at" field to the future so that a scan won't be triggered.
@@ -2595,93 +2440,95 @@ mod tests {
 
         // create some identifiers
         let test_ssid_1 = "foo".as_bytes().to_vec();
-        let test_security_1 = types::SecurityTypeDetailed::Wpa3Personal;
         let test_id_1 = types::NetworkIdentifier {
             ssid: test_ssid_1.clone(),
             type_: types::SecurityType::Wpa3,
         };
         let test_ssid_2 = "bar".as_bytes().to_vec();
-        let test_security_2 = types::SecurityTypeDetailed::Wpa1;
         let test_id_2 =
             types::NetworkIdentifier { ssid: test_ssid_2.clone(), type_: types::SecurityType::Wpa };
 
-        let mock_scan_results = vec![
-            types::ScanResult {
-                ssid: test_ssid_1.clone(),
-                security_type_detailed: test_security_1.clone(),
-                entries: vec![
-                    types::Bss { observed_in_passive_scan: true, ..generate_random_bss() },
-                    types::Bss { observed_in_passive_scan: true, ..generate_random_bss() },
-                    types::Bss { observed_in_passive_scan: false, ..generate_random_bss() },
-                ],
-                compatibility: types::Compatibility::Supported,
-            },
-            types::ScanResult {
-                ssid: test_ssid_2.clone(),
-                security_type_detailed: test_security_2.clone(),
-                entries: vec![types::Bss {
-                    observed_in_passive_scan: true,
-                    ..generate_random_bss()
-                }],
-                compatibility: types::Compatibility::Supported,
-            },
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-        ];
+        let hasher = WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes());
+        let mut mock_scan_results = vec![];
 
-        let mut mock_saved_networks = HashMap::new();
-        let _ = mock_saved_networks.insert(
-            test_id_1.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_1.clone(),
-                credential: Credential::Password("foo_pass".as_bytes().to_vec()),
-                has_ever_connected: false,
-                recent_failures: Vec::new(),
-            },
-        );
-        let _ = mock_saved_networks.insert(
-            test_id_2.clone(),
-            InternalSavedNetworkData {
+        let test_network_info_1 = InternalSavedNetworkData {
+            network_id: test_id_1.clone(),
+            credential: Credential::Password("foo_pass".as_bytes().to_vec()),
+            has_ever_connected: false,
+            recent_failures: Vec::new(),
+        };
+        let test_bss_1 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
+        mock_scan_results.push(InternalBss {
+            network_info: test_network_info_1.clone(),
+            bss_info: &test_bss_1,
+            multiple_bss_candidates: true,
+            hasher: hasher.clone(),
+        });
+
+        let test_bss_2 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
+        mock_scan_results.push(InternalBss {
+            network_info: test_network_info_1.clone(),
+            bss_info: &test_bss_2,
+            multiple_bss_candidates: true,
+            hasher: hasher.clone(),
+        });
+
+        // mark one BSS as found in active scan
+        let test_bss_3 = types::Bss { observed_in_passive_scan: false, ..generate_random_bss() };
+        mock_scan_results.push(InternalBss {
+            network_info: test_network_info_1.clone(),
+            bss_info: &test_bss_3,
+            multiple_bss_candidates: true,
+            hasher: hasher.clone(),
+        });
+
+        let test_bss_4 = types::Bss { observed_in_passive_scan: true, ..generate_random_bss() };
+        mock_scan_results.push(InternalBss {
+            network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: Credential::Password("bar_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
                 recent_failures: Vec::new(),
             },
-        );
-        let random_saved_net = generate_random_saved_network();
-        let _ = mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
-        let random_saved_net = generate_random_saved_network();
-        let _ = mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
-        let random_saved_net = generate_random_saved_network();
-        let _ = mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+            bss_info: &test_bss_4,
+            multiple_bss_candidates: false,
+            hasher: hasher.clone(),
+        });
 
-        record_metrics_on_scan(&mock_scan_results, mock_saved_networks, &mut cobalt_api, true);
+        record_metrics_on_scan(mock_scan_results, &mut cobalt_api);
+
+        // The order of the first two cobalt events is not deterministic, so extract them into
+        // a vector that we're search through
+        let cobalt_events_vec =
+            vec![cobalt_events.try_next().unwrap(), cobalt_events.try_next().unwrap()];
 
         // Three BSSs present for network 1 in scan results
-        assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
-                    .with_event_code(
-                        SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour.as_event_code()
-                    )
-                    .as_event()
-            )
-        );
+        assert!(cobalt_events_vec
+            .iter()
+            .find(|&event| event
+                == &Some(
+                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
+                        .with_event_code(
+                            SavedNetworkInScanResultMetricDimensionBssCount::TwoToFour
+                                .as_event_code()
+                        )
+                        .as_event()
+                ))
+            .is_some());
+
         // One BSS present for network 2 in scan results
-        assert_eq!(
-            cobalt_events.try_next().unwrap(),
-            Some(
-                CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
-                    .with_event_code(
-                        SavedNetworkInScanResultMetricDimensionBssCount::One.as_event_code()
-                    )
-                    .as_event()
-            )
-        );
+        assert!(cobalt_events_vec
+            .iter()
+            .find(|&event| event
+                == &Some(
+                    CobaltEvent::builder(SAVED_NETWORK_IN_SCAN_RESULT_METRIC_ID)
+                        .with_event_code(
+                            SavedNetworkInScanResultMetricDimensionBssCount::One.as_event_code()
+                        )
+                        .as_event()
+                ))
+            .is_some());
+
         // Total of two saved networks in the scan results
         assert_eq!(
             cobalt_events.try_next().unwrap(),
@@ -2710,18 +2557,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn recorded_metrics_on_scan_no_saved_networks() {
         let (mut cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let mock_scan_results = vec![];
 
-        let mock_scan_results = vec![
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-            generate_random_scan_result(),
-        ];
-
-        let mock_saved_networks = HashMap::new();
-
-        record_metrics_on_scan(&mock_scan_results, mock_saved_networks, &mut cobalt_api, true);
+        record_metrics_on_scan(mock_scan_results, &mut cobalt_api);
 
         // No saved networks in scan results
         assert_eq!(
@@ -2745,22 +2583,6 @@ mod tests {
         );
         // No more metrics
         assert!(cobalt_events.try_next().is_err());
-    }
-
-    /// Get the connect failures of the specified network identifier for a test. This is used
-    /// because we currently can't
-    async fn get_connect_failures(
-        id: types::NetworkIdentifier,
-        saved_networks_manager: &SavedNetworksManager,
-    ) -> Vec<ConnectFailure> {
-        saved_networks_manager
-            .lookup(id.into())
-            .await
-            .get(0)
-            .expect("failed to get config")
-            .perf_stats
-            .failure_list
-            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
     }
 
     fn connect_failure_with_bssid(bssid: types::Bssid) -> ConnectFailure {

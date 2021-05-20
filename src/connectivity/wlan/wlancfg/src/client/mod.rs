@@ -293,7 +293,7 @@ async fn handle_client_request_scan(
         iface_manager,
         saved_networks.clone(),
         Some(output_iterator),
-        network_selector.generate_scan_result_updater(wpa3_supported),
+        network_selector.generate_scan_result_updater(),
         scan::LocationSensorUpdater { wpa3_supported },
         |_| {
             if potentially_hidden_saved_networks.is_empty() {
