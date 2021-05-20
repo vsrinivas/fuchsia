@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
-use fidl_fuchsia_hardware_ethernet as zx_eth;
-use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_ext as net_ext;
-use fidl_fuchsia_net_filter::FilterMarker;
-use fidl_fuchsia_net_neighbor as neighbor;
-use fidl_fuchsia_net_neighbor_ext as neighbor_ext;
-use fidl_fuchsia_net_stack::{self as netstack, InterfaceInfo, LogMarker, StackMarker};
-use fidl_fuchsia_net_stack_ext::{self as pretty, exec_fidl as stack_fidl, FidlReturn};
-use fidl_fuchsia_netstack::NetstackMarker;
+use fidl_fuchsia_hardware_ethernet as fethernet;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_filter as ffilter;
+use fidl_fuchsia_net_neighbor as fneighbor;
+use fidl_fuchsia_net_neighbor_ext as fneighbor_ext;
+use fidl_fuchsia_net_stack as fstack;
+use fidl_fuchsia_net_stack_ext::{self as fstack_ext, FidlReturn as _};
+use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_zircon_status as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::info;
-use netfilter::FidlReturn as FilterFidlReturn;
+use netfilter::FidlReturn as _;
 use prettytable::{cell, format, row, Row, Table};
 use std::str::FromStr as _;
 
@@ -39,7 +39,7 @@ pub struct Device {
     /// The path to the device in the driver tree.
     pub topological_path: String,
     /// A channel to the device's I/O protocol.
-    pub dev: fidl::endpoints::ClientEnd<zx_eth::DeviceMarker>,
+    pub dev: fidl::endpoints::ClientEnd<fethernet::DeviceMarker>,
 }
 
 /// An interface for acquiring a proxy to a FIDL service.
@@ -53,12 +53,12 @@ pub trait ServiceConnector<S: fidl::endpoints::ServiceMarker> {
 /// FIDL dependencies are specified as supertraits. These supertraits are a complete enumeration of
 /// all FIDL dependencies required by net-cli.
 pub trait NetCliDepsConnector:
-    ServiceConnector<StackMarker>
-    + ServiceConnector<NetstackMarker>
-    + ServiceConnector<FilterMarker>
-    + ServiceConnector<LogMarker>
-    + ServiceConnector<neighbor::ControllerMarker>
-    + ServiceConnector<neighbor::ViewMarker>
+    ServiceConnector<fstack::StackMarker>
+    + ServiceConnector<fnetstack::NetstackMarker>
+    + ServiceConnector<ffilter::FilterMarker>
+    + ServiceConnector<fstack::LogMarker>
+    + ServiceConnector<fneighbor::ControllerMarker>
+    + ServiceConnector<fneighbor::ViewMarker>
 {
     /// Acquires a connection to the device at the provided path.
     ///
@@ -108,11 +108,11 @@ pub async fn do_root<C: NetCliDepsConnector>(
     }
 }
 
-fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<InterfaceInfo>) {
+fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<fstack::InterfaceInfo>) {
     interfaces.retain(|i| i.properties.name.contains(name_pattern))
 }
 
-async fn tabulate_interfaces_info(interfaces: Vec<InterfaceInfo>) -> Result<String, Error> {
+async fn tabulate_interfaces_info(interfaces: Vec<fstack::InterfaceInfo>) -> Result<String, Error> {
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
@@ -121,10 +121,10 @@ async fn tabulate_interfaces_info(interfaces: Vec<InterfaceInfo>) -> Result<Stri
             let () = add_row(&mut t, row![]);
         }
 
-        let pretty::InterfaceInfo {
+        let fstack_ext::InterfaceInfo {
             id,
             properties:
-                pretty::InterfaceProperties {
+                fstack_ext::InterfaceProperties {
                     name,
                     topopath,
                     filepath,
@@ -172,7 +172,7 @@ where
 async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Result<(), Error> {
     match cmd {
         IfEnum::List(IfList { name_pattern }) => {
-            let stack = connect_with_context::<StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
             let mut response = stack.list_interfaces().await.context("error getting response")?;
             if let Some(name_pattern) = name_pattern {
                 let () = shortlist_interfaces(&name_pattern, &mut response);
@@ -184,8 +184,8 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
         }
         IfEnum::Add(IfAdd { path }) => match connector.connect_device(&path) {
             Ok(Device { topological_path, dev }) => {
-                let stack = connect_with_context::<StackMarker, _>(connector)?;
-                let id = stack_fidl!(
+                let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+                let id = fstack_ext::exec_fidl!(
                     stack.add_ethernet_interface(&topological_path, dev),
                     "error adding interface"
                 )?;
@@ -196,58 +196,68 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
             }
         },
         IfEnum::Del(IfDel { id }) => {
-            let stack = connect_with_context::<StackMarker, _>(connector)?;
-            let () = stack_fidl!(stack.del_ethernet_interface(id), "error removing interface")?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let () = fstack_ext::exec_fidl!(
+                stack.del_ethernet_interface(id),
+                "error removing interface"
+            )?;
             info!("Deleted interface {}", id);
         }
         IfEnum::Get(IfGet { id }) => {
-            let stack = connect_with_context::<StackMarker, _>(connector)?;
-            let info = stack_fidl!(stack.get_interface_info(id), "error getting interface")?;
-            println!("{}", pretty::InterfaceInfo::from(info));
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let info =
+                fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
+            println!("{}", fstack_ext::InterfaceInfo::from(info));
         }
         IfEnum::Enable(IfEnable { id }) => {
-            let stack = connect_with_context::<StackMarker, _>(connector)?;
-            let () = stack_fidl!(stack.enable_interface(id), "error enabling interface")?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let () =
+                fstack_ext::exec_fidl!(stack.enable_interface(id), "error enabling interface")?;
             info!("Interface {} enabled", id);
         }
         IfEnum::Disable(IfDisable { id }) => {
-            let stack = connect_with_context::<StackMarker, _>(connector)?;
-            let () = stack_fidl!(stack.disable_interface(id), "error disabling interface")?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let () =
+                fstack_ext::exec_fidl!(stack.disable_interface(id), "error disabling interface")?;
             info!("Interface {} disabled", id);
         }
         IfEnum::Addr(IfAddr { addr_cmd }) => {
-            let stack = connect_with_context::<StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
             match addr_cmd {
                 IfAddrEnum::Add(IfAddrAdd { id, addr, prefix }) => {
-                    let parsed_addr = net_ext::IpAddress::from_str(&addr)?.into();
-                    let mut fidl_addr = net::Subnet { addr: parsed_addr, prefix_len: prefix };
-                    let () = stack_fidl!(
+                    let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
+                    let mut fidl_addr = fnet::Subnet { addr: parsed_addr, prefix_len: prefix };
+                    let () = fstack_ext::exec_fidl!(
                         stack.add_interface_address(id, &mut fidl_addr),
                         "error adding interface address"
                     )?;
-                    info!("Address {} added to interface {}", net_ext::Subnet::from(fidl_addr), id);
+                    info!(
+                        "Address {} added to interface {}",
+                        fnet_ext::Subnet::from(fidl_addr),
+                        id
+                    );
                 }
                 IfAddrEnum::Del(IfAddrDel { id, addr, prefix }) => {
-                    let parsed_addr = net_ext::IpAddress::from_str(&addr)?.into();
+                    let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
                     let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
-                        net::IpAddress::Ipv4(_) => 32,
-                        net::IpAddress::Ipv6(_) => 128,
+                        fnet::IpAddress::Ipv4(_) => 32,
+                        fnet::IpAddress::Ipv6(_) => 128,
                     });
-                    let mut fidl_addr = net::Subnet { addr: parsed_addr, prefix_len };
-                    let () = stack_fidl!(
+                    let mut fidl_addr = fnet::Subnet { addr: parsed_addr, prefix_len };
+                    let () = fstack_ext::exec_fidl!(
                         stack.del_interface_address(id, &mut fidl_addr),
                         "error deleting interface address"
                     )?;
                     info!(
                         "Address {} deleted from interface {}",
-                        net_ext::Subnet::from(fidl_addr),
+                        fnet_ext::Subnet::from(fidl_addr),
                         id
                     );
                 }
             }
         }
         IfEnum::Bridge(IfBridge { ids }) => {
-            let netstack = connect_with_context::<NetstackMarker, _>(connector)?;
+            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
             let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
             if result.status != fidl_fuchsia_netstack::Status::Ok {
                 return Err(anyhow::anyhow!("{:?}: {}", result.status, result.message));
@@ -260,51 +270,51 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
 }
 
 async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Result<(), Error> {
-    let stack = connect_with_context::<StackMarker, _>(connector)?;
+    let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
     match cmd {
         FwdEnum::List(_) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
             for entry in response {
-                println!("{}", pretty::ForwardingEntry::from(entry));
+                println!("{}", fstack_ext::ForwardingEntry::from(entry));
             }
         }
         FwdEnum::AddDevice(FwdAddDevice { id, addr, prefix }) => {
-            let mut entry = netstack::ForwardingEntry {
-                subnet: net::Subnet {
-                    addr: net_ext::IpAddress::from_str(&addr)?.into(),
+            let mut entry = fstack::ForwardingEntry {
+                subnet: fnet::Subnet {
+                    addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
                     prefix_len: prefix,
                 },
-                destination: netstack::ForwardingDestination::DeviceId(id),
+                destination: fstack::ForwardingDestination::DeviceId(id),
             };
-            let () = stack_fidl!(
+            let () = fstack_ext::exec_fidl!(
                 stack.add_forwarding_entry(&mut entry),
                 "error adding device forwarding entry"
             )?;
             info!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
         }
         FwdEnum::AddHop(FwdAddHop { next_hop, addr, prefix }) => {
-            let mut entry = netstack::ForwardingEntry {
-                subnet: net::Subnet {
-                    addr: net_ext::IpAddress::from_str(&addr)?.into(),
+            let mut entry = fstack::ForwardingEntry {
+                subnet: fnet::Subnet {
+                    addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
                     prefix_len: prefix,
                 },
-                destination: netstack::ForwardingDestination::NextHop(
-                    net_ext::IpAddress::from_str(&next_hop)?.into(),
+                destination: fstack::ForwardingDestination::NextHop(
+                    fnet_ext::IpAddress::from_str(&next_hop)?.into(),
                 ),
             };
-            let () = stack_fidl!(
+            let () = fstack_ext::exec_fidl!(
                 stack.add_forwarding_entry(&mut entry),
                 "error adding next-hop forwarding entry"
             )?;
             info!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
         }
         FwdEnum::Del(FwdDel { addr, prefix }) => {
-            let mut entry = net::Subnet {
-                addr: net_ext::IpAddress::from_str(&addr)?.into(),
+            let mut entry = fnet::Subnet {
+                addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
                 prefix_len: prefix,
             };
-            let () = stack_fidl!(
+            let () = fstack_ext::exec_fidl!(
                 stack.del_forwarding_entry(&mut entry),
                 "error removing forwarding entry"
             )?;
@@ -318,7 +328,7 @@ async fn do_route<C: NetCliDepsConnector>(
     cmd: opts::RouteEnum,
     connector: &C,
 ) -> Result<(), Error> {
-    let netstack = connect_with_context::<NetstackMarker, _>(connector)?;
+    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
     match cmd {
         RouteEnum::List(RouteList {}) => {
             let response =
@@ -379,7 +389,7 @@ async fn do_filter<C: NetCliDepsConnector>(
     cmd: opts::FilterEnum,
     connector: &C,
 ) -> Result<(), Error> {
-    let filter = connect_with_context::<FilterMarker, _>(connector)?;
+    let filter = connect_with_context::<ffilter::FilterMarker, _>(connector)?;
     match cmd {
         FilterEnum::Enable(_) => {
             let () = filter_fidl!(filter.enable(true), "error enabling filter")?;
@@ -446,7 +456,7 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
     cmd: opts::IpFwdEnum,
     connector: &C,
 ) -> Result<(), Error> {
-    let stack = connect_with_context::<StackMarker, _>(connector)?;
+    let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
     match cmd {
         IpFwdEnum::Enable(IpFwdEnable {}) => {
             let () = stack
@@ -467,10 +477,13 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
 }
 
 async fn do_log<C: NetCliDepsConnector>(cmd: opts::LogEnum, connector: &C) -> Result<(), Error> {
-    let log = connect_with_context::<LogMarker, _>(connector)?;
+    let log = connect_with_context::<fstack::LogMarker, _>(connector)?;
     match cmd {
         LogEnum::SetLevel(LogSetLevel { log_level }) => {
-            let () = stack_fidl!(log.set_log_level(log_level.into()), "error setting log level")?;
+            let () = fstack_ext::exec_fidl!(
+                log.set_log_level(log_level.into()),
+                "error setting log level"
+            )?;
             info!("log level set to {:?}", log_level);
         }
         LogEnum::SetPackets(LogSetPackets { enabled }) => {
@@ -487,7 +500,7 @@ async fn do_metric<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         MetricEnum::Set(MetricSet { id, metric }) => {
-            let netstack = connect_with_context::<NetstackMarker, _>(connector)?;
+            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
             let result = netstack.set_interface_metric(id, metric).await?;
             if result.status != fidl_fuchsia_netstack::Status::Ok {
                 Err(anyhow::anyhow!("{:?}: {}", result.status, result.message))
@@ -500,7 +513,7 @@ async fn do_metric<C: NetCliDepsConnector>(
 }
 
 async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> Result<(), Error> {
-    let netstack = connect_with_context::<NetstackMarker, _>(connector)?;
+    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
     let (dhcp, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
     match cmd {
@@ -526,41 +539,41 @@ async fn do_neigh<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         NeighEnum::Add(NeighAdd { interface, ip, mac }) => {
-            let controller = connect_with_context::<neighbor::ControllerMarker, _>(connector)?;
+            let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
             let () = do_neigh_add(interface, ip.into(), mac.into(), controller)
                 .await
                 .context("failed during neigh add command")?;
             info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
         }
         NeighEnum::Clear(NeighClear { interface, ip_version }) => {
-            let controller = connect_with_context::<neighbor::ControllerMarker, _>(connector)?;
+            let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
             let () = do_neigh_clear(interface, ip_version, controller)
                 .await
                 .context("failed during neigh clear command")?;
             info!("Cleared entries for interface {}", interface);
         }
         NeighEnum::Del(NeighDel { interface, ip }) => {
-            let controller = connect_with_context::<neighbor::ControllerMarker, _>(connector)?;
+            let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
             let () = do_neigh_del(interface, ip.into(), controller)
                 .await
                 .context("failed during neigh del command")?;
             info!("Deleted entry {} for interface {}", ip, interface);
         }
         NeighEnum::List(NeighList {}) => {
-            let view = connect_with_context::<neighbor::ViewMarker, _>(connector)?;
+            let view = connect_with_context::<fneighbor::ViewMarker, _>(connector)?;
             let () = print_neigh_entries(false /* watch_for_changes */, view)
                 .await
                 .context("error listing neighbor entries")?;
         }
         NeighEnum::Watch(NeighWatch {}) => {
-            let view = connect_with_context::<neighbor::ViewMarker, _>(connector)?;
+            let view = connect_with_context::<fneighbor::ViewMarker, _>(connector)?;
             let () = print_neigh_entries(true /* watch_for_changes */, view)
                 .await
                 .context("error watching for changes to the neighbor table")?;
         }
         NeighEnum::Config(NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
             NeighConfigEnum::Get(NeighGetConfig { interface, ip_version }) => {
-                let view = connect_with_context::<neighbor::ViewMarker, _>(connector)?;
+                let view = connect_with_context::<fneighbor::ViewMarker, _>(connector)?;
                 let () = print_neigh_config(interface, ip_version, view)
                     .await
                     .context("failed during neigh config get command")?;
@@ -580,7 +593,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
                 max_anycast_delay_time,
                 max_reachability_confirmations,
             }) => {
-                let updates = neighbor::UnreachabilityConfig {
+                let updates = fneighbor::UnreachabilityConfig {
                     base_reachable_time,
                     learn_base_reachable_time,
                     min_random_factor,
@@ -592,9 +605,9 @@ async fn do_neigh<C: NetCliDepsConnector>(
                     max_unicast_probes,
                     max_anycast_delay_time,
                     max_reachability_confirmations,
-                    ..neighbor::UnreachabilityConfig::EMPTY
+                    ..fneighbor::UnreachabilityConfig::EMPTY
                 };
-                let controller = connect_with_context::<neighbor::ControllerMarker, _>(connector)?;
+                let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
                 let () = update_neigh_config(interface, ip_version, updates, controller)
                     .await
                     .context("failed during neigh config update command")?;
@@ -607,9 +620,9 @@ async fn do_neigh<C: NetCliDepsConnector>(
 
 async fn do_neigh_add(
     interface: u64,
-    neighbor: net::IpAddress,
-    mac: net::MacAddress,
-    controller: neighbor::ControllerProxy,
+    neighbor: fnet::IpAddress,
+    mac: fnet::MacAddress,
+    controller: fneighbor::ControllerProxy,
 ) -> Result<(), Error> {
     controller
         .add_entry(interface, &mut neighbor.into(), &mut mac.into())
@@ -621,8 +634,8 @@ async fn do_neigh_add(
 
 async fn do_neigh_clear(
     interface: u64,
-    ip_version: net::IpVersion,
-    controller: neighbor::ControllerProxy,
+    ip_version: fnet::IpVersion,
+    controller: fneighbor::ControllerProxy,
 ) -> Result<(), Error> {
     controller
         .clear_entries(interface, ip_version)
@@ -634,8 +647,8 @@ async fn do_neigh_clear(
 
 async fn do_neigh_del(
     interface: u64,
-    neighbor: net::IpAddress,
-    controller: neighbor::ControllerProxy,
+    neighbor: fnet::IpAddress,
+    controller: fneighbor::ControllerProxy,
 ) -> Result<(), Error> {
     controller
         .remove_entry(interface, &mut neighbor.into())
@@ -647,15 +660,15 @@ async fn do_neigh_del(
 
 async fn print_neigh_entries(
     watch_for_changes: bool,
-    view: neighbor::ViewProxy,
+    view: fneighbor::ViewProxy,
 ) -> Result<(), Error> {
     let (it_client, it_server) =
-        fidl::endpoints::create_endpoints::<neighbor::EntryIteratorMarker>()
+        fidl::endpoints::create_endpoints::<fneighbor::EntryIteratorMarker>()
             .context("error creating channel for entry iterator")?;
     let it = it_client.into_proxy().context("error creating proxy to entry iterator")?;
 
     let () = view
-        .open_entry_iterator(it_server, neighbor::EntryIteratorOptions::EMPTY)
+        .open_entry_iterator(it_server, fneighbor::EntryIteratorOptions::EMPTY)
         .context("error opening a connection to the entry iterator")?;
 
     neigh_entry_stream(it, watch_for_changes)
@@ -669,8 +682,8 @@ async fn print_neigh_entries(
 
 async fn print_neigh_config(
     interface: u64,
-    version: net::IpVersion,
-    view: neighbor::ViewProxy,
+    version: fnet::IpVersion,
+    view: fneighbor::ViewProxy,
 ) -> Result<(), Error> {
     let config = view
         .get_unreachability_config(interface, version)
@@ -685,9 +698,9 @@ async fn print_neigh_config(
 
 async fn update_neigh_config(
     interface: u64,
-    version: net::IpVersion,
-    updates: neighbor::UnreachabilityConfig,
-    controller: neighbor::ControllerProxy,
+    version: fnet::IpVersion,
+    updates: fneighbor::UnreachabilityConfig,
+    controller: fneighbor::ControllerProxy,
 ) -> Result<(), Error> {
     controller
         .update_unreachability_config(interface, version, updates)
@@ -698,9 +711,9 @@ async fn update_neigh_config(
 }
 
 fn neigh_entry_stream(
-    iterator: neighbor::EntryIteratorProxy,
+    iterator: fneighbor::EntryIteratorProxy,
     watch_for_changes: bool,
-) -> impl futures::Stream<Item = Result<neighbor::EntryIteratorItem, Error>> {
+) -> impl futures::Stream<Item = Result<fneighbor::EntryIteratorItem, Error>> {
     futures::stream::try_unfold(iterator, |iterator| {
         iterator
             .get_next()
@@ -711,7 +724,7 @@ fn neigh_entry_stream(
     .try_flatten()
     .take_while(move |item| {
         futures::future::ready(item.as_ref().map_or(false, |item| {
-            if let neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}) = item {
+            if let fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}) = item {
                 watch_for_changes
             } else {
                 true
@@ -722,26 +735,26 @@ fn neigh_entry_stream(
 
 fn write_neigh_entry<W: std::io::Write>(
     f: &mut W,
-    item: neighbor::EntryIteratorItem,
+    item: fneighbor::EntryIteratorItem,
     watch_for_changes: bool,
 ) -> Result<(), std::io::Error> {
     match item {
-        neighbor::EntryIteratorItem::Existing(entry) => {
+        fneighbor::EntryIteratorItem::Existing(entry) => {
             if watch_for_changes {
-                writeln!(f, "EXISTING | {}", neighbor_ext::Entry::from(entry))
+                writeln!(f, "EXISTING | {}", fneighbor_ext::Entry::from(entry))
             } else {
-                writeln!(f, "{}", neighbor_ext::Entry::from(entry))
+                writeln!(f, "{}", fneighbor_ext::Entry::from(entry))
             }
         }
-        neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}) => writeln!(f, "IDLE"),
-        neighbor::EntryIteratorItem::Added(entry) => {
-            writeln!(f, "ADDED    | {}", neighbor_ext::Entry::from(entry))
+        fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}) => writeln!(f, "IDLE"),
+        fneighbor::EntryIteratorItem::Added(entry) => {
+            writeln!(f, "ADDED    | {}", fneighbor_ext::Entry::from(entry))
         }
-        neighbor::EntryIteratorItem::Changed(entry) => {
-            writeln!(f, "CHANGED  | {}", neighbor_ext::Entry::from(entry))
+        fneighbor::EntryIteratorItem::Changed(entry) => {
+            writeln!(f, "CHANGED  | {}", fneighbor_ext::Entry::from(entry))
         }
-        neighbor::EntryIteratorItem::Removed(entry) => {
-            writeln!(f, "REMOVED  | {}", neighbor_ext::Entry::from(entry))
+        fneighbor::EntryIteratorItem::Removed(entry) => {
+            writeln!(f, "REMOVED  | {}", fneighbor_ext::Entry::from(entry))
         }
     }
 }
@@ -750,18 +763,18 @@ fn write_neigh_entry<W: std::io::Write>(
 mod tests {
     use anyhow::Error;
     use fidl::endpoints::ServiceMarker;
-    use fidl_fuchsia_net as net;
+    use fidl_fuchsia_net as fnet;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
     use futures::prelude::*;
     use net_declare::{fidl_mac, fidl_subnet};
     use std::convert::TryFrom as _;
     use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
 
-    const SUBNET_V4: net::Subnet = fidl_subnet!("192.168.0.1/32");
-    const SUBNET_V6: net::Subnet = fidl_subnet!("fd00::1/128");
+    const SUBNET_V4: fnet::Subnet = fidl_subnet!("192.168.0.1/32");
+    const SUBNET_V6: fnet::Subnet = fidl_subnet!("fd00::1/128");
 
-    const MAC_1: net::MacAddress = fidl_mac!("01:02:03:04:05:06");
-    const MAC_2: net::MacAddress = fidl_mac!("02:03:04:05:06:07");
+    const MAC_1: fnet::MacAddress = fidl_mac!("01:02:03:04:05:06");
+    const MAC_2: fnet::MacAddress = fidl_mac!("02:03:04:05:06:07");
 
     struct TestConnector {
         stack: Option<StackProxy>,
@@ -769,7 +782,7 @@ mod tests {
     }
 
     impl ServiceConnector<StackMarker> for TestConnector {
-        fn connect(&self) -> Result<<StackMarker as ServiceMarker>::Proxy, Error> {
+        fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
             match &self.stack {
                 Some(stack) => Ok(stack.clone()),
                 None => Err(anyhow::anyhow!("connector has no stack instance")),
@@ -778,7 +791,7 @@ mod tests {
     }
 
     impl ServiceConnector<NetstackMarker> for TestConnector {
-        fn connect(&self) -> Result<<NetstackMarker as ServiceMarker>::Proxy, Error> {
+        fn connect(&self) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
             match &self.netstack {
                 Some(netstack) => Ok(netstack.clone()),
                 None => Err(anyhow::anyhow!("connector has no netstack instance")),
@@ -786,26 +799,26 @@ mod tests {
         }
     }
 
-    impl ServiceConnector<FilterMarker> for TestConnector {
-        fn connect(&self) -> Result<<FilterMarker as ServiceMarker>::Proxy, Error> {
+    impl ServiceConnector<ffilter::FilterMarker> for TestConnector {
+        fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect filter unimplemented for test connector"))
         }
     }
 
     impl ServiceConnector<LogMarker> for TestConnector {
-        fn connect(&self) -> Result<<LogMarker as ServiceMarker>::Proxy, Error> {
+        fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect log unimplemented for test connector"))
         }
     }
 
-    impl ServiceConnector<neighbor::ControllerMarker> for TestConnector {
-        fn connect(&self) -> Result<<neighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
+    impl ServiceConnector<fneighbor::ControllerMarker> for TestConnector {
+        fn connect(&self) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor controller unimplemented for test connector"))
         }
     }
 
-    impl ServiceConnector<neighbor::ViewMarker> for TestConnector {
-        fn connect(&self) -> Result<<neighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
+    impl ServiceConnector<fneighbor::ViewMarker> for TestConnector {
+        fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor view unimplemented for test connector"))
         }
     }
@@ -825,7 +838,7 @@ mod tests {
                 filepath: "[none]".to_string(),
                 mac: None,
                 mtu: 65536,
-                features: zx_eth::Features::Loopback,
+                features: fethernet::Features::Loopback,
                 administrative_status: AdministrativeStatus::Enabled,
                 physical_status: PhysicalStatus::Up,
                 addresses: vec![],
@@ -867,7 +880,7 @@ mod tests {
     async fn test_if_del_addr() {
         async fn next_request(
             requests: &mut StackRequestStream,
-        ) -> (u64, net::Subnet, StackDelInterfaceAddressResponder) {
+        ) -> (u64, fnet::Subnet, StackDelInterfaceAddressResponder) {
             requests
                 .try_next()
                 .await
@@ -887,7 +900,7 @@ mod tests {
             IfEnum::Addr(IfAddr {
                 addr_cmd: IfAddrEnum::Del(IfAddrDel {
                     id: 1,
-                    addr: net_ext::IpAddress::from(SUBNET_V4.addr).to_string(),
+                    addr: fnet_ext::IpAddress::from(SUBNET_V4.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 32 for IPv4.
                 }),
             }),
@@ -909,7 +922,7 @@ mod tests {
             IfEnum::Addr(IfAddr {
                 addr_cmd: IfAddrEnum::Del(IfAddrDel {
                     id: 2,
-                    addr: net_ext::IpAddress::from(SUBNET_V6.addr).to_string(),
+                    addr: fnet_ext::IpAddress::from(SUBNET_V6.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 128 for IPv6.
                 }),
             }),
@@ -1147,11 +1160,11 @@ mod tests {
 
     async fn test_get_neigh_entries(
         watch_for_changes: bool,
-        batches: Vec<Vec<neighbor::EntryIteratorItem>>,
+        batches: Vec<Vec<fneighbor::EntryIteratorItem>>,
         want: String,
     ) {
         let (it, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<neighbor::EntryIteratorMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fneighbor::EntryIteratorMarker>().unwrap();
 
         let server = async {
             for mut items in batches {
@@ -1205,7 +1218,7 @@ mod tests {
     async fn test_neigh_none(watch_for_changes: bool, want: String) {
         test_get_neigh_entries(
             watch_for_changes,
-            vec![vec![neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {})]],
+            vec![vec![fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {})]],
             want,
         )
         .await
@@ -1229,15 +1242,15 @@ mod tests {
         i64::try_from(past.as_nanos()).expect("failed to convert duration to i64")
     }
 
-    async fn test_neigh_one(watch_for_changes: bool, want: fn(neighbor_ext::Entry) -> String) {
-        fn new_entry(updated_at: i64) -> neighbor::Entry {
-            neighbor::Entry {
+    async fn test_neigh_one(watch_for_changes: bool, want: fn(fneighbor_ext::Entry) -> String) {
+        fn new_entry(updated_at: i64) -> fneighbor::Entry {
+            fneighbor::Entry {
                 interface: Some(1),
                 neighbor: Some(SUBNET_V4.addr),
-                state: Some(neighbor::EntryState::Reachable),
+                state: Some(fneighbor::EntryState::Reachable),
                 mac: Some(MAC_1),
                 updated_at: Some(updated_at),
-                ..neighbor::Entry::EMPTY
+                ..fneighbor::Entry::EMPTY
             }
         }
 
@@ -1246,10 +1259,10 @@ mod tests {
         test_get_neigh_entries(
             watch_for_changes,
             vec![vec![
-                neighbor::EntryIteratorItem::Existing(new_entry(updated_at)),
-                neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}),
+                fneighbor::EntryIteratorItem::Existing(new_entry(updated_at)),
+                fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}),
             ]],
-            want(neighbor_ext::Entry::from(new_entry(updated_at))),
+            want(fneighbor_ext::Entry::from(new_entry(updated_at))),
         )
         .await
     }
@@ -1273,16 +1286,20 @@ mod tests {
 
     async fn test_neigh_many(
         watch_for_changes: bool,
-        want: fn(neighbor_ext::Entry, neighbor_ext::Entry) -> String,
+        want: fn(fneighbor_ext::Entry, fneighbor_ext::Entry) -> String,
     ) {
-        fn new_entry(ip: net::IpAddress, mac: net::MacAddress, updated_at: i64) -> neighbor::Entry {
-            neighbor::Entry {
+        fn new_entry(
+            ip: fnet::IpAddress,
+            mac: fnet::MacAddress,
+            updated_at: i64,
+        ) -> fneighbor::Entry {
+            fneighbor::Entry {
                 interface: Some(1),
                 neighbor: Some(ip),
-                state: Some(neighbor::EntryState::Reachable),
+                state: Some(fneighbor::EntryState::Reachable),
                 mac: Some(mac),
                 updated_at: Some(updated_at),
-                ..neighbor::Entry::EMPTY
+                ..fneighbor::Entry::EMPTY
             }
         }
 
@@ -1293,17 +1310,21 @@ mod tests {
         test_get_neigh_entries(
             watch_for_changes,
             vec![vec![
-                neighbor::EntryIteratorItem::Existing(new_entry(SUBNET_V4.addr, MAC_1, updated_at)),
-                neighbor::EntryIteratorItem::Existing(new_entry(
+                fneighbor::EntryIteratorItem::Existing(new_entry(
+                    SUBNET_V4.addr,
+                    MAC_1,
+                    updated_at,
+                )),
+                fneighbor::EntryIteratorItem::Existing(new_entry(
                     SUBNET_V6.addr,
                     MAC_2,
                     updated_at - offset,
                 )),
-                neighbor::EntryIteratorItem::Idle(neighbor::IdleEvent {}),
+                fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}),
             ]],
             want(
-                neighbor_ext::Entry::from(new_entry(SUBNET_V4.addr, MAC_1, updated_at)),
-                neighbor_ext::Entry::from(new_entry(SUBNET_V6.addr, MAC_2, updated_at - offset)),
+                fneighbor_ext::Entry::from(new_entry(SUBNET_V4.addr, MAC_1, updated_at)),
+                fneighbor_ext::Entry::from(new_entry(SUBNET_V6.addr, MAC_2, updated_at - offset)),
             ),
         )
         .await
@@ -1328,12 +1349,12 @@ mod tests {
     }
 
     const INTERFACE_ID: u64 = 1;
-    const IP_VERSION: net::IpVersion = net::IpVersion::V4;
+    const IP_VERSION: fnet::IpVersion = fnet::IpVersion::V4;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_add() {
         let (controller, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
         let neigh = do_neigh_add(INTERFACE_ID, SUBNET_V4.addr, MAC_1, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_address, got_mac, responder) = requests
@@ -1357,7 +1378,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_clear() {
         let (controller, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
         let neigh = do_neigh_clear(INTERFACE_ID, IP_VERSION, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_version, responder) = requests
@@ -1380,7 +1401,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_del() {
         let (controller, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
         let neigh = do_neigh_del(INTERFACE_ID, SUBNET_V4.addr, controller);
         let neigh_succeeds = async {
             let (got_interface_id, got_ip_address, responder) = requests
@@ -1403,7 +1424,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_config_get() {
         let (view, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<neighbor::ViewMarker>()
+            fidl::endpoints::create_proxy_and_stream::<fneighbor::ViewMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
         let neigh = print_neigh_config(INTERFACE_ID, IP_VERSION, view);
         let neigh_succeeds = async {
@@ -1417,7 +1438,7 @@ mod tests {
             assert_eq!(got_interface_id, INTERFACE_ID);
             assert_eq!(got_ip_version, IP_VERSION);
             let () = responder
-                .send(&mut Ok(neighbor::UnreachabilityConfig::EMPTY))
+                .send(&mut Ok(fneighbor::UnreachabilityConfig::EMPTY))
                 .expect("responder.send should succeed");
             Ok(())
         };
@@ -1428,15 +1449,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_neigh_config_update() {
-        const CONFIG: neighbor::UnreachabilityConfig = neighbor::UnreachabilityConfig::EMPTY;
+        const CONFIG: fneighbor::UnreachabilityConfig = fneighbor::UnreachabilityConfig::EMPTY;
 
         let (controller, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<neighbor::ControllerMarker>()
+            fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
         let neigh = update_neigh_config(
             INTERFACE_ID,
             IP_VERSION,
-            neighbor::UnreachabilityConfig::EMPTY,
+            fneighbor::UnreachabilityConfig::EMPTY,
             controller,
         );
         let neigh_succeeds = async {
@@ -1461,7 +1482,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_ip_fwd_enable() {
         let (stack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<netstack::StackMarker>()
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
         let connector = TestConnector { stack: Some(stack), netstack: None };
         let op = do_ip_fwd(IpFwdEnum::Enable(IpFwdEnable {}), &connector);
@@ -1483,7 +1504,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_ip_fwd_disable() {
         let (stack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<netstack::StackMarker>()
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
         let connector = TestConnector { stack: Some(stack), netstack: None };
         let op = do_ip_fwd(IpFwdEnum::Disable(IpFwdDisable {}), &connector);

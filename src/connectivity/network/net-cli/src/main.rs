@@ -4,11 +4,11 @@
 
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_hardware_ethernet as zx_eth;
-use fidl_fuchsia_net_filter::FilterMarker;
-use fidl_fuchsia_net_neighbor as neighbor;
-use fidl_fuchsia_net_stack::{LogMarker, StackMarker};
-use fidl_fuchsia_netstack::NetstackMarker;
+use fidl_fuchsia_hardware_ethernet as fethernet;
+use fidl_fuchsia_net_filter as ffilter;
+use fidl_fuchsia_net_neighbor as fneighbor;
+use fidl_fuchsia_net_stack as fstack;
+use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
@@ -45,39 +45,39 @@ fn logger_init() -> Result<(), SetLoggerError> {
 
 struct Connector;
 
-impl net_cli::ServiceConnector<StackMarker> for Connector {
-    fn connect(&self) -> Result<<StackMarker as ServiceMarker>::Proxy, Error> {
-        connect_to_protocol::<StackMarker>()
+impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
+    fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
+        connect_to_protocol::<fstack::StackMarker>()
     }
 }
 
-impl net_cli::ServiceConnector<NetstackMarker> for Connector {
-    fn connect(&self) -> Result<<NetstackMarker as ServiceMarker>::Proxy, Error> {
-        connect_to_protocol::<NetstackMarker>()
+impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
+    fn connect(&self) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
+        connect_to_protocol::<fnetstack::NetstackMarker>()
     }
 }
 
-impl net_cli::ServiceConnector<FilterMarker> for Connector {
-    fn connect(&self) -> Result<<FilterMarker as ServiceMarker>::Proxy, Error> {
-        connect_to_protocol::<FilterMarker>()
+impl net_cli::ServiceConnector<ffilter::FilterMarker> for Connector {
+    fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
+        connect_to_protocol::<ffilter::FilterMarker>()
     }
 }
 
-impl net_cli::ServiceConnector<LogMarker> for Connector {
-    fn connect(&self) -> Result<<LogMarker as ServiceMarker>::Proxy, Error> {
-        connect_to_protocol::<LogMarker>()
+impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
+    fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
+        connect_to_protocol::<fstack::LogMarker>()
     }
 }
 
-impl net_cli::ServiceConnector<neighbor::ControllerMarker> for Connector {
-    fn connect(&self) -> Result<<neighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
-        connect_to_protocol::<neighbor::ControllerMarker>()
+impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for Connector {
+    fn connect(&self) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
+        connect_to_protocol::<fneighbor::ControllerMarker>()
     }
 }
 
-impl net_cli::ServiceConnector<neighbor::ViewMarker> for Connector {
-    fn connect(&self) -> Result<<neighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
-        connect_to_protocol::<neighbor::ViewMarker>()
+impl net_cli::ServiceConnector<fneighbor::ViewMarker> for Connector {
+    fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
+        connect_to_protocol::<fneighbor::ViewMarker>()
     }
 }
 
@@ -95,7 +95,7 @@ impl net_cli::NetCliDepsConnector for Connector {
         // and error case.
         zx::Status::ok(unsafe { fdio::fdio_sys::fdio_get_service_handle(fd, &mut client) })
             .context("failed to get fdio service handle")?;
-        let dev = fidl::endpoints::ClientEnd::<zx_eth::DeviceMarker>::new(
+        let dev = fidl::endpoints::ClientEnd::<fethernet::DeviceMarker>::new(
             // Safe because we checked the return status above.
             zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
         );

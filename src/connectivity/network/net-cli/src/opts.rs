@@ -2,28 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_logger as logger;
-use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_ext as net_ext;
+use fidl_fuchsia_logger as flogger;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_ext as fnet_ext;
 
 use argh::FromArgs;
 
-fn parse_log_level_str(value: &str) -> Result<logger::LogLevelFilter, String> {
+fn parse_log_level_str(value: &str) -> Result<flogger::LogLevelFilter, String> {
     match &value.to_lowercase()[..] {
-        "trace" => Ok(logger::LogLevelFilter::Trace),
-        "debug" => Ok(logger::LogLevelFilter::Debug),
-        "info" => Ok(logger::LogLevelFilter::Info),
-        "warn" => Ok(logger::LogLevelFilter::Warn),
-        "error" => Ok(logger::LogLevelFilter::Error),
-        "fatal" => Ok(logger::LogLevelFilter::Fatal),
+        "trace" => Ok(flogger::LogLevelFilter::Trace),
+        "debug" => Ok(flogger::LogLevelFilter::Debug),
+        "info" => Ok(flogger::LogLevelFilter::Info),
+        "warn" => Ok(flogger::LogLevelFilter::Warn),
+        "error" => Ok(flogger::LogLevelFilter::Error),
+        "fatal" => Ok(flogger::LogLevelFilter::Fatal),
         _ => Err("invalid log level".to_string()),
     }
 }
 
-fn parse_ip_version_str(value: &str) -> Result<net::IpVersion, String> {
+fn parse_ip_version_str(value: &str) -> Result<fnet::IpVersion, String> {
     match &value.to_lowercase()[..] {
-        "ipv4" => Ok(net::IpVersion::V4),
-        "ipv6" => Ok(net::IpVersion::V6),
+        "ipv4" => Ok(fnet::IpVersion::V4),
+        "ipv6" => Ok(fnet::IpVersion::V6),
         _ => Err("invalid IP version".to_string()),
     }
 }
@@ -344,7 +344,7 @@ pub enum LogEnum {
 /// syslog severity level / loglevel
 pub struct LogSetLevel {
     #[argh(positional, from_str_fn(parse_log_level_str))]
-    pub log_level: logger::LogLevelFilter,
+    pub log_level: flogger::LogLevelFilter,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -381,9 +381,9 @@ pub struct NeighAdd {
     #[argh(positional)]
     pub interface: u64,
     #[argh(positional)]
-    pub ip: net_ext::IpAddress,
+    pub ip: fnet_ext::IpAddress,
     #[argh(positional)]
-    pub mac: net_ext::MacAddress,
+    pub mac: fnet_ext::MacAddress,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -394,7 +394,7 @@ pub struct NeighClear {
     pub interface: u64,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
-    pub ip_version: net::IpVersion,
+    pub ip_version: fnet::IpVersion,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -409,7 +409,7 @@ pub struct NeighDel {
     #[argh(positional)]
     pub interface: u64,
     #[argh(positional)]
-    pub ip: net_ext::IpAddress,
+    pub ip: fnet_ext::IpAddress,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -440,7 +440,7 @@ pub struct NeighGetConfig {
     pub interface: u64,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
-    pub ip_version: net::IpVersion,
+    pub ip_version: fnet::IpVersion,
 }
 
 #[derive(FromArgs, Clone, Debug)]
@@ -451,7 +451,7 @@ pub struct NeighUpdateConfig {
     pub interface: u64,
 
     #[argh(positional, from_str_fn(parse_ip_version_str))]
-    pub ip_version: net::IpVersion,
+    pub ip_version: fnet::IpVersion,
 
     /// a base duration, in nanoseconds, for computing the random reachable
     /// time
