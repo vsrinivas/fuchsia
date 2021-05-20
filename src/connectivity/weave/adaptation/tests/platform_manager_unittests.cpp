@@ -2,52 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// clang-format off
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
+// clang-format on
+
+#include <lib/gtest/test_loop_fixture.h>
 
 #include "src/connectivity/weave/adaptation/platform_manager_impl.h"
-#include "weave_test_fixture.h"
 
-namespace nl::Weave::DeviceLayer::Internal {
-namespace testing {
-namespace {
-using nl::Weave::DeviceLayer::PlatformManager;
-using nl::Weave::DeviceLayer::PlatformManagerImpl;
-}  // namespace
+namespace nl::Weave::DeviceLayer::Internal::testing {
 
-class PlatformManagerTest : public WeaveTestFixture<> {
+class PlatformManagerTest : public ::gtest::TestLoopFixture {
  public:
-  void SetUp() {
-    WeaveTestFixture<>::SetUp();
-    PlatformMgrImpl().SetDispatcher(dispatcher());
-  }
-
-  void TearDown() { WeaveTestFixture<>::TearDown(); }
+  void SetUp() override { PlatformMgrImpl().SetDispatcher(dispatcher()); }
 };
 
-class TestAppend {
- public:
-  std::string *append_to_;
-  const char *str_;
-  TestAppend(std::string *append_str, const char *s) : append_to_(append_str), str_(s) {}
-  static void AppendStr(intptr_t arg) {
-    TestAppend *t = reinterpret_cast<TestAppend *>(arg);
-    t->append_to_->append(t->str_);
-  }
-};
+TEST_F(PlatformManagerTest, ScheduleWork) {
+  size_t counter = 0;
+  auto increment_counter = [](intptr_t context) { (*reinterpret_cast<size_t*>(context))++; };
 
-TEST_F(PlatformManagerTest, ScheduleMultipleWork) {
-  const char *test1 = "abc";
-  const char *test2 = "def";
-  std::string s = "abcdef";
-  std::string append_to;
-  TestAppend t1(&append_to, test1);
-  TestAppend t2(&append_to, test2);
-  PlatformMgr().ScheduleWork(TestAppend::AppendStr, (intptr_t)&t1);
-  PlatformMgr().ScheduleWork(TestAppend::AppendStr, (intptr_t)&t2);
+  PlatformMgr().ScheduleWork(increment_counter, reinterpret_cast<intptr_t>(&counter));
   RunLoopUntilIdle();
-  EXPECT_STREQ(s.c_str(), append_to.c_str());
+  EXPECT_EQ(counter, 1U);
+
+  PlatformMgr().ScheduleWork(increment_counter, reinterpret_cast<intptr_t>(&counter));
+  PlatformMgr().ScheduleWork(increment_counter, reinterpret_cast<intptr_t>(&counter));
+  RunLoopUntilIdle();
+  EXPECT_EQ(counter, 3U);
 }
 
-}  // namespace testing
-}  // namespace nl::Weave::DeviceLayer::Internal
+}  // namespace nl::Weave::DeviceLayer::Internal::testing

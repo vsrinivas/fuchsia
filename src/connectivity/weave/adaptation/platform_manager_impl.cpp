@@ -17,17 +17,13 @@
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 
-namespace {
-using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
-}
+using Internal::NetworkProvisioningSvrImpl;
 
 PlatformManagerImpl PlatformManagerImpl::sInstance;
 
-WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
+WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack() {
   FX_CHECK(ConfigurationMgrImpl().GetDelegate() != nullptr)
       << "ConfigurationManager delegate must be set before InitWeaveStack is called.";
   FX_CHECK(ConnectivityMgrImpl().GetDelegate() != nullptr)
@@ -39,7 +35,7 @@ WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
 }
 
-sys::ComponentContext *PlatformManagerImpl::GetComponentContextForProcess(void) {
+sys::ComponentContext *PlatformManagerImpl::GetComponentContextForProcess() {
   if (!context_) {
     context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   }
@@ -52,17 +48,17 @@ void PlatformManagerImpl::SetComponentContextForProcess(
 }
 
 void PlatformManagerImpl::SetDispatcher(async_dispatcher_t *dispatcher) {
-  ZX_ASSERT(dispatcher != NULL);
+  ZX_ASSERT(dispatcher != nullptr);
   dispatcher_ = dispatcher;
 }
 
 void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
-  ZX_ASSERT(dispatcher_ != NULL);
+  ZX_ASSERT(dispatcher_ != nullptr);
   async::PostTask(dispatcher_, [ev = *event] { PlatformMgr().DispatchEvent(&ev); });
   GetSystemLayer().WakeSelect();
 }
 
-void PlatformManagerImpl::ShutdownWeaveStack(void) {
+void PlatformManagerImpl::ShutdownWeaveStack() {
   Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_ShutdownWeaveStack();
   ThreadStackMgrImpl().SetDelegate(nullptr);
   NetworkProvisioningSvrImpl().SetDelegate(nullptr);
@@ -71,12 +67,10 @@ void PlatformManagerImpl::ShutdownWeaveStack(void) {
   context_.reset();
 }
 
-InetLayer::FuchsiaPlatformData *PlatformManagerImpl::GetPlatformData(void) {
+InetLayer::FuchsiaPlatformData *PlatformManagerImpl::GetPlatformData() {
   platform_data_.ctx = GetComponentContextForProcess();
   platform_data_.dispatcher = dispatcher_;
   return &platform_data_;
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

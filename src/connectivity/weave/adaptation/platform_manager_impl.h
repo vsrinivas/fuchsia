@@ -9,9 +9,7 @@
 
 #include "generic_platform_manager_impl_fuchsia.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 
 /**
  * Concrete implementation of the PlatformManager singleton object for the Fuchsia platform.
@@ -29,8 +27,8 @@ class NL_DLL_EXPORT PlatformManagerImpl final
 
  public:
   // ===== Platform-specific members that may be accessed directly by the application.
-  void ShutdownWeaveStack(void);
-  sys::ComponentContext* GetComponentContextForProcess(void);
+  void ShutdownWeaveStack();
+  sys::ComponentContext* GetComponentContextForProcess();
   void SetComponentContextForProcess(std::unique_ptr<sys::ComponentContext> context);
 
   // Sets the dispatcher to which tasks will be posted.
@@ -40,7 +38,7 @@ class NL_DLL_EXPORT PlatformManagerImpl final
 
   // Gets the platform data required for openweave.
   // Platform data contains component context and dispatcher.
-  InetLayer::FuchsiaPlatformData* GetPlatformData(void);
+  InetLayer::FuchsiaPlatformData* GetPlatformData();
 
   // Posts an event to dispatcher.
   void PostEvent(const WeaveDeviceEvent* event);
@@ -52,7 +50,7 @@ class NL_DLL_EXPORT PlatformManagerImpl final
   //
   // Precondition: Delegates have been set for ConfigurationManager, ConnectivityManager, and
   // ThreadStackManager.
-  WEAVE_ERROR _InitWeaveStack(void);
+  WEAVE_ERROR _InitWeaveStack();
 
   // Posts an event to the dispatcher. The event will be handled asynchronously
   // by the main async loop.
@@ -62,8 +60,8 @@ class NL_DLL_EXPORT PlatformManagerImpl final
 
   // ===== Members for internal use by the following friends.
 
-  friend PlatformManager& PlatformMgr(void);
-  friend PlatformManagerImpl& PlatformMgrImpl(void);
+  friend PlatformManager& PlatformMgr();
+  friend PlatformManagerImpl& PlatformMgrImpl();
 
   static PlatformManagerImpl sInstance;
   std::unique_ptr<sys::ComponentContext> context_;
@@ -81,7 +79,7 @@ inline void PlatformManagerImpl::PostEvent(const WeaveDeviceEvent* event) {
  * Weave applications should use this to access features of the PlatformManager object
  * that are common to all platforms.
  */
-inline PlatformManager& PlatformMgr(void) { return PlatformManagerImpl::sInstance; }
+inline PlatformManager& PlatformMgr() { return PlatformManagerImpl::sInstance; }
 
 /**
  * Returns the platform-specific implementation of the PlatformManager singleton object.
@@ -89,10 +87,8 @@ inline PlatformManager& PlatformMgr(void) { return PlatformManagerImpl::sInstanc
  * Weave applications can use this to gain access to features of the PlatformManager
  * that are specific to the Fuchsia platform.
  */
-inline PlatformManagerImpl& PlatformMgrImpl(void) { return PlatformManagerImpl::sInstance; }
+inline PlatformManagerImpl& PlatformMgrImpl() { return PlatformManagerImpl::sInstance; }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer
 
 #endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_PLATFORM_MANAGER_IMPL_H_
