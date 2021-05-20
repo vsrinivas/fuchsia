@@ -33,7 +33,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
     state->NextStep();  // End: Setup. Begin: Encode.
 
     const char* error;
-    if (!encode(&aligned_value, &error, [](const uint8_t*, size_t) {})) {
+    if (!encode(&aligned_value, &error,
+                [](const uint8_t* bytes, size_t) { perftest::DoNotOptimize(bytes); })) {
       std::cout << "error in encode benchmark: " << error << std::endl;
       return false;
     }
