@@ -23,7 +23,18 @@ Objects are stored in **traversal order**, and are subject to **padding**.
 
 The first object is called the **primary object**.
 It is a structure of fixed size whose type and size are known from the
-context.
+context. When reading a message, it is required to know the expected
+type to be read, i.e. the format is not self-describing. The context
+in which a read occurs should make this unambiguous. As an example,
+in the case of reading messages as part of IPC
+(see [transactional message header](#transactional-messages)),
+the context is fully specified by the data contained in the header
+(in particular, the ordinal allows the recipient to know what is the
+intended type). In the case of reading data at rest, there is no
+equivalent descriptor, but it is assumed that both encoder and decoder
+have knowledge about what type is being encoded or decoded (for example,
+this information is compiled into the respective libraries used by the
+encoder and decoder).
 
 The primary object may refer to **secondary objects** (such as in the
 case of strings, vectors, unions, and so on) if additional variable-sized
