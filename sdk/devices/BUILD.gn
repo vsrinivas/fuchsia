@@ -2,45 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/sdk/sdk_device_profile.gni")
 import("//build/sdk/sdk_molecule.gni")
-import("//sdk/config.gni")
-
-template("device") {
-  # TODO(fxbug.dev/77022): Remove sdk_device_profile.
-  sdk_device_profile(target_name) {
-    category = "partner"
-
-    description = invoker.description
-
-    images = "gs://fuchsia/development/$sdk_id/images/$target_name.tgz"
-
-    packages = "gs://fuchsia/development/$sdk_id/packages/$target_name.tar.gz"
-  }
-
-  name = target_name
-  generated_file("hardware-$target_name") {
-    visibility = [ ":*" ]
-
-    outputs = [ "$target_gen_dir/$name.json" ]
-    output_conversion = "json"
-
-    # This must conform to //build/sdk/meta/physical_device.json schema.
-    contents = {
-      version = "1"
-      data = {
-        type = "physical_device"
-        name = name
-        description = invoker.description
-        hardware = {
-          cpu = {
-            arch = invoker.arch
-          }
-        }
-      }
-    }
-  }
-}
+import("//sdk/devices/device.gni")
 
 devices = [
   {
