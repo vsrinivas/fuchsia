@@ -52,7 +52,7 @@ func TestValidateIPAddressMask(t *testing.T) {
 
 func TestFuchsiaNetStack(t *testing.T) {
 	t.Run("Add and Delete Forwarding Entries", func(t *testing.T) {
-		ns := newNetstack(t)
+		ns, _ := newNetstack(t)
 		t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
 		ni := stackImpl{ns: ns}
 
@@ -181,7 +181,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 	})
 
 	t.Run("Enable and Disable PacketFilter", func(t *testing.T) {
-		ns := newNetstack(t)
+		ns, _ := newNetstack(t)
 		t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
 		ni := stackImpl{ns: ns}
 
@@ -224,7 +224,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 	})
 
 	t.Run("Enable and Disable IP Forwarding", func(t *testing.T) {
-		ns := newNetstack(t)
+		ns, _ := newNetstack(t)
 		ifs := addNoopEndpoint(t, ns, "")
 		t.Cleanup(ifs.Remove)
 		ni := stackImpl{ns: ns}
@@ -251,7 +251,7 @@ func TestFuchsiaNetStack(t *testing.T) {
 }
 
 func TestDnsServerWatcher(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	watcherCollection := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 	ni := stackImpl{ns: ns, dnsWatchers: watcherCollection}
 	request, watcher, err := name.NewDnsServerWatcherWithCtxInterfaceRequest()

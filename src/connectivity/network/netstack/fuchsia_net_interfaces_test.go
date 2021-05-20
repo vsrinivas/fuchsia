@@ -131,7 +131,7 @@ func wantInterfaceProperties(ns *Netstack, nicid tcpip.NICID) interfaces.Propert
 }
 
 func TestInterfacesWatcher(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	ni := &netstackImpl{ns: ns}
 	si := &interfaceStateImpl{ns: ns}
 

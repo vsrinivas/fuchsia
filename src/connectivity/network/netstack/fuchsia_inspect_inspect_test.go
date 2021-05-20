@@ -163,7 +163,7 @@ func TestCircularLogsInspectImpl(t *testing.T) {
 
 func TestSocketStatCounterInspectImpl(t *testing.T) {
 	// Create a new netstack and add TCP and UDP endpoints.
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	wq := new(waiter.Queue)
 	tcpEP, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {

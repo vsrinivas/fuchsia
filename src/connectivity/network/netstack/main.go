@@ -340,7 +340,7 @@ func Main() {
 	ndpDisp.dhcpv6Obs.init(func() {
 		cobaltClient.Register(&ndpDisp.dhcpv6Obs)
 	})
-	ndpDisp.dynamicAddressSourceObs.init(func() {
+	ndpDisp.dynamicAddressSourceObs.init(stk.Clock(), func() {
 		cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
 	})
 	ndpDisp.start(ctx)

@@ -39,6 +39,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/faketime"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
@@ -86,7 +87,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestDelRouteErrors(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 
 	ifs := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifs.Remove)
@@ -118,7 +119,7 @@ func TestDelRouteErrors(t *testing.T) {
 // TestStackNICEnableDisable tests that the NIC in stack.Stack is enabled or
 // disabled when the underlying link is brought up or down, respectively.
 func TestStackNICEnableDisable(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	ifs := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifs.Remove)
 
@@ -176,7 +177,7 @@ func (h *testNicRemovedHandler) RemovedNIC(nicID tcpip.NICID) {
 // underlying link is closed.
 func TestStackNICRemove(t *testing.T) {
 	nicRemovedHandler := testNicRemovedHandler{}
-	ns := newNetstackWithNicRemovedHandler(t, &nicRemovedHandler)
+	ns, _ := newNetstackWithNicRemovedHandler(t, &nicRemovedHandler)
 	var obs noopObserver
 
 	ifs, err := ns.addEndpoint(
@@ -253,7 +254,7 @@ func containsRoute(rs []tcpip.Route, r tcpip.Route) bool {
 }
 
 func TestEndpoint_Close(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	var wq waiter.Queue
 	// Avoid polluting everything with err of type tcpip.Error.
 	ep := func() tcpip.Endpoint {
@@ -419,7 +420,7 @@ func TestEndpoint_Close(t *testing.T) {
 // isn't added to the endpoints map, since such an endpoint wouldn't receive a
 // hangup notification and its reference in the map would leak.
 func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	if err := ns.addLoopback(); err != nil {
 		t.Fatalf("ns.addLoopback() = %s", err)
 	}
@@ -520,7 +521,7 @@ func createEP(t *testing.T, ns *Netstack, wq *waiter.Queue) *endpointWithSocket 
 }
 
 func TestTCPEndpointMapClose(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	eps := createEP(t, ns, new(waiter.Queue))
 
 	// Closing the endpoint should remove it from the endpoints map.
@@ -534,7 +535,7 @@ func TestTCPEndpointMapClose(t *testing.T) {
 }
 
 func TestTCPEndpointMapConnect(t *testing.T) {
-	ns := newNetstack(t)
+	ns, clock := newNetstack(t)
 
 	var linkEP tcpipstack.LinkEndpoint = &noopEndpoint{
 		capabilities: tcpipstack.CapabilityResolutionRequired,
@@ -588,6 +589,15 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	default:
 		t.Fatalf("got Connect(%#v) = %v, want %s", destination, err, &tcpip.ErrConnectStarted{})
 	}
+
+	{
+		nudConfig, err := ns.stack.NUDConfigurations(ifs.nicid, ipv4.ProtocolNumber)
+		if err != nil {
+			t.Fatalf("stack.NUDConfigurations(): %s", err)
+		}
+		clock.Advance(time.Duration(nudConfig.MaxMulticastProbes) * nudConfig.RetransmitTimer)
+	}
+
 	if got, want := <-events, waiter.ReadableEvents|waiter.WritableEvents|waiter.EventErr|waiter.EventHUp; got != want {
 		t.Fatalf("got event = %b, want %b", got, want)
 	}
@@ -602,7 +612,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 // FIN_WAIT2 to be present in the endpoints map and is deleted when the
 // endpoint transitions to CLOSED state.
 func TestTCPEndpointMapClosing(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	if err := ns.addLoopback(); err != nil {
 		t.Fatalf("ns.addLoopback() = %s", err)
 	}
@@ -689,7 +699,7 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 }
 
 func TestEndpointsMapKey(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	if ns.endpoints.nextKey != 0 {
 		t.Fatalf("got ns.endpoints.nextKey = %d, want 0", ns.endpoints.nextKey)
 	}
@@ -741,7 +751,7 @@ func TestEndpointsMapKey(t *testing.T) {
 }
 
 func TestNICName(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 
 	if want, got := "unknown(NICID=0)", ns.name(0); got != want {
 		t.Fatalf("got ns.name(0) = %q, want %q", got, want)
@@ -766,7 +776,7 @@ func TestNICName(t *testing.T) {
 }
 
 func TestNotStartedByDefault(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 
 	startCalled := false
 	controller := noopController{
@@ -867,7 +877,7 @@ func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
 // Test that NICs get an on-link route to the IPv6 link-local subnet when it is
 // brought up.
 func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 
 	ep := noopEndpoint{
 		linkAddress: tcpip.LinkAddress([]byte{2, 3, 4, 5, 6, 7}),
@@ -932,7 +942,7 @@ func TestOnLinkV6Route(t *testing.T) {
 }
 
 func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 
 	multicastPromiscuousModeEnabled := false
 	eth, _ := testutil.MakeEthernetDevice(t, ethernet.Info{}, 1)
@@ -951,7 +961,7 @@ func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 }
 
 func TestUniqueFallbackNICNames(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifs1.Remove)
@@ -975,7 +985,7 @@ func TestUniqueFallbackNICNames(t *testing.T) {
 }
 
 func TestStaticIPConfiguration(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	ns.filter = filter.New(ns.stack)
 
 	addr := fidlconv.ToNetIpAddress(testV4Address)
@@ -1068,17 +1078,17 @@ type noopNicRemovedHandler struct{}
 
 func (*noopNicRemovedHandler) RemovedNIC(tcpip.NICID) {}
 
-func newNetstack(t *testing.T) *Netstack {
+func newNetstack(t *testing.T) (*Netstack, *faketime.ManualClock) {
 	t.Helper()
 	return newNetstackWithNDPDispatcher(t, nil)
 }
 
-func newNetstackWithNicRemovedHandler(t *testing.T, h NICRemovedHandler) *Netstack {
+func newNetstackWithNicRemovedHandler(t *testing.T, h NICRemovedHandler) (*Netstack, *faketime.ManualClock) {
 	t.Helper()
 	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, nil, h)
 }
 
-func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstack {
+func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) (*Netstack, *faketime.ManualClock) {
 	t.Helper()
 
 	// ndpDispatcher should never be called with a nil receiver.
@@ -1098,20 +1108,21 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 		return newNetstackWithStackNDPDispatcher(t, nil)
 	}
 
-	ns := newNetstackWithStackNDPDispatcher(t, ndpDisp)
+	ns, clock := newNetstackWithStackNDPDispatcher(t, ndpDisp)
 	ndpDisp.ns = ns
-	return ns
+	return ns, clock
 }
 
-func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp ipv6.NDPDispatcher) *Netstack {
+func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp ipv6.NDPDispatcher) (*Netstack, *faketime.ManualClock) {
 	t.Helper()
 	return newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t, ndpDisp, &noopNicRemovedHandler{})
 }
 
-func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp ipv6.NDPDispatcher, h NICRemovedHandler) *Netstack {
+func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp ipv6.NDPDispatcher, h NICRemovedHandler) (*Netstack, *faketime.ManualClock) {
 	t.Helper()
 
-	// TODO(fxbug.dev/57075): Use a fake clock
+	clock := faketime.NewManualClock()
+
 	stk := tcpipstack.New(tcpipstack.Options{
 		NetworkProtocols: []tcpipstack.NetworkProtocolFactory{
 			arp.NewProtocol,
@@ -1124,6 +1135,7 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 			tcp.NewProtocol,
 			udp.NewProtocol,
 		},
+		Clock: clock,
 	})
 	f := filter.New(stk)
 	ns := &Netstack{
@@ -1147,7 +1159,7 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 			ifs.endpoint.Wait()
 		}
 	})
-	return ns
+	return ns, clock
 }
 
 func getInterfaceAddresses(t *testing.T, ni *stackImpl, nicid tcpip.NICID) []tcpip.AddressWithPrefix {
@@ -1190,7 +1202,7 @@ func compareInterfaceAddresses(t *testing.T, got, want []tcpip.AddressWithPrefix
 }
 
 func TestNetstackImpl_GetInterfaces(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	ni := &netstackImpl{ns: ns}
 
 	t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
@@ -1222,7 +1234,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 	ndpDisp := testNDPDispatcher{
 		dadC: make(chan ndpDADEvent, 1),
 	}
-	ns := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
+	ns, clock := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
 	ni := &stackImpl{ns: ns}
 
 	ep := noopEndpoint{
@@ -1243,12 +1255,13 @@ func TestListInterfaceAddresses(t *testing.T) {
 	}
 
 	// Wait for and account for any addresses added automatically.
-	for ch := time.After(dadResolutionTimeout); ; {
+	clock.Advance(dadResolutionTimeout)
+	for {
 		select {
 		case d := <-ndpDisp.dadC:
 			t.Logf("startup DAD event: %#v", d)
 			continue
-		case <-ch:
+		default:
 		}
 		break
 	}
@@ -1280,6 +1293,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
 				expectDad := header.IsV6UnicastAddress(addr.Address)
+				clock.Advance(dadResolutionTimeout)
 				select {
 				case d := <-ndpDisp.dadC:
 					if !expectDad {
@@ -1288,7 +1302,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 					if diff := cmp.Diff(ndpDADEvent{nicID: ifState.nicid, addr: addr.Address, result: &tcpipstack.DADSucceeded{}}, d, cmp.AllowUnexported(d)); diff != "" {
 						t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
 					}
-				case <-time.After(dadResolutionTimeout):
+				default:
 					if expectDad {
 						t.Fatal("timed out waiting for DAD event")
 					}
@@ -1332,7 +1346,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 // Test that adding an address with one prefix and then adding the same address
 // but with a different prefix will simply replace the first address.
 func TestAddAddressesThenChangePrefix(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	ni := &stackImpl{ns: ns}
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.Remove)
@@ -1375,7 +1389,7 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 }
 
 func TestAddRouteParameterValidation(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	addr := tcpip.ProtocolAddress{
 		Protocol: ipv4.ProtocolNumber,
 		AddressWithPrefix: tcpip.AddressWithPrefix{
@@ -1449,7 +1463,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 }
 
 func TestDHCPAcquired(t *testing.T) {
-	ns := newNetstack(t)
+	ns, _ := newNetstack(t)
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.Remove)
 

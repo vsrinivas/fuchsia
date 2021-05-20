@@ -261,10 +261,7 @@ func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []s
 var _ NICRemovedHandler = (*availableDynamicIPv6AddressConfigObservation)(nil)
 var _ cobaltEventProducer = (*availableDynamicIPv6AddressConfigObservation)(nil)
 
-// Using a var so that it can be overriden for tests.
-//
-// TODO(fxbug.dev/57075): Use a fake clock in tests so we can make these constants.
-var (
+const (
 	// availableDynamicIPv6AddressConfigDelayInitialEvents is the initial delay
 	// before registering with the cobalt client that events are ready.
 	//
@@ -302,14 +299,14 @@ func (o *availableDynamicIPv6AddressConfigObservation) initWithoutTimer(hasEvent
 
 // init sets the events registration callback and starts the timer to register
 // events.
-func (o *availableDynamicIPv6AddressConfigObservation) init(hasEvents func()) {
+func (o *availableDynamicIPv6AddressConfigObservation) init(clock tcpip.Clock, hasEvents func()) {
 	o.initWithoutTimer(hasEvents)
 
 	var mu sync.Mutex
-	var t *time.Timer
+	var t tcpip.Timer
 	mu.Lock()
 	defer mu.Unlock()
-	t = time.AfterFunc(availableDynamicIPv6AddressConfigDelayInitialEvents, func() {
+	t = clock.AfterFunc(availableDynamicIPv6AddressConfigDelayInitialEvents, func() {
 		o.hasEvents()
 
 		mu.Lock()

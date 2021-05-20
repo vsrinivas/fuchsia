@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/faketime"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -131,7 +132,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			defer cancel()
 
 			ndpDisp := newNDPDispatcherForTest()
-			ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+			ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
 			si := &interfaceStateImpl{ns: ns}
 			ndpDisp.start(ctx)
 
@@ -199,7 +200,7 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
@@ -224,7 +225,7 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -340,7 +341,7 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
@@ -365,7 +366,7 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -480,7 +481,7 @@ func TestLinkDown(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, _ := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -588,7 +589,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, clock := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs1 := addNoopEndpoint(t, ns, "")
@@ -666,7 +667,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, shortLifetime)
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= shortLifetimeTimeout; elapsedTime += incrementalTimeout {
-		time.Sleep(incrementalTimeout)
+		clock.Advance(incrementalTimeout)
 		want := []tcpip.FullAddress(nil)
 		got := ns.dnsConfig.GetServersCache()
 		if diff := dnsServersAddressesDiff(want, got); diff != "" {
@@ -692,7 +693,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	defer cancel()
 
 	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+	ns, clock := newNetstackWithNDPDispatcher(t, ndpDisp)
 	ndpDisp.start(ctx)
 
 	ifs := addNoopEndpoint(t, ns, "")
@@ -732,7 +733,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	ndpDisp.OnRecursiveDNSServerOption(ifs.nicid, []tcpip.Address{addr2.Addr, addr3.Addr}, newInfiniteLifetime)
 	waitForEmptyQueue(ndpDisp)
 	for elapsedTime := time.Duration(0); elapsedTime <= middleLifetimeTimeout; elapsedTime += incrementalTimeout {
-		time.Sleep(incrementalTimeout)
+		clock.Advance(incrementalTimeout)
 		want := []tcpip.FullAddress{addr2, addr3}
 		got := ns.dnsConfig.GetServersCache()
 		if diff := dnsServersAddressesDiff(want, got); diff != "" {
@@ -749,7 +750,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	// addr2 and addr3 should not expire after newInfiniteLifetime (since it
 	// represents infinity).
 	for elapsedTime := time.Duration(0); elapsedTime <= newInfiniteLifetimeTimeout; elapsedTime += incrementalTimeout {
-		time.Sleep(incrementalTimeout)
+		clock.Advance(incrementalTimeout)
 		want := []tcpip.FullAddress{addr2, addr3}
 		got := ns.dnsConfig.GetServersCache()
 		if diff := dnsServersAddressesDiff(want, got); diff != "" {
@@ -1144,33 +1145,46 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 }
 
 func TestAvailableDynamicIPv6AddressConfigEventsRegistration(t *testing.T) {
-	savedInitialTimeout := availableDynamicIPv6AddressConfigDelayInitialEvents
-	savedDelayBetweenEvents := availableDynamicIPv6AddressConfigDelayBetweenEvents
-	availableDynamicIPv6AddressConfigDelayInitialEvents = time.Second
-	availableDynamicIPv6AddressConfigDelayBetweenEvents = 2 * time.Second
-	defer func() {
-		availableDynamicIPv6AddressConfigDelayInitialEvents = savedInitialTimeout
-		availableDynamicIPv6AddressConfigDelayBetweenEvents = savedDelayBetweenEvents
-	}()
+	const smallestDuration time.Duration = 1
 
-	const extraTimeout = 10 * time.Second
+	clock := faketime.NewManualClock()
 
 	ch := make(chan struct{}, 1)
 
 	ndpDisp := newNDPDispatcher()
-	ndpDisp.dynamicAddressSourceObs.init(func() {
+	ndpDisp.dynamicAddressSourceObs.init(clock, func() {
 		ch <- struct{}{}
 	})
 
-	select {
-	case <-ch:
-	case <-time.After(availableDynamicIPv6AddressConfigDelayInitialEvents + extraTimeout):
-		t.Fatalf("timed out waiting for first event's registration")
-	}
+	clock.Advance(availableDynamicIPv6AddressConfigDelayInitialEvents - smallestDuration)
 
 	select {
 	case <-ch:
-	case <-time.After(availableDynamicIPv6AddressConfigDelayBetweenEvents + extraTimeout):
-		t.Fatalf("timed out waiting for next event's registration")
+		t.Fatal("first event's registration arrived prematurely")
+	default:
+	}
+
+	clock.Advance(smallestDuration)
+
+	select {
+	case <-ch:
+	default:
+		t.Fatal("timed out waiting for first event's registration")
+	}
+
+	clock.Advance(availableDynamicIPv6AddressConfigDelayBetweenEvents - smallestDuration)
+
+	select {
+	case <-ch:
+		t.Fatal("next event's registration arrived prematurely")
+	default:
+	}
+
+	clock.Advance(smallestDuration)
+
+	select {
+	case <-ch:
+	default:
+		t.Fatal("timed out waiting for next event's registration")
 	}
 }

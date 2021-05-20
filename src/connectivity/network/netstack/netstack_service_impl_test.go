@@ -43,10 +43,11 @@ func TestRouteTableTransactions(t *testing.T) {
 	t.Run("no contentions", func(t *testing.T) {
 		// Create a basic netstack instance with a single interface. We need at
 		// least one interface in order to add routes.
-		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
-		ifs := addNoopEndpoint(t, netstackServiceImpl.ns, "")
+		ns, _ := newNetstack(t)
+		ifs := addNoopEndpoint(t, ns, "")
 		t.Cleanup(ifs.Remove)
 
+		netstackServiceImpl := netstackImpl{ns: ns}
 		originalTable, err := netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
 
@@ -160,7 +161,8 @@ func TestRouteTableTransactions(t *testing.T) {
 
 func TestGetDhcpClient(t *testing.T) {
 	t.Run("bad NIC", func(t *testing.T) {
-		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
+		ns, _ := newNetstack(t)
+		netstackServiceImpl := netstackImpl{ns: ns}
 		req, proxy, err := dhcp.NewClientWithCtxInterfaceRequest()
 		if err != nil {
 			t.Fatalf("dhcp.NewClientWithCtxInterfaceRequest() = %s", err)
