@@ -69,7 +69,7 @@ resources based on runtime resource demands.
 
 These are packages that exist on the package server, but not on the device.
 
-## Structure of a package
+## Structure of a package {#structure-of-a-package}
 
 In most cases, a package in Fuchsia is a collection of `BLOB`s, which at a
 minimum contains one content-addressed `BLOB` named [`meta.far`](#meta-far).
