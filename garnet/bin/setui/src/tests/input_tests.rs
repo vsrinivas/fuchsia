@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::base::Payload as HandlerPayload,
+    crate::handler::base::{Payload as HandlerPayload, Request},
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::ingress::fidl::Interface,
     crate::input::common::MediaButtonsEventBuilder,
@@ -16,7 +16,7 @@ use {
         DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputInfoSources,
         InputState,
     },
-    crate::message::base::{filter, MessengerType},
+    crate::message::base::{filter, Attribution, Message, MessageType, MessengerType},
     crate::message::receptor::Receptor,
     crate::service::message::Delegate,
     crate::service::{Address, Payload, Role},
@@ -268,8 +268,12 @@ fn create_broker(
 ) -> Receptor<Payload, Address, Role> {
     let message_hub_future = delegate.create(MessengerType::Broker(Some(filter::Builder::single(
         filter::Condition::Custom(Arc::new(move |message| {
-            // Only catch changes to input info.
-            matches!(message.payload(), Payload::Setting(HandlerPayload::Response(Ok(None))))
+            // The first condition indicates that it is a response to a set request.
+            if let Payload::Setting(HandlerPayload::Response(Ok(None))) = message.payload() {
+                is_attr_onbutton(message)
+            } else {
+                false
+            }
         })),
     ))));
     pin_mut!(message_hub_future);
@@ -286,17 +290,26 @@ fn create_broker(
 async fn wait_for_media_button_event(
     media_buttons_receptor: &mut Receptor<Payload, Address, Role>,
 ) {
-    loop {
-        let payload = media_buttons_receptor.next_payload().await.expect("payload should exist");
-        match payload {
-            (Payload::Setting(HandlerPayload::Response(Ok(None))), message_client) => {
-                message_client.propagate(payload.0);
-                break;
-            }
-            (_, message_client) => {
-                message_client.propagate(payload.0);
-            }
-        }
+    let event = media_buttons_receptor.next_payload().await.expect("payload should exist");
+
+    let (payload, message_client) = event;
+    message_client.propagate(payload);
+}
+
+// Returns true if the given attribution `message`'s payload is an OnButton event.
+fn is_attr_onbutton(message: &Message<Payload, Address, Role>) -> bool {
+    // Find the corresponding message from the message's attribution.
+    let attr_msg =
+        if let Attribution::Source(MessageType::Reply(message)) = message.get_attribution() {
+            message
+        } else {
+            return false;
+        };
+
+    // Filter by the attribution message's payload. It should be an OnButton request.
+    match attr_msg.payload() {
+        Payload::Setting(HandlerPayload::Request(Request::OnButton(_))) => true,
+        _ => false,
     }
 }
 
@@ -358,6 +371,19 @@ macro_rules! run_code_with_executor {
     }};
 }
 
+// Run the provided `future` via the `executor`.
+fn move_executor_forward(
+    executor: &mut TestExecutor,
+    future: impl futures::Future<Output = ()>,
+    panic_msg: &str,
+) {
+    pin_mut!(future);
+    match executor.run_until_stalled(&mut future) {
+        Poll::Ready(res) => res,
+        _ => panic!("{}", panic_msg),
+    }
+}
+
 // Test that a watch is executed correctly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_watch() {
@@ -378,54 +404,54 @@ fn test_set_watch_mic_mute() {
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // SW muted, HW unmuted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             set_mic_mute_input2(&input_proxy, true).await;
-        }),
-        "Failed to set mic mute"
+        },
+        "Failed to set mic mute",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, true).await;
-        }),
-        "Failed to watch mic mute"
+        },
+        "Failed to watch mic mute",
     );
 
     // SW unmuted, HW muted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_mic_mute(&env, true).await;
             set_mic_mute_input2(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch mic mute state"
+        },
+        "Failed to switch mic mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, true).await;
-        }),
-        "Failed to watch mic mute"
+        },
+        "Failed to watch mic mute",
     );
 
     // SW unmuted, HW unmuted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_mic_mute(&env, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch hardware mic mute"
+        },
+        "Failed to switch hardware mic mute",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, false).await;
-        }),
-        "Failed to watch mic mute"
+        },
+        "Failed to watch mic mute",
     );
 }
 
@@ -437,48 +463,48 @@ fn test_set_watch_camera_disable() {
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // SW muted, HW unmuted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             set_camera_disable(&input_proxy, true).await;
             get_and_check_camera_disable(&input_proxy, true).await;
-        }),
-        "Failed to switch camera state"
+        },
+        "Failed to switch camera state",
     );
 
     // SW unmuted, HW muted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_camera_disable(&env, true).await;
             set_camera_disable(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch camera state"
+        },
+        "Failed to switch camera state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, true).await;
-        }),
-        "Failed to get camera mute state"
+        },
+        "Failed to get camera mute state",
     );
 
     // SW unmuted, HW unmuted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_camera_disable(&env, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch camera mute state"
+        },
+        "Failed to switch camera mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, false).await;
-        }),
-        "Failed to get camera mute state"
+        },
+        "Failed to get camera mute state",
     );
 }
 
@@ -489,20 +515,20 @@ fn test_mic_input() {
     let input_proxy = env.input_service.clone();
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_mic_mute(&env, true).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch hardware mic mute"
+        },
+        "Failed to switch hardware mic mute",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, true).await;
-        }),
-        "Failed to watch mic mute"
+        },
+        "Failed to watch mic mute",
     );
 }
 
@@ -513,22 +539,22 @@ fn test_camera_input() {
     let input_proxy = env.input_service.clone();
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, false).await;
             switch_hardware_camera_disable(&env, true).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to get and switch hardware camera mute state"
+        },
+        "Failed to get and switch hardware camera mute state",
     );
 
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, true).await;
-        }),
-        "Failed to get camera mute state"
+        },
+        "Failed to get camera mute state",
     );
 }
 
@@ -539,13 +565,13 @@ fn test_camera3_hw_change() {
     let (mut executor, env) = create_env_and_executor_with_config(default_mic_cam_config(), None);
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_camera_disable(&env, true).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch camera hw state"
+        },
+        "Failed to switch camera hw state",
     );
 
     let camera3_service_future = env.camera3_service.lock();
@@ -581,66 +607,66 @@ fn test_mic_mute_combinations() {
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // Hardware muted, software unmuted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_mic_mute(&env, true).await;
             set_mic_mute_input2(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch mic mute state"
+        },
+        "Failed to switch mic mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, true).await;
-        }),
-        "Failed to get mic mute state"
+        },
+        "Failed to get mic mute state",
     );
 
     // Hardware muted, software muted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             set_mic_mute_input2(&input_proxy, true).await;
             get_and_check_mic_mute(&input_proxy, true).await;
-        }),
-        "Failed to switch and check mic mute state"
+        },
+        "Failed to switch and check mic mute state",
     );
 
     // Hardware unmuted, software muted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_mic_mute(&env, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch hardware mic mute state"
+        },
+        "Failed to switch hardware mic mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, true).await;
-        }),
-        "Failed to watch mic mute state"
+        },
+        "Failed to watch mic mute state",
     );
 
     // Hardware unmuted, software unmuted.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_mic_mute(&env, false).await;
             set_mic_mute_input2(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch mic mute state"
+        },
+        "Failed to switch mic mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_mic_mute(&input_proxy, false).await;
-        }),
-        "Failed to watch mic mute state"
+        },
+        "Failed to watch mic mute state",
     );
 }
 
@@ -653,66 +679,66 @@ fn test_camera_disable_combinations() {
     let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // Hardware disabled, software enabled.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_camera_disable(&env, true).await;
             set_camera_disable(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch camera mute state"
+        },
+        "Failed to switch camera mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, true).await;
-        }),
-        "Failed to get camera mute state"
+        },
+        "Failed to get camera mute state",
     );
 
     // Hardware disabled, software disabled
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             set_camera_disable(&input_proxy, true).await;
             get_and_check_camera_disable(&input_proxy, true).await;
-        }),
-        "Failed to switch camera mute state"
+        },
+        "Failed to switch camera mute state",
     );
 
     // Hardware enabled, software disabled.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_camera_disable(&env, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch hardware camera mute state"
+        },
+        "Failed to switch hardware camera mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, true).await;
-        }),
-        "Failed to watch camera mute state"
+        },
+        "Failed to watch camera mute state",
     );
 
     // Hardware enabled, software enabled.
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             switch_hardware_camera_disable(&env, false).await;
             set_camera_disable(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
-        }),
-        "Failed to switch camera mute state"
+        },
+        "Failed to switch camera mute state",
     );
-    run_code_with_executor!(
-        executor,
-        Box::pin(async {
+    move_executor_forward(
+        &mut executor,
+        async {
             get_and_check_camera_disable(&input_proxy, false).await;
-        }),
-        "Failed to watch camera mute state"
+        },
+        "Failed to watch camera mute state",
     );
 }
 
