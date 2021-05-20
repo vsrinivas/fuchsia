@@ -13,15 +13,13 @@
 #include "src/connectivity/weave/adaptation/weave_device_platform_error.h"
 #include "utils.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
-
+namespace nl::Weave::DeviceLayer::Internal {
 namespace {
-using namespace ::nl::Weave::TLV;
-using namespace ::nl::Weave::Profiles;
-using namespace ::nl::Weave::Profiles::Security;
+namespace Profiles = ::nl::Weave::Profiles;
+namespace Security = ::nl::Weave::Profiles::Security;
+namespace ServiceProvisioning = ::nl::Weave::Profiles::ServiceProvisioning;
+
+using Security::WeaveCertificateData;
 
 // TODO(fxbug.dev/51130): Allow build-time configuration of these values.
 constexpr size_t kMaxCerts = 10;
@@ -47,8 +45,8 @@ WEAVE_ERROR PlatformCASEAuthDelegate::EncodeNodePayload(const BeginSessionContex
   WEAVE_ERROR error = WEAVE_NO_ERROR;
   size_t device_desc_len;
 
-  error = ConfigurationMgr().GetDeviceDescriptorTLV(payload_buf, (size_t)payload_buf_size,
-                                                    device_desc_len);
+  error = ConfigurationMgr().GetDeviceDescriptorTLV(
+      payload_buf, static_cast<size_t>(payload_buf_size), device_desc_len);
   if (error != WEAVE_NO_ERROR) {
     return error;
   }
@@ -108,8 +106,8 @@ WEAVE_ERROR PlatformCASEAuthDelegate::GenerateNodeSignature(const BeginSessionCo
   // Using a private key directly is intended only for test purposes.
   status = ConfigurationMgrImpl().GetPrivateKeyForSigning(&signing_key);
   if (status == ZX_OK) {
-    status = GenerateAndEncodeWeaveECDSASignature(writer, tag, msg_hash, msg_hash_len,
-                                                  signing_key.data(), signing_key.size());
+    status = Security::GenerateAndEncodeWeaveECDSASignature(writer, tag, msg_hash, msg_hash_len,
+                                                            signing_key.data(), signing_key.size());
     secure_memset(signing_key.data(), 0, signing_key.size());
     signing_key.clear();
     return status;
@@ -136,7 +134,7 @@ WEAVE_ERROR PlatformCASEAuthDelegate::GenerateNodeSignature(const BeginSessionCo
   }
 
   output = &result.response().signature;
-  return ConvertECDSASignature_DERToWeave(output->data(), output->size(), writer, tag);
+  return Security::ConvertECDSASignature_DERToWeave(output->data(), output->size(), writer, tag);
 }
 
 WEAVE_ERROR PlatformCASEAuthDelegate::BeginValidation(const BeginSessionContext& msg_ctx,
@@ -174,7 +172,8 @@ WEAVE_ERROR PlatformCASEAuthDelegate::BeginValidation(const BeginSessionContext&
   // the access token certificate.
   for (uint8_t cert_index = 0; cert_index < cert_set.CertCount; cert_index++) {
     WeaveCertificateData* cert = &cert_set.Certs[cert_index];
-    if ((cert->CertFlags & kCertFlag_IsTrusted) != 0 && cert->CertType == kCertType_General &&
+    if ((cert->CertFlags & Security::kCertFlag_IsTrusted) != 0 &&
+        cert->CertType == kCertType_General &&
         cert->SubjectDN.AttrOID == ASN1::kOID_AttributeType_CommonName) {
       cert->CertType = kCertType_AccessToken;
     }
@@ -191,18 +190,19 @@ WEAVE_ERROR PlatformCASEAuthDelegate::BeginValidation(const BeginSessionContext&
     // TODO(fxbug.dev/51890): The default implementation of GetClock_RealTimeMS only returns
     // not-synced if the value is before Jan 1, 2000. Use the UTC fidl instead
     // to confirm whether the clock source is from some external source.
-    valid_ctx.EffectiveTime = SecondsSinceEpochToPackedCertTime((uint32_t)(now_ms / 1000));
+    valid_ctx.EffectiveTime =
+        Security::SecondsSinceEpochToPackedCertTime(static_cast<uint32_t>(now_ms / 1000));
   } else if (err == WEAVE_SYSTEM_ERROR_REAL_TIME_NOT_SYNCED) {
     // TODO(fxbug.dev/51890): Acquire the firmware build time, for now we set it to Jan 1, 2020
     // as sane default time.
-    valid_ctx.EffectiveTime = SecondsSinceEpochToPackedCertTime(1577836800U);
-    valid_ctx.ValidateFlags |= kValidateFlag_IgnoreNotBefore;
+    valid_ctx.EffectiveTime = Security::SecondsSinceEpochToPackedCertTime(1577836800U);
+    valid_ctx.ValidateFlags |= Security::kValidateFlag_IgnoreNotBefore;
     FX_LOGS(WARNING) << "Real time clock not synchronized, using default time for cert validation.";
   }
 
-  valid_ctx.RequiredKeyUsages = kKeyUsageFlag_DigitalSignature;
-  valid_ctx.RequiredKeyPurposes =
-      msg_ctx.IsInitiator() ? kKeyPurposeFlag_ServerAuth : kKeyPurposeFlag_ClientAuth;
+  valid_ctx.RequiredKeyUsages = Security::kKeyUsageFlag_DigitalSignature;
+  valid_ctx.RequiredKeyPurposes = msg_ctx.IsInitiator() ? Security::kKeyPurposeFlag_ServerAuth
+                                                        : Security::kKeyPurposeFlag_ClientAuth;
   release_cert_set.cancel();
   return WEAVE_NO_ERROR;
 }
@@ -263,14 +263,15 @@ WEAVE_ERROR PlatformCASEAuthDelegate::LoadCertsFromServiceConfig(const uint8_t* 
                                                                  uint16_t service_config_len,
                                                                  WeaveCertificateSet& cert_set) {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
-  TLVReader reader;
-  TLVType top_level_container;
+  TLV::TLVReader reader;
+  TLV::TLVType top_level_container;
 
   reader.Init(service_config, service_config_len);
-  reader.ImplicitProfileId = kWeaveProfile_ServiceProvisioning;
+  reader.ImplicitProfileId = Profiles::kWeaveProfile_ServiceProvisioning;
 
-  err = reader.Next(kTLVType_Structure, ProfileTag(kWeaveProfile_ServiceProvisioning,
-                                                   ServiceProvisioning::kTag_ServiceConfig));
+  err = reader.Next(TLV::kTLVType_Structure,
+                    TLV::ProfileTag(Profiles::kWeaveProfile_ServiceProvisioning,
+                                    ServiceProvisioning::kTag_ServiceConfig));
   if (err != WEAVE_NO_ERROR) {
     return err;
   }
@@ -280,12 +281,13 @@ WEAVE_ERROR PlatformCASEAuthDelegate::LoadCertsFromServiceConfig(const uint8_t* 
     return err;
   }
 
-  err = reader.Next(kTLVType_Array, ContextTag(ServiceProvisioning::kTag_ServiceConfig_CACerts));
+  err = reader.Next(TLV::kTLVType_Array,
+                    TLV::ContextTag(ServiceProvisioning::kTag_ServiceConfig_CACerts));
   if (err != WEAVE_NO_ERROR) {
     return err;
   }
 
-  err = cert_set.LoadCerts(reader, kDecodeFlag_IsTrusted);
+  err = cert_set.LoadCerts(reader, Security::kDecodeFlag_IsTrusted);
   if (err != WEAVE_NO_ERROR) {
     return err;
   }
@@ -293,7 +295,4 @@ WEAVE_ERROR PlatformCASEAuthDelegate::LoadCertsFromServiceConfig(const uint8_t* 
   return WEAVE_NO_ERROR;
 }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal

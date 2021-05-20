@@ -47,8 +47,9 @@ class PlatformCASEAuthDelegate final : public WeaveCASEAuthDelegate {
                      WeaveCertificateSet& cert_set) override;
 
  private:
-  WEAVE_ERROR LoadCertsFromServiceConfig(const uint8_t* service_config, uint16_t service_config_len,
-                                         WeaveCertificateSet& cert_set);
+  static WEAVE_ERROR LoadCertsFromServiceConfig(const uint8_t* service_config,
+                                                uint16_t service_config_len,
+                                                WeaveCertificateSet& cert_set);
 
   std::vector<uint8_t> service_config_;
 };

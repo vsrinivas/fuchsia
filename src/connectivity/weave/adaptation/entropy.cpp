@@ -7,17 +7,8 @@
 #include <Weave/Support/crypto/WeaveRNG.h>
 // clang-format on
 
-using namespace ::nl;
-using namespace ::nl::Weave;
-
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-namespace Internal {
+namespace nl::Weave::DeviceLayer::Internal {
 
 WEAVE_ERROR InitEntropy() { return WEAVE_NO_ERROR; }
 
-}  // namespace Internal
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer::Internal
