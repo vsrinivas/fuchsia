@@ -135,7 +135,8 @@ resource("resources") {
 fuchsia_test_package("web_runner_tests") {
   test_components = [
     ":web_runner_integration_tests",
-    ":web_runner_pixel_tests",
+    # (TODO: fxbug.dev/72369) Temporary disable this test due to test flakes.
+    #":web_runner_pixel_tests",
   ]
 
   deps = [
