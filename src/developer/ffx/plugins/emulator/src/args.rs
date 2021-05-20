@@ -212,6 +212,10 @@ pub struct StartCommand {
     /// int, port to an existing package server running on the host.
     #[argh(option)]
     pub package_server_port: Option<usize>,
+
+    /// bool, enables extra logging for debugging
+    #[argh(switch, short = 'V')]
+    pub verbose: bool,
 }
 
 fn default_window_height() -> usize {

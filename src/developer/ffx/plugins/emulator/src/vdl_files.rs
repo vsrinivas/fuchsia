@@ -60,10 +60,13 @@ pub struct VDLFiles {
 
     /// True if user invoked fvdl with the arg --sdk.
     is_sdk: bool,
+
+    /// True to enable extra logging.
+    verbose: bool,
 }
 
 impl VDLFiles {
-    pub fn new(is_sdk: bool) -> Result<VDLFiles> {
+    pub fn new(is_sdk: bool, verbose: bool) -> Result<VDLFiles> {
         let staging_dir = Builder::new().prefix("vdl_staging_").tempdir()?;
         let staging_dir_path = staging_dir.path().to_owned();
         if is_sdk {
@@ -75,8 +78,11 @@ impl VDLFiles {
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
                 is_sdk: is_sdk,
+                verbose: verbose,
             };
-
+            if verbose {
+                vdl_files.ssh_files.print();
+            }
             vdl_files.ssh_files.stage_files(&staging_dir_path)?;
 
             Ok(vdl_files)
@@ -90,8 +96,12 @@ impl VDLFiles {
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
                 is_sdk: is_sdk,
+                verbose: verbose,
             };
-
+            if verbose {
+                vdl_files.image_files.print();
+                vdl_files.ssh_files.print();
+            }
             vdl_files.image_files.stage_files(&staging_dir_path)?;
             vdl_files.ssh_files.stage_files(&staging_dir_path)?;
 
@@ -413,6 +423,9 @@ impl VDLFiles {
         for i in 0..start_command.envs.len() {
             cmd.arg("--env").arg(&start_command.envs[i]);
         }
+        if self.verbose {
+            println!("[fvdl] Running device_launcher cmd: {:?}", cmd);
+        }
         let shared_process = SharedChild::spawn(&mut cmd)?;
         let child_arc = Arc::new(shared_process);
 
@@ -436,16 +449,17 @@ impl VDLFiles {
         }
 
         let status = child_arc.wait()?;
-
         if !status.success() {
-            let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
-                .unwrap_or(env::current_dir()?)
-                .join("emu_crash.log");
-            copy(&self.emulator_log, &persistent_emu_log)?;
+            if self.emulator_log.exists() {
+                let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
+                    .unwrap_or(env::current_dir()?)
+                    .join("emu_crash.log");
+                copy(&self.emulator_log, &persistent_emu_log)?;
+                println!("Emulator log is copied to {}", persistent_emu_log.display());
+            }
             ffx_bail!(
-                "Cannot start Fuchsia Emulator. Exit status is {}\nEmulator log is copied to {}",
+                "Cannot start Fuchsia Emulator. Exit status is {}",
                 status.code().unwrap_or_default(),
-                persistent_emu_log.display()
             )
         }
         if vdl_args.tuntap {
@@ -635,11 +649,11 @@ mod tests {
         let start_command = &create_start_command();
 
         // --sdk
-        let aemu = VDLFiles::new(true)?.resolve_aemu_path(start_command)?;
+        let aemu = VDLFiles::new(true, false)?.resolve_aemu_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/aemu"), aemu);
-        let vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true, false)?.resolve_vdl_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/device_launcher"), vdl);
-        let grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
+        let grpcwebproxy = VDLFiles::new(true, false)?.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(PathBuf::from("/path/to/grpcwebproxy"), grpcwebproxy);
         Ok(())
     }
@@ -659,7 +673,7 @@ mod tests {
         start_command.vdl_version = Some("g3-revision:vdl_fuchsia_20210113_RC00".to_string());
 
         // --sdk
-        let vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true, false)?.resolve_vdl_path(start_command)?;
         assert_eq!(
             tmp_dir.path().join("vdl-g3-revision-vdl_fuchsia_20210113_RC00/device_launcher"),
             vdl
@@ -686,11 +700,11 @@ mod tests {
         start_command.grpcwebproxy_version = None;
 
         // --sdk
-        let vdl = VDLFiles::new(true)?.resolve_vdl_path(start_command)?;
+        let vdl = VDLFiles::new(true, false)?.resolve_vdl_path(start_command)?;
         assert_eq!(tmp_dir.path().join("vdl-latest/device_launcher"), vdl);
-        let aemu = VDLFiles::new(true)?.resolve_aemu_path(start_command)?;
+        let aemu = VDLFiles::new(true, false)?.resolve_aemu_path(start_command)?;
         assert_eq!(tmp_dir.path().join("aemu-integration/emulator"), aemu);
-        let grpcwebproxy = VDLFiles::new(true)?.resolve_grpcwebproxy_path(start_command)?;
+        let grpcwebproxy = VDLFiles::new(true, false)?.resolve_grpcwebproxy_path(start_command)?;
         assert_eq!(tmp_dir.path().join("grpcwebproxy-latest/grpcwebproxy"), grpcwebproxy);
         Ok(())
     }
@@ -702,19 +716,19 @@ mod tests {
 
         let mut start_command = &mut create_start_command();
         start_command.port_map = None;
-        let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert!(ssh > 0);
         let re = Regex::new(r"hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("".to_string());
-        let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert!(ssh > 0);
         let re = Regex::new(r"hostfwd=tcp::\d+-:22").unwrap();
         assert!(re.is_match(&port_map));
 
         start_command.port_map = Some("hostfwd=tcp::123-:222,hostfwd=tcp::80-:223".to_string());
-        let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert!(ssh > 0);
         let re =
             Regex::new(r"hostfwd=tcp::123-:222,hostfwd=tcp::80-:223,hostfwd=tcp::\d+-:22").unwrap();
@@ -722,18 +736,18 @@ mod tests {
 
         start_command.port_map =
             Some("hostfwd=tcp::123-:223,hostfwd=tcp::80-:322,hostfwd=tcp::456-:22".to_string());
-        let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert_eq!(456, ssh);
         assert_eq!("hostfwd=tcp::123-:223,hostfwd=tcp::80-:322,hostfwd=tcp::456-:22", port_map);
 
         start_command.port_map = Some("hostfwd=tcp::789-:22".to_string());
-        let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert_eq!(789, ssh);
         assert_eq!("hostfwd=tcp::789-:22", port_map);
 
         start_command.port_map =
             Some("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222".to_string());
-        let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
+        let (port_map, ssh) = VDLFiles::new(true, false)?.resolve_portmap(start_command);
         assert_eq!(123, ssh);
         assert_eq!("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222", port_map);
         Ok(())

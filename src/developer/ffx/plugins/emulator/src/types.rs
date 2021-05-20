@@ -46,15 +46,19 @@ pub struct InTreePaths {
 
 impl FuchsiaPaths for InTreePaths {
     /// Walks the current execution path and its parent directories to find the path
-    /// that contains .jiri_manifest directory.
+    /// that contains .jiri_root directory.
     fn find_fuchsia_root(&mut self) -> Result<PathBuf> {
         if self.root_dir.is_none() {
             for ancester in std::env::current_exe()?.ancestors() {
                 if let Ok(entries) = read_dir(ancester) {
                     for entry in entries {
                         if let Ok(entry) = entry {
-                            if entry.path().ends_with(".jiri_manifest") {
+                            if entry.path().ends_with(".jiri_root") {
                                 self.root_dir.replace(ancester.to_path_buf());
+                                println!(
+                                    "[fvdl] Found Fuchsia root directory {:?}",
+                                    self.root_dir.as_ref().unwrap().display()
+                                );
                             }
                         }
                     }
@@ -492,8 +496,8 @@ pub struct SSHKeys {
 impl SSHKeys {
     #[allow(dead_code)]
     pub fn print(&self) {
-        println!("private_key {:?}", self.private_key);
-        println!("auth_key {:?}", self.auth_key);
+        println!("[fvdl] private_key {:?}", self.private_key);
+        println!("[fvdl] auth_key {:?}", self.auth_key);
     }
 
     /// Initialize SSH key files for in-tree usage.
