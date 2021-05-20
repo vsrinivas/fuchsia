@@ -45,7 +45,6 @@ pub enum CommandEnum {
     Log(Log),
     Neigh(Neigh),
     Route(Route),
-    Stat(Stat),
     Metric(Metric),
     Dhcp(Dhcp),
 }
@@ -576,25 +575,6 @@ macro_rules! route_struct {
 // TODO(https://github.com/google/argh/issues/48): do this more sanely.
 route_struct!(RouteAdd, "add", "adds a route to the route table");
 route_struct!(RouteDel, "del", "deletes a route from the route table");
-
-#[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "stat")]
-/// commands for aggregates statistics
-pub struct Stat {
-    #[argh(subcommand)]
-    pub stat_cmd: StatEnum,
-}
-
-#[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand)]
-pub enum StatEnum {
-    Show(StatShow),
-}
-
-#[derive(FromArgs, Clone, Debug)]
-#[argh(subcommand, name = "show")]
-/// shows classified netstack stats
-pub struct StatShow {}
 
 #[derive(FromArgs, Clone, Debug)]
 #[argh(subcommand, name = "metric")]
