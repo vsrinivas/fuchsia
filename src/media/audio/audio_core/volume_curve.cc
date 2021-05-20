@@ -10,6 +10,7 @@
 
 #include <algorithm>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
@@ -35,28 +36,36 @@ VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   return curve_result.take_value();
 }
 
-fit::result<VolumeCurve, VolumeCurve::Error> VolumeCurve::FromMappings(
+fit::result<VolumeCurve, std::string> VolumeCurve::FromMappings(
     std::vector<VolumeMapping> mappings) {
   if (mappings.size() < 2) {
-    return fit::error(kLessThanTwoMappingsCannotMakeCurve);
+    return fit::error("mapping must have at least two entries");
   }
 
-  if (mappings.front().volume != fuchsia::media::audio::MIN_VOLUME ||
-      mappings.back().volume != fuchsia::media::audio::MAX_VOLUME) {
-    return fit::error(kDomain0to1NotCovered);
+  if (auto& front = mappings.front(); front.volume != fuchsia::media::audio::MIN_VOLUME ||
+                                      front.gain_dbfs != fuchsia::media::audio::MUTED_GAIN_DB) {
+    return fit::error(fxl::StringPrintf(
+        "first entry (%.2f -> %.2f) must map volume level %.2f to muted gain_db (%.2f)",
+        front.volume, front.gain_dbfs, fuchsia::media::audio::MIN_VOLUME,
+        fuchsia::media::audio::MUTED_GAIN_DB));
   }
 
-  if (mappings.back().gain_dbfs != Gain::kUnityGainDb) {
-    return fit::error(kRange0NotCovered);
+  if (auto& back = mappings.back();
+      back.volume != fuchsia::media::audio::MAX_VOLUME || back.gain_dbfs != Gain::kUnityGainDb) {
+    return fit::error(fxl::StringPrintf(
+        "last entry (%.2f -> %.2f) must map volume level %.2f to gain_db = %.2f", back.volume,
+        back.gain_dbfs, fuchsia::media::audio::MAX_VOLUME, Gain::kUnityGainDb));
   }
 
   for (size_t i = 1; i < mappings.size(); ++i) {
     if (mappings[i - 1].volume >= mappings[i].volume) {
-      return fit::error(kNonIncreasingDomainIllegal);
+      return fit::error(fxl::StringPrintf("volume mapping does not increase: %.2f is not > %.2f",
+                                          mappings[i].volume, mappings[i - 1].volume));
     }
 
     if (mappings[i - 1].gain_dbfs >= mappings[i].gain_dbfs) {
-      return fit::error(kNonIncreasingRangeIllegal);
+      return fit::error(fxl::StringPrintf("gain_db mapping does not increase: %.2f is not > %.2f",
+                                          mappings[i].gain_dbfs, mappings[i - 1].gain_dbfs));
     }
   }
 

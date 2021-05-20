@@ -78,12 +78,20 @@ fit::result<rapidjson::SchemaDocument, std::string> LoadProcessConfigSchema() {
   return fit::ok(rapidjson::SchemaDocument(schema_doc));
 }
 
-fit::result<VolumeCurve, VolumeCurve::Error> ParseVolumeCurveFromJsonObject(
+fit::result<VolumeCurve, std::string> ParseVolumeCurveFromJsonObject(
     const rapidjson::Value& value) {
   FX_CHECK(value.IsArray());
   std::vector<VolumeCurve::VolumeMapping> mappings;
   for (const auto& mapping : value.GetArray()) {
-    mappings.emplace_back(mapping["level"].GetFloat(), mapping["db"].GetFloat());
+    if (mapping["db"].IsString()) {
+      std::string str = mapping["db"].GetString();
+      if (str != "MUTED") {
+        return fit::error("unknown gain value '" + str + "'");
+      }
+      mappings.emplace_back(mapping["level"].GetFloat(), fuchsia::media::audio::MUTED_GAIN_DB);
+    } else {
+      mappings.emplace_back(mapping["level"].GetFloat(), mapping["db"].GetFloat());
+    }
   }
 
   return VolumeCurve::FromMappings(std::move(mappings));

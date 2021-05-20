@@ -1,6 +1,6 @@
 {
   "volume_curve": [
-      {"level":0.0, "db":-120.0},
+      {"level":0.0, "db":"MUTED"},
       {"level":1.0, "db":   0.0}
   ],
   "output_devices": [

@@ -1,6 +1,6 @@
 {
   "volume_curve": [
-      {"level":0.0, "db":-120.0},
+      {"level":0.0, "db":"MUTED"},
       {"level":0.01,"db": -53.0},
       {"level":0.1, "db": -44.0},
       {"level":0.2, "db": -38.0},

@@ -16,14 +16,6 @@ namespace media::audio {
 // domain [0.0, 1.0] to gain in dbfs.
 class VolumeCurve {
  public:
-  enum Error {
-    kLessThanTwoMappingsCannotMakeCurve = 1,
-    kDomain0to1NotCovered = 2,
-    kNonIncreasingDomainIllegal = 3,
-    kNonIncreasingRangeIllegal = 4,
-    kRange0NotCovered = 5,
-  };
-
   // A mapping from volume domain to gain in dbfs.
   struct VolumeMapping {
     VolumeMapping(float volume_in, float gain_dbfs_in)
@@ -42,7 +34,7 @@ class VolumeCurve {
   // Attempts to construct a curve from a mapping from volume domain to gain in dbfs. Mappings must
   // represent a continuous increasing function from volume to gain in dbfs over the volume domain
   // [0.0, 1.0]. The gain range must start with a negative value and end exactly at 0.0.
-  static fit::result<VolumeCurve, Error> FromMappings(std::vector<VolumeMapping> mappings);
+  static fit::result<VolumeCurve, std::string> FromMappings(std::vector<VolumeMapping> mappings);
 
   // Samples the gain curve for the dbfs value at `volume`. Outside of [0.0, 1.0], the volume is
   // clamped before sampling.

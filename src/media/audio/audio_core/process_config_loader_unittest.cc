@@ -32,9 +32,33 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOnlyVolumeCurve) {
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithVolumeCurve.data(),
                                kConfigWithVolumeCurve.size()));
 
-  auto config_result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(config_result.is_ok());
-  const auto config = config_result.take_value();
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok()) << result.error();
+  const auto config = result.take_value();
+  EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(0.0), -160.0);
+  EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(1.0), 0.0);
+}
+
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithMutedVolumeCurve) {
+  static const std::string kConfigWithVolumeCurve =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": "MUTED"
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithVolumeCurve.data(),
+                               kConfigWithVolumeCurve.size()));
+
+  auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(result.is_ok()) << result.error();
+  const auto config = result.take_value();
   EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(0.0), -160.0);
   EXPECT_FLOAT_EQ(config.default_volume_curve().VolumeToDb(1.0), 0.0);
 }
@@ -62,7 +86,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithDefaultRenderUsageVolumes) {
                                kConfigWithDefaultRenderUsageVolumes.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& default_volumes = result.value().default_render_usage_volumes();
 
@@ -116,7 +140,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
                                                         0x22, 0x3a}};
 
   const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& config = result.value().device_config();
 
@@ -178,7 +202,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingMultipleDeviceIds) {
                                                           0x05, 0x3b}};
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& config = result.value().device_config();
   for (const auto& device_id : {expected_id1, expected_id2}) {
@@ -230,7 +254,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
                                                         0x22, 0x3a}};
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& config = result.value().device_config();
 
@@ -350,7 +374,7 @@ TEST(ProcessConfigLoaderTest, AllowConfigWithoutUltrasound) {
                                kConfigWithRoutingPolicy.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputDriverGain) {
@@ -385,7 +409,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputDriverGain) {
                                kConfigWithDriverGain.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
                                                          0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
@@ -426,7 +450,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDriverGain) {
                                kConfigWithDriverGain.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
                                                          0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
@@ -477,7 +501,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
                                                         0x22, 0x3a}};
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& config = result.value().device_config();
 
@@ -607,7 +631,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                                kConfigWithEffects.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   const audio_stream_unique_id_t device_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
                                                        0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
@@ -1013,7 +1037,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
                                kConfigWithThermalPolicy.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto config = result.value();
   const auto& entries = config.thermal_config().entries();
@@ -1081,7 +1105,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithDefaultPipeline) {
                                                          0x05, 0x3a}};
 
   const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& config = result.value().device_config().output_device_profile(expected_id);
   EXPECT_TRUE(config.pipeline_config().root().loopback);
@@ -1132,7 +1156,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithNoSupportedStreamTypes) 
                                                          0x05, 0x3a}};
 
   const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto& config = result.value().device_config().output_device_profile(expected_id);
   for (const auto& render_usage : kRenderUsages) {
@@ -1189,7 +1213,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyVolumeCurve) {
                                                          0x05, 0x3a}};
 
   const auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(result.is_ok()) << result.error();
   auto& result_curve =
       result.value().device_config().output_device_profile(expected_id).volume_curve();
 
@@ -1197,7 +1221,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyVolumeCurve) {
   auto expected_curve = VolumeCurve::FromMappings({VolumeCurve::VolumeMapping(0.0, -160.0),
                                                    VolumeCurve::VolumeMapping(0.5, -5.0),
                                                    VolumeCurve::VolumeMapping(1.0, 0.0)});
-  ASSERT_TRUE(result.is_ok());
+  ASSERT_TRUE(expected_curve.is_ok()) << expected_curve.error();
   auto curve = expected_curve.take_value();
 
   EXPECT_FLOAT_EQ(curve.VolumeToDb(0.25), result_curve.VolumeToDb(0.25));

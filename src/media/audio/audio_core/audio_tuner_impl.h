@@ -152,7 +152,9 @@ inline VolumeCurve ToVolumeCurve(const std::vector<fuchsia::media::tuning::Volum
   for (auto vol : volume_curve) {
     mappings.push_back(VolumeCurve::VolumeMapping(vol.level, vol.decibel));
   }
-  return VolumeCurve::FromMappings(std::move(mappings)).take_value();
+  auto result = VolumeCurve::FromMappings(std::move(mappings));
+  FX_CHECK(result.is_ok()) << "invalid VolumeCurve: " << result.error();
+  return result.take_value();
 }
 
 class AudioTunerImpl : public fuchsia::media::tuning::AudioTuner {
