@@ -197,9 +197,11 @@ fn ip_test_inner(
 
     let output = quote_spanned! { span =>
         #(#attrs)*
-        #vis #sig {
-            #block
-        }
+        // Note: `ItemFn::block` includes the function body braces. Do not add
+        // additional braces (will break source code coverage analysis).
+        // TODO(fxbug.dev/77212): Try to improve the Rust compiler to ease
+        // this restriction.
+        #vis #sig #block
 
         #[test]
         #(#test_attrs)*
@@ -270,7 +272,7 @@ struct Input {
 fn serialize(input: Input, cfg: &Config) -> TokenStream {
     // First generate the body of the function; we'll generate the declaration
     // later.
-    let block = if input.errors.is_empty() {
+    let statements = if input.errors.is_empty() {
         let ipv4_block = &input.ipv4_block;
         let ipv6_block = &input.ipv6_block;
 
@@ -345,8 +347,14 @@ fn serialize(input: Input, cfg: &Config) -> TokenStream {
     // TODO(rheacock): strip `mut` keyword from arguments in the outer function
     quote!(
         #(#attrs)*
+        // Note: `ItemFn::block` includes the function body braces (and should
+        // not be wrapped with additional braces or it will break source code
+        // coverage analysis). But the `statements` defined above are not
+        // encapsulated in a braced-block, so the braces are required.
+        // TODO(fxbug.dev/77212): Try to improve the Rust compiler to ease
+        // this restriction.
         #vis #sig {
-            #block
+            #statements
         }
     )
     .into()

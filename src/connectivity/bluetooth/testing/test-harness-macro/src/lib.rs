@@ -91,9 +91,11 @@ pub fn run_singlethreaded_test(_attr: TokenStream, item: TokenStream) -> TokenSt
         // Preserve any original attributes.
         #(#attrs)* #[test]
         fn #ident () #ret_type {
-            async fn func(#inputs) #ret_type {
-                #block
-            }
+            // Note: `ItemFn::block` includes the function body braces. Do not
+            // add additional braces (will break source code coverage analysis).
+            // TODO(fxbug.dev/77212): Try to improve the Rust compiler to ease
+            // this restriction.
+            async fn func(#inputs) #ret_type #block
             let func = move |_| { ::test_harness::run_with_harness(func) };
             ::test_harness::run_singlethreaded_test(func)
           }

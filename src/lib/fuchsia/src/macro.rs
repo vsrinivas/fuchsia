@@ -236,9 +236,12 @@ impl Finish for Transformer {
         let output = quote_spanned! {span =>
             #(#attrs)* #(#func_attrs)*
             fn #ident () #ret_type {
-                #asyncness fn #func(#inputs) #ret_type {
-                    #block
-                }
+                // Note: `ItemFn::block` includes the function body braces. Do
+                // not add additional braces (will break source code coverage
+                // analysis).
+                // TODO(fxbug.dev/77212): Try to improve the Rust compiler to
+                // ease this restriction.
+                #asyncness fn #func(#inputs) #ret_type #block
                 let func = #adapt_main;
                 let func = #init_logging;
                 #run_executor
