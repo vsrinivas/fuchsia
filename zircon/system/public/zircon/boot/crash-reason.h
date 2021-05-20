@@ -38,6 +38,11 @@
 // HW reboot reason may be known, but only if the bootloader reports it to us.
 #define ZIRCON_CRASH_REASON_SOFTWARE_WATCHDOG ((uint32_t)5)
 
+// "Userspace root job termination" indicates a crash triggered by the system
+// because it detected the termination of the userspace root job, most likely
+// because one its critical processes crashed.
+#define ZIRCON_CRASH_REASON_USERSPACE_ROOT_JOB_TERMINATION ((uint32_t)6)
+
 #ifndef __ASSEMBLER__
 #if !__cplusplus
 typedef uint32_t zircon_crash_reason_t;
@@ -49,6 +54,7 @@ enum class ZirconCrashReason : uint32_t {
   Oom = ZIRCON_CRASH_REASON_OOM,
   Panic = ZIRCON_CRASH_REASON_PANIC,
   SoftwareWatchdog = ZIRCON_CRASH_REASON_SOFTWARE_WATCHDOG,
+  UserspaceRootJobTermination = ZIRCON_CRASH_REASON_USERSPACE_ROOT_JOB_TERMINATION,
 };
 
 // Using alias to maintain compatibility with APIs meant to be used by both C and C++.

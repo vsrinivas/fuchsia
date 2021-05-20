@@ -108,6 +108,7 @@ TEST(RamCrashlogTestCase, ValidReasonRequired) {
       Reason{ZirconCrashReason::Oom, true},
       Reason{ZirconCrashReason::Panic, true},
       Reason{ZirconCrashReason::SoftwareWatchdog, true},
+      Reason{ZirconCrashReason::UserspaceRootJobTermination, true},
       Reason{ZirconCrashReason::Invalid, false},
       Reason{static_cast<ZirconCrashReason>(0xbaadf00d), false},
   };

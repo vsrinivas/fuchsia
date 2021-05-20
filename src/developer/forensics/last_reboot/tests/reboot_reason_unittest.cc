@@ -100,6 +100,17 @@ TEST(RebootReasonTest, Brownout) {
   EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::BROWNOUT);
 }
 
+TEST(RebootReasonTest, RootJobTermination) {
+  const auto reason = RebootReason::kRootJobTermination;
+
+  EXPECT_TRUE(IsCrash(reason));
+  EXPECT_TRUE(IsFatal(reason));
+  EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kRootJobTermination);
+  EXPECT_EQ(ToCrashSignature(reason), "fuchsia-root-job-termination");
+  EXPECT_EQ(ToCrashProgramName(reason), "system");
+  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::ROOT_JOB_TERMINATION);
+}
+
 TEST(RebootReasonTest, GenericGraceful) {
   const auto reason = RebootReason::kGenericGraceful;
 

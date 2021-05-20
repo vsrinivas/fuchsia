@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/last_reboot/reboot_reason.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/forensics/utils/cobalt/metrics.h"
@@ -31,6 +32,8 @@ std::string ToString(const RebootReason reason) {
       return "SOFTWARE WATCHDOG TIMEOUT";
     case RebootReason::kBrownout:
       return "BROWNOUT";
+    case RebootReason::kRootJobTermination:
+      return "ROOT JOB TERMINATION";
     case RebootReason::kUserRequest:
       return "USER REQUEST";
     case RebootReason::kSystemUpdate:
@@ -61,6 +64,7 @@ bool IsCrash(const RebootReason reason) {
     case RebootReason::kHardwareWatchdogTimeout:
     case RebootReason::kSoftwareWatchdogTimeout:
     case RebootReason::kBrownout:
+    case RebootReason::kRootJobTermination:
     case RebootReason::kSessionFailure:
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
@@ -86,6 +90,7 @@ bool IsFatal(const RebootReason reason) {
     case RebootReason::kHardwareWatchdogTimeout:
     case RebootReason::kSoftwareWatchdogTimeout:
     case RebootReason::kBrownout:
+    case RebootReason::kRootJobTermination:
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
     case RebootReason::kRetrySystemUpdate:
@@ -122,6 +127,7 @@ std::optional<bool> OptionallyGraceful(const RebootReason reason) {
     case RebootReason::kHardwareWatchdogTimeout:
     case RebootReason::kSoftwareWatchdogTimeout:
     case RebootReason::kBrownout:
+    case RebootReason::kRootJobTermination:
       return false;
     case RebootReason::kNotParseable:
       return std::nullopt;
@@ -166,6 +172,8 @@ cobalt::LastRebootReason ToCobaltLastRebootReason(RebootReason reason) {
       return cobalt::LastRebootReason::kSoftwareWatchdogTimeout;
     case RebootReason::kBrownout:
       return cobalt::LastRebootReason::kBrownout;
+    case RebootReason::kRootJobTermination:
+      return cobalt::LastRebootReason::kRootJobTermination;
   }
 }
 
@@ -185,6 +193,8 @@ std::string ToCrashSignature(const RebootReason reason) {
       return "fuchsia-sw-watchdog-timeout";
     case RebootReason::kBrownout:
       return "fuchsia-brownout";
+    case RebootReason::kRootJobTermination:
+      return "fuchsia-root-job-termination";
     case RebootReason::kSessionFailure:
       return "fuchsia-session-failure";
     case RebootReason::kSysmgrFailure:
@@ -217,6 +227,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
       return "device";
     case RebootReason::kOOM:
     case RebootReason::kSoftwareWatchdogTimeout:
+    case RebootReason::kRootJobTermination:
     case RebootReason::kSessionFailure:
     case RebootReason::kSysmgrFailure:
     case RebootReason::kCriticalComponentFailure:
@@ -271,6 +282,8 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
       return fuchsia::feedback::RebootReason::SOFTWARE_WATCHDOG_TIMEOUT;
     case RebootReason::kBrownout:
       return fuchsia::feedback::RebootReason::BROWNOUT;
+    case RebootReason::kRootJobTermination:
+      return fuchsia::feedback::RebootReason::ROOT_JOB_TERMINATION;
     case RebootReason::kNotParseable:
       return std::nullopt;
   }

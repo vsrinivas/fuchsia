@@ -31,15 +31,15 @@ __NO_RETURN void Halt() {
 
   // About to call |platform_halt|, which never returns.
   if (!strcmp(behavior, "halt")) {
-    platform_halt(HALT_ACTION_HALT, ZirconCrashReason::NoCrash);
+    platform_halt(HALT_ACTION_HALT, ZirconCrashReason::UserspaceRootJobTermination);
   } else if (!strcmp(behavior, "bootloader")) {
-    platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::NoCrash);
+    platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::UserspaceRootJobTermination);
   } else if (!strcmp(behavior, "recovery")) {
-    platform_halt(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::NoCrash);
+    platform_halt(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::UserspaceRootJobTermination);
   } else if (!strcmp(behavior, "shutdown")) {
-    platform_halt(HALT_ACTION_SHUTDOWN, ZirconCrashReason::NoCrash);
+    platform_halt(HALT_ACTION_SHUTDOWN, ZirconCrashReason::UserspaceRootJobTermination);
   } else {
-    platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash);
+    platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::UserspaceRootJobTermination);
   }
 }
 

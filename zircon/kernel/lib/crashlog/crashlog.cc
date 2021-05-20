@@ -91,6 +91,10 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
       reason_str = "SW WATCHDOG";
       break;
 
+    case ZirconCrashReason::UserspaceRootJobTermination:
+      reason_str = "USERSPACE ROOT JOB TERMINATION";
+      break;
+
     default:
       reason_str = "UNKNOWN";
       break;

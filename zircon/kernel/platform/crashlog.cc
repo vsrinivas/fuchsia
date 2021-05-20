@@ -149,6 +149,9 @@ size_t default_platform_recover_crashlog(FILE* tgt) {
     case ZirconCrashReason::NoCrash:
       str_reason = "NO CRASH";
       break;
+    case ZirconCrashReason::UserspaceRootJobTermination:
+      str_reason = "USERSPACE ROOT JOB TERMINATION";
+      break;
     default:
       str_reason = nullptr;
       break;

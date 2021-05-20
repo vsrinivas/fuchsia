@@ -109,6 +109,8 @@ std::string GetReason(const LastReboot& last_reboot) {
         return "fatal critical component failure";
       case RebootReason::FACTORY_DATA_RESET:
         return "factory data reset";
+      case RebootReason::ROOT_JOB_TERMINATION:
+        return "root job termination";
       default:
         if (!last_reboot.has_graceful()) {
           return "unknown";

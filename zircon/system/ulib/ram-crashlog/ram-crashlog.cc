@@ -47,6 +47,7 @@ zx_status_t ram_crashlog_stow(void* buf, size_t buf_len, const void* payload, ui
     case ZirconCrashReason::Oom:
     case ZirconCrashReason::Panic:
     case ZirconCrashReason::SoftwareWatchdog:
+    case ZirconCrashReason::UserspaceRootJobTermination:
       break;
     default:
       return ZX_ERR_INVALID_ARGS;

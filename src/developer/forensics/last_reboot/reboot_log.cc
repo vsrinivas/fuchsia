@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "src/developer/forensics/last_reboot/graceful_reboot_reason.h"
+#include "src/developer/forensics/last_reboot/reboot_reason.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
@@ -29,6 +30,7 @@ enum class ZirconRebootReason {
   kSwWatchdog,
   kBrownout,
   kUnknown,
+  kRootJobTermination,
   kNotParseable,
 };
 
@@ -52,6 +54,8 @@ ZirconRebootReason ExtractZirconRebootReason(const std::string_view line) {
     return ZirconRebootReason::kBrownout;
   } else if (line == "ZIRCON REBOOT REASON (UNKNOWN)") {
     return ZirconRebootReason::kUnknown;
+  } else if (line == "ZIRCON REBOOT REASON (USERSPACE ROOT JOB TERMINATION)") {
+    return ZirconRebootReason::kRootJobTermination;
   }
 
   FX_LOGS(ERROR) << "Failed to extract a reboot reason from Zircon reboot log";
@@ -141,6 +145,8 @@ RebootReason DetermineRebootReason(const ZirconRebootReason zircon_reason,
       return RebootReason::kBrownout;
     case ZirconRebootReason::kUnknown:
       return RebootReason::kSpontaneous;
+    case ZirconRebootReason::kRootJobTermination:
+      return RebootReason::kRootJobTermination;
     case ZirconRebootReason::kNotParseable:
       return RebootReason::kNotParseable;
     case ZirconRebootReason::kNoCrash:

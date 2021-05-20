@@ -59,6 +59,10 @@ enum RebootReason : uint16 {
     HARDWARE_WATCHDOG_TIMEOUT = 7;
     SOFTWARE_WATCHDOG_TIMEOUT = 8;
 
+    /// The device rebooted because the userspace root job was terminated, most likely because one
+    /// of its critical processes crashed.
+    ROOT_JOB_TERMINATION = 19;
+
     // ///////////////////////////////////////////////////////////////////////////////////////////
     // Graceful reboot reasons
     // |graceful| has a value of true in LastReboot above.

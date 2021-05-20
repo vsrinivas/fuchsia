@@ -31,6 +31,7 @@ enum class RebootReason {
   kHardwareWatchdogTimeout,
   kSoftwareWatchdogTimeout,
   kBrownout,
+  kRootJobTermination,
   kUserRequest,
   kSystemUpdate,
   kRetrySystemUpdate,
