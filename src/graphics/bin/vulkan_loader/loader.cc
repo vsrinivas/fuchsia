@@ -59,6 +59,13 @@ void LoaderImpl::Get(std::string name, GetCallback callback) {
 
 void LoaderImpl::ConnectToDeviceFs(zx::channel channel) { app_->ServeDeviceFs(std::move(channel)); }
 
+void LoaderImpl::GetSupportedFeatures(GetSupportedFeaturesCallback callback) {
+  fuchsia::vulkan::loader::Features features =
+      fuchsia::vulkan::loader::Features::CONNECT_TO_DEVICE_FS |
+      fuchsia::vulkan::loader::Features::GET;
+  callback(features);
+}
+
 void LoaderImpl::AddCallback(std::string name, fit::function<void(zx::vmo)> callback) {
   std::optional<zx::vmo> vmo = app_->GetMatchingIcd(name);
   if (vmo) {

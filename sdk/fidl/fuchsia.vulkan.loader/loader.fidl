@@ -6,6 +6,13 @@ library fuchsia.vulkan.loader;
 
 using zx;
 
+flexible bits Features {
+    /// Implements Get().
+    GET = 1;
+    /// Implements ConnectToDeviceFs().
+    CONNECT_TO_DEVICE_FS = 2;
+};
+
 /// Service to provide Vulkan libraries to the loader.
 [Discoverable, ForDeprecatedCBindings]
 protocol Loader {
@@ -18,4 +25,7 @@ protocol Loader {
     /// potentially relevant to ICDs.  /dev/<devname> will be served under
     /// <devname> in this directory.
     ConnectToDeviceFs(zx.handle:CHANNEL channel);
+
+    /// Returns the set of features the loader service supports.
+    GetSupportedFeatures() -> (Features features);
 };

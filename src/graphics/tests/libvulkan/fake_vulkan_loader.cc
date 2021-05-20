@@ -56,6 +56,12 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
     // libvulkan_fake.json from the device fs.
     fdio_open("/pkg/data", fuchsia::io::OPEN_RIGHT_READABLE, channel.release());
   }
+  void GetSupportedFeatures(GetSupportedFeaturesCallback callback) override {
+    fuchsia::vulkan::loader::Features features =
+        fuchsia::vulkan::loader::Features::CONNECT_TO_DEVICE_FS |
+        fuchsia::vulkan::loader::Features::GET;
+    callback(features);
+  }
 
   fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
 };

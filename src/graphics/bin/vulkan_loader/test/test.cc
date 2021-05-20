@@ -108,3 +108,16 @@ TEST(VulkanLoader, DeviceFs) {
   ASSERT_TRUE(query_result.is_response());
   EXPECT_EQ(5u, query_result.response().result);
 }
+
+TEST(VulkanLoader, Features) {
+  fuchsia::vulkan::loader::LoaderSyncPtr loader;
+  EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.vulkan.loader.Loader",
+                                        loader.NewRequest().TakeChannel().release()));
+
+  fuchsia::vulkan::loader::Features features;
+  EXPECT_EQ(ZX_OK, loader->GetSupportedFeatures(&features));
+  constexpr fuchsia::vulkan::loader::Features kExpectedFeatures =
+      fuchsia::vulkan::loader::Features::CONNECT_TO_DEVICE_FS |
+      fuchsia::vulkan::loader::Features::GET;
+  EXPECT_EQ(kExpectedFeatures, features);
+}
