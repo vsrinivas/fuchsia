@@ -26,3 +26,26 @@ fuchsia_component("component") {
   manifest = "meta/puppet.cmx"
   deps = [ ":cpp-puppet" ]
 }
+
+executable("cpp-puppet-e2e") {
+  output_name = "sink_validator_cpp_puppet_e2e"
+  testonly = true
+  sources = [ "puppet.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp:backend",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("component-e2e") {
+  component_name = "sink-validator-cpp-puppet-e2e"
+  testonly = true
+  manifest = "meta/puppet-e2e.cmx"
+  deps = [ ":cpp-puppet-e2e" ]
+}

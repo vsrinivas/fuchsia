@@ -97,6 +97,18 @@ impl From<LogsData> for Message {
     }
 }
 
+/// State machine used for parsing a record.
+enum StateMachine {
+    /// Initial state (Printf, ModifiedNormal)
+    Init,
+    /// Regular parsing case (no special mode such as printf)
+    RegularArgs,
+    /// Modified parsing case (may switch to printf args)
+    NestedRegularArgs,
+    /// Inside printf args (may switch to RegularArgs)
+    PrintfArgs,
+}
+
 impl Message {
     /// Returns a new Message which encodes a count of dropped messages in its metadata.
     pub fn for_dropped(count: u64, source: &ComponentIdentity, timestamp: i64) -> Self {
@@ -231,60 +243,108 @@ impl Message {
 
         // Raw value from the client that we don't trust (not yet sanitized)
         let mut severity_untrusted = None;
+        let mut state = StateMachine::Init;
+        let mut printf_arguments = vec![];
+        let mut msg = None;
         for a in record.arguments {
-            let label = LogsField::from(a.name);
-
-            match (a.value, label) {
-                (Value::SignedInt(v), LogsField::Dropped) => {
-                    builder = builder.set_dropped(v as u64);
+            let name = a.name;
+            macro_rules! insert_normal {
+                () => {
+                    let label = LogsField::from(name);
+                    match (a.value, label) {
+                        (Value::SignedInt(v), LogsField::Dropped) => {
+                            builder = builder.set_dropped(v as u64);
+                        }
+                        (Value::UnsignedInt(v), LogsField::Dropped) => {
+                            builder = builder.set_dropped(v);
+                        }
+                        (Value::Floating(f), LogsField::Dropped) => {
+                            return Err(StreamError::ExpectedInteger {
+                                value: format!("{:?}", f),
+                                found: "float",
+                            })
+                        }
+                        (Value::Text(t), LogsField::Dropped) => {
+                            return Err(StreamError::ExpectedInteger { value: t, found: "text" });
+                        }
+                        (Value::SignedInt(v), LogsField::Verbosity) => {
+                            severity_untrusted = Some(v);
+                        }
+                        (_, LogsField::Verbosity) => {
+                            return Err(StreamError::ExpectedInteger {
+                                value: "".into(),
+                                found: "other",
+                            });
+                        }
+                        (Value::Text(text), LogsField::Tag) => {
+                            builder = builder.add_tag(text);
+                        }
+                        (_, LogsField::Tag) => {
+                            return Err(StreamError::UnrecognizedValue);
+                        }
+                        (Value::UnsignedInt(v), LogsField::ProcessId) => {
+                            builder = builder.set_pid(v);
+                        }
+                        (Value::UnsignedInt(v), LogsField::ThreadId) => {
+                            builder = builder.set_tid(v);
+                        }
+                        (Value::Text(v), LogsField::Msg) => {
+                            msg = Some(v);
+                        }
+                        (Value::Text(v), LogsField::FilePath) => {
+                            builder = builder.set_file(v);
+                        }
+                        (Value::UnsignedInt(v), LogsField::LineNumber) => {
+                            builder = builder.set_line(v);
+                        }
+                        (value, label) => {
+                            builder = builder.add_key(match value {
+                                Value::SignedInt(v) => LogsProperty::Int(label, v),
+                                Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
+                                Value::Floating(v) => LogsProperty::Double(label, v),
+                                Value::Text(v) => LogsProperty::String(label, v),
+                                ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
+                            })
+                        }
+                    }
+                };
+            }
+            match state {
+                StateMachine::Init if name == "printf" => {
+                    state = StateMachine::NestedRegularArgs;
                 }
-                (Value::UnsignedInt(v), LogsField::Dropped) => {
-                    builder = builder.set_dropped(v);
+                StateMachine::Init => {
+                    insert_normal!();
+                    state = StateMachine::RegularArgs;
                 }
-                (Value::Floating(f), LogsField::Dropped) => {
-                    return Err(StreamError::ExpectedInteger {
-                        value: format!("{:?}", f),
-                        found: "float",
-                    })
+                StateMachine::RegularArgs => {
+                    insert_normal!();
                 }
-                (Value::Text(t), LogsField::Dropped) => {
-                    return Err(StreamError::ExpectedInteger { value: t, found: "text" });
-                }
-                (Value::SignedInt(v), LogsField::Verbosity) => {
-                    severity_untrusted = Some(v);
-                }
-                (_, LogsField::Verbosity) => {
-                    return Err(StreamError::ExpectedInteger { value: "".into(), found: "other" });
-                }
-                (Value::Text(text), LogsField::Tag) => {
-                    builder = builder.add_tag(text);
-                }
-                (_, LogsField::Tag) => {
-                    return Err(StreamError::UnrecognizedValue);
-                }
-                (Value::UnsignedInt(v), LogsField::ProcessId) => {
-                    builder = builder.set_pid(v);
-                }
-                (Value::UnsignedInt(v), LogsField::ThreadId) => {
-                    builder = builder.set_tid(v);
-                }
-                (Value::Text(v), LogsField::Msg) => {
-                    builder = builder.set_message(v);
-                }
-                (Value::Text(v), LogsField::FilePath) => {
-                    builder = builder.set_file(v);
-                }
-                (Value::UnsignedInt(v), LogsField::LineNumber) => {
-                    builder = builder.set_line(v);
-                }
-                (value, label) => {
-                    builder = builder.add_key(match value {
-                        Value::SignedInt(v) => LogsProperty::Int(label, v),
-                        Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
-                        Value::Floating(v) => LogsProperty::Double(label, v),
-                        Value::Text(v) => LogsProperty::String(label, v),
+                StateMachine::NestedRegularArgs if name == "" => {
+                    state = StateMachine::PrintfArgs;
+                    printf_arguments.push(match a.value {
+                        Value::SignedInt(v) => v.to_string(),
+                        Value::UnsignedInt(v) => v.to_string(),
+                        Value::Floating(v) => v.to_string(),
+                        Value::Text(v) => v,
                         ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
-                    })
+                    });
+                }
+                StateMachine::NestedRegularArgs => {
+                    insert_normal!();
+                }
+                StateMachine::PrintfArgs if name == "" => {
+                    printf_arguments.push(match a.value {
+                        Value::SignedInt(v) => v.to_string(),
+                        Value::UnsignedInt(v) => v.to_string(),
+                        Value::Floating(v) => v.to_string(),
+                        Value::Text(v) => v,
+                        ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
+                    });
+                }
+                StateMachine::PrintfArgs => {
+                    insert_normal!();
+                    state = StateMachine::RegularArgs;
                 }
             }
         }
@@ -296,6 +356,13 @@ impl Message {
             LegacySeverity::try_from(record.severity).unwrap()
         };
         let (severity, verbosity) = raw_severity.for_structured();
+        if let Some(string) = msg {
+            if !printf_arguments.is_empty() {
+                builder = builder.set_format_printf(string, printf_arguments);
+            } else {
+                builder = builder.set_message(string)
+            }
+        }
         builder = builder.set_severity(severity);
 
         let mut result = Message::from(builder.build());

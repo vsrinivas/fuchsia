@@ -550,6 +550,10 @@ pub struct LogsDataBuilder {
     args: BuilderArgs,
     /// List of KVPs from the user
     keys: Vec<Property<LogsField>>,
+    /// Printf format string
+    format: Option<String>,
+    /// Arguments for printf string
+    printf_args: Vec<String>,
 }
 
 pub struct BuilderArgs {
@@ -582,6 +586,8 @@ impl LogsDataBuilder {
             tags: vec![],
             tid: None,
             keys: vec![],
+            format: None,
+            printf_args: vec![],
         }
     }
 
@@ -641,6 +647,20 @@ impl LogsDataBuilder {
             let val = DiagnosticsHierarchy::new("keys", self.keys, vec![]);
             payload_fields.push(val);
         }
+        if let Some(format) = self.format {
+            let val = DiagnosticsHierarchy::new(
+                "printf".to_string(),
+                vec![
+                    LogsProperty::String(LogsField::Other("format".to_string()), format),
+                    LogsProperty::StringList(
+                        LogsField::Other("args".to_string()),
+                        self.printf_args,
+                    ),
+                ],
+                vec![],
+            );
+            payload_fields.push(val);
+        }
         let mut payload = LogsHierarchy::new("root", vec![], payload_fields);
         payload.sort();
         let mut ret = LogsData::for_logs(
@@ -672,6 +692,14 @@ impl LogsDataBuilder {
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_message(mut self, msg: impl Into<String>) -> Self {
         self.msg = Some(msg.into());
+        self
+    }
+
+    /// Sets the printf format and arguments.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_format_printf(mut self, format: impl Into<String>, args: Vec<String>) -> Self {
+        self.format = Some(format.into());
+        self.printf_args = args;
         self
     }
 
@@ -755,6 +783,30 @@ impl Data<Logs> {
                 _ => None,
             })
         })
+    }
+
+    pub fn payload_printf_format(&mut self) -> Option<&str> {
+        self.payload_printf().as_ref().and_then(|p| {
+            p.properties.iter().find_map(|property| match property {
+                LogsProperty::String(LogsField::Format, format) => Some(format.as_str()),
+                _ => None,
+            })
+        })
+    }
+
+    pub fn payload_printf_args(&mut self) -> Option<&Vec<String>> {
+        self.payload_printf().as_ref().and_then(|p| {
+            p.properties.iter().find_map(|property| match property {
+                LogsProperty::StringList(LogsField::Args, format) => Some(format),
+                _ => None,
+            })
+        })
+    }
+
+    pub fn payload_printf(&self) -> Option<&DiagnosticsHierarchy<LogsField>> {
+        self.payload
+            .as_ref()
+            .and_then(|p| p.children.iter().find(|property| property.name.as_str() == "printf"))
     }
 
     pub fn payload_message(&self) -> Option<&DiagnosticsHierarchy<LogsField>> {
@@ -897,6 +949,8 @@ pub enum LogsField {
     MsgStructured,
     FilePath,
     LineNumber,
+    Args,
+    Format,
     Other(String),
 }
 
@@ -908,6 +962,8 @@ pub const DROPPED_LABEL: &str = "num_dropped";
 pub const TAG_LABEL: &str = "tag";
 pub const MESSAGE_LABEL_STRUCTURED: &str = "value";
 pub const MESSAGE_LABEL: &str = "message";
+pub const FORMAT_LABEL: &str = "format";
+pub const ARGS_LABEL: &str = "args";
 pub const VERBOSITY_LABEL: &str = "verbosity";
 pub const FILE_PATH_LABEL: &str = "file";
 pub const LINE_NUMBER_LABEL: &str = "line";
@@ -939,6 +995,8 @@ impl AsRef<str> for LogsField {
             Self::FilePath => FILE_PATH_LABEL,
             Self::LineNumber => LINE_NUMBER_LABEL,
             Self::MsgStructured => MESSAGE_LABEL_STRUCTURED,
+            Self::Args => MESSAGE_LABEL,
+            Self::Format => FORMAT_LABEL,
             Self::Other(str) => str.as_str(),
         }
     }
@@ -960,6 +1018,8 @@ where
             FILE_PATH_LABEL => Self::FilePath,
             LINE_NUMBER_LABEL => Self::LineNumber,
             MESSAGE_LABEL_STRUCTURED => Self::MsgStructured,
+            FORMAT_LABEL => Self::Format,
+            ARGS_LABEL => Self::Args,
             _ => Self::Other(s.to_string()),
         }
     }
@@ -1113,6 +1173,159 @@ mod tests {
           }
         });
 
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
+    }
+
+    #[test]
+    fn default_builder_test() {
+        let builder = LogsDataBuilder::new(BuilderArgs {
+            component_url: "url".to_string(),
+            moniker: String::from("moniker"),
+            severity: Severity::Info,
+            size_bytes: 0,
+            timestamp_nanos: 0.into(),
+        });
+        //let tree = builder.build();
+        let expected_json = json!({
+          "moniker": "moniker",
+          "version": 1,
+          "data_source": "Logs",
+          "payload": {
+              "root":
+              {
+                  "message":{}
+              }
+          },
+          "metadata": {
+            "errors": [],
+            "component_url": "url",
+              "dropped": 0,
+              "errors": null,
+              "file": null,
+              "line": null,
+              "pid": null,
+              "severity": "INFO",
+              "size_bytes": 0,
+              "tags": [],
+              "tid": null,
+
+            "timestamp": 0,
+          }
+        });
+        let result_json =
+            serde_json::to_value(&builder.build()).expect("serialization should succeed.");
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
+    }
+
+    #[test]
+    fn regular_message_test() {
+        let builder = LogsDataBuilder::new(BuilderArgs {
+            component_url: "url".to_string(),
+            moniker: String::from("moniker"),
+            severity: Severity::Info,
+            size_bytes: 0,
+            timestamp_nanos: 0.into(),
+        })
+        .set_message("app")
+        .set_file("test file.cc")
+        .set_line(420)
+        .set_pid(1001)
+        .set_tid(200)
+        .set_dropped(2)
+        .add_tag("You're")
+        .add_tag("IT!")
+        .add_key(LogsProperty::String(LogsField::Other("key".to_string()), "value".to_string()));
+        // TODO (http://fxbug.dev/77054): Convert to our custom DSL when possible.
+        let expected_json = json!({
+          "moniker": "moniker",
+          "version": 1,
+          "data_source": "Logs",
+          "payload": {
+              "root":
+              {
+                  "keys":{
+                      "key":"value"
+                  },
+                  "message":{
+                      "value":"app"
+                  }
+              }
+          },
+          "metadata": {
+            "errors": [],
+            "component_url": "url",
+              "dropped": 2,
+              "errors": [{"dropped_logs":{"count":2}}],
+              "file": "test file.cc",
+              "line": 420,
+              "pid": 1001,
+              "severity": "INFO",
+              "size_bytes": 0,
+              "tags": ["You're", "IT!"],
+              "tid": 200,
+
+            "timestamp": 0,
+          }
+        });
+        let result_json =
+            serde_json::to_value(&builder.build()).expect("serialization should succeed.");
+        pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
+    }
+
+    #[test]
+    fn printf_test() {
+        let builder = LogsDataBuilder::new(BuilderArgs {
+            component_url: "url".to_string(),
+            moniker: String::from("moniker"),
+            severity: Severity::Info,
+            size_bytes: 0,
+            timestamp_nanos: 0.into(),
+        })
+        .set_format_printf("app", vec!["some".to_string(), "arg".to_string()])
+        .set_file("test file.cc")
+        .set_line(420)
+        .set_pid(1001)
+        .set_tid(200)
+        .set_dropped(2)
+        .add_tag("You're")
+        .add_tag("IT!")
+        .add_key(LogsProperty::String(LogsField::Other("key".to_string()), "value".to_string()));
+        let expected_json = json!({
+          "moniker": "moniker",
+          "version": 1,
+          "data_source": "Logs",
+          "payload": {
+              "root":
+              {
+                  "keys":{
+                      "key":"value"
+                  },
+                  "printf":{
+                    "args":["some", "arg"],
+                    "format":"app"
+                  },
+                  "message":{
+                  }
+              }
+          },
+          "metadata": {
+            "errors": [],
+            "component_url": "url",
+              "dropped": 2,
+              "errors": [{"dropped_logs":{"count":2}}],
+              "file": "test file.cc",
+              "line": 420,
+              "pid": 1001,
+              "severity": "INFO",
+              "size_bytes": 0,
+              "tags": ["You're", "IT!"],
+              "tid": 200,
+
+            "timestamp": 0,
+          }
+        });
+        let result_json =
+            serde_json::to_value(&builder.build()).expect("serialization should succeed.");
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
     }
 
