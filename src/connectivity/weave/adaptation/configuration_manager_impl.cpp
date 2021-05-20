@@ -16,9 +16,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
+namespace nl::Weave::DeviceLayer {
 namespace {
 using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;
 using Key = ::nl::Weave::Platform::PersistedStorage::Key;
@@ -27,7 +25,7 @@ using Key = ::nl::Weave::Platform::PersistedStorage::Key;
 /* Singleton instance of the ConfigurationManager implementation object for the Fuchsia. */
 ConfigurationManagerImpl ConfigurationManagerImpl::sInstance;
 
-WEAVE_ERROR ConfigurationManagerImpl::_Init(void) {
+WEAVE_ERROR ConfigurationManagerImpl::_Init() {
   FX_CHECK(delegate_ != nullptr) << "ConfigurationManager delegate not set before Init.";
   return delegate_->Init();
 }
@@ -65,13 +63,13 @@ bool ConfigurationManagerImpl::_IsPairedToAccount() { return delegate_->IsPaired
 
 bool ConfigurationManagerImpl::_IsMemberOfFabric() { return delegate_->IsMemberOfFabric(); }
 
-GroupKeyStoreBase* ConfigurationManagerImpl::_GetGroupKeyStore(void) {
+GroupKeyStoreBase* ConfigurationManagerImpl::_GetGroupKeyStore() {
   return delegate_->GetGroupKeyStore();
 }
 
-bool ConfigurationManagerImpl::_CanFactoryReset(void) { return delegate_->CanFactoryReset(); }
+bool ConfigurationManagerImpl::_CanFactoryReset() { return delegate_->CanFactoryReset(); }
 
-void ConfigurationManagerImpl::_InitiateFactoryReset(void) { delegate_->InitiateFactoryReset(); }
+void ConfigurationManagerImpl::_InitiateFactoryReset() { delegate_->InitiateFactoryReset(); }
 
 WEAVE_ERROR ConfigurationManagerImpl::_ReadPersistedStorageValue(Key key, uint32_t& value) {
   return delegate_->ReadPersistedStorageValue(key, value);
@@ -156,6 +154,4 @@ WEAVE_ERROR ConfigurationManagerImpl::_StorePairedAccountId(const char* account_
   return delegate_->StorePairedAccountId(account_id, account_id_len);
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

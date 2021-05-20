@@ -234,7 +234,7 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
   WEAVE_ERROR _GetProductId(uint16_t& product_id);
   WEAVE_ERROR _GetVendorId(uint16_t& vendor_id);
   WEAVE_ERROR _GetDeviceDescriptorTLV(uint8_t* buf, size_t buf_size, size_t& encoded_len);
-  WEAVE_ERROR _SetFailSafeArmed(bool val);
+  WEAVE_ERROR _SetFailSafeArmed(bool fail_safe_armed);
   WEAVE_ERROR _StoreFabricId(uint64_t fabric_id);
   WEAVE_ERROR _StoreServiceProvisioningData(uint64_t service_id, const uint8_t* service_config,
                                             size_t service_config_len, const char* account_id,

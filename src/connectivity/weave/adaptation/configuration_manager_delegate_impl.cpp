@@ -26,10 +26,7 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "weave_inspector.h"
 
-namespace nl {
-namespace Weave {
-namespace DeviceLayer {
-
+namespace nl::Weave::DeviceLayer {
 namespace {
 
 using nl::Weave::WeaveInspector;
@@ -281,10 +278,10 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreHWInfo() {
   if (ZX_OK == hwinfo_device_->GetInfo(&device_info) && device_info.has_serial_number()) {
     return impl_->StoreSerialNumber(device_info.serial_number().c_str(),
                                     device_info.serial_number().length());
-  } else if ((err =
-                  device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_SerialNumber, serial,
-                                                   ConfigurationManager::kMaxSerialNumberLength + 1,
-                                                   &serial_size)) == WEAVE_NO_ERROR) {
+  }
+  if ((err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_SerialNumber, serial,
+                                              ConfigurationManager::kMaxSerialNumberLength + 1,
+                                              &serial_size)) == WEAVE_NO_ERROR) {
     return impl_->StoreSerialNumber(serial, serial_size);
   }
   return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
@@ -318,8 +315,9 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStorePairingCode() {
     return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
   }
 
-  return impl_->StorePairingCode((const char*)pairing_code_response.pairing_code.data(),
-                                 pairing_code_response.pairing_code.size());
+  return impl_->StorePairingCode(
+      reinterpret_cast<const char*>(pairing_code_response.pairing_code.data()),
+      pairing_code_response.pairing_code.size());
 }
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetAndStoreMfrDeviceCert() {
@@ -386,7 +384,8 @@ zx_status_t ConfigurationManagerDelegateImpl::GetPrivateKeyForSigning(
                                          &out_len);
   if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return ZX_ERR_NOT_FOUND;
-  } else if (err != WEAVE_NO_ERROR) {
+  }
+  if (err != WEAVE_NO_ERROR) {
     FX_LOGS(ERROR) << "Failed to read private key.";
     return ZX_ERR_INTERNAL;
   }
@@ -477,7 +476,7 @@ zx_status_t ConfigurationManagerDelegateImpl::GetDeviceIdFromFactory(const char*
     return ZX_ERR_IO;
   }
 
-  *factory_device_id = strtoull(output, NULL, 16);
+  *factory_device_id = strtoull(output, nullptr, 16);
   if (errno == ERANGE) {
     FX_LOGS(ERROR) << "Failed to strtoull device ID: " << strerror(errno);
     return ZX_ERR_IO;
@@ -587,6 +586,4 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::StorePairedAccountId(const char* a
   return err;
 }
 
-}  // namespace DeviceLayer
-}  // namespace Weave
-}  // namespace nl
+}  // namespace nl::Weave::DeviceLayer

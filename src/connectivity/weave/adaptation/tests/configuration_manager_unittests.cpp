@@ -32,8 +32,7 @@
 #include "thread_stack_manager_delegate_impl.h"
 #include "weave_test_fixture.h"
 
-namespace nl::Weave::DeviceLayer::Internal {
-namespace testing {
+namespace nl::Weave::DeviceLayer::Internal::testing {
 namespace {
 
 using nl::Weave::WeaveKeyId;
@@ -141,10 +140,12 @@ class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataM
 
 class FakeDirectory {
  public:
-  FakeDirectory() { root_ = std::make_unique<vfs::PseudoDir>(); }
+  FakeDirectory() : root_(std::make_unique<vfs::PseudoDir>()) {}
+
   zx_status_t AddResource(std::string filename, const std::string& data) {
-    return root_->AddEntry(filename, CreateVmoFile(data));
+    return root_->AddEntry(std::move(filename), CreateVmoFile(data));
   }
+
   void Serve(fidl::InterfaceRequest<fuchsia::io::Directory> channel,
              async_dispatcher_t* dispatcher) {
     root_->Serve(fuchsia::io::OPEN_FLAG_DIRECTORY | fuchsia::io::OPEN_RIGHT_READABLE |
@@ -153,7 +154,9 @@ class FakeDirectory {
   }
 
  private:
-  std::unique_ptr<vfs::VmoFile> CreateVmoFile(const std::string& data) {
+  std::unique_ptr<vfs::PseudoDir> root_;
+
+  static std::unique_ptr<vfs::VmoFile> CreateVmoFile(const std::string& data) {
     fsl::SizedVmo test_vmo;
     if (!VmoFromString(data, &test_vmo)) {
       return nullptr;
@@ -162,9 +165,6 @@ class FakeDirectory {
                                           vfs::VmoFile::WriteOption::WRITABLE,
                                           vfs::VmoFile::Sharing::CLONE_COW);
   }
-
- protected:
-  std::unique_ptr<vfs::PseudoDir> root_;
 };
 
 class FakeWeaveFactoryStoreProvider
@@ -264,7 +264,7 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
         fake_weave_factory_store_provider_.GetHandler(dispatcher()));
   }
 
-  void SetUp() {
+  void SetUp() override {
     WeaveTestFixture<CfgMgrTestResource>::SetUp();
     WeaveTestFixture<CfgMgrTestResource>::RunFixtureLoop();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
@@ -275,14 +275,14 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
   }
 
-  void TearDown() {
+  void TearDown() override {
     WeaveTestFixture<CfgMgrTestResource>::StopFixtureLoop();
     WeaveTestFixture<CfgMgrTestResource>::TearDown();
     ThreadStackMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(nullptr);
   }
 
-  bool CopyFile(std::string src, std::string dst) {
+  static bool CopyFile(const std::string& src, const std::string& dst) {
     std::string data;
     bool result = files::ReadFileToString(src, &data);
     int e = errno;
@@ -299,26 +299,22 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     return result;
   }
 
-  bool CopyFileFromPkgToData(std::string filename) {
+  static bool CopyFileFromPkgToData(const std::string& filename) {
     return CopyFile(kPkgDataPath + filename, kDataPath + filename);
   }
 
-  bool CopyFileFromConfigToData(std::string filename) {
+  static bool CopyFileFromConfigToData(const std::string& filename) {
     return CopyFile(kConfigDataPath + filename, kDataPath + filename);
   }
 
-  bool CopyFileFromConfigToData(std::string src_filename, std::string dst_filename) {
+  static bool CopyFileFromConfigToData(const std::string& src_filename,
+                                       const std::string& dst_filename) {
     return CopyFile(kConfigDataPath + src_filename, kDataPath + dst_filename);
   }
 
   void DisableHwInfoSerialNum() { fake_hwinfo_.DisableSerialNum(); }
 
  protected:
-  FakeHwinfo fake_hwinfo_;
-  FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
-  FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
-  ThreadStackManagerTestDelegateImpl* thread_mgr_;
-
   // Add a fake directory to the resource that will be destroyed only after the
   // background loop has completed. There is no interface for removing a fake
   // directory as it may still be referenced by the loop.
@@ -327,7 +323,21 @@ class ConfigurationManagerTest : public WeaveTestFixture<CfgMgrTestResource> {
     return *resource().fake_dirs.back();
   }
 
+  FakeHwinfo& fake_hwinfo() { return fake_hwinfo_; }
+  FakeWeaveFactoryDataManager& fake_weave_factory_data_manager() {
+    return fake_weave_factory_data_manager_;
+  }
+  FakeWeaveFactoryStoreProvider& fake_weave_factory_store_provider() {
+    return fake_weave_factory_store_provider_;
+  }
+  ThreadStackManagerTestDelegateImpl* thread_mgr() { return thread_mgr_; }
+
  private:
+  FakeHwinfo fake_hwinfo_;
+  FakeWeaveFactoryDataManager fake_weave_factory_data_manager_;
+  FakeWeaveFactoryStoreProvider fake_weave_factory_store_provider_;
+  ThreadStackManagerTestDelegateImpl* thread_mgr_;
+
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<sys::ComponentContext> context_;
 };
@@ -412,13 +422,13 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFile) {
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
 
-  ConfigurationManagerTestDelegateImpl* delegate =
-      (ConfigurationManagerTestDelegateImpl*)ConfigurationMgrImpl().GetDelegate();
+  auto delegate =
+      reinterpret_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
   EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
 
   auto& fake_dir = AddFakeDirectory();
   EXPECT_EQ(ZX_OK, fake_dir.AddResource(kFilename, data));
-  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
+  fake_weave_factory_store_provider().AttachDir(&fake_dir);
 
   EXPECT_EQ(delegate->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_OK);
 
@@ -436,13 +446,13 @@ TEST_F(ConfigurationManagerTest, ReadFactoryFileLargerThanExpected) {
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerTestDelegateImpl>());
 
-  ConfigurationManagerTestDelegateImpl* delegate =
-      (ConfigurationManagerTestDelegateImpl*)ConfigurationMgrImpl().GetDelegate();
+  auto delegate =
+      reinterpret_cast<ConfigurationManagerTestDelegateImpl*>(ConfigurationMgrImpl().GetDelegate());
   EXPECT_EQ(delegate->Init(), WEAVE_NO_ERROR);
 
   auto& fake_dir = AddFakeDirectory();
   EXPECT_EQ(ZX_OK, fake_dir.AddResource(kFilename, data));
-  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
+  fake_weave_factory_store_provider().AttachDir(&fake_dir);
 
   EXPECT_EQ(delegate->ReadFactoryFile(kFilename, buf, kBufSize, &out_len), ZX_ERR_BUFFER_TOO_SMALL);
 }
@@ -456,17 +466,17 @@ TEST_F(ConfigurationManagerTest, SetAndGetDeviceId) {
 
   auto& fake_dir = AddFakeDirectory();
   EXPECT_EQ(ZX_OK, fake_dir.AddResource(test_device_id_file, test_device_id_data));
-  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
+  fake_weave_factory_store_provider().AttachDir(&fake_dir);
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
+  EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), nullptr, 16));
 
   // Show that even if the file is modified, it doesn't affect us as we read from
   // factory only once.
   stored_weave_device_id = 0;
   auto& fake_dir2 = AddFakeDirectory();
-  fake_weave_factory_store_provider_.AttachDir(&fake_dir2);
+  fake_weave_factory_store_provider().AttachDir(&fake_dir2);
   EXPECT_EQ(ConfigurationMgr().GetDeviceId(stored_weave_device_id), WEAVE_NO_ERROR);
-  EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), NULL, 16));
+  EXPECT_EQ(stored_weave_device_id, strtoull(test_device_id_data.c_str(), nullptr, 16));
 }
 
 TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
@@ -482,7 +492,7 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
             WEAVE_NO_ERROR);
   auto& fake_dir = AddFakeDirectory();
   EXPECT_EQ(ZX_OK, fake_dir.AddResource(test_mfr_cert_file, test_mfr_cert_data));
-  fake_weave_factory_store_provider_.AttachDir(&fake_dir);
+  fake_weave_factory_store_provider().AttachDir(&fake_dir);
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
                                                                 cert_len),
             WEAVE_NO_ERROR);
@@ -493,7 +503,7 @@ TEST_F(ConfigurationManagerTest, GetManufacturerDeviceCertificate) {
   // Show that after being read in once, modifying the  data has no effect
   std::memset(mfr_cert_buf, 0, sizeof(mfr_cert_buf));
   auto& fake_dir2 = AddFakeDirectory();
-  fake_weave_factory_store_provider_.AttachDir(&fake_dir2);
+  fake_weave_factory_store_provider().AttachDir(&fake_dir2);
   EXPECT_EQ(ConfigurationMgr().GetManufacturerDeviceCertificate(mfr_cert_buf, sizeof(mfr_cert_buf),
                                                                 cert_len),
             WEAVE_NO_ERROR);
@@ -545,45 +555,45 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   // All false
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr_->SetThreadProvisioned(false);
+  thread_mgr()->SetThreadProvisioned(false);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   // Two false
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr_->SetThreadProvisioned(false);
+  thread_mgr()->SetThreadProvisioned(false);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr_->SetThreadProvisioned(false);
+  thread_mgr()->SetThreadProvisioned(false);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr_->SetThreadProvisioned(true);
+  thread_mgr()->SetThreadProvisioned(true);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   // One false
   cfg_mgr->SetPairedToAccount(false);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr_->SetThreadProvisioned(true);
+  thread_mgr()->SetThreadProvisioned(true);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(false);
-  thread_mgr_->SetThreadProvisioned(true);
+  thread_mgr()->SetThreadProvisioned(true);
 
   EXPECT_FALSE(ConfigurationMgr().IsFullyProvisioned());
 
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr_->SetThreadProvisioned(false);
+  thread_mgr()->SetThreadProvisioned(false);
 
   // TODO(fxbug.dev/58252) Change to EXPECT_FALSE once ThreadStackManager is ready
   EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
@@ -591,7 +601,7 @@ TEST_F(ConfigurationManagerTest, IsFullyProvisioned) {
   // No false
   cfg_mgr->SetPairedToAccount(true);
   cfg_mgr->SetMemberOfFabric(true);
-  thread_mgr_->SetThreadProvisioned(true);
+  thread_mgr()->SetThreadProvisioned(true);
 
   EXPECT_TRUE(ConfigurationMgr().IsFullyProvisioned());
 }
@@ -640,11 +650,11 @@ TEST_F(ConfigurationManagerTest, GetLocalSerialNumber) {
   // Create a new context and set a new delegate so that
   // the disablehwinwoserialnum takes effect.
   sys::testing::ComponentContextProvider context_provider;
-  context_provider.service_directory_provider()->AddService(fake_hwinfo_.GetHandler(dispatcher()));
+  context_provider.service_directory_provider()->AddService(fake_hwinfo().GetHandler(dispatcher()));
   context_provider.service_directory_provider()->AddService(
-      fake_weave_factory_data_manager_.GetHandler(dispatcher()));
+      fake_weave_factory_data_manager().GetHandler(dispatcher()));
   context_provider.service_directory_provider()->AddService(
-      fake_weave_factory_store_provider_.GetHandler(dispatcher()));
+      fake_weave_factory_store_provider().GetHandler(dispatcher()));
   PlatformMgrImpl().SetComponentContextForProcess(context_provider.TakeContext());
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
@@ -723,5 +733,4 @@ TEST_F(ConfigurationManagerTest, SetConfiguration) {
   files::DeletePath(kDataPath + to_filename, false);
 }
 
-}  // namespace testing
-}  // namespace nl::Weave::DeviceLayer::Internal
+}  // namespace nl::Weave::DeviceLayer::Internal::testing
