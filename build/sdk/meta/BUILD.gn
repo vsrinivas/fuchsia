@@ -16,12 +16,15 @@ schemas = [
   "data.json",
   "device_profile.json",
   "documentation.json",
+  "emu_manifest.json",
   "fidl_library.json",
+  "flash_manifest-02.json",
   "hardware.json",
   "host_tool.json",
   "loadable_module.json",
   "manifest.json",
   "physical_device.json",
+  "product_bundle.json",
   "sysroot.json",
 ]
 

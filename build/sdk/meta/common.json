@@ -1,5 +1,4 @@
 {
-    "id": "http://fuchsia.com/schemas/sdk/common.json",
     "$schema": "http://json-schema.org/draft-07/schema#",
     "definitions": {
         "banjo_library_name": {
@@ -36,6 +35,30 @@
             "description": "Path to a file from the root of the SDK",
             "type": "string"
         },
+        "key_value": {
+            "additionalItems": false,
+            "description": "A key-value pair.",
+            "items": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": [
+                        "number",
+                        "string"
+                    ]
+                }
+            ],
+            "minItems": 2,
+            "type": "array"
+        },
+        "key_value_list": {
+            "description": "A list of key-value pairs.",
+            "items": {
+                "$ref": "#/definitions/key_value"
+            },
+            "type": "array"
+        },
         "sdk_element": {
             "description": "Base type for SDK elements",
             "properties": {
@@ -66,6 +89,11 @@
             "description": "Represents the type of an SDK element",
             "type": "string"
         },
+        "version": {
+            "description": "An opaque version string. The string may include any characters. Tools must not attempt to draw any conclusions about inter version compatibility other than the version 'X' manifest complies with the version 'X' of the schema and is therefore parsable by the version 'X' parser. There are no guarantees, for example, a parser for version 'B' may be able to parse a JSON document versioned 'A'.",
+            "minLength": 1,
+            "type": "string"
+        },
         "versioned_sdk_element": {
             "allOf": [
                 {
@@ -86,5 +114,6 @@
             ],
             "type": "object"
         }
-    }
+    },
+    "id": "http://fuchsia.com/schemas/sdk/common.json"
 }
