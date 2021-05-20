@@ -62,7 +62,6 @@ class TestDeviceBase {
     path[response.path.size()] = 0;
     // Remove everything after the final slash.
     *strrchr(path, '/') = 0;
-    printf("Parent device path: %s\n", path);
     zx::channel local_channel, remote_channel;
 
     auto parent = service::Connect<fuchsia_device::Controller>(path);
