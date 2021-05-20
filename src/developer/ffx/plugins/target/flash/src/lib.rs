@@ -102,6 +102,7 @@ mod test {
         pub(crate) staged_files: Vec<String>,
         pub(crate) oem_commands: Vec<String>,
         pub(crate) variables: Vec<String>,
+        pub(crate) bootloader_reboots: usize,
     }
 
     pub(crate) struct TestResolver {
@@ -152,6 +153,8 @@ mod test {
                 }
                 FastbootRequest::RebootBootloader { listener, responder } => {
                     listener.into_proxy().unwrap().on_reboot().unwrap();
+                    let mut state = state.lock().unwrap();
+                    state.bootloader_reboots += 1;
                     responder.send(&mut Ok(())).unwrap();
                 }
                 FastbootRequest::ContinueBoot { responder } => {

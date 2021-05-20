@@ -9,13 +9,15 @@ use {
     },
     anyhow::{anyhow, Result},
     async_trait::async_trait,
-    ffx_core::ffx_bail,
+    ffx_core::{ffx_bail, ffx_error},
     ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
     std::io::Write,
 };
 
+const REBOOT_ERR: &str = "Failed to reboot your device.  \
+                          Power cycle the device manually and try again.";
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
 pub(crate) const MULTIPLE_PRODUCT: &str =
     "Multiple products found in manifest. Please specify a product";
@@ -98,8 +100,10 @@ impl Flash for FlashManifest {
         };
         flash_partitions(writer, file_resolver, &product.bootloader_partitions, &fastboot_proxy)
             .await?;
-        if product.bootloader_partitions.len() > 0 {
-            reboot_bootloader(writer, &fastboot_proxy).await?;
+        if product.bootloader_partitions.len() > 0 && !cmd.no_bootloader_reboot {
+            reboot_bootloader(writer, &fastboot_proxy)
+                .await
+                .map_err(|_| ffx_error!("{}", REBOOT_ERR))?;
         }
         flash_partitions(writer, file_resolver, &product.partitions, &fastboot_proxy).await?;
         stage_oem_files(writer, file_resolver, true, &product.oem_files, &fastboot_proxy).await?;
@@ -427,6 +431,30 @@ mod test {
             println!("{}", partition.file());
             assert_eq!(path_listing.find_iter(&output).count(), expected);
         }
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_should_succeed_and_not_reboot_bootloader() -> Result<()> {
+        let v: FlashManifest = from_str(MANIFEST)?;
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        let (state, proxy) = setup();
+        let mut writer = Vec::<u8>::new();
+        v.flash(
+            &mut writer,
+            &mut TestResolver::new(),
+            proxy,
+            FlashCommand {
+                manifest: tmp_file_name,
+                product: Some("product".to_string()),
+                no_bootloader_reboot: true,
+                ..Default::default()
+            },
+        )
+        .await?;
+        let state = state.lock().unwrap();
+        assert_eq!(0, state.bootloader_reboots);
         Ok(())
     }
 }

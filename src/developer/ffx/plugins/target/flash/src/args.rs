@@ -64,6 +64,12 @@ pub struct FlashCommand {
            key in ffx config"
     )]
     pub ssh_key: Option<String>,
+
+    #[argh(
+        switch,
+        description = "the device should not reboot after bootloader images are flashed"
+    )]
+    pub no_bootloader_reboot: bool,
 }
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
