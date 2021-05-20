@@ -21,9 +21,7 @@ group("drivers") {
     "drivers/usb-virtual-bus:usb-virtual-bus",
     "drivers/usb-virtual-bus:virtual-bus-tester",
     "drivers/usb-virtual-bus:virtual-bus-tester-function",
-
-    # TODO(http://fxbug.dev/77082): Renable disabled drivers.
-    #"drivers/xhci:xhci-x86",
+    "drivers/xhci:xhci-x86",
     "drivers/xhci-rewrite:xhci",
     "tests/usb-hci-test:driver",
   ]
