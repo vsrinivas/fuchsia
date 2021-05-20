@@ -27,8 +27,8 @@ static_library("nix") {
   deps = [
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/lib/fdio",
+    "//sdk/lib/zxio",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/zxio",
   ]
   defines = [ "_ALL_SOURCE" ]
   public_configs = [ ":nix_headers" ]

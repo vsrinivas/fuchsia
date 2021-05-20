@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_REMOTE_V2_H_
-#define ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_REMOTE_V2_H_
+#ifndef LIB_ZXIO_REMOTE_V2_REMOTE_V2_H_
+#define LIB_ZXIO_REMOTE_V2_REMOTE_V2_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/stream.h>
@@ -29,4 +29,4 @@ class RemoteV2 {
   zxio_remote_v2_t* rio_;
 };
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_REMOTE_V2_H_
+#endif  // LIB_ZXIO_REMOTE_V2_REMOTE_V2_H_

@@ -91,6 +91,7 @@ test("fdio-test") {
       "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
       "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",
+      "//sdk/lib/zxio",
       "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/async:async-cpp",
@@ -99,7 +100,6 @@ test("fdio-test") {
       "//zircon/system/ulib/fidl-async",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
       "//zircon/system/ulib/test-utils",
-      "//zircon/system/ulib/zxio",
     ]
   }
 }

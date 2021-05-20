@@ -86,7 +86,6 @@ group("tests") {
     "zbi:tests",
     "zbi-bootfs:tests",
     "zbitl:tests",
-    "zxio:tests",
     "zxtest:tests",
     "//zircon/third_party/ulib/lz4:tests",
   ]

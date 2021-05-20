@@ -58,6 +58,7 @@ source_set("common") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//sdk/lib/zxio",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//src/lib/storage/vfs/cpp",
@@ -73,7 +74,6 @@ source_set("common") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
-    "//zircon/system/ulib/zxio",
   ]
 
   configs += [ "//build/config:all_source" ]

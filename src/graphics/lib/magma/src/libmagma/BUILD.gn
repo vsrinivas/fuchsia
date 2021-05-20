@@ -49,7 +49,7 @@ static_library("libmagma_complete") {
 static_library("zxio") {
   complete_static_lib = true
 
-  deps = [ "//zircon/system/ulib/zxio" ]
+  deps = [ "//sdk/lib/zxio" ]
 }
 
 group("magma_deps") {

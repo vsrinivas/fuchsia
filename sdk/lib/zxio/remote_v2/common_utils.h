@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
+#ifndef LIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
+#define LIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
 
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zxio/ops.h>
@@ -18,4 +18,4 @@ zxio_abilities_t ToZxioAbilities(fuchsia_io2::wire::Operations abilities);
 
 fuchsia_io2::wire::Operations ToIo2Abilities(zxio_abilities_t zxio_abilities);
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_
+#endif  // LIB_ZXIO_REMOTE_V2_COMMON_UTILS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZXIO_OPS_H_
-#define LIB_ZXIO_OPS_H_
+#ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_OPS_H_
+#define LIB_ZXIO_INCLUDE_LIB_ZXIO_OPS_H_
 
 #include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
@@ -94,4 +94,4 @@ const zxio_ops_t* zxio_get_ops(zxio_t* io);
 
 __END_CDECLS
 
-#endif  // LIB_ZXIO_OPS_H_
+#endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_OPS_H_

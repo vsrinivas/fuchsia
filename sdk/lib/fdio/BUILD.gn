@@ -105,12 +105,12 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
       "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
       "//sdk/lib/stdcompat",
+      "//sdk/lib/zxio",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/zircon-internal",
       "//zircon/public/lib/zx",
-      "//zircon/system/ulib/zxio",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
   }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZXIO_TYPES_H_
-#define LIB_ZXIO_TYPES_H_
+#ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_TYPES_H_
+#define LIB_ZXIO_INCLUDE_LIB_ZXIO_TYPES_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -267,4 +267,4 @@ typedef struct zxio_dirent {
 
 __END_CDECLS
 
-#endif  // LIB_ZXIO_TYPES_H_
+#endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_TYPES_H_

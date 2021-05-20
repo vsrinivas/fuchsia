@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZXIO_INCEPTION_H_
-#define LIB_ZXIO_INCEPTION_H_
+#ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_INCEPTION_H_
+#define LIB_ZXIO_INCLUDE_LIB_ZXIO_INCEPTION_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/mutex.h>
@@ -122,4 +122,4 @@ zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 
 __END_CDECLS
 
-#endif  // LIB_ZXIO_INCEPTION_H_
+#endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_INCEPTION_H_

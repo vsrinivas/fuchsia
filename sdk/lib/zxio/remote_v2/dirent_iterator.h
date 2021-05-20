@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_DIRENT_ITERATOR_H_
-#define ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_DIRENT_ITERATOR_H_
+#ifndef LIB_ZXIO_REMOTE_V2_DIRENT_ITERATOR_H_
+#define LIB_ZXIO_REMOTE_V2_DIRENT_ITERATOR_H_
 
 #include <lib/zxio/ops.h>
 
@@ -15,4 +15,4 @@ zx_status_t zxio_remote_v2_dirent_iterator_next(zxio_t* io, zxio_dirent_iterator
 
 void zxio_remote_v2_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* iterator);
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZXIO_REMOTE_V2_DIRENT_ITERATOR_H_
+#endif  // LIB_ZXIO_REMOTE_V2_DIRENT_ITERATOR_H_

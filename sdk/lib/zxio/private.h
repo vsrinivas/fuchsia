@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
-#define ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
+#ifndef LIB_ZXIO_PRIVATE_H_
+#define LIB_ZXIO_PRIVATE_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -117,4 +117,4 @@ zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attr
 zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control,
                                      const zxio_node_attributes_t* attr);
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
+#endif  // LIB_ZXIO_PRIVATE_H_

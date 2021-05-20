@@ -34,19 +34,19 @@ and fix up as needed with 'git commit -a'
 """
 
 fuchsia_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
-
 """
 Creates a git branch for a move and checks it out.
 """
 
 
 def create_branch_for_move(source, dest, dry_run):
-    branch_name = 'move_%s_to_%s' % (source.replace('/', '_'),
-                                     dest.replace('/', '_'))
+    branch_name = 'move_%s_to_%s' % (
+        source.replace('/', '_'), dest.replace('/', '_'))
 
-    run_command(['git', 'checkout', '-b', branch_name, '--track',
-                 'origin/master'], dry_run)
+    run_command(
+        ['git', 'checkout', '-b', branch_name, '--track', 'origin/master'],
+        dry_run)
+
 
 """
 Guess if a target is a go library target, which requires a specialized
@@ -55,8 +55,9 @@ forwarding target type.
 
 
 def is_go_library_target(target):
-    return (target['type'] == 'action' and
-            target['script'] == '//build/go/gen_library_metadata.py')
+    return (
+        target['type'] == 'action' and
+        target['script'] == '//build/go/gen_library_metadata.py')
 
 
 """
@@ -72,12 +73,12 @@ class ForwardingTarget:
         self.is_go_library = is_go_library_target(target)
 
     def __repr__(self):
-        return 'ForwardingTarget(%s, %s, %s)' % (self.label, self.testonly,
-                                                 self.is_go_library)
+        return 'ForwardingTarget(%s, %s, %s)' % (
+            self.label, self.testonly, self.is_go_library)
 
     def __str__(self):
         return '%s testonly %s go_library %s' % (
-               self.label, self.testonly, self.is_go_library)
+            self.label, self.testonly, self.is_go_library)
 
 
 """
@@ -116,8 +117,7 @@ def find_referenced_targets(build_graph, source):
     # compute forwarding targets to create
     for target in sorted(targets_in_source):
         if target.label in referenced_targets:
-            logging.debug(
-                'Need to generate forwarding target for %s' % target)
+            logging.debug('Need to generate forwarding target for %s' % target)
             forwarding_targets.append(target)
 
     return forwarding_targets
@@ -135,13 +135,14 @@ def find_unknown_references(source):
     logging.debug('Running %s' % jiri_grep_args)
     grep_results = subprocess.check_output(jiri_grep_args, cwd=fuchsia_root)
     for line in grep_results.splitlines():
-        file, match = line.split(':', 1)
-        if not os.path.normpath(file).startswith(source):
-            if '#include' in match:
-                continue
-            if file.endswith('BUILD.gn'):
-                continue
-            unknown_references.append(line)
+        if ':' in line:
+            file, match = line.split(':', 1)
+            if not os.path.normpath(file).startswith(source):
+                if '#include' in match:
+                    continue
+                if file.endswith('BUILD.gn'):
+                    continue
+                unknown_references.append(line)
     return unknown_references
 
 
@@ -190,8 +191,9 @@ def generate_forwarding_target(target, source, dest):
     dest_path = os.path.normpath(os.path.join(dest, relative_label))
     dest_label = '//%s:%s' % (dest_path, target_name)
 
-    logging.debug('relative_label %s dest_label %s target_name %s' % (
-        relative_label, dest_label, target_name))
+    logging.debug(
+        'relative_label %s dest_label %s target_name %s' %
+        (relative_label, dest_label, target_name))
 
     build = PartialBuildFile()
 
@@ -285,8 +287,7 @@ def write_copyright_header(f, comment):
 %s Use of this source code is governed by a BSD-style license that can be
 %s found in the LICENSE file.
 
-''' % (comment, datetime.date.today().year, comment,
-        comment)
+''' % (comment, datetime.date.today().year, comment, comment)
     f.write(copyright_header)
 
 
@@ -300,8 +301,8 @@ def generate_forwarding_header(header, source, dest, dry_run):
     relative_path = os.path.normpath(os.path.relpath(header, source))
     dest_path = os.path.join(dest, relative_path)
 
-    logging.debug('Generating forwarding header %s pointing to %s' % (
-        header, dest_path))
+    logging.debug(
+        'Generating forwarding header %s pointing to %s' % (header, dest_path))
 
     if dry_run:
         return
@@ -313,7 +314,8 @@ def generate_forwarding_header(header, source, dest, dry_run):
         # Formatter will generate a proper header guard
         f.write('#pragma once\n')
 
-        f.write('''
+        f.write(
+            '''
 // Do not use this header directly, instead use %s.
 
 ''' % dest_path)
@@ -328,8 +330,8 @@ about the move as well as a list of generated forwarding artifacts.
 """
 
 
-def generate_commit_message(source, dest, forwarding_targets,
-                            forwarding_headers, change_id):
+def generate_commit_message(
+        source, dest, forwarding_targets, forwarding_headers, change_id):
     commit_message = '''[%s] Move %s to %s
 
 This moves the contents of the directory:
@@ -404,8 +406,8 @@ def find_externally_referenced_headers(source):
             include = include[len('#include "'):-1]
             externally_referenced_headers.add(include)
 
-    logging.debug('Externally referenced headers: %s' %
-                  externally_referenced_headers)
+    logging.debug(
+        'Externally referenced headers: %s' % externally_referenced_headers)
     return externally_referenced_headers
 
 
@@ -418,8 +420,10 @@ build graph.
 def extract_build_graph(label_or_pattern='//*'):
     out_dir = subprocess.check_output(['fx', 'get-build-dir']).strip()
 
-    args = ['fx', 'gn', 'desc', out_dir, label_or_pattern, '--format=json',
-            '--all-toolchains']
+    args = [
+        'fx', 'gn', 'desc', out_dir, label_or_pattern, '--format=json',
+        '--all-toolchains'
+    ]
     json_build_graph = subprocess.check_output(args)
     return json.loads(json_build_graph)
 
@@ -438,6 +442,7 @@ def move_directory(source, dest, dry_run, repository=fuchsia_root):
         os.makedirs(dest_parent_abs)
     run_command(['git', 'mv', source, dest], dry_run, cwd=repository)
 
+
 """
 Updates all references to 'source' in files in the directory 'dest'.
 """
@@ -447,7 +452,8 @@ def update_all_references(source, dest, dry_run):
     for dirpath, dirnames, filenames in os.walk(dest):
         for name in filenames:
             filepath = os.path.join(dirpath, name)
-            logging.debug('converting %s to %s in %s' % (source, dest, filepath))
+            logging.debug(
+                'converting %s to %s in %s' % (source, dest, filepath))
 
             # On a dry run, verify that the input_file can be read
             # On a normal run, read the input, write with new references
@@ -471,8 +477,9 @@ def commit_with_message(commit_message, dry_run, no_commit):
     with tempfile.NamedTemporaryFile(delete=False) as commit_message_file:
         commit_message_file.write(commit_message)
     if not no_commit:
-        run_command(['git', 'commit', '-a', '--file=%s' %
-                     commit_message_file.name], dry_run)
+        run_command(
+            ['git', 'commit', '-a',
+             '--file=%s' % commit_message_file.name], dry_run)
     os.remove(commit_message_file.name)
 
 
@@ -494,18 +501,29 @@ def main():
 
     parser.add_argument('source', help='Source path')
     parser.add_argument('dest', help='Destination path')
-    parser.add_argument('--no-branch', action='store_true',
-                        help='Do not create a git branch for this move')
-    parser.add_argument('--no-commit', action='store_true',
-                        help='Do not create a git commit for this move')
-    parser.add_argument('--change-id',
-                        help='Change-Id value to use in generated commit. ' +
-                        'Use this to generate new commits associated with ' +
-                        'an existing review')
-    parser.add_argument('--dry-run', '-n', action='store_true',
-                        help='Dry run - log commands, but do not modify tree')
-    parser.add_argument('--verbose', '-v', action='store_true',
-                        help='Enable verbose debug logging')
+    parser.add_argument(
+        '--no-branch',
+        action='store_true',
+        help='Do not create a git branch for this move')
+    parser.add_argument(
+        '--no-commit',
+        action='store_true',
+        help='Do not create a git commit for this move')
+    parser.add_argument(
+        '--change-id',
+        help='Change-Id value to use in generated commit. ' +
+        'Use this to generate new commits associated with ' +
+        'an existing review')
+    parser.add_argument(
+        '--dry-run',
+        '-n',
+        action='store_true',
+        help='Dry run - log commands, but do not modify tree')
+    parser.add_argument(
+        '--verbose',
+        '-v',
+        action='store_true',
+        help='Enable verbose debug logging')
 
     args = parser.parse_args()
 
@@ -559,8 +577,7 @@ def main():
     move_directory(source, dest, args.dry_run)
 
     # generate forwarding targets
-    write_forwarding_build_rules(
-        forwarding_targets, source, dest, args.dry_run)
+    write_forwarding_build_rules(forwarding_targets, source, dest, args.dry_run)
 
     # generate forwarding headers
     for header in forwarding_headers:
@@ -573,10 +590,8 @@ def main():
     run_command(['fx', 'format-code'], args.dry_run)
 
     # generate commit message
-    commit_message = generate_commit_message(source, dest,
-                                             forwarding_targets,
-                                             forwarding_headers,
-                                             args.change_id)
+    commit_message = generate_commit_message(
+        source, dest, forwarding_targets, forwarding_headers, args.change_id)
 
     logging.debug(commit_message)
 
@@ -585,8 +600,9 @@ def main():
 
     # log other references
     if len(other_references):
-        print('%s references to old location found, please update manually' %
-              len(other_references))
+        print(
+            '%s references to old location found, please update manually' %
+            len(other_references))
         for line in other_references:
             print('  %s' % line)
 

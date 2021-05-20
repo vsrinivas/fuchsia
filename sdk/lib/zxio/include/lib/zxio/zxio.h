@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZXIO_ZXIO_H_
-#define LIB_ZXIO_ZXIO_H_
+#ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_ZXIO_H_
+#define LIB_ZXIO_INCLUDE_LIB_ZXIO_ZXIO_H_
 
 #include <lib/zxio/types.h>
 #include <zircon/compiler.h>
@@ -333,4 +333,4 @@ zx_status_t zxio_isatty(zxio_t* io, bool* tty);
 
 __END_CDECLS
 
-#endif  // LIB_ZXIO_ZXIO_H_
+#endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_ZXIO_H_

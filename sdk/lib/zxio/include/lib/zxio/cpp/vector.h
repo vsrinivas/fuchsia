@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZXIO_CPP_VECTOR_H_
-#define LIB_ZXIO_CPP_VECTOR_H_
+#ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_VECTOR_H_
+#define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_VECTOR_H_
 
 #include <zircon/types.h>
 
@@ -33,4 +33,4 @@ zx_status_t zxio_do_vector(const zx_iovec_t* vector, size_t vector_count, size_t
   return ZX_OK;
 }
 
-#endif  // LIB_ZXIO_CPP_VECTOR_H_
+#endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_VECTOR_H_
