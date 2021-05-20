@@ -7,8 +7,10 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/unittest/unittest.h>
 
+#include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
 #include <ktl/string_view.h>
+#include <ktl/unique_ptr.h>
 
 // We exercise basic boot option functionality here, with an aim toward
 // covering the (libc/ktl) behavior that would be sufficiently different in the
@@ -40,24 +42,55 @@ class DummyFile {
   size_t write_ = 0;
 };
 
+#ifdef _KERNEL
+
+using BootOptionsPtr = ktl::unique_ptr<BootOptions>;
+
+#else  // !_KERNEL
+
+using BootOptionsPtr = BootOptions*;
+
+#endif
+
+// Provides an instance of boot options->for a test to use.
+BootOptionsPtr MakeBootOptions() {
+#ifdef _KERNEL
+
+  fbl::AllocChecker ac;
+  auto options = ktl::make_unique<BootOptions>(&ac);
+  if (!ac.check()) {
+    options = nullptr;
+  }
+  return options;
+
+#else  // !_KERNEL
+
+  static BootOptions options;
+  options = {};
+  return &options;
+
+#endif
+}
+
 bool ParseBool() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Default value.
   {
-    options = {};
-    EXPECT_FALSE(options.test_bool);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    EXPECT_FALSE(options->test_bool);
   }
 
   // true.
   {
     DummyFile dummy;
     FILE file{&dummy};
-    options = {};
-    options.test_bool = false;
-    options.SetMany("test.option.bool=true", &file);
-    EXPECT_TRUE(options.test_bool);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_bool = false;
+    options->SetMany("test.option.bool=true", &file);
+    EXPECT_TRUE(options->test_bool);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
@@ -65,30 +98,33 @@ bool ParseBool() {
   {
     DummyFile dummy;
     FILE file{&dummy};
-    options = {};
-    options.test_bool = true;
-    options.SetMany("test.option.bool=false", &file);
-    EXPECT_FALSE(options.test_bool);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_bool = true;
+    options->SetMany("test.option.bool=false", &file);
+    EXPECT_FALSE(options->test_bool);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   {  // "0" should be falsey.
     DummyFile dummy;
     FILE file{&dummy};
-    options = {};
-    options.test_bool = true;
-    options.SetMany("test.option.bool=0", &file);
-    EXPECT_FALSE(options.test_bool);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_bool = true;
+    options->SetMany("test.option.bool=0", &file);
+    EXPECT_FALSE(options->test_bool);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   {  // "off" should be falsey.
     DummyFile dummy;
     FILE file{&dummy};
-    options = {};
-    options.test_bool = true;
-    options.SetMany("test.option.bool=off", &file);
-    EXPECT_FALSE(options.test_bool);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_bool = true;
+    options->SetMany("test.option.bool=off", &file);
+    EXPECT_FALSE(options->test_bool);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
@@ -97,30 +133,31 @@ bool ParseBool() {
 
 bool UnparseBool() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // true.
   {
-    options = {};
-    options.test_bool = true;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_bool = true;
 
     constexpr ktl::string_view kExpected = "test.option.bool=true\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.bool", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.bool", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // false.
   {
-    options = {};
-    options.test_bool = false;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_bool = false;
 
     constexpr ktl::string_view kExpected = "test.option.bool=false\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.bool", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.bool", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
@@ -130,66 +167,71 @@ bool UnparseBool() {
 
 bool ParseUint32() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Default value
   {
-    options = {};
-    EXPECT_EQ(123u, options.test_uint32);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    EXPECT_EQ(123u, options->test_uint32);
   }
 
   // 321.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint32 = 0u;
-    options.SetMany("test.option.uint32=321", &file);
-    EXPECT_EQ(321u, options.test_uint32);
+    options->test_uint32 = 0u;
+    options->SetMany("test.option.uint32=321", &file);
+    EXPECT_EQ(321u, options->test_uint32);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   // 0x123: hex notation is kosher.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint32 = 0u;
-    options.SetMany("test.option.uint32=0x123", &file);
-    EXPECT_EQ(0x123u, options.test_uint32);
+    options->test_uint32 = 0u;
+    options->SetMany("test.option.uint32=0x123", &file);
+    EXPECT_EQ(0x123u, options->test_uint32);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
   // -123.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint32 = 0u;
-    options.SetMany("test.option.uint32=-123", &file);
-    EXPECT_EQ(~uint32_t{123u} + 1, options.test_uint32);
+    options->test_uint32 = 0u;
+    options->SetMany("test.option.uint32=-123", &file);
+    EXPECT_EQ(~uint32_t{123u} + 1, options->test_uint32);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
   // Unparsable values are ignored.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint32 = 123u;
-    options.SetMany("test.option.uint32=not-a-uint32", &file);
-    EXPECT_EQ(123u, options.test_uint32);
+    options->test_uint32 = 123u;
+    options->SetMany("test.option.uint32=not-a-uint32", &file);
+    EXPECT_EQ(123u, options->test_uint32);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
   // Bits after 32 are truncated.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint32 = 0u;
-    options.SetMany("test.option.uint32=0x987654321", &file);
-    EXPECT_EQ(uint32_t{0x87654321}, options.test_uint32);
+    options->test_uint32 = 0u;
+    options->SetMany("test.option.uint32=0x987654321", &file);
+    EXPECT_EQ(uint32_t{0x87654321}, options->test_uint32);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
@@ -198,43 +240,46 @@ bool ParseUint32() {
 
 bool UnparseUint32() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // 123.
   {
-    options = {};
-    options.test_uint32 = 123u;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    ;
+    options->test_uint32 = 123u;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0x7b\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.uint32", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.uint32", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // 0x123.
   {
-    options = {};
-    options.test_uint32 = 0x123u;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_uint32 = 0x123u;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0x123\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.uint32", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.uint32", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // -123.
   {
-    options = {};
-    options.test_uint32 = ~uint32_t{123u} + 1;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_uint32 = ~uint32_t{123u} + 1;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0xffffff85\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.uint32", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.uint32", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
@@ -244,66 +289,71 @@ bool UnparseUint32() {
 
 bool ParseUint64() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Default value.
   {
-    options = {};
-    EXPECT_EQ(456u, options.test_uint64);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    EXPECT_EQ(456u, options->test_uint64);
   }
 
   // 654.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint64 = 0u;
-    options.SetMany("test.option.uint64=654", &file);
-    EXPECT_EQ(654u, options.test_uint64);
+    options->test_uint64 = 0u;
+    options->SetMany("test.option.uint64=654", &file);
+    EXPECT_EQ(654u, options->test_uint64);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   // 0x456: hex notation is kosher.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint64 = 0u;
-    options.SetMany("test.option.uint64=0x456", &file);
-    EXPECT_EQ(0x456u, options.test_uint64);
+    options->test_uint64 = 0u;
+    options->SetMany("test.option.uint64=0x456", &file);
+    EXPECT_EQ(0x456u, options->test_uint64);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
   // -456.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint64 = 0u;
-    options.SetMany("test.option.uint64=-456", &file);
-    EXPECT_EQ(~uint64_t{456u} + 1, options.test_uint64);
+    options->test_uint64 = 0u;
+    options->SetMany("test.option.uint64=-456", &file);
+    EXPECT_EQ(~uint64_t{456u} + 1, options->test_uint64);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
   // Unparsable values are ignored.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint64 = 456u;
-    options.SetMany("test.option.uint64=not-a-uint64", &file);
-    EXPECT_EQ(456u, options.test_uint64);
+    options->test_uint64 = 456u;
+    options->SetMany("test.option.uint64=not-a-uint64", &file);
+    EXPECT_EQ(456u, options->test_uint64);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
   // Bits after 64 are truncated.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_uint64 = 0u;
-    options.SetMany("test.option.uint64=0x87654321012345678", &file);
-    EXPECT_EQ(uint64_t{0x7654321012345678}, options.test_uint64);
+    options->test_uint64 = 0u;
+    options->SetMany("test.option.uint64=0x87654321012345678", &file);
+    EXPECT_EQ(uint64_t{0x7654321012345678}, options->test_uint64);
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
@@ -312,43 +362,45 @@ bool ParseUint64() {
 
 bool UnparseUint64() {
   BEGIN_TEST;
-  static BootOptions options = {};
 
   // 456u.
   {
-    options = {};
-    options.test_uint32 = 456u;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_uint32 = 456u;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0x1c8\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.uint64", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.uint64", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // 0x456u.
   {
-    options = {};
-    options.test_uint64 = 0x456u;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_uint64 = 0x456u;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0x456\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.uint64", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.uint64", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // -456u.
   {
-    options = {};
-    options.test_uint64 = ~uint64_t{456u} + 1;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_uint64 = ~uint64_t{456u} + 1;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0xfffffffffffffe38\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.uint64", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.uint64", false, &file));
 
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
@@ -359,39 +411,41 @@ bool UnparseUint64() {
 
 bool ParseSmallString() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Default value.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     constexpr SmallString kDefault = {'t', 'e', 's', 't', '-', 'd', 'e', 'f', 'a', 'u',
                                       'l', 't', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
-    ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
-    EXPECT_EQ(0, strcmp(kDefault.data(), options.test_smallstring.data()));
+    ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
+    EXPECT_EQ(0, strcmp(kDefault.data(), options->test_smallstring.data()));
   }
 
   // new-value.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     constexpr SmallString kNew = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_smallstring = {};
-    options.SetMany("test.option.smallstring=new-value", &file);
-    ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
-    EXPECT_EQ(0, strcmp(kNew.data(), options.test_smallstring.data()));
+    options->test_smallstring = {};
+    options->SetMany("test.option.smallstring=new-value", &file);
+    ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
+    EXPECT_EQ(0, strcmp(kNew.data(), options->test_smallstring.data()));
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   {  // Multi-world values are not permitted.
     constexpr SmallString kFirst = {'f', 'i', 'r', 's', 't', '\0'};
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_smallstring = {};
-    options.SetMany("test.option.smallstring=first second", &file);
-    ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
-    EXPECT_EQ(0, strcmp(kFirst.data(), options.test_smallstring.data()));
+    options->test_smallstring = {};
+    options->SetMany("test.option.smallstring=first second", &file);
+    ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
+    EXPECT_EQ(0, strcmp(kFirst.data(), options->test_smallstring.data()));
     EXPECT_GT(dummy.contents().size(), 0u);  // File your complaints here.
   }
 
@@ -415,11 +469,12 @@ bool ParseSmallString() {
     };
 
     // clang-format on
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_smallstring = {};
-    options.SetMany(
+    options->test_smallstring = {};
+    options->SetMany(
         "test.option.smallstring="  // Seven alphabets.
         "abcdefghijklmnopqrstuvwxyz"
         "abcdefghijklmnopqrstuvwxyz"
@@ -429,8 +484,8 @@ bool ParseSmallString() {
         "abcdefghijklmnopqrstuvwxyz"
         "abcdefghijklmnopqrstuvwxyz",
         &file);
-    ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
-    EXPECT_EQ(0, strcmp(kSevenAlphabetsTruncated.data(), options.test_smallstring.data()));
+    ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
+    EXPECT_EQ(0, strcmp(kSevenAlphabetsTruncated.data(), options->test_smallstring.data()));
     EXPECT_EQ(0u, dummy.contents().size());  // Silently truncate.
   }
 
@@ -439,17 +494,17 @@ bool ParseSmallString() {
 
 bool UnparseSmallString() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // new-value.
   {
-    options = {};
-    options.test_smallstring = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_smallstring = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
 
     constexpr ktl::string_view kExpected = "test.option.smallstring=new-value\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.smallstring", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.smallstring", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
@@ -459,44 +514,47 @@ bool UnparseSmallString() {
 
 bool ParseEnum() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Default value.
   {
-    options = {};
-    EXPECT_EQ(TestEnum::kDefault, options.test_enum);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    EXPECT_EQ(TestEnum::kDefault, options->test_enum);
   }
 
   // kValue1.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_enum = TestEnum::kDefault;
-    options.SetMany("test.option.enum=value1", &file);
-    EXPECT_EQ(TestEnum::kValue1, options.test_enum);
+    options->test_enum = TestEnum::kDefault;
+    options->SetMany("test.option.enum=value1", &file);
+    EXPECT_EQ(TestEnum::kValue1, options->test_enum);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   // kValue2.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_enum = TestEnum::kDefault;
-    options.SetMany("test.option.enum=value2", &file);
-    EXPECT_EQ(TestEnum::kValue2, options.test_enum);
+    options->test_enum = TestEnum::kDefault;
+    options->SetMany("test.option.enum=value2", &file);
+    EXPECT_EQ(TestEnum::kValue2, options->test_enum);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   // Unparsable values are ignored.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options.test_enum = TestEnum::kValue2;
-    options.SetMany("test.option.enum=unknown", &file);
-    EXPECT_EQ(TestEnum::kValue2, options.test_enum);
+    options->test_enum = TestEnum::kValue2;
+    options->SetMany("test.option.enum=unknown", &file);
+    EXPECT_EQ(TestEnum::kValue2, options->test_enum);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
@@ -505,43 +563,45 @@ bool ParseEnum() {
 
 bool UnparseEnum() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // kDefault.
   {
-    options = {};
-    options.test_enum = TestEnum::kDefault;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_enum = TestEnum::kDefault;
 
     constexpr ktl::string_view kExpected = "test.option.enum=default\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.enum", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.enum", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // kValue1.
   {
-    options = {};
-    options.test_enum = TestEnum::kValue1;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_enum = TestEnum::kValue1;
 
     constexpr ktl::string_view kExpected = "test.option.enum=value1\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.enum", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.enum", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // kValue2.
   {
-    options = {};
-    options.test_enum = TestEnum::kValue2;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_enum = TestEnum::kValue2;
 
     constexpr ktl::string_view kExpected = "test.option.enum=value2\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.enum", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.enum", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
@@ -551,35 +611,36 @@ bool UnparseEnum() {
 
 bool ParseStruct() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Default value.
   {
-    options = {};
-    EXPECT_TRUE(TestStruct{} == options.test_struct);
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    EXPECT_TRUE(TestStruct{} == options->test_struct);
   }
 
   // Basic value.
   {
-    options = {};
-    DummyFile dummy;
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options) DummyFile dummy;
     FILE file{&dummy};
 
-    options.test_struct = TestStruct{};
-    options.SetMany("test.option.struct=test", &file);
-    EXPECT_TRUE(TestStruct{.present = true} == options.test_struct);
+    options->test_struct = TestStruct{};
+    options->SetMany("test.option.struct=test", &file);
+    EXPECT_TRUE(TestStruct{.present = true} == options->test_struct);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
   // Unparsable values are ignored.
   {
-    options = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
 
-    options.test_struct = TestStruct{.present = true};
-    options.SetMany("test.option.struct=unparsable", &file);
-    EXPECT_TRUE(TestStruct{.present = true} == options.test_struct);  // No change.
+    options->test_struct = TestStruct{.present = true};
+    options->SetMany("test.option.struct=unparsable", &file);
+    EXPECT_TRUE(TestStruct{.present = true} == options->test_struct);  // No change.
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
@@ -588,30 +649,31 @@ bool ParseStruct() {
 
 bool UnparseStruct() {
   BEGIN_TEST;
-  static BootOptions options;
 
   // Empty value.
   {
-    options = {};
-    options.test_struct = {};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_struct = {};
 
     constexpr ktl::string_view kExpected = "test.option.struct=test\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.struct", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.struct", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }
 
   // Basic value.
   {
-    options = {};
-    options.test_struct = {.present = true};
+    auto options = MakeBootOptions();
+    ASSERT_TRUE(options);
+    options->test_struct = {.present = true};
 
     constexpr ktl::string_view kExpected = "test.option.struct=test\n";
     DummyFile dummy;
     FILE file{&dummy};
-    ASSERT_EQ(0, options.Show("test.option.struct", false, &file));
+    ASSERT_EQ(0, options->Show("test.option.struct", false, &file));
     ASSERT_EQ(kExpected.size(), dummy.contents().size());
     EXPECT_EQ(0, memcmp(kExpected.data(), dummy.contents().data(), kExpected.size()));
   }

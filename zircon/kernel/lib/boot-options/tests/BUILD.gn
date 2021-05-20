@@ -18,6 +18,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/unittest",
+      "//zircon/system/ulib/fbl",
     ]
   }
 }
