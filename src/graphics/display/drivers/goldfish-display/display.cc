@@ -667,6 +667,22 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
         break;
       }
     }
+
+    if (handle == 0u) {
+      // The display doesn't have any active layers right now. For layers that
+      // previously existed, we should cancel waiting events on the pending
+      // color buffer and remove references to both pending and current color
+      // buffers.
+      async::PostTask(loop_.dispatcher(), [this, display_id = it.first] {
+        if (pending_cb_[display_id] && pending_cb_[display_id]->async_wait) {
+          pending_cb_[display_id]->async_wait->Cancel();
+        }
+        pending_cb_.erase(display_id);
+        current_cb_.erase(display_id);
+      });
+      return;
+    }
+
     auto color_buffer = reinterpret_cast<ColorBuffer*>(handle);
     if (color_buffer && !color_buffer->id) {
       zx::vmo vmo;
