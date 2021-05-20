@@ -3,8 +3,10 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/bt_profile_test_server",
-        "args": [ "--v1" ]
+        "args": [
+            "--v1"
+        ],
+        "binary": "bin/bt_profile_test_server"
     },
     "sandbox": {
         "services": [

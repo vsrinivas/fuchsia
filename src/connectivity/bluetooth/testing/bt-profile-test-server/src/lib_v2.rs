@@ -233,20 +233,27 @@ async fn add_profile<'a>(
     // Route:
     //   * Profile from mock piconet member to profile under test
     //   * ProfileTest from Profile Test Server to mock piconet member
+    //   * LogSink from parent to the profile under test + mock piconet member.
     {
         builder.add_protocol_route::<bredr::ProfileMarker>(
             RouteEndpoint::component(mock_piconet_member_name.clone()),
             vec![RouteEndpoint::component(spec.name.to_string())],
         )?;
 
-        builder
-            .add_protocol_route::<bredr::ProfileTestMarker>(
-                RouteEndpoint::component(&server_moniker),
-                vec![RouteEndpoint::component(mock_piconet_member_name.clone())],
-            )
-            .map(|_| ())
-            .map_err(|e| e.into())
+        builder.add_protocol_route::<bredr::ProfileTestMarker>(
+            RouteEndpoint::component(&server_moniker),
+            vec![RouteEndpoint::component(mock_piconet_member_name.clone())],
+        )?;
+
+        builder.add_protocol_route::<LogSinkMarker>(
+            RouteEndpoint::AboveRoot,
+            vec![
+                RouteEndpoint::component(spec.name.to_string()),
+                RouteEndpoint::component(mock_piconet_member_name.clone()),
+            ],
+        )?;
     }
+    Ok(())
 }
 
 async fn add_mock_piconet_members(
@@ -569,15 +576,13 @@ impl ProfileTestHarnessV2 {
 #[cfg(test)]
 mod tests {
     use {
-        super::{PiconetMemberSpec, ProfileTestHarnessV2},
+        super::*,
         cm_rust::{
             CapabilityName, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl,
             ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
             UseDecl, UseProtocolDecl, UseSource,
         },
-        fidl::endpoints::DiscoverableService,
-        fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-        fuchsia_component_test::{Moniker, Realm},
+        fuchsia_component_test::Realm,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -756,5 +761,16 @@ mod tests {
             dependency_type: DependencyType::Strong,
         });
         assert!(root.offers.contains(&profile_test_offer));
+
+        // LogSink is offered by test root to interposer and profile.
+        let log_capability_name = CapabilityName(LogSinkMarker::SERVICE_NAME.to_string());
+        let log_offer = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Parent,
+            source_name: log_capability_name.clone(),
+            target: OfferTarget::Child(profile_name.to_string()),
+            target_name: log_capability_name.clone(),
+            dependency_type: DependencyType::Strong,
+        });
+        assert!(root.offers.contains(&log_offer));
     }
 }
