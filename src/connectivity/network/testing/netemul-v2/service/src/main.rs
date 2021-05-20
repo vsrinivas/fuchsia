@@ -721,7 +721,6 @@ mod tests {
         }
     }
 
-    const TEST_DRIVER_COMPONENT_NAME: &str = "test_driver";
     const COUNTER_COMPONENT_NAME: &str = "counter";
     const COUNTER_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter.cm";
 
@@ -966,7 +965,6 @@ mod tests {
             }
             let TestRealm { realm } = realm;
             let selector = vec![
-                TEST_DRIVER_COMPONENT_NAME.into(),
                 realm.get_moniker().await.expect(&format!(
                     "fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}",
                     i
