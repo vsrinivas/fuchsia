@@ -110,5 +110,5 @@ func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, err
 
 	connectBackoff := retry.NewConstantBackoff(c.connectTimeout)
 
-	return device.NewClient(ctx, deviceFinder, deviceResolver, sshPrivateKey, connectBackoff)
+	return device.NewClient(ctx, deviceFinder, deviceResolver, sshPrivateKey, connectBackoff, c.WorkaroundBrokenTimeSkip)
 }

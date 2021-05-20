@@ -33,10 +33,11 @@ const rebootCheckPath = "/tmp/ota_test_should_reboot"
 
 // Client manages the connection to the device.
 type Client struct {
-	deviceFinder         *DeviceFinder
-	deviceResolver       DeviceResolver
-	sshClient            *sshutil.Client
-	initialMonotonicTime time.Time
+	deviceFinder             *DeviceFinder
+	deviceResolver           DeviceResolver
+	sshClient                *sshutil.Client
+	initialMonotonicTime     time.Time
+	workaroundBrokenTimeSkip bool
 }
 
 // NewClient creates a new Client.
@@ -46,6 +47,7 @@ func NewClient(
 	deviceResolver DeviceResolver,
 	privateKey ssh.Signer,
 	sshConnectBackoff retry.Backoff,
+	workaroundBrokenTimeSkip bool,
 ) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
@@ -66,12 +68,13 @@ func NewClient(
 	}
 
 	c := &Client{
-		deviceFinder:   deviceFinder,
-		deviceResolver: deviceResolver,
-		sshClient:      sshClient,
+		deviceFinder:             deviceFinder,
+		deviceResolver:           deviceResolver,
+		sshClient:                sshClient,
+		workaroundBrokenTimeSkip: workaroundBrokenTimeSkip,
 	}
 
-	if err := c.setInitialMonotonicTime(ctx); err != nil {
+	if err := c.postConnectSetup(ctx); err != nil {
 		c.Close()
 		return nil, err
 
@@ -100,12 +103,30 @@ func (c *Client) Close() {
 	c.sshClient.Close()
 }
 
+// Run all setup steps after we've connected to a device.
+func (c *Client) postConnectSetup(ctx context.Context) error {
+	// TODO(http://fxbug.dev/74942): The device might drop connections
+	// early after boot when the RTC is updated, which typically happens
+	// about 10 seconds after boot. To avoid this, if we find that we
+	// connected before 15s, we'll disconnect, sleep, then connect again.
+	if c.workaroundBrokenTimeSkip {
+		logger.Infof(ctx, "Sleeping 15s in case fxbug.dev/74947 causes a spurious disconnection")
+		time.Sleep(15 * time.Second)
+
+		if err := c.sshClient.Reconnect(ctx); err != nil {
+			return err
+		}
+	}
+
+	return c.setInitialMonotonicTime(ctx)
+}
+
 func (c *Client) Reconnect(ctx context.Context) error {
 	if err := c.sshClient.Reconnect(ctx); err != nil {
 		return err
 	}
 
-	return c.setInitialMonotonicTime(ctx)
+	return c.postConnectSetup(ctx)
 }
 
 func (c *Client) setInitialMonotonicTime(ctx context.Context) error {

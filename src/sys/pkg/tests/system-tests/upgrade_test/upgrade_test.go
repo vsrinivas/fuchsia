@@ -117,7 +117,7 @@ func doTest(ctx context.Context) error {
 
 	ch := make(chan *sl4f.Client, 1)
 	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-		rpcClient, err := initializeDevice(ctx, deviceClient, downgradeBuild, c.deviceConfig.WorkaroundBrokenTimeSkip)
+		rpcClient, err := initializeDevice(ctx, deviceClient, downgradeBuild)
 		ch <- rpcClient
 		return err
 	}); err != nil {
@@ -213,7 +213,6 @@ func initializeDevice(
 	ctx context.Context,
 	device *device.Client,
 	build artifacts.Build,
-	workaroundBrokenTimeSkip bool,
 ) (*sl4f.Client, error) {
 	logger.Infof(ctx, "Initializing device")
 
@@ -254,15 +253,6 @@ func initializeDevice(
 				return nil, fmt.Errorf("failed to pave device during initialization: %w", err)
 			}
 		}
-	}
-
-	// If we have a potentially bad build, we need to wait some time for the clock to
-	// become accurate, then reconnect.
-	// TODO(fxbug.dev/74942): remove this
-	if workaroundBrokenTimeSkip {
-		logger.Infof(ctx, "Reconnecting SSH to avoid potentially flaky downgrade build")
-		time.Sleep(15 * time.Second)
-		device.Reconnect(ctx)
 	}
 
 	// Creating a sl4f.Client requires knowing the build currently running
