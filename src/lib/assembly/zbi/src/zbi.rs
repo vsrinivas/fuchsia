@@ -61,7 +61,7 @@ impl ZbiBuilder {
         self.write_boot_args(&mut boot_args)?;
 
         // Run the zbi tool to construct the ZBI.
-        let zbi_args = self.build_zbi_args(&bootfs_manifest_path, &boot_args_path, output)?;
+        let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
         let status = Command::new("host_x64/zbi")
             .args(&zbi_args)
             .status()
@@ -98,7 +98,7 @@ impl ZbiBuilder {
     fn build_zbi_args(
         &self,
         bootfs_manifest_path: impl AsRef<Path>,
-        boot_args_path: impl AsRef<Path>,
+        boot_args_path: Option<impl AsRef<Path>>,
         output_path: impl AsRef<Path>,
     ) -> Result<Vec<String>> {
         // Ensure a kernel is supplied.
@@ -110,8 +110,6 @@ impl ZbiBuilder {
             .as_ref()
             .to_str()
             .ok_or(anyhow!("BootFS manifest path is not valid UTF-8"))?;
-        let boot_args_path =
-            boot_args_path.as_ref().to_str().ok_or(anyhow!("Boot args path is not valid UTF-8"))?;
         let output_path =
             output_path.as_ref().to_str().ok_or(anyhow!("Output path is not valid UTF-8"))?;
 
@@ -120,8 +118,18 @@ impl ZbiBuilder {
         args.push(kernel.to_string());
         args.push("--files".to_string());
         args.push(bootfs_manifest_path.to_string());
-        args.push("--type=image_args".to_string());
-        args.push(format!("--entry={}", boot_args_path));
+
+        // Instead of supplying the devmgr_config.txt file, we could use boot args. This is disable
+        // by default, in order to allow for binary diffing the ZBI to the in-tree built ZBI.
+        if let Some(boot_args_path) = boot_args_path {
+            let boot_args_path = boot_args_path
+                .as_ref()
+                .to_str()
+                .ok_or(anyhow!("Boot args path is not valid UTF-8"))?;
+            args.push("--type=image_args".to_string());
+            args.push(format!("--entry={}", boot_args_path));
+        }
+
         args.push("--type=cmdline".to_string());
         for cmd in &self.cmdline {
             args.push(format!("--entry={}", cmd));
@@ -192,14 +200,14 @@ mod tests {
     #[test]
     fn zbi_args_missing_kernel() {
         let builder = ZbiBuilder::default();
-        assert!(builder.build_zbi_args("bootfs", "bootargs", "output").is_err());
+        assert!(builder.build_zbi_args("bootfs", Some("bootargs"), "output").is_err());
     }
 
     #[test]
     fn zbi_args_with_kernel() {
         let mut builder = ZbiBuilder::default();
         builder.set_kernel("path/to/kernel");
-        let args = builder.build_zbi_args("bootfs", "bootargs", "output").unwrap();
+        let args = builder.build_zbi_args("bootfs", Some("bootargs"), "output").unwrap();
         assert_eq!(
             args,
             [
@@ -221,7 +229,7 @@ mod tests {
         builder.set_kernel("path/to/kernel");
         builder.add_cmdline_arg("cmd-arg1");
         builder.add_cmdline_arg("cmd-arg2");
-        let args = builder.build_zbi_args("bootfs", "bootargs", "output").unwrap();
+        let args = builder.build_zbi_args("bootfs", Some("bootargs"), "output").unwrap();
         assert_eq!(
             args,
             [
@@ -231,6 +239,28 @@ mod tests {
                 "bootfs",
                 "--type=image_args",
                 "--entry=bootargs",
+                "--type=cmdline",
+                "--entry=cmd-arg1",
+                "--entry=cmd-arg2",
+                "--output=output",
+            ]
+        );
+    }
+
+    #[test]
+    fn zbi_args_without_boot_args() {
+        let mut builder = ZbiBuilder::default();
+        builder.set_kernel("path/to/kernel");
+        builder.add_cmdline_arg("cmd-arg1");
+        builder.add_cmdline_arg("cmd-arg2");
+        let args = builder.build_zbi_args("bootfs", None::<String>, "output").unwrap();
+        assert_eq!(
+            args,
+            [
+                "--type=container",
+                "path/to/kernel",
+                "--files",
+                "bootfs",
                 "--type=cmdline",
                 "--entry=cmd-arg1",
                 "--entry=cmd-arg2",
