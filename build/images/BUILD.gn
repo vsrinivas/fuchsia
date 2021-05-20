@@ -2221,7 +2221,7 @@ action("update.manifest") {
     # Add the meta/package JSON file that makes this the "update" package.
     {
       target = "meta/package"
-      source = "update_package.json"
+      source = "update_package_json"
     },
     {
       target = "version"
@@ -2390,7 +2390,7 @@ action("update_prime.manifest") {
   args += [
     "--rewrite",
     "meta/package={target}=" +
-        rebase_path("update_package.json", root_build_dir),
+        rebase_path("update_package_json", root_build_dir),
     "--rewrite",
     "packages={target}=" +
         rebase_path(update_prime_packages_manifest_outputs[0], root_build_dir),
