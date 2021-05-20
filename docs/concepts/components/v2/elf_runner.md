@@ -28,10 +28,11 @@ path to an executable file in the package the manifest comes from, and the
 the process when it is created.
 
 The `main_process_critical` field may be used to mark the component's first
-process as [critical to component manager's job][job-set-critical], which will
-cause component manager (and all components) to be terminated if the process
-exits with a non-zero code. An allowlist is used to control which components may
-use this field.
+process as [critical to component manager's job][job-set-critical], which
+causes component manager (and by extension, all components) to be terminated if
+the process exits with a non-zero code. An
+[allowlist][main-process-critical-allowlist] is used to control which
+components may use this field.
 
 This is an example manifest that launches `bin/echo` with the arguments `Hello`
 and `world!`. It assumes that the ELF runner capability has been offered to the
@@ -50,8 +51,8 @@ component under the name `elf`:
 ### Lifecycle
 
 Components have a [lifecycle][lifecycle]. Components run by the ELF runner can
-integrate with the lifecycle if you add a `lifecycle` attribute to your component
-manifest. Currently `stop` is the only method in the Lifecycle protocol.
+integrate with the lifecycle if you add a `lifecycle` attribute to your
+component manifest.
 
 ```cml
 {
@@ -111,6 +112,7 @@ For more information, see [fxb-72178] and [fxb-72764] respectively.
 [lifecycle]: lifecycle.md
 [program-loading]: /docs/concepts/booting/program_loading.md
 [job-set-critical]: /docs/reference/syscalls/job_set_critical.md
+[main-process-critical-allowlist]: /src/security/policy/component_manager_policy.json5
 [fxb-72178]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72178
 [fxb-72764]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72764
 [logsink]: /docs/development/diagnostics/logs/recording.md#logsinksyslog

@@ -136,14 +136,15 @@ routing a directory capability from one component to another.
 ## Directory capability rights {#directory-capability-rights}
 
 As directories are [offered][offer] and [exposed][expose] throughout the system
-a user may want to restrict what components who have access to this directory
-may do. For example, a component could expose a directory as read-write to its
-parent realm, which could expose that directory it to its children as read-write
-but to its parent as read-only.
+a user may want to restrict the actions that other components may perform with
+this directory. For example, a component might expose a directory as read-write
+to its parent realm, which could in turn expose that directory to its children
+as read-only.
 
-[Directory rights][directory-rights] allow any directory declaration to specify
-a rights field that indicates the set of rights that the directory would like to
-[offer][offer], [expose][expose] or [use][use].
+[Directory rights][directory-rights] enable any directory declaration, as well
+as mentions of it in [offer][offer], [expose][expose], and [use][use], to
+include a rights field that restricts the set of rights for that directory.
+
 
 ### Example
 

@@ -56,9 +56,10 @@ represent components and may be provided to components at runtime.
 
 The component framework doesn't dictate a particular format for programs, but
 instead requires components to specify which runtime they need by specifying a
-[runner][doc-runners]. The component framework provides a built-in ELF runner,
-while other runtimes are implemented as components within the framework. A
-component can use any runner available in its [environment][doc-environments].
+[runner][doc-runners]. The component framework provides a built-in [ELF runner](elf_runner.md),
+while other runtimes are implemented as components
+within the framework. A component can specify any runner available in its
+[environment][doc-environments].
 
 The [`program`](#program) section of a component manifest designates a runner
 and declares to the runner how the component is run, such as the program
@@ -260,7 +261,7 @@ A reference may refer to:
 ### include {#include}
 
 The optional `include` property describes zero or more other component manifest
-files (or shards) to be merged into this component manifest. For example:
+files to be merged into this component manifest. For example:
 
 ```json5
 include: [ "src/lib/syslog/client.shard.cml" ]
@@ -269,7 +270,7 @@ include: [ "src/lib/syslog/client.shard.cml" ]
 In the example given above, the component manifest is including contents from a
 manifest shard provided by the `syslog` library, thus ensuring that the
 component functions correctly at runtime if it attempts to write to syslog. By
-convention such files end with `.shard.cml`.
+convention such files are called "manifest shards" and end with `.shard.cml`.
 
 If working in fuchsia.git, include paths are relative to the source root of the
 Fuchsia tree.
@@ -292,11 +293,14 @@ that particular runner.
 
 #### ELF runners {#elf-runners}
 
-If the component uses the ELF runner, `program` includes the following
-properties:
+If the component uses the ELF runner, `program` must include the following
+properties, at a minimum:
 
+-   `runner`: must be set to `"elf"`
 -   `binary`: Package-relative path to the executable binary
 -   `args` _(optional)_: List of arguments
+
+Example:
 
 ```json5
 program: {
@@ -306,7 +310,7 @@ program: {
 },
 ```
 
-See also: [ELF Runner](elf_runner.md)
+For a complete list of properties, see: [ELF Runner](elf_runner.md)
 
 #### Other runners {#other-runners}
 
@@ -318,12 +322,14 @@ determine what keys it expects to receive, and how it interprets them.
 ### children {#children}
 
 The `children` section declares child component instances as described in
-[Child component instances][doc-children]
+[Child component instances][doc-children].
 
-`children` is an array of objects with the following properties:
+`children` is an array of objects where each object has the following
+properties:
 
 -   `name`: The name of the child component instance, which is a string of one
-    or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`.
+    or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
+    identifies this component when used in a [reference](#references).
 -   `url`: The component URL for the child component instance.
 -   `startup` _(optional)_: The component instance's startup mode.
     -   `lazy` _(default)_: Start the component instance only if another
@@ -356,15 +362,15 @@ children: [
 The `collections` section declares collections as described in
 [Component collections][doc-collections].
 
-`collections` is an array of objects with the following properties:
+`collections` is an array of objects where each object has the following
+properties:
 
 -   `name`: The name of the component collection, which is a string of one or
-    more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`.
+    more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
+    identifies this collection when used in a [reference](#references).
 -   `durability`: The duration of child component instances in the collection.
     -   `transient`: The instance exists until its parent is stopped or it is
         explicitly destroyed.
-    -   `persistent`: The instance exists until it is explicitly destroyed. This
-        mode is not yet supported.
 -   `environment` _(optional)_: If present, the environment that will be
     assigned to instances in this collection, one of
     [`environments`](#environments). If omitted, instances in this collection
@@ -386,12 +392,14 @@ collections: [
 The `environments` section declares environments as described in
 [Environments][doc-environments].
 
-`environments` is an array of objects with the following properties:
+`environments` is an array of objects where each object has the following
+properties:
 
 -   `name`: The name of the environment, which is a string of one or more of the
-    following characters: `a-z`, `0-9`, `_`, `.`, `-`.
+    following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
+    identifies this environment when used in a [reference](#references).
 -   `extend`: How the environment should extend this realm's environment.
-    -   `realm`: Inherit all properties from this realm's environment.
+    -   `realm`: Inherit all properties from this compenent's environment.
     -   `none`: Start with an empty environment, do not inherit anything.
 -   `runners`: The runners registered in the environment. An array of objects
     with the following properties:
@@ -443,8 +451,8 @@ environments: [
 ### capabilities {#capabilities}
 
 The `capabilities` section defines capabilities that are provided by this
-component. Capabilities that are offered or exposed from `self` must be declared
-here.
+component. Capabilities that are offered or exposed from `self` must be
+declared here.
 
 `capabilities` is an array of objects of any of the following types:
 
@@ -483,16 +491,16 @@ A definition of a [directory capability][doc-directory].
 A definition of a [storage capability][doc-storage].
 
 -   `storage`: The [name](#capability-names) for this storage capability.
--   `from`: The source of the directory capability backing the new storage
-    capabilities, one of:
+-   `from`: The source of the existing directory capability backing this storage
+    capability, one of:
     -   `parent`: The component's parent.
     -   `self`: This component.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance.
 -   `backing_dir`: The [name](#capability-names) of the directory backing the
     storage.
--   `subdir`: Users are given isolated access to this subdirectory that is
-    inside of the `backing_dir` directory.
+-   `subdir`: The subdirectory within `backing_dir` where per-component
+    isolated storage directories are created.
 -   `storage_id`: The identifier used to isolated storage for a component, one
     of:
     -   `static_instance_id`: The instance ID in the component ID index is used
@@ -534,9 +542,8 @@ runtime, as explained in [Routing terminology](#routing-terminology).
     -   `storage`: The [name](#capability-names) of a storage capability.
 -   `path` _(optional)_: The path at which to install the capability in the
     component's namespace. For protocols, defaults to `/svc/${protocol}`.
-    Required for `directory` and `storage`. This protocol cannot be used:
-    -   For runner capabilities.
-    -   When `protocol` is an array of multiple items.
+    Required for `directory` and `storage`. This property is disallowed for
+    declarations with capability arrays.
 
 Example:
 
@@ -713,7 +720,7 @@ expect their facets to adhere to a particular schema.
 
 This section may be omitted.
 
-[doc-children]: realms.md#child-component-instances
+[doc-children]: realms.md#child_component_instances
 [doc-collections]: realms.md#collections
 [doc-environments]: environments.md
 [glossary-appmgr]: /docs/glossary.md#appmgr

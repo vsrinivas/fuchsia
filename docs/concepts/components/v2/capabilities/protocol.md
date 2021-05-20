@@ -4,7 +4,7 @@
 
 [Protocol capabilities][glossary-protocol] allow components to
 connect to [FIDL protocols][glossary-fidl-protocol] provided either by other
-components or the component framework itself.
+components or by the component framework itself.
 
 Note: _Protocol_ and _service_ capabilities are distinct types of
 capabilities. A protocol represents a single instance of a
@@ -47,10 +47,7 @@ is `/svc/fuchsia.example.ExampleProtocol`. You can also customize the path:
 
 ## Routing protocol capabilities
 
-Components route protocol capabilities by either:
-
-- [exposing](#routing-protocol-capability-expose) them,
-- or [offering](#routing-protocol-capability-offer) them.
+Components route protocol capabilities by either [exposing] or [offering] them.
 
 ### Exposing {#routing-protocol-capability-expose}
 

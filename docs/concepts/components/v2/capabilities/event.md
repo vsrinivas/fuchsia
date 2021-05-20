@@ -9,12 +9,11 @@ Components that wish to listen for events should have routed to them:
 
 -   [`fuchsia.sys2.EventSource`][event-source]: allows the
     component to listen for events. Component manager will wait
-    for the component to handle the event. This is used for
-    [hermetic tests][hermetic-tests].
+    for the component to handle the event.
 
-At the moment, events can only originate from the framework itself and are
-limited to lifecycle events. Refer to [`fuchsia.sys2.EventType`][event-type] for
-the complete list of supported events and their explanations.
+Events originate from the framework. Refer to
+[`fuchsia.sys2.EventType`][event-type] for the complete list of supported
+events and their explanations.
 
 ## Event filters {#event-filters}
 
@@ -109,7 +108,7 @@ events should be offered to the component.
 Events can come from two sources:
 
 -   `framework`: events used from framework are scoped to the component using
-    them. For example, given a topology `A -> B -> C` where `A` is the parent of
+    them. For example, consider a topology `A -> B -> C` where `A` is the parent of
     `B` and `B` of `C`. Suppose that `B` uses `started` from `framework`. `B`
     will be able to see when `C` starts but it won't be able to see when a
     sibling of itself (another child of `A`) starts.

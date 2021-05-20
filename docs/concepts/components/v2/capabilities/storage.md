@@ -13,7 +13,8 @@ instances (including their own children).
 
 ## Directory vs storage capabilities
 
-As an example, if component instance `a` receives a _directory_ capability from
+As an example, if component instance `a` receives a
+[_directory_ capability][directory-capabilities] from
 its [realm][realm] and both [uses][use] it and [offers][offer] it to `b`, which
 also uses the directory, both component instances can see and interact with the
 same directory.
@@ -96,9 +97,9 @@ b.cml:
 }
 ```
 
-In this example any files that `a` creates are not be visible to `b`, as storage
+Any files that `a` creates are not visible to `b`, and vice versa. Storage
 capabilities provide unique non-overlapping directories to each component
-instance.
+instance that `use`s them.
 
 ## Creating storage capabilities
 
@@ -107,14 +108,15 @@ Storage capabilities can be created with a
 Once storage capabilities have been declared, they can then be offered to other
 component instances.
 
-A `storage` declaration must include a reference to a directory capability,
-which is the directory from which the component manager will create isolated
-directories for each component instance using the storage capability.
+A `storage` declaration must include a reference to a backing directory
+capability. The component manager will create isolated sub-directories within
+the backing directory, one for each component instance using the storage
+capability.
 
 For example, the following manifest describes a new storage capability named
-`temp` backed by the `memfs` directory exposed by the child named `#memfs`. From
-this storage declaration a storage capability is offered to the child named
-`storage_user`.
+`temp` backed by the `memfs` directory capability exposed by the child named
+`memfs`. From this storage declaration a storage capability is offered to the
+child named `storage-user`.
 
 ```
 {

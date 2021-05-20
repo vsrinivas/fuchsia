@@ -33,10 +33,9 @@ environments: [
     }
 ```
 
-An environment must be assigned to a child in order for the registered resolver to take effect.
-That child’s URL, and any descendents that do not override their environment
-(see [`environment`][environment]), will be resolved with the registered resolver, if the URL
-scheme matches.
+An environment must be assigned to a child in order for the registered resolver
+to take effect. Then, the registered resolver will be used to resolve any
+component URLs in the environment whose URL scheme matches `scheme`.
 
 Note: For more information on the children section of the component manifest, see
 [children](/docs/concepts/components/v2/component_manifests.md#children).
@@ -53,19 +52,20 @@ children: [
 
 ## Implementing a component resolver
 
-A component resolver can be implemented by
+A component resolver can be implemented by doing the following:
 
-- Implementing the [`fuchsia.sys2.ComponentResolver`] FIDL protocol.
+- Implementing the [`fuchsia.sys2.ComponentResolver`] FIDL protocol in a
+  component.
 - Declaring and [routing] a `resolver` capability backed by this protocol.
 
 When the component manager is asked to resolve a component URL, it finds the component resolver
-registered to the URL’s scheme and asks it to resolve the URL over the
+registered to the URL’s scheme in the relevant environment and asks it to resolve the URL using the
 [`fuchsia.sys2.ComponentResolver`] FIDL protocol.
 
-If resolution succeeds, the component resolver must return a [`ComponentDecl`], the FIDL
+If resolution succeeds, the component resolver returns a [`ComponentDecl`], the FIDL
 representation of a [component manifest][component-manifest]. If the component being resolved has
 an associated package, the component resolver should also return a [`fuchsia.io.Directory`] handle
-that points to the package directory.
+for the package directory.
 
 Before registering a resolver with an environment, it must be created and routed to the
 environment.
