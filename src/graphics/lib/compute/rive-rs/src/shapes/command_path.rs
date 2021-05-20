@@ -86,6 +86,12 @@ impl CommandPath {
         let mut curves = Vec::new();
         let mut end_point = None;
 
+        let push = |curves: &mut Vec<Bezier>, curve: Bezier| {
+            if let Some(curve) = curve.normalize() {
+                curves.push(curve);
+            }
+        };
+
         for command in &self.commands {
             match *command {
                 Command::MoveTo(p) => {
@@ -100,11 +106,11 @@ impl CommandPath {
                     end_point = Some(p);
                 }
                 Command::LineTo(p) => {
-                    curves.push(Bezier::Line([end_point.unwrap(), p]));
+                    push(&mut curves, Bezier::Line([end_point.unwrap(), p]));
                     end_point = Some(p);
                 }
                 Command::CubicTo(c0, c1, p) => {
-                    curves.push(Bezier::Cubic([end_point.unwrap(), c0, c1, p]));
+                    push(&mut curves, Bezier::Cubic([end_point.unwrap(), c0, c1, p]));
                     end_point = Some(p);
                 }
                 Command::Close => {
@@ -113,7 +119,7 @@ impl CommandPath {
                         curves.last().and_then(|c| c.points().last().copied()),
                     ) {
                         if first.distance(last) > 0.01 {
-                            curves.push(Bezier::Line([last, first]));
+                            push(&mut curves, Bezier::Line([last, first]));
                         }
                     }
 
@@ -216,9 +222,11 @@ impl Outline {
     fn join(&mut self, next_curves: &[Bezier], dist: f32, join: StrokeJoin) {
         let last = self.curves.last().unwrap();
         let first = next_curves.first().unwrap();
+        let (last_ray, first_ray) = self.last_first_ray(&next_curves);
 
-        if !last.intersect(first) {
-            let (last_ray, first_ray) = self.last_first_ray(&next_curves);
+        if last.intersect(first) {
+            self.curves.push(Bezier::Line([last_ray.point, first_ray.point]));
+        } else {
             let mid_ray = last_ray.mid(&first_ray);
 
             match join {
@@ -347,18 +355,14 @@ impl Outline {
 
         if !is_closed {
             outline.join_curves(
-                curves.iter().filter_map(Bezier::normalize).map(|curve| curve.offset(dist)),
+                curves.iter().map(|curve| curve.offset(dist)),
                 dist,
                 style.join,
                 is_closed,
             );
 
-            let mut flipside_curves = curves
-                .iter()
-                .rev()
-                .filter_map(Bezier::normalize)
-                .map(|curve| curve.offset(-dist))
-                .peekable();
+            let mut flipside_curves =
+                curves.iter().rev().map(|curve| curve.offset(-dist)).peekable();
 
             let (last_ray, first_ray) = outline.last_first_ray(&flipside_curves.peek().unwrap());
             outline.cap_end(&last_ray, &first_ray, dist, style.cap);
@@ -369,14 +373,14 @@ impl Outline {
             outline.cap_end(&last_ray, &first_ray, dist, style.cap);
         } else {
             outline.join_curves(
-                curves.iter().filter_map(Bezier::normalize).map(|curve| curve.offset(dist)),
+                curves.iter().map(|curve| curve.offset(dist)),
                 dist,
                 style.join,
                 is_closed,
             );
             outline.second_outline_index = Some(outline.curves.len());
             outline.join_curves(
-                curves.iter().rev().filter_map(Bezier::normalize).map(|curve| curve.offset(-dist)),
+                curves.iter().rev().map(|curve| curve.offset(-dist)),
                 dist,
                 style.join,
                 is_closed,

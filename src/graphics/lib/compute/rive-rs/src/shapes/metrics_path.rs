@@ -79,28 +79,28 @@ fn segment_cubic(
     to_in: math::Vec,
     to: math::Vec,
     mut running_length: f32,
+    t0: f32,
     t1: f32,
-    t2: f32,
     segments: &mut Vec<CubicSegment>,
 ) -> f32 {
     const MIN_SEGMENT_LENGTH: f32 = 0.05;
 
     if should_split_cubic(from, from_out, to_in, to) {
-        let half_t = (t1 + t2) / 2.0;
+        let half_t = (t0 + t1) / 2.0;
 
         let mut hull = [math::Vec::default(); 6];
         compute_hull(from, from_out, to_in, to, 0.5, &mut hull);
 
         running_length =
-            segment_cubic(from, hull[0], hull[3], hull[5], running_length, t1, half_t, segments);
+            segment_cubic(from, hull[0], hull[3], hull[5], running_length, t0, half_t, segments);
         running_length =
-            segment_cubic(hull[5], hull[4], hull[2], to, running_length, t1, half_t, segments);
+            segment_cubic(hull[5], hull[4], hull[2], to, running_length, half_t, t1, segments);
     } else {
         let length = from.distance(to);
         running_length += length;
 
         if length > MIN_SEGMENT_LENGTH {
-            segments.push(CubicSegment { t: t2, len: running_length });
+            segments.push(CubicSegment { t: t1, len: running_length });
         }
     }
 
@@ -222,20 +222,22 @@ impl MetricsPath {
         match first_part {
             None => return builder.build(),
             Some((first_part_index, start_t)) => {
-                // Find last part.
                 let (last_part_index, end_t) = parts_and_lengths
                     .enumerate()
                     .skip(first_part_index)
-                    .find(|(_, (len, part_len))| len + part_len > end_len)
+                    .find(|(_, (len, part_len))| len + part_len >= end_len)
                     .map(|(i, (len, part_len))| (i, (end_len - len) / part_len))
-                    .unwrap_or_else(|| (self.parts.len(), 1.0));
+                    .unwrap_or_else(|| (self.parts.len() - 1, 1.0));
+
+                let start_t = start_t.clamp(0.0, 1.0);
+                let end_t = end_t.clamp(0.0, 1.0);
 
                 if first_part_index == last_part_index {
                     self.extract_sub_part(first_part_index, start_t, end_t, move_to, &mut builder);
                 } else {
                     self.extract_sub_part(first_part_index, start_t, 1.0, move_to, &mut builder);
 
-                    for part in &self.parts[first_part_index..last_part_index] {
+                    for part in &self.parts[first_part_index + 1..last_part_index] {
                         match part.r#type {
                             PathPartType::Line => {
                                 builder.line_to(self.points[part.offset]);
@@ -266,11 +268,6 @@ impl MetricsPath {
         move_to: bool,
         builder: &mut CommandPathBuilder,
     ) {
-        assert!(start_t >= 0.0);
-        assert!(start_t <= 1.0);
-        assert!(end_t >= 0.0);
-        assert!(end_t <= 1.0);
-
         let part = self.parts[i];
         match part.r#type {
             PathPartType::Line => {
@@ -308,6 +305,7 @@ impl MetricsPath {
                             // start to where we landed while finding the first
                             // segment, that way it can skip a bunch of work.
                             start_end_segment_index = si;
+                            break;
                         }
                     }
                 }
@@ -325,6 +323,8 @@ impl MetricsPath {
                                 let t = (end_len - previous_len) / (segment.len - previous_len);
                                 end_t = math::lerp(self.cubic_segments[si - 1].t, segment.t, t);
                             }
+
+                            break;
                         }
                     }
                 }
