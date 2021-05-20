@@ -630,4 +630,19 @@ class Strings {
         name: 'loading',
         desc: 'The label for the "loading" text field.',
       );
+  static String get feedback => Intl.message(
+        'Feedback',
+        name: 'feedback',
+        desc: 'The label for the "feedback" text field.',
+      );
+  static String get please => Intl.message(
+        'Please',
+        name: 'please',
+        desc: 'The label for the "please" text field.',
+      );
+  static String get visit => Intl.message(
+        'Visit',
+        name: 'visit',
+        desc: 'The label for the "visit" text field.',
+      );
 }

@@ -22,6 +22,9 @@ class SystemInformation extends UiSpec {
   static String get _memory => Strings.memory;
   static String get _view => Strings.view;
   static String get _loading => Strings.loading;
+  static String get _feedback => Strings.feedback;
+  static String get _please => Strings.please;
+  static String get _visit => Strings.visit;
 
   // Action to change channel.
   static int changeAction = QuickAction.details.$value;
@@ -93,6 +96,10 @@ class SystemInformation extends UiSpec {
             values: [
               TextValue(text: '${_memory.toUpperCase()}'),
               TextValue(text: '${usedMemory}GB / ${totalMemory}GB'),
+              TextValue(text: '${_feedback.toUpperCase()}'),
+              TextValue(
+                  text:
+                      '$_please ${_visit.toLowerCase()} https://fuchsia.dev/fuchsia-src/contribute/report-issue'),
             ],
           )),
         ]),
