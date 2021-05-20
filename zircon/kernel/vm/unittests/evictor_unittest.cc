@@ -585,6 +585,10 @@ static bool evictor_continuous_test() {
 // repeatedly.
 static bool evictor_continuous_repeated_test() {
   BEGIN_TEST;
+
+  // TODO(fxbug.dev/77187): This test is flaky, re-enable when fixed.
+  END_TEST;
+
   AutoVmScannerDisable scanner_disable;
 
   // Create a pager backed vmo to evict pages from.
