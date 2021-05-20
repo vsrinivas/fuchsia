@@ -258,7 +258,10 @@ driver_module("driver_module") {
     ":driver_sources",
     "//src/connectivity/wlan/lib/common/cpp:common",
   ]
-  visibility += [ "//src/connectivity/wlan:drivers" ]
+  visibility += [
+    "//bundles/drivers:pci",
+    "//src/connectivity/wlan:drivers",
+  ]
 }
 
 # Driver module for the test version of the brcmfmac driver, which includes run_unit_tests() DDK

@@ -49,3 +49,40 @@ group("utils") {
     "//src/ui/input/bin/hid",
   ]
 }
+
+group("pci") {
+  deps = [
+    "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
+    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_module",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_driver",
+    "//src/devices/block/drivers/ahci:ahci",
+    "//src/devices/block/drivers/nvme:nvme",
+    "//src/devices/block/drivers/pci-sdhci:pci-sdhci",
+    "//src/devices/block/drivers/virtio:virtio_block",
+    "//src/devices/i2c/drivers/intel-i2c:intel-i2c",
+    "//src/devices/misc/drivers/virtio-rng:virtio_rng",
+    "//src/devices/misc/drivers/virtio-socket:virtio_socket",
+    "//src/devices/serial/drivers/virtio-console:virtio_console",
+    "//src/devices/usb/drivers/xhci:xhci-x86",
+    "//src/devices/usb/drivers/xhci-rewrite:xhci",
+    "//src/graphics/display/drivers/intel-i915:intel-i915",
+    "//src/graphics/display/drivers/simple:simple.amd-kaveri",
+    "//src/graphics/display/drivers/simple:simple.bochs",
+    "//src/graphics/display/drivers/simple:simple.intel",
+    "//src/graphics/display/drivers/simple:simple.nv",
+    "//src/graphics/display/drivers/simple:simple.vmware",
+    "//src/graphics/drivers/misc/goldfish_address_space:address_space_driver",
+    "//src/graphics/drivers/virtio:virtio_gpu",
+    "//src/media/audio/drivers/intel-hda/controller:intel-hda",
+    "//src/ui/input/drivers/virtio:virtio_input",
+    "//zircon/third_party/dev/ethernet/e1000:e1000",
+  ]
+
+  if (target_cpu == "x64") {
+    deps += [
+      "//src/connectivity/ethernet/drivers/realtek-8111:realtek-8111",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-intel-gen",
+    ]
+  }
+}
