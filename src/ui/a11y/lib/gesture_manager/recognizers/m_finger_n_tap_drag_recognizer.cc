@@ -42,16 +42,17 @@ struct MFingerNTapDragRecognizer::Contest {
   async::TaskClosureMethod<ContestMember, &ContestMember::Accept> accept_task;
 };
 
-MFingerNTapDragRecognizer::MFingerNTapDragRecognizer(OnMFingerNTapDragCallback on_recognize,
-                                                     OnMFingerNTapDragCallback on_update,
-                                                     OnMFingerNTapDragCallback on_complete,
-                                                     uint32_t number_of_fingers,
-                                                     uint32_t number_of_taps)
-    : number_of_fingers_in_gesture_(number_of_fingers),
-      number_of_taps_in_gesture_(number_of_taps),
-      on_recognize_(std::move(on_recognize)),
+MFingerNTapDragRecognizer::MFingerNTapDragRecognizer(
+    OnMFingerNTapDragCallback on_recognize, OnMFingerNTapDragCallback on_update,
+    OnMFingerNTapDragCallback on_complete, uint32_t number_of_fingers, uint32_t number_of_taps,
+    float drag_displacement_threshold, float update_displacement_threshold)
+    : on_recognize_(std::move(on_recognize)),
       on_update_(std::move(on_update)),
-      on_complete_(std::move(on_complete)) {}
+      on_complete_(std::move(on_complete)),
+      number_of_fingers_in_gesture_(number_of_fingers),
+      number_of_taps_in_gesture_(number_of_taps),
+      drag_displacement_threshold_(drag_displacement_threshold),
+      update_displacement_threshold_(update_displacement_threshold) {}
 
 MFingerNTapDragRecognizer::~MFingerNTapDragRecognizer() = default;
 
@@ -89,9 +90,18 @@ void MFingerNTapDragRecognizer::OnMoveEvent(
   // fingers are close enough to their starting locations to constitute a valid
   // tap.
   if (contest_->won) {
-    on_update_(gesture_context_);
+    if (DisplacementExceedsThreshold(
+            last_update_gesture_context_.CurrentCentroid(/* use_local_coordinates = */ false),
+            gesture_context_.CurrentCentroid(/* use_local_coordinates = */ false),
+            update_displacement_threshold_)) {
+      on_update_(gesture_context_);
+      last_update_gesture_context_ = gesture_context_;
+    }
   } else if (contest_->number_of_taps_detected == number_of_taps_in_gesture_ - 1) {
-    if (DisplacementExceedsDragThreshold()) {
+    if (DisplacementExceedsThreshold(
+            gesture_context_.StartingCentroid(/* use_local_coordinates = */ false),
+            gesture_context_.CurrentCentroid(/* use_local_coordinates = */ false),
+            drag_displacement_threshold_)) {
       contest_->member->Accept();
       return;
     }
@@ -254,11 +264,10 @@ void MFingerNTapDragRecognizer::HandleEvent(
   }
 }
 
-bool MFingerNTapDragRecognizer::DisplacementExceedsDragThreshold() {
-  return SquareDistanceBetweenPoints(
-             gesture_context_.StartingCentroid(false /*use_local_coordinates*/),
-             gesture_context_.CurrentCentroid(false /*use_local_coordinates*/)) >=
-         kDragDisplacementThreshold * kDragDisplacementThreshold;
+bool MFingerNTapDragRecognizer::DisplacementExceedsThreshold(::fuchsia::math::PointF start,
+                                                             ::fuchsia::math::PointF end,
+                                                             float threshold) {
+  return SquareDistanceBetweenPoints(start, end) >= threshold * threshold;
 }
 
 void MFingerNTapDragRecognizer::ResetRecognizer() {
@@ -268,6 +277,7 @@ void MFingerNTapDragRecognizer::ResetRecognizer() {
 
 void MFingerNTapDragRecognizer::OnWin() {
   on_recognize_(gesture_context_);
+  last_update_gesture_context_ = gesture_context_;
   if (contest_) {
     contest_->won = true;
   } else {

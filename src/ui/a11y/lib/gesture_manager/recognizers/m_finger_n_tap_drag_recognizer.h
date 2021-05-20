@@ -27,7 +27,11 @@ class MFingerNTapDragRecognizer : public GestureRecognizer {
 
   // Displacements of less than 1/16 NDC are considered valid for taps, so we want
   // to recognize slightly larger gestures as drags.
-  static constexpr float kDragDisplacementThreshold = 1.f / 10;
+  static constexpr float kDefaultDragDisplacementThreshold = 1.f / 10;
+
+  // Default value for the minimum displacement between successive updates.
+  // Default to updating on every MOVE event after a win.
+  static constexpr float kDefaultUpdateDisplacementThreshold = 0;
 
   // Callback which will be invoked when gesture has been recognized.
   using OnMFingerNTapDragCallback = fit::function<void(GestureContext)>;
@@ -44,10 +48,11 @@ class MFingerNTapDragRecognizer : public GestureRecognizer {
   // When the gesture starts, we schedule a timeout on the default dispatcher. If gesture is
   // recognized in this timeout period, then the scheduled task is cancelled. If not recognized,
   // scheduled tasks will get executed which will declare defeat for the current recognizer.
-  MFingerNTapDragRecognizer(OnMFingerNTapDragCallback on_recognize,
-                            OnMFingerNTapDragCallback on_update,
-                            OnMFingerNTapDragCallback on_complete, uint32_t number_of_fingers,
-                            uint32_t number_of_taps);
+  MFingerNTapDragRecognizer(
+      OnMFingerNTapDragCallback on_recognize, OnMFingerNTapDragCallback on_update,
+      OnMFingerNTapDragCallback on_complete, uint32_t number_of_fingers, uint32_t number_of_taps,
+      float drag_displacement_threshold = kDefaultDragDisplacementThreshold,
+      float update_displacement_threshold = kDefaultUpdateDisplacementThreshold);
 
   ~MFingerNTapDragRecognizer() override;
 
@@ -72,9 +77,9 @@ class MFingerNTapDragRecognizer : public GestureRecognizer {
   // Represents state internal to a contest, i.e. contest member, long-press timeout, and tap state.
   struct Contest;
 
-  // Returns true if the centroid of the fingers on screen has moved more than
-  // the specified threshold to become a drag.
-  bool DisplacementExceedsDragThreshold();
+  // Returns true if the displacement from |start| to |end| is at least |threshold|.
+  bool DisplacementExceedsThreshold(::fuchsia::math::PointF start, ::fuchsia::math::PointF end,
+                                    float threshold);
 
   // Helper method invoked when more than m fingers are in contact with the
   // screen.
@@ -93,13 +98,10 @@ class MFingerNTapDragRecognizer : public GestureRecognizer {
   void ResetRecognizer();
 
   // Stores the Gesture Context which is required to execute the callback.
-  GestureContext gesture_context_;
+  GestureContext gesture_context_ = {};
 
-  // Number of fingers in gesture.
-  const uint32_t number_of_fingers_in_gesture_;
-
-  // Number of taps this gesture recognizer will detect.
-  const uint32_t number_of_taps_in_gesture_;
+  // Stores the Gesture Context at the time of the last update.
+  GestureContext last_update_gesture_context_ = {};
 
   // Callback which will be executed when gesture is detected and is also a winner in the arena.
   OnMFingerNTapDragCallback on_recognize_;
@@ -112,6 +114,19 @@ class MFingerNTapDragRecognizer : public GestureRecognizer {
   OnMFingerNTapDragCallback on_complete_;
 
   std::unique_ptr<Contest> contest_;
+
+  // Number of fingers in gesture.
+  const uint32_t number_of_fingers_in_gesture_;
+
+  // Number of taps this gesture recognizer will detect.
+  const uint32_t number_of_taps_in_gesture_;
+
+  // Minimum displacement from starting point beyond which a drag is
+  // automatically accepted.
+  const float drag_displacement_threshold_;
+
+  // Minimum displacement between successive updates.
+  const float update_displacement_threshold_;
 };
 
 }  // namespace a11y

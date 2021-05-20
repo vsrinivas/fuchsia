@@ -379,6 +379,8 @@ bool GestureHandler::BindMFingerNTapDragAction(OnGestureCallback on_recognize,
   }
 
   gesture_handlers_[gesture_type].on_recognize = std::move(on_recognize);
+  gesture_handlers_[gesture_type].on_update = std::move(on_update);
+  gesture_handlers_[gesture_type].on_complete = std::move(on_complete);
 
   gesture_recognizers_[gesture_type] = std::make_unique<MFingerNTapDragRecognizer>(
       [this, gesture_type](GestureContext context) {

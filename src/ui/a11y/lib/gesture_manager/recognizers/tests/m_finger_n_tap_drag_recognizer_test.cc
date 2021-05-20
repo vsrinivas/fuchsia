@@ -39,7 +39,12 @@ class MFingerNTapDragRecognizerTest : public gtest::TestLoopFixture {
     }
   }
 
-  void CreateGestureRecognizer(uint32_t number_of_fingers, uint32_t number_of_taps) {
+  void CreateGestureRecognizer(
+      uint32_t number_of_fingers, uint32_t number_of_taps,
+      float drag_displacement_threshold =
+          a11y::MFingerNTapDragRecognizer::kDefaultDragDisplacementThreshold,
+      float update_displacement_threshold =
+          a11y::MFingerNTapDragRecognizer::kDefaultUpdateDisplacementThreshold) {
     recognizer_ = std::make_unique<a11y::MFingerNTapDragRecognizer>(
         [this](a11y::GestureContext context) {
           gesture_won_ = true;
@@ -47,7 +52,8 @@ class MFingerNTapDragRecognizerTest : public gtest::TestLoopFixture {
         },
         [this](a11y::GestureContext context) { gesture_updates_.push_back(context); },
         [this](a11y::GestureContext context) { gesture_complete_called_ = true; },
-        number_of_fingers, number_of_taps);
+        number_of_fingers, number_of_taps, drag_displacement_threshold,
+        update_displacement_threshold);
   }
 
   MockContestMember member_;
@@ -58,8 +64,8 @@ class MFingerNTapDragRecognizerTest : public gtest::TestLoopFixture {
   std::vector<a11y::GestureContext> gesture_updates_;
 };
 
-// Tests successfulthree-finger double-tap with hold detection.
-TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithHoldDetected) {
+// Tests successful three-finger double-tap with drag detection.
+TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragDetected) {
   CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/);
   recognizer_->OnContestStarted(member_.TakeInterface());
 
@@ -89,6 +95,55 @@ TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithHoldDetected) {
   SendPointerEvents(UpEvents(1, {}));
 
   EXPECT_TRUE(gesture_complete_called_);
+}
+
+// Tests successful three-finger double-tap indecision with drag detection.
+TEST_F(MFingerNTapDragRecognizerTest,
+       ThreeFingerDoubleTapWithDragUndecidedNonDefaultDragThreshold) {
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/,
+                          0.2f /*drag displacement threshold*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  // Send events for first tap.
+  SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
+                     UpEvents(2, {}) + UpEvents(3, {})));
+
+  // Send events for second tap. The centroid's displacement should be between
+  // the default drag displacement threshold of 0.1f and the specified threshold
+  // of 0.2f.
+  SendPointerEvents(
+      (DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + MoveEvents(1, {}, {0.45f, 0})));
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kUndecided);
+}
+
+// Tests the case in which a three-finger-double-tap is detected, but the update
+// threshold is not met.
+TEST_F(MFingerNTapDragRecognizerTest, ThreeFingerDoubleTapWithDragNoUpdatesUntilThresholdExceeded) {
+  CreateGestureRecognizer(3 /*number of fingers*/, 2 /*number of fingers*/,
+                          0.1f /*drag displacement threshold*/,
+                          0.5f /*update displacement threshold*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  // Send events for first tap.
+  SendPointerEvents((DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + UpEvents(1, {}) +
+                     UpEvents(2, {}) + UpEvents(3, {})));
+
+  // Send events for second tap.
+  SendPointerEvents(
+      (DownEvents(1, {}) + DownEvents(2, {}) + DownEvents(3, {}) + MoveEvents(1, {}, {0.5f, 0})));
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
+  recognizer_->OnWin();
+
+  EXPECT_TRUE(gesture_won_);
+  EXPECT_FALSE(gesture_complete_called_);
+
+  // Move across a displacement that does NOT exceed the update threshold.
+  SendPointerEvents(MoveEvents(2, {}, {0.1f, 0}));
+
+  // No updates should have been received.
+  EXPECT_TRUE(gesture_updates_.empty());
 }
 
 // Tests rejection of drag that doesn't last long enough.
@@ -137,6 +192,48 @@ TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapWithDragDetected) {
   SendPointerEvents(UpEvents(1, {}));
 
   EXPECT_TRUE(gesture_complete_called_);
+}
+
+// Tests successful one-finger triple-tap with drag indecision with non-default
+// drag displacement threshold.
+TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapWithDragUndecidedNonDefaultDragThreshold) {
+  CreateGestureRecognizer(1 /*number of fingers*/, 3 /*number of fingers*/,
+                          0.2f /*drag displacement threshold*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  // MOVE events should cover a displacement between the default drag threshold
+  // of 0.1f and the specified threshold of 0.2f.
+  SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
+                     DownEvents(1, {}) + MoveEvents(1, {}, {0.15f, 0})));
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kUndecided);
+}
+
+// Tests the case in which a drag is detected, but the update threshold is not
+// met.
+TEST_F(MFingerNTapDragRecognizerTest, OneFingerTripleTapDragNoUpdatesUntilThresholdExceeded) {
+  CreateGestureRecognizer(1 /*number of fingers*/, 3 /*number of fingers*/,
+                          0.1f /*drag displacement threshold*/,
+                          0.5f /*update displacement threshold*/);
+  recognizer_->OnContestStarted(member_.TakeInterface());
+
+  SendPointerEvents((DownEvents(1, {}) + UpEvents(1, {}) + DownEvents(1, {}) + UpEvents(1, {}) +
+                     DownEvents(1, {}) + MoveEvents(1, {}, {0.5f, 0.5f})));
+
+  EXPECT_EQ(member_.status(), a11y::ContestMember::Status::kAccepted);
+  recognizer_->OnWin();
+
+  EXPECT_TRUE(gesture_won_);
+  EXPECT_FALSE(gesture_complete_called_);
+  // We should NOT have received any updates during the MOVE events prior to
+  // accepting.
+  EXPECT_TRUE(gesture_updates_.empty());
+
+  // Move across a displacement that does NOT exceed the update threshold.
+  SendPointerEvents(MoveEvents(1, {0.5f, 0.5f}, {0.6f, .5f}));
+
+  // No updates should have been received.
+  EXPECT_TRUE(gesture_updates_.empty());
 }
 
 // Tests the case in which a drag is detected, but then an extra finger is
