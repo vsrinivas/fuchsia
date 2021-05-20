@@ -42,10 +42,11 @@ class DummyFile {
 
 bool ParseBool() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Default value.
   {
-    BootOptions options;
+    options = {};
     EXPECT_FALSE(options.test_bool);
   }
 
@@ -53,7 +54,7 @@ bool ParseBool() {
   {
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
+    options = {};
     options.test_bool = false;
     options.SetMany("test.option.bool=true", &file);
     EXPECT_TRUE(options.test_bool);
@@ -64,7 +65,7 @@ bool ParseBool() {
   {
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
+    options = {};
     options.test_bool = true;
     options.SetMany("test.option.bool=false", &file);
     EXPECT_FALSE(options.test_bool);
@@ -74,7 +75,7 @@ bool ParseBool() {
   {  // "0" should be falsey.
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
+    options = {};
     options.test_bool = true;
     options.SetMany("test.option.bool=0", &file);
     EXPECT_FALSE(options.test_bool);
@@ -84,7 +85,7 @@ bool ParseBool() {
   {  // "off" should be falsey.
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
+    options = {};
     options.test_bool = true;
     options.SetMany("test.option.bool=off", &file);
     EXPECT_FALSE(options.test_bool);
@@ -96,10 +97,11 @@ bool ParseBool() {
 
 bool UnparseBool() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // true.
   {
-    BootOptions options;
+    options = {};
     options.test_bool = true;
 
     constexpr ktl::string_view kExpected = "test.option.bool=true\n";
@@ -112,7 +114,7 @@ bool UnparseBool() {
 
   // false.
   {
-    BootOptions options;
+    options = {};
     options.test_bool = false;
 
     constexpr ktl::string_view kExpected = "test.option.bool=false\n";
@@ -128,18 +130,19 @@ bool UnparseBool() {
 
 bool ParseUint32() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Default value
   {
-    BootOptions options;
+    options = {};
     EXPECT_EQ(123u, options.test_uint32);
   }
 
   // 321.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint32 = 0u;
     options.SetMany("test.option.uint32=321", &file);
     EXPECT_EQ(321u, options.test_uint32);
@@ -148,9 +151,9 @@ bool ParseUint32() {
 
   // 0x123: hex notation is kosher.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint32 = 0u;
     options.SetMany("test.option.uint32=0x123", &file);
     EXPECT_EQ(0x123u, options.test_uint32);
@@ -159,9 +162,9 @@ bool ParseUint32() {
 
   // -123.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint32 = 0u;
     options.SetMany("test.option.uint32=-123", &file);
     EXPECT_EQ(~uint32_t{123u} + 1, options.test_uint32);
@@ -170,9 +173,9 @@ bool ParseUint32() {
 
   // Unparsable values are ignored.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint32 = 123u;
     options.SetMany("test.option.uint32=not-a-uint32", &file);
     EXPECT_EQ(123u, options.test_uint32);
@@ -181,9 +184,9 @@ bool ParseUint32() {
 
   // Bits after 32 are truncated.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint32 = 0u;
     options.SetMany("test.option.uint32=0x987654321", &file);
     EXPECT_EQ(uint32_t{0x87654321}, options.test_uint32);
@@ -195,10 +198,11 @@ bool ParseUint32() {
 
 bool UnparseUint32() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // 123.
   {
-    BootOptions options;
+    options = {};
     options.test_uint32 = 123u;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0x7b\n";
@@ -211,7 +215,7 @@ bool UnparseUint32() {
 
   // 0x123.
   {
-    BootOptions options;
+    options = {};
     options.test_uint32 = 0x123u;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0x123\n";
@@ -224,7 +228,7 @@ bool UnparseUint32() {
 
   // -123.
   {
-    BootOptions options;
+    options = {};
     options.test_uint32 = ~uint32_t{123u} + 1;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0xffffff85\n";
@@ -240,18 +244,19 @@ bool UnparseUint32() {
 
 bool ParseUint64() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Default value.
   {
-    BootOptions options;
+    options = {};
     EXPECT_EQ(456u, options.test_uint64);
   }
 
   // 654.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint64 = 0u;
     options.SetMany("test.option.uint64=654", &file);
     EXPECT_EQ(654u, options.test_uint64);
@@ -260,9 +265,9 @@ bool ParseUint64() {
 
   // 0x456: hex notation is kosher.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint64 = 0u;
     options.SetMany("test.option.uint64=0x456", &file);
     EXPECT_EQ(0x456u, options.test_uint64);
@@ -271,9 +276,9 @@ bool ParseUint64() {
 
   // -456.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint64 = 0u;
     options.SetMany("test.option.uint64=-456", &file);
     EXPECT_EQ(~uint64_t{456u} + 1, options.test_uint64);
@@ -282,9 +287,9 @@ bool ParseUint64() {
 
   // Unparsable values are ignored.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint64 = 456u;
     options.SetMany("test.option.uint64=not-a-uint64", &file);
     EXPECT_EQ(456u, options.test_uint64);
@@ -293,9 +298,9 @@ bool ParseUint64() {
 
   // Bits after 64 are truncated.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_uint64 = 0u;
     options.SetMany("test.option.uint64=0x87654321012345678", &file);
     EXPECT_EQ(uint64_t{0x7654321012345678}, options.test_uint64);
@@ -307,10 +312,11 @@ bool ParseUint64() {
 
 bool UnparseUint64() {
   BEGIN_TEST;
+  static BootOptions options = {};
 
   // 456u.
   {
-    BootOptions options;
+    options = {};
     options.test_uint32 = 456u;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0x1c8\n";
@@ -323,7 +329,7 @@ bool UnparseUint64() {
 
   // 0x456u.
   {
-    BootOptions options;
+    options = {};
     options.test_uint64 = 0x456u;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0x456\n";
@@ -336,7 +342,7 @@ bool UnparseUint64() {
 
   // -456u.
   {
-    BootOptions options;
+    options = {};
     options.test_uint64 = ~uint64_t{456u} + 1;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0xfffffffffffffe38\n";
@@ -353,10 +359,11 @@ bool UnparseUint64() {
 
 bool ParseSmallString() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Default value.
   {
-    BootOptions options;
+    options = {};
     constexpr SmallString kDefault = {'t', 'e', 's', 't', '-', 'd', 'e', 'f', 'a', 'u',
                                       'l', 't', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
     ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
@@ -365,10 +372,10 @@ bool ParseSmallString() {
 
   // new-value.
   {
+    options = {};
     constexpr SmallString kNew = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_smallstring = {};
     options.SetMany("test.option.smallstring=new-value", &file);
     ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
@@ -378,9 +385,9 @@ bool ParseSmallString() {
 
   {  // Multi-world values are not permitted.
     constexpr SmallString kFirst = {'f', 'i', 'r', 's', 't', '\0'};
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_smallstring = {};
     options.SetMany("test.option.smallstring=first second", &file);
     ASSERT_EQ(options.test_smallstring.data()[options.test_smallstring.size() - 1], '\0');
@@ -406,10 +413,11 @@ bool ParseSmallString() {
       'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
       'a', 'b', 'c', '\0',
     };
+
     // clang-format on
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_smallstring = {};
     options.SetMany(
         "test.option.smallstring="  // Seven alphabets.
@@ -431,10 +439,11 @@ bool ParseSmallString() {
 
 bool UnparseSmallString() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // new-value.
   {
-    BootOptions options;
+    options = {};
     options.test_smallstring = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
 
     constexpr ktl::string_view kExpected = "test.option.smallstring=new-value\n";
@@ -450,18 +459,19 @@ bool UnparseSmallString() {
 
 bool ParseEnum() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Default value.
   {
-    BootOptions options;
+    options = {};
     EXPECT_EQ(TestEnum::kDefault, options.test_enum);
   }
 
   // kValue1.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_enum = TestEnum::kDefault;
     options.SetMany("test.option.enum=value1", &file);
     EXPECT_EQ(TestEnum::kValue1, options.test_enum);
@@ -470,9 +480,9 @@ bool ParseEnum() {
 
   // kValue2.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_enum = TestEnum::kDefault;
     options.SetMany("test.option.enum=value2", &file);
     EXPECT_EQ(TestEnum::kValue2, options.test_enum);
@@ -481,9 +491,9 @@ bool ParseEnum() {
 
   // Unparsable values are ignored.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
-    BootOptions options;
     options.test_enum = TestEnum::kValue2;
     options.SetMany("test.option.enum=unknown", &file);
     EXPECT_EQ(TestEnum::kValue2, options.test_enum);
@@ -495,10 +505,11 @@ bool ParseEnum() {
 
 bool UnparseEnum() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // kDefault.
   {
-    BootOptions options;
+    options = {};
     options.test_enum = TestEnum::kDefault;
 
     constexpr ktl::string_view kExpected = "test.option.enum=default\n";
@@ -511,7 +522,7 @@ bool UnparseEnum() {
 
   // kValue1.
   {
-    BootOptions options;
+    options = {};
     options.test_enum = TestEnum::kValue1;
 
     constexpr ktl::string_view kExpected = "test.option.enum=value1\n";
@@ -524,7 +535,7 @@ bool UnparseEnum() {
 
   // kValue2.
   {
-    BootOptions options;
+    options = {};
     options.test_enum = TestEnum::kValue2;
 
     constexpr ktl::string_view kExpected = "test.option.enum=value2\n";
@@ -540,19 +551,20 @@ bool UnparseEnum() {
 
 bool ParseStruct() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Default value.
   {
-    BootOptions options;
+    options = {};
     EXPECT_TRUE(TestStruct{} == options.test_struct);
   }
 
   // Basic value.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
 
-    BootOptions options;
     options.test_struct = TestStruct{};
     options.SetMany("test.option.struct=test", &file);
     EXPECT_TRUE(TestStruct{.present = true} == options.test_struct);
@@ -561,10 +573,10 @@ bool ParseStruct() {
 
   // Unparsable values are ignored.
   {
+    options = {};
     DummyFile dummy;
     FILE file{&dummy};
 
-    BootOptions options;
     options.test_struct = TestStruct{.present = true};
     options.SetMany("test.option.struct=unparsable", &file);
     EXPECT_TRUE(TestStruct{.present = true} == options.test_struct);  // No change.
@@ -576,10 +588,11 @@ bool ParseStruct() {
 
 bool UnparseStruct() {
   BEGIN_TEST;
+  static BootOptions options;
 
   // Empty value.
   {
-    BootOptions options;
+    options = {};
     options.test_struct = {};
 
     constexpr ktl::string_view kExpected = "test.option.struct=test\n";
@@ -592,7 +605,7 @@ bool UnparseStruct() {
 
   // Basic value.
   {
-    BootOptions options;
+    options = {};
     options.test_struct = {.present = true};
 
     constexpr ktl::string_view kExpected = "test.option.struct=test\n";
