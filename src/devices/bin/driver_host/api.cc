@@ -306,16 +306,16 @@ __EXPORT zx_status_t load_firmware_deprecated(zx_device_t* dev, const char* path
   return internal::ContextForApi()->LoadFirmware(dev_ref, path, fw, size);
 }
 
-__EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
-                                   size_t* size) {
+__EXPORT zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* dev, const char* path,
+                                               zx_handle_t* fw, size_t* size) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   fbl::RefPtr<zx_device_t> dev_ref(dev);
   // TODO(bwb): Can we propogate zx::vmo further up?
   return internal::ContextForApi()->LoadFirmware(dev_ref, path, fw, size);
 }
 
-__EXPORT void load_firmware_async(zx_device_t* dev, const char* path,
-                                  load_firmware_callback_t callback, void* ctx) {
+__EXPORT void load_firmware_async_from_driver(zx_driver_t* drv, zx_device_t* dev, const char* path,
+                                              load_firmware_callback_t callback, void* ctx) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   fbl::RefPtr<zx_device_t> dev_ref(dev);
   internal::ContextForApi()->LoadFirmwareAsync(dev_ref, path, callback, ctx);

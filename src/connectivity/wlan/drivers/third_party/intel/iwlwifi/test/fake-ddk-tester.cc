@@ -7,7 +7,8 @@
 #include <zircon/syscalls.h>
 
 // This trampolines the load_firmware() DDK entry point to the FakeDdkTester implementation.
-zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
+zx_status_t load_firmware_from_driver(zx_driver_t* driver, zx_device_t* device, const char* path,
+                                      zx_handle_t* fw, size_t* size) {
   return static_cast<wlan::testing::FakeDdkTester*>(fake_ddk::Bind::Instance())
       ->LoadFirmware(device, path, fw, size);
 }

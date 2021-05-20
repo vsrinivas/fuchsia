@@ -12,7 +12,8 @@ static bcm_hci_t* dev;
 static zx_status_t load_firmware_result;
 
 // Stub out the firmware loading from the devhost API.
-zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw, size_t* size) {
+zx_status_t load_firmware_from_driver(zx_driver_t* driver, zx_device_t* dev, const char* path,
+                                      zx_handle_t* fw, size_t* size) {
   *fw = ZX_HANDLE_INVALID;
   *size = 0;
   return load_firmware_result;

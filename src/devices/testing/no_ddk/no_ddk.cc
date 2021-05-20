@@ -104,8 +104,9 @@ zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t thread, 
   return ZX_OK;
 }
 
-__EXPORT __WEAK zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
-                                          size_t* size) {
+__EXPORT __WEAK zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* dev,
+                                                      const char* path, zx_handle_t* fw,
+                                                      size_t* size) {
   // This is currently a no-op.
   *fw = ZX_HANDLE_INVALID;
   *size = no_ddk::kFakeFWSize;

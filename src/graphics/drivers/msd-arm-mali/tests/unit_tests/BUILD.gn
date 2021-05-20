@@ -13,8 +13,8 @@ executable("msd_arm_mali_nonhardware_tests") {
 
   public_deps = [
     ":tests_not_requiring_hardware",
+    "//src/devices/testing/no_ddk",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
-    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

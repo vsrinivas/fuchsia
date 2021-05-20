@@ -18,13 +18,13 @@ executable("nonhardware_tests") {
   ]
 
   deps = [
+    "//src/devices/testing/no_ddk",
     "//src/graphics/drivers/msd-vsi-vip/src",
     "//src/graphics/lib/magma/src/magma_util:mapped_batch",
     "//src/graphics/lib/magma/src/sys_driver:sys_driver",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/graphics/lib/magma/tests/mock:bus_mapper",
     "//src/graphics/lib/magma/tests/mock:mmio",
-    "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

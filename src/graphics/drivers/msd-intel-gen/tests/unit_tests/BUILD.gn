@@ -12,6 +12,7 @@ executable("msd_intel_gen_nonhardware_tests") {
   deps = []
   public_deps = [
     ":nonhardware_tests",
+    "//src/devices/testing/no_ddk",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

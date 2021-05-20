@@ -359,13 +359,21 @@ zx_handle_t get_root_resource(void);
 typedef void (*load_firmware_callback_t)(void* ctx, zx_status_t status, zx_handle_t fw,
                                          size_t size);
 
+void load_firmware_async_from_driver(zx_driver_t* drv, zx_device_t* device, const char* path,
+                                     load_firmware_callback_t callback, void* context);
+zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device, const char* path,
+                                      zx_handle_t* fw, size_t* size);
+
 // Drivers may need to load firmware for a device, typically during the call to
 // bind the device. The devmgr will look for the firmware at the given path
 // relative to system-defined locations for device firmware. The load will be done asynchronously,
 // and the given callback will be called with the status of the call, a handle to the fw (or
 // ZX_HANDLE_INVALID if invalid), and the size of the loaded firmware.
-void load_firmware_async(zx_device_t* device, const char* path, load_firmware_callback_t callback,
-                         void* context);
+static inline void load_firmware_async(zx_device_t* device, const char* path,
+                                       load_firmware_callback_t callback, void* context) {
+  return load_firmware_async_from_driver(__zircon_driver_rec__.driver, device, path, callback,
+                                         context);
+}
 
 // TODO(fxbug.dev/77135): This is needed for a soft migration.
 zx_status_t load_firmware_deprecated(zx_device_t* device, const char* path, zx_handle_t* fw,
@@ -374,7 +382,10 @@ zx_status_t load_firmware_deprecated(zx_device_t* device, const char* path, zx_h
 // Synchronous version of load_firmware_async that blocks the current thread until the firmware is
 // loaded. Care should be taken when using this variant, as it may cause deadlocks if storage is
 // backed by a driver in the same driver host.
-zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size);
+static inline zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw,
+                                        size_t* size) {
+  return load_firmware_from_driver(__zircon_driver_rec__.driver, device, path, fw, size);
+}
 
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,

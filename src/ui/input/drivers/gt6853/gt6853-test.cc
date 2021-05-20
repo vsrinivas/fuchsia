@@ -29,7 +29,8 @@ size_t firmware_size = 0;
 
 }  // namespace
 
-zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
+zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device, const char* path,
+                                      zx_handle_t* fw, size_t* size) {
   if (strcmp(path, GT6853_CONFIG_9364_PATH) == 0 && config_vmo && config_vmo->is_valid()) {
     *fw = config_vmo->get();
     *size = config_size;

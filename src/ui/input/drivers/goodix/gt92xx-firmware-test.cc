@@ -23,7 +23,8 @@ bool corrupt_firmware_checksum = false;
 }  // namespace
 
 // Must not be in a namespace in order to override the weak implementation in fake_ddk.
-zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size) {
+zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device, const char* path,
+                                      zx_handle_t* fw, size_t* size) {
   constexpr uint8_t kFirmwareTestData[] = {0x52, 0xc0, 0xb3, 0x37, 0x84, 0x2c, 0xf0, 0xbc,
                                            0x88, 0xe7, 0xca, 0x28, 0x93, 0x9f, 0xed, 0x86,
                                            0xd6, 0x06, 0x4b, 0xb1, 0x72, 0x65, 0x45, 0x48,
