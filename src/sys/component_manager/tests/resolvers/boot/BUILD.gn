@@ -13,7 +13,14 @@ group("boot") {
 
 group("tests") {
   testonly = true
-  deps = [ ":boot-resolver-routing-tests" ]
+  deps = []
+
+  # TODO(https://fxbug.dev/77163): This test launches a nested component manager
+  # and doesn't route debug data service, causing the test to log on error
+  # level, which fails because of restricted log severity in tests.
+  if (!is_coverage) {
+    deps += [ ":boot-resolver-routing-tests" ]
+  }
 }
 
 rustc_test("integration-test-bin") {
