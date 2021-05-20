@@ -7,7 +7,6 @@ use {
     ffx_core::ffx_command,
     std::{
         net::{Ipv4Addr, SocketAddr},
-        path::PathBuf,
         str::FromStr as _,
     },
 };
@@ -16,17 +15,9 @@ use {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "serve", description = "")]
 pub struct ServeCommand {
-    /// serve the repository on this address. `ADDRESS` is optional. Defaults to `localhost:8084`.
+    /// serve repositories on this address. `ADDRESS` is optional. Defaults to `localhost:8084`.
     #[argh(option, short = 'a', default = "default_listen_addr()", from_str_fn(parse_listen_addr))]
     pub listen_address: SocketAddr,
-
-    /// repositories will be named `NAME`. Defaults to `devhost`.
-    #[argh(option, default = "\"devhost\".to_string()")]
-    pub name: String,
-
-    /// path to the package repository.
-    #[argh(positional)]
-    pub repo_path: PathBuf,
 }
 
 fn default_listen_addr() -> SocketAddr {

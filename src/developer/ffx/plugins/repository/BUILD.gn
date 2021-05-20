@@ -10,7 +10,9 @@ ffx_plugin("ffx_repository") {
   with_unit_tests = true
 
   plugin_deps = [
+    "add:ffx_repository_add",
     "list:ffx_repository_list",
+    "remove:ffx_repository_remove",
     "serve:ffx_repository_serve",
   ]
 

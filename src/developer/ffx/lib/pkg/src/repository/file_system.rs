@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, RepositoryBackend, Resource},
+    super::{manager::RepositorySpec, Error, RepositoryBackend, Resource},
     anyhow::Result,
     bytes::{Bytes, BytesMut},
     futures::{ready, stream, AsyncRead, Stream},
@@ -40,6 +40,10 @@ impl FileSystemRepository {
 
 #[async_trait::async_trait]
 impl RepositoryBackend for FileSystemRepository {
+    fn spec(&self) -> RepositorySpec {
+        RepositorySpec::FileSystem { path: self.repo_path.clone() }
+    }
+
     async fn fetch(&self, resource_path: &str) -> Result<Resource, Error> {
         let file_path = sanitize_path(&self.repo_path, resource_path)?;
 

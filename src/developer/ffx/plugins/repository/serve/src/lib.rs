@@ -4,25 +4,23 @@
 
 use {
     anyhow::Result,
-    ffx_core::ffx_plugin,
+    ffx_core::{ffx_bail, ffx_plugin},
     ffx_repository_serve_args::ServeCommand,
-    pkg::repository::{FileSystemRepository, Repository, RepositoryManager, RepositoryServer},
-    std::sync::Arc,
+    fidl_fuchsia_developer_bridge::RepositoriesProxy,
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
+    std::net,
 };
 
-#[ffx_plugin()]
-pub async fn serve(cmd: ServeCommand) -> Result<()> {
-    let fs_repo = FileSystemRepository::new(cmd.repo_path);
-    let repo = Repository::new(&cmd.name, Box::new(fs_repo)).await.unwrap();
-    let repo_manager = RepositoryManager::new();
-    repo_manager.add(Arc::new(repo));
+#[ffx_plugin(RepositoriesProxy = "daemon::service")]
+pub async fn serve(cmd: ServeCommand, repo: RepositoriesProxy) -> Result<()> {
+    let mut ip = match cmd.listen_address.ip() {
+        net::IpAddr::V4(addr) => IpAddress::Ipv4(Ipv4Address { addr: addr.octets() }),
+        net::IpAddr::V6(addr) => IpAddress::Ipv6(Ipv6Address { addr: addr.octets() }),
+    };
 
-    let (task, server) =
-        RepositoryServer::builder(cmd.listen_address, repo_manager).start().await?;
-
-    println!("starting server on {}", server.local_addr());
-
-    let () = task.await;
+    if !repo.serve(&mut ip, cmd.listen_address.port()).await? {
+        ffx_bail!("Could not start server. Check the daemon log for details.")
+    }
 
     Ok(())
 }

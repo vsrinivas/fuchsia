@@ -24,7 +24,7 @@ mod server;
 
 pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
-pub use manager::RepositoryManager;
+pub use manager::{RepositoryManager, RepositorySpec};
 pub use server::{RepositoryServer, RepositoryServerBuilder};
 
 /// The below types exist to provide definitions with Serialize.
@@ -144,6 +144,11 @@ impl Repository {
         &self.name
     }
 
+    /// Get a [RepositorySpec] for this [Repository]
+    pub fn spec(&self) -> RepositorySpec {
+        self.backend.spec()
+    }
+
     pub async fn fetch(&self, path: &str) -> Result<Resource, Error> {
         self.backend.fetch(path).await
     }
@@ -198,6 +203,9 @@ impl Repository {
 
 #[async_trait::async_trait]
 pub trait RepositoryBackend: std::fmt::Debug {
+    /// Get a [RepositorySpec] for this [Repository]
+    fn spec(&self) -> RepositorySpec;
+
     /// Fetch a [Resource] from this repository.
     async fn fetch(&self, path: &str) -> Result<Resource, Error>;
 

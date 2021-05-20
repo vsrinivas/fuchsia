@@ -9,7 +9,7 @@ use {
     },
     crate::mapping::{filter::filter, flatten::flatten},
     anyhow::anyhow,
-    serde_json::Value,
+    serde_json::{Map, Value},
     std::{
         convert::{From, TryFrom, TryInto},
         path::PathBuf,
@@ -220,6 +220,29 @@ impl<T: TryFrom<ConfigValue>> TryFrom<ConfigValue> for Vec<T> {
                 }
                 None => ConfigValue(Some(val)).try_into().map(|x| vec![x]).ok(),
             })
+            .ok_or(anyhow!("no configuration value found").into())
+    }
+}
+
+impl ValueStrategy for Map<String, Value> {
+    fn handle_arrays<'a, F: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a F,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        filter(next)
+    }
+
+    fn validate_query(_query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
+        Ok(())
+    }
+}
+
+impl TryFrom<ConfigValue> for Map<String, Value> {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|x| x.as_object().cloned())
             .ok_or(anyhow!("no configuration value found").into())
     }
 }

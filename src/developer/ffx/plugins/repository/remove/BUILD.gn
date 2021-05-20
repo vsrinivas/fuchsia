@@ -4,18 +4,11 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_repository_list") {
+ffx_plugin("ffx_repository_remove") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-  deps = [
-    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//src/developer/ffx/lib/pkg",
-    "//src/lib/fidl/rust/fidl",
-    "//src/sys/pkg/lib/tuf",
-    "//third_party/rust_crates:async-trait",
-  ]
+  deps = []
 
   sources = [
     "src/args.rs",

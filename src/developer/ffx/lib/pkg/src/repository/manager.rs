@@ -18,7 +18,7 @@ type ArcRepository = Arc<Repository>;
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum RepositorySpec {
+pub enum RepositorySpec {
     #[serde(rename = "fs")]
     FileSystem { path: std::path::PathBuf },
 }
@@ -48,7 +48,17 @@ impl RepositoryManager {
 
     /// Use a configuration value to instantiate a [Repository] and add it to the [RepositoryManager].
     pub async fn add_from_config(&self, name: String, spec: Value) -> Result<(), Error> {
-        self.add(Arc::new(Repository::new(&name, self.get_backend(spec)?).await?));
+        let repo = match () {
+            #[cfg(test)]
+            () => Repository::new_with_metadata(
+                &name,
+                self.get_backend(spec)?,
+                RepositoryMetadata::default(),
+            ),
+            #[cfg(not(test))]
+            () => Repository::new(&name, self.get_backend(spec)?).await?,
+        };
+        self.add(Arc::new(repo));
         Ok(())
     }
 
@@ -66,6 +76,11 @@ impl RepositoryManager {
     /// Get a [Repository].
     pub fn get(&self, repo_name: &str) -> Option<ArcRepository> {
         self.repositories.read().get(repo_name).map(|repo| Arc::clone(repo))
+    }
+
+    /// Remove a [Repository] from the [RepositoryManager].
+    pub fn remove(&self, name: &str) -> bool {
+        self.repositories.write().remove(name).is_some()
     }
 
     /// Iterate through all [Repositories](Repository)
@@ -98,5 +113,20 @@ mod test {
             manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),
             vec!["my_repo".to_owned()]
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn remove_test() {
+        let value = json!({ "type": "fs", "path": "/nowhere" });
+        let manager = RepositoryManager::new();
+        manager.add_from_config("my_repo".to_owned(), value).await.expect("Error adding value");
+
+        assert_eq!(
+            manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),
+            vec!["my_repo".to_owned()]
+        );
+
+        manager.remove("my_repo");
+        assert!(manager.repositories().next().is_none());
     }
 }

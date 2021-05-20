@@ -8,8 +8,10 @@ if (is_host) {
   ffx_services("ffx_daemon_services") {
     version = "0.1.0"
     sources = [ "src/lib.rs" ]
-    deps =
-        [ "//src/developer/ffx/daemon/services/echo:ffx_daemon_service_echo" ]
+    deps = [
+      "//src/developer/ffx/daemon/services/echo:ffx_daemon_service_echo",
+      "//src/developer/ffx/daemon/services/repo:ffx_daemon_service_repo",
+    ]
   }
 }
 
@@ -18,5 +20,6 @@ group("tests") {
   deps = [
     ":ffx_daemon_services_lib_test($host_toolchain)",
     "echo:tests($host_toolchain)",
+    "repo:tests($host_toolchain)",
   ]
 }

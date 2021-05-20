@@ -1,0 +1,43 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.bridge;
+
+using fuchsia.net;
+
+const uint64 MAX_NAME = 255;
+const uint64 MAX_PATH = 4095;
+const uint64 MAX_REPOS = 512;
+
+flexible union RepositorySpec {
+    1: FileSystemRepositorySpec filesystem;
+};
+
+table FileSystemRepositorySpec {
+    1: string:MAX_PATH path;
+};
+
+[Discoverable]
+protocol Repositories {
+    // FIXME(76719): This will change semantics or be removed when service auto-starting lands
+    /// Starts the server listening on the given port.
+    Serve(fuchsia.net.IpAddress addr, uint16 port) -> (bool success);
+
+    // FIXME(76201): Should return a RepoError
+    Add(string:MAX_NAME name, RepositorySpec repository);
+
+    // FIXME(76201): Should return a RepoError
+    Remove(string:MAX_NAME name) -> (bool found);
+
+    List(request<RepositoryIterator> iterator);
+};
+
+struct RepositoryConfig {
+    string:MAX_NAME name;
+    RepositorySpec spec;
+};
+
+protocol RepositoryIterator {
+    Next() -> (vector<RepositoryConfig>:MAX_REPOS repos);
+};

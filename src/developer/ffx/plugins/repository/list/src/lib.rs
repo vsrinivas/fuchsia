@@ -6,66 +6,102 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_repository_list_args::ListCommand,
-    pkg::repository::RepositoryManager,
+    fidl,
+    fidl_fuchsia_developer_bridge::{RepositoriesProxy, RepositoryIteratorMarker},
     std::io::{stdout, Write},
 };
 
-#[ffx_plugin()]
-pub async fn list(_cmd: ListCommand) -> Result<()> {
-    list_impl(&RepositoryManager::new(), stdout()).await
+#[ffx_plugin(RepositoriesProxy = "daemon::service")]
+pub async fn list(cmd: ListCommand, repos: RepositoriesProxy) -> Result<()> {
+    list_impl(cmd, repos, stdout()).await
 }
 
-async fn list_impl<W: Write>(manager: &RepositoryManager, mut writer: W) -> Result<()> {
-    for repo in manager.repositories() {
-        writeln!(writer, "{}", repo.name())?;
-    }
+async fn list_impl<W: Write>(
+    _cmd: ListCommand,
+    repos_proxy: RepositoriesProxy,
+    mut writer: W,
+) -> Result<()> {
+    let (client, server) = fidl::endpoints::create_endpoints::<RepositoryIteratorMarker>()?;
+    repos_proxy.list(server)?;
+    let client = client.into_proxy()?;
 
-    Ok(())
+    loop {
+        let repos = client.next().await?;
+
+        if repos.is_empty() {
+            return Ok(());
+        }
+
+        for repo in repos {
+            writeln!(writer, "{}", repo.name)?;
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use {
-        async_trait::async_trait,
+        fidl_fuchsia_developer_bridge::{
+            FileSystemRepositorySpec, RepositoriesRequest, RepositoryConfig,
+            RepositoryIteratorRequest, RepositorySpec,
+        },
         fuchsia_async as fasync,
-        pkg::repository::{Error, Repository, RepositoryBackend, RepositoryMetadata, Resource},
-        std::sync::Arc,
-        tuf::{interchange::Json, repository::RepositoryProvider},
+        futures::StreamExt,
     };
-
-    #[derive(Debug)]
-    struct DummyBackend {}
-
-    #[async_trait]
-    impl RepositoryBackend for DummyBackend {
-        async fn fetch(&self, _: &str) -> Result<Resource, Error> {
-            unimplemented!()
-        }
-
-        fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error> {
-            unimplemented!();
-        }
-    }
 
     #[fasync::run_singlethreaded(test)]
     async fn list() {
-        let metadata = RepositoryMetadata::new(vec![], 1);
-
+        let repos = setup_fake_repos(move |req| {
+            fasync::Task::spawn(async move {
+                let mut sent = false;
+                match req {
+                    RepositoriesRequest::List { iterator, .. } => {
+                        let mut iterator = iterator.into_stream().unwrap();
+                        while let Some(Ok(req)) = iterator.next().await {
+                            match req {
+                                RepositoryIteratorRequest::Next { responder } => {
+                                    if !sent {
+                                        sent = true;
+                                        responder
+                                            .send(
+                                                &mut vec![
+                                                    &mut RepositoryConfig {
+                                                        name: "Test1".to_owned(),
+                                                        spec: RepositorySpec::Filesystem(
+                                                            FileSystemRepositorySpec {
+                                                                path: Some("a/b".to_owned()),
+                                                                ..FileSystemRepositorySpec::EMPTY
+                                                            },
+                                                        ),
+                                                    },
+                                                    &mut RepositoryConfig {
+                                                        name: "Test2".to_owned(),
+                                                        spec: RepositorySpec::Filesystem(
+                                                            FileSystemRepositorySpec {
+                                                                path: Some("c/d".to_owned()),
+                                                                ..FileSystemRepositorySpec::EMPTY
+                                                            },
+                                                        ),
+                                                    },
+                                                ]
+                                                .into_iter(),
+                                            )
+                                            .unwrap()
+                                    } else {
+                                        responder.send(&mut vec![].into_iter()).unwrap()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    other => panic!("Unexpected request: {:?}", other),
+                }
+            })
+            .detach();
+        });
         let mut out = Vec::<u8>::new();
-        let manager = RepositoryManager::new();
-        manager.add(Arc::new(Repository::new_with_metadata(
-            "Test1",
-            Box::new(DummyBackend {}),
-            metadata.clone(),
-        )));
-        manager.add(Arc::new(Repository::new_with_metadata(
-            "Test2",
-            Box::new(DummyBackend {}),
-            metadata,
-        )));
-        list_impl(&manager, &mut out).await.unwrap();
-
+        list_impl(ListCommand {}, repos, &mut out).await.unwrap();
         assert_eq!(&String::from_utf8_lossy(&out), "Test1\nTest2\n");
     }
 }

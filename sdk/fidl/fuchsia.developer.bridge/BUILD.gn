@@ -11,6 +11,7 @@ fidl("fuchsia.developer.bridge") {
     "diagnostics.fidl",
     "echo.fidl",
     "fastboot.fidl",
+    "repo.fidl",
     "target.fidl",
     "version.fidl",
   ]
