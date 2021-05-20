@@ -56,10 +56,25 @@ inline bool vfs_valid_name(std::string_view name) {
 // The ops are used for dispatch and the lifecycle of Vnodes are owned by RefPtrs.
 //
 // All names passed to the Vnode class are valid according to "vfs_valid_name".
+//
+// Memory management
+// -----------------
+// The Vnode uses the fbl::Recyclable system to allow caching. This kicks in when the reference
+// count of the node goes to zero.
+//
+// fbl::RefPtr uses fbl::internal::has_fbl_recycle_v which checks whether there is an fbl_recycle()
+// implementation on the class being pointed to. This does not catch base class implementations!
+//
+// Each derived class must inherit from fbl::Recyclable<class_name> and implement an fbl_recycle()
+// function. These implementations should call the protected virtual function RecycleNode().
+//
+// Derived classes should override RecycleNode() to implement the desired caching behavior.
 class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
  public:
   virtual ~Vnode();
-  virtual void fbl_recycle() { delete this; }
+
+  // See class comment above about memory management.
+  void fbl_recycle() { RecycleNode(); }
 
   template <typename T>
   class Validated {
@@ -362,6 +377,17 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
+
+  // Implementation of fbl_recycle(). Normal fbl_recycle() use is non-virtual and requires different
+  // inheritance paths to fbl::Recyclable. This virtual implementation allows there to be one
+  // implementation.
+  //
+  // This function is called when the object reference count drops to 0. This default implementation
+  // just deletes the object to get "normal" reference counting. Derived classes can override to
+  // implement caching if desired.
+  //
+  // See the class comment above on recycling, this is subtle.
+  virtual void RecycleNode() { delete this; }
 
   // Opens/Closes the vnode. These are the callbacks that the Vnode implementation overrides to do
   // the open and close work. They are called by the public Open() and Close() functions which

@@ -42,8 +42,8 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   explicit Directory(Minfs* fs);
   ~Directory() final;
 
-  // fbl::Recyclable interface.
-  void fbl_recycle() final { VnodeMinfs::fbl_recycle(); }
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
   // fs::Vnode interface.
   fs::VnodeProtocolSet GetProtocols() const final;

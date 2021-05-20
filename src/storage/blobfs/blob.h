@@ -98,8 +98,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   void VmoRead(uint64_t offset, uint64_t length) override __TA_EXCLUDES(mutex_);
 #endif
 
-  // fbl::Removeable implementation:
-  void fbl_recycle() final { CacheNode::fbl_recycle(); }
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
   // Returned true if this blob is marked for deletion.
   //

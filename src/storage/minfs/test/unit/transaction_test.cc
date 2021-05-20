@@ -388,8 +388,8 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
 
   ~MockVnodeMinfs() override { *alive_ = false; }
 
-  // fbl::Recyclable interface.
-  void fbl_recycle() final { delete this; }
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
  private:
   bool IsDirectory() const final { return false; }

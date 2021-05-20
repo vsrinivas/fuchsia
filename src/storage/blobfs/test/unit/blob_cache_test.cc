@@ -27,7 +27,8 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
   explicit TestNode(const Digest& digest, BlobCache* cache)
       : CacheNode(nullptr, digest), cache_(cache) {}
 
-  void fbl_recycle() final { CacheNode::fbl_recycle(); }
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
   BlobCache& GetCache() final { return *cache_; }
 

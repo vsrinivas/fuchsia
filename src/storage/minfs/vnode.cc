@@ -320,7 +320,7 @@ void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
 #endif  // MINFS_PARANOID_MODE && __Fuchsia__
 }
 
-void VnodeMinfs::fbl_recycle() {
+void VnodeMinfs::RecycleNode() {
   {
     // Need to hold the lock to check open_count(), but be careful not to hold it across this class
     // getting deleted at the bottom of this function.

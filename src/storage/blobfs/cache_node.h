@@ -34,19 +34,12 @@ class CacheNode : public VnodeType,
  public:
   explicit CacheNode(VfsType* vfs, const Digest& digest,
                      std::optional<CachePolicy> override_cache_policy = std::nullopt);
-  virtual ~CacheNode();
+  virtual ~CacheNode() = default;
 
   const Digest& digest() const { return digest_; }
 
-  // Invoked by fbl::RefPtr when all strong references to RefPtr<CacheNode> go out of scope.
-  //
-  // If a derived class wishes to participate in the Cache's lifetime management, they must
-  // implement the following:
-  //
-  //   void fbl_recycle() final {
-  //     CacheNode::fbl_recycle();
-  //   }
-  void fbl_recycle() override;
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
   // Returns a reference to the BlobCache.
   //
@@ -78,6 +71,10 @@ class CacheNode : public VnodeType,
   // system-wide policy is applied.
   std::optional<CachePolicy> overriden_cache_policy() const { return overriden_cache_policy_; };
   void set_overridden_cache_policy(CachePolicy policy) { overriden_cache_policy_ = policy; };
+
+ protected:
+  // Vnode memory management function called when the reference count reaches 0.
+  void RecycleNode() override;
 
  private:
   digest::Digest digest_;

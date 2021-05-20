@@ -34,8 +34,8 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   explicit File(Minfs* fs);
   ~File() override;
 
-  // fbl::Recyclable interface.
-  void fbl_recycle() final { VnodeMinfs::fbl_recycle(); }
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
  private:
   zx_status_t CanUnlink() const final;

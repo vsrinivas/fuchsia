@@ -33,8 +33,11 @@ namespace fs {
 //  - You can override this behavior by overriding OnNoPagedVmoClones().
 //     - Always call EnsurePagedVmoUnregistered() to free the reference forcing this class alive.
 //     - Cache the VMO as desired, freeing with FreePagedVmo()
-class PagedVnode : public Vnode {
+class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
  public:
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
+
   // Called by the paging system in response to a kernel request to fill data into this node's VMO.
   //
   //  - On success, calls vfs()->SupplyPages() with the created data range.

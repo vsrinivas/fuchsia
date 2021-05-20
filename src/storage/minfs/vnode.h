@@ -105,8 +105,8 @@ class VnodeMinfs : public fs::Vnode,
   void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) final;
 #endif
 
-  // fbl::Recyclable interface.
-  void fbl_recycle() override;
+  // Required for memory management, see the class comment above Vnode for more.
+  void fbl_recycle() { RecycleNode(); }
 
   // Queries the underlying vnode to ask if it may be unlinked.
   //
@@ -239,8 +239,12 @@ class VnodeMinfs : public fs::Vnode,
   // assumption.
   void ValidateVmoTail(uint64_t inode_size) const;
 
- private:
+ protected:
   // fs::Vnode protected interface.
+  void RecycleNode() final;
+
+ private:
+  // fs::Vnode private interface.
   zx_status_t CloseNode() final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;

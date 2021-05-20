@@ -92,7 +92,7 @@ class BlobCache {
   // Precondition: The blob must have no strong references.
   // This function is currently only safe to call from CacheNode::fbl_recycle.
   void Downgrade(CacheNode* vn);
-  friend void CacheNode::fbl_recycle();
+  friend class CacheNode;
 
   // Identical to |Evict|, but utilizing a raw pointer.
   //

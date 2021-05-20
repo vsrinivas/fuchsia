@@ -9,7 +9,18 @@
 
 namespace blobfs {
 
-void CacheNode::fbl_recycle() {
+CacheNode::CacheNode(VfsType* vfs, const digest::Digest& digest,
+                     std::optional<CachePolicy> override_cache_policy)
+    : VnodeType(
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+          vfs
+#endif
+          ),
+      digest_(digest),
+      overriden_cache_policy_(override_cache_policy) {
+}
+
+void CacheNode::RecycleNode() {
   if (ShouldCache()) {
     // Migrate from the open cache to the closed cache, keeping the Vnode alive.
     //
@@ -24,18 +35,5 @@ void CacheNode::fbl_recycle() {
     delete this;
   }
 }
-
-CacheNode::CacheNode(VfsType* vfs, const digest::Digest& digest,
-                     std::optional<CachePolicy> override_cache_policy)
-    : VnodeType(
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-          vfs
-#endif
-          ),
-      digest_(digest),
-      overriden_cache_policy_(override_cache_policy) {
-}
-
-CacheNode::~CacheNode() = default;
 
 }  // namespace blobfs
