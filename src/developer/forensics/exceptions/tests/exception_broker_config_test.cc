@@ -3,6 +3,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -21,16 +22,20 @@ constexpr char kTestConfigFile[] = "/pkg/data/enable_jitd_on_startup.json";
 
 TEST(ExceptionBrokerConfig, NonExistanceShouldNotActivate) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/1u,
-                                        /*exception_ttl=*/zx::hour(1));
+  inspect::Inspector inspector;
+  auto broker =
+      ExceptionBroker::Create(loop.dispatcher(), &inspector.GetRoot(), /*max_num_handlers=*/1u,
+                              /*exception_ttl=*/zx::hour(1));
 
   ASSERT_FALSE(broker->limbo_manager().active());
 }
 
 TEST(ExceptionBrokerConfig, ExistanceShouldActivate) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/
-                                        1u, /*exception_ttl=*/zx::hour(1), kTestConfigFile);
+  inspect::Inspector inspector;
+  auto broker =
+      ExceptionBroker::Create(loop.dispatcher(), &inspector.GetRoot(), /*max_num_handlers=*/
+                              1u, /*exception_ttl=*/zx::hour(1), kTestConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 
@@ -44,8 +49,10 @@ constexpr char kFilterConfigFile[] = "/pkg/data/filter_jitd_config.json";
 
 TEST(ExceptionBrokerConfig, FilterArray) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto broker = ExceptionBroker::Create(loop.dispatcher(), /*max_num_handlers=*/1u,
-                                        /*exception_ttl=*/zx::hour(1), kFilterConfigFile);
+  inspect::Inspector inspector;
+  auto broker =
+      ExceptionBroker::Create(loop.dispatcher(), &inspector.GetRoot(), /*max_num_handlers=*/1u,
+                              /*exception_ttl=*/zx::hour(1), kFilterConfigFile);
 
   ASSERT_TRUE(broker->limbo_manager().active());
 

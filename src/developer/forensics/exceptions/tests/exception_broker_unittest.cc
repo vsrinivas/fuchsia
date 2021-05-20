@@ -64,7 +64,8 @@ using ProcessHandlerTest = UnitTestFixture;
 
 TEST_F(ProcessHandlerTest, ManagesSubprocessLifetime) {
   {
-    ProcessHandler process_handler(dispatcher(), [] {});
+    ProcessHandler process_handler(
+        dispatcher(), [](std::string) {}, [] {});
     ASSERT_EQ(NumSubprocesses(), 0u);
 
     process_handler.Handle(zx::exception{}, zx::process{}, zx::thread{});
@@ -81,7 +82,8 @@ TEST_F(ProcessHandlerTest, ManagesSubprocessLifetime) {
 
 TEST_F(ProcessHandlerTest, OnAvailableCalled) {
   bool available = false;
-  ProcessHandler process_handler(dispatcher(), [&available] { available = true; });
+  ProcessHandler process_handler(
+      dispatcher(), [](std::string) {}, [&available] { available = true; });
 
   process_handler.Handle(zx::exception{}, zx::process{}, zx::thread{});
 

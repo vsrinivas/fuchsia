@@ -30,8 +30,8 @@ int main() {
 
   forensics::component::Component component;
 
-  auto broker =
-      ExceptionBroker::Create(component.Dispatcher(), kMaxNumExceptionHandlers, kExceptionTtl);
+  auto broker = ExceptionBroker::Create(component.Dispatcher(), component.InspectRoot(),
+                                        kMaxNumExceptionHandlers, kExceptionTtl);
   if (!broker)
     return EXIT_FAILURE;
 

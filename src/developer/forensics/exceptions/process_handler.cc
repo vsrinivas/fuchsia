@@ -62,8 +62,11 @@ bool SpawnSubprocess(zx::channel* client, zx::process* subprocess) {
 
 }  // namespace
 
-ProcessHandler::ProcessHandler(async_dispatcher_t* dispatcher, fit::closure on_available)
-    : dispatcher_(dispatcher), on_available_(std::move(on_available)) {
+ProcessHandler::ProcessHandler(async_dispatcher_t* dispatcher, LogMonikerFn log_moniker,
+                               fit::closure on_available)
+    : dispatcher_(dispatcher),
+      log_moniker_(std::move(log_moniker)),
+      on_available_(std::move(on_available)) {
   crash_reporter_.set_error_handler([this](const zx_status_t status) {
     FX_PLOGS(WARNING, status) << "Lost connection to subprocess";
     on_available_();
@@ -95,9 +98,16 @@ void ProcessHandler::Handle(zx::exception exception, zx::process process, zx::th
     crash_reporter_.Bind(std::move(client), dispatcher_);
   }
 
-  // TODO(fxbug.dev/76150): increment the moniker's crash count and expose it via Inspect.
   crash_reporter_->Send(std::move(exception), std::move(process), std::move(thread),
-                        [this](const ::fidl::StringPtr unused_moniker) { on_available_(); });
+                        [this](const ::fidl::StringPtr moniker) {
+                          // Log |moniker| before calling |on_available_| because the lambda may
+                          // recurse.
+                          if (moniker) {
+                            log_moniker_(*moniker);
+                          }
+
+                          on_available_();
+                        });
 }
 
 }  // namespace exceptions

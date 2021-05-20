@@ -14,6 +14,7 @@
 #include <deque>
 #include <vector>
 
+#include "src/developer/forensics/exceptions/crash_counter.h"
 #include "src/developer/forensics/exceptions/pending_exception.h"
 #include "src/developer/forensics/exceptions/process_handler.h"
 
@@ -22,8 +23,8 @@ namespace exceptions {
 
 class HandlerManager {
  public:
-  HandlerManager(async_dispatcher_t* dispatcher, size_t max_num_handlers,
-                 zx::duration exception_ttl);
+  HandlerManager(async_dispatcher_t* dispatcher, CrashCounter crash_counter,
+                 size_t max_num_handlers, zx::duration exception_ttl);
 
   // Spawns a dedicated handler for |exception|. This way if the exception handling logic
   // were to crash, e.g., while generating the minidump from the process, only the sub-process would
@@ -34,6 +35,7 @@ class HandlerManager {
   void HandleNextPendingException();
 
   async_dispatcher_t* dispatcher_;
+  CrashCounter crash_counter_;
 
   zx::duration exception_ttl_;
   std::deque<PendingException> pending_exceptions_;

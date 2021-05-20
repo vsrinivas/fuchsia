@@ -42,11 +42,13 @@ executable("exception_broker_config_test_exe") {
   sources = [ "exception_broker_config_test.cc" ]
 
   deps = [
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/forensics/exceptions:lib",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 }
@@ -71,6 +73,7 @@ executable("exception_broker_unittest_exe") {
   testonly = true
 
   sources = [
+    "crash_counter_unittest.cc",
     "crash_reporter_unittest.cc",
     "exception_broker_unittest.cc",
     "minidump_unittest.cc",
@@ -87,6 +90,7 @@ executable("exception_broker_unittest_exe") {
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",

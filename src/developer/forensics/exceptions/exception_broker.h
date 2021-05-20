@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_EXCEPTIONS_EXCEPTION_BROKER_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/zx/time.h>
 
 #include "src/developer/forensics/exceptions/handler_manager.h"
@@ -24,6 +25,7 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   // If |override_filepath| is defined, it will attempt to locate that file instead of the default
   // config one. See exception_broker.cc for the prod filepath.
   static std::unique_ptr<ExceptionBroker> Create(async_dispatcher_t* dispatcher,
+                                                 inspect::Node* inspect_root,
                                                  size_t max_num_handlers,
                                                  zx::duration exception_ttl,
                                                  const char* override_filepath = nullptr);
@@ -37,8 +39,8 @@ class ExceptionBroker : public fuchsia::exception::Handler {
   const ProcessLimboManager& limbo_manager() const { return limbo_manager_; }
 
  private:
-  ExceptionBroker(async_dispatcher_t* dispatcher, size_t max_num_handlers,
-                  zx::duration exception_ttl);
+  ExceptionBroker(async_dispatcher_t* dispatcher, inspect::Node* inspect_root,
+                  size_t max_num_handlers, zx::duration exception_ttl);
   void AddToLimbo(zx::exception exception, fuchsia::exception::ExceptionInfo info);
 
   HandlerManager handler_manager_;

@@ -22,7 +22,8 @@ using ProcessLaunchFailureTest = UnitTestFixture;
 // subprocesses and ended up handling the same exception in an unterminated loop. For more
 // information, see fxbug.dev/59246.
 TEST_F(ProcessLaunchFailureTest, HandleOnlyOnce) {
-  HandlerManager handler_manager(dispatcher(), 1u, zx::duration::infinite());
+  HandlerManager handler_manager(dispatcher(), CrashCounter(&InspectRoot()), 1u,
+                                 zx::duration::infinite());
   handler_manager.Handle(zx::exception{});
 }
 

@@ -19,7 +19,9 @@ namespace exceptions {
 // is automatically managed and it is replaced if it crashes.
 class ProcessHandler {
  public:
-  ProcessHandler(async_dispatcher_t* dispatcher, fit::closure on_available);
+  using LogMonikerFn = fit::function<void(const std::string&)>;
+  ProcessHandler(async_dispatcher_t* dispatcher, LogMonikerFn log_moniker,
+                 fit::closure on_available);
   ~ProcessHandler();
 
   ProcessHandler(ProcessHandler&&) = default;
@@ -29,6 +31,7 @@ class ProcessHandler {
 
  private:
   async_dispatcher_t* dispatcher_;
+  LogMonikerFn log_moniker_;
   fit::closure on_available_;
 
   zx::process subprocess_;
