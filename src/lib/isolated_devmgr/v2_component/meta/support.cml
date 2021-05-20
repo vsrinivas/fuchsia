@@ -5,24 +5,16 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/driver_manager",
-        args: [
-            "--path-prefix",
-            "/pkg/",
-        ],
+        binary: "bin/support",
     },
     capabilities: [
         {
-            directory: "dev",
-            rights: [ "rw*" ],
-            path: "/dev",
-        },
-    ],
-    use: [
-        {
-            directory: "system-delayed",
-            rights: [ "r*" ],
-            path: "/system",
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+            ],
         },
         {
             directory: "pkgfs-delayed",
@@ -30,19 +22,27 @@
             path: "/pkgfs",
         },
         {
+            directory: "system-delayed",
+            rights: [ "r*" ],
+            path: "/pkgfs",
+        },
+    ],
+    expose: [
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.Items",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.power.manager.DriverManagerRegistration",
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
+            from: "self",
         },
-    ],
-    expose: [
         {
-            directory: "dev",
+            directory: "pkgfs-delayed",
+            from: "self",
+        },
+        {
+            directory: "system-delayed",
             from: "self",
         },
     ],

@@ -24,10 +24,14 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <vector>
 
 #include <ddk/metadata/test.h>
 #include <mock-boot-arguments/server.h>
+
+#include "lib/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 namespace {
 
@@ -204,6 +208,9 @@ int main(void) {
         fidl_bind(dispatcher, request.release(), root_job_dispatch, nullptr, &kRootJobOps);
       }),
       fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>);
+
+  context->outgoing()->root_dir()->AddEntry("system", std::make_unique<vfs::PseudoDir>());
+  context->outgoing()->root_dir()->AddEntry("pkgfs", std::make_unique<vfs::PseudoDir>());
 
   loop.Run();
   return 0;

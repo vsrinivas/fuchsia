@@ -49,7 +49,7 @@ void DriverLoader::StartLoadingThread(Coordinator* coordinator) {
 void DriverLoader::LoadDrivers() {
   fbl::unique_fd fd(open("/system", O_RDONLY));
   if (fd.get() < 0) {
-    LOGF(WARNING, "Unabled to open '/system', system drivers are disabled");
+    LOGF(WARNING, "Unable to open '/system', system drivers are disabled");
     return;
   }
 
@@ -64,6 +64,12 @@ void DriverLoader::LoadDrivers() {
   auto manifest_path = GetPathFromUrl(
       "fuchsia-pkg://fuchsia.com/driver-manager-base-config#config/base-driver-manifest.json");
   ZX_DEBUG_ASSERT(manifest_path.is_ok());
+  fd = fbl::unique_fd(open(manifest_path.value().c_str(), O_RDONLY));
+  if (fd.get() < 0) {
+    LOGF(WARNING, "Unable to open Base Manifest, base drivers are disabled");
+    return;
+  }
+
   auto manifest_result = ParseDriverManifestFromPath(manifest_path.value());
   if (manifest_result.is_error()) {
     LOGF(ERROR, "Base Driver Manifest failed to parse: %s", manifest_result.status_string());

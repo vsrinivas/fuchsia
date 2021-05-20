@@ -18,6 +18,7 @@ executable("support") {
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
@@ -39,6 +40,12 @@ fuchsia_component("driver-manager-test") {
     "//src/devices/bin/driver_manager",
     "//src/devices/bus/drivers/platform",
   ]
+}
+
+fuchsia_component("driver-manager-support") {
+  testonly = true
+  manifest = "meta/support.cml"
+  deps = [ ":support" ]
 }
 
 source_set("client") {

@@ -57,24 +57,14 @@ template("isolated_devmgr_v2_component") {
         "sdk/lib/diagnostics/inspect/client.shard.cml",
         "sdk/lib/diagnostics/syslog/client.shard.cml",
       ]
-      program = {
-        runner = "elf"
-        binary = "bin/support"
-      }
       children = [
         {
           name = "driver-manager-test"
           url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/driver-manager-test.cm"
         },
-      ]
-      capabilities = [
         {
-          protocol = [
-            "fuchsia.boot.Arguments",
-            "fuchsia.kernel.RootJob",
-            "fuchsia.boot.Items",
-            "fuchsia.power.manager.DriverManagerRegistration",
-          ]
+          name = "driver-manager-support"
+          url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/driver-manager-support.cm"
         },
       ]
       offer = [
@@ -94,7 +84,17 @@ template("isolated_devmgr_v2_component") {
             "fuchsia.boot.Items",
             "fuchsia.power.manager.DriverManagerRegistration",
           ]
-          from = "self"
+          from = "#driver-manager-support"
+          to = [ "#driver-manager-test" ]
+        },
+        {
+          directory = "pkgfs-delayed"
+          from = "#driver-manager-support"
+          to = [ "#driver-manager-test" ]
+        },
+        {
+          directory = "system-delayed"
+          from = "#driver-manager-support"
           to = [ "#driver-manager-test" ]
         },
       ]
@@ -122,8 +122,8 @@ template("isolated_devmgr_v2_component") {
     }
     deps += [
       ":$manifest_path",
+      "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
       "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
-      "//src/lib/isolated_devmgr/v2_component:support",
     ]
   }
 }
