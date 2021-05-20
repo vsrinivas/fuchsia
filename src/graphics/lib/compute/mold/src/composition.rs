@@ -595,7 +595,6 @@ mod tests {
             0.0,
             TILE_SIZE as f32,
         ]);
-        dbg!("HERE");
 
         composition.render(
             Buffer {

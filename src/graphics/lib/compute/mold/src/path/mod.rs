@@ -383,7 +383,7 @@ mod tests {
         };
         let segments: Vec<_> = path.segments().collect();
 
-        for segment in dbg!(&segments[1..]) {
+        for segment in &segments[1..] {
             fn len_squared(point: Point<f32>) -> f32 {
                 point.x * point.x + point.y * point.y
             }

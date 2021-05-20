@@ -99,7 +99,7 @@ impl LayerIdSet {
 
 type Container = u32;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct SmallBitSet {
     bit_set: Container,
 }
