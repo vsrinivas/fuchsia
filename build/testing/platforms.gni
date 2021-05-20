@@ -103,6 +103,12 @@ test_platforms = [
     pool = "fuchsia.tests.connectivity"
     device_type = "Intel NUC Kit NUC7i5DNHE"
   },
+  {
+    testbed = "astro_thermal"
+    cpu = "arm64"
+    pool = "fuchsia.tests.thermal"
+    device_type = "Astro"
+  },
 
   # Experimental/FYI.
   # fxbug.dev/43946
