@@ -4,6 +4,11 @@
 
 import("cmc.gni")
 
+declare_args() {
+  # Enable code coverage for Fuchsia components. Only applies to v1 components.
+  fuchsia_code_coverage = false
+}
+
 # Defines a Fuchsia component.
 # See: https://fuchsia.dev/fuchsia-src/glossary#component
 #
@@ -59,10 +64,6 @@ import("cmc.gni")
 #
 #     Type: string
 #     Default: The base file name of `manifest` without an extension.
-#
-#   is_coverage [optional]
-#     If set to true, enables coverage information to be gathered. Only applies
-#     to v1 components.
 #
 #   resources [optional]
 #     Lists additional files to include for runtime access by the component.
@@ -123,7 +124,7 @@ template("fuchsia_component") {
     _manifest_version = "v2"
   }
 
-  if (defined(invoker.is_coverage) && invoker.is_coverage) {
+  if (fuchsia_code_coverage) {
     if (_manifest_version == "v1") {
       merged_manifest = "${target_name}-coverage.cmx"
       cmc_merge(merged_manifest) {
@@ -155,7 +156,7 @@ template("fuchsia_component") {
       if (defined(invoker.deps)) {
         deps += invoker.deps
       }
-      if (defined(invoker.is_coverage) && invoker.is_coverage) {
+      if (fuchsia_code_coverage) {
         deps += [ ":${merged_manifest}" ]
       }
     }
