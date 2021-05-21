@@ -178,6 +178,27 @@ impl PidTable {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct SignalState {
+    /// The ITIMER_REAL timer.
+    ///
+    /// See <https://linux.die.net/man/2/setitimer>/
+    // TODO: Actually schedule and fire the timer.
+    pub itimer_real: itimerval,
+
+    /// The ITIMER_VIRTUAL timer.
+    ///
+    /// See <https://linux.die.net/man/2/setitimer>/
+    // TODO: Actually schedule and fire the timer.
+    pub itimer_virtual: itimerval,
+
+    /// The ITIMER_PROF timer.
+    ///
+    /// See <https://linux.die.net/man/2/setitimer>/
+    // TODO: Actually schedule and fire the timer.
+    pub itimer_prof: itimerval,
+}
+
 pub struct ThreadGroup {
     /// The kernel to which this thread group belongs.
     pub kernel: Arc<Kernel>,
@@ -200,8 +221,12 @@ pub struct ThreadGroup {
     /// The tasks in the thread group.
     pub tasks: RwLock<HashSet<pid_t>>,
 
+    /// The signal state for this thread group.
+    pub signal_state: RwLock<SignalState>,
+
     /// The signal actions that are registered for `tasks`. All `tasks` share the same `sigaction`
     /// for a given signal.
+    // TODO: Move into signal_state.
     pub signal_actions: RwLock<SignalActions>,
 }
 
@@ -221,6 +246,7 @@ impl ThreadGroup {
             process,
             leader,
             tasks: RwLock::new(tasks),
+            signal_state: RwLock::new(SignalState::default()),
             signal_actions: RwLock::new(SignalActions::default()),
         }
     }

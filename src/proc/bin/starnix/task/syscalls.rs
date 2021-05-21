@@ -149,6 +149,66 @@ pub fn sys_sched_setaffinity(
     Ok(SUCCESS)
 }
 
+pub fn sys_getitimer(
+    ctx: &SyscallContext<'_>,
+    which: u32,
+    user_curr_value: UserRef<itimerval>,
+) -> Result<SyscallResult, Errno> {
+    let signal_state = ctx.task.thread_group.signal_state.read();
+    match which {
+        ITIMER_REAL => {
+            ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_real)?;
+        }
+        ITIMER_VIRTUAL => {
+            ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_virtual)?;
+        }
+        ITIMER_PROF => {
+            ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_prof)?;
+        }
+        _ => {
+            return Err(EINVAL);
+        }
+    }
+    Ok(SUCCESS)
+}
+
+pub fn sys_setitimer(
+    ctx: &SyscallContext<'_>,
+    which: u32,
+    user_new_value: UserRef<itimerval>,
+    user_old_value: UserRef<itimerval>,
+) -> Result<SyscallResult, Errno> {
+    let mut new_value = itimerval::default();
+    ctx.task.mm.read_object(user_new_value, &mut new_value)?;
+
+    let old_value;
+    let mut signal_state = ctx.task.thread_group.signal_state.write();
+
+    match which {
+        ITIMER_REAL => {
+            old_value = signal_state.itimer_real;
+            signal_state.itimer_real = new_value;
+        }
+        ITIMER_VIRTUAL => {
+            old_value = signal_state.itimer_virtual;
+            signal_state.itimer_virtual = new_value;
+        }
+        ITIMER_PROF => {
+            old_value = signal_state.itimer_prof;
+            signal_state.itimer_prof = new_value;
+        }
+        _ => {
+            return Err(EINVAL);
+        }
+    }
+
+    if !user_old_value.is_null() {
+        ctx.task.mm.write_object(user_old_value, &old_value)?;
+    }
+
+    Ok(SUCCESS)
+}
+
 pub fn sys_prctl(
     ctx: &SyscallContext<'_>,
     option: u32,
