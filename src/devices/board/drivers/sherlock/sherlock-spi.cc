@@ -77,16 +77,12 @@ static pbus_dev_t spi_dev = []() {
 }();
 
 // composite binding rules
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static constexpr zx_bind_inst_t gpio_spicc0_ss0_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SPICC0_SS0),
 };
 static constexpr device_fragment_part_t gpio_spicc0_ss0_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(gpio_spicc0_ss0_match), gpio_spicc0_ss0_match},
 };
 

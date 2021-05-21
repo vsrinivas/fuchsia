@@ -232,9 +232,6 @@ zx_status_t Mt8167::Msdc2Init() {
       .set_gpio70_mode(kGpioModeMsdc2)
       .WriteTo(&(*gpio_mmio));
 
-  static constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
 
   static constexpr zx_bind_inst_t reset_gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
@@ -246,11 +243,9 @@ zx_status_t Mt8167::Msdc2Init() {
   };
 
   static const device_fragment_part_t reset_gpio_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(reset_gpio_match), reset_gpio_match},
   };
   static const device_fragment_part_t power_en_gpio_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(power_en_gpio_match), power_en_gpio_match},
   };
 

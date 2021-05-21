@@ -66,15 +66,11 @@ static const pbus_boot_metadata_t emmc_boot_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_EMMC_RST),
 };
 static const device_fragment_part_t gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
 static const device_fragment_t fragments[] = {

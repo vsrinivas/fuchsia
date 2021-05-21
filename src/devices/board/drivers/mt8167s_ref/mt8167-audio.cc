@@ -41,9 +41,6 @@ class WACS2_RDATA : public hwreg::RegisterBase<WACS2_RDATA, uint32_t> {
   DEF_FIELD(18, 16, status);
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t in_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
@@ -70,23 +67,18 @@ static const zx_bind_inst_t cleo_out_codec_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS58xx),
 };
 static const device_fragment_part_t in_i2c_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(in_i2c_match), in_i2c_match},
 };
 static const device_fragment_part_t mt8167s_out_i2c_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(mt8167s_out_i2c_match), mt8167s_out_i2c_match},
 };
 static const device_fragment_part_t cleo_out_i2c_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(cleo_out_i2c_match), cleo_out_i2c_match},
 };
 static const device_fragment_part_t cleo_out_codec_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(cleo_out_codec_match), cleo_out_codec_match},
 };
 static const device_fragment_part_t mt8167s_out_codec_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(mt8167s_out_codec_match), mt8167s_out_codec_match},
 };
 
@@ -103,15 +95,12 @@ static const zx_bind_inst_t mt8167s_out_mute_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO108_MSDC1_DAT2),
 };
 static const device_fragment_part_t in_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(in_gpio_match), in_gpio_match},
 };
 static const device_fragment_part_t mt8167s_out_reset_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(mt8167s_out_reset_gpio_match), mt8167s_out_reset_gpio_match},
 };
 static const device_fragment_part_t mt8167s_out_mute_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(mt8167s_out_mute_gpio_match), mt8167s_out_mute_gpio_match},
 };
 

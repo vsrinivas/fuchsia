@@ -19,9 +19,6 @@
 namespace board_mt8167 {
 
 zx_status_t Mt8167::I2cInit() {
-  static const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   static const zx_bind_inst_t sda0_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO58_SDA0),
@@ -47,27 +44,21 @@ zx_status_t Mt8167::I2cInit() {
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO61_SCL2),
   };
   static const device_fragment_part_t sda0_fragment[] = {
-      {countof(root_match), root_match},
       {countof(sda0_match), sda0_match},
   };
   static const device_fragment_part_t scl0_fragment[] = {
-      {countof(root_match), root_match},
       {countof(scl0_match), scl0_match},
   };
   static const device_fragment_part_t sda1_fragment[] = {
-      {countof(root_match), root_match},
       {countof(sda1_match), sda1_match},
   };
   static const device_fragment_part_t scl1_fragment[] = {
-      {countof(root_match), root_match},
       {countof(scl1_match), scl1_match},
   };
   static const device_fragment_part_t sda2_fragment[] = {
-      {countof(root_match), root_match},
       {countof(sda2_match), sda2_match},
   };
   static const device_fragment_part_t scl2_fragment[] = {
-      {countof(root_match), root_match},
       {countof(scl2_match), scl2_match},
   };
   static const device_fragment_t fragments[] = {

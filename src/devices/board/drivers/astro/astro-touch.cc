@@ -27,9 +27,6 @@ static const device_metadata_t ft3x27_touch_metadata[] = {
 };
 
 // Composite binding rules for focaltech touch driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 const zx_bind_inst_t ft_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, ASTRO_I2C_2),
@@ -49,19 +46,15 @@ static const zx_bind_inst_t gpio_reset_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
 };
 static const device_fragment_part_t ft_i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ft_i2c_match), ft_i2c_match},
 };
 static const device_fragment_part_t goodix_i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(goodix_i2c_match), goodix_i2c_match},
 };
 static const device_fragment_part_t gpio_int_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_int_match), gpio_int_match},
 };
 static const device_fragment_part_t gpio_reset_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_reset_match), gpio_reset_match},
 };
 static const device_fragment_t ft_fragments[] = {

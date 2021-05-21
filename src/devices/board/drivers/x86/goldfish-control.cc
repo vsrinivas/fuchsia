@@ -16,10 +16,6 @@
 
 namespace x86 {
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
-
 static const zx_bind_inst_t goldfish_pipe_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
 };
@@ -33,17 +29,14 @@ static const zx_bind_inst_t goldfish_sync_match[] = {
 };
 
 static const device_fragment_part_t goldfish_pipe_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(goldfish_pipe_match), goldfish_pipe_match},
 };
 
 static const device_fragment_part_t goldfish_address_space_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(goldfish_address_space_match), goldfish_address_space_match},
 };
 
 static const device_fragment_part_t goldfish_sync_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(goldfish_sync_match), goldfish_sync_match},
 };
 

@@ -75,14 +75,10 @@ static const pbus_dev_t bt_uart_dev = []() {
 }();
 
 // Composite binding rules for bluetooth.
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 constexpr zx_bind_inst_t pwm_e_match[] = {
     BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
 };
 constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_e_match), pwm_e_match},
 };
 constexpr device_fragment_t bt_uart_fragments[] = {

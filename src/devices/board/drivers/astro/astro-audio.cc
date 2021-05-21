@@ -76,9 +76,6 @@ static const pbus_bti_t tdm_btis[] = {
     },
 };
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -120,32 +117,26 @@ static const zx_bind_inst_t dai_in_match[] = {
 #endif
 #endif
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
 static const device_fragment_part_t fault_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(fault_gpio_match), fault_gpio_match},
 };
 
 static const device_fragment_part_t enable_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(enable_gpio_match), enable_gpio_match},
 };
 static const device_fragment_part_t codec_fragment[] = {
-    {countof(root_match), root_match},
     {countof(codec_match), codec_match},
 };
 #ifdef ENABLE_BT
 #ifdef ENABLE_DAI_MODE
 #ifdef ENABLE_DAI_TEST
 static const device_fragment_part_t dai_out_fragment[] = {
-    {countof(root_match), root_match},
     {countof(dai_out_match), dai_out_match},
 };
 static const device_fragment_part_t dai_in_fragment[] = {
-    {countof(root_match), root_match},
     {countof(dai_in_match), dai_in_match},
 };
 static const device_fragment_t dai_test_out_fragments[] = {

@@ -83,9 +83,6 @@ static pbus_dev_t nna_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static const zx_bind_inst_t reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
@@ -93,7 +90,6 @@ static const zx_bind_inst_t reset_match[] = {
 };
 
 static const device_fragment_part_t reset_fragment[] = {
-    {countof(root_match), root_match},
     {countof(reset_match), reset_match},
 };
 

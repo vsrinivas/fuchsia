@@ -154,9 +154,6 @@ static pbus_dev_t dsi_dev = []() {
 }();
 
 // Composite binding rules for display driver.
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t lcd_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_LCD_RST),
@@ -175,19 +172,15 @@ constexpr zx_bind_inst_t dsi_impl_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
 };
 static const device_fragment_part_t lcd_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(lcd_gpio_match), lcd_gpio_match},
 };
 constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 constexpr device_fragment_part_t dsi_impl_fragment[] = {
-    {countof(root_match), root_match},
     {countof(dsi_impl_match), dsi_impl_match},
 };
 constexpr device_fragment_part_t power_fragment[] = {
-    {countof(root_match), root_match},
     {countof(power_match), power_match},
 };
 constexpr device_fragment_t fragments[] = {

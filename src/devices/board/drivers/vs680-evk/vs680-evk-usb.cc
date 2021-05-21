@@ -132,9 +132,6 @@ static const pbus_dev_t usb_phy_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
@@ -142,7 +139,6 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
 static const device_fragment_part_t dwc2_phy_fragment[] = {
-    {countof(root_match), root_match},
     {countof(dwc2_phy_match), dwc2_phy_match},
 };
 static const device_fragment_t dwc2_fragments[] = {

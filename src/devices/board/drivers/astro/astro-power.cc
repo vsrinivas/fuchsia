@@ -44,16 +44,12 @@ const pbus_metadata_t power_impl_metadata[] = {
     },
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 constexpr zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
 
@@ -93,7 +89,6 @@ constexpr zx_bind_inst_t pwm_ao_d_match[] = {
 };
 
 constexpr device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
 

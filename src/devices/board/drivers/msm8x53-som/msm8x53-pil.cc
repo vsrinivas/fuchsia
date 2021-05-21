@@ -69,9 +69,6 @@ zx_status_t Msm8x53::PilInit() {
   dev.mmio_list = fw_mmios;
   dev.mmio_count = countof(fw_mmios);
 
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   constexpr zx_bind_inst_t clk_crypto_ahb_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoAhbClk),
@@ -85,15 +82,12 @@ zx_status_t Msm8x53::PilInit() {
       BI_MATCH_IF(EQ, BIND_CLOCK_ID, msm8x53::kCryptoClk),
   };
   const device_fragment_part_t clk_crypto_ahb_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(clk_crypto_ahb_match), clk_crypto_ahb_match},
   };
   const device_fragment_part_t clk_crypto_axi_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(clk_crypto_axi_match), clk_crypto_axi_match},
   };
   const device_fragment_part_t clk_crypto_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(clk_crypto_match), clk_crypto_match},
   };
   const device_fragment_t fragments[] = {

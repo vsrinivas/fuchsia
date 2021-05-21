@@ -109,15 +109,11 @@ static pbus_dev_t emmc_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_EMMC_RESET),
 };
 static const device_fragment_part_t gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
 static const device_fragment_t fragments[] = {

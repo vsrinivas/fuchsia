@@ -53,9 +53,6 @@ zx_status_t As370::LightInit() {
   };
 
   // Composite binding rules for TI LED driver.
-  static const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
 
   static const zx_bind_inst_t i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -64,7 +61,6 @@ zx_status_t As370::LightInit() {
   };
 
   static const device_fragment_part_t i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(i2c_match), i2c_match},
   };
 

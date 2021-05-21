@@ -90,9 +90,6 @@ const pbus_dev_t thermal_dev = []() {
   return thermal_dev;
 }();
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, board_mt8167::kClkThem),
@@ -110,19 +107,15 @@ static const zx_bind_inst_t clk4_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, board_mt8167::kClkPmicwrap26m),
 };
 static const device_fragment_part_t clk1_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk1_match), clk1_match},
 };
 static const device_fragment_part_t clk2_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
 static const device_fragment_part_t clk3_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk3_match), clk3_match},
 };
 static const device_fragment_part_t clk4_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk4_match), clk4_match},
 };
 static const device_fragment_t fragments[] = {

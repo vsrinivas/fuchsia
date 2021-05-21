@@ -281,9 +281,6 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
   device_fragment_t fragments[kMaxFragments];
   memcpy(&fragments[1], fragments_list, fragments_count * sizeof(fragments[1]));
 
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   const zx_bind_inst_t pdev_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, pdev->vid),
@@ -292,7 +289,6 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, pdev->instance_id),
   };
   const device_fragment_part_t pdev_fragment[] = {
-      {countof(root_match), root_match},
       {countof(pdev_match), pdev_match},
   };
 

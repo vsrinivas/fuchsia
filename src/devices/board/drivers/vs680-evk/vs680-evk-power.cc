@@ -16,9 +16,6 @@
 namespace board_vs680_evk {
 
 zx_status_t Vs680Evk::PowerInit() {
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
 
   constexpr zx_bind_inst_t pmic_i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -27,7 +24,6 @@ zx_status_t Vs680Evk::PowerInit() {
   };
 
   const device_fragment_part_t pmic_i2c_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(pmic_i2c_match), pmic_i2c_match},
   };
 
@@ -57,7 +53,6 @@ zx_status_t Vs680Evk::PowerInit() {
   };
 
   const device_fragment_part_t power_impl_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(power_impl_driver_match), power_impl_driver_match},
   };
 

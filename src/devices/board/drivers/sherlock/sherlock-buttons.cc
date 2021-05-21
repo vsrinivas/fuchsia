@@ -18,9 +18,6 @@
 namespace sherlock {
 
 zx_status_t Sherlock::ButtonsInit() {
-  static const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   static const zx_bind_inst_t volume_up_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VOLUME_UP),
@@ -42,23 +39,18 @@ zx_status_t Sherlock::ButtonsInit() {
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_MUTE),
   };
   static const device_fragment_part_t volume_up_fragment[] = {
-      {countof(root_match), root_match},
       {countof(volume_up_match), volume_up_match},
   };
   static const device_fragment_part_t volume_down_fragment[] = {
-      {countof(root_match), root_match},
       {countof(volume_down_match), volume_down_match},
   };
   static const device_fragment_part_t volume_both_fragment[] = {
-      {countof(root_match), root_match},
       {countof(volume_both_match), volume_both_match},
   };
   static const device_fragment_part_t mic_privacy_fragment[] = {
-      {countof(root_match), root_match},
       {countof(mic_privacy_match), mic_privacy_match},
   };
   static const device_fragment_part_t cam_mute_fragment[] = {
-      {countof(root_match), root_match},
       {countof(cam_mute_match), cam_mute_match},
   };
   static const device_fragment_t fragments[] = {

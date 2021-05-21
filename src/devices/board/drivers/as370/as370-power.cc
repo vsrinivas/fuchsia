@@ -18,16 +18,12 @@ namespace board_as370 {
 
 namespace {
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
 
@@ -68,7 +64,6 @@ static const zx_bind_inst_t i2c_match[] = {
 };
 
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 

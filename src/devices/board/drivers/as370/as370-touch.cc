@@ -17,16 +17,12 @@
 
 namespace board_as370 {
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x37),
 };
 static const device_fragment_part_t ref_out_i2c_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(ref_out_i2c_match), ref_out_i2c_match},
 };
 
@@ -35,7 +31,6 @@ static const zx_bind_inst_t ref_out_touch_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, 5),
 };
 static const device_fragment_part_t ref_out_touch_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ref_out_touch_gpio_match), ref_out_touch_gpio_match},
 };
 

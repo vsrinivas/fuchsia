@@ -21,9 +21,6 @@
 namespace astro {
 
 // Composite binding rules for focaltech touch driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 const zx_bind_inst_t i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -37,12 +34,10 @@ static const zx_bind_inst_t gpio_match[] = {
 };
 
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
 static const device_fragment_part_t gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_match), gpio_match},
 };
 
@@ -119,11 +114,9 @@ zx_status_t Astro::LightInit() {
       BI_MATCH_IF(EQ, BIND_PWM_ID, S905D2_PWM_AO_A),
   };
   const device_fragment_part_t amber_led_gpio_fragment[] = {
-      {countof(root_match), root_match},
       {countof(amber_led_gpio_match), amber_led_gpio_match},
   };
   const device_fragment_part_t amber_led_pwm_fragment[] = {
-      {countof(root_match), root_match},
       {countof(amber_led_pwm_match), amber_led_pwm_match},
   };
   const device_fragment_t light_fragments[] = {

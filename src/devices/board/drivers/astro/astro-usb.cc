@@ -197,15 +197,11 @@ static const pbus_dev_t usb_phy_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t reset_register_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
     BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_USB_PHY_V2_RESET),
 };
 static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(root_match), root_match},
     {countof(reset_register_match), reset_register_match},
 };
 static const device_fragment_t usb_phy_fragments[] = {
@@ -218,7 +214,6 @@ static const zx_bind_inst_t xhci_phy_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
 };
 static const device_fragment_part_t xhci_phy_fragment[] = {
-    {countof(root_match), root_match},
     {countof(xhci_phy_match), xhci_phy_match},
 };
 static const device_fragment_t xhci_fragments[] = {
@@ -231,7 +226,6 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
 static const device_fragment_part_t dwc2_phy_fragment[] = {
-    {countof(root_match), root_match},
     {countof(dwc2_phy_match), dwc2_phy_match},
 };
 static const device_fragment_t dwc2_fragments[] = {

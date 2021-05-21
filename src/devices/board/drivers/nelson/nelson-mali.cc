@@ -61,15 +61,11 @@ constexpr pbus_smc_t nelson_mali_smcs[] = {
         .exclusive = false,
     },
 };
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t reset_register_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
     BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_MALI_RESET),
 };
 static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(root_match), root_match},
     {countof(reset_register_match), reset_register_match},
 };
 static const device_fragment_t mali_fragments[] = {

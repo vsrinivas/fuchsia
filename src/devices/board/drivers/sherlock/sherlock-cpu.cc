@@ -53,9 +53,6 @@ constexpr pbus_dev_t cpu_dev = []() {
   return result;
 }();
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 // The CPU device must bind to a legacy thermal driver to which DVFS commands are forwarded.
 // We need to specify the PLL sensor to ensure the correct bind, as there is a non-legacy thermal
@@ -66,7 +63,6 @@ constexpr zx_bind_inst_t thermal_match[] = {
 };
 
 constexpr device_fragment_part_t thermal_fragment[] = {
-    {countof(root_match), root_match},
     {countof(thermal_match), thermal_match},
 };
 

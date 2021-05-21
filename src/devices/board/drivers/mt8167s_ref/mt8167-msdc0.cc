@@ -140,15 +140,11 @@ zx_status_t Mt8167::Msdc0Init() {
 
   InitMmPll(&*clk_mmio, &*pll_mmio);
 
-  static constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   static constexpr zx_bind_inst_t reset_gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_MSDC0_RST),
   };
   static const device_fragment_part_t reset_gpio_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(reset_gpio_match), reset_gpio_match},
   };
   static const device_fragment_t fragments[] = {

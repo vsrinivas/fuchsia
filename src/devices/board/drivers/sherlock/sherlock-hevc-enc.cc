@@ -52,9 +52,6 @@ constexpr pbus_irq_t sherlock_hevc_enc_irqs[] = {
     },
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
@@ -63,11 +60,9 @@ const zx_bind_inst_t clk_dos_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS),
 };
 constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 constexpr device_fragment_part_t clk_dos_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk_dos_match), clk_dos_match},
 };
 constexpr device_fragment_t fragments[] = {

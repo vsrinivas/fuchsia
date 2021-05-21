@@ -66,9 +66,6 @@ static pbus_dev_t pwm_dev = []() {
 }();
 
 // Composite binding rules for pwm init driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t pwm_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
     BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_E),
@@ -82,15 +79,12 @@ static const zx_bind_inst_t bt_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_BT_REG_ON),
 };
 static const device_fragment_part_t pwm_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_match), pwm_match},
 };
 static const device_fragment_part_t wifi_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(wifi_gpio_match), wifi_gpio_match},
 };
 static const device_fragment_part_t bt_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(bt_gpio_match), bt_gpio_match},
 };
 static const device_fragment_t composite[] = {

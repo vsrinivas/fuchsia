@@ -76,9 +76,6 @@ static pbus_dev_t display_dev = []() {
 }();
 
 // Composite binding rules for display driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static const zx_bind_inst_t hpd_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
@@ -98,22 +95,18 @@ static const zx_bind_inst_t hdmi_match[] = {
 };
 
 static const device_fragment_part_t hpd_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(hpd_gpio_match), hpd_gpio_match},
 };
 
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 
 static const device_fragment_part_t canvas_fragment[] = {
-    {countof(root_match), root_match},
     {countof(canvas_match), canvas_match},
 };
 
 static const device_fragment_part_t hdmi_fragment[] = {
-    {countof(root_match), root_match},
     {countof(hdmi_match), hdmi_match},
 };
 

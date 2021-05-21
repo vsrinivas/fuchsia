@@ -76,9 +76,6 @@ zx_status_t Mt8167::ButtonsInit() {
   comp_desc.props_count = countof(props);
   comp_desc.coresident_device_index = UINT32_MAX;
 
-  static const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
     comp_desc.metadata_list = mt8167s_ref_metadata;
     comp_desc.metadata_count = countof(mt8167s_ref_metadata);
@@ -99,19 +96,15 @@ zx_status_t Mt8167::ButtonsInit() {
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_KP_COL1),
     };
     static const device_fragment_part_t row0_fragment[] = {
-        {countof(root_match), root_match},
         {countof(row0_match), row0_match},
     };
     static const device_fragment_part_t row1_fragment[] = {
-        {countof(root_match), root_match},
         {countof(row1_match), row1_match},
     };
     static const device_fragment_part_t col0_fragment[] = {
-        {countof(root_match), root_match},
         {countof(col0_match), col0_match},
     };
     static const device_fragment_part_t col1_fragment[] = {
-        {countof(root_match), root_match},
         {countof(col1_match), col1_match},
     };
     static const device_fragment_t fragments[] = {
@@ -141,11 +134,9 @@ zx_status_t Mt8167::ButtonsInit() {
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_MIC_PRIVACY),
     };
     static const device_fragment_part_t volume_up_fragment[] = {
-        {countof(root_match), root_match},
         {countof(volume_up_match), volume_up_match},
     };
     static const device_fragment_part_t mic_privacy_fragment[] = {
-        {countof(root_match), root_match},
         {countof(mic_privacy_match), mic_privacy_match},
     };
     static const device_fragment_t fragments[] = {

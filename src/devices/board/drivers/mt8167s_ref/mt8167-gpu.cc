@@ -15,9 +15,6 @@
 
 namespace board_mt8167 {
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, kClkRgSlowMfg),
@@ -31,15 +28,12 @@ static const zx_bind_inst_t clk3_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, kClkMfgMm),
 };
 static const device_fragment_part_t clk1_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk1_match), clk1_match},
 };
 static const device_fragment_part_t clk2_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
 static const device_fragment_part_t clk3_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk3_match), clk3_match},
 };
 static const device_fragment_t fragments[] = {

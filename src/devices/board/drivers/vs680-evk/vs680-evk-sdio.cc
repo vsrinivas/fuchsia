@@ -16,9 +16,6 @@
 namespace board_vs680_evk {
 
 zx_status_t Vs680Evk::SdioInit() {
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
 
   constexpr zx_bind_inst_t expander2_i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -36,15 +33,12 @@ zx_status_t Vs680Evk::SdioInit() {
   };
 
   const device_fragment_part_t expander2_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(expander2_i2c_match), expander2_i2c_match},
   };
   const device_fragment_part_t expander3_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(expander3_i2c_match), expander3_i2c_match},
   };
   const device_fragment_part_t sd0_clock_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(sd0_clock_match), sd0_clock_match},
   };
 

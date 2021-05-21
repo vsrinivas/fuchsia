@@ -163,9 +163,6 @@ static pbus_dev_t isp_dev = []() {
 }();
 
 // Composite binding rules for ARM ISP
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static const zx_bind_inst_t reset_register_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
@@ -181,12 +178,10 @@ static const zx_bind_inst_t amlogiccanvas_match[] = {
 };
 
 static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(root_match), root_match},
     {countof(reset_register_match), reset_register_match},
 };
 
 static const device_fragment_part_t camera_sensor_fragment[] = {
-    {countof(root_match), root_match},
     {countof(camera_sensor_match), camera_sensor_match},
 };
 
@@ -201,7 +196,6 @@ static const device_fragment_t gdc_fragments[] = {
 };
 
 static const device_fragment_part_t amlogiccanvas_fragment[] = {
-    {countof(root_match), root_match},
     {countof(amlogiccanvas_match), amlogiccanvas_match},
 };
 
@@ -237,27 +231,21 @@ static const zx_bind_inst_t mipicsi_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MIPI_CSI),
 };
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 static const device_fragment_part_t gpio_reset_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_reset_match), gpio_reset_match},
 };
 static const device_fragment_part_t gpio_vana_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_vana_match), gpio_vana_match},
 };
 static const device_fragment_part_t gpio_vdig_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_vdig_match), gpio_vdig_match},
 };
 static const device_fragment_part_t clk_sensor_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk_sensor_match), clk_sensor_match},
 };
 static const device_fragment_part_t mipicsi_fragment[] = {
-    {countof(root_match), root_match},
     {countof(mipicsi_match), mipicsi_match},
 };
 static const device_fragment_t imx227_sensor_fragments[] = {
@@ -283,19 +271,15 @@ static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 static const device_fragment_part_t isp_fragment[] = {
-    {countof(root_match), root_match},
     {countof(isp_match), isp_match},
 };
 static const device_fragment_part_t gdc_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gdc_match), gdc_match},
 };
 static const device_fragment_part_t ge2d_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ge2d_match), ge2d_match},
 };
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 static const device_fragment_t camera_controller_fragments[] = {

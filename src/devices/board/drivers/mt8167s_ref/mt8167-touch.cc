@@ -35,9 +35,6 @@ zx_status_t Mt8167::TouchInit() {
   };
 
   // Composite binding rules for focaltech touch driver.
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   constexpr zx_bind_inst_t ft_i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
@@ -52,15 +49,12 @@ zx_status_t Mt8167::TouchInit() {
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_TOUCH_RST),
   };
   const device_fragment_part_t ft_i2c_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(ft_i2c_match), ft_i2c_match},
   };
   const device_fragment_part_t gpio_int_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(gpio_int_match), gpio_int_match},
   };
   const device_fragment_part_t gpio_reset_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(gpio_reset_match), gpio_reset_match},
   };
   const device_fragment_t ft_fragments[] = {

@@ -151,9 +151,6 @@ const pbus_dev_t sdio_dev = []() {
 }();
 
 // Composite binding rules for wifi driver.
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 constexpr zx_bind_inst_t sdio_fn1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO), BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
     BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 1),           BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
@@ -169,15 +166,12 @@ constexpr zx_bind_inst_t oob_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_HOST_WAKE),
 };
 constexpr device_fragment_part_t sdio_fn1_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(sdio_fn1_match), sdio_fn1_match},
 };
 constexpr device_fragment_part_t sdio_fn2_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(sdio_fn2_match), sdio_fn2_match},
 };
 constexpr device_fragment_part_t oob_gpio_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(oob_gpio_match), oob_gpio_match},
 };
 constexpr device_fragment_t wifi_composite[] = {
@@ -195,11 +189,9 @@ constexpr zx_bind_inst_t pwm_e_match[] = {
     BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
 };
 constexpr device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
 constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(pwm_e_match), pwm_e_match},
 };
 constexpr device_fragment_t sdio_fragments[] = {

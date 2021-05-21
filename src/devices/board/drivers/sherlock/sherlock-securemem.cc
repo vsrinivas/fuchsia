@@ -32,9 +32,6 @@ static const pbus_dev_t secure_mem_dev = []() {
   return dev;
 }();
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
@@ -42,11 +39,9 @@ constexpr zx_bind_inst_t tee_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEE),
 };
 constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 constexpr device_fragment_part_t tee_fragment[] = {
-    {countof(root_match), root_match},
     {countof(tee_match), tee_match},
 };
 constexpr device_fragment_t fragments[] = {

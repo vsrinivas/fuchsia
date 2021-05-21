@@ -29,9 +29,6 @@ constexpr pbus_mmio_t cpu_mmios[]{
     },
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 constexpr zx_bind_inst_t power_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
@@ -39,7 +36,6 @@ constexpr zx_bind_inst_t power_match[] = {
 };
 
 constexpr device_fragment_part_t power_dfp[] = {
-    {countof(root_match), root_match},
     {countof(power_match), power_match},
 };
 
@@ -49,7 +45,6 @@ constexpr zx_bind_inst_t clock_pll_div16_match[] = {
 };
 
 constexpr device_fragment_part_t clock_pll_div16_dfp[] = {
-    {countof(root_match), root_match},
     {countof(clock_pll_div16_match), clock_pll_div16_match},
 };
 
@@ -59,7 +54,6 @@ constexpr zx_bind_inst_t clock_cpu_div16_match[] = {
 };
 
 constexpr device_fragment_part_t clock_cpu_div16_dfp[] = {
-    {countof(root_match), root_match},
     {countof(clock_cpu_div16_match), clock_cpu_div16_match},
 };
 
@@ -69,7 +63,6 @@ constexpr zx_bind_inst_t clock_cpu_scaler_match[] = {
 };
 
 constexpr device_fragment_part_t clock_cpu_scaler_dfp[] = {
-    {countof(root_match), root_match},
     {countof(clock_cpu_scaler_match), clock_cpu_scaler_match},
 };
 

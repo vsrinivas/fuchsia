@@ -20,9 +20,6 @@
 namespace sherlock {
 
 zx_status_t Sherlock::LightInit() {
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   constexpr zx_bind_inst_t gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_LIGHT_INTERRUPT),
@@ -33,11 +30,9 @@ zx_status_t Sherlock::LightInit() {
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x39),
   };
   const device_fragment_part_t gpio_fragment[] = {
-      {countof(root_match), root_match},
       {countof(gpio_match), gpio_match},
   };
   const device_fragment_part_t i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(i2c_match), i2c_match},
   };
   const device_fragment_t fragments[] = {
@@ -121,19 +116,15 @@ zx_status_t Sherlock::LightInit() {
       BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_F),
   };
   const device_fragment_part_t amber_led_gpio_fragment[] = {
-      {countof(root_match), root_match},
       {countof(amber_led_gpio_match), amber_led_gpio_match},
   };
   const device_fragment_part_t amber_led_pwm_fragment[] = {
-      {countof(root_match), root_match},
       {countof(amber_led_pwm_match), amber_led_pwm_match},
   };
   const device_fragment_part_t green_led_gpio_fragment[] = {
-      {countof(root_match), root_match},
       {countof(green_led_gpio_match), green_led_gpio_match},
   };
   const device_fragment_part_t green_led_pwm_fragment[] = {
-      {countof(root_match), root_match},
       {countof(green_led_pwm_match), green_led_pwm_match},
   };
   const device_fragment_t light_fragments[] = {

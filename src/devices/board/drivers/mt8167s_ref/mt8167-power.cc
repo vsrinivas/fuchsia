@@ -16,14 +16,10 @@
 #include "src/devices/board/drivers/mt8167s_ref/mt8167_bind.h"
 
 namespace {
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 static const device_fragment_part_t power_impl_fragment[] = {
-    {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
 zx_device_prop_t props[] = {

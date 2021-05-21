@@ -78,9 +78,6 @@ zx_status_t Sherlock::AudioInit() {
   const char* product_name = is_sherlock ? "sherlock" : (is_ernie ? "ernie" : "luis");
   constexpr size_t device_name_max_length = 32;
 
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   constexpr zx_bind_inst_t enable_gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
@@ -152,59 +149,46 @@ zx_status_t Sherlock::AudioInit() {
   };
 
   const device_fragment_part_t enable_gpio_fragment[] = {
-      {countof(root_match), root_match},
       {countof(enable_gpio_match), enable_gpio_match},
   };
 
   // I2C matches to be used by the codec fragments below.
   const device_fragment_part_t woofer_i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(woofer_i2c_match), woofer_i2c_match},
   };
   const device_fragment_part_t tweeter_left_i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(tweeter_left_i2c_match), tweeter_left_i2c_match},
   };
   const device_fragment_part_t tweeter_right_i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(tweeter_right_i2c_match), tweeter_right_i2c_match},
   };
   const device_fragment_part_t luis_codec_i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(luis_codec_i2c_match), luis_codec_i2c_match},
   };
   const device_fragment_part_t ernie_woofer_codec_i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(ernie_woofer_codec_i2c_match), ernie_woofer_codec_i2c_match},
   };
   const device_fragment_part_t ernie_tweeter_codec_i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(ernie_tweeter_codec_i2c_match), ernie_tweeter_codec_i2c_match},
   };
 
   // Fragment to be used by the controller, pointing to the codecs.
   const device_fragment_part_t codec_woofer_fragment[] = {
-      {countof(root_match), root_match},
       {countof(codec_woofer_match), codec_woofer_match},
   };
   const device_fragment_part_t codec_tweeter_left_fragment[] = {
-      {countof(root_match), root_match},
       {countof(codec_tweeter_left_match), codec_tweeter_left_match},
   };
   const device_fragment_part_t codec_tweeter_right_fragment[] = {
-      {countof(root_match), root_match},
       {countof(codec_tweeter_right_match), codec_tweeter_right_match},
   };
   const device_fragment_part_t luis_codec_fragment[] = {
-      {countof(root_match), root_match},
       {countof(luis_codec_match), luis_codec_match},
   };
   const device_fragment_part_t ernie_codec_woofer_fragment[] = {
-      {countof(root_match), root_match},
       {countof(ernie_codec_woofer_match), ernie_codec_woofer_match},
   };
   const device_fragment_part_t ernie_codec_tweeter_fragment[] = {
-      {countof(root_match), root_match},
       {countof(ernie_codec_tweeter_match), ernie_codec_tweeter_match},
   };
 

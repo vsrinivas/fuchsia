@@ -29,9 +29,6 @@ constexpr pbus_mmio_t cpu_mmios[]{
     },
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 constexpr zx_bind_inst_t big_power_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
@@ -71,42 +68,34 @@ constexpr zx_bind_inst_t clock_little_cpu_scaler_match[] = {
 };
 
 const device_fragment_part_t big_power_fragment[] = {
-    {countof(root_match), root_match},
     {countof(big_power_match), big_power_match},
 };
 
 const device_fragment_part_t little_power_fragment[] = {
-    {countof(root_match), root_match},
     {countof(little_power_match), little_power_match},
 };
 
 const device_fragment_part_t big_pll_div16_fragment[] = {
-    {countof(root_match), root_match},
     {countof(big_pll_div16_match), big_pll_div16_match},
 };
 
 const device_fragment_part_t big_cpu_div16_fragment[] = {
-    {countof(root_match), root_match},
     {countof(big_cpu_div16_match), big_cpu_div16_match},
 };
 
 const device_fragment_part_t little_pll_div16_fragment[] = {
-    {countof(root_match), root_match},
     {countof(little_pll_div16_match), little_pll_div16_match},
 };
 
 const device_fragment_part_t little_cpu_div16_fragment[] = {
-    {countof(root_match), root_match},
     {countof(little_cpu_div16_match), little_cpu_div16_match},
 };
 
 const device_fragment_part_t clock_big_cpu_scaler_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clock_big_cpu_scaler_match), clock_big_cpu_scaler_match},
 };
 
 const device_fragment_part_t clock_little_cpu_scaler_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clock_little_cpu_scaler_match), clock_little_cpu_scaler_match},
 };
 

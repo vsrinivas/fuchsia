@@ -12,9 +12,6 @@
 
 namespace nelson {
 
-static constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static constexpr zx_bind_inst_t irq_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
@@ -34,17 +31,14 @@ static constexpr zx_bind_inst_t spi_match[] = {
 };
 
 static constexpr device_fragment_part_t irq_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(irq_gpio_match), irq_gpio_match},
 };
 
 static constexpr device_fragment_part_t reset_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(reset_gpio_match), reset_gpio_match},
 };
 
 static constexpr device_fragment_part_t spi_fragment[] = {
-    {countof(root_match), root_match},
     {countof(spi_match), spi_match},
 };
 

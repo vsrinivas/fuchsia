@@ -29,9 +29,6 @@ static const pbus_metadata_t nrf52840_radio_metadata[] = {
 };
 
 // Composite binding rules for openthread radio driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static constexpr zx_bind_inst_t ot_dev_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_NORDIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_NORDIC_NRF52840),
@@ -50,19 +47,15 @@ static constexpr zx_bind_inst_t gpio_bootloader_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_BOOTLOADER),
 };
 static constexpr device_fragment_part_t ot_dev_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(ot_dev_match), ot_dev_match},
 };
 static constexpr device_fragment_part_t gpio_int_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(gpio_int_match), gpio_int_match},
 };
 static constexpr device_fragment_part_t gpio_reset_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(gpio_reset_match), gpio_reset_match},
 };
 static constexpr device_fragment_part_t gpio_bootloader_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(gpio_bootloader_match), gpio_bootloader_match},
 };
 static constexpr device_fragment_t ot_fragments[] = {

@@ -30,9 +30,6 @@ zx_status_t Vs680Evk::ThermalInit() {
       },
   };
 
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
 
   constexpr zx_bind_inst_t cpu_clock_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
@@ -45,12 +42,10 @@ zx_status_t Vs680Evk::ThermalInit() {
   };
 
   const device_fragment_part_t cpu_clock_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(cpu_clock_match), cpu_clock_match},
   };
 
   const device_fragment_part_t cpu_power_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(cpu_power_match), cpu_power_match},
   };
 

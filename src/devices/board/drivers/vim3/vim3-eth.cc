@@ -117,9 +117,6 @@ static pbus_dev_t dwmac_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 // Composite binding rules for ethernet board driver.
 const zx_bind_inst_t i2c_match[] = {
@@ -133,12 +130,10 @@ static const zx_bind_inst_t gpio_int_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, VIM3_ETH_MAC_INTR),
 };
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 
 static const device_fragment_part_t gpio_int_fragment[] = {
-    {countof(root_match), root_match},
     {countof(gpio_int_match), gpio_int_match},
 };
 static const device_fragment_t eth_fragments[] = {
@@ -153,7 +148,6 @@ static const zx_bind_inst_t eth_board_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DESIGNWARE_ETH_MAC),
 };
 static const device_fragment_part_t eth_board_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(eth_board_match), eth_board_match},
 };
 static const device_fragment_t dwmac_fragments[] = {

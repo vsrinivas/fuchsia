@@ -24,9 +24,6 @@
 #endif
 
 namespace nelson {
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t ref_out_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, NELSON_I2C_3),
@@ -49,19 +46,15 @@ static const zx_bind_inst_t p2_out_codec_match[] = {
 };
 
 static const device_fragment_part_t ref_out_i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ref_out_i2c_match), ref_out_i2c_match},
 };
 static const device_fragment_part_t p2_out_i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(p2_out_i2c_match), p2_out_i2c_match},
 };
 static const device_fragment_part_t ref_out_codec_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ref_out_codec_match), ref_out_codec_match},
 };
 static const device_fragment_part_t p2_out_codec_fragment[] = {
-    {countof(root_match), root_match},
     {countof(p2_out_codec_match), p2_out_codec_match},
 };
 
@@ -74,11 +67,9 @@ static const zx_bind_inst_t ref_out_fault_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
 };
 static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
 static const device_fragment_part_t ref_out_fault_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(ref_out_fault_gpio_match), ref_out_fault_gpio_match},
 };
 

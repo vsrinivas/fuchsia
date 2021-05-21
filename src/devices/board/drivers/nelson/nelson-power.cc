@@ -49,9 +49,6 @@ constexpr device_metadata_t kAudioMetadata[] = {
     },
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 constexpr zx_bind_inst_t mlb_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -60,7 +57,6 @@ constexpr zx_bind_inst_t mlb_i2c_match[] = {
 };
 
 constexpr device_fragment_part_t mlb_i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(mlb_i2c_match), mlb_i2c_match},
 };
 
@@ -75,7 +71,6 @@ constexpr zx_bind_inst_t speakers_i2c_match[] = {
 };
 
 constexpr device_fragment_part_t speakers_i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(speakers_i2c_match), speakers_i2c_match},
 };
 

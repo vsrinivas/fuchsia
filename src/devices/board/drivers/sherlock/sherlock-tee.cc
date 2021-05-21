@@ -57,9 +57,6 @@ static pbus_dev_t tee_dev = []() {
   return tee_dev;
 }();
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 constexpr zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
@@ -67,11 +64,9 @@ constexpr zx_bind_inst_t rpmb_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RPMB),
 };
 constexpr device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 constexpr device_fragment_part_t rpmb_fragment[] = {
-    {countof(root_match), root_match},
     {countof(rpmb_match), rpmb_match},
 };
 constexpr device_fragment_t fragments[] = {

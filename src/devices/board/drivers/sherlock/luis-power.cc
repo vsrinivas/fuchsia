@@ -47,16 +47,12 @@ const pbus_metadata_t power_impl_metadata[] = {
     },
 };
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 constexpr zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
 
@@ -118,7 +114,6 @@ constexpr zx_bind_inst_t pwm_ao_d_match[] = {
 };
 
 constexpr device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
 
@@ -129,7 +124,6 @@ constexpr zx_bind_inst_t vreg_pp1000_cpu_a_match[] = {
 };
 
 constexpr device_fragment_part_t vreg_pp1000_cpu_a_fragment[] = {
-    {countof(root_match), root_match},
     {countof(vreg_pp1000_cpu_a_match), vreg_pp1000_cpu_a_match},
 };
 
@@ -159,7 +153,6 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
   };
 
   const device_fragment_part_t i2c_fragment[] = {
-      {countof(root_match), root_match},
       {countof(i2c_match), i2c_match},
   };
 

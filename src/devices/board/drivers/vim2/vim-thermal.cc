@@ -160,9 +160,6 @@ static fuchsia_hardware_thermal::wire::ThermalDeviceInfo aml_vim2_config = {
 };
 
 // Composite binding rules for thermal driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t scpi_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SCPI),
@@ -176,15 +173,12 @@ static const zx_bind_inst_t fan1_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_THERMAL_FAN_1),
 };
 static const device_fragment_part_t scpi_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(scpi_match), scpi_match},
 };
 static const device_fragment_part_t fan0_gpio_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(fan0_gpio_match), fan0_gpio_match},
 };
 static const device_fragment_part_t fan1_gpio_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(fan1_gpio_match), fan1_gpio_match},
 };
 static const device_fragment_t fragments[] = {

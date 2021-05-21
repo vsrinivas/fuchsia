@@ -266,9 +266,6 @@ static constexpr pbus_dev_t thermal_dev_ddr = []() {
   return dev;
 }();
 
-const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 const zx_bind_inst_t pwm_ao_d_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
     BI_MATCH_IF(EQ, BIND_PWM_ID, A311D_PWM_AO_D),
@@ -294,27 +291,21 @@ const zx_bind_inst_t clk4_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16),
 };
 const device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
 const device_fragment_part_t pwm_a_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_a_match), pwm_a_match},
 };
 const device_fragment_part_t clk1_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk1_match), clk1_match},
 };
 const device_fragment_part_t clk2_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
 const device_fragment_part_t clk3_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk3_match), clk3_match},
 };
 const device_fragment_part_t clk4_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk4_match), clk4_match},
 };
 const device_fragment_t fragments[] = {

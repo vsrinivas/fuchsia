@@ -38,9 +38,6 @@ static const zx_device_prop_t luis_touch_props[] = {
 };
 
 // Composite binding rules for focaltech touch driver.
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 
 static constexpr zx_bind_inst_t sherlock_i2c_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
@@ -49,7 +46,6 @@ static constexpr zx_bind_inst_t sherlock_i2c_match[] = {
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x40),
 };
 static constexpr device_fragment_part_t sherlock_i2c_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(sherlock_i2c_match), sherlock_i2c_match},
 };
 
@@ -59,7 +55,6 @@ static constexpr zx_bind_inst_t luis_i2c_match[] = {
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x40),
 };
 static constexpr device_fragment_part_t luis_i2c_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(sherlock_i2c_match), luis_i2c_match},
 };
 
@@ -68,7 +63,6 @@ static constexpr zx_bind_inst_t gpio_int_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_INTERRUPT),
 };
 static constexpr device_fragment_part_t gpio_int_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(gpio_int_match), gpio_int_match},
 };
 
@@ -77,7 +71,6 @@ static constexpr zx_bind_inst_t gpio_reset_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_TOUCH_RESET),
 };
 static constexpr device_fragment_part_t gpio_reset_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(gpio_reset_match), gpio_reset_match},
 };
 

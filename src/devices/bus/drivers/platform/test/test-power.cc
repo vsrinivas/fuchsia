@@ -17,14 +17,10 @@
 namespace {
 
 // Composite binding rules for power domain 1
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(root_match), root_match},
     {countof(power_impl_driver_match), power_impl_driver_match},
 };
 zx_device_prop_t props[] = {
@@ -59,7 +55,6 @@ static const zx_bind_inst_t parent_domain_match[] = {
     BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 1),
 };
 constexpr device_fragment_part_t parent_domain_fragment[] = {
-    {countof(root_match), root_match},
     {countof(parent_domain_match), parent_domain_match},
 };
 

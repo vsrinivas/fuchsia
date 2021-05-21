@@ -98,9 +98,6 @@ zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, con
 zx_status_t Sysdev::MakeComposite() {
   // Composite binding rules for the well-known composite that
   // libdriver-integration-test uses.
-  const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   const zx_bind_inst_t fragment1_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_LIBDRIVER_TEST),
@@ -112,11 +109,9 @@ zx_status_t Sysdev::MakeComposite() {
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
   };
   const device_fragment_part_t fragment1[] = {
-      {countof(root_match), root_match},
       {countof(fragment1_match), fragment1_match},
   };
   const device_fragment_part_t fragment2[] = {
-      {countof(root_match), root_match},
       {countof(fragment2_match), fragment2_match},
   };
   const device_fragment_t fragments[] = {

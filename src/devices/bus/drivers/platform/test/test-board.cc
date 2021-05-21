@@ -132,15 +132,11 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   }
 
   // Add a composite device
-  const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   const zx_bind_inst_t power_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_POWER),
       BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 3),
   };
   device_fragment_part_t power_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(power_match), power_match},
   };
   const zx_bind_inst_t goldfish_address_space_match[] = {
@@ -164,11 +160,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 1),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 5),
-  };
-  const zx_bind_inst_t child2_match[] = {
-      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
   };
   const zx_bind_inst_t child4_match[] = {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
@@ -194,52 +185,39 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
   };
   device_fragment_part_t goldfish_address_space_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(goldfish_address_space_match), goldfish_address_space_match},
   };
   device_fragment_part_t goldfish_pipe_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(goldfish_pipe_match), goldfish_pipe_match},
   };
   device_fragment_part_t goldfish_sync_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(goldfish_sync_match), goldfish_sync_match},
   };
   device_fragment_part_t gpio_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(gpio_match), gpio_match},
   };
   device_fragment_part_t clock_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(clock_match), clock_match},
   };
   device_fragment_part_t i2c_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(i2c_match), i2c_match},
   };
   device_fragment_part_t child4_fragment[] = {
-      {std::size(root_match), root_match},
-      {std::size(child2_match), child2_match},
       {std::size(child4_match), child4_match},
   };
   device_fragment_part_t spi_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(spi_match), spi_match},
   };
   device_fragment_part_t pwm_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(pwm_match), pwm_match},
   };
   device_fragment_part_t rpmb_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(rpmb_match), rpmb_match},
   };
   device_fragment_part_t vreg_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(vreg_match), vreg_match},
   };
   device_fragment_part_t pci_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(pci_match), pci_match},
   };
 

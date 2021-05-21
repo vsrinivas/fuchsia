@@ -36,15 +36,11 @@
 
 namespace pci {
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 
@@ -88,7 +84,6 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) 
   };
 
   const device_fragment_part_t pci_fragment[] = {
-      {countof(root_match), root_match},
       {countof(pci_match), pci_match},
   };
 

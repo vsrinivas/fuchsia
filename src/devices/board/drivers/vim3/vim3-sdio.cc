@@ -54,15 +54,11 @@ static const pbus_metadata_t sdio_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t wifi_pwren_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, A311D_GPIOX(6)),
 };
 static const device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
 };
 static const device_fragment_t sdio_fragments[] = {

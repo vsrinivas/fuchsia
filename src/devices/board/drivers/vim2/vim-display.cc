@@ -73,9 +73,6 @@ static const pbus_bti_t vim_display_btis[] = {
     },
 };
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t hpd_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_DISPLAY_HPD),
@@ -87,15 +84,12 @@ static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 static const device_fragment_part_t hpd_gpio_fragment[] = {
-    {countof(root_match), root_match},
     {countof(hpd_gpio_match), hpd_gpio_match},
 };
 static const device_fragment_part_t canvas_fragment[] = {
-    {countof(root_match), root_match},
     {countof(canvas_match), canvas_match},
 };
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
 };
 static const device_fragment_t fragments[] = {

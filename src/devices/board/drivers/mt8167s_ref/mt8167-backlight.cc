@@ -21,9 +21,6 @@ zx_status_t Mt8167::BacklightInit() {
   }
 
   // Add a composite device
-  constexpr zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   constexpr zx_bind_inst_t i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 2),
@@ -34,11 +31,9 @@ zx_status_t Mt8167::BacklightInit() {
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_CLEO_GPIO_LCM_EN),
   };
   const device_fragment_part_t i2c_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(i2c_match), i2c_match},
   };
   const device_fragment_part_t gpio_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(gpio_match), gpio_match},
   };
   const device_fragment_t fragments[] = {

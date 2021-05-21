@@ -247,9 +247,6 @@ static const pbus_dev_t thermal_dev = []() {
   return dev;
 }();
 
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 const zx_bind_inst_t pwm_ao_d_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
     BI_MATCH_IF(EQ, BIND_PWM_ID, S905D3_PWM_AO_D),
@@ -263,15 +260,12 @@ static const zx_bind_inst_t clk2_match[] = {
     BI_MATCH_IF(EQ, BIND_CLOCK_ID, sm1_clk::CLK_SYS_CPU_CLK_DIV16),
 };
 const device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(root_match), root_match},
     {countof(pwm_ao_d_match), pwm_ao_d_match},
 };
 static const device_fragment_part_t clk1_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk1_match), clk1_match},
 };
 static const device_fragment_part_t clk2_fragment[] = {
-    {countof(root_match), root_match},
     {countof(clk2_match), clk2_match},
 };
 static const device_fragment_t fragments[] = {

@@ -146,15 +146,11 @@ zx_status_t Vim::GpioInit() {
       },
   };
 
-  const zx_bind_inst_t root_match[] = {
-      BI_MATCH(),
-  };
   const zx_bind_inst_t gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SYS_LED),
   };
   const device_fragment_part_t gpio_fragment[] = {
-      {std::size(root_match), root_match},
       {std::size(gpio_match), gpio_match},
   };
   const device_fragment_t fragments[] = {
