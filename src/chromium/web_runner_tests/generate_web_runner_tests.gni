@@ -12,9 +12,9 @@ template("generate_web_runner_tests") {
     testonly = true
 
     deps = [
-      ":web_runner_tests",
       "${invoker.chromium_dir}:web_engine",
       "${invoker.chromium_dir}:web_runner",
+      "//src/chromium/web_runner_tests",
 
       # The deps below are necessary on minimal product configs.
       "//src/graphics/bin/vulkan_loader",
