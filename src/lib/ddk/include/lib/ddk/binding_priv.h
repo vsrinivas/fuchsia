@@ -163,6 +163,9 @@ __BEGIN_CDECLS
 // Regsiters binding variables at 0x0A8X
 #define BIND_REGISTER_ID 0x0A80
 
+// Power sensor binding variables at 0x0A9X
+#define BIND_POWER_SENSOR_DOMAIN 0x0A90
+
 typedef struct zx_bind_inst {
   uint32_t op;
   uint32_t arg;

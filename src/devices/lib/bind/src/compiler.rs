@@ -374,6 +374,9 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     // Registers binding variables at 0x0A8X
     keys.push(("BIND_REGISTER_ID".to_string(), 0x0A80));
 
+    // Power sensor binding variables at 0x0A9X
+    keys.push(("BIND_POWER_SENSOR_DOMAIN".to_string(), 0x0A90));
+
     keys
 }
 
