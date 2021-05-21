@@ -966,17 +966,6 @@ impl Target {
     }
 }
 
-#[async_trait(?Send)]
-impl EventSynthesizer<DaemonEvent> for Target {
-    async fn synthesize_events(&self) -> Vec<DaemonEvent> {
-        if self.inner.state.borrow().is_connected() {
-            vec![DaemonEvent::NewTarget(self.target_info())]
-        } else {
-            vec![]
-        }
-    }
-}
-
 impl From<&Target> for bridge::Target {
     fn from(target: &Target) -> Self {
         let (product_config, board_config) = target
@@ -1285,7 +1274,9 @@ impl EventSynthesizer<DaemonEvent> for TargetCollection {
         let mut res = Vec::with_capacity(self.targets.borrow().len());
         let targets = self.targets.borrow().values().cloned().collect::<Vec<_>>();
         for target in targets.into_iter() {
-            res.extend(target.synthesize_events().await);
+            if target.is_connected() {
+                res.push(DaemonEvent::NewTarget(target.target_info()));
+            }
         }
         res
     }
@@ -1888,15 +1879,17 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_event_synthesis() {
+    async fn test_new_target_event_synthesis() {
         let t = Target::new("clopperdoop");
-        let vec = t.synthesize_events().await;
+        let tc = TargetCollection::new_with_queue();
+        tc.merge_insert(t.clone());
+        let vec = tc.synthesize_events().await;
         assert_eq!(vec.len(), 0);
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(Instant::now())
         });
-        let vec = t.synthesize_events().await;
+        let vec = tc.synthesize_events().await;
         assert_eq!(vec.len(), 1);
         assert_eq!(
             vec.iter().next().expect("events empty"),
