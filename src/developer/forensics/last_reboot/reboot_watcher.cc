@@ -4,7 +4,7 @@
 
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 
-#include "src/developer/forensics/last_reboot/graceful_reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/graceful_reboot_reason.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -33,7 +33,7 @@ void ImminentGracefulRebootWatcher::Connect() {
 
 void ImminentGracefulRebootWatcher::OnReboot(
     fuchsia::hardware::power::statecontrol::RebootReason reason, OnRebootCallback callback) {
-  const std::string content = ToFileContent(ToGracefulRebootReason(reason));
+  const std::string content = feedback::ToFileContent(feedback::ToGracefulRebootReason(reason));
   FX_LOGS(INFO) << "Received reboot reason  '" << content << "' ";
 
   const size_t timer_id = cobalt_->StartTimer();

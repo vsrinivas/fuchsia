@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_reason.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
@@ -10,7 +10,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 
 std::string ToString(const RebootReason reason) {
   switch (reason) {
@@ -289,5 +289,5 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
   }
 }
 
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics

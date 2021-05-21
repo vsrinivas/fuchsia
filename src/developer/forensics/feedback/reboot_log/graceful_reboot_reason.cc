@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/last_reboot/graceful_reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/graceful_reboot_reason.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 namespace {
 
 constexpr char kReasonNotSet[] = "NOT SET";
@@ -133,5 +133,5 @@ GracefulRebootReason ToGracefulRebootReason(
   }
 }
 
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics

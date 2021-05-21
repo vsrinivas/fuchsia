@@ -7,14 +7,14 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
-#include "src/developer/forensics/last_reboot/reboot_log.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 
 namespace forensics {
 namespace last_reboot {
 
 class LastRebootInfoProvider : public fuchsia::feedback::LastRebootInfoProvider {
  public:
-  LastRebootInfoProvider(const RebootLog& reboot_log);
+  LastRebootInfoProvider(const feedback::RebootLog& reboot_log);
 
   // |fuchsia::feedback::LastRebootInfoProvider|
   void Get(GetCallback callback) override;

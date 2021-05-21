@@ -11,8 +11,8 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/inspect/cpp/component.h>
 
+#include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 #include "src/developer/forensics/last_reboot/last_reboot_info_provider.h"
-#include "src/developer/forensics/last_reboot/reboot_log.h"
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 #include "src/developer/forensics/last_reboot/reporter.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -28,7 +28,7 @@ class MainService {
     async_dispatcher_t* dispatcher;
     std::shared_ptr<sys::ServiceDirectory> services;
     inspect::Node* root_node;
-    RebootLog reboot_log;
+    feedback::RebootLog reboot_log;
     std::string graceful_reboot_reason_write_path;
   };
 

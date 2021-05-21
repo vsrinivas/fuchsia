@@ -9,19 +9,6 @@ visibility = [ ":*" ]
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("graceful_reboot_reason_unittest_exe") {
-  testonly = true
-
-  sources = [ "graceful_reboot_reason_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/last_reboot:graceful_reboot_reason",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("last_reboot_info_provider_unittest_exe") {
   testonly = true
 
@@ -32,8 +19,8 @@ executable("last_reboot_info_provider_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/last_reboot:last_reboot_info_provider",
-    "//src/developer/forensics/last_reboot:reboot_reason",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
@@ -61,41 +48,6 @@ executable("main_service_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/inspect",
-  ]
-}
-
-executable("reboot_log_unittest_exe") {
-  testonly = true
-
-  sources = [ "reboot_log_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/last_reboot:reboot_log",
-    "//src/developer/forensics/last_reboot:reboot_watcher",
-    "//src/developer/forensics/testing:gpretty_printers",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-executable("reboot_reason_unittest_exe") {
-  testonly = true
-
-  sources = [ "reboot_reason_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/last_reboot:reboot_reason",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
   ]
 }
 
@@ -143,14 +95,6 @@ executable("reporter_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("graceful_reboot_reason_unittest") {
-  testonly = true
-
-  manifest = "meta/graceful_reboot_reason_unittest.cmx"
-
-  deps = [ ":graceful_reboot_reason_unittest_exe" ]
-}
-
 fuchsia_component("last_reboot_info_provider_unittest") {
   testonly = true
 
@@ -165,22 +109,6 @@ fuchsia_component("main_service_unittest") {
   manifest = "meta/main_service_unittest.cml"
 
   deps = [ ":main_service_unittest_exe" ]
-}
-
-fuchsia_component("reboot_log_unittest") {
-  testonly = true
-
-  manifest = "meta/reboot_log_unittest.cml"
-
-  deps = [ ":reboot_log_unittest_exe" ]
-}
-
-fuchsia_component("reboot_reason_unittest") {
-  testonly = true
-
-  manifest = "meta/reboot_reason_unittest.cml"
-
-  deps = [ ":reboot_reason_unittest_exe" ]
 }
 
 fuchsia_component("reboot_watcher_unittest") {
@@ -209,11 +137,8 @@ fuchsia_test_package("last-reboot-tests") {
     }
   }
   test_components = [
-    ":graceful_reboot_reason_unittest",
     ":last_reboot_info_provider_unittest",
     ":main_service_unittest",
-    ":reboot_log_unittest",
-    ":reboot_reason_unittest",
     ":reboot_watcher_unittest",
     ":reporter_unittest",
   ]

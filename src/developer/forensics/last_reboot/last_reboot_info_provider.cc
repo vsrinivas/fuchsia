@@ -6,12 +6,12 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_reason.h"
 
 namespace forensics {
 namespace last_reboot {
 
-LastRebootInfoProvider::LastRebootInfoProvider(const RebootLog& reboot_log) {
+LastRebootInfoProvider::LastRebootInfoProvider(const feedback::RebootLog& reboot_log) {
   if (reboot_log.HasUptime()) {
     last_reboot_.set_uptime(reboot_log.Uptime().get());
   }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_REASON_H_
-#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_REASON_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_REBOOT_REASON_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_REBOOT_REASON_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
@@ -13,7 +13,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 
 // Feedback's internal representation of why a device rebooted.
 //
@@ -59,7 +59,7 @@ std::string ToCrashSignature(RebootReason reason);
 std::string ToCrashProgramName(RebootReason reason);
 std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(RebootReason reason);
 
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_REASON_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_REBOOT_REASON_H_

@@ -1,0 +1,107 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("graceful_reboot_reason_unittest_exe") {
+  testonly = true
+
+  sources = [ "graceful_reboot_reason_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("reboot_log_unittest_exe") {
+  testonly = true
+
+  sources = [ "reboot_log_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("reboot_reason_unittest_exe") {
+  testonly = true
+
+  sources = [ "reboot_reason_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback/reboot_log",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_component("graceful_reboot_reason_unittest") {
+  testonly = true
+
+  manifest = "meta/graceful_reboot_reason_unittest.cmx"
+
+  deps = [ ":graceful_reboot_reason_unittest_exe" ]
+}
+
+fuchsia_component("reboot_log_unittest") {
+  testonly = true
+
+  manifest = "meta/reboot_log_unittest.cml"
+
+  deps = [ ":reboot_log_unittest_exe" ]
+}
+
+fuchsia_component("reboot_reason_unittest") {
+  testonly = true
+
+  manifest = "meta/reboot_reason_unittest.cml"
+
+  deps = [ ":reboot_reason_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("reboot-log-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [
+    ":graceful_reboot_reason_unittest",
+    ":reboot_log_unittest",
+    ":reboot_reason_unittest",
+  ]
+}
+
+###############################################################################
+# GROUPS
+###############################################################################
+group("tests") {
+  testonly = true
+
+  deps = [ ":reboot-log-tests" ]
+}

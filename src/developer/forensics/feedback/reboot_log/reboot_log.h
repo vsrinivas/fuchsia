@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_LOG_H_
-#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_LOG_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_REBOOT_LOG_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_REBOOT_LOG_H_
 
 #include <lib/zx/time.h>
 
 #include <optional>
 #include <string>
 
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_reason.h"
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 
 // Wrapper around a device's reboot log.
 class RebootLog {
@@ -38,7 +38,7 @@ class RebootLog {
   std::optional<zx::duration> last_boot_uptime_;
 };
 
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_REBOOT_LOG_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_REBOOT_LOG_H_

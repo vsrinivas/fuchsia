@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_reason.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
@@ -34,7 +34,7 @@ Reporter::Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceD
       crash_reporter_(dispatcher, services),
       cobalt_(cobalt) {}
 
-void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reporting_delay) {
+void Reporter::ReportOn(const feedback::RebootLog& reboot_log, zx::duration crash_reporting_delay) {
   if (files::IsFile(kHasReportedOnPath)) {
     FX_LOGS(INFO)
         << "Reboot log has already been reported on in another instance of this component "
@@ -58,7 +58,7 @@ void Reporter::ReportOn(const RebootLog& reboot_log, zx::duration crash_reportin
 
 namespace {
 
-fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
+fuchsia::feedback::CrashReport CreateCrashReport(const feedback::RebootLog& reboot_log) {
   // Build the crash report.
   fuchsia::feedback::CrashReport report;
   report.set_program_name(ToCrashProgramName(reboot_log.RebootReason()))
@@ -82,7 +82,7 @@ fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
 
 }  // namespace
 
-::fit::promise<void> Reporter::FileCrashReport(const RebootLog& reboot_log,
+::fit::promise<void> Reporter::FileCrashReport(const feedback::RebootLog& reboot_log,
                                                const zx::duration delay) {
   auto report = CreateCrashReport(reboot_log);
 

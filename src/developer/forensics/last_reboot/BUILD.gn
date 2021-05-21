@@ -14,14 +14,11 @@ source_set("last_reboot_info_provider") {
   ]
 
   public_deps = [
-    ":reboot_log",
     "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/forensics/feedback/reboot_log",
   ]
 
-  deps = [
-    ":reboot_reason",
-    "//sdk/lib/syslog/cpp",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("main") {
@@ -48,58 +45,15 @@ source_set("main_service") {
 
   public_deps = [
     ":last_reboot_info_provider",
-    ":reboot_log",
     ":reboot_watcher",
     ":reporter",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/utils:inspect_node_manager",
     "//src/developer/forensics/utils:inspect_protocol_stats",
     "//src/developer/forensics/utils/cobalt",
-  ]
-}
-
-source_set("reboot_log") {
-  sources = [
-    "reboot_log.cc",
-    "reboot_log.h",
-  ]
-
-  public_deps = [ ":reboot_reason" ]
-
-  deps = [
-    ":graceful_reboot_reason",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/files",
-    "//src/lib/fxl",
-  ]
-}
-
-source_set("reboot_reason") {
-  sources = [
-    "reboot_reason.cc",
-    "reboot_reason.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//src/developer/forensics/utils/cobalt",
-  ]
-
-  deps = [ "//sdk/lib/syslog/cpp" ]
-}
-
-source_set("graceful_reboot_reason") {
-  sources = [
-    "graceful_reboot_reason.cc",
-    "graceful_reboot_reason.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/syslog/cpp",
   ]
 }
 
@@ -116,7 +70,7 @@ source_set("reboot_watcher") {
   ]
 
   deps = [
-    ":graceful_reboot_reason",
+    "//src/developer/forensics/feedback/reboot_log",
     "//src/lib/files",
     "//src/lib/fxl",
   ]
@@ -129,12 +83,11 @@ source_set("reporter") {
   ]
 
   public_deps = [
-    ":reboot_log",
-    ":reboot_reason",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",

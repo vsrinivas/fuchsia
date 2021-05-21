@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_LAST_REBOOT_GRACEFUL_REBOOT_REASON_H_
-#define SRC_DEVELOPER_FORENSICS_LAST_REBOOT_GRACEFUL_REBOOT_REASON_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_GRACEFUL_REBOOT_REASON_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_GRACEFUL_REBOOT_REASON_H_
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 
 #include <string>
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 
 // Feedback's internal representation of why a device rebooted gracefully.
 //
@@ -43,7 +43,7 @@ GracefulRebootReason FromFileContent(std::string content);
 // The input is limited to values corresponding to |power::statecontrol::RebootReason|.
 std::string ToFileContent(GracefulRebootReason reason);
 
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_LAST_REBOOT_GRACEFUL_REBOOT_REASON_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_REBOOT_LOG_GRACEFUL_REBOOT_REASON_H_

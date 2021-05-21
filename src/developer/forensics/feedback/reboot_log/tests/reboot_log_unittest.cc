@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/last_reboot/reboot_log.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -11,14 +11,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/last_reboot/reboot_watcher.h"
+#include "src/developer/forensics/feedback/reboot_log/graceful_reboot_reason.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 namespace {
 
 using GracefulRebootReason = fuchsia::hardware::power::statecontrol::RebootReason;
@@ -64,8 +65,8 @@ class RebootLogTest : public UnitTestFixture, public testing::WithParamInterface
 
     cobalt::Logger cobalt(dispatcher(), services());
 
-    ImminentGracefulRebootWatcher watcher(services(), graceful_reboot_log_path_, &cobalt);
-    watcher.OnReboot(reason, [] {});
+    FX_CHECK(
+        files::WriteFile(graceful_reboot_log_path_, ToFileContent(ToGracefulRebootReason(reason))));
   }
 
   void SetAsFdr() { FX_CHECK(files::DeletePath(not_a_fdr_path_, /*recursive=*/true)); }
@@ -350,5 +351,5 @@ TEST_F(RebootLogStrTest, Succeed_InferFDR) {
 }
 
 }  // namespace
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics

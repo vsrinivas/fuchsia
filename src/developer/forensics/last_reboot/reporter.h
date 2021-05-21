@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-#include "src/developer/forensics/last_reboot/reboot_log.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/lib/fxl/functional/cancelable_callback.h"
@@ -29,10 +29,10 @@ class Reporter {
   Reporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
            cobalt::Logger* cobalt);
 
-  void ReportOn(const RebootLog& reboot_log, zx::duration crash_reporting_delay);
+  void ReportOn(const feedback::RebootLog& reboot_log, zx::duration crash_reporting_delay);
 
  private:
-  ::fit::promise<void> FileCrashReport(const RebootLog& reboot_log, zx::duration delay);
+  ::fit::promise<void> FileCrashReport(const feedback::RebootLog& reboot_log, zx::duration delay);
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;

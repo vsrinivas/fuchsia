@@ -22,7 +22,7 @@ MainService::MainService(Config config)
 void MainService::WatchForImminentGracefulReboot() { reboot_watcher_.Connect(); }
 
 void MainService::Report(const zx::duration oom_crash_reporting_delay) {
-  const zx::duration delay = (config_.reboot_log.RebootReason() == RebootReason::kOOM)
+  const zx::duration delay = (config_.reboot_log.RebootReason() == feedback::RebootReason::kOOM)
                                  ? oom_crash_reporting_delay
                                  : zx::sec(0);
   reporter_.ReportOn(config_.reboot_log, delay);

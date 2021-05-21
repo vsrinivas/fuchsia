@@ -2,22 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/last_reboot/reboot_log.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include <array>
 #include <sstream>
 
-#include "src/developer/forensics/last_reboot/graceful_reboot_reason.h"
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/graceful_reboot_reason.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 namespace {
 
 enum class ZirconRebootReason {
@@ -230,5 +229,5 @@ RebootLog::RebootLog(enum RebootReason reboot_reason, std::string reboot_log_str
       reboot_log_str_(reboot_log_str),
       last_boot_uptime_(last_boot_uptime) {}
 
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics

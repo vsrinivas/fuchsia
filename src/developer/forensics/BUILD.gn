@@ -25,6 +25,7 @@ group("tests") {
   deps = [
     "crash_reports/tests",
     "exceptions/tests",
+    "feedback:tests",
     "feedback_data/system_log_recorder/tests",
     "feedback_data/tests",
     "last_reboot/tests",

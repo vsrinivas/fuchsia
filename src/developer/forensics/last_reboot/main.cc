@@ -44,8 +44,8 @@ int main() {
       .dispatcher = component.Dispatcher(),
       .services = component.Services(),
       .root_node = component.InspectRoot(),
-      .reboot_log = RebootLog::ParseRebootLog("/boot/log/last-panic.txt",
-                                              reboot_reason_file.PreviousBootPath(), kNotAFdr),
+      .reboot_log = feedback::RebootLog::ParseRebootLog(
+          "/boot/log/last-panic.txt", reboot_reason_file.PreviousBootPath(), kNotAFdr),
       .graceful_reboot_reason_write_path = reboot_reason_file.CurrentBootPath(),
   });
 

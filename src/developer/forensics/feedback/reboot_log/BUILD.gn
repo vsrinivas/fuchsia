@@ -1,0 +1,32 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/developer/forensics/*" ]
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("reboot_log") {
+  sources = [
+    "graceful_reboot_reason.cc",
+    "graceful_reboot_reason.h",
+    "reboot_log.cc",
+    "reboot_log.h",
+    "reboot_reason.cc",
+    "reboot_reason.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils/cobalt",
+  ]
+
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}

@@ -9,9 +9,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/reboot_log/reboot_log.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_reason.h"
 #include "src/developer/forensics/last_reboot/last_reboot_info_provider.h"
-#include "src/developer/forensics/last_reboot/reboot_log.h"
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 
 namespace forensics {
@@ -19,8 +19,9 @@ namespace last_reboot {
 namespace {
 
 fuchsia::feedback::LastReboot GetLastReboot(
-    const RebootReason reboot_reason, const std::optional<zx::duration> uptime = std::nullopt) {
-  const RebootLog reboot_log(reboot_reason, "", uptime);
+    const feedback::RebootReason reboot_reason,
+    const std::optional<zx::duration> uptime = std::nullopt) {
+  const feedback::RebootLog reboot_log(reboot_reason, "", uptime);
   fuchsia::feedback::LastReboot out_last_reboot;
 
   LastRebootInfoProvider last_reboot_info_provider(reboot_log);
@@ -31,7 +32,7 @@ fuchsia::feedback::LastReboot GetLastReboot(
 }
 
 TEST(LastRebootInfoProviderTest, Succeed_Graceful) {
-  const RebootReason reboot_reason = RebootReason::kGenericGraceful;
+  const feedback::RebootReason reboot_reason = feedback::RebootReason::kGenericGraceful;
 
   const auto last_reboot = GetLastReboot(reboot_reason);
 
@@ -42,7 +43,7 @@ TEST(LastRebootInfoProviderTest, Succeed_Graceful) {
 }
 
 TEST(LastRebootInfoProviderTest, Succeed_NotGraceful) {
-  const RebootReason reboot_reason = RebootReason::kKernelPanic;
+  const feedback::RebootReason reboot_reason = feedback::RebootReason::kKernelPanic;
 
   const auto last_reboot = GetLastReboot(reboot_reason);
 
@@ -56,20 +57,20 @@ TEST(LastRebootInfoProviderTest, Succeed_NotGraceful) {
 TEST(LastRebootInfoProviderTest, Succeed_HasUptime) {
   const zx::duration uptime = zx::msec(100);
 
-  const auto last_reboot = GetLastReboot(RebootReason::kGenericGraceful, uptime);
+  const auto last_reboot = GetLastReboot(feedback::RebootReason::kGenericGraceful, uptime);
 
   ASSERT_TRUE(last_reboot.has_uptime());
   EXPECT_EQ(last_reboot.uptime(), uptime.to_nsecs());
 }
 
 TEST(LastRebootInfoProviderTest, Succeed_DoesNotHaveUptime) {
-  const auto last_reboot = GetLastReboot(RebootReason::kGenericGraceful, std::nullopt);
+  const auto last_reboot = GetLastReboot(feedback::RebootReason::kGenericGraceful, std::nullopt);
 
   EXPECT_FALSE(last_reboot.has_uptime());
 }
 
 TEST(LastRebootInfoProviderTest, Succeed_NotParseable) {
-  const RebootReason reboot_reason = RebootReason::kNotParseable;
+  const feedback::RebootReason reboot_reason = feedback::RebootReason::kNotParseable;
 
   const auto last_reboot = GetLastReboot(reboot_reason);
 

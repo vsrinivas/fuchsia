@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/last_reboot/reboot_reason.h"
+#include "src/developer/forensics/feedback/reboot_log/reboot_reason.h"
 
 #include <fuchsia/feedback/cpp/fidl.h>
 
@@ -12,7 +12,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
-namespace last_reboot {
+namespace feedback {
 namespace {
 
 TEST(RebootReasonTest, NotParseable) {
@@ -211,5 +211,5 @@ TEST(RebootReasonTest, FDR) {
 }
 
 }  // namespace
-}  // namespace last_reboot
+}  // namespace feedback
 }  // namespace forensics
