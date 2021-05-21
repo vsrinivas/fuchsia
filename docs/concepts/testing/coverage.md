@@ -110,6 +110,39 @@ at a patch set that was sent to CQ. You can click "show experimental tryjobs" to
 reveal a tryjob named `fuchsia-coverage`. If the tryjob is still running, come
 back later and refresh the page.
 
+### Ensure that your test ran
+
+If your code is missing coverage that you expect to see, then pick a test that
+should have covered your code and ensure that it ran on the coverage tryjob.
+
+1.   Find the tryjob in Gerrit, or find a recent `fuchsia-coverage` run on the
+     [CI dashboard][fuchsia-coverage-ci].
+1.   In the Overview tab, find the "collect builds" step and expand it to find
+     links to the pages that show different coverage build & test runs for
+     different configurations.
+1.   Each of these pages should have a Test Results tab showing all tests that
+     ran. Ensure that your expected test ran, and preferably that it passed.
+
+If your test didn't run on any coverage tryjob as expected then one reason might
+simply be that it only runs in configurations not currently covered by CI/CQ.
+Another is that the test is explicitly opted out in coverage variants. For
+instance a `BUILD.gn` file referencing your test might look as follows:
+
+```gn
+group("tests") {
+  deps = [
+    ":foo_test",
+    ":bar_test",
+  ]
+  // TODO(fxbug.dev/12345): This test is intentionally disabled on coverage.
+  if (!is_coverage) {
+    deps += [ ":qux_test" ]
+  }
+}
+```
+
+Look for context as to why your test is disabled on coverage and investigate.
+
 ## How test coverage works
 
 Fuchsia's code coverage build, test runtime support, and processing tools use
@@ -157,6 +190,7 @@ dashboards.
 [cfv2]: /docs/concepts/components/v2/
 [covargs]: /tools/debug/covargs/
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
+[fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
 [fxr499602]: https://fuchsia-review.googlesource.com/c/fuchsia/+/499602/12
