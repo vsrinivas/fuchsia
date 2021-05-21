@@ -16,12 +16,16 @@ group("common") {
     ":bind",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 

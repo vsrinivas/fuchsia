@@ -37,6 +37,8 @@ struct Ina231Metadata {
   // Resolution is 1250 uV regardless of other settings. Only used if alert is not kAlertNone.
   uint64_t bus_voltage_limit_microvolt;
   uint16_t alert;
+
+  uint32_t power_sensor_domain;
 };
 
 }  // namespace power_sensor

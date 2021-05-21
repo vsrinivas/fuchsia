@@ -13,6 +13,12 @@
 
 namespace nelson {
 
+// These values are specific to Nelson, and are only used within this board driver.
+enum : uint32_t {
+  kPowerSensorDomainMlb = 0,
+  kPowerSensorDomainAudio = 1,
+};
+
 constexpr power_sensor::Ina231Metadata kMlbSensorMetadata = {
     .mode = power_sensor::Ina231Metadata::kModeShuntAndBusContinuous,
     .shunt_voltage_conversion_time = power_sensor::Ina231Metadata::kConversionTime332us,
@@ -21,6 +27,7 @@ constexpr power_sensor::Ina231Metadata kMlbSensorMetadata = {
     .shunt_resistance_microohm = 10'000,
     .bus_voltage_limit_microvolt = 0,
     .alert = power_sensor::Ina231Metadata::kAlertNone,
+    .power_sensor_domain = kPowerSensorDomainMlb,
 };
 
 constexpr power_sensor::Ina231Metadata kAudioSensorMetadata = {
@@ -31,6 +38,7 @@ constexpr power_sensor::Ina231Metadata kAudioSensorMetadata = {
     .shunt_resistance_microohm = 10'000,
     .bus_voltage_limit_microvolt = 11'000'000,
     .alert = power_sensor::Ina231Metadata::kAlertBusUnderVoltage,
+    .power_sensor_domain = kPowerSensorDomainAudio,
 };
 
 constexpr device_metadata_t kMlbMetadata[] = {

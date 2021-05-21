@@ -128,4 +128,47 @@ TEST(TiIna231Test, SetAlertLimit) {
   EXPECT_EQ(fake_i2c.alert_limit(), 0x2260);
 }
 
+TEST(TiIna231Test, BanjoClients) {
+  fake_ddk::Bind ddk;
+  FakeIna231Device fake_i2c;
+  Ina231Device dut(fake_ddk::kFakeParent, 10'000, fake_i2c.GetProto());
+
+  constexpr Ina231Metadata kMetadata = {
+      .mode = Ina231Metadata::kModeShuntAndBusContinuous,
+      .shunt_voltage_conversion_time = Ina231Metadata::kConversionTime332us,
+      .bus_voltage_conversion_time = Ina231Metadata::kConversionTime332us,
+      .averages = Ina231Metadata::kAverages1024,
+      .shunt_resistance_microohm = 10'000,
+      .bus_voltage_limit_microvolt = 11'000'000,
+      .alert = Ina231Metadata::kAlertBusUnderVoltage,
+  };
+
+  EXPECT_OK(dut.Init(kMetadata));
+
+  fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> client1, client2;
+
+  zx::channel server;
+  ASSERT_OK(zx::channel::create(0, client1.mutable_channel(), &server));
+  ASSERT_OK(dut.PowerSensorConnectServer(std::move(server)));
+
+  ASSERT_OK(zx::channel::create(0, client2.mutable_channel(), &server));
+  ASSERT_OK(dut.PowerSensorConnectServer(std::move(server)));
+
+  fake_i2c.set_power(4792);
+
+  {
+    auto response = client1.GetPowerWatts();
+    ASSERT_TRUE(response.ok());
+    ASSERT_FALSE(response.value().result.is_err());
+    EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
+  }
+
+  {
+    auto response = client2.GetPowerWatts();
+    ASSERT_TRUE(response.ok());
+    ASSERT_FALSE(response.value().result.is_err());
+    EXPECT_TRUE(FloatNear(response.value().result.response().power, 29.95f));
+  }
+}
+
 }  // namespace power_sensor

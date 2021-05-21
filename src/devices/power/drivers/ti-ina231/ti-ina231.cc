@@ -9,6 +9,7 @@
 #include <lib/ddk/metadata.h>
 
 #include <ddktl/fidl.h>
+#include <fbl/auto_lock.h>
 
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-bind.h"
 
@@ -75,7 +76,10 @@ zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  if ((status = dev->DdkAdd("ti-ina231")) != ZX_OK) {
+  zx_device_prop_t props[] = {
+      {BIND_POWER_SENSOR_DOMAIN, 0, metadata.power_sensor_domain},
+  };
+  if ((status = dev->DdkAdd(ddk::DeviceAddArgs("ti-ina231").set_props(props))) != ZX_OK) {
     zxlogf(ERROR, "DdkAdd failed: %d", status);
     return status;
   }
@@ -84,9 +88,21 @@ zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
+zx_status_t Ina231Device::PowerSensorConnectServer(zx::channel server) {
+  fidl::BindServer(loop_.dispatcher(),
+                   fidl::ServerEnd<fuchsia_hardware_power_sensor::Device>(std::move(server)), this);
+  return ZX_OK;
+}
+
 void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
                                  GetPowerWattsCompleter::Sync& completer) {
-  auto power_reg = Read16(Register::kPowerReg);
+  zx::status<uint16_t> power_reg;
+
+  {
+    fbl::AutoLock lock(&i2c_lock_);
+    power_reg = Read16(Register::kPowerReg);
+  }
+
   if (power_reg.is_error()) {
     completer.ReplyError(power_reg.error_value());
     return;
@@ -97,8 +113,18 @@ void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
 }
 
 zx_status_t Ina231Device::Init(const Ina231Metadata& metadata) {
+  {
+    zx_status_t status = loop_.StartThread("TI INA231 loop thread");
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to start thread: %d", status);
+      return status;
+    }
+  }
+
   // Keep only the bits that are not defined in the datasheet, and clear the reset bit.
   constexpr uint16_t kConfigurationRegMask = 0x7000;
+
+  fbl::AutoLock lock(&i2c_lock_);
 
   auto status = Write16(Register::kCalibrationReg, kCalibrationValue);
   if (status.is_error()) {
