@@ -20,7 +20,10 @@ rustc_test("tests_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  sources = [ "main.rs" ]
+  sources = [
+    "lib.rs",
+    "main.rs",
+  ]
 }
 
 fuchsia_component("rust_runner_integration_test") {
@@ -29,8 +32,40 @@ fuchsia_component("rust_runner_integration_test") {
   deps = [ ":tests_bin" ]
 }
 
+rustc_test("stress_tests_bin") {
+  edition = "2018"
+  source_root = "stress_main.rs"
+  name = "rust_runner_stress_test"
+
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/test_executor/rust:test_executor",
+    "//src/sys/test_runners:test_lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "lib.rs",
+    "stress_main.rs",
+  ]
+}
+
+fuchsia_component("rust_runner_stress_test") {
+  testonly = true
+  manifest = "meta/rust_runner_stress_test.cml"
+  deps = [ ":stress_tests_bin" ]
+}
+
 fuchsia_test_package("rust-runner-integration-test") {
   test_components = [ ":rust_runner_integration_test" ]
+
+  if (!is_coverage) {
+    # https://fxbug.dev/77236: This stress test times out on coverage bot.
+    test_components += [ ":rust_runner_stress_test" ]
+  }
 }
 
 group("tests") {
