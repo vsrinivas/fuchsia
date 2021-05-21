@@ -65,6 +65,7 @@ static struct timeval start_time, end_time;
 static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
 static bool no_bind = false;
+static bool reuseport = false;
 
 struct firmware {
   const char* type;
@@ -270,7 +271,8 @@ void usage(void) {
       "  --nocolor    disable ANSI color (false)\n"
       "  --allow-zedboot-version-mismatch warn on zedboot version mismatch rather than fail\n"
       "  --fail-fast-if-version-mismatch  error if zedboot version does not match\n"
-      "  --no-bind    do not bind to bootserver port. Should be used with -a <IPV6>\n",
+      "  --no-bind    do not bind to bootserver port. Should be used with -a <IPV6>\n"
+      "  --reuseport  allow other programs to bind the listen port\n",
       appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
   exit(1);
 }
@@ -660,6 +662,8 @@ int main(int argc, char** argv) {
         return -1;
       }
       wipe_partition_tables_device_path = argv[1];
+    } else if (!strcmp(argv[1], "--reuseport")) {
+      reuseport = true;
     } else if (!strcmp(argv[1], "--")) {
       while (argc > 2) {
         argc--;
@@ -704,8 +708,9 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) || nodename) {
+  if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) || nodename || reuseport) {
     setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof 1);
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof 1);
   }
 
   memset(&addr, 0, sizeof(addr));

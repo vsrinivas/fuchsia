@@ -39,7 +39,7 @@ kill_child_processes() {
 trap kill_child_processes EXIT
 
 serve_args=()
-pave_args=()
+pave_args=(--reuseport)
 
 fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
