@@ -84,6 +84,7 @@ ZBI_TOOL=""
 FVM_TOOL=""
 POINTING_DEVICE="mouse"
 BUILD=1
+EMU_ARGS=()
 
 # Propagate our TERM environment variable as a kernel command line
 # argument.  This is first so that an explicit -c TERM=foo argument
@@ -214,7 +215,8 @@ while [[ $# -ge 1 ]]; do
     EXPERIMENT_ARM64=true
     ;;
   *)
-    break
+    EMU_ARGS+=("$1")
+    ;;
   esac
   shift
 done
@@ -564,4 +566,4 @@ CMDLINE+=$OPT_CMDLINE
 set -x
 "${AEMU_DIR}/${AEMU}" "${OPTIONS[@]}" -fuchsia \
      -kernel "${KERNEL_IMAGE}" \
-     -initrd "$KERNEL_ZBI" "${ARGS[@]}" -append "$CMDLINE" "$@"
+     -initrd "$KERNEL_ZBI" "${ARGS[@]}" -append "$CMDLINE" "${EMU_ARGS[@]}"

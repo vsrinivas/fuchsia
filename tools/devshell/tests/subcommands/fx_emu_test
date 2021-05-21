@@ -114,4 +114,36 @@ EOF
       "-device" "virtio-blk-pci,drive=vdisk"
 }
 
+# The emu script parses all of the args passed on the command line. Anything not
+# recognized and handled by the emu script are passed along to the emulator
+# itself. The next few tests illustrate how an argument in any position is
+# passed along.
+TEST_first_param_is_appended() {
+  BT_EXPECT ${fx} emu --emu_param --no-build --headless -a off
+  BT_EXPECT btf::does-mock-args-contain \
+      "${PREBUILT_AEMU_DIR}/emulator.mock_state" \
+      "--emu_param"
+}
+
+TEST_middle_param_is_appended() {
+  BT_EXPECT ${fx} emu --no-build --headless --emu_param -a off
+  BT_EXPECT btf::does-mock-args-contain \
+      "${PREBUILT_AEMU_DIR}/emulator.mock_state" \
+      "--emu_param"
+}
+
+TEST_last_param_is_appended() {
+  BT_EXPECT ${fx} emu --no-build --headless -a off --emu_param
+  BT_EXPECT btf::does-mock-args-contain \
+      "${PREBUILT_AEMU_DIR}/emulator.mock_state" \
+      "--emu_param"
+}
+
+TEST_multiple_params_are_appended() {
+  BT_EXPECT ${fx} emu --no-build --emu_param1 --headless --emu_param2 -a off --emu_param3
+  BT_EXPECT btf::does-mock-args-contain \
+      "${PREBUILT_AEMU_DIR}/emulator.mock_state" \
+      "--emu_param1" "--emu_param2" "--emu_param3"
+}
+
 BT_RUN_TESTS "$@"
