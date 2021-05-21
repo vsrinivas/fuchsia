@@ -59,6 +59,7 @@ impl FuchsiaPaths for InTreePaths {
                                     "[fvdl] Found Fuchsia root directory {:?}",
                                     self.root_dir.as_ref().unwrap().display()
                                 );
+                                return Ok(ancester.to_path_buf());
                             }
                         }
                     }
