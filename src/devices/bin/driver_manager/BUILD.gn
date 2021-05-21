@@ -168,7 +168,6 @@ executable("driver_manager") {
 test("driver_manager_test") {
   sources = [
     "autobind_tests.cc",
-    "binding_test.cc",
     "binding_v2_test.cc",
     "composite_device_tests.cc",
     "coordinator_test_utils.cc",

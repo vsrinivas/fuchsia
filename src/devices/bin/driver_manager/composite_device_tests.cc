@@ -83,15 +83,9 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
 
     fuchsia_device_manager::wire::DeviceFragment fragment;  // = &fragments[i];
     fragment.name = ::fidl::StringView("unnamed-fragment");
-    fragment.parts_count = 2;
+    fragment.parts_count = 1;
     fragment.parts[0].match_program_count = 1;
     fragment.parts[0].match_program[0] = fuchsia_device_manager::wire::BindInstruction{
-        .op = always.op,
-        .arg = always.arg,
-        .debug = always.debug,
-    };
-    fragment.parts[1].match_program_count = 1;
-    fragment.parts[1].match_program[0] = fuchsia_device_manager::wire::BindInstruction{
         .op = protocol.op,
         .arg = protocol.arg,
         .debug = always.debug,

@@ -114,22 +114,6 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
   return false;
 }
 
-Match SumMatchCounts(Match m1, Match m2) {
-  switch (m1) {
-    case Match::None:
-      return m2;
-    case Match::One:
-      return (m2 == Match::None ? Match::One : Match::Many);
-    case Match::Many:
-      return Match::Many;
-  }
-  __builtin_trap();
-}
-
-// Instantiate MatchParts<Device>
-template Match MatchParts(const fbl::RefPtr<Device>& device, const FragmentPartDescriptor* parts,
-                          uint32_t parts_count);
-
 }  // namespace internal
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

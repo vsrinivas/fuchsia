@@ -62,22 +62,24 @@ zx_status_t CompositeDevice::Create(
   for (uint32_t i = 0; i < comp_desc.fragments.count(); ++i) {
     const auto& fidl_fragment = comp_desc.fragments[i];
     size_t parts_count = fidl_fragment.parts_count;
-    fbl::Array<FragmentPartDescriptor> parts(new FragmentPartDescriptor[parts_count], parts_count);
-    for (size_t j = 0; j < parts_count; ++j) {
-      const auto& fidl_part = fidl_fragment.parts[j];
-      size_t program_count = fidl_part.match_program_count;
-      fbl::Array<zx_bind_inst_t> match_program(new zx_bind_inst_t[program_count], program_count);
-      for (size_t k = 0; k < program_count; ++k) {
-        match_program[k] = zx_bind_inst_t{
-            .op = fidl_part.match_program[k].op,
-            .arg = fidl_part.match_program[k].arg,
-        };
-      }
-      parts[j] = {std::move(match_program)};
+    if (parts_count != 1) {
+      LOGF(ERROR, "Composite fragments with multiple parts are deprecated. %s has %zd parts.",
+           name.data());
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    const auto& fidl_part = fidl_fragment.parts[0];
+    size_t program_count = fidl_part.match_program_count;
+    fbl::Array<zx_bind_inst_t> bind_rules(new zx_bind_inst_t[program_count], program_count);
+    for (size_t j = 0; j < program_count; ++j) {
+      bind_rules[j] = zx_bind_inst_t{
+          .op = fidl_part.match_program[j].op,
+          .arg = fidl_part.match_program[j].arg,
+      };
     }
     std::string name(fidl_fragment.name.data(), fidl_fragment.name.size());
-
-    auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), name, i, std::move(parts));
+    auto fragment =
+        std::make_unique<CompositeDeviceFragment>(dev.get(), name, i, std::move(bind_rules));
     dev->unbound_.push_back(std::move(fragment));
   }
   *out = std::move(dev);
@@ -262,20 +264,13 @@ void CompositeDevice::Remove() {
 
 CompositeDeviceFragment::CompositeDeviceFragment(CompositeDevice* composite, std::string name,
                                                  uint32_t index,
-                                                 fbl::Array<const FragmentPartDescriptor> parts)
-    : composite_(composite), name_(name), index_(index), parts_(std::move(parts)) {}
+                                                 fbl::Array<const zx_bind_inst_t> bind_rules)
+    : composite_(composite), name_(name), index_(index), bind_rules_(std::move(bind_rules)) {}
 
 CompositeDeviceFragment::~CompositeDeviceFragment() = default;
 
 bool CompositeDeviceFragment::TryMatch(const fbl::RefPtr<Device>& dev) {
-  if (parts_.size() > UINT32_MAX) {
-    return false;
-  }
-  auto match = ::internal::MatchParts(dev, parts_.data(), static_cast<uint32_t>(parts_.size()));
-  if (match != ::internal::Match::One) {
-    return false;
-  }
-  return true;
+  return internal::EvaluateBindProgram(dev, "composite_binder", bind_rules_, true /* autobind */);
 }
 
 zx_status_t CompositeDeviceFragment::Bind(const fbl::RefPtr<Device>& dev) {

@@ -23,11 +23,6 @@ class CompositeDevice;
 class Coordinator;
 class Device;
 
-// Describes a device on the path to a fragment of a composite device
-struct FragmentPartDescriptor {
-  fbl::Array<const zx_bind_inst_t> match_program;
-};
-
 // Tags used for container membership identification
 namespace internal {
 struct CdfListTag {};
@@ -47,7 +42,7 @@ class CompositeDeviceFragment
   using DeviceListTag = internal::CdfDeviceListTag;
 
   CompositeDeviceFragment(CompositeDevice* composite, std::string name, uint32_t index,
-                          fbl::Array<const FragmentPartDescriptor> parts);
+                          fbl::Array<const zx_bind_inst_t> bind_rules);
 
   CompositeDeviceFragment(CompositeDeviceFragment&&) = delete;
   CompositeDeviceFragment& operator=(CompositeDeviceFragment&&) = delete;
@@ -88,9 +83,8 @@ class CompositeDeviceFragment
   // The index of this fragment within its CompositeDevice
   const uint32_t index_;
 
-  // A description of the devices from the root of the tree to the fragment
-  // itself.
-  const fbl::Array<const FragmentPartDescriptor> parts_;
+  // Bind rules for the fragment.
+  const fbl::Array<const zx_bind_inst_t> bind_rules_;
 
   // If this fragment has been bound to a device, this points to that device.
   fbl::RefPtr<Device> bound_device_ = nullptr;
