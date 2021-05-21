@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::fmt;
+use std::{fmt, rc::Rc};
 
 use crate::{
     core::ObjectRef,
@@ -14,6 +14,6 @@ pub fn as_ref<'a>(object_ref: ObjectRef<'_>) -> impl StrokeEffect + '_ {
 }
 
 pub trait StrokeEffect: fmt::Debug {
-    fn effect_path(&self, source: &mut MetricsPath) -> CommandPath;
+    fn effect_path(&self, source: &mut MetricsPath) -> Rc<CommandPath>;
     fn invalidate_effect(&self);
 }

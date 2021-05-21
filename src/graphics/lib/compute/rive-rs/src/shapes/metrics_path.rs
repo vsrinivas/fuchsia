@@ -197,13 +197,17 @@ impl MetricsPath {
         length
     }
 
-    pub fn trimmed(&self, start_len: f32, end_len: f32, move_to: bool) -> CommandPath {
+    pub fn trimmed(
+        &self,
+        builder: &mut CommandPathBuilder,
+        start_len: f32,
+        end_len: f32,
+        move_to: bool,
+    ) {
         assert!(end_len >= start_len);
 
-        let mut builder = CommandPathBuilder::new();
-
         if start_len == end_len || self.parts.is_empty() {
-            return builder.build();
+            return;
         }
 
         let parts_and_lengths = self.lengths.iter().scan(0.0, |len, &part_len| {
@@ -220,7 +224,7 @@ impl MetricsPath {
             .map(|(i, (len, part_len))| (i, (start_len - len) / part_len));
 
         match first_part {
-            None => return builder.build(),
+            None => return,
             Some((first_part_index, start_t)) => {
                 let (last_part_index, end_t) = parts_and_lengths
                     .enumerate()
@@ -233,9 +237,9 @@ impl MetricsPath {
                 let end_t = end_t.clamp(0.0, 1.0);
 
                 if first_part_index == last_part_index {
-                    self.extract_sub_part(first_part_index, start_t, end_t, move_to, &mut builder);
+                    self.extract_sub_part(first_part_index, start_t, end_t, move_to, builder);
                 } else {
-                    self.extract_sub_part(first_part_index, start_t, 1.0, move_to, &mut builder);
+                    self.extract_sub_part(first_part_index, start_t, 1.0, move_to, builder);
 
                     for part in &self.parts[first_part_index + 1..last_part_index] {
                         match part.r#type {
@@ -252,12 +256,10 @@ impl MetricsPath {
                         }
                     }
 
-                    self.extract_sub_part(last_part_index, 0.0, end_t, false, &mut builder);
+                    self.extract_sub_part(last_part_index, 0.0, end_t, false, builder);
                 }
             }
         }
-
-        builder.build()
     }
 
     fn extract_sub_part(

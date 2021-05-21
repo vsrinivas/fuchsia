@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem;
+use std::{mem, rc::Rc};
 
 use crate::{
     component::Component,
     component_dirt::ComponentDirt,
     core::{Core, CoreContext, ObjectRef, OnAdded, Property},
+    option_cell::OptionCell,
     shapes::{
         paint::{stroke_effect::StrokeEffect, Stroke},
-        CommandPath, MetricsPath,
+        CommandPath, CommandPathBuilder, MetricsPath,
     },
     status_code::StatusCode,
 };
@@ -22,6 +23,7 @@ pub struct TrimPath {
     end: Property<f32>,
     offset: Property<f32>,
     mode_value: Property<u64>,
+    command_path: OptionCell<Rc<CommandPath>>,
 }
 
 impl ObjectRef<'_, TrimPath> {
@@ -31,6 +33,7 @@ impl ObjectRef<'_, TrimPath> {
 
     pub fn set_start(&self, start: f32) {
         self.start.set(start);
+        self.invalidate_effect();
     }
 
     pub fn end(&self) -> f32 {
@@ -39,6 +42,7 @@ impl ObjectRef<'_, TrimPath> {
 
     pub fn set_end(&self, end: f32) {
         self.end.set(end);
+        self.invalidate_effect();
     }
 
     pub fn offset(&self) -> f32 {
@@ -47,6 +51,7 @@ impl ObjectRef<'_, TrimPath> {
 
     pub fn set_offset(&self, offset: f32) {
         self.offset.set(offset);
+        self.invalidate_effect();
     }
 
     pub fn mode_value(&self) -> u64 {
@@ -55,15 +60,22 @@ impl ObjectRef<'_, TrimPath> {
 
     pub fn set_mode_value(&self, mode_value: u64) {
         self.mode_value.set(mode_value);
+        self.invalidate_effect();
     }
 }
 
 impl StrokeEffect for ObjectRef<'_, TrimPath> {
-    fn effect_path(&self, source: &mut MetricsPath) -> CommandPath {
+    fn effect_path(&self, source: &mut MetricsPath) -> Rc<CommandPath> {
+        if let Some(command_path) = self.command_path.get() {
+            return command_path;
+        }
+
         let mut render_offset = self.offset().fract();
         if render_offset.is_sign_negative() {
-            render_offset = 1.0 - render_offset;
+            render_offset = 1.0 + render_offset;
         }
+
+        // todo!("implement mode 2");
 
         let total_len = source.compute_length();
         let mut start_len = total_len * (self.start() + render_offset);
@@ -78,11 +90,33 @@ impl StrokeEffect for ObjectRef<'_, TrimPath> {
             end_len -= total_len;
         }
 
-        source.trimmed(start_len.max(0.0), end_len, true)
+        let mut builder = CommandPathBuilder::new();
+
+        while end_len > 0.0 {
+            if start_len < total_len {
+                source.trimmed(&mut builder, start_len, end_len, true);
+                end_len -= total_len;
+                start_len = 0.0;
+            } else {
+                start_len -= total_len;
+                end_len -= total_len;
+            }
+        }
+
+        let command_path = Rc::new(builder.build());
+        self.command_path.set(Some(command_path.clone()));
+
+        command_path
     }
 
     fn invalidate_effect(&self) {
-        self.cast::<Component>()
+        self.command_path.set(None);
+        let stroke = self.cast::<Component>().parent().unwrap().cast::<Stroke>();
+
+        stroke.as_ref().outlined_stroke.set(None);
+        stroke
+            .cast::<Component>()
+            .as_ref()
             .parent()
             .unwrap()
             .cast::<Component>()

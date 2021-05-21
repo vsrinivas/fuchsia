@@ -78,7 +78,7 @@ pub struct Stroke {
     transform_affects_stroke: Property<bool>,
     metrics_path: OptionCell<MetricsPath>,
     effect: OptionCell<Object>,
-    outlined_stroke: OptionCell<CommandPath>,
+    pub(crate) outlined_stroke: OptionCell<CommandPath>,
 }
 
 impl ObjectRef<'_, Stroke> {
