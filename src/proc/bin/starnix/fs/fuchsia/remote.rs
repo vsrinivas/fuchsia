@@ -9,10 +9,10 @@ use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use log::{info, warn};
 
-use crate::fd_impl_seekable;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
+use crate::{fd_impl_seekable, not_implemented};
 
 lazy_static! {
     static ref VMEX_RESOURCE: zx::Resource = {
@@ -24,13 +24,21 @@ lazy_static! {
     };
 }
 
-struct RemoteDirectory {
+struct RemoteDirectoryNode {
     dir: fio::DirectorySynchronousProxy,
     // The fuchsia.io rights for the dir handle. Subdirs will be opened with the same rights.
     rights: u32,
 }
 
-impl FsNodeOps for RemoteDirectory {
+impl FsNodeOps for RemoteDirectoryNode {
+    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(RemoteFile {
+            node: RemoteNode::Directory(
+                syncio::directory_clone(&self.dir, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
+            ),
+        }))
+    }
+
     fn lookup(&self, name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         let desc = syncio::directory_open(
             &self.dir,
@@ -49,26 +57,44 @@ impl FsNodeOps for RemoteDirectory {
                 EIO
             }
         })?;
-        Ok(Box::new(match desc.info {
-            fio::NodeInfo::Directory(_) => Self {
+        Ok(match desc.info {
+            fio::NodeInfo::Directory(_) => Box::new(RemoteDirectoryNode {
                 dir: fio::DirectorySynchronousProxy::new(desc.node.into_channel()),
                 rights: self.rights,
-            },
+            }),
+            fio::NodeInfo::File(_) => Box::new(RemoteFileNode {
+                file: fio::FileSynchronousProxy::new(desc.node.into_channel()),
+            }),
             _ => {
                 warn!("non-directories are unimplemented {:?}", desc.info);
                 return Err(ENOSYS);
             }
-        }))
+        })
     }
 
     fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
+        not_implemented!("remote mkdir");
         Err(ENOSYS)
+    }
+}
+
+struct RemoteFileNode {
+    file: fio::FileSynchronousProxy,
+}
+
+impl FsNodeOps for RemoteFileNode {
+    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(Box::new(RemoteFile {
+            node: RemoteNode::File(
+                syncio::file_clone(&self.file, fio::CLONE_FLAG_SAME_RIGHTS).map_err(|_| EIO)?,
+            ),
+        }))
     }
 }
 
 #[cfg(test)] // Will be used outside of tests later
 fn new_remote_filesystem(dir: fio::DirectorySynchronousProxy, rights: u32) -> FsNodeHandle {
-    FsNode::new_root(RemoteDirectory { dir, rights })
+    FsNode::new_root(RemoteDirectoryNode { dir, rights })
 }
 
 pub struct RemoteFile {
@@ -207,8 +233,10 @@ mod test {
             DirectorySynchronousProxy::new(root.into_channel().unwrap().into_zx_channel()),
             rights,
         );
-        path_lookup(&root, b"lib").unwrap();
         assert_eq!(path_lookup(&root, b"nib").err(), Some(ENOENT));
+        path_lookup(&root, b"lib").unwrap();
+
+        let _test_file = path_lookup(&root, b"bin/hello_starnix")?.open()?;
         Ok(())
     }
 }

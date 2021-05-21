@@ -6,6 +6,7 @@ use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
+use super::{FileHandle, FileObject, FileOps};
 use crate::types::*;
 
 pub type FsString = Vec<u8>;
@@ -24,7 +25,9 @@ struct FsNodeState {
     children: HashMap<FsString, Weak<FsNode>>,
 }
 
-pub trait FsNodeOps {
+pub trait FsNodeOps: Send + Sync {
+    fn open(&self) -> Result<Box<dyn FileOps>, Errno>;
+
     // The various ways of creating sub-nodes
     fn lookup(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Err(ENOTDIR)
@@ -57,18 +60,22 @@ impl FsNode {
         &**self.ops.get().unwrap()
     }
 
+    pub fn open(self: &FsNodeHandle) -> Result<FileHandle, Errno> {
+        Ok(FileObject::new_with_node(self.ops().open()?, Some(Arc::clone(self))))
+    }
+
+    fn lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        let node = self.get_or_create_empty_child(name.to_vec());
+        node.initialize(|name| self.ops().lookup(name))?;
+        Ok(node)
+    }
+
     fn mkdir(self: &FsNodeHandle, name: FsString) -> Result<FsNodeHandle, Errno> {
         let node = self.get_or_create_empty_child(name);
         let exists = node.initialize(|name| self.ops().mkdir(name))?;
         if exists {
             return Err(EEXIST);
         }
-        Ok(node)
-    }
-
-    fn lookup(self: &FsNodeHandle, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        let node = self.get_or_create_empty_child(name.to_vec());
-        node.initialize(|name| self.ops().lookup(name))?;
         Ok(node)
     }
 
@@ -137,7 +144,7 @@ pub fn path_lookup(node: &FsNodeHandle, path: &FsStr) -> Result<FsNodeHandle, Er
         } else if component == b".." {
             node = Arc::clone(node.parent());
         } else {
-            node = node.lookup(path)?;
+            node = node.lookup(component)?;
         }
     }
     Ok(node)
@@ -148,6 +155,9 @@ struct TmpfsDirectory;
 impl FsNodeOps for TmpfsDirectory {
     fn mkdir(&self, _name: &FsStr) -> Result<Box<dyn FsNodeOps>, Errno> {
         Ok(Box::new(Self))
+    }
+    fn open(&self) -> Result<Box<dyn FileOps>, Errno> {
+        Err(ENOSYS)
     }
 }
 

@@ -130,6 +130,24 @@ pub fn directory_open_directory_async(
     Ok(fio::DirectorySynchronousProxy::new(client))
 }
 
+pub fn directory_clone(
+    directory: &fio::DirectorySynchronousProxy,
+    flags: u32,
+) -> Result<fio::DirectorySynchronousProxy, zx::Status> {
+    let (client_end, server_end) = zx::Channel::create()?;
+    directory.clone(flags, ServerEnd::new(server_end)).map_err(|_| zx::Status::IO)?;
+    Ok(fio::DirectorySynchronousProxy::new(client_end))
+}
+
+pub fn file_clone(
+    file: &fio::FileSynchronousProxy,
+    flags: u32,
+) -> Result<fio::FileSynchronousProxy, zx::Status> {
+    let (client_end, server_end) = zx::Channel::create()?;
+    file.clone(flags, ServerEnd::new(server_end)).map_err(|_| zx::Status::IO)?;
+    Ok(fio::FileSynchronousProxy::new(client_end))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
+use crate::fs::*;
 use crate::not_implemented;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
@@ -36,7 +37,7 @@ impl fmt::Display for FdNumber {
 }
 
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
-pub trait FileOps {
+pub trait FileOps: Send + Sync {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
     fn read(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
@@ -145,14 +146,19 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
 
 /// Corresponds to struct file in Linux.
 pub struct FileObject {
+    ops: Box<dyn FileOps>,
+    #[allow(dead_code)]
+    node: Option<FsNodeHandle>,
     pub offset: Mutex<usize>,
     pub async_owner: Mutex<pid_t>,
-    ops: Box<dyn FileOps + Send + Sync>,
 }
 
 impl FileObject {
-    pub fn new<T: FileOps + Send + Sync + 'static>(ops: T) -> FileHandle {
-        Arc::new(Self { ops: Box::new(ops), offset: Mutex::new(0), async_owner: Mutex::new(0) })
+    pub fn new<T: FileOps + 'static>(ops: T) -> FileHandle {
+        Self::new_with_node(Box::new(ops), None)
+    }
+    pub fn new_with_node(ops: Box<dyn FileOps>, node: Option<FsNodeHandle>) -> FileHandle {
+        Arc::new(Self { node, ops, offset: Mutex::new(0), async_owner: Mutex::new(0) })
     }
 
     pub fn ops(&self) -> &dyn FileOps {
