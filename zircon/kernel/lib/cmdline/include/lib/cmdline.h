@@ -124,8 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kPageScannerEnableUserPagerEviction[] =
-    "kernel.page-scanner.enable-user-pager-eviction";
 static constexpr const char kPageScannerPromoteNoClones[] = "kernel.page-scanner.promote-no-clones";
 static constexpr const char kPageScannerStartAtBoot[] = "kernel.page-scanner.start-at-boot";
 static constexpr const char kPageScannerZeroPageScansPerSecond[] =
