@@ -548,6 +548,14 @@ CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '
 # Don't 'reboot' the emulator if the kernel crashes
 CMDLINE+="kernel.halt-on-panic=true "
 
+# TODO(fxbug.dev/74233): FEMU using HVF accelerator may encounter a race
+# condition between VCPU threads which could cause emulator to crash if page
+# table eviction is enabled; As a workaround, we disable page table eviction if
+# we are using HVF.
+if [[ "$ACCEL" == "hvf" ]]; then
+  CMDLINE+="kernel.page-scanner.page-table-eviction-policy=never "
+fi
+
 # Finally, append any values received via option. We save them for last so that
 # they can override others since "last value wins".
 CMDLINE+=$OPT_CMDLINE

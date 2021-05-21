@@ -81,6 +81,21 @@ gn-test-check-mock-args() {
   return 0
 }
 
+# Verifies that there exists an argument in BT_MOCK_ARGS containing the
+# argument to this function as its substring.
+# Args: The expected argument.
+# Returns: 0 if found; 1 if not found.
+gn-test-check-mock-arg-has-substr() {
+  local expected="$1"
+  local actual=("${BT_MOCK_ARGS[@]}")
+  for (( i=0; i<"${#actual[@]}"; i++ )); do
+    if [[ "${actual[$i]}" =~ "${expected}" ]];  then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Verifies that the given arguments appear in the command line invocation of the
 # most previously sourced mock state. Any arguments passed to this function will
 # be searched for in the actual arguments. This succeeds if the arguments are

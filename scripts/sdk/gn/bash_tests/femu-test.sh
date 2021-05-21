@@ -99,6 +99,10 @@ TEST_femu_kvm_on() {
   gn-test-check-mock-partial -fuchsia
   if is-mac; then
       gn-test-check-mock-partial -enable-hvf -cpu Haswell
+      # TODO(fxbug.dev/74233): This is a workaround to solve an emulator crash
+      # when using HVF accelerator. We need to remove this once the fix is
+      # landed on host emulator.
+      gn-test-check-mock-arg-has-substr kernel.page-scanner.page-table-eviction-policy=never
   else
       gn-test-check-mock-partial -enable-kvm -cpu host,migratable=no,+invtsc
   fi
