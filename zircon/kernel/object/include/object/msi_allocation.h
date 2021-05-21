@@ -54,7 +54,7 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
   void GetInfo(zx_info_msi* info) const TA_EXCL(lock_);
 
   static zx_obj_type_t get_type() { return ZX_OBJ_TYPE_MSI_ALLOCATION; }
-  const msi_block_t& block() const TA_REQ(lock_) { return block_; }
+  const msi_block_t& block() const { return block_; }
   // Interface for MsiDispatchers to reserve a given MSI id for management.
   zx_status_t ReserveId(MsiId msi_id) TA_EXCL(lock_);
   zx_status_t ReleaseId(MsiId msi_id) TA_EXCL(lock_);
@@ -72,7 +72,7 @@ class MsiAllocation : public fbl::RefCounted<MsiAllocation> {
   // A pointer to the function to free the block when the object is released.
   MsiFreeFn msi_free_fn_;
   // Function pointers for MSI platform functions to facilitate unit tests.
-  msi_block_t block_ TA_GUARDED(lock_) = {};
+  const msi_block_t block_;
   // A bitfield of MSI ids currently associated with MsiDispatchers.
   IdBitMaskType ids_in_use_ TA_GUARDED(lock_) = 0;
   // Used to synchronize access to an MSI vector control register for

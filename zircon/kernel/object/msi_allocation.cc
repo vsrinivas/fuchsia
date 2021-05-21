@@ -86,11 +86,11 @@ zx_status_t MsiAllocation::Create(uint32_t irq_cnt, fbl::RefPtr<MsiAllocation>* 
 }
 
 zx_status_t MsiAllocation::ReserveId(MsiId msi_id) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
   if (msi_id >= block_.num_irq) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  Guard<SpinLock, IrqSave> guard{&lock_};
   auto id_mask = (1u << msi_id);
   if (ids_in_use_ & id_mask) {
     return ZX_ERR_ALREADY_BOUND;
@@ -101,11 +101,11 @@ zx_status_t MsiAllocation::ReserveId(MsiId msi_id) {
 }
 
 zx_status_t MsiAllocation::ReleaseId(MsiId msi_id) {
-  Guard<SpinLock, IrqSave> guard{&lock_};
   if (msi_id >= block_.num_irq) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  Guard<SpinLock, IrqSave> guard{&lock_};
   auto id_mask = (1u << msi_id);
   if (!(ids_in_use_ & id_mask)) {
     return ZX_ERR_BAD_STATE;
@@ -117,10 +117,13 @@ zx_status_t MsiAllocation::ReleaseId(MsiId msi_id) {
 
 MsiAllocation::~MsiAllocation() {
   Guard<SpinLock, IrqSave> guard{&lock_};
+  DEBUG_ASSERT(ids_in_use_ == 0);
+
+  msi_block_t block = block_;
   if (block_.allocated) {
-    msi_free_fn_(&block_);
+    msi_free_fn_(&block);
   }
-  DEBUG_ASSERT(!block_.allocated);
+  DEBUG_ASSERT(!block.allocated);
   kcounter_add(msi_destroy_count, 1);
 }
 

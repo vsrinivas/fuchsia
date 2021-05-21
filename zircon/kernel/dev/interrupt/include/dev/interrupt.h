@@ -79,16 +79,15 @@ void interrupt_init_percpu(void);
 // A structure which holds the state of a block of IRQs allocated by the
 // platform to be used for delivering MSI or MSI-X interrupts.
 typedef struct msi_block {
-  void* platform_ctx;  // Allocation context owned by the platform
-  uint64_t tgt_addr;   // The target write transaction physical address
-  bool allocated;      // Whether or not this block has been allocated
-  uint base_irq_id;    // The first IRQ id in the allocated block
-  uint num_irq;        // The number of irqs in the allocated block
-
+  uint64_t tgt_addr;  // The target write transaction physical address
   // The data which the device should write when triggering an IRQ.  Note,
   // only the lower 16 bits are used when the block has been allocated for MSI
   // instead of MSI-X
   uint32_t tgt_data;
+  uint32_t base_irq_id;  // The first IRQ id in the allocated block
+  uint32_t num_irq;      // The number of irqs in the allocated block
+  bool allocated;        // Whether or not this block has been allocated
+  bool is_32bit;         // 32 bit if true, 64 bit otherwise
 } msi_block_t;
 
 // Methods used to determine if a platform supports MSI or not, and if so,

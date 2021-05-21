@@ -213,7 +213,7 @@ class InterruptManager {
       uint32_t tgt_data = alloc_start;
 
       /* Success!  Fill out the bookkeeping and we are done */
-      out_block->platform_ctx = NULL;
+      out_block->is_32bit = false;
       out_block->base_irq_id = alloc_start;
       out_block->num_irq = alloc_size;
       out_block->tgt_addr = tgt_addr;

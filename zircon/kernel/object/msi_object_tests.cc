@@ -32,7 +32,7 @@ zx_status_t MsiAllocate(uint requested_irqs, bool /*unused*/, bool /*unused*/,
   out_block->num_irq = requested_irqs;
   out_block->tgt_addr = 0x1234u;
   out_block->tgt_addr = 0x4321u;
-  out_block->platform_ctx = nullptr;
+  out_block->is_32bit = false;
   return ZX_OK;
 }
 

@@ -204,13 +204,11 @@ interrupt_eoi MsiDispatcher::IrqHandler(void* ctx) {
 }
 
 zx_status_t MsiDispatcher::RegisterInterruptHandler() {
-  Guard<SpinLock, IrqSave> guard{&alloc_->lock()};
   register_int_fn_(&alloc_->block(), msi_id_, IrqHandler, this);
   return ZX_OK;
 }
 
 void MsiDispatcher::UnregisterInterruptHandler() {
-  Guard<SpinLock, IrqSave> guard{&alloc_->lock()};
   register_int_fn_(&alloc_->block(), msi_id_, nullptr, this);
 }
 

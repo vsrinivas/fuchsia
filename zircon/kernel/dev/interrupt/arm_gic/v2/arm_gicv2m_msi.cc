@@ -128,7 +128,7 @@ zx_status_t arm_gicv2m_msi_alloc_block(uint requested_irqs, bool can_target_64bi
   LTRACEF("success: base spi %u size %u\n", alloc_start, alloc_size);
 
   /* Success!  Fill out the bookkeeping and we are done */
-  out_block->platform_ctx = (void*)is_32bit;
+  out_block->is_32bit = is_32bit;
   out_block->base_irq_id = alloc_start;
   out_block->num_irq = alloc_size;
   out_block->tgt_addr = info.doorbell;
@@ -146,7 +146,7 @@ void arm_gicv2m_msi_free_block(msi_block_t* block) {
   DEBUG_ASSERT(block->allocated);
 
   /* We stashed whether or not this came from the 32 bit pool in the platform context pointer */
-  Pow2RangeAllocator* pool = block->platform_ctx ? &g_32bit_targets : &g_64bit_targets;
+  Pow2RangeAllocator* pool = block->is_32bit ? &g_32bit_targets : &g_64bit_targets;
   pool->FreeRange(block->base_irq_id, block->num_irq);
   memset(block, 0, sizeof(*block));
 }
