@@ -167,6 +167,10 @@ impl RoutingTestModelBuilder for RoutingTestBuilder {
         Self::new(root_component, components)
     }
 
+    fn set_namespace_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
+        self.namespace_capabilities = caps;
+    }
+
     async fn build(self) -> RoutingTest {
         self.build().await
     }
@@ -231,16 +235,16 @@ impl RoutingTest {
         let echo_service = Arc::new(EchoService::new());
 
         let config = RuntimeConfig {
-            namespace_capabilities: builder.namespace_capabilities,
+            namespace_capabilities: builder.namespace_capabilities.clone(),
             root_component_url: Some(
                 Url::new(format!("test:///{}", builder.root_component)).unwrap(),
             ),
             security_policy: SecurityPolicy {
-                capability_policy: builder.capability_policy,
-                debug_capability_policy: builder.debug_capability_policy,
+                capability_policy: builder.capability_policy.clone(),
+                debug_capability_policy: builder.debug_capability_policy.clone(),
                 ..Default::default()
             },
-            component_id_index_path: builder.component_id_index_path,
+            component_id_index_path: builder.component_id_index_path.clone(),
             ..Default::default()
         };
         let inspector = inspect::Inspector::new();
@@ -249,25 +253,25 @@ impl RoutingTest {
             .set_runtime_config(config)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());
-        for (name, runner) in builder.builtin_runners {
+        for (name, runner) in builder.builtin_runners.clone() {
             env_builder = env_builder.add_runner(name, runner);
         }
         let builtin_environment =
             env_builder.build().await.expect("builtin environment setup failed");
 
         let model = builtin_environment.model.clone();
-        model.root.hooks.install(builder.additional_hooks).await;
+        model.root.hooks.install(builder.additional_hooks.clone()).await;
         model.root.hooks.install(echo_service.hooks()).await;
 
         Self {
-            components: builder.components,
+            components: builder.components.clone(),
             model,
             builtin_environment,
             _echo_service: echo_service,
             mock_runner,
             test_dir,
             test_dir_proxy,
-            root_component_name: builder.root_component,
+            root_component_name: builder.root_component.clone(),
         }
     }
 
@@ -793,6 +797,16 @@ impl RoutingTestModel for RoutingTest {
     async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
         capability_util::create_static_file(&self.test_dir_proxy, path, contents).await
     }
+
+    fn install_namespace_directory(&self, path: &str) {
+        let (client_chan, server_chan) = zx::Channel::create().unwrap();
+        let ns = fdio::Namespace::installed().expect("Failed to get installed namespace");
+        ns.bind(path, client_chan).expect(&format!("Failed to bind dir {}", path));
+        let mut out_dir = OutDir::new();
+        Self::install_default_out_files(&mut out_dir);
+        out_dir.add_directory_proxy(&self.test_dir_proxy);
+        out_dir.host_fn()(ServerEnd::new(server_chan));
+    }
 }
 
 /// Installs a new directory at `path` in the test's namespace, removing it when this object
@@ -803,13 +817,7 @@ pub struct ScopedNamespaceDir<'a> {
 
 impl<'a> ScopedNamespaceDir<'a> {
     pub fn new(test: &RoutingTest, path: &'a str) -> Self {
-        let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        let ns = fdio::Namespace::installed().expect("Failed to get installed namespace");
-        ns.bind(path, client_chan).expect(&format!("Failed to bind dir {}", path));
-        let mut out_dir = OutDir::new();
-        RoutingTest::install_default_out_files(&mut out_dir);
-        out_dir.add_directory_proxy(&test.test_dir_proxy);
-        out_dir.host_fn()(ServerEnd::new(server_chan));
+        test.install_namespace_directory(path);
         Self { path }
     }
 }

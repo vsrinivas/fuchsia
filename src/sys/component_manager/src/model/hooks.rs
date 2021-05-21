@@ -253,6 +253,7 @@ pub trait Hook: Send + Sync {
 /// A single object may register for multiple events through a vector of `EventType`. `Hooks`
 /// does not retain the callback. The hook is lazily removed when the callback object loses
 /// strong references.
+#[derive(Clone)]
 pub struct HooksRegistration {
     name: &'static str,
     events: Vec<EventType>,

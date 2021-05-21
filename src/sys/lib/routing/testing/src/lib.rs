@@ -8,11 +8,11 @@ pub mod policy;
 use {
     async_trait::async_trait,
     cm_rust::{
-        CapabilityName, CapabilityPath, ComponentDecl, DependencyType, DictionaryValue, EventMode,
-        ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferSource, OfferTarget,
-        ProgramDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl,
-        UseSource,
+        CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, DependencyType,
+        DictionaryValue, EventMode, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
+        ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
+        OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl, UseDecl, UseDirectoryDecl,
+        UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseSource,
     },
     cm_rust_testing::{
         ComponentDeclBuilder, DirectoryDeclBuilder, ProtocolDeclBuilder, TEST_RUNNER_NAME,
@@ -132,6 +132,9 @@ pub trait RoutingTestModel {
     /// Create a file with the given contents in the test dir, along with any subdirectories
     /// required.
     async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error>;
+
+    /// Installs a new directory at `path` in the test's namespace.
+    fn install_namespace_directory(&self, path: &str);
 }
 
 /// Builds an implementation of `RoutingTestModel` from a set of `ComponentDecl`s.
@@ -142,6 +145,9 @@ pub trait RoutingTestModelBuilder {
     /// Create a new builder. Both string arguments refer to component names, not URLs,
     /// ex: "a", not "test:///a" or "test:///a_resolved".
     fn new(root_component: &str, components: Vec<(&'static str, ComponentDecl)>) -> Self;
+
+    /// Set the capabilities that should be available from the top instance's namespace.
+    fn set_namespace_capabilities(&mut self, caps: Vec<CapabilityDecl>);
 
     async fn build(self) -> Self::Model;
 }
@@ -1008,6 +1014,138 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         model
             .check_use(
                 vec!["c:0", "f:0"].into(),
+                CheckUse::Protocol {
+                    path: default_service_capability(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+    }
+
+    ///  component manager's namespace
+    ///   |
+    ///   a
+    ///
+    /// a: uses directory /use_from_cm_namespace/data/foo as foo_data
+    /// a: uses service /use_from_cm_namespace/svc/foo as foo_svc
+    pub async fn test_use_from_component_manager_namespace(&self) {
+        let components = vec![(
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source: UseSource::Parent,
+                    source_name: "foo_data".into(),
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    rights: *READ_RIGHTS,
+                    subdir: None,
+                }))
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Parent,
+                    source_name: "foo_svc".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        )];
+        let namespace_capabilities = vec![
+            CapabilityDecl::Directory(
+                DirectoryDeclBuilder::new("foo_data")
+                    .path("/use_from_cm_namespace/data/foo")
+                    .build(),
+            ),
+            CapabilityDecl::Protocol(
+                ProtocolDeclBuilder::new("foo_svc").path("/use_from_cm_namespace/svc/foo").build(),
+            ),
+        ];
+        let mut builder = T::new("a", components);
+        builder.set_namespace_capabilities(namespace_capabilities);
+        let model = builder.build().await;
+
+        model.install_namespace_directory("/use_from_cm_namespace");
+        model.check_use(vec![].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+        model
+            .check_use(
+                vec![].into(),
+                CheckUse::Protocol {
+                    path: default_service_capability(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+    }
+
+    ///  component manager's namespace
+    ///   |
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: offers directory /offer_from_cm_namespace/data/foo from realm as bar_data
+    /// a: offers service /offer_from_cm_namespace/svc/foo from realm as bar_svc
+    /// b: uses directory bar_data as /data/hippo
+    /// b: uses service bar_svc as /svc/hippo
+    pub async fn test_offer_from_component_manager_namespace(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Parent,
+                        source_name: "foo_data".into(),
+                        target_name: "bar_data".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Parent,
+                        source_name: "foo_svc".into(),
+                        target_name: "bar_svc".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Parent,
+                        source_name: "bar_data".into(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: *READ_RIGHTS,
+                        subdir: None,
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "bar_svc".into(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }))
+                    .build(),
+            ),
+        ];
+        let namespace_capabilities = vec![
+            CapabilityDecl::Directory(
+                DirectoryDeclBuilder::new("foo_data")
+                    .path("/offer_from_cm_namespace/data/foo")
+                    .build(),
+            ),
+            CapabilityDecl::Protocol(
+                ProtocolDeclBuilder::new("foo_svc")
+                    .path("/offer_from_cm_namespace/svc/foo")
+                    .build(),
+            ),
+        ];
+        let mut builder = T::new("a", components);
+        builder.set_namespace_capabilities(namespace_capabilities);
+        let model = builder.build().await;
+
+        model.install_namespace_directory("/offer_from_cm_namespace");
+        model.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+        model
+            .check_use(
+                vec!["b:0"].into(),
                 CheckUse::Protocol {
                     path: default_service_capability(),
                     expected_res: ExpectedResult::Ok,

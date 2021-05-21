@@ -8,7 +8,9 @@ use {
         component_model::{ComponentModelForAnalyzer, ModelBuilderForAnalyzer},
         component_tree::{ComponentTreeBuilder, NodePath},
     },
-    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl},
+    cm_rust::{
+        CapabilityDecl, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl,
+    },
     fuchsia_zircon_status as zx_status,
     moniker::AbsoluteMoniker,
     routing::{component_instance::ComponentInstanceInterface, config::RuntimeConfig},
@@ -28,11 +30,14 @@ struct RoutingTestForAnalyzer {
 struct RoutingTestBuilderForAnalyzer {
     root_url: String,
     decls_by_url: HashMap<String, ComponentDecl>,
+    namespace_capabilities: Vec<CapabilityDecl>,
 }
 
 impl RoutingTestBuilderForAnalyzer {
     fn build_runtime_config(&self) -> Arc<RuntimeConfig> {
-        Arc::new(RuntimeConfig::default())
+        let mut config = RuntimeConfig::default();
+        config.namespace_capabilities = self.namespace_capabilities.clone();
+        Arc::new(config)
     }
 }
 
@@ -47,13 +52,17 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
                 .into_iter()
                 .map(|(name, decl)| (format!("{}{}", TEST_URL_PREFIX, name), decl)),
         );
-        Self { root_url, decls_by_url }
+        Self { root_url, decls_by_url, namespace_capabilities: Vec::new() }
+    }
+
+    fn set_namespace_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
+        self.namespace_capabilities = caps;
     }
 
     async fn build(self) -> RoutingTestForAnalyzer {
         let config = self.build_runtime_config();
-        let tree = ComponentTreeBuilder::new(self.decls_by_url)
-            .build(self.root_url)
+        let tree = ComponentTreeBuilder::new(self.decls_by_url.clone())
+            .build(self.root_url.clone())
             .tree
             .expect("failed to build ComponentTree");
 
@@ -225,6 +234,10 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
         Ok(())
     }
+
+    // This is a no-op for the static model.
+    #[allow(unused_variables)]
+    fn install_namespace_directory(&self, path: &str) {}
 }
 
 mod tests {
@@ -358,6 +371,24 @@ mod tests {
         block_on(async {
             CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
                 .test_use_directory_with_subdir_from_sibling()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_from_component_manager_namespace() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_from_component_manager_namespace()
+                .await
+        });
+    }
+
+    #[test]
+    fn offer_from_component_manager_namespace() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_offer_from_component_manager_namespace()
                 .await
         });
     }

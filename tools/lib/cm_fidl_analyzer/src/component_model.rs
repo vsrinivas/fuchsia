@@ -230,6 +230,7 @@ impl ComponentModelForAnalyzer {
             CapabilitySourceInterface::Component { component: weak, .. } => {
                 self.check_executable(&weak.upgrade()?).await
             }
+            CapabilitySourceInterface::Namespace { .. } => Ok(()),
             _ => unimplemented![],
         }
     }
@@ -244,6 +245,7 @@ impl ComponentModelForAnalyzer {
             CapabilitySourceInterface::Component { component: weak, .. } => {
                 self.check_executable(&weak.upgrade()?).await
             }
+            CapabilitySourceInterface::Namespace { .. } => Ok(()),
             _ => unimplemented![],
         }
     }
