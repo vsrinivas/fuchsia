@@ -109,6 +109,9 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
  public:
   void Initiate(fxl::WeakPtr<Session> session, fit::callback<void(const Err&)> callback);
 
+  // Use only when non-multithreaded.
+  const SessionConnectionInfo& connection_info() { return connection_info_; }
+
   // There are no other functions since this will be running on a background thread and the class
   // state can't be safely retrieved. It reports all of the output state via ConnectionResolved.
 
@@ -809,8 +812,12 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   connection_storage_->set_data_available_callback([this]() { OnStreamReadable(); });
   connection_storage_->set_error_callback([this]() { OnStreamError(); });
 
+  // Simple heuristic to tell if we're connected to the local system.
+  // TODO As we extend local debugging support, this will need to get more complex and robust.
+  bool is_local_connection = pending->connection_info().host == "localhost";
+
   // Issue success callbacks.
-  system_.DidConnect();
+  system_.DidConnect(is_local_connection);
   if (callback)
     callback(Err());
 

@@ -48,13 +48,21 @@ class SystemSymbols {
   // lookups. If you don't need this feature, disabling it will accelerate the loading time.
   void set_create_index(bool val) { create_index_ = val; }
 
+  // Set to true to fallback for symbol searching by looking for absolute module paths on the
+  // local system
+  void set_enable_local_fallback(bool enable) { enable_local_fallback_ = enable; }
+
   // Injects a ModuleSymbols object for the given build ID. Used for testing. Normally the test
   // would provide a dummy implementation for ModuleSymbols.
   void InjectModuleForTesting(const std::string& build_id, ModuleSymbols* module);
 
-  // Retrieves the symbols for the module with the given build ID. If the module's symbols have
-  // already been loaded, just puts an owning reference into the given out param. If not, the
+  // Retrieves the symbols for the module with the given name and build ID. If the module's symbols
+  // have already been loaded, just puts an owning reference into the given out param. If not, the
   // symbols will be loaded.
+  //
+  // The build ID will be used if a match is found in the index. The name will only be used if
+  // local_fallback_ is set, in which case if the build ID is not found, the local filesystem will
+  // be checked for the module name. The name can be empty to disable this behavior.
   //
   // Missing symbols is not counted as an error, so *module will be empty even on success in this
   // case. Errors will be from things like corrupted symbols. If a download is requested, downloads
@@ -62,8 +70,8 @@ class SystemSymbols {
   //
   // This function uses the build_id for loading symbols. The name is only used for generating
   // informational messages.
-  Err GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymbols>* module,
-                DownloadType download_type = kSymbols);
+  Err GetModule(const std::string& name, const std::string& build_id,
+                fxl::RefPtr<ModuleSymbols>* module, DownloadType download_type = kSymbols);
 
  private:
   // Saves the given module in the modules_ map and registers for its deletion.
@@ -78,6 +86,7 @@ class SystemSymbols {
   std::map<std::string, ModuleSymbols*> modules_;
 
   bool create_index_ = true;
+  bool enable_local_fallback_ = false;
 
   fxl::WeakPtrFactory<SystemSymbols> weak_factory_;
 

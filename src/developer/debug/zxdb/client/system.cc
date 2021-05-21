@@ -463,7 +463,9 @@ std::shared_ptr<Download> System::GetDownload(std::string build_id, DebugSymbolF
 
           for (const auto& target : weak_this->targets_) {
             if (auto process = target->process()) {
-              process->GetSymbols()->RetryLoadBuildID(build_id, file_type);
+              // Don't need local symbol lookup when retrying a download, so can pass an empty
+              // module name.
+              process->GetSymbols()->RetryLoadBuildID(std::string(), build_id, file_type);
             }
           }
         } else {
@@ -758,7 +760,7 @@ std::shared_ptr<Download> System::InjectDownloadForTesting(const std::string& bu
   return GetDownload(build_id, DebugSymbolFileType::kDebugInfo, true);
 }
 
-void System::DidConnect() {
+void System::DidConnect(bool is_local) {
   // Force reload the symbol mappings after connection. This needs to be done for every connection
   // since a new image could have been compiled and launched which will have a different build ID
   // file.
@@ -783,9 +785,12 @@ void System::DidConnect() {
   }
   implicit_job->AttachToSystemRoot([](fxl::WeakPtr<Job>, const Err&) {});
 
-  // Force the debug agent to reload its second-chance exception handling
-  // policy.
+  // Force the debug agent to reload its second-chance exception handling policy.
   OnSettingChanged(settings(), ClientSettings::System::kSecondChanceExceptions);
+
+  // When debugging locally, fall back to using symbols from the local modules themselves if not
+  // found in the normal symbol locations.
+  GetSymbols()->set_enable_local_fallback(is_local);
 }
 
 void System::DidDisconnect() {

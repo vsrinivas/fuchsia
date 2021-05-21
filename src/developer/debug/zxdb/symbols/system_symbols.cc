@@ -16,6 +16,32 @@
 
 namespace zxdb {
 
+namespace {
+
+// Checks for a file with the given name on the local system that has the given build ID. If
+// it exists, it will return nonempty paths in the Entry, identical to
+// BuildIDIndex::EntryForBuildID().
+BuildIDIndex::Entry LoadLocalModuleSymbols(const std::string& name, const std::string& build_id) {
+  BuildIDIndex::Entry result;
+
+  if (name.empty() || name[0] != '/')
+    return result;  // Only try local symbols when an absolute path is given.
+
+  auto elf = elflib::ElfLib::Create(name);
+  if (!elf)
+    return result;
+
+  std::string file_build_id = elf->GetGNUBuildID();
+  if (file_build_id == build_id) {
+    // Matches, declare this local file contains both code and symbols.
+    result.debug_info = name;
+    result.binary = name;
+  }
+  return result;
+}
+
+}  // namespace
+
 SystemSymbols::SystemSymbols(DownloadHandler* download_handler)
     : download_handler_(download_handler), weak_factory_(this) {}
 
@@ -25,7 +51,8 @@ void SystemSymbols::InjectModuleForTesting(const std::string& build_id, ModuleSy
   SaveModule(build_id, module);
 }
 
-Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymbols>* module,
+Err SystemSymbols::GetModule(const std::string& name, const std::string& build_id,
+                             fxl::RefPtr<ModuleSymbols>* module,
                              SystemSymbols::DownloadType download_type) {
   *module = fxl::RefPtr<ModuleSymbols>();
 
@@ -36,6 +63,12 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymb
   }
 
   auto entry = build_id_index_.EntryForBuildID(build_id);
+
+  if (enable_local_fallback_ && entry.debug_info.empty()) {
+    // Local fallback is enabled and the name could be an absolute local path. See if the binary
+    // matches and has symbols (this will leave entry.debug_info empty if still not found).
+    entry = LoadLocalModuleSymbols(name, build_id);
+  }
 
   if (entry.debug_info.empty() && download_type == SystemSymbols::DownloadType::kSymbols &&
       download_handler_) {

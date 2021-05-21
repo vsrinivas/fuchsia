@@ -142,9 +142,10 @@ class System : public ClientObject,
   void RequestDownload(const std::string& build_id, DebugSymbolFileType file_type,
                        bool quiet) override;
 
-  // Notification that a connection has been made/terminated to a target
-  // system.
-  void DidConnect();
+  // Notification that a connection has been made/terminated to a target system.
+  //
+  // The is_local flag will be set when the connection is just a loopback to the local computer.
+  void DidConnect(bool is_local);
   void DidDisconnect();
 
   // Returns the breakpoint implementation for the given ID, or null if the ID was not found in the

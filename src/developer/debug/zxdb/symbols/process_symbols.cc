@@ -212,7 +212,8 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(const debug_ipc::Modu
   info.base = module.base;
 
   fxl::RefPtr<ModuleSymbols> module_symbols;
-  *symbol_load_err = target_symbols_->system_symbols()->GetModule(module.build_id, &module_symbols);
+  *symbol_load_err =
+      target_symbols_->system_symbols()->GetModule(module.name, module.build_id, &module_symbols);
   if (symbol_load_err->has_error()) {
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))
@@ -232,7 +233,8 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(const debug_ipc::Modu
   return &inserted_iter->second;
 }
 
-void ProcessSymbols::RetryLoadBuildID(const std::string& build_id, DebugSymbolFileType file_type) {
+void ProcessSymbols::RetryLoadBuildID(const std::string& name, const std::string& build_id,
+                                      DebugSymbolFileType file_type) {
   auto download_type = SystemSymbols::DownloadType::kNone;
 
   if (file_type == DebugSymbolFileType::kDebugInfo) {
@@ -245,8 +247,8 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& build_id, DebugSymbolFi
     }
 
     fxl::RefPtr<ModuleSymbols> module_symbols;
-    Err err =
-        target_symbols_->system_symbols()->GetModule(build_id, &module_symbols, download_type);
+    Err err = target_symbols_->system_symbols()->GetModule(name, build_id, &module_symbols,
+                                                           download_type);
 
     if (!err.has_error() && !module_symbols) {
       err = Err("Symbols were downloaded but did not appear in index.");
