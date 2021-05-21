@@ -1,0 +1,31 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Helper template that generates web runner tests.
+#
+# Parameters:
+#   chromium_dir: The directory from which Chromium targets are built.
+
+template("generate_web_runner_tests") {
+  group(target_name) {
+    testonly = true
+
+    deps = [
+      ":web_runner_tests",
+      "${invoker.chromium_dir}:web_engine",
+      "${invoker.chromium_dir}:web_runner",
+
+      # The deps below are necessary on minimal product configs.
+      "//src/graphics/bin/vulkan_loader",
+
+      # TODO(fxbug.dev/24643): Remove keyboard dispatch from Scenic
+      "//src/ui/bin/ime:ime_service",
+      "//src/ui/bin/root_presenter",
+      "//src/ui/scenic",
+
+      # This dependency is used to provide a fake `fuchsia.intl.PropertyProvider`.
+      "//garnet/examples/intl/manager:intl_property_manager",
+    ]
+  }
+}
