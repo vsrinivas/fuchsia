@@ -16,11 +16,6 @@
 
 #include <optional>
 
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
-
 #include "usb-request.h"
 
 namespace usb {

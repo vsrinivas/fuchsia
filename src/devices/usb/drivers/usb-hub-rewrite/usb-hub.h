@@ -27,6 +27,7 @@
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
+#include <fbl/auto_lock.h>
 #include <fbl/hard_int.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/null_lock.h>

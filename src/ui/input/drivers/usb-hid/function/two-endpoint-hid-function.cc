@@ -20,6 +20,7 @@
 #include <memory>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 
 #include "src/ui/input/drivers/usb-hid/function/two_endpoint_hid-bind.h"

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 
+#include <fbl/auto_lock.h>
 #include <usb/request-cpp.h>
 
 #include "src/connectivity/ethernet/drivers/rndis-function/rndis_function_bind.h"

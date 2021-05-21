@@ -19,6 +19,8 @@
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <usb/usb.h>
 
 #include "asix-88179-regs.h"

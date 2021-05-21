@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/usb/cpp/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
+#include <fbl/auto_lock.h>
 #include <usb/request-cpp.h>
 #include <zxtest/base/test.h>
 #include <zxtest/zxtest.h>

@@ -10,6 +10,7 @@
 
 #include <thread>
 
+#include <fbl/ref_counted.h>
 #include <usb/request-cpp.h>
 #include <utf_conversion/utf_conversion.h>
 #include <zxtest/zxtest.h>

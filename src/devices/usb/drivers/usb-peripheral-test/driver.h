@@ -11,6 +11,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/suspend-txn.h>
+#include <fbl/mutex.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 
