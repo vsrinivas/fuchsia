@@ -32,6 +32,7 @@ pub struct Args {
 pub enum VDLCommand {
     Start(StartCommand),
     Kill(KillCommand),
+    Remote(RemoteCommand),
 }
 
 #[derive(FromArgs, Default, Debug, PartialEq)]
@@ -200,7 +201,7 @@ pub struct StartCommand {
     pub amber_unpack_root: Option<String>,
 
     /// environment variables for emulator. The argument can be repeated for multiple times
-    /// to add multiplee arguments. If not specified, only the default environment variables
+    /// to add multiple arguments. If not specified, only the default environment variables
     /// (DISPLAY) will be set to run the emulator.
     #[argh(option)]
     pub envs: Vec<String>,
@@ -226,6 +227,14 @@ fn default_window_width() -> usize {
     1280
 }
 
+fn default_port() -> String {
+    "8080".to_string()
+}
+
+fn default_display() -> String {
+    "xvfb-run".to_string()
+}
+
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "kill")]
 /// Killing Fuchsia Emulator
@@ -236,4 +245,52 @@ pub struct KillCommand {
     /// required, file containing device_launcher process artifact location.
     #[argh(option)]
     pub launched_proto: Option<String>,
+}
+
+#[derive(FromArgs, Default, Debug, PartialEq)]
+#[argh(subcommand, name = "remote")]
+/// This is a placeholder for a new feature in active development. Please stand by...
+// Connect to <host>, run a build using fx from <dir>, fetch the artifacts and
+// start the emulator. Alternatively, start the emulator on <host>,
+// and open an WebRTC connection to it using local browser.
+pub struct RemoteCommand {
+    /// the hostname to connect to
+    #[argh(positional)]
+    pub host: String,
+
+    /// defaults to ~/fuchsia, the path to the FUCHSIA_DIR on <host>
+    #[argh(option)]
+    pub dir: Option<String>,
+
+    /// do not build, just pull artifacts already present
+    #[argh(switch)]
+    pub no_build: bool,
+
+    /// stream output from remote emulator using WebRTC instead of fetching artifacts
+    #[argh(switch)]
+    pub stream: bool,
+
+    /// only tunnel, do not start remote emulator
+    #[argh(switch)]
+    pub no_emu: bool,
+
+    /// do not use turn configuration for remote emulator
+    #[argh(switch)]
+    pub no_turn: bool,
+
+    /// do not open https://web-femu.appspot.com, just run remote emulator
+    #[argh(switch)]
+    pub no_open: bool,
+
+    /// do not start remote virtual display, use DPY instead
+    #[argh(option, default = "default_display()")]
+    pub display: String,
+
+    /// port used on local machine to connect with remote emulator over HTTP (default: 8080)
+    #[argh(option, default = "default_port()")]
+    pub port: String,
+
+    /// arguments to pass to the emulator
+    #[argh(positional)]
+    pub args: Vec<String>,
 }

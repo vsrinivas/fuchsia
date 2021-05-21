@@ -10,7 +10,7 @@ use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
 use ffx_core::ffx_bail;
-use ffx_emulator_args::{KillCommand, StartCommand};
+use ffx_emulator_args::{KillCommand, RemoteCommand, StartCommand};
 use regex::Regex;
 use shared_child::SharedChild;
 use signal_hook;
@@ -505,7 +505,7 @@ impl VDLFiles {
                         let ssh_out = self.ssh_and_wait(vdl_args.tuntap, ssh_port)?;
                         // If SSH process terminated successfully, we think user intend to end
                         // SSH session as well as shutting down emulator, stop trying to ssh.
-                        // If SSH process terminated with a non-zerio exit status, we think the
+                        // If SSH process terminated with a non-zero exit status, we think the
                         // user has issued "dm reboot", which reboots fuchsia and disconnects ssh,
                         // but emulator should still be running.
                         if ssh_out.status.success() {
@@ -606,6 +606,10 @@ impl VDLFiles {
                     .status()?;
             }
         }
+        Ok(())
+    }
+
+    pub fn remote_emulator(&self, _remote_command: &RemoteCommand) -> Result<()> {
         Ok(())
     }
 }
