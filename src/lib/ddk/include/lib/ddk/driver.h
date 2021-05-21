@@ -384,10 +384,6 @@ static inline void load_firmware_async(zx_device_t* device, const char* path,
                                          context);
 }
 
-// TODO(fxbug.dev/77135): This is needed for a soft migration.
-zx_status_t load_firmware_deprecated(zx_device_t* device, const char* path, zx_handle_t* fw,
-                                     size_t* size);
-
 // Synchronous version of load_firmware_async that blocks the current thread until the firmware is
 // loaded. Care should be taken when using this variant, as it may cause deadlocks if storage is
 // backed by a driver in the same driver host.

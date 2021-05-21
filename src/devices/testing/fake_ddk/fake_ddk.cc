@@ -551,14 +551,6 @@ void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* 
   *new_txn = *new_ddk_txn.DeviceFidlTxn();
 }
 
-__EXPORT __WEAK zx_status_t load_firmware_deprecated(zx_device_t* device, const char* path,
-                                                     zx_handle_t* fw, size_t* size) {
-  // This is currently a no-op.
-  *fw = ZX_HANDLE_INVALID;
-  *size = fake_ddk::kFakeFWSize;
-  return ZX_OK;
-}
-
 __EXPORT __WEAK zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* dev,
                                                       const char* path, zx_handle_t* fw,
                                                       size_t* size) {
