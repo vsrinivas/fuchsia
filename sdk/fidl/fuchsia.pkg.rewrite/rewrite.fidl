@@ -31,17 +31,6 @@ using zx;
 ///     path_prefix_replacement: "/rolldice"
 /// }
 /// ```
-///
-/// Redirects all packages under "fuchsia-pkg://example.com/examples/" to
-/// "fuchsia-pkg://example.com/examples/beta/".
-/// ```
-/// {
-///     host_match: "example.com"
-///     host_replacement: "example.com"
-///     path_prefix_match: "/examples/"
-///     path_prefix_replacement: "/examples/beta/"
-/// }
-/// ```
 struct LiteralRule {
     /// The exact hostname to match.
     string host_match;
