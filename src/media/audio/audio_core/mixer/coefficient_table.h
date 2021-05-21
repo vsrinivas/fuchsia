@@ -5,9 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_COEFFICIENT_TABLE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_COEFFICIENT_TABLE_H_
 
-#include <lib/fit/function.h>
-#include <lib/syslog/cpp/macros.h>
-#include <zircon/compiler.h>
+#include <lib/stdcompat/span.h>
 
 #include <cmath>
 #include <map>
@@ -15,9 +13,17 @@
 #include <mutex>
 #include <vector>
 
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/lib/format/constants.h"
+
+// coefficient_table.h is included by gen_coefficient_tables.cc, which does not have access to
+// Fuchsia headers because it is compiled as a host binary.
+#ifndef BUILDING_FUCHSIA_AUDIO_HOST_TOOL
+#include <lib/syslog/cpp/macros.h>  // nogncheck
+#else
+#include <cassert>
+#define FX_CHECK(cond) assert(cond)
+#endif
 
 namespace media::audio::mixer {
 
@@ -26,9 +32,6 @@ namespace media::audio::mixer {
 // are most commonly with an integral stride (that is 1 << frac_bits stride). Optimize for this use
 // case by placing these values physically contiguously in memory.
 //
-// Note we still expose iterators, but the order is no longer preserved (iteration will be performed
-// in physical order).
-//
 // Coefficient tables represent one side of a symmetric convolution filter. Coefficients cover the
 // entire discrete space of fractional position values, but for any calculation we reference only
 // a small subset of these values (see ReadSlice for an example).
@@ -36,17 +39,20 @@ class CoefficientTable {
  public:
   // |width| is the filter width of this table, in fixed point format with |frac_bits| of fractional
   // precision. The |width| will determine the number of entries in the table, which will be |width|
-  // rounded up to the nearest integer in the same fixed-point format.
-  CoefficientTable(int64_t width, int32_t frac_bits)
+  // rounded up to the nearest integer in the same fixed-point format. |data| provides the raw table
+  // data ordered by physical address. If |data| is empty, storage is allocated automatically.
+  CoefficientTable(int64_t width, int32_t frac_bits, cpp20::span<const float> data)
       : stride_(ComputeStride(width, frac_bits)),
         frac_filter_width_(width),
         frac_bits_(frac_bits),
         frac_mask_((1 << frac_bits_) - 1),
-        table_(stride_ * (1 << frac_bits)) {
-    FX_DCHECK(frac_filter_width_ >= 0) << "CoefficientTable width cannot be negative";
+        storage_(data.empty() ? std::make_optional<std::vector<float>>(stride_ * (1 << frac_bits))
+                              : std::nullopt),
+        table_(data.empty() ? cpp20::span<const float>(&(*storage_)[0], storage_->size()) : data) {
+    FX_CHECK(frac_filter_width_ >= 0);
+    FX_CHECK(static_cast<int64_t>(table_.size()) == stride_ * (1 << frac_bits));
   }
 
-  float& operator[](int64_t offset) { return table_[PhysicalIndex(offset)]; }
   const float& operator[](int64_t offset) const { return table_[PhysicalIndex(offset)]; }
 
   // Reads |num_coefficients| coefficients starting at |offset|. The result is a pointer to
@@ -68,9 +74,10 @@ class CoefficientTable {
     return &table_[PhysicalIndex(offset)];
   }
 
-  auto begin() { return table_.begin(); }
-  auto end() { return table_.end(); }
+  // Returns the raw table in physical (not logical) order.
+  cpp20::span<const float> raw_table() const { return table_; }
 
+  // Returns the physical index corresponding to the given logical index.
   size_t PhysicalIndex(int64_t offset) const {
     auto integer = offset >> frac_bits_;
     auto fraction = offset & frac_mask_;
@@ -78,6 +85,9 @@ class CoefficientTable {
   }
 
  private:
+  friend class CoefficientTableBuilder;
+  friend class CoefficientTableTest;
+
   static int64_t ComputeStride(int64_t filter_width, int32_t frac_bits) {
     return (filter_width + ((1 << frac_bits) - 1)) / (1 << frac_bits);
   }
@@ -86,7 +96,30 @@ class CoefficientTable {
   const int64_t frac_filter_width_;
   const int32_t frac_bits_;
   const int64_t frac_mask_;
-  std::vector<float> table_;
+
+  // The table_ can reference the storage vector storage_ or an externally-allocated array,
+  // such as an array allocated in .rodata.
+  std::optional<std::vector<float>> storage_;
+  cpp20::span<const float> table_;
+};
+
+// CoefficientTableBuilder constructs a single CoefficientTable.
+// Once constructed, the CoefficientTable is immutable.
+class CoefficientTableBuilder {
+ public:
+  CoefficientTableBuilder(int64_t width, int32_t frac_bits)
+      : table_(std::make_unique<CoefficientTable>(width, frac_bits, cpp20::span<const float>{})) {}
+
+  float& operator[](int64_t offset) { return (*table_->storage_)[table_->PhysicalIndex(offset)]; }
+
+  auto physical_index_begin() { return table_->storage_->begin(); }
+  auto physical_index_end() { return table_->storage_->end(); }
+  size_t size() const { return table_->storage_->size(); }
+
+  std::unique_ptr<CoefficientTable> Build() { return std::move(table_); }
+
+ private:
+  std::unique_ptr<CoefficientTable> table_;
 };
 
 // Nearest-neighbor "zero-order interpolation" resampler, implemented using the convolution
@@ -186,6 +219,19 @@ class SincFilterCoefficientTable {
 
   static std::unique_ptr<CoefficientTable> Create(Inputs);
 };
+
+// These global structs This global struct describes a set of prebuilt coefficient tables.
+struct PrebuiltSincFilterCoefficientTable {
+  int32_t source_rate;
+  int32_t dest_rate;
+  cpp20::span<const float> table;
+};
+
+// The list of prebuilt coefficient tables.
+// This uses std::array so it can directly reference data in .rodata without reallocating
+// (std::vector would allocate and copy from .rodata).
+extern const cpp20::span<const PrebuiltSincFilterCoefficientTable>
+    kPrebuiltSincFilterCoefficientTables;
 
 }  // namespace media::audio::mixer
 

@@ -7,7 +7,6 @@ import("//build/components.gni")
 source_set("format") {
   sources = [
     "audio_buffer.h",
-    "constants.h",
     "driver_format.cc",
     "driver_format.h",
     "format.cc",
@@ -16,11 +15,11 @@ source_set("format") {
   ]
 
   public_deps = [
+    ":constants",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/timeline",
-    "//zircon/public/lib/ffl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
   ]
@@ -29,6 +28,11 @@ source_set("format") {
     "//src/lib/fxl",
     "//zircon/system/ulib/audio-proto-utils",
   ]
+}
+
+source_set("constants") {
+  sources = [ "constants.h" ]
+  public_deps = [ "//zircon/public/lib/ffl" ]
 }
 
 executable("unittest-bin") {

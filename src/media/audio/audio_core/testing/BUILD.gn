@@ -62,6 +62,7 @@ executable("unittest_bin") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/clock/testing:testing",
   ]
 }

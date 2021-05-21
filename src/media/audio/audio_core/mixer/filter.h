@@ -87,7 +87,7 @@ class PointFilter : public Filter {
 
   void Display() override { DisplayTable(*filter_coefficients_); }
 
-  float& operator[](size_t index) { return (*filter_coefficients_)[index]; }
+  const float& operator[](int64_t index) { return (*filter_coefficients_)[index]; }
 
   void EagerlyPrepare() override { filter_coefficients_.get(); }
 
@@ -117,7 +117,7 @@ class LinearFilter : public Filter {
 
   void Display() override { DisplayTable(*filter_coefficients_); }
 
-  float& operator[](size_t index) { return (*filter_coefficients_)[index]; }
+  const float& operator[](int64_t index) { return (*filter_coefficients_)[index]; }
 
   void EagerlyPrepare() override { filter_coefficients_.get(); }
 
@@ -156,7 +156,7 @@ class SincFilter : public Filter {
 
   void Display() override { DisplayTable(*filter_coefficients_); }
 
-  float& operator[](size_t index) { return (*filter_coefficients_)[index]; }
+  const float& operator[](int64_t index) { return (*filter_coefficients_)[index]; }
 
   void EagerlyPrepare() override { filter_coefficients_.get(); }
 

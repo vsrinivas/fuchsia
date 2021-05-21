@@ -139,7 +139,15 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
   // See fxbug.dev/45074 and fxbug.dev/57666.
   SincFilter::persistent_cache_ = new std::vector<SincFilter::CacheT::SharedPtr>;
 
+  // First load any coefficient tables that were built into this executable.
+  for (auto& t : kPrebuiltSincFilterCoefficientTables) {
+    auto inputs = SincFilterCoefficientTable::MakeInputs(t.source_rate, t.dest_rate);
+    SincFilter::persistent_cache_->push_back(cache->Add(
+        inputs, new CoefficientTable(inputs.side_length, inputs.num_frac_bits, t.table)));
+  }
+
   // Now make sure we have all the coefficient tables we need.
+  // In practice, this should be a superset of the prebuilt tables.
   SincFilter::persistent_cache_->push_back(
       cache->Get(SincFilterCoefficientTable::MakeInputs(48000, 48000)));
   SincFilter::persistent_cache_->push_back(

@@ -5,17 +5,62 @@
 import("//build/components.gni")
 import("//tools/cmc/build/cmc.gni")
 
+# Parameters
+#     package_name (optional)
+#       See audio_core_package and audio_core_test_package
+#
+#     effects (optional)
+#       See audio_core_package and audio_core_test_package
+#
+#     extra_cmx (optional)
+#       See audio_core_package and audio_core_test_package
+#
+#     use_prebuilt_coefficient_tables (optional)
+#       See audio_core_package and audio_core_test_package
+#
+#     manifests (required)
+#       A list of CMX manifest files. One component will be created per manifest.
+#
 template("_audio_core_package") {
   components = []
+  use_prebuilt_coefficient_tables =
+      defined(invoker.use_prebuilt_coefficient_tables) &&
+      invoker.use_prebuilt_coefficient_tables
+
   foreach(invoker_manifest, invoker.manifests) {
     cmx_name = get_path_info(invoker_manifest, "name")
+
+    # Merge in extra_cmx
     if (defined(invoker.extra_cmx)) {
       manifest_merge_target = "${target_name}_${cmx_name}_merge"
       cmc_merge(manifest_merge_target) {
         sources = [ invoker_manifest ] + invoker.extra_cmx
-        output_name = "$manifest_merge_target.cmx"
+        output_name = "${manifest_merge_target}.cmx"
       }
       invoker_manifest = get_target_outputs(":$manifest_merge_target")
+      invoker_manifest = invoker_manifest[0]
+    }
+
+    # Fix binary name.
+    if (use_prebuilt_coefficient_tables) {
+      manifest_rewrite_target = "${target_name}_${cmx_name}_rewrite"
+      action(manifest_rewrite_target) {
+        forward_variables_from(invoker, [ "testonly" ])
+        script = "//src/media/audio/replace_string.sh"
+        sources = [ invoker_manifest ]
+        outputs = [ "${target_gen_dir}/${manifest_rewrite_target}.cmx" ]
+        args = [
+          rebase_path(invoker_manifest, root_build_dir),
+          rebase_path(target_gen_dir, root_build_dir) +
+              "/${manifest_rewrite_target}.cmx",
+          "bin/audio_core",
+          "bin/audio_core_with_prebuilt_coefficient_tables",
+        ]
+        if (defined(manifest_merge_target)) {
+          deps = [ ":$manifest_merge_target" ]
+        }
+      }
+      invoker_manifest = get_target_outputs(":$manifest_rewrite_target")
       invoker_manifest = invoker_manifest[0]
     }
 
@@ -29,7 +74,12 @@ template("_audio_core_package") {
         "/*",
       ]
 
-      deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
+      if (use_prebuilt_coefficient_tables) {
+        deps = [ "//src/media/audio/audio_core:audio_core_bin_with_prebuilt_coefficient_tables" ]
+        deps += [ ":$manifest_rewrite_target" ]
+      } else {
+        deps = [ "//src/media/audio/audio_core:audio_core_bin" ]
+      }
       if (defined(manifest_merge_target)) {
         deps += [ ":$manifest_merge_target" ]
       }
@@ -88,10 +138,16 @@ template("_audio_core_package") {
 #           Type: string
 #
 #     extra_cmx (optional)
-#       Additinoal CMX manifests that will be merged with the base audio_core.cmx manifest.
+#       Additional CMX manifests that will be merged with the base audio_core.cmx manifest.
 #       This can be used to add additional services or features that may be needed by different
 #       audio effects.
 #       Type: list(path)
+#
+#     use_prebuilt_coefficient_tables (optional)
+#       If set, we will include a few prebuilt tables in the executable. This improves startup
+#       performance at the cost of a larger executable image.
+#       Type: bool
+#
 template("audio_core_test_package") {
   _audio_core_package(target_name) {
     testonly = true
@@ -100,6 +156,7 @@ template("audio_core_test_package") {
                              "effects",
                              "extra_cmx",
                              "package_name",
+                             "use_prebuilt_coefficient_tables",
                            ])
 
     manifests = [
@@ -112,6 +169,9 @@ template("audio_core_test_package") {
       # fixture may provide a custom /config/data directory.
       "//src/media/audio/audio_core/meta/audio_core_nodevfs_noconfigdata.cmx",
     ]
+
+    # Tests run faster with prebuilt tables and don't have tight executable size requirements.
+    use_prebuilt_coefficient_tables = true
   }
 }
 
@@ -167,6 +227,12 @@ template("audio_core_test_package") {
 #       This can be used to add additional services or features that may be needed by different
 #       audio effects.
 #       Type: list(path)
+#
+#     use_prebuilt_coefficient_tables (optional)
+#       If set, we will include a few prebuilt tables in the executable. This improves startup
+#       performance at the cost of a larger executable image.
+#       Type: bool
+#
 template("audio_core_package") {
   forward_variables_from(invoker,
                          [
@@ -180,6 +246,7 @@ template("audio_core_package") {
                              "effects",
                              "extra_cmx",
                              "package_name",
+                             "use_prebuilt_coefficient_tables",
                            ])
     manifests = [ "//src/media/audio/audio_core/meta/audio_core.cmx" ]
   }

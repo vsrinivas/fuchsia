@@ -204,16 +204,32 @@ source_set("audio_core_lib") {
   ]
 }
 
-executable("audio_core_bin") {
-  output_name = "audio_core"
-
+source_set("audio_core_main") {
   sources = [ "main.cc" ]
 
   deps = [
     ":audio_core_lib",
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
+    "//zircon/system/ulib/syslog:syslog-headers",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+  ]
+}
+
+executable("audio_core_bin") {
+  output_name = "audio_core"
+  deps = [
+    ":audio_core_main",
+    "//src/media/audio/audio_core/mixer:empty_coefficient_tables",
+  ]
+}
+
+executable("audio_core_bin_with_prebuilt_coefficient_tables") {
+  output_name = "audio_core_with_prebuilt_coefficient_tables"
+  deps = [
+    ":audio_core_main",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
   ]
 }
 
@@ -286,6 +302,7 @@ executable("unittest_bin") {
     "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/clock/testing",
     "//src/media/audio/lib/effects_loader/testing",
     "//src/media/audio/lib/format",
@@ -311,7 +328,10 @@ fuchsia_unittest_package("audio_core_unittests") {
 
 fuzzer("audio_core_fuzzer") {
   sources = [ "policy_loader_fuzzer.cc" ]
-  deps = [ ":audio_core_lib" ]
+  deps = [
+    ":audio_core_lib",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
+  ]
 }
 
 group("tests") {

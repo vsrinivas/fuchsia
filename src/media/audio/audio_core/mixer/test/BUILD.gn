@@ -41,6 +41,7 @@ executable("fidelity_test_bin") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/analysis",
     "//src/media/audio/lib/format",
     "//third_party/googletest:gmock",

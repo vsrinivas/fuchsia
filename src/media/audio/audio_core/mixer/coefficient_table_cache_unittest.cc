@@ -11,6 +11,10 @@
 namespace media::audio::mixer {
 namespace {
 
+CoefficientTable* MakeCoefficientTable() {
+  return new CoefficientTable(1, 1, cpp20::span<const float>{});
+}
+
 TEST(CoefficientTableCacheTest, CachingWorks) {
   using InputT = std::pair<int, int>;
 
@@ -23,8 +27,8 @@ TEST(CoefficientTableCacheTest, CachingWorks) {
     return cache.Get(input);
   };
 
-  CoefficientTable* t1 = new CoefficientTable(1, 1);
-  CoefficientTable* t2 = new CoefficientTable(1, 1);
+  CoefficientTable* t1 = MakeCoefficientTable();
+  CoefficientTable* t2 = MakeCoefficientTable();
 
   auto p1 = cache_get(InputT(1, 1), [t1]() { return t1; });
   EXPECT_EQ(t1, p1.get());
@@ -32,14 +36,14 @@ TEST(CoefficientTableCacheTest, CachingWorks) {
   auto p2 = cache_get(InputT(2, 2), [t2]() { return t2; });
   EXPECT_EQ(t2, p2.get());
 
-  auto p3 = cache_get(InputT(1, 1), []() { return new CoefficientTable(1, 1); });
+  auto p3 = cache_get(InputT(1, 1), []() { return MakeCoefficientTable(); });
   EXPECT_EQ(t1, p3.get());
 
   // After dropping p1, t1 should still be in the cache.
   p1 = CoefficientTableCache<InputT>::SharedPtr();
   EXPECT_EQ(nullptr, p1.get());
 
-  auto p4 = cache_get(InputT(1, 1), []() { return new CoefficientTable(1, 1); });
+  auto p4 = cache_get(InputT(1, 1), []() { return MakeCoefficientTable(); });
   EXPECT_EQ(t1, p4.get());
 
   // After dropping p3 and p4, t1 should be evicted.
@@ -48,12 +52,12 @@ TEST(CoefficientTableCacheTest, CachingWorks) {
   EXPECT_EQ(nullptr, p3.get());
   EXPECT_EQ(nullptr, p4.get());
 
-  CoefficientTable* t5 = new CoefficientTable(1, 1);
+  CoefficientTable* t5 = MakeCoefficientTable();
   auto p5 = cache_get(InputT(1, 1), [t5]() { return t5; });
   EXPECT_EQ(t5, p5.get());
 
   // t2 should still be cached.
-  auto p6 = cache_get(InputT(2, 2), []() { return new CoefficientTable(1, 1); });
+  auto p6 = cache_get(InputT(2, 2), []() { return MakeCoefficientTable(); });
   EXPECT_EQ(t2, p6.get());
 
   // This should be equivalent to p6 = SharedPtr().
@@ -64,7 +68,7 @@ TEST(CoefficientTableCacheTest, CachingWorks) {
   p2 = CoefficientTableCache<InputT>::SharedPtr();
   EXPECT_EQ(nullptr, p2.get());
 
-  CoefficientTable* t7 = new CoefficientTable(1, 1);
+  CoefficientTable* t7 = MakeCoefficientTable();
   auto p7 = cache_get(InputT(2, 2), [t7]() { return t7; });
   EXPECT_EQ(t7, p7.get());
 }
@@ -74,9 +78,9 @@ TEST(LazySharedCoefficientTableTest, LazinessWorks) {
   fit::function<CoefficientTable*()> create_table;
   CoefficientTableCache<InputT> cache([&create_table](InputT) { return create_table(); });
 
-  CoefficientTable* t1 = new CoefficientTable(1, 1);
-  CoefficientTable* t3 = new CoefficientTable(1, 1);
-  CoefficientTable* t4 = new CoefficientTable(1, 1);
+  CoefficientTable* t1 = MakeCoefficientTable();
+  CoefficientTable* t3 = MakeCoefficientTable();
+  CoefficientTable* t4 = MakeCoefficientTable();
 
   {
     bool created = false;
@@ -90,7 +94,7 @@ TEST(LazySharedCoefficientTableTest, LazinessWorks) {
     EXPECT_TRUE(created);
 
     // Should reused the cached table.
-    create_table = []() { return new CoefficientTable(1, 1); };
+    create_table = []() { return MakeCoefficientTable(); };
     LazySharedCoefficientTable<InputT> p2(&cache, InputT(1, 1));
     EXPECT_EQ(t1, p2.get());
 

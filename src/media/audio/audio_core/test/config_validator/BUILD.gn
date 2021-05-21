@@ -9,5 +9,6 @@ executable("config_validator") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
   ]
 }

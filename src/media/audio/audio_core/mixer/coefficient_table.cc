@@ -9,15 +9,12 @@ namespace media::audio::mixer {
 
 // Calculate our nearest-neighbor filter. With it we perform frame-rate conversion.
 std::unique_ptr<CoefficientTable> PointFilterCoefficientTable::Create(Inputs inputs) {
-  auto out = std::make_unique<CoefficientTable>(inputs.side_length, inputs.num_frac_bits);
-  auto& table = *out;
+  CoefficientTableBuilder table(inputs.side_length, inputs.num_frac_bits);
 
   // kHalfFrameIdx should always be the last idx in the filter table, because our ctor sets
   // side_length to (1 << (num_frac_bits - 1)), which == (frac_size >> 1)
   const int64_t kHalfFrameIdx = 1 << (inputs.num_frac_bits - 1);  // frac_half
-  FX_DCHECK(inputs.side_length == kHalfFrameIdx + 1)
-      << "Computed filter edge " << kHalfFrameIdx << " should equal specified side_length "
-      << inputs.side_length;
+  FX_CHECK(inputs.side_length == kHalfFrameIdx + 1);
 
   // Just a rectangular window, with the exact midpoint performing averaging (for zero phase).
   for (auto idx = 0; idx < kHalfFrameIdx; ++idx) {
@@ -27,18 +24,15 @@ std::unique_ptr<CoefficientTable> PointFilterCoefficientTable::Create(Inputs inp
   // Here we average, so that we are zero-phase
   table[kHalfFrameIdx] = 0.5f;
 
-  return out;
+  return table.Build();
 }
 
 // Calculate our linear-interpolation filter. With it we perform frame-rate conversion.
 std::unique_ptr<CoefficientTable> LinearFilterCoefficientTable::Create(Inputs inputs) {
-  auto out = std::make_unique<CoefficientTable>(inputs.side_length, inputs.num_frac_bits);
-  auto& table = *out;
+  CoefficientTableBuilder table(inputs.side_length, inputs.num_frac_bits);
 
   const int64_t kZeroCrossIdx = 1 << inputs.num_frac_bits;  // frac_one
-  FX_DCHECK(inputs.side_length == kZeroCrossIdx)
-      << "Computed filter edge " << kZeroCrossIdx << " should equal specified side_length "
-      << inputs.side_length;
+  FX_CHECK(inputs.side_length == kZeroCrossIdx);
 
   const float kTransitionFactor = 1.0f / static_cast<float>(kZeroCrossIdx);
 
@@ -54,13 +48,12 @@ std::unique_ptr<CoefficientTable> LinearFilterCoefficientTable::Create(Inputs in
     }
   }
 
-  return out;
+  return table.Build();
 }
 
 // Calculate our windowed-sinc FIR filter. With it we perform band-limited frame-rate conversion.
 std::unique_ptr<CoefficientTable> SincFilterCoefficientTable::Create(Inputs inputs) {
-  auto out = std::make_unique<CoefficientTable>(inputs.side_length, inputs.num_frac_bits);
-  auto& table = *out;
+  CoefficientTableBuilder table(inputs.side_length, inputs.num_frac_bits);
 
   const auto length = inputs.side_length;
   const auto frac_one = 1 << inputs.num_frac_bits;
@@ -97,7 +90,8 @@ std::unique_ptr<CoefficientTable> SincFilterCoefficientTable::Create(Inputs inpu
   const double normalize_factor = 1.0 / amplitude_at_dc;
   const double pre_normalized_epsilon = std::numeric_limits<float>::epsilon() * amplitude_at_dc;
 
-  std::transform(table.begin(), table.end(), table.begin(),
+  std::transform(table.physical_index_begin(), table.physical_index_end(),
+                 table.physical_index_begin(),
                  [normalize_factor, pre_normalized_epsilon](float sample) -> float {
                    if (sample < pre_normalized_epsilon && sample > -pre_normalized_epsilon) {
                      return 0.0f;
@@ -105,7 +99,7 @@ std::unique_ptr<CoefficientTable> SincFilterCoefficientTable::Create(Inputs inpu
                    return static_cast<float>(sample * normalize_factor);
                  });
 
-  return out;
+  return table.Build();
 }
 
 }  // namespace media::audio::mixer

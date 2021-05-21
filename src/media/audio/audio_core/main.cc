@@ -5,7 +5,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/logger.h>
 #include <lib/trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
@@ -29,7 +28,7 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
   auto threading_model = ThreadingModel::CreateWithMixStrategy(MixStrategy::kThreadPerMix);
   trace::TraceProviderWithFdio trace_provider(threading_model->FidlDomain().dispatcher());
 
-  syslog::SetLogSettings({.min_log_level = FX_LOG_INFO}, {"audio_core"});
+  syslog::SetLogSettings({.min_log_level = syslog::LOG_INFO}, {"audio_core"});
 
   FX_LOGS(INFO) << "AudioCore starting up";
 
