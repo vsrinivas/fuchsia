@@ -32,7 +32,7 @@ func (rule *newlineBeforeCodeSpan) OnDocStart(_ *core.Doc) {
 }
 
 func (rule *newlineBeforeCodeSpan) OnNext(tok core.Token) {
-	if rule.newLineCount < 2 && tok.Kind == core.Code {
+	if rule.newLineCount < 2 && tok.Kind == core.FencedCodeBlock {
 		rule.reporter.Warnf(tok, "no emtpy newline before fenced code block")
 	}
 	if tok.Kind == core.Newline {

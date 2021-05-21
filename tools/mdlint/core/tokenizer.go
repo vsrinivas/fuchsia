@@ -20,7 +20,8 @@ const (
 	_ TokenKind = iota
 
 	Anchor
-	Code
+	CodeBlock
+	FencedCodeBlock
 	EOF
 	Header
 	Link
@@ -38,7 +39,8 @@ const (
 
 var tokenKindStrings = map[TokenKind]string{
 	Anchor:          "Anchor",
-	Code:            "Code",
+	CodeBlock:       "CodeBlock",
+	FencedCodeBlock: "FencedCodeBlock",
 	EOF:             "EOF",
 	Header:          "Header",
 	Link:            "Link",
@@ -355,6 +357,7 @@ func (t *tokenizer) next() (Token, error) {
 		// https://spec.commonmark.org/0.29/#fenced-code-blocks.
 		if r == '`' {
 			seqToRead := []rune{'`'}
+			isFencedBlock := false
 			peek, err := t.doc.peekRune(2)
 			if err != nil {
 				return Token{}, err
@@ -367,11 +370,16 @@ func (t *tokenizer) next() (Token, error) {
 					}
 				}
 				seqToRead = append(seqToRead, '`', '`')
+				isFencedBlock = true
 			}
 			if err := t.readUntilEscapeSeq(seqToRead...); err != nil {
 				return Token{}, err
 			}
-			return t.newToken(Code), nil
+			if isFencedBlock {
+				return t.newToken(FencedCodeBlock), nil
+			} else {
+				return t.newToken(CodeBlock), nil
+			}
 		}
 		if isSeparatorSpace(r) {
 			if err := t.readUntil(false, isSeparatorSpace); err != nil {
