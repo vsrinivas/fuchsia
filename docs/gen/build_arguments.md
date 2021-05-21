@@ -308,7 +308,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:55
+From //src/graphics/lib/magma/gnbuild/magma.gni:54
 
 ### board_name
 Board name used for paving and amber updates.
@@ -520,13 +520,6 @@ of the most recent update.
 
 From //build/info/info.gni:16
 
-### build_libvulkan_arm_mali
-Targets that will be built as mali vulkan ICDS.
-
-**Current value (from the default):** `[]`
-
-From //src/graphics/lib/magma/gnbuild/magma.gni:43
-
 ### build_libvulkan_goldfish
 
 **Current value (from the default):** `""`
@@ -538,21 +531,21 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:52
+From //src/graphics/lib/magma/gnbuild/magma.gni:51
 
 ### build_libvulkan_qcom_adreno
 Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:49
+From //src/graphics/lib/magma/gnbuild/magma.gni:48
 
 ### build_libvulkan_vsi_vip
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:46
+From //src/graphics/lib/magma/gnbuild/magma.gni:45
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -1469,6 +1462,14 @@ attributing code generation bugs.
 
 From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:38
 
+### have_libvulkan_arm_mali
+Driver developers can set this to true if they are manually including a Mali package. This will
+change test environments so Vulkan tests run on boards with Mali GPUs.
+
+**Current value (from the default):** `false`
+
+From //src/graphics/lib/magma/gnbuild/magma.gni:40
+
 ### host_byteorder
 
 **Current value (from the default):** `"undefined"`
@@ -1972,14 +1973,14 @@ The path to OpenVX headers
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:35
+From //src/graphics/lib/magma/gnbuild/magma.gni:33
 
 ### magma_openvx_package
 The path to an OpenVX implementation
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:38
+From //src/graphics/lib/magma/gnbuild/magma.gni:36
 
 ### magma_python_path
 
@@ -2791,18 +2792,12 @@ This must have in its `bin/` subdirectory `gen_snapshot.OS-CPU` binaries.
 
 From //build/dart/dart.gni:8
 
-### prebuilt_libvulkan_arm_path
-
-**Current value (from the default):** `""`
-
-From //src/graphics/lib/magma/gnbuild/magma.gni:29
-
 ### prebuilt_libvulkan_img_path
 The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:32
+From //src/graphics/lib/magma/gnbuild/magma.gni:30
 
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
