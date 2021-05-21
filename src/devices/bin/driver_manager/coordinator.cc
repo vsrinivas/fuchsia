@@ -66,6 +66,7 @@ namespace {
 
 constexpr char kDriverHostPath[] = "bin/driver_host";
 constexpr char kBootFirmwarePath[] = "lib/firmware";
+constexpr char kSystemPrefix[] = "/system/";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
 
@@ -822,8 +823,8 @@ zx_status_t Coordinator::AddCompositeDevice(
   return ZX_OK;
 }
 
-zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path,
-                                      zx::vmo* vmo, size_t* size) {
+zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname,
+                                      const char* path, zx::vmo* vmo, size_t* size) {
   const std::string fwdirs[] = {
       config_.path_prefix + kBootFirmwarePath,
       kSystemFirmwarePath,
@@ -834,9 +835,13 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // We can't check /system if the system is not coming up otherwise
-  // the call to open will hang forever.
-  size_t directories_to_check = (config_.require_system) ? std::size(fwdirs) : 1;
+  // We are only going to check /system/ if the driver was loaded out of /system.
+  // This ensures that /system is available and loaded, as otherwise touching /system
+  // will wait, potentially forever.
+  size_t directories_to_check = 1;
+  if (strncmp(driver_libname, kSystemPrefix, std::size(kSystemPrefix) - 1) == 0) {
+    directories_to_check = std::size(fwdirs);
+  }
 
   int fd, fwfd;
   for (unsigned n = 0; n < directories_to_check; n++) {

@@ -977,6 +977,10 @@ void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
 void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
+  char driver_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
+  memcpy(driver_path, request->driver_path.data(), request->driver_path.size());
+  driver_path[request->driver_path.size()] = 0;
+
   char fw_path[fuchsia_device_manager_DEVICE_PATH_MAX + 1];
   memcpy(fw_path, request->fw_path.data(), request->fw_path.size());
   fw_path[request->fw_path.size()] = 0;
@@ -985,7 +989,7 @@ void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter
   zx::vmo vmo;
   uint64_t size = 0;
   zx_status_t status;
-  if ((status = dev->coordinator->LoadFirmware(dev, fw_path, &vmo, &size)) != ZX_OK) {
+  if ((status = dev->coordinator->LoadFirmware(dev, driver_path, fw_path, &vmo, &size)) != ZX_OK) {
     response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
     completer.Reply(std::move(response));
     return;

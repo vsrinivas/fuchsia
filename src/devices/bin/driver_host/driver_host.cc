@@ -957,7 +957,8 @@ zx_status_t DriverHostContext::DeviceRunCompatibilityTests(const fbl::RefPtr<zx_
   return call_status;
 }
 
-zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+zx_status_t DriverHostContext::LoadFirmware(const zx_driver_t* drv,
+                                            const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                             zx_handle_t* vmo_handle, size_t* size) {
   if ((vmo_handle == nullptr) || (size == nullptr)) {
     return ZX_ERR_INVALID_ARGS;
@@ -969,8 +970,9 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
     return ZX_ERR_IO_REFUSED;
   }
   VLOGD(1, *dev, "load-firmware");
+  auto drv_libname = ::fidl::StringView::FromExternal(drv->libname());
   auto str_path = ::fidl::StringView::FromExternal(path);
-  auto response = client->LoadFirmware_Sync(std::move(str_path));
+  auto response = client->LoadFirmware_Sync(std::move(drv_libname), std::move(str_path));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   auto result = std::move(response.Unwrap()->result);
@@ -992,7 +994,8 @@ zx_status_t DriverHostContext::LoadFirmware(const fbl::RefPtr<zx_device_t>& dev,
   return call_status;
 }
 
-void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, const char* path,
+void DriverHostContext::LoadFirmwareAsync(const zx_driver_t* drv,
+                                          const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                           load_firmware_callback_t callback, void* context) {
   ZX_DEBUG_ASSERT(callback);
 
@@ -1004,9 +1007,10 @@ void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, c
     return;
   }
   VLOGD(1, *dev, "load-firmware-async");
+  auto drv_libname = ::fidl::StringView::FromExternal(drv->libname());
   auto str_path = ::fidl::StringView::FromExternal(path);
   auto result = client->LoadFirmware(
-      std::move(str_path),
+      std::move(drv_libname), std::move(str_path),
       [callback, context, dev = std::move(device_ref)](
           fidl::WireResponse<fuchsia_device_manager::Coordinator::LoadFirmware>* response) {
         zx_status_t call_status = ZX_OK;

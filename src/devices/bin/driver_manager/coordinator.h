@@ -227,8 +227,8 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
                          bool new_device);
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
-  zx_status_t LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path, zx::vmo* vmo,
-                           size_t* size);
+  zx_status_t LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname,
+                           const char* path, zx::vmo* vmo, size_t* size);
 
   zx_status_t GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                           size_t buflen, size_t* size);

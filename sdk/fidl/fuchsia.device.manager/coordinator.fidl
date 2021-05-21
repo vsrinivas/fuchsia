@@ -278,7 +278,7 @@ protocol Coordinator {
     GetTopologicalPath() -> (string:DEVICE_PATH_MAX path) error zx.status;
 
     /// Requests that the firmware at the given path be loaded and returned.
-    LoadFirmware(string:DEVICE_PATH_MAX fw_path)
+    LoadFirmware(string:DEVICE_PATH_MAX driver_path, string:DEVICE_PATH_MAX fw_path)
         -> (zx.handle:VMO vmo, uint64 size) error zx.status;
 
     /// Retrieve the metadata blob associated with this device and the given key.
