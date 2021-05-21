@@ -207,11 +207,14 @@ impl ProfileObserver {
 /// and the Profile Test Server. This node acts as a facade between the profile
 /// under test and the Test Server. If the PiconetMemberSpec passed in contains
 /// a Channel then PeerObserver events will be forwarded to that channel.
+/// Any `additional_capabilities` will be routed from the profile to above the
+/// test root - to be accessible in the test realm's outgoing directory.
 async fn add_profile<'a>(
     builder: &mut RealmBuilder,
     spec: &'a mut PiconetMemberSpec,
     server_moniker: String,
     profile_url: String,
+    additional_capabilities: Vec<Capability>,
 ) -> Result<(), Error> {
     let mock_piconet_member_name = interposer_name_for_profile(&spec.name);
     add_mock_piconet_component(
@@ -234,6 +237,8 @@ async fn add_profile<'a>(
     //   * Profile from mock piconet member to profile under test
     //   * ProfileTest from Profile Test Server to mock piconet member
     //   * LogSink from parent to the profile under test + mock piconet member.
+    //   * Additional capabilities from the profile under test to AboveRoot to be
+    //     accessible via the test realm service directory.
     {
         builder.add_protocol_route::<bredr::ProfileMarker>(
             RouteEndpoint::component(mock_piconet_member_name.clone()),
@@ -252,6 +257,14 @@ async fn add_profile<'a>(
                 RouteEndpoint::component(mock_piconet_member_name.clone()),
             ],
         )?;
+
+        for capability in additional_capabilities {
+            builder.add_route(CapabilityRoute {
+                capability,
+                source: RouteEndpoint::component(spec.name.to_string()),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })?;
+        }
     }
     Ok(())
 }
@@ -554,22 +567,50 @@ impl ProfileTestHarnessV2 {
         self.builder.build().create().await.map_err(|e| e.into())
     }
 
+    /// Add a profile with moniker `name` to the test topology. The profile should be
+    /// accessible via the provided `profile_url` and will be launched during the test.
+    ///
+    /// Returns an observer for the launched profile.
     pub async fn add_profile(
         &mut self,
         name: String,
         profile_url: String,
     ) -> Result<ProfileObserver, Error> {
+        self.add_profile_with_capabilities(name, profile_url, vec![]).await
+    }
+
+    /// Add a profile with moniker `name` to the test topology.
+    /// The profile should be accessible via the provided `profile_url` and will be launched
+    /// during the test.
+    /// `additional_capabilities` specifies any capabilities provided by the profile to be
+    /// available in the outgoing directory of the test realm root.
+    ///
+    /// Returns an observer for the launched profile.
+    pub async fn add_profile_with_capabilities(
+        &mut self,
+        name: String,
+        profile_url: String,
+        additional_capabilities: Vec<Capability>,
+    ) -> Result<ProfileObserver, Error> {
         let (mut spec, request_stream) = PiconetMemberSpec::for_profile(name);
-        self.add_profile_from_spec(&mut spec, profile_url).await?;
+        self.add_profile_from_spec(&mut spec, profile_url, additional_capabilities).await?;
         Ok(ProfileObserver::new(request_stream, spec.id))
     }
 
-    pub async fn add_profile_from_spec(
+    async fn add_profile_from_spec(
         &mut self,
         spec: &mut PiconetMemberSpec,
         profile_url: String,
+        additional_capabilities: Vec<Capability>,
     ) -> Result<(), Error> {
-        add_profile(&mut self.builder, spec, self.ps_moniker.clone(), profile_url).await
+        add_profile(
+            &mut self.builder,
+            spec,
+            self.ps_moniker.clone(),
+            profile_url,
+            additional_capabilities,
+        )
+        .await
     }
 }
 
@@ -772,5 +813,53 @@ mod tests {
             dependency_type: DependencyType::Strong,
         });
         assert!(root.offers.contains(&log_offer));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_profile_with_additional_capabilities() {
+        let mut test_harness = ProfileTestHarnessV2::new().await;
+        let profile_name = "test-profile-member";
+        let profile_moniker: Moniker = vec![profile_name.to_string()].into();
+
+        // Add a profile with a fake URL and some fake additional capabilities.
+        let fake_cap1 = "Foo".to_string();
+        let fake_cap2 = "Bar".to_string();
+        let additional_capabilities =
+            vec![Capability::protocol(fake_cap1.clone()), Capability::protocol(fake_cap2.clone())];
+        let _profile_member = test_harness
+            .add_profile_with_capabilities(
+                profile_name.to_string(),
+                "fuchsia-pkg://fuchsia.com/example#meta/example.cm".to_string(),
+                additional_capabilities,
+            )
+            .await
+            .expect("failed to add profile");
+
+        let mut topology = test_harness.builder.build();
+        assert!(topology.contains(&profile_moniker));
+
+        // Validate the additional capability routes. See `test_add_profile` for validation
+        // of Profile, ProfileTest, and LogSink routes.
+
+        // `Foo` is exposed by the profile to parent.
+        let fake_capability_name1 = CapabilityName(fake_cap1);
+        let fake_capability_expose1 = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Child(profile_name.to_string()),
+            source_name: fake_capability_name1.clone(),
+            target: ExposeTarget::Parent,
+            target_name: fake_capability_name1.clone(),
+        });
+        // `Bar` is exposed by the profile to parent.
+        let fake_capability_name2 = CapabilityName(fake_cap2);
+        let fake_capability_expose2 = ExposeDecl::Protocol(ExposeProtocolDecl {
+            source: ExposeSource::Child(profile_name.to_string()),
+            source_name: fake_capability_name2.clone(),
+            target: ExposeTarget::Parent,
+            target_name: fake_capability_name2.clone(),
+        });
+
+        let root = topology.get_decl_mut(&vec![].into()).expect("unable to get root decl");
+        assert!(root.exposes.contains(&fake_capability_expose1));
+        assert!(root.exposes.contains(&fake_capability_expose2));
     }
 }
