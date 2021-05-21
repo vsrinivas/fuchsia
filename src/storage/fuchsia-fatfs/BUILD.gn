@@ -113,3 +113,7 @@ rustc_binary("fatfs") {
 fuchsia_package("fuchsia-fatfs") {
   deps = [ "//src/storage/fuchsia-fatfs/mounter:fatfs-mounter" ]
 }
+
+fuchsia_shell_package("fatfs-bin") {
+  deps = [ ":fatfs" ]
+}

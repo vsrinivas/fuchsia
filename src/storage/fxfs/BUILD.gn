@@ -131,3 +131,7 @@ rustc_binary("fxfs") {
   ]
   sources = [ "src/main.rs" ]
 }
+
+fuchsia_shell_package("fxfs-bin") {
+  deps = [ ":fxfs" ]
+}
