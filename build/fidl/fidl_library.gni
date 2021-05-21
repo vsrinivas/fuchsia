@@ -44,10 +44,14 @@ template("fidl_library") {
     experimental_flags = invoker.experimental_flags
   }
 
-  generate_api_summary = false
-  if (defined(invoker.experimental_api_summary)) {
+  # TODO(fxbug.dev/68952): Setting generate_api_summary to false makes the
+  # generation optional in case of an emergency.  Once the tool is stabilized,
+  # make this unconditional.
+  generate_api_summary = true
+  if (defined(invoker.experimental_api_summary) || generate_api_summary) {
     not_needed(invoker, [ "experimental_api_summary" ])
-    generate_api_summary = invoker.experimental_api_summary
+    generate_api_summary =
+        generate_api_summary || invoker.experimental_api_summary
     summarization_target_name = "${target_name}_api_summarize"
     summarization_target_name_json = "${target_name}_api_summarize_json"
   }
