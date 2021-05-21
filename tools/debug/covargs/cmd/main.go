@@ -36,7 +36,7 @@ const (
 	symbolCacheSize        = 100
 	cloudFetchMaxAttempts  = 2
 	cloudFetchRetryBackoff = 500 * time.Millisecond
-	cloudFetchTimeout      = 8 * time.Second
+	cloudFetchTimeout      = 60 * time.Second
 )
 
 var (
@@ -296,7 +296,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 					file, err = repo.GetBuildObject(module)
 					return err
 				}, nil); err != nil {
-					logger.Warningf(ctx, "module with build id %s not found\n", module)
+					logger.Warningf(ctx, "module with build id %s not found: %v\n", module, err)
 					return
 				}
 				if isInstrumented(file.String()) {

@@ -261,7 +261,10 @@ func (fc *FileCache) Add(key FileKey, value io.Reader) (*LinkedFile, error) {
 		file.Close()
 		os.Remove(name)
 	}()
-	io.Copy(file, value)
+	_, err = io.Copy(file, value)
+	if err != nil {
+		return nil, err
+	}
 	path := fc.getFilePath(key.Hash())
 	// Link the file into the temporary directory for return.
 	out := LinkedFile(getTmpFile(fc.dir))
