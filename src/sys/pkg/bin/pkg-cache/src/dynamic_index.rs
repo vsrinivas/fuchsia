@@ -34,6 +34,9 @@ pub enum DynamicIndexError {
     #[error("the blob being fulfilled ({hash}) is not needed, dynamic index state in {state}")]
     FulfillNotNeededBlob { hash: Hash, state: &'static str },
 
+    #[error("the blob ({0}) is not present in blobfs")]
+    BlobNotFound(Hash),
+
     #[error("the package is in an unexpected state: {0:?}")]
     UnexpectedPackageState(Option<Package>),
 
@@ -186,12 +189,9 @@ pub async fn fulfill_meta_far_blob(
         });
     }
 
-    let (path, required_blobs) =
-        enumerate_package_blobs(blobfs, &blob_hash).await?.ok_or_else(|| {
-            DynamicIndexError::OpenBlob(io_util::node::OpenError::OpenError(
-                fuchsia_zircon::Status::NOT_FOUND,
-            ))
-        })?;
+    let (path, required_blobs) = enumerate_package_blobs(blobfs, &blob_hash)
+        .await?
+        .ok_or_else(|| DynamicIndexError::BlobNotFound(blob_hash))?;
 
     // This heuristic was taken from pkgfs, the total number of blobs has grown since it was
     // initially written, we probably want to reevaluate the proper value to use here.
@@ -706,6 +706,24 @@ mod tests {
         assert_matches!(
             fulfill_meta_far_blob(&dynamic_index, &blobfs, Hash::from([2; 32])).await,
             Err(DynamicIndexError::FulfillNotNeededBlob{hash, state}) if hash == Hash::from([2; 32]) && state == "missing"
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn fulfill_meta_far_blob_not_found() {
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
+
+        let meta_far_hash = Hash::from([2; 32]);
+        dynamic_index.start_install(meta_far_hash);
+
+        let dynamic_index = Arc::new(Mutex::new(dynamic_index));
+
+        let (_blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
+
+        assert_matches!(
+            fulfill_meta_far_blob(&dynamic_index, &blobfs, meta_far_hash).await,
+            Err(DynamicIndexError::BlobNotFound(hash)) if hash == meta_far_hash
         );
     }
 
