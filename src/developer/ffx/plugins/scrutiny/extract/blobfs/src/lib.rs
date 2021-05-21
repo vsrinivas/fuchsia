@@ -17,7 +17,7 @@ pub async fn scrutiny_blobfs(cmd: ScrutinyBlobfsCommand) -> Result<(), Error> {
     let config = Config {
         launch: LaunchConfig {
             command: Some(
-                format!("tool.zbi.blobfs --input {} --output {}", cmd.input, cmd.output)
+                format!("tool.blobfs.extract --input {} --output {}", cmd.input, cmd.output)
                     .to_string(),
             ),
             script_path: None,
