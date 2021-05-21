@@ -90,7 +90,7 @@ async fn test_detect_early_exit() {
         &audio_proxy,
         create_default_audio_stream(AudioStreamType::Media),
         Some(Arc::new(move || {
-            tx.unbounded_send(()).ok();
+            tx.unbounded_send(()).unwrap();
         })),
         None,
     )

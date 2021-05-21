@@ -51,9 +51,9 @@ impl Drop for StreamVolumeControl {
 
             // Consider panic! is likely to be abort in the drop method, only log info for
             // unbounded_send failure.
-            exit_tx
-                .unbounded_send(())
-                .unwrap_or_else(|_| fx_log_warn!("exit_tx failed to send exit signal"));
+            exit_tx.unbounded_send(()).unwrap_or_else(|_| {
+                fx_log_warn!("StreamVolumeControl::drop, exit_tx failed to send exit signal")
+            });
         }
     }
 }
@@ -163,7 +163,10 @@ impl StreamVolumeControl {
 
         if let Some(exit_tx) = self.listen_exit_tx.take() {
             // exit_rx needs this signal to end leftover spawn.
-            exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
+            exit_tx.unbounded_send(()).expect(
+                "StreamVolumeControl::bind_volume_control, listen_exit_tx failed to send exit \
+                signal",
+            );
         }
 
         // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a notification

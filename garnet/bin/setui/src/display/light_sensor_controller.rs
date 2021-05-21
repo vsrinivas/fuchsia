@@ -257,7 +257,7 @@ mod tests {
     #[async_trait]
     impl LightNotifier for TestNotifier {
         async fn notify(&self, _: SettingInfo) {
-            self.notifier.unbounded_send(SettingType::LightSensor).ok();
+            self.notifier.unbounded_send(SettingType::LightSensor).unwrap();
         }
     }
 

@@ -75,7 +75,9 @@ where
             responder.on_error(&error);
             if let Some(exit_tx) = optional_exit_tx {
                 // Panic if send failed, otherwise, spawn might not be ended.
-                exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
+                exit_tx
+                    .unbounded_send(())
+                    .expect("HangingGetController::on_error, exit_tx failed to send exit signal");
             }
         }
     }
@@ -207,16 +209,18 @@ where
         // been dropped already.
         if let Some(exit_tx) = self.listen_exit_tx.take() {
             if !exit_tx.is_closed() {
-                exit_tx
-                    .unbounded_send(())
-                    .unwrap_or_else(|_| fx_log_warn!("exit_tx failed to send exit signal"));
+                exit_tx.unbounded_send(()).unwrap_or_else(|_| {
+                    fx_log_warn!(
+                        "HangingGetHandler::close, listen_exit_tx failed to send exit signal"
+                    )
+                });
             }
         }
 
         if !self.command_tx.is_closed() {
-            self.command_tx
-                .unbounded_send(ListenCommand::Exit)
-                .unwrap_or_else(|_| fx_log_warn!("command_tx failed to send Exit command"));
+            self.command_tx.unbounded_send(ListenCommand::Exit).unwrap_or_else(|_| {
+                fx_log_warn!("HangingGetHandler::close, command_tx failed to send Exit command")
+            });
         }
     }
 
@@ -276,7 +280,9 @@ where
                             if let Ok((Payload::Response(Ok(Some(setting_info))), _)) =
                                 Payload::try_from_with_client(update) {
                                     command_tx_clone.unbounded_send(
-                                        ListenCommand::Change(setting_info)).ok();
+                                        ListenCommand::Change(setting_info))
+                                        .expect("HangingGetHandler::watch_with_change_fn, \
+                                        command_tx failed to send Change command");
                             }
                         }
                         _ = exit_rx.next() => {
@@ -332,7 +338,9 @@ where
     fn on_error(&mut self, error: &anyhow::Error) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
             // Panic if send failed, otherwise, spawn might not be ended.
-            exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
+            exit_tx
+                .unbounded_send(())
+                .expect("HangingGetHandler::on_error, exit_tx failed to send exit signal");
         }
 
         self.default_controller.on_error(&error);

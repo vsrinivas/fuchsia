@@ -124,7 +124,7 @@ impl TestAgent {
 
         self.last_invocation = Some(invocation.clone());
         let (tx, rx) = futures::channel::oneshot::channel::<InvocationResult>();
-        self.callback.unbounded_send((self.id, invocation.clone(), tx)).ok();
+        self.callback.unbounded_send((self.id, invocation.clone(), tx)).unwrap();
         if let Ok(result) = rx.await {
             return result;
         } else {

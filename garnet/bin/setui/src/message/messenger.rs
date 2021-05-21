@@ -56,7 +56,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A
                 tx,
                 self.messenger_action_tx.clone(),
             ))
-            .expect("messenger_action_tx failed to send message");
+            .expect("Builder::build, messenger_action_tx failed to send message");
 
         rx.await.map_err(|_| MessageError::Unexpected).and_then(identity)
     }
@@ -152,9 +152,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Messenger<P,
 
         // Log info. transmit is called by forward. However, forward might fail if there is no next
         // Messenger exists.
-        self.action_tx
-            .unbounded_send((self.fingerprint, action, beacon))
-            .unwrap_or_else(|_| fx_log_warn!("action_tx failed to send message"));
+        self.action_tx.unbounded_send((self.fingerprint, action, beacon)).unwrap_or_else(|_| {
+            fx_log_warn!("Messenger::transmit, action_tx failed to send message")
+        });
     }
 
     pub(super) fn get_signature(&self) -> Signature<A> {

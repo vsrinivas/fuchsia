@@ -59,11 +59,18 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Delegate<P, 
     #[cfg(test)]
     pub async fn contains(&self, signature: Signature<A>) -> MessengerPresenceResult<A> {
         let (tx, rx) = futures::channel::oneshot::channel::<MessengerPresenceResult<A>>();
-        self.messenger_action_tx.unbounded_send(MessengerAction::CheckPresence(signature, tx)).ok();
+        self.messenger_action_tx
+            .unbounded_send(MessengerAction::CheckPresence(signature, tx))
+            .unwrap();
         rx.await.unwrap_or(Err(MessageError::Unexpected))
     }
 
     pub fn delete(&self, signature: Signature<A>) {
-        self.messenger_action_tx.unbounded_send(MessengerAction::DeleteBySignature(signature)).ok();
+        self.messenger_action_tx
+            .unbounded_send(MessengerAction::DeleteBySignature(signature))
+            .expect(
+                "Delegate::delete, messenger_action_tx failed to send DeleteBySignature messenger\
+                 action",
+            );
     }
 }

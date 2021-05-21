@@ -162,7 +162,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
     fn check_exit(&self) {
         if self.messenger_channel_closed && self.beacons.is_empty() {
             // Panic if send failed, otherwise, spawn might not be ended.
-            self.exit_tx.unbounded_send(()).expect("exit_tx failed to send exit signal");
+            self.exit_tx
+                .unbounded_send(())
+                .expect("MessageHub::check_exit, exit_tx failed to send exit signal");
         }
     }
 

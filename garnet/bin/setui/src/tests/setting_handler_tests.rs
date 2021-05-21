@@ -190,7 +190,9 @@ async fn test_write_notify() {
         Box::new(move |proxy| {
             let client_tx = client_tx.clone();
             Box::pin(async move {
-                client_tx.unbounded_send(persist::ClientProxy::new(proxy, setting_type).await).ok();
+                client_tx
+                    .unbounded_send(persist::ClientProxy::new(proxy, setting_type).await)
+                    .unwrap();
                 Ok(Box::new(BlankController {}) as BoxedController)
             })
         }),
@@ -281,8 +283,8 @@ impl controller::Handle for StateController {
 
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         self.invocation_counts.entry(state).and_modify(|e| *e += 1);
-        self.invocation_counts_reporter.unbounded_send(self.invocation_counts.clone()).ok();
-        self.state_reporter.unbounded_send(state).ok();
+        self.invocation_counts_reporter.unbounded_send(self.invocation_counts.clone()).unwrap();
+        self.state_reporter.unbounded_send(state).unwrap();
         None
     }
 }

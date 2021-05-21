@@ -33,7 +33,7 @@ impl TestMonitorAgent {
                     .unbounded_send(
                         context.resource_monitor_actor.clone().expect("should be present"),
                     )
-                    .ok();
+                    .unwrap();
 
                 Box::pin(async move {
                     // Immediately respond to all invocations
@@ -66,7 +66,7 @@ async fn test_environment_bringup() {
             let monitor_context_tx = monitor_context_tx.clone();
 
             Box::pin(async move {
-                monitor_context_tx.unbounded_send(context).ok();
+                monitor_context_tx.unbounded_send(context).unwrap();
                 Ok(())
             })
         });

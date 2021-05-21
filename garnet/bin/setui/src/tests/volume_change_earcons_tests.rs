@@ -189,7 +189,7 @@ async fn create_environment(
         Arc::new(move |delegate: service::message::Delegate| -> BoxFuture<'static, ()> {
             let event_tx = event_tx.clone();
             Box::pin(async move {
-                event_tx.unbounded_send(delegate).ok();
+                event_tx.unbounded_send(delegate).unwrap();
             })
         });
 

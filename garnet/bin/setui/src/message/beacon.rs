@@ -111,7 +111,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Beacon<P, A,
                     // Panic if send failed, otherwise the client cannot abort processes.
                     event_tx
                         .unbounded_send(MessageEvent::Status(Status::Timeout))
-                        .expect("event_tx failed to send Timeout status message");
+                        .expect("Beacon::create, event_tx failed to send Timeout status message");
                 },
                 timeout_abort_server,
             );

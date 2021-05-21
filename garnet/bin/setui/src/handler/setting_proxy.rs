@@ -388,7 +388,10 @@ impl SettingProxy {
         if self.active_request.is_some() {
             self.proxy_request_sender
                 .unbounded_send(ProxyRequest::HandleResult(Err(ControllerError::ExitError)))
-                .expect("proxy_request_sender failed to send ExitError proxy request");
+                .expect(
+                    "SettingProxy::process_exit, proxy_request_sender failed to send ExitError\
+                     proxy request",
+                );
         }
 
         // If there is an active listener, forefully refetch
@@ -437,7 +440,7 @@ impl SettingProxy {
     fn request(&self, request: ProxyRequest) {
         self.proxy_request_sender
             .unbounded_send(request)
-            .expect("proxy_request_sender cannot send requests anymore");
+            .expect("SettingProxy::request, proxy_request_sender cannot send requests anymore");
     }
 
     /// Sends an update to the controller about whether or not it should be
@@ -601,7 +604,8 @@ impl SettingProxy {
             let proxy_request_sender = self.proxy_request_sender.clone();
             info.bind_to_scope(Box::new(move |request_info| {
                 proxy_request_sender.unbounded_send(ProxyRequest::EndListen(request_info)).expect(
-                    "proxy_request_sender failed to send EndListen proxy request with info",
+                    "SettingProxy::execute_next_request, proxy_request_sender failed to send \
+                    EndListen proxy request with info",
                 );
             }))
             .await;
@@ -677,7 +681,10 @@ impl SettingProxy {
                     // processed anymore.
                     proxy_request_sender_clone
                         .unbounded_send(ProxyRequest::HandleResult(result.clone()))
-                        .expect("proxy_request_sender failed to send proxy request");
+                        .expect(
+                            "SettingProxy::execute_next_request, proxy_request_sender failed to \
+                            send proxy request",
+                        );
                     return;
                 }
             }
@@ -737,9 +744,10 @@ impl SettingProxy {
 
             // Panic if the unbounded_send failed, which indicates the channel got dropped and
             // requests cannot be processed anymore.
-            sender
-                .unbounded_send(ProxyRequest::Teardown)
-                .expect("proxy_request_sender failed to send Teardown proxy request");
+            sender.unbounded_send(ProxyRequest::Teardown).expect(
+                "SettingProxy::start_teardown_timeout, proxy_request_sender failed to send Teardown\
+                 proxy request",
+            );
         })
         .detach();
     }

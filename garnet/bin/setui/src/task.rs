@@ -148,7 +148,7 @@ impl<C: Category + 'static> Client<C> {
         // Panic if send failed since message is used to track task's lifetime.
         self.action_tx
             .unbounded_send((task_id, Action::Create(category.clone()), now()))
-            .expect("action_tx failed to send a spawn creation message");
+            .expect("Client::spawn, action_tx failed to send a spawn creation message");
 
         // Pass a clone of the action sender to the spawned task in order to
         // signal when the task completes.
@@ -160,7 +160,7 @@ impl<C: Category + 'static> Client<C> {
             // Panic if send failed since message is used to track task's lifetime.
             action_tx
                 .unbounded_send((task_id, Action::Complete, now()))
-                .expect("action_tx failed to send a spawn completed message");
+                .expect("Client::spawn, action_tx failed to send a spawn completed message");
         })
         .detach();
     }
@@ -469,7 +469,7 @@ mod tests {
 
     impl Sink<TestCategory> for TestSink {
         fn process(&mut self, summary: &TestSummary) {
-            self.sender.unbounded_send(summary.clone()).ok();
+            self.sender.unbounded_send(summary.clone()).unwrap();
         }
     }
 

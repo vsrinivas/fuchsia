@@ -90,9 +90,10 @@ impl Service for SoundPlayerService {
                         for listener in sound_played_listeners.lock().await.iter() {
                             // Panic if send failed, otherwise sound is played but cannot be
                             // notified.
-                            listener
-                                .unbounded_send((id, usage))
-                                .expect("listener failed to send id and usage");
+                            listener.unbounded_send((id, usage)).expect(
+                                "SoundPlayerService::process_stream, listener failed to send id and\
+                                 usage",
+                            );
                         }
                         responder.send(&mut Ok(())).unwrap();
                     }

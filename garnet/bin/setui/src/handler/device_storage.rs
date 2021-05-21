@@ -384,7 +384,7 @@ impl DeviceStorage {
         let cached_storage = typed_storage.cached_storage.lock().await;
         let mut value = Value::Stringval(value);
         cached_storage.stash_proxy.set_value(&prefixed(key), &mut value)?;
-        typed_storage.commit_sender.unbounded_send(CommitParams { flush }).ok();
+        typed_storage.commit_sender.unbounded_send(CommitParams { flush }).unwrap();
         Ok(())
     }
 

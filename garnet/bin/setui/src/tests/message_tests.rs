@@ -574,7 +574,7 @@ async fn test_action_fuse() {
     {
         let _ = ActionFuseBuilder::new()
             .add_action(Box::new(move || {
-                tx.unbounded_send(()).ok();
+                tx.unbounded_send(()).unwrap();
             }))
             .build();
     }
@@ -592,12 +592,12 @@ async fn test_chained_action_fuse() {
     {
         let _ = ActionFuseBuilder::new()
             .add_action(Box::new(move || {
-                tx.unbounded_send(()).ok();
+                tx.unbounded_send(()).unwrap();
             }))
             .chain_fuse(
                 ActionFuseBuilder::new()
                     .add_action(Box::new(move || {
-                        tx2.unbounded_send(()).ok();
+                        tx2.unbounded_send(()).unwrap();
                     }))
                     .build(),
             )
@@ -666,7 +666,7 @@ async fn test_bind_to_recipient() {
                 .bind_to_recipient(
                     ActionFuseBuilder::new()
                         .add_action(Box::new(move || {
-                            tx.unbounded_send(()).ok();
+                            tx.unbounded_send(()).unwrap();
                         }))
                         .build(),
                 )
