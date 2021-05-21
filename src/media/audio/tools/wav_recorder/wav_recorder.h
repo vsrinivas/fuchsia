@@ -80,7 +80,6 @@ class WavRecorder {
   void* payload_buf_virt_ = nullptr;
   uint32_t payload_buf_size_ = 0;
   uint32_t payload_buf_frames_ = 0;
-  std::unique_ptr<uint8_t[]> compress_32_24_buff_;  // only used for 'packed-24'
   bool pack_24bit_samples_ = false;
 
   fuchsia::media::AudioSampleFormat sample_format_;

@@ -40,8 +40,8 @@ namespace audio {
 // Delete method removes the file entirely -- subsequently the object would
 // generally be destroyed, although it can be revived by re-calling Initialize.
 //
-// Note that this library makes no effort to be thread-safe, so the client bears
-// all responsibilities for synchronization.
+// Note: this library makes no effort to be thread-safe, so clients bear all
+// responsibilities for synchronization.
 //
 template <bool enabled = true>
 class WavWriter {
@@ -64,6 +64,8 @@ class WavWriter {
   std::string file_name_;
   fbl::unique_fd file_;
   size_t payload_written_ = 0;
+  static constexpr int64_t kPacked24BufferSize = 12288;
+  std::unique_ptr<uint8_t[]> packed_24_buff_;  // only used if bits_per_sample == 24
 
   static std::atomic<uint32_t> instance_count_;
 };

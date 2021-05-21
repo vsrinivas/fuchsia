@@ -185,6 +185,10 @@ bool WavWriter<enabled>::Initialize(const char* const file_name,
                      << std::quoted(file_name_);
     return false;
   }
+
+  if (bits_per_sample_ == 24) {
+    packed_24_buff_ = std::make_unique<uint8_t[]>(kPacked24BufferSize);
+  }
   FX_LOGS(INFO) << "WavWriter[" << this << "] recording Format "
                 << fidl::ToUnderlying(sample_format_) << ", " << bits_per_sample_ << "-bit, "
                 << frame_rate_ << " Hz, " << channel_count_ << "-chan PCM to "
@@ -201,7 +205,37 @@ bool WavWriter<enabled>::Write(void* const buffer, uint32_t num_bytes) {
     return false;
   }
 
-  ssize_t amt = WriteData(file_.get(), buffer, num_bytes);
+  auto source_buffer = reinterpret_cast<uint8_t*>(buffer);
+  // If bits_per_sample is 24 then write as packed-24 (we've received the audio data as 24-in-32).
+  // When compressing each 32-bit sample, we'll skip the first, least-significant of each four
+  // bytes. We assume that (file) Write does not buffer, so we copy/compress locally then call Write
+  // just once, to avoid potential performance problems.
+  if (bits_per_sample_ == 24) {
+    FX_CHECK(sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32);
+
+    constexpr auto kPadded24BufferSize = kPacked24BufferSize * 4 / 3;
+    while (num_bytes > kPadded24BufferSize) {
+      auto succeeded = Write(buffer, kPadded24BufferSize);
+      if (!succeeded) {
+        return false;
+      }
+      num_bytes -= kPadded24BufferSize;
+      source_buffer += kPadded24BufferSize;
+    }
+
+    int64_t write_idx = 0;
+    int64_t read_idx = 0;
+    while (read_idx < num_bytes) {
+      ++read_idx;
+      packed_24_buff_[write_idx++] = source_buffer[read_idx++];
+      packed_24_buff_[write_idx++] = source_buffer[read_idx++];
+      packed_24_buff_[write_idx++] = source_buffer[read_idx++];
+    }
+    num_bytes = static_cast<uint32_t>(write_idx);
+    source_buffer = packed_24_buff_.get();
+  }
+
+  ssize_t amt = WriteData(file_.get(), source_buffer, num_bytes);
   if (amt < 0) {
     FX_LOGS(WARNING) << "Failed (" << amt << ") while writing to " << std::quoted(file_name_);
     return false;

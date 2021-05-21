@@ -487,10 +487,6 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
   if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) {
     CLI_CHECK(bits_per_sample == (pack_24bit_samples_ ? 24 : 32),
               "Incorrect bits_per_sample value");
-
-    if (pack_24bit_samples_ == true) {
-      compress_32_24_buff_ = std::make_unique<uint8_t[]>(payload_buf_size_ * 3 / 4);
-    }
   }
 
   if (!cmd_line_.HasOption(kSyncModeOption)) {
@@ -639,31 +635,9 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
   if (payload_size) {
     CLI_CHECK(payload_buf_virt_ || Shutdown(), "payload_buf_virt cannot be null");
 
-    auto tgt = reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt.payload_offset;
-
-    // Max payload buffer is 1.5sec, 192kHz, 4b/sample, 8chan: 8.7M. Min is 1s, 1k, 1 b/frame: 1K.
-    // Minimum 2 pkts/payload buffer, so max packet payload_size is 4'608'000; thus cast is safe.
-    int32_t write_size = payload_size;
-
-    // If 24_in_32, write as packed-24, skipping the first, least-significant of
-    // each four bytes). Assuming Write does not buffer, compress locally and
-    // call Write just once, to avoid potential performance problems.
-    if (sample_format_ == fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
-        pack_24bit_samples_) {
-      int32_t write_idx = 0;
-      int32_t read_idx = 0;
-      while (read_idx < payload_size) {
-        ++read_idx;
-        compress_32_24_buff_[write_idx++] = tgt[read_idx++];
-        compress_32_24_buff_[write_idx++] = tgt[read_idx++];
-        compress_32_24_buff_[write_idx++] = tgt[read_idx++];
-      }
-      write_size = write_idx;
-      tgt = compress_32_24_buff_.get();
-    }
-
-    // We write a packet at a time; limiting write_size to 31-bit (not 32) will never be a problem.
-    if (!wav_writer_.Write(reinterpret_cast<void* const>(tgt), static_cast<uint32_t>(write_size))) {
+    if (!wav_writer_.Write(reinterpret_cast<void* const>(
+                               reinterpret_cast<uint8_t*>(payload_buf_virt_) + pkt.payload_offset),
+                           static_cast<uint32_t>(payload_size))) {
       printf("File write failed. Trying to save any already-written data.\n");
       CLI_CHECK(wav_writer_.Close(), "File close failed as well.");
       Shutdown();

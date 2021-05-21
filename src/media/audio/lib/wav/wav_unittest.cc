@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 
+#include "fuchsia/media/cpp/fidl.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/media/audio/lib/wav/wav_reader.h"
@@ -20,12 +21,13 @@ struct __PACKED RiffChunkHeader {
 constexpr char kFileName[] = "/tmp/test.wav";
 
 TEST(WavWriterTest, EmptyFileRiffChunkSize) {
-  WavWriter wav_writer;
   files::DeletePath(kFileName, false);
+
+  WavWriter wav_writer;
   wav_writer.Initialize(kFileName, fuchsia::media::AudioSampleFormat::SIGNED_16,
-                        1,  // channels
-                        1,  // sample rate
-                        1   // bits per sample
+                        8,       // channels
+                        192000,  // frame_rate
+                        16       // bits_per_sample
   );
   wav_writer.Close();
 
@@ -42,9 +44,9 @@ TEST(WavWriterTest, NonEmptyFileRiffChunkSize) {
   WavWriter wav_writer;
   files::DeletePath(kFileName, false);
   wav_writer.Initialize(kFileName, fuchsia::media::AudioSampleFormat::SIGNED_16,
-                        1,  // channels
-                        1,  // sample rate
-                        1   // bits per sample
+                        5,      // channels
+                        96000,  // frame_rate
+                        16      // bits_per_sample
   );
   char buf[10];
   wav_writer.Write(buf, 10);
@@ -98,9 +100,9 @@ TEST_F(WavReaderTest, CanReadWrittenFile) {
   WavWriter writer;
   files::DeletePath(kFileName, false);
   writer.Initialize(kFileName, fuchsia::media::AudioSampleFormat::UNSIGNED_8,
-                    2,   // channels
-                    12,  // sample rate
-                    8    // bits per sample
+                    2,      // channels
+                    12000,  // frame_rate
+                    8       // bits_per_sample
   );
   writer.Write((void*)kWant, strlen(kWant));
   writer.Close();
@@ -110,9 +112,9 @@ TEST_F(WavReaderTest, CanReadWrittenFile) {
   ASSERT_TRUE(open_result.is_ok());
   auto reader = std::move(open_result.value());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::UNSIGNED_8, reader->sample_format());
-  EXPECT_EQ(2u, reader->channel_count());
-  EXPECT_EQ(12u, reader->frame_rate());
-  EXPECT_EQ(8u, reader->bits_per_sample());
+  EXPECT_EQ(reader->channel_count(), 2u);
+  EXPECT_EQ(reader->frame_rate(), 12000u);
+  EXPECT_EQ(reader->bits_per_sample(), 8u);
 
   char buf[128];
   auto read_bytes = reader->Read(static_cast<void*>(buf), sizeof(buf));
@@ -131,9 +133,9 @@ TEST_F(WavReaderTest, CanResetAndRereadWrittenFile) {
   WavWriter writer;
   files::DeletePath(kFileName, false);
   writer.Initialize(kFileName, fuchsia::media::AudioSampleFormat::UNSIGNED_8,
-                    1,   // channels
-                    32,  // sample rate
-                    8    // bits per sample
+                    1,      // channels
+                    32000,  // frame_rate
+                    8       // bits_per_sample
   );
   writer.Write((void*)kWant, strlen(kWant));
   writer.Close();
@@ -211,6 +213,95 @@ TEST_F(WavReaderTest, CanReadPadded24File) {
         << "[" << idx << "] got " << std::hex << data_read[idx] << ", wanted " << kExpect[idx];
   }
 }
+
+struct Format {
+  Format(){};
+  Format(fuchsia::media::AudioSampleFormat format, int32_t rate, int32_t f_size, int32_t s_size)
+      : sample_format(format),
+        frame_rate(rate),
+        file_sample_size(f_size),
+        stream_sample_size(s_size){};
+  fuchsia::media::AudioSampleFormat sample_format;
+  int32_t frame_rate;
+  int32_t file_sample_size;
+  int32_t stream_sample_size;
+};
+class WavWriterReaderTest : public testing::TestWithParam<std::tuple<Format, int32_t>> {};
+TEST_P(WavWriterReaderTest, FormatSpecifics) {
+  Format format = std::get<0>(GetParam());
+  int32_t num_channels = std::get<1>(GetParam());
+  constexpr int64_t kDataSize = 24;
+  constexpr char kFileContent[kDataSize + 1] = "abcdefghijklmnopqrstuvwx";
+
+  WavWriter writer;
+
+  files::DeletePath(kFileName, false);
+  // Create the test file
+  ASSERT_TRUE(writer.Initialize(kFileName, format.sample_format,
+                                static_cast<uint16_t>(num_channels), format.frame_rate,
+                                static_cast<uint16_t>(format.file_sample_size * 8)));
+  for (auto chan = 1; chan <= num_channels; ++chan) {
+    // write out the same amount of file content for each channel
+    ASSERT_TRUE(writer.Write((void*)kFileContent, strlen(kFileContent)));
+  }
+  ASSERT_TRUE(writer.Close());
+
+  // Read WAV header and the entire contents.
+
+  // When testing 24-bit file writing and reading (both "packed" and "padded") with the
+  // WavWriter/Reader, we convey data both directions as "padded" 24-in-32-bit samples.
+  // Although we tell WavWriter to use 24-bit, or 32-bit samples (in the FILE it saves),
+  // WavReader will always tell us that the audio is 32-bit data (in the STREAM it produces).
+
+  // To verify WavReader, we check the byte-count (did all data get read in) and the frame-count
+  // (does WavReader correctly interpret the in-file packed/padded frame size).
+  auto open_result = WavReader::Open(kFileName);
+  ASSERT_TRUE(open_result.is_ok()) << "sample_format " << static_cast<int>(format.sample_format)
+                                   << ", bits " << format.file_sample_size * 8 << ", rate "
+                                   << format.frame_rate << ", chans " << num_channels;
+
+  auto reader = std::move(open_result.value());
+  EXPECT_EQ(reader->sample_format(), format.sample_format);
+  EXPECT_EQ(static_cast<int32_t>(reader->bits_per_sample()), format.stream_sample_size * 8);
+  EXPECT_EQ(static_cast<int32_t>(reader->frame_rate()), format.frame_rate);
+
+  EXPECT_EQ(static_cast<int>(reader->channel_count()), num_channels);
+  EXPECT_EQ(static_cast<int64_t>(reader->length_in_bytes()), kDataSize * num_channels);
+  EXPECT_EQ(static_cast<int64_t>(reader->length_in_frames()),
+            kDataSize / format.stream_sample_size);
+
+  EXPECT_TRUE(writer.Delete());
+}
+
+std::array<Format, 5> formats{
+    Format(fuchsia::media::AudioSampleFormat::FLOAT, 48000, 4, 4),
+    Format(fuchsia::media::AudioSampleFormat::SIGNED_16, 96000, 2, 2),
+    Format(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 16000, 3, 4),
+    Format(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 192000, 4, 4),
+    Format(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 44100, 1, 1),
+};
+INSTANTIATE_TEST_SUITE_P(null, WavWriterReaderTest,
+                         testing::Combine(testing::ValuesIn(formats), testing::Range(1, 9)),
+                         [](const testing::TestParamInfo<WavWriterReaderTest::ParamType>& info) {
+                           std::string name;
+                           switch (std::get<0>(info.param).sample_format) {
+                             case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
+                               name = "Uint8";
+                               break;
+                             case fuchsia::media::AudioSampleFormat::SIGNED_16:
+                               name = "Int16";
+                               break;
+                             case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
+                               name = (std::get<0>(info.param).file_sample_size == 3) ? "Packed24"
+                                                                                      : "Padded24";
+                               break;
+                             case fuchsia::media::AudioSampleFormat::FLOAT:
+                               name = "Float32";
+                               break;
+                           }
+                           name += "_" + std::to_string(std::get<1>(info.param)) + "chan";
+                           return name;
+                         });
 
 }  // namespace
 }  // namespace media::audio
