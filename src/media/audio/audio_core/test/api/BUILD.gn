@@ -26,6 +26,11 @@ audio_core_test_package("audio-core-with-test-effects") {
   }
 }
 
+resource("audio-core-config-with-gain-limits") {
+  sources = [ "testdata/audio_core_config_with_gain_limits.json" ]
+  outputs = [ "data/audio-core-config-with-gain-limits/audio_core_config.json" ]
+}
+
 resource("audio-core-config-with-inversion-filter") {
   sources = [ "testdata/audio_core_config_with_inversion_filter.json" ]
   outputs =
@@ -91,8 +96,12 @@ audio_core_api_test_component("audio-renderer-test") {
 
 audio_core_api_test_component("audio-renderer-pipeline-test") {
   source = "audio_renderer_pipeline_test.cc"
-  executable_deps = [ "//src/media/audio/lib/analysis" ]
+  executable_deps = [
+    "//src/media/audio/audio_core/mixer",
+    "//src/media/audio/lib/analysis",
+  ]
   component_deps = [
+    ":audio-core-config-with-gain-limits",
     ":audio-core-config-with-inversion-filter",
     ":audio-core-config-with-sleeper-filter",
     ":audio-core-with-test-effects",

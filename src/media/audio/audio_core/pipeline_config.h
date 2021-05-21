@@ -41,6 +41,8 @@ class PipelineConfig {
     std::vector<RenderUsage> input_streams;
     std::vector<Effect> effects;
     std::vector<MixGroup> inputs;
+    std::optional<float> min_gain_db;
+    std::optional<float> max_gain_db;
     bool loopback = false;
     // TODO(fxbug.dev/70642): rename these fields require that they be specified explicitly
     int32_t output_rate = kDefaultMixGroupRate;

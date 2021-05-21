@@ -15,8 +15,10 @@ namespace media::audio {
 
 constexpr int64_t Mixer::Bookkeeping::kScaleArrLen;
 
-Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width)
-    : pos_filter_width_(pos_filter_width), neg_filter_width_(neg_filter_width) {}
+Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits)
+    : pos_filter_width_(pos_filter_width),
+      neg_filter_width_(neg_filter_width),
+      bookkeeping_(gain_limits) {}
 
 //
 // Select an appropriate instance of a mixer based on the user-specified
@@ -28,7 +30,7 @@ Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width)
 // fail (i.e. return nullptr), even in cases where 'Default' would succeed.
 std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& source_format,
                                      const fuchsia::media::AudioStreamType& dest_format,
-                                     Resampler resampler) {
+                                     Resampler resampler, Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "Mixer::Select");
 
   if (source_format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND ||
@@ -75,9 +77,9 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& sour
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:
-      return mixer::PointSampler::Select(source_format, dest_format);
+      return mixer::PointSampler::Select(source_format, dest_format, gain_limits);
     case Resampler::WindowedSinc:
-      return mixer::SincSampler::Select(source_format, dest_format);
+      return mixer::SincSampler::Select(source_format, dest_format, gain_limits);
 
       // Otherwise (if Default), continue onward.
     case Resampler::Default:
@@ -88,9 +90,9 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& sour
   // integrated low-pass filter).
   TimelineRate source_to_dest(dest_format.frames_per_second, source_format.frames_per_second);
   if (source_to_dest.subject_delta() == 1 && source_to_dest.reference_delta() == 1) {
-    return mixer::PointSampler::Select(source_format, dest_format);
+    return mixer::PointSampler::Select(source_format, dest_format, gain_limits);
   } else {
-    return mixer::SincSampler::Select(source_format, dest_format);
+    return mixer::SincSampler::Select(source_format, dest_format, gain_limits);
   }
 }
 

@@ -95,8 +95,9 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     uint32_t* usage_mask, Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec);
 
-  auto stage = std::make_shared<MixStage>(output_format, max_block_size_frames,
-                                          ref_pts_to_fractional_frame, audio_clock);
+  auto stage =
+      std::make_shared<MixStage>(output_format, max_block_size_frames, ref_pts_to_fractional_frame,
+                                 audio_clock, spec.min_gain_db, spec.max_gain_db);
   for (const auto& usage : spec.input_streams) {
     auto mask = 1 << static_cast<uint32_t>(usage);
     FX_DCHECK((*usage_mask & mask) == 0);

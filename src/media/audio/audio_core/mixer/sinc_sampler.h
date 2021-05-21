@@ -13,11 +13,12 @@ namespace media::audio::mixer {
 class SincSampler : public Mixer {
  public:
   static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& source_format,
-                                       const fuchsia::media::AudioStreamType& dest_format);
+                                       const fuchsia::media::AudioStreamType& dest_format,
+                                       Gain::Limits gain_limits = {});
 
  protected:
-  SincSampler(Fixed pos_filter_width, Fixed neg_filter_width)
-      : Mixer(pos_filter_width, neg_filter_width) {}
+  SincSampler(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits)
+      : Mixer(pos_filter_width, neg_filter_width, gain_limits) {}
 };
 
 }  // namespace media::audio::mixer

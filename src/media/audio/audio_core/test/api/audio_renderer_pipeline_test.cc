@@ -14,6 +14,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_tuner_impl.h"
+#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/test/comparators.h"
@@ -578,6 +579,154 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
   auto noise_ratio = result.total_magn_signal / result.total_magn_other;
   EXPECT_LT(noise_ratio, 0.02) << "\ntotal_magn_highfreq_noise = " << result.total_magn_signal
                                << "\ntotal_magn_other = " << result.total_magn_other;
+}
+
+class AudioRendererGainLimitsTest : public AudioRendererPipelineTestFloat {
+ protected:
+  // For these tests:
+  //   min_gain_db = -20
+  //   max_gain_db = -10
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteEnvironmentOptions(HermeticAudioEnvironment::Options{
+        .audio_core_config_data_path = "/pkg/data/audio-core-config-with-gain-limits",
+    });
+  }
+
+  // The test plays a sequence of constant values with amplitude 1.0. This output waveform's
+  // amplitude will be adjusted by the specified stream and usage gains.
+  struct TestCase {
+    // Calls SetMute(true) if |input_stream_mute|, otherwise SetGain.
+    float input_stream_gain_db = 0;
+    bool input_stream_mute = false;
+    // Calls SetMute(true) if |media_mute|, otherwise SetGain.
+    float media_gain_db = 0;
+    bool media_mute = false;
+    float expected_output_sample = 1.0;
+  };
+
+  void Run(TestCase tc) {
+    auto [renderer, format] = CreateRenderer(kOutputFrameRate);
+    const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
+    const auto frames_per_packet = num_frames / num_packets;
+    const auto kSilentPrefix = frames_per_packet;
+
+    // Set stream gain/mute.
+    fuchsia::media::audio::GainControlPtr gain_control;
+    renderer->fidl()->BindGainControl(gain_control.NewRequest());
+    AddErrorHandler(gain_control, "AudioRenderer::GainControl");
+    if (tc.input_stream_mute) {
+      gain_control->SetMute(true);
+    } else {
+      gain_control->SetGain(tc.input_stream_gain_db);
+    }
+
+    // Set usage gain/mute.
+    if (tc.media_mute) {
+      fuchsia::media::audio::VolumeControlPtr volume_control;
+      audio_core_->BindUsageVolumeControl(
+          fuchsia::media::Usage::WithRenderUsage(AudioRenderUsage::MEDIA),
+          volume_control.NewRequest());
+      volume_control->SetMute(true);
+    } else {
+      audio_core_->SetRenderUsageGain(AudioRenderUsage::MEDIA, tc.media_gain_db);
+    }
+
+    // Render.
+    auto input_buffer = GenerateSilentAudio(format, kSilentPrefix);
+    auto signal = GenerateConstantAudio(format, num_frames - kSilentPrefix, 1.0);
+    input_buffer.Append(&signal);
+
+    auto packets = renderer->AppendSlice(input_buffer, frames_per_packet);
+    renderer->PlaySynchronized(this, output_, 0);
+    renderer->WaitForPackets(this, packets);
+    auto ring_buffer = output_->SnapshotRingBuffer();
+
+    auto expected_output_buffer =
+        GenerateConstantAudio(format, num_frames - kSilentPrefix, tc.expected_output_sample);
+
+    CompareAudioBufferOptions opts;
+    opts.num_frames_per_packet = kDebugFramesPerPacket;
+    opts.test_label = "check initial silence";
+    CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, kSilentPrefix),
+                        AudioBufferSlice<ASF::FLOAT>(), opts);
+    opts.test_label = "check data";
+    CompareAudioBuffers(AudioBufferSlice(&ring_buffer, kSilentPrefix, num_frames - kSilentPrefix),
+                        AudioBufferSlice(&expected_output_buffer, 0, num_frames - kSilentPrefix),
+                        opts);
+    opts.test_label = "check final silence";
+    CompareAudioBuffers(AudioBufferSlice(&ring_buffer, num_frames, output_->frame_count()),
+                        AudioBufferSlice<ASF::FLOAT>(), opts);
+  }
+};
+
+TEST_F(AudioRendererGainLimitsTest, StreamGainRespectsMinGain) {
+  Run({
+      .input_stream_gain_db = -30,
+      .expected_output_sample = Gain::DbToScale(-20),
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, StreamGainsRespectsMaxGain) {
+  Run({
+      .input_stream_gain_db = -1,
+      .expected_output_sample = Gain::DbToScale(-10),
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, StreamGainInRange) {
+  Run({
+      .input_stream_gain_db = -15,
+      .expected_output_sample = Gain::DbToScale(-15),
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, UsageGainRespectsMinGain) {
+  Run({
+      .media_gain_db = -30,
+      .expected_output_sample = Gain::DbToScale(-20),
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, UsageGainsRespectsMaxGain) {
+  Run({
+      .media_gain_db = -1,
+      .expected_output_sample = Gain::DbToScale(-10),
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, UsageGainInRange) {
+  Run({
+      .media_gain_db = -15,
+      .expected_output_sample = Gain::DbToScale(-15),
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, KeepStreamMuteGain) {
+  Run({
+      .input_stream_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
+      .expected_output_sample = 0,
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, KeepStreamMute) {
+  Run({
+      .input_stream_mute = true,
+      .expected_output_sample = 0,
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, KeepUsageMuteGain) {
+  Run({
+      .media_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
+      .expected_output_sample = 0,
+  });
+}
+
+TEST_F(AudioRendererGainLimitsTest, KeepUsageMute) {
+  Run({
+      .media_mute = true,
+      .expected_output_sample = 0,
+  });
 }
 
 class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {

@@ -20,13 +20,14 @@ namespace media::audio::mixer {
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 class SincSamplerImpl : public SincSampler {
  public:
-  SincSamplerImpl(int32_t source_frame_rate, int32_t dest_frame_rate)
+  SincSamplerImpl(int32_t source_frame_rate, int32_t dest_frame_rate, Gain::Limits gain_limits)
       : SincSampler(
             // TODO(fxbug.dev/72561): Convert Mixer and the rest of audio_core to a filter_width
             // definition that includes [0] in its count (as SincFilter::Length does).
             SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1),
             // Sinc filters are symmetric (pos == neg, for coefficient values)
-            SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1)),
+            SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1),
+            gain_limits),
         frac_filter_length_(SincFilter::Length(source_frame_rate, dest_frame_rate).raw_value()),
         source_rate_(source_frame_rate),
         dest_rate_(dest_frame_rate),
@@ -293,31 +294,36 @@ bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
 // Templates used to expand  the different combinations of possible SincSampler configurations.
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format) {
+                                               const fuchsia::media::AudioStreamType& dest_format,
+                                               Gain::Limits gain_limits) {
   return std::make_unique<SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>(
-      source_format.frames_per_second, dest_format.frames_per_second);
+      source_format.frames_per_second, dest_format.frames_per_second, gain_limits);
 }
 
 template <int32_t DestChanCount, typename SourceSampleType>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format) {
+                                               const fuchsia::media::AudioStreamType& dest_format,
+                                               Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SelectSSM(dChan,sType)");
 
   switch (source_format.channels) {
     case 1:
       if constexpr (DestChanCount <= 4) {
-        return SelectSSM<DestChanCount, SourceSampleType, 1>(source_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 1>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     case 2:
       if constexpr (DestChanCount <= 4) {
-        return SelectSSM<DestChanCount, SourceSampleType, 2>(source_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 2>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     case 3:
       // Unlike other samplers, we handle 3:3 here since there is no NxN sinc sampler variant.
       if constexpr (DestChanCount <= 3) {
-        return SelectSSM<DestChanCount, SourceSampleType, 3>(source_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 3>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     case 4:
@@ -331,7 +337,8 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
       // TODO(fxbug.dev/13682): account for frequency range (e.g. "4-channel" stereo woofer+tweeter)
       if constexpr (DestChanCount <= 2 || DestChanCount == 4) {
-        return SelectSSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format);
+        return SelectSSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     default:
@@ -344,18 +351,19 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
 
 template <int32_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format) {
+                                               const fuchsia::media::AudioStreamType& dest_format,
+                                               Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SelectSSM(dChan)");
 
   switch (source_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return SelectSSM<DestChanCount, uint8_t>(source_format, dest_format);
+      return SelectSSM<DestChanCount, uint8_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return SelectSSM<DestChanCount, int16_t>(source_format, dest_format);
+      return SelectSSM<DestChanCount, int16_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return SelectSSM<DestChanCount, int32_t>(source_format, dest_format);
+      return SelectSSM<DestChanCount, int32_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return SelectSSM<DestChanCount, float>(source_format, dest_format);
+      return SelectSSM<DestChanCount, float>(source_format, dest_format, gain_limits);
     default:
       FX_LOGS(WARNING) << "SincSampler does not support this sample_format: "
                        << static_cast<int64_t>(source_format.sample_format);
@@ -364,7 +372,8 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
 }
 
 std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType& source_format,
-                                           const fuchsia::media::AudioStreamType& dest_format) {
+                                           const fuchsia::media::AudioStreamType& dest_format,
+                                           Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SincSampler::Select");
 
   if (source_format.channels > 4) {
@@ -375,11 +384,11 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
 
   switch (dest_format.channels) {
     case 1:
-      return SelectSSM<1>(source_format, dest_format);
+      return SelectSSM<1>(source_format, dest_format, gain_limits);
     case 2:
-      return SelectSSM<2>(source_format, dest_format);
+      return SelectSSM<2>(source_format, dest_format, gain_limits);
     case 3:
-      return SelectSSM<3>(source_format, dest_format);
+      return SelectSSM<3>(source_format, dest_format, gain_limits);
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
@@ -387,7 +396,7 @@ std::unique_ptr<Mixer> SincSampler::Select(const fuchsia::media::AudioStreamType
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
       // TODO(fxbug.dev/13682): account for frequency range (e.g. a "4-channel" stereo
       // woofer+tweeter).
-      return SelectSSM<4>(source_format, dest_format);
+      return SelectSSM<4>(source_format, dest_format, gain_limits);
     default:
       FX_LOGS(WARNING) << "SincSampler does not support this channelization: "
                        << source_format.channels << " -> " << dest_format.channels;

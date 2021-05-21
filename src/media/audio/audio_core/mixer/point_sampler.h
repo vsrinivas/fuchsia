@@ -14,11 +14,12 @@ namespace media::audio::mixer {
 class PointSampler : public Mixer {
  public:
   static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& source_format,
-                                       const fuchsia::media::AudioStreamType& dest_format);
+                                       const fuchsia::media::AudioStreamType& dest_format,
+                                       Gain::Limits gain_limits = {});
 
  protected:
-  PointSampler(Fixed pos_filter_width, Fixed neg_filter_width)
-      : Mixer(pos_filter_width, neg_filter_width) {}
+  PointSampler(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits)
+      : Mixer(pos_filter_width, neg_filter_width, gain_limits) {}
 };
 
 }  // namespace media::audio::mixer

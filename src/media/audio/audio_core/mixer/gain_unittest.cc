@@ -17,14 +17,17 @@ using testing::FloatEq;
 using testing::Not;
 using testing::Pointwise;
 
+static constexpr auto kMinGainDb = media::audio::Gain::kMinGainDb;
+static constexpr auto kMaxGainDb = media::audio::Gain::kMaxGainDb;
+
 namespace media::audio::test {
 
 TEST(StaticGainTest, CombineGains) {
-  static_assert(-90.0 < Gain::kMinGainDb / 2);
-  static_assert(15.0 > Gain::kMaxGainDb / 2);
+  static_assert(-90.0 < kMinGainDb / 2);
+  static_assert(15.0 > kMaxGainDb / 2);
 
-  EXPECT_EQ(Gain::CombineGains(-90, -90), Gain::kMinGainDb);
-  EXPECT_EQ(Gain::CombineGains(15, 15), Gain::kMaxGainDb);
+  EXPECT_EQ(Gain::CombineGains(-90, -90), kMinGainDb);
+  EXPECT_EQ(Gain::CombineGains(15, 15), kMaxGainDb);
   EXPECT_EQ(Gain::CombineGains(-20, 5), -15);
 }
 
@@ -223,8 +226,8 @@ void GainBase::UnityChecks() {
   TestUnityGain(Gain::kUnityGainDb, Gain::kUnityGainDb);
 
   // These positive/negative values should sum to 0.0: UNITY
-  TestUnityGain(Gain::kMaxGainDb / 2, -Gain::kMaxGainDb / 2);
-  TestUnityGain(-Gain::kMaxGainDb, Gain::kMaxGainDb);
+  TestUnityGain(kMaxGainDb / 2, -kMaxGainDb / 2);
+  TestUnityGain(-kMaxGainDb, kMaxGainDb);
 }
 // Do source and destination gains correctly combine to produce unity scaling?
 TEST_F(SourceGainTest, Unity) { UnityChecks(); }
@@ -280,10 +283,8 @@ void GainBase::VerifyMinGain(float first_gain_db, float second_gain_db) {
 
   EXPECT_FLOAT_EQ(Gain::kMuteScale, gain_.GetGainScale());
 
-  EXPECT_FLOAT_EQ(GetPartialGainDb(),
-                  std::clamp(first_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
-  EXPECT_FLOAT_EQ(GetOtherPartialGainDb(),
-                  std::clamp(second_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
+  EXPECT_FLOAT_EQ(GetPartialGainDb(), std::clamp(first_gain_db, kMinGainDb, kMaxGainDb));
+  EXPECT_FLOAT_EQ(GetOtherPartialGainDb(), std::clamp(second_gain_db, kMinGainDb, kMaxGainDb));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
@@ -291,25 +292,25 @@ void GainBase::VerifyMinGain(float first_gain_db, float second_gain_db) {
 void GainBase::MinGainChecks() {
   // First, test for source/dest interactions.
   // if dest gain <= kMinGainDb, scale must be 0, regardless of source gain.
-  VerifyMinGain(-2 * Gain::kMinGainDb, Gain::kMinGainDb);
+  VerifyMinGain(-2 * kMinGainDb, kMinGainDb);
 
   // if source gain <= kMinGainDb, scale must be 0, regardless of dest gain.
-  VerifyMinGain(Gain::kMinGainDb, Gain::kMaxGainDb * 1.2);
+  VerifyMinGain(kMinGainDb, kMaxGainDb * 1.2);
 
   // if sum of source gain and dest gain <= kMinGainDb, scale should be 0.
   // dest gain is just slightly above MinGain; source gain takes us below it.
-  VerifyMinGain(-2.0f, Gain::kMinGainDb + 1.0f);
+  VerifyMinGain(-2.0f, kMinGainDb + 1.0f);
 
   // Next, test for source/dest interactions.
   // Check if source alone mutes.
-  VerifyMinGain(Gain::kMinGainDb, Gain::kUnityGainDb);
-  VerifyMinGain(Gain::kMinGainDb, Gain::kUnityGainDb + 1);
+  VerifyMinGain(kMinGainDb, Gain::kUnityGainDb);
+  VerifyMinGain(kMinGainDb, Gain::kUnityGainDb + 1);
   // Check if dest alone mutes.
-  VerifyMinGain(Gain::kUnityGainDb + 1, Gain::kMinGainDb);
-  VerifyMinGain(Gain::kUnityGainDb, Gain::kMinGainDb);
+  VerifyMinGain(Gain::kUnityGainDb + 1, kMinGainDb);
+  VerifyMinGain(Gain::kUnityGainDb, kMinGainDb);
 
   // Check if the combination mutes.
-  VerifyMinGain(Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
+  VerifyMinGain(kMinGainDb / 2, kMinGainDb / 2);
 }
 // System independently limits source gain and dest gain to kMinGainDb (-160dB).
 // Assert scale is zero, if either (or combo) are kMinGainDb or less.
@@ -321,29 +322,27 @@ void GainBase::VerifyMaxGain(float first_gain_db, float second_gain_db) {
   SetOtherGain(second_gain_db);
 
   EXPECT_FLOAT_EQ(Gain::kMaxScale, gain_.GetGainScale());
-  EXPECT_FLOAT_EQ(Gain::kMaxGainDb, gain_.GetGainDb());
+  EXPECT_FLOAT_EQ(kMaxGainDb, gain_.GetGainDb());
 
-  EXPECT_FLOAT_EQ(GetPartialGainDb(),
-                  std::clamp(first_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
-  EXPECT_FLOAT_EQ(GetOtherPartialGainDb(),
-                  std::clamp(second_gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
+  EXPECT_FLOAT_EQ(GetPartialGainDb(), std::clamp(first_gain_db, kMinGainDb, kMaxGainDb));
+  EXPECT_FLOAT_EQ(GetOtherPartialGainDb(), std::clamp(second_gain_db, kMinGainDb, kMaxGainDb));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
 }
 void GainBase::MaxGainChecks() {
   // Check if source or dest alone leads to max scale.
-  VerifyMaxGain(Gain::kMaxGainDb, Gain::kUnityGainDb);
+  VerifyMaxGain(kMaxGainDb, Gain::kUnityGainDb);
 
   // Check if the combination leads to max scale.
-  VerifyMinGain(Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
+  VerifyMinGain(kMinGainDb / 2, kMinGainDb / 2);
 
   // One gain is just slightly below MaxGain; the other will take us above it.
-  VerifyMaxGain(Gain::kMaxGainDb - 1.0f, 2.0f);
+  VerifyMaxGain(kMaxGainDb - 1.0f, 2.0f);
 
   // Stages are not clamped until they are combined
   // otherwise, the first would be clamped and the combination would be kMaxGainDb-1.0
-  VerifyMaxGain(Gain::kMaxGainDb + 1.0f, -1.0f);
+  VerifyMaxGain(kMaxGainDb + 1.0f, -1.0f);
 }
 // System only limits source gain and dest gain to kMaxGainDb (+24dB) when they are combined.
 // Assert scale is max, if either (or combo) are kMaxGainDb or more.
@@ -370,7 +369,7 @@ void GainBase::SourceMuteChecks() {
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_LE(gain_.GetGainDb(), Gain::kMinGainDb);
+  EXPECT_LE(gain_.GetGainDb(), kMinGainDb);
 
   gain_.SetSourceMute(false);
   SetGainWithRamp(-10.0, zx::msec(25));
@@ -385,7 +384,7 @@ void GainBase::SourceMuteChecks() {
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
-  EXPECT_LE(gain_.GetGainDb(), Gain::kMinGainDb);
+  EXPECT_LE(gain_.GetGainDb(), kMinGainDb);
 }
 // source_mute control should affect IsSilent, IsUnity, IsRamping and GetGainScale appropriately.
 TEST_F(SourceGainTest, SourceMuteOverridesGainAndRamp) { SourceMuteChecks(); }
@@ -415,7 +414,7 @@ void GainBase::TestRampWithDuration() {
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
 
-  SetGainWithRamp(Gain::kMinGainDb, zx::nsec(1));
+  SetGainWithRamp(kMinGainDb, zx::nsec(1));
   EXPECT_TRUE(gain_.GetGainScale() == Gain::kUnityScale);
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsUnity());
@@ -427,14 +426,14 @@ TEST_F(DestGainRampTest, SetRampWithDurationDoesntChangeCurrentGain) { TestRampW
 
 void GainBase::TestRampIntoSilence() {
   SetGain(0.0f);
-  SetOtherGain(Gain::kMinGainDb + 1.0f);
-  SetGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(1));
+  SetOtherGain(kMinGainDb + 1.0f);
+  SetGainWithRamp(kMinGainDb + 1.0f, zx::sec(1));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
 
   SetOtherGain(0.0f);
-  SetGainWithRamp(Gain::kMinGainDb * 2, zx::sec(1));
+  SetGainWithRamp(kMinGainDb * 2, zx::sec(1));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
@@ -445,7 +444,7 @@ TEST_F(DestGainRampTest, RampFromNonSilenceToSilenceIsNotSilent) { TestRampIntoS
 
 void GainBase::TestRampOutOfSilence() {
   // Combined, we start in silence...
-  SetGain(Gain::kMinGainDb + 10.f);
+  SetGain(kMinGainDb + 10.f);
   SetOtherGain(-22.0f);
   EXPECT_TRUE(gain_.IsSilent());
   // ... and ramp out of it
@@ -455,12 +454,12 @@ void GainBase::TestRampOutOfSilence() {
   EXPECT_TRUE(gain_.IsRamping());
 
   // The first stage, on its own, makes us silent...
-  SetGain(Gain::kMinGainDb - 5.0f);
+  SetGain(kMinGainDb - 5.0f);
   SetOtherGain(0.0f);
   EXPECT_TRUE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
   // ... but it ramps out of it.
-  SetGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(1));
+  SetGainWithRamp(kMinGainDb + 1.0f, zx::sec(1));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
@@ -471,13 +470,13 @@ TEST_F(DestGainRampTest, RampFromSilenceToNonSilenceIsNotSilent) { TestRampOutOf
 
 void GainBase::TestRampFromSilenceToSilence() {
   // Both start and end are at/below kMinGainDb -- ramping up
-  SetGain(Gain::kMinGainDb - 1.0f);
-  SetGainWithRamp(Gain::kMinGainDb, zx::sec(1));
+  SetGain(kMinGainDb - 1.0f);
+  SetGainWithRamp(kMinGainDb, zx::sec(1));
   EXPECT_TRUE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
 
   // Both start and end are at/below kMinGainDb -- ramping down
-  SetGainWithRamp(Gain::kMinGainDb - 2.0f, zx::sec(1));
+  SetGainWithRamp(kMinGainDb - 2.0f, zx::sec(1));
   EXPECT_TRUE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
 }
@@ -487,7 +486,7 @@ TEST_F(DestGainRampTest, RampFromSilenceToSilenceIsNotRamping) { TestRampFromSil
 
 void GainBase::TestRampsCombineForSilence() {
   // Both start and end are at/below kMinGainDb -- ramping up
-  SetGain(Gain::kMinGainDb);
+  SetGain(kMinGainDb);
   SetOtherGain(Gain::kUnityGainDb);
   EXPECT_TRUE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
@@ -495,7 +494,7 @@ void GainBase::TestRampsCombineForSilence() {
   // Because our scalelinear ramps are not equal-power, we "bulge" at the midpoint of fades, thus
   // combined ramps may not be silent just because their endpoints are.
   SetGainWithRamp(Gain::kUnityGainDb, zx::sec(1));
-  SetOtherGainWithRamp(Gain::kMinGainDb, zx::sec(1));
+  SetOtherGainWithRamp(kMinGainDb, zx::sec(1));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_TRUE(gain_.IsRamping());
 }
@@ -605,14 +604,14 @@ void GainBase::TestRampsForSilence() {
   EXPECT_TRUE(gain_.IsSilent());
 
   SetGain(10.0f);
-  SetOtherGain(Gain::kMinGainDb);
+  SetOtherGain(kMinGainDb);
   SetGainWithRamp(12.0f, zx::sec(1));
   // Ramping upward, but other stage is below mute threshold
   EXPECT_TRUE(gain_.IsSilent());
 
-  SetGain(Gain::kMinGainDb - 5.0f);
+  SetGain(kMinGainDb - 5.0f);
   SetOtherGain(10.0f);
-  SetGainWithRamp(Gain::kMinGainDb, zx::sec(1));
+  SetGainWithRamp(kMinGainDb, zx::sec(1));
   // Ramping upward, but to a target below mute threshold
   EXPECT_TRUE(gain_.IsSilent());
 }
@@ -633,9 +632,9 @@ void GainBase::TestRampsForNonSilence() {
   // Below the silence threshold but ramping upward
   EXPECT_FALSE(gain_.IsSilent());
 
-  SetGain(Gain::kMinGainDb - 5.0f);
+  SetGain(kMinGainDb - 5.0f);
   SetOtherGain(10.0f);
-  SetGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(1));
+  SetGainWithRamp(kMinGainDb + 1.0f, zx::sec(1));
   // Ramping from below to above mute threshold
   EXPECT_FALSE(gain_.IsSilent());
 
@@ -983,5 +982,183 @@ void GainBase::TestCrossFades() {
 // equal-power, the result won't be constant-gain, but it will have a predictable shape.
 TEST_F(SourceGainScaleArrayTest, CrossFades) { TestCrossFades(); }
 TEST_F(DestGainScaleArrayTest, CrossFades) { TestCrossFades(); }
+
+// Tests for Set{Min,Max}Gain.
+
+TEST(GainLimitsTest, LimitedByMinGain) {
+  Gain gain({
+      .min_gain_db = -30,
+  });
+  gain.SetSourceGain(-20);
+  gain.SetDestGain(-20);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -30);
+}
+
+TEST(GainLimitsTest, LimitedByMaxGain) {
+  Gain gain({
+      .max_gain_db = 3,
+  });
+  gain.SetSourceGain(2);
+  gain.SetDestGain(2);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), 3);
+}
+
+TEST(GainLimitsTest, AllowedWhenSourceDestInRange) {
+  Gain gain({
+      .min_gain_db = -40,
+      .max_gain_db = -10,
+  });
+  gain.SetSourceGain(-15);
+  gain.SetDestGain(-15);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -30);
+}
+
+TEST(GainLimitsTest, AllowedWhenSourceInRange) {
+  Gain gain({
+      .min_gain_db = -10,
+      .max_gain_db = 10,
+  });
+  gain.SetSourceGain(5);
+  gain.SetDestGain(-11);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -6);
+}
+
+TEST(GainLimitsTest, AllowedWhenDestInRange) {
+  Gain gain({
+      .min_gain_db = -10,
+      .max_gain_db = 10,
+  });
+  gain.SetSourceGain(-11);
+  gain.SetDestGain(5);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -6);
+}
+
+TEST(GainLimitsTest, AllowedWhenSourceDestHigh) {
+  Gain gain({
+      .min_gain_db = -20,
+      .max_gain_db = -10,
+  });
+  gain.SetSourceGain(-6);
+  gain.SetDestGain(-6);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -12);
+}
+
+TEST(GainLimitsTest, AllowedWhenSourceDestLow) {
+  Gain gain({
+      .min_gain_db = 5,
+      .max_gain_db = 10,
+  });
+  gain.SetSourceGain(3);
+  gain.SetDestGain(3);
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), 6);
+}
+
+TEST(GainLimitsTest, PreserveSourceMuteGain) {
+  Gain gain({
+      .min_gain_db = -10,
+  });
+  gain.SetSourceGain(kMinGainDb);
+  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kMuteScale);
+}
+
+TEST(GainLimitsTest, PreserveDestMuteGain) {
+  Gain gain({
+      .min_gain_db = -10,
+  });
+  gain.SetDestGain(kMinGainDb);
+  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kMuteScale);
+}
+
+TEST(GainLimitsTest, PreserveSourceMute) {
+  Gain gain({
+      .min_gain_db = -10,
+  });
+  gain.SetSourceGain(-15);
+  gain.SetSourceMute(true);
+  EXPECT_FLOAT_EQ(gain.GetGainScale(), Gain::kMuteScale);
+}
+
+TEST(GainLimitsTest, SourceRampUp) {
+  Gain::AScale scale_arr[6];
+  // Without limits, this is:  {0.1, 0.28, 0.46, 0.64, 0.82, 1.0};
+  Gain::AScale expect_arr[6] = {0.3, 0.30, 0.46, 0.64, 0.80, 0.8};
+
+  Gain gain({
+      .min_gain_db = Gain::ScaleToDb(0.30),
+      .max_gain_db = Gain::ScaleToDb(0.80),
+  });
+  gain.SetSourceGain(-20);
+  gain.SetSourceGainWithRamp(0, zx::msec(5));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
+  EXPECT_TRUE(gain.IsRamping());
+}
+
+TEST(GainLimitsTest, SourceRampEntirelyBelowMin) {
+  Gain gain({
+      .min_gain_db = -11,
+  });
+  gain.SetSourceGain(-15);
+  gain.SetSourceGainWithRamp(-16, zx::sec(1));
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -11);
+  EXPECT_TRUE(gain.IsRamping());
+}
+
+TEST(GainLimitsTest, DestRampDown) {
+  Gain::AScale scale_arr[6];
+  // Without limits, this is:  {1.0, 0.82, 0.64, 0.46, 0.28, 0.1};
+  Gain::AScale expect_arr[6] = {0.8, 0.80, 0.64, 0.46, 0.30, 0.3};
+
+  Gain gain({
+      .min_gain_db = Gain::ScaleToDb(0.30),
+      .max_gain_db = Gain::ScaleToDb(0.80),
+  });
+  gain.SetDestGainWithRamp(-20, zx::msec(5));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
+  EXPECT_TRUE(gain.IsRamping());
+}
+
+TEST(GainLimitsTest, DestRampEntirelyBelowMin) {
+  Gain gain({
+      .min_gain_db = -11,
+  });
+  gain.SetDestGain(-15);
+  gain.SetDestGainWithRamp(-16, zx::sec(1));
+  EXPECT_FLOAT_EQ(gain.GetGainDb(), -11);
+  EXPECT_TRUE(gain.IsRamping());
+}
+
+TEST(GainLimitsTest, GainScaleArrayRespectsMinWhenNotRamping) {
+  Gain::AScale scale_arr[6];
+  Gain::AScale expect_arr[6] = {0.2, 0.2, 0.2, 0.2, 0.2, 0.2};
+
+  Gain gain({
+      .min_gain_db = Gain::ScaleToDb(0.20),
+      .max_gain_db = Gain::ScaleToDb(0.80),
+  });
+  gain.SetSourceGain(Gain::ScaleToDb(0.1));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
+  EXPECT_FALSE(gain.IsRamping());
+}
+
+TEST(GainLimitsTest, GainScaleArrayRespectsMaxWhenNotRamping) {
+  Gain::AScale scale_arr[6];
+  Gain::AScale expect_arr[6] = {0.8, 0.8, 0.8, 0.8, 0.8, 0.8};
+
+  Gain gain({
+      .min_gain_db = Gain::ScaleToDb(0.20),
+      .max_gain_db = Gain::ScaleToDb(0.80),
+  });
+  gain.SetSourceGain(Gain::ScaleToDb(0.9));
+  gain.GetScaleArray(scale_arr, std::size(scale_arr), TimelineRate(1000, ZX_SEC(1)));
+
+  EXPECT_THAT(scale_arr, Pointwise(FloatEq(), expect_arr));
+  EXPECT_FALSE(gain.IsRamping());
+}
 
 }  // namespace media::audio::test

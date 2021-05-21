@@ -35,9 +35,10 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
 
   if (source_gain_db <= kMinGainDb && target_source_gain_db_ <= kMinGainDb) {
     if constexpr (kLogSetRamp) {
-      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp starts at/below min ("
-                    << target_source_gain_db_ << " dB) and ends at/below min (" << source_gain_db
-                    << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
+      FX_LOGS(INFO) << "Gain(" << this << "): SetSourceGainWithRamp starts at ("
+                    << target_source_gain_db_ << " dB) and ends at (" << source_gain_db
+                    << " dB), below min gain (" << kMinGainDb << " dB); " << duration.to_usecs()
+                    << "-usec ramp is ignored";
     }
     SetSourceGain(source_gain_db);
     return;
@@ -84,9 +85,10 @@ void Gain::SetDestGainWithRamp(float dest_gain_db, zx::duration duration,
 
   if (dest_gain_db <= kMinGainDb && target_dest_gain_db_ <= kMinGainDb) {
     if constexpr (kLogSetRamp) {
-      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGainWithRamp starts at/below min ("
-                    << target_dest_gain_db_ << " dB) and ends at/below min (" << dest_gain_db
-                    << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
+      FX_LOGS(INFO) << "Gain(" << this << "): SetDestGainWithRamp starts at ("
+                    << target_dest_gain_db_ << " dB) and ends at (" << dest_gain_db
+                    << " dB), below min gain (" << min_gain_db_ << " dB); " << duration.to_usecs()
+                    << "-usec ramp is ignored";
     }
     SetDestGain(dest_gain_db);
     return;
@@ -262,6 +264,15 @@ void Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
       scale_arr[idx] *= dest_scale;
     }
   }
+
+  // Apply gain limits.
+  if (min_gain_db_ > kMinGainDb || max_gain_db_ < kMaxGainDb) {
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
+      if (scale_arr[idx] > kMuteScale) {
+        scale_arr[idx] = std::clamp(scale_arr[idx], min_gain_scale_, max_gain_scale_);
+      }
+    }
+  }
 }
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in
@@ -313,6 +324,11 @@ void Gain::RecalculateGainScale() {
       // Else, we really do need to compute the combined gain-scale.
       combined_gain_scale_ = DbToScale(effective_gain_db);
     }
+  }
+
+  // Apply gain limits.
+  if (combined_gain_scale_ > kMuteScale) {
+    combined_gain_scale_ = std::clamp(combined_gain_scale_, min_gain_scale_, max_gain_scale_);
   }
 }
 

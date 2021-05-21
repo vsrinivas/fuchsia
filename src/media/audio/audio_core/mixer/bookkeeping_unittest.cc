@@ -13,7 +13,7 @@ namespace {
 
 class StubMixer : public Mixer {
  public:
-  StubMixer() : Mixer(Fixed(0), Fixed(0)) {}
+  StubMixer() : Mixer(Fixed(0), Fixed(0), Gain::Limits{}) {}
 
   bool Mix(float*, int64_t, int64_t*, const void*, int64_t, Fixed*, bool) final { return false; }
 };

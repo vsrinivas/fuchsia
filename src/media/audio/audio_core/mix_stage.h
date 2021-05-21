@@ -9,6 +9,8 @@
 #include <lib/async/cpp/time.h>
 #include <lib/zx/time.h>
 
+#include <optional>
+
 #include <gtest/gtest_prod.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
@@ -25,10 +27,13 @@ namespace media::audio {
 class MixStage : public ReadableStream {
  public:
   MixStage(const Format& output_format, uint32_t block_size,
-           TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& ref_clock);
+           TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& ref_clock,
+           std::optional<float> min_gain_db = std::nullopt,
+           std::optional<float> max_gain_db = std::nullopt);
   MixStage(const Format& output_format, uint32_t block_size,
            fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-           AudioClock& ref_clock);
+           AudioClock& ref_clock, std::optional<float> min_gain_db = std::nullopt,
+           std::optional<float> max_gain_db = std::nullopt);
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
@@ -87,6 +92,8 @@ class MixStage : public ReadableStream {
   std::vector<float> output_buffer_;
   AudioClock& output_ref_clock_;
   fbl::RefPtr<VersionedTimelineFunction> output_ref_clock_to_fractional_frame_;
+
+  const Gain::Limits gain_limits_;
 
   // The last buffer returned from ReadLock, saved to prevent recomputing frames on
   // consecutive calls to ReadLock. This is reset once the caller has unlocked the buffer,

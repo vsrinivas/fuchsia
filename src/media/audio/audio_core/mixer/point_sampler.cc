@@ -20,9 +20,9 @@ namespace media::audio::mixer {
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 class PointSamplerImpl : public PointSampler {
  public:
-  PointSamplerImpl()
+  explicit PointSamplerImpl(Gain::Limits gain_limits)
       : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
-                     Fixed::FromRaw(kFracNegativeFilterWidth)) {}
+                     Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits) {}
 
   bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
@@ -84,9 +84,9 @@ class PointSamplerImpl : public PointSampler {
 template <typename SourceSampleType>
 class NxNPointSamplerImpl : public PointSampler {
  public:
-  NxNPointSamplerImpl(int32_t chan_count)
+  NxNPointSamplerImpl(int32_t chan_count, Gain::Limits gain_limits)
       : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
-                     Fixed::FromRaw(kFracNegativeFilterWidth)),
+                     Fixed::FromRaw(kFracNegativeFilterWidth), gain_limits),
         chan_count_(chan_count) {}
 
   bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
@@ -349,35 +349,42 @@ bool NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_fr
 // Templates used to expand the combinations of possible PointSampler configurations.
 template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format) {
+                                               const fuchsia::media::AudioStreamType& dest_format,
+                                               Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SelectPSM(dChan,sType,sChan)");
-  return std::make_unique<PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>();
+  return std::make_unique<PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>(
+      gain_limits);
 }
 
 template <int32_t DestChanCount, typename SourceSampleType>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format) {
+                                               const fuchsia::media::AudioStreamType& dest_format,
+                                               Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SelectPSM(dChan,sType)");
 
   switch (source_format.channels) {
     case 1:
       if constexpr (DestChanCount <= 4) {
-        return SelectPSM<DestChanCount, SourceSampleType, 1>(source_format, dest_format);
+        return SelectPSM<DestChanCount, SourceSampleType, 1>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     case 2:
       if constexpr (DestChanCount <= 4) {
-        return SelectPSM<DestChanCount, SourceSampleType, 2>(source_format, dest_format);
+        return SelectPSM<DestChanCount, SourceSampleType, 2>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     case 3:
       if constexpr (DestChanCount <= 2) {
-        return SelectPSM<DestChanCount, SourceSampleType, 3>(source_format, dest_format);
+        return SelectPSM<DestChanCount, SourceSampleType, 3>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     case 4:
       if constexpr (DestChanCount <= 2) {
-        return SelectPSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format);
+        return SelectPSM<DestChanCount, SourceSampleType, 4>(source_format, dest_format,
+                                                             gain_limits);
       }
       break;
     default:
@@ -388,42 +395,44 @@ static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStream
 
 template <int32_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
-                                               const fuchsia::media::AudioStreamType& dest_format) {
+                                               const fuchsia::media::AudioStreamType& dest_format,
+                                               Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SelectPSM(dChan)");
 
   switch (source_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return SelectPSM<DestChanCount, uint8_t>(source_format, dest_format);
+      return SelectPSM<DestChanCount, uint8_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return SelectPSM<DestChanCount, int16_t>(source_format, dest_format);
+      return SelectPSM<DestChanCount, int16_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return SelectPSM<DestChanCount, int32_t>(source_format, dest_format);
+      return SelectPSM<DestChanCount, int32_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return SelectPSM<DestChanCount, float>(source_format, dest_format);
+      return SelectPSM<DestChanCount, float>(source_format, dest_format, gain_limits);
     default:
       return nullptr;
   }
 }
 
 static inline std::unique_ptr<Mixer> SelectNxNPSM(
-    const fuchsia::media::AudioStreamType& source_format) {
+    const fuchsia::media::AudioStreamType& source_format, Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "SelectNxNPSM");
   switch (source_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return std::make_unique<NxNPointSamplerImpl<uint8_t>>(source_format.channels);
+      return std::make_unique<NxNPointSamplerImpl<uint8_t>>(source_format.channels, gain_limits);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return std::make_unique<NxNPointSamplerImpl<int16_t>>(source_format.channels);
+      return std::make_unique<NxNPointSamplerImpl<int16_t>>(source_format.channels, gain_limits);
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return std::make_unique<NxNPointSamplerImpl<int32_t>>(source_format.channels);
+      return std::make_unique<NxNPointSamplerImpl<int32_t>>(source_format.channels, gain_limits);
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return std::make_unique<NxNPointSamplerImpl<float>>(source_format.channels);
+      return std::make_unique<NxNPointSamplerImpl<float>>(source_format.channels, gain_limits);
     default:
       return nullptr;
   }
 }
 
 std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamType& source_format,
-                                            const fuchsia::media::AudioStreamType& dest_format) {
+                                            const fuchsia::media::AudioStreamType& dest_format,
+                                            Gain::Limits gain_limits) {
   TRACE_DURATION("audio", "PointSampler::Select");
 
   if (source_format.frames_per_second != dest_format.frames_per_second) {
@@ -435,7 +444,7 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
   // If num_channels for source and dest are equal and > 2, directly map these one-to-one.
   // TODO(fxbug.dev/13361): eliminate NxN mixers; replace w/ flexible rechannelization (see below).
   if (source_format.channels == dest_format.channels && source_format.channels > 2) {
-    return SelectNxNPSM(source_format);
+    return SelectNxNPSM(source_format, gain_limits);
   }
 
   if (source_format.channels < 1 || source_format.channels > 4) {
@@ -446,18 +455,18 @@ std::unique_ptr<Mixer> PointSampler::Select(const fuchsia::media::AudioStreamTyp
 
   switch (dest_format.channels) {
     case 1:
-      return SelectPSM<1>(source_format, dest_format);
+      return SelectPSM<1>(source_format, dest_format, gain_limits);
     case 2:
-      return SelectPSM<2>(source_format, dest_format);
+      return SelectPSM<2>(source_format, dest_format, gain_limits);
     case 3:
-      return SelectPSM<3>(source_format, dest_format);
+      return SelectPSM<3>(source_format, dest_format, gain_limits);
     case 4:
       // For now, to mix Mono and Stereo sources to 4-channel destinations, we duplicate source
       // channels across multiple destinations (Stereo LR becomes LRLR, Mono M becomes MMMM).
       // Audio formats do not include info needed to filter frequencies or 3D-locate channels.
       // TODO(fxbug.dev/13679): enable the mixer to rechannelize in a more sophisticated way.
       // TODO(fxbug.dev/13682): account for frequency range (e.g. "4-channel" stereo woofer+tweeter)
-      return SelectPSM<4>(source_format, dest_format);
+      return SelectPSM<4>(source_format, dest_format, gain_limits);
     default:
       FX_LOGS(WARNING) << "PointSampler does not support this channelization: "
                        << source_format.channels << " -> " << dest_format.channels;

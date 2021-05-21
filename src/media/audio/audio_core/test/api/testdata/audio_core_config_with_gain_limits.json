@@ -1,0 +1,40 @@
+{
+  "volume_curve": [
+      {"level":0.0, "db":"MUTED"},
+      {"level":0.01,"db": -53.0},
+      {"level":0.1, "db": -44.0},
+      {"level":0.2, "db": -38.0},
+      {"level":0.3, "db": -32.0},
+      {"level":0.4, "db": -26.0},
+      {"level":0.5, "db": -21.0},
+      {"level":0.6, "db": -16.0},
+      {"level":0.7, "db": -11.0},
+      {"level":0.8, "db":  -6.0},
+      {"level":0.9, "db":  -2.5},
+      {"level":1.0, "db":   0.0}
+  ],
+  "output_devices": [
+    {
+      "device_id": "*",
+      "supported_stream_types": [
+        "render:media",
+        "render:background",
+        "render:interruption",
+        "render:system_agent",
+        "render:communications"
+      ],
+      "pipeline": {
+        "name": "default",
+        "streams": [
+          "render:media",
+          "render:background",
+          "render:interruption",
+          "render:system_agent",
+          "render:communications"
+        ],
+        "min_gain_db": -20,
+        "max_gain_db": -10
+      }
+    }
+  ]
+}

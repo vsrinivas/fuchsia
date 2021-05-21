@@ -168,6 +168,8 @@ class Mixer {
   // Source_offset and step_size use the same fixed-point format, so they have identical precision
   // limitations. Source_pos_modulo, then, represents fractions of source subframe position.
   struct Bookkeeping {
+    explicit Bookkeeping(Gain::Limits gain_limits = Gain::Limits{}) : gain(gain_limits) {}
+
     // This object maintains gain values in the mix path, including source gain and a snapshot of
     // destination gain (the definitive value for destination gain is owned elsewhere). Gain accepts
     // level in dB, and provides gainscale as float multiplier.
@@ -264,7 +266,8 @@ class Mixer {
   // performance across changing conditions, callers should use Default whenever possible.
   static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& source_format,
                                        const fuchsia::media::AudioStreamType& dest_format,
-                                       Resampler resampler_type = Resampler::Default);
+                                       Resampler resampler_type = Resampler::Default,
+                                       Gain::Limits gain_limits = Gain::Limits{});
 
   //
   // Mix
@@ -365,7 +368,7 @@ class Mixer {
   virtual void EagerlyPrepare() {}
 
  protected:
-  Mixer(Fixed pos_filter_width, Fixed neg_filter_width);
+  Mixer(Fixed pos_filter_width, Fixed neg_filter_width, Gain::Limits gain_limits);
 
  private:
   const Fixed pos_filter_width_;

@@ -99,7 +99,11 @@
         // _before_ applying any effects, which could apply further rechannelizations.
         //
         // This will default to '2' if unspecified.
-        "output_channels": { "$ref" : "#/definitions/channel_count" }
+        "output_channels": { "$ref" : "#/definitions/channel_count" },
+
+        // Gain limits for this stage.
+        "min_gain_db": "number",  // defaults to fuchsia::media::audio::MUTED_GAIN_DB if unspecified
+        "max_gain_db": "number"   // defaults to fuchsia::media::audio::MAX_GAIN_DB if unspecified
       },
       "additionalProperties": false
     },

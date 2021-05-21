@@ -147,13 +147,18 @@ const char kThrottledConfig[] = "config";
 // Verifies that the thermal agent works properly with a single thermal config entry with one
 // trip point.
 TEST_F(ThermalAgentTest, OneConfigEntry) {
-  PipelineConfig pipeline_config({"mixgroup",
-                                  {},
-                                  {{"lib", "effect", kTargetName, kNominalConfig, std::nullopt}},
-                                  {},
-                                  false,
-                                  48000,
-                                  2});
+  PipelineConfig pipeline_config({
+      .name = "mixgroup",
+      .effects = {{
+          .lib_name = "lib",
+          .effect_name = "effect",
+          .instance_name = kTargetName,
+          .effect_config = kNominalConfig,
+      }},
+      .loopback = false,
+      .output_rate = 48000,
+      .output_channels = 2,
+  });
   auto transitions = MakeTransitions({{kTargetName, {kThrottledConfig}}});
   auto volume_curve = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
   ProcessConfig process_config =
@@ -230,15 +235,33 @@ const char kTripPoint2Config2[] = "config2_2";
 // Note that whenever a given target is not included in a transition, its config does not change
 // across the corresponding trip point.
 TEST_F(ThermalAgentTest, MultipleConfigEntries) {
-  PipelineConfig pipeline_config({"mixgroup",
-                                  {},
-                                  {{"lib", "effect", kTargetName0, kNominalConfig0, std::nullopt},
-                                   {"lib", "effect", kTargetName1, kNominalConfig1, std::nullopt},
-                                   {"lib", "effect", kTargetName2, kNominalConfig2, std::nullopt}},
-                                  {},
-                                  false,
-                                  48000,
-                                  2});
+  PipelineConfig pipeline_config({
+      .name = "mixgroup",
+      .effects =
+          {
+              {
+                  .lib_name = "lib",
+                  .effect_name = "effect",
+                  .instance_name = kTargetName0,
+                  .effect_config = kNominalConfig0,
+              },
+              {
+                  .lib_name = "lib",
+                  .effect_name = "effect",
+                  .instance_name = kTargetName1,
+                  .effect_config = kNominalConfig1,
+              },
+              {
+                  .lib_name = "lib",
+                  .effect_name = "effect",
+                  .instance_name = kTargetName2,
+                  .effect_config = kNominalConfig2,
+              },
+          },
+      .loopback = false,
+      .output_rate = 48000,
+      .output_channels = 2,
+  });
   auto transitions0 =
       MakeTransitions({{kTargetName0, kTripPoint0Config0}, {kTargetName1, kTripPoint0Config1}});
   auto transitions1 =

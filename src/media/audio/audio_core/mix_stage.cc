@@ -53,19 +53,25 @@ constexpr int64_t kDestPosRollbackTolerance = 29;
 constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(1);
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock)
+                   TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
+                   std::optional<float> min_gain_db, std::optional<float> max_gain_db)
     : MixStage(output_format, block_size,
                fbl::MakeRefCounted<VersionedTimelineFunction>(ref_time_to_frac_presentation_frame),
-               audio_clock) {}
+               audio_clock, min_gain_db, max_gain_db) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-                   AudioClock& audio_clock)
+                   AudioClock& audio_clock, std::optional<float> min_gain_db,
+                   std::optional<float> max_gain_db)
     : ReadableStream(output_format),
       output_buffer_frames_(block_size),
       output_buffer_(block_size * output_format.channels()),
       output_ref_clock_(audio_clock),
-      output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame) {
+      output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame),
+      gain_limits_{
+          .min_gain_db = min_gain_db,
+          .max_gain_db = max_gain_db,
+      } {
   FX_CHECK(format().sample_format() == fuchsia::media::AudioSampleFormat::FLOAT)
       << "MixStage must output FLOATs; got format = " << static_cast<int>(format().sample_format());
 }
@@ -82,9 +88,10 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
   resampler_hint = AudioClock::UpgradeResamplerIfNeeded(resampler_hint, stream->reference_clock(),
                                                         reference_clock());
 
-  auto mixer = std::shared_ptr<Mixer>(
-      Mixer::Select(stream->format().stream_type(), format().stream_type(), resampler_hint)
-          .release());
+  auto mixer =
+      std::shared_ptr<Mixer>(Mixer::Select(stream->format().stream_type(), format().stream_type(),
+                                           resampler_hint, gain_limits_)
+                                 .release());
   if (!mixer) {
     mixer = std::make_unique<audio::mixer::NoOp>();
   }

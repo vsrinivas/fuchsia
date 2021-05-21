@@ -15,6 +15,7 @@
 
 #include "rapidjson/prettywriter.h"
 #include "src/lib/files/file.h"
+#include "src/media/audio/audio_core/mixer/gain.h"
 
 #include "src/media/audio/audio_core/schema/audio_core_config_schema.inl"
 
@@ -50,6 +51,8 @@ static constexpr char kJsonKeyTripPoint[] = "trip_point";
 static constexpr char kJsonKeyTripPointDeactivateBelow[] = "deactivate_below";
 static constexpr char kJsonKeyTripPointActivateAt[] = "activate_at";
 static constexpr char kJsonKeyStateTransitions[] = "state_transitions";
+static constexpr char kJsonKeyMinGainDb[] = "min_gain_db";
+static constexpr char kJsonKeyMaxGainDb[] = "max_gain_db";
 
 void CountLoopbackStages(const PipelineConfig::MixGroup& mix_group, uint32_t* count) {
   if (mix_group.loopback) {
@@ -149,7 +152,7 @@ RenderUsageVolumes ParseDefaultRenderUsageVolumesFromJsonObject(const rapidjson:
   for (const auto& vol : value.GetObject()) {
     FX_CHECK(vol.name.IsString());
     auto usage = RenderUsageFromString(vol.name.GetString());
-    FX_DCHECK(usage);
+    FX_CHECK(usage);
 
     FX_CHECK(vol.value.IsNumber());
     auto level = vol.value.GetFloat();
@@ -189,7 +192,7 @@ PipelineConfig::Effect ParseEffectFromJsonObject(const rapidjson::Value& value) 
 
   it = value.FindMember(kJsonKeyOutputChannels);
   if (it != value.MemberEnd()) {
-    FX_DCHECK(it->value.IsUint());
+    FX_CHECK(it->value.IsUint());
     effect.output_channels = it->value.GetUint();
   }
   return effect;
@@ -211,7 +214,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
     for (const auto& stream_type : it->value.GetArray()) {
       FX_CHECK(stream_type.IsString());
       auto render_usage = RenderUsageFromString(stream_type.GetString());
-      FX_DCHECK(render_usage);
+      FX_CHECK(render_usage);
       mix_group.input_streams.push_back(*render_usage);
     }
   }
@@ -242,7 +245,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
 
   it = value.FindMember(kJsonKeyOutputRate);
   if (it != value.MemberEnd()) {
-    FX_DCHECK(it->value.IsUint());
+    FX_CHECK(it->value.IsUint());
     mix_group.output_rate = it->value.GetUint();
   } else {
     mix_group.output_rate = PipelineConfig::kDefaultMixGroupRate;
@@ -250,17 +253,37 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
 
   it = value.FindMember(kJsonKeyOutputChannels);
   if (it != value.MemberEnd()) {
-    FX_DCHECK(it->value.IsUint());
+    FX_CHECK(it->value.IsUint());
     mix_group.output_channels = it->value.GetUint();
   } else {
     mix_group.output_channels = PipelineConfig::kDefaultMixGroupChannels;
+  }
+
+  it = value.FindMember(kJsonKeyMinGainDb);
+  if (it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsNumber());
+    FX_CHECK(it->value.GetFloat() >= Gain::kMinGainDb);
+    for (auto usage : mix_group.input_streams) {
+      FX_CHECK(usage != RenderUsage::ULTRASOUND) << "cannot set gain limits for ultrasound";
+    }
+    mix_group.min_gain_db = it->value.GetFloat();
+  }
+
+  it = value.FindMember(kJsonKeyMaxGainDb);
+  if (it != value.MemberEnd()) {
+    FX_CHECK(it->value.IsNumber());
+    FX_CHECK(it->value.GetFloat() <= Gain::kMaxGainDb);
+    for (auto usage : mix_group.input_streams) {
+      FX_CHECK(usage != RenderUsage::ULTRASOUND) << "cannot set gain limits for ultrasound";
+    }
+    mix_group.max_gain_db = it->value.GetFloat();
   }
 
   return mix_group;
 }
 
 std::optional<audio_stream_unique_id_t> ParseDeviceIdFromJsonString(const rapidjson::Value& value) {
-  FX_DCHECK(value.IsString());
+  FX_CHECK(value.IsString());
   const auto* device_id_string = value.GetString();
 
   std::optional<audio_stream_unique_id_t> device_id;
@@ -275,7 +298,7 @@ std::optional<audio_stream_unique_id_t> ParseDeviceIdFromJsonString(const rapidj
         &device_id->data[4], &device_id->data[5], &device_id->data[6], &device_id->data[7],
         &device_id->data[8], &device_id->data[9], &device_id->data[10], &device_id->data[11],
         &device_id->data[12], &device_id->data[13], &device_id->data[14], &device_id->data[15]);
-    FX_DCHECK(captures == 16);
+    FX_CHECK(captures == 16);
   }
   return device_id;
 }
@@ -307,12 +330,12 @@ std::optional<std::vector<audio_stream_unique_id_t>> ParseDeviceIdFromJsonValue(
 
 StreamUsageSet ParseStreamUsageSetFromJsonArray(const rapidjson::Value& value,
                                                 StreamUsageSet* all_supported_usages = nullptr) {
-  FX_DCHECK(value.IsArray());
+  FX_CHECK(value.IsArray());
   StreamUsageSet supported_stream_types;
   for (const auto& stream_type : value.GetArray()) {
-    FX_DCHECK(stream_type.IsString());
+    FX_CHECK(stream_type.IsString());
     const auto supported_usage = StreamUsageFromString(stream_type.GetString());
-    FX_DCHECK(supported_usage);
+    FX_CHECK(supported_usage);
     if (all_supported_usages) {
       all_supported_usages->insert(*supported_usage);
     }
@@ -327,31 +350,31 @@ fit::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
 ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                                        StreamUsageSet* all_supported_usages,
                                        VolumeCurve volume_curve) {
-  FX_DCHECK(value.IsObject());
+  FX_CHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
-  FX_DCHECK(device_id_it != value.MemberEnd());
+  FX_CHECK(device_id_it != value.MemberEnd());
 
   auto device_id = ParseDeviceIdFromJsonValue(device_id_it->value);
 
   bool eligible_for_loopback = false;
   auto eligible_for_loopback_it = value.FindMember(kJsonKeyEligibleForLoopback);
   if (eligible_for_loopback_it != value.MemberEnd()) {
-    FX_DCHECK(eligible_for_loopback_it->value.IsBool());
+    FX_CHECK(eligible_for_loopback_it->value.IsBool());
     eligible_for_loopback = eligible_for_loopback_it->value.GetBool();
   }
 
   auto independent_volume_control_it = value.FindMember(kJsonKeyIndependentVolumeControl);
   bool independent_volume_control = false;
   if (independent_volume_control_it != value.MemberEnd()) {
-    FX_DCHECK(independent_volume_control_it->value.IsBool());
+    FX_CHECK(independent_volume_control_it->value.IsBool());
     independent_volume_control = independent_volume_control_it->value.GetBool();
   }
 
   float driver_gain_db = 0.0;
   auto driver_gain_db_it = value.FindMember(kJsonKeyDriverGainDb);
   if (driver_gain_db_it != value.MemberEnd()) {
-    FX_DCHECK(driver_gain_db_it->value.IsNumber());
+    FX_CHECK(driver_gain_db_it->value.IsNumber());
     driver_gain_db = driver_gain_db_it->value.GetDouble();
   }
 
@@ -366,11 +389,11 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
       supported_stream_types =
           ParseStreamUsageSetFromJsonArray(supported_stream_types_it->value, all_supported_usages);
     } else {
-      FX_DCHECK(false) << "Missing required stream usage set";
+      FX_CHECK(false) << "Missing required stream usage set";
     }
   }
   auto& supported_stream_types_value = supported_stream_types_it->value;
-  FX_DCHECK(supported_stream_types_value.IsArray());
+  FX_CHECK(supported_stream_types_value.IsArray());
 
   bool supports_loopback =
       supported_stream_types.find(StreamUsage::WithCaptureUsage(CaptureUsage::LOOPBACK)) !=
@@ -408,37 +431,37 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
 }
 
 ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {
-  FX_DCHECK(value.IsObject());
+  FX_CHECK(value.IsObject());
 
   auto trip_point_it = value.FindMember(kJsonKeyTripPoint);
-  FX_DCHECK(trip_point_it != value.MemberEnd());
+  FX_CHECK(trip_point_it != value.MemberEnd());
 
-  FX_DCHECK(trip_point_it->value.IsObject());
+  FX_CHECK(trip_point_it->value.IsObject());
   auto deactivate_below_it = trip_point_it->value.FindMember(kJsonKeyTripPointDeactivateBelow);
-  FX_DCHECK(deactivate_below_it != trip_point_it->value.MemberEnd());
-  FX_DCHECK(deactivate_below_it->value.IsUint());
+  FX_CHECK(deactivate_below_it != trip_point_it->value.MemberEnd());
+  FX_CHECK(deactivate_below_it->value.IsUint());
   uint32_t deactivate_below = deactivate_below_it->value.GetUint();
   auto activate_at_it = trip_point_it->value.FindMember(kJsonKeyTripPointActivateAt);
-  FX_DCHECK(activate_at_it != trip_point_it->value.MemberEnd());
-  FX_DCHECK(activate_at_it->value.IsUint());
+  FX_CHECK(activate_at_it != trip_point_it->value.MemberEnd());
+  FX_CHECK(activate_at_it->value.IsUint());
   uint32_t activate_at = activate_at_it->value.GetUint();
-  FX_DCHECK(deactivate_below >= 1);
-  FX_DCHECK(activate_at <= 100);
+  FX_CHECK(deactivate_below >= 1);
+  FX_CHECK(activate_at <= 100);
 
   auto transitions_it = value.FindMember(kJsonKeyStateTransitions);
-  FX_DCHECK(transitions_it != value.MemberEnd());
-  FX_DCHECK(transitions_it->value.IsArray());
+  FX_CHECK(transitions_it != value.MemberEnd());
+  FX_CHECK(transitions_it->value.IsArray());
 
   std::vector<ThermalConfig::StateTransition> transitions;
   for (const auto& transition : transitions_it->value.GetArray()) {
-    FX_DCHECK(transition.IsObject());
+    FX_CHECK(transition.IsObject());
     auto target_name_it = transition.FindMember(kJsonKeyTargetName);
-    FX_DCHECK(target_name_it != value.MemberEnd());
-    FX_DCHECK(target_name_it->value.IsString());
+    FX_CHECK(target_name_it != value.MemberEnd());
+    FX_CHECK(target_name_it->value.IsString());
     const auto* target_name = target_name_it->value.GetString();
 
     auto config_it = transition.FindMember(kJsonKeyConfig);
-    FX_DCHECK(config_it != transition.MemberEnd());
+    FX_CHECK(config_it != transition.MemberEnd());
     rapidjson::StringBuffer config_buf;
     rapidjson::Writer<rapidjson::StringBuffer> writer(config_buf);
     config_it->value.Accept(writer);
@@ -453,7 +476,7 @@ ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Valu
 
 fit::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
     const rapidjson::Value& output_device_profiles, ProcessConfigBuilder* config_builder) {
-  FX_DCHECK(output_device_profiles.IsArray());
+  FX_CHECK(output_device_profiles.IsArray());
 
   StreamUsageSet all_supported_usages;
   for (const auto& output_device_profile : output_device_profiles.GetArray()) {
@@ -480,15 +503,15 @@ fit::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
 fit::result<std::pair<std::optional<std::vector<audio_stream_unique_id_t>>,
                       DeviceConfig::InputDeviceProfile>>
 ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
-  FX_DCHECK(value.IsObject());
+  FX_CHECK(value.IsObject());
 
   auto device_id_it = value.FindMember(kJsonKeyDeviceId);
-  FX_DCHECK(device_id_it != value.MemberEnd());
+  FX_CHECK(device_id_it != value.MemberEnd());
 
   auto device_id = ParseDeviceIdFromJsonValue(device_id_it->value);
 
   auto rate_it = value.FindMember(kJsonKeyRate);
-  FX_DCHECK(rate_it != value.MemberEnd());
+  FX_CHECK(rate_it != value.MemberEnd());
   if (!rate_it->value.IsUint()) {
     return fit::error();
   }
@@ -497,7 +520,7 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
   float driver_gain_db = 0.0;
   auto driver_gain_db_it = value.FindMember(kJsonKeyDriverGainDb);
   if (driver_gain_db_it != value.MemberEnd()) {
-    FX_DCHECK(driver_gain_db_it->value.IsNumber());
+    FX_CHECK(driver_gain_db_it->value.IsNumber());
     driver_gain_db = driver_gain_db_it->value.GetDouble();
   }
 
@@ -515,7 +538,7 @@ ParseInputDeviceProfileFromJsonObject(const rapidjson::Value& value) {
 
 fit::result<> ParseInputDevicePoliciesFromJsonObject(const rapidjson::Value& input_device_profiles,
                                                      ProcessConfigBuilder* config_builder) {
-  FX_DCHECK(input_device_profiles.IsArray());
+  FX_CHECK(input_device_profiles.IsArray());
 
   for (const auto& input_device_profile : input_device_profiles.GetArray()) {
     auto result = ParseInputDeviceProfileFromJsonObject(input_device_profile);
@@ -529,7 +552,7 @@ fit::result<> ParseInputDevicePoliciesFromJsonObject(const rapidjson::Value& inp
 
 void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
                                       ProcessConfigBuilder* config_builder) {
-  FX_DCHECK(value.IsArray());
+  FX_CHECK(value.IsArray());
   for (const auto& thermal_policy_entry : value.GetArray()) {
     config_builder->AddThermalPolicyEntry(
         ParseThermalPolicyEntryFromJsonObject(thermal_policy_entry));

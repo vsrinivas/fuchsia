@@ -609,6 +609,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
                     "render:communications"
                   ],
                   "name": "communications",
+                  "min_gain_db": -30,
+                  "max_gain_db": -20,
                   "effects": [
                     {
                       "lib": "libbaz.so",
@@ -660,6 +662,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     ASSERT_FALSE(mix_group.loopback);
     ASSERT_EQ(96000, mix_group.output_rate);
     EXPECT_EQ(4, mix_group.output_channels);
+    ASSERT_FALSE(mix_group.min_gain_db.has_value());
+    ASSERT_FALSE(mix_group.max_gain_db.has_value());
   }
 
   const auto& mix = root.inputs[0];
@@ -679,6 +683,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     ASSERT_EQ(2u, mix_group.inputs.size());
     ASSERT_TRUE(mix_group.loopback);
     ASSERT_EQ(48000, mix_group.output_rate);
+    ASSERT_FALSE(mix_group.min_gain_db.has_value());
+    ASSERT_FALSE(mix_group.max_gain_db.has_value());
   }
 
   {  // output mix_group 1
@@ -705,6 +711,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     EXPECT_EQ(48000, mix_group.output_rate);
     EXPECT_EQ(2, mix_group.output_channels);
     ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
+    ASSERT_FALSE(mix_group.min_gain_db.has_value());
+    ASSERT_FALSE(mix_group.max_gain_db.has_value());
   }
 
   {  // output mix_group 2
@@ -724,6 +732,10 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     EXPECT_EQ(48000, mix_group.output_rate);
     EXPECT_EQ(2, mix_group.output_channels);
     ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
+    ASSERT_TRUE(mix_group.min_gain_db.has_value());
+    ASSERT_TRUE(mix_group.max_gain_db.has_value());
+    EXPECT_EQ(-30.0f, *mix_group.min_gain_db);
+    EXPECT_EQ(-20.0f, *mix_group.max_gain_db);
   }
 }
 

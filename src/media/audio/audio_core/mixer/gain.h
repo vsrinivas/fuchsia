@@ -74,6 +74,23 @@ class Gain {
   static constexpr AScale kUnityScale = 1.0f;
   static constexpr AScale kMaxScale = 15.8489319f;  // kMaxGainDb is +24.0 dB
 
+  // The final (combined) gain is limited to the range [kMinGainDb, kMaxGainDb]
+  // by default, but a more restricted range can be given in this constructor.
+  // No matter the value of min_gain_db, the gain can always be set to MUTED_GAIN_DB,
+  // either explicitly or via Set{Source,Dest}Mute().
+  struct Limits {
+    std::optional<float> min_gain_db;
+    std::optional<float> max_gain_db;
+  };
+
+  Gain() : Gain(Limits{}) {}
+
+  explicit Gain(Limits limits)
+      : min_gain_db_(std::max(limits.min_gain_db.value_or(kMinGainDb), kMinGainDb)),
+        max_gain_db_(std::min(limits.max_gain_db.value_or(kMaxGainDb), kMaxGainDb)),
+        min_gain_scale_(DbToScale(min_gain_db_)),
+        max_gain_scale_(DbToScale(max_gain_db_)) {}
+
   // The Gain object specifies the volume scaling to be performed for a given
   // Mix operation, when mixing a single stream into some combined resultant
   // audio stream. Restated, a Mix has one or more Sources, and it combines
@@ -220,6 +237,11 @@ class Gain {
   // Recalculate the stream's gain-scale, from respective source and dest values that may have
   // changed since the last time this was called.
   void RecalculateGainScale();
+
+  const float min_gain_db_;
+  const float max_gain_db_;
+  const float min_gain_scale_;
+  const float max_gain_scale_;
 
   float target_source_gain_db_ = kUnityGainDb;
   float target_dest_gain_db_ = kUnityGainDb;
