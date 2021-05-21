@@ -1803,7 +1803,7 @@ using the directory capability `build-info` and path `/config/build-info`.
 [component-id-index]: /docs/development/components/component_id_index.md
 [components-intro]: /docs/concepts/components/v2/introduction.md
 [components-topology]: /docs/concepts/components/v2/topology.md
-[components-migration-status]: /docs/concepts/components/v2/migration.md
+[components-migration-status]: /docs/contribute/open_projects/components/migration.md
 [config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
 [cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20

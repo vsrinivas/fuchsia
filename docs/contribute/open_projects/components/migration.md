@@ -1,11 +1,29 @@
-# State of the Components v2 migration
+# Components v2 migration
+
+## Goal & motivation
 
 The Component Framework is one of the key foundations for Fuchsia's usermode
 runtime environment. The original incarnation of components dates back to the
 inception of the Fuchsia OS and the initial commits in 2016. The framework has
 steadily evolved since then.
 
-## Components v1 vs. v2
+## Technical background
+
+Last updated: **May 2021**
+
+A high-level diagram of the system's component topology is shown below:
+
+![Realms diagram](../../../concepts/components/v2/images/high_level_components_topology.png)
+
+*   v2 components are shown in blue boxes.
+*   v1 components are shown in red boxes.
+*   Boxes with dashed lines represent components that are only present on some
+    build configurations.
+
+In addition, all [unit tests with generated manifests][unit-tests-generated]
+are v2 components.
+
+### Components v1 vs. v2
 
 Presently there are two revisions of the Component Framework that exist on
 Fuchsia, which are referred to as [Components v1][cfv1] and
@@ -38,21 +56,28 @@ In addition, both Components v1 and v2 use [`cmc`][cmc] (component manifest
 compiler), a build-time host tool that processes all formats of component
 manifest files.
 
-## Incremental progress
+#### Interoperability
 
-The nature of migrations is that they may take a long time and happen in
-incremental steps. The final step for migrating a component from v1 to v2
-typically involves replacing a `.cmx` file with a `.cml` file.
+Component manager launches `appmgr`, itself a v2 component, in order to manage
+v1 components. All v1 components on the system run under `appmgr`. Users may
+continue developing and maintaining v1 components while v2 migrations take place
+at their own pace.
 
-Please see the [self-service migration guide][migrating-sys-components].
+Build configurations that use the [Session Framework][session-framework] also
+include the `session_manager` component. All v1-backed capabilities the session
+needs are routed to the `session_manager` from `appmgr`.
 
 ### Terminology
 
-Use this terminology when talking about the state of migrating a component from
-v1 to v2.
+Use this terminology when talking about the state of migrating a component and
+its tests from v1 to v2.
 
-A component and its tests can be migrated separately. For this reason, describe
-the state of migration for the component and its tests explicitly.
+&nbsp; | The component | Tests that exercise it
+:----: | ------------- | ----------------------
+**Fully migrated**|<ul><li>has a `.cml` file and no `.cmx` file</li><li>runs as v2 in all product builds</li></ul>|<ul><li>All automated tests run the component as a v2 component</li></ul>
+**Partially migrated**|<ul><li>has a `.cml` file and a `.cmx` file</li><li>runs as v1 in some product configurations but not others, or is guarded by a flag to do so for development purposes</li></ul>|<ul><li>Some automated tests exist in which the component runs as a v2 component, but others run it as v1</li></ul>
+**Prototyped**|<ul><li>runs as a v1 component in all product configurations</li><li>has a `.cml` file</li></ul>|<ul><li>All automated tests in CI/CQ run the component as v1</li><li>there are tests with the component as v2, but they don't run in CI/CQ</li></ul>
+**Not migrated**|<ul><li>does not have a `.cml` file</li></ul>|<ul><li>There are no tests that run the component as v2</li></ul>
 
 #### Examples
 "root_presenter is _partially migrated_ but its tests are _not migrated_."
@@ -64,63 +89,14 @@ Specifically, ..."
 
 "setui_service was _prototyped_ to v2 and it exposed some missing dependencies."
 
-#### Terms table
-&nbsp; | The component | Tests that exercise it
-:-----:|---------------|------------------------
-**Fully migrated**|The component has a `.cml` file and no `.cmx` file **AND** the component runs as v2 in all product builds|All automated tests run the component as a v2 component
-**Partially migrated**|The component has a `.cml` file and a `.cmx` file **AND** the component runs as v1 in some product configurations but not others, or is guarded by a flag to do so for development purposes|Some automated tests exist in which the component runs as a v2 component, but others run it as v1
-**Prototyped**|The component runs as a v1 component in all product configurations **AND** the component has a `.cml` file|All automated tests in CI/CQ run the component as v1 **AND** there are tests with the component as v2, but they don't run in CI/CQ
-**Not migrated**|The component does not have a `.cml` file|There are no tests that run the component as v2
-
-## Latest status
+## How to help
 
 Last updated: **May 2021**
 
-A high-level diagram of the system's component topology is shown below:
+### Picking a task
 
-![Realms diagram](images/high_level_components_topology.png)
-
-*   v2 components are shown in blue boxes.
-*   v1 components are shown in red boxes.
-*   Boxes with dashed lines represent components that are only present on some
-    build configurations.
-
-Component manager is one of the [initial processes][initial-processes] that are
-started in the system boot sequence. The system startup sequence then launches a
-number of low-level system components that deal with various responsibilities,
-including in no particular order:
-
-*   Power management: device administration, thermals, power button, etc'.
-*   System diagnostics: Archivist, Detect, and associated components.
-*   Device driver management.
-*   Filesystem management.
-*   Developer tools support, such as Remote Control Service and the serial
-    debugger bridge.
-*   The package resolver, package cache, and system update committer.
-*   The runtime for the [session framework][sfw].
-*   Various other system services such as the font provider, Stash system
-    configurations service, the DHCP daemon, activity service, last reboot
-    logger, etc'.
-
-In addition, all [unit tests with generated manifests][unit-tests-generated]
-are v2 components.
-
-## Interoperability with v1 components
-
-Component manager launches `appmgr`, itself a v2 component, in order to manage
-v1 components. All v1 components on the system run under `appmgr`. Users may
-continue developing and maintaining v1 components while v2 migrations take place
-at their own pace.
-
-Build configurations that use the [Session Framework][session-framework] also
-include the `session_manager` component. All v1-backed capabilities the session
-needs are routed to the `session_manager` from `appmgr`.
-
-## Current areas of focus
-
-Last updated: **May 2021**
-
-Components v2 migrations are happening throughout the system. However there is
+Components v2 migrations are happening throughout the system. Any component that
+still has at least one `.cmx` file is a migration candidate. However there is
 currently additional focus on:
 
 -   The stack of Software Delivery components and associated tests, including
@@ -134,6 +110,44 @@ currently additional focus on:
 -   Scaling migrations by creating and expanding a
     [self-service guide][migrating-sys-components].
 -   Exploratory work with migrating wlan and Thread/Weave components.
+
+### Doing a task
+
+Component migrations may take multiple incremental steps to complete due to
+dependencies between other components that have not been migrated yet.
+For example, a component and its tests can be migrated separately.
+For more details on the incremental stages, see [terminology](#terminology).
+
+The final step for migrating a component from v1 to v2 typically involves
+replacing all `.cmx` files with equivalent `.cml` files.
+For detailed instructions on migrating a component and its tests, see the
+[self-service migration guide][migrating-sys-components].
+
+### Completing a task
+
+Send code reviews to owners of the directories with the component definitions
+that you're changing, and to people listed below who volunteered to help with
+these migrations:
+
+*   jmatt@google.com
+*   geb@google.com
+*   yeg@google.com
+
+New volunteer? Please add yourself to the list!
+
+## Examples
+
+*  [504575: [http-client] Migrate to Components v2](https://fuchsia-review.googlesource.com/c/fuchsia/+/504575)
+*  [504523: [soundplayer] transition to CFv2](https://fuchsia-review.googlesource.com/c/fuchsia/+/504523)
+*  [489757: [device_settings] Migrate to CFv2](https://fuchsia-review.googlesource.com/c/fuchsia/+/489757)
+
+## Sponsors
+
+Reach out for questions or for status updates:
+
+*   <jmatt@google.com>
+*   <shayba@google.com>
+*   <component-framework-dev@fuchsia.dev>
 
 [appmgr]: /src/sys/appmgr
 [cfv1]: /docs/glossary.md#components-v1

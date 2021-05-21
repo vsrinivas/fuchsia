@@ -20,6 +20,10 @@ toc:
     path: /docs/contribute/open_projects/build/zx_wrappers_deprecation.md
   - title: "Hermetic actions"
     path: /docs/contribute/open_projects/build/hermetic_actions.md
+- title: "Components projects"
+  section:
+  - title: "Components v2 migration"
+    path: /docs/contribute/open_projects/components/migration.md
 - title: "Source control projects"
   section:
   - title: "Layer Cake deprecation"

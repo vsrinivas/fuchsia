@@ -4,7 +4,7 @@ Components are the basic unit of executable software on Fuchsia.
 
 Note: This section contains documentation about components using the modern
 component framework ([Components v2][glossary-components-v2]).
-The Fuchsia platform team is currently [migrating legacy components](migration.md)
+The Fuchsia platform team is currently [migrating legacy components][migration]
 to the modern component framework.
 For details on legacy components, see [Legacy components][legacy-components].
 
@@ -62,6 +62,7 @@ For details on legacy components, see [Legacy components][legacy-components].
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [legacy-components]: /docs/concepts/components/v1/README.md
+[migration]: /docs/contribute/open_projects/components/migration.md
 [test-components]: /docs/concepts/testing/v2/test_component.md
 [trf]: /docs/concepts/testing/v2/test_runner_framework.md
 [integration-testing]: /docs/concepts/testing/v2/integration_testing.md

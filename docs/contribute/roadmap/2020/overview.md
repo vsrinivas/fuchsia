@@ -68,7 +68,7 @@ following areas:
     straightforward to migrate.
 
 For more information, see
-[State of the Components v2 migration](/docs/concepts/components/v2/migration.md).
+[Components v2 migration](/docs/contribute/open_projects/components/migration.md).
 
 ### Implementing drivers as components
 

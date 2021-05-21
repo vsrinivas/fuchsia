@@ -53,8 +53,6 @@ toc:
     path: /docs/concepts/components/v2/design_principles.md
   - title: "Components vs. processes"
     path: /docs/concepts/components/v2/components_vs_processes.md
-- title: "Components v2 migration status"
-  path: /docs/concepts/components/v2/migration.md
 - title: "Legacy components"
   section:
   - title: "Overview"

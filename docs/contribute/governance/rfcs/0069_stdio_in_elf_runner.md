@@ -241,7 +241,7 @@ a socket, as proposed above, it'll be POSIX compliant "out of the box".
 [doc-appmgr]: /docs/concepts/components/v1/component_manifests.md
 [doc-cf-intro]: /docs/concepts/components/v2/introduction.md
 [doc-cf-principles]: /docs/concepts/components/v2/design_principles.md
-[doc-cf-migration]: /docs/concepts/components/v2/migration.md
+[doc-cf-migration]: /docs/contribute/open_projects/components/migration.md
 [doc-elf-runner]: /docs/concepts/components/v2/elf_runner.md
 [doc-logs-recording]: /docs/development/diagnostics/logs/recording.md
 [doc-principles-inclusive]: /docs/concepts/principles/inclusive.md

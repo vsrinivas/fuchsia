@@ -3,7 +3,7 @@
     <b>Caution:</b> Caution: This format is used with
     <a href="/docs/concepts/components/v1/README.md">legacy components</a>.
     If you are still using legacy components, consider
-    <a href="/docs/development/components/v2/migration.md">migrating</a>
+    <a href="/docs/contribute/open_projects/components/migration.md">migrating</a>
     to the modern component framework.
   </aside>
 {% endset %}
@@ -1058,7 +1058,7 @@ You must add your component to the allowlist for the feature in
 [`//tools/cmc/build/unstable_features/BUILD.gn`][allowlist].
 
 [allowlist]: /tools/cmc/build/unstable_features/BUILD.gn
-[components-migration]: /docs/concepts/components/v2/migration.md
+[components-migration]: /docs/contribute/open_projects/components/migration.md
 [cpp-syslog]: /docs/development/languages/c-cpp/logging.md#component_manifest_dependency
 [executable]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#func_executable
 [fx-test]: https://www.fuchsia.dev/reference/tools/fx/cmd/test.md
