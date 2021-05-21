@@ -113,6 +113,7 @@ struct BootOptions {
   OPTION_TYPE(OomBehavior);
   OPTION_TYPE(EntropyTestSource);
   OPTION_TYPE(GfxConsoleFont);
+  OPTION_TYPE(SerialDebugSyscalls);
   OPTION_TYPE(PageTableEvictionPolicy);
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
   OPTION_TYPE(TestEnum);

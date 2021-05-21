@@ -348,13 +348,8 @@ When disabled, certain debugging-related syscalls will fail with
 - `zx_system_mexec()`
 - `zx_system_mexec_payload_get()
 
-### kernel.enable-serial-syscalls=\<string>
+### kernel.enable-serial-syscalls=[false | true | output-only]
 **Default:** `false`
-
-Can be one of three values:
-- `false`
-- `true`
-- `output-only`
 
 When `false`, both `zx_debug_read()` and `zx_debug_write()` will fail with
 `ZX_ERR_NOT_SUPPORTED`.

@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
 #define ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
 
+#include <lib/boot-options/types.h>
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/types.h>
 #include <zircon/types.h>
@@ -65,14 +66,7 @@ class user_out_handle final {
 // Returns |true| if debugging syscalls have been enabled (see kernel.enable-debugging-syscalls).
 bool DebuggingSyscallsEnabled();
 
-enum class SerialState {
-  kDisabled,    // Fully disabled: kernel.enable-serial-syscalls=false, or unspecified, or any other
-                // unrecognized value.
-  kEnabled,     // Fully enabled, both input and output: kernel.enable-serial-syscalls=true
-  kOutputOnly,  // Output enabled, input disabled: kernel.enable-serial-syscalls=output-only
-};
-
-SerialState SerialSyscallsEnabled();
+SerialDebugSyscalls SerialSyscallsEnabled();
 
 // One of these macros is invoked by kernel.inc for each syscall.
 

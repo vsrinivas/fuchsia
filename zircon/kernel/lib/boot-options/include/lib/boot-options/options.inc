@@ -337,12 +337,8 @@ When disabled, certain debugging-related syscalls will fail with
 - `zx_system_mexec_payload_get()
 )""")
 
-DEFINE_OPTION("kernel.enable-serial-syscalls", SmallString, enable_serial_syscalls, {"false"}, R"""(
-Can be one of three values:
-- `false`
-- `true`
-- `output-only`
-
+DEFINE_OPTION("kernel.enable-serial-syscalls", SerialDebugSyscalls, enable_serial_syscalls,
+              {SerialDebugSyscalls::kDisabled}, R"""(
 When `false`, both `zx_debug_read()` and `zx_debug_write()` will fail with
 `ZX_ERR_NOT_SUPPORTED`.
 

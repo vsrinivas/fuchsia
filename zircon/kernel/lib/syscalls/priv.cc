@@ -13,20 +13,7 @@ bool DebuggingSyscallsEnabled() {
   return enabled;
 }
 
-SerialState SerialSyscallsEnabled() {
-  static const char* serial = gBootOptions->enable_serial_syscalls.data();
-
-  if (serial == nullptr) {
-    return SerialState::kDisabled;
-  }
-
-  if (strcmp(serial, "true") == 0) {
-    return SerialState::kEnabled;
-  }
-
-  if (strcmp(serial, "output-only") == 0) {
-    return SerialState::kOutputOnly;
-  }
-
-  return SerialState::kDisabled;
+SerialDebugSyscalls SerialSyscallsEnabled() {
+  static const SerialDebugSyscalls serial = gBootOptions->enable_serial_syscalls;
+  return serial;
 }

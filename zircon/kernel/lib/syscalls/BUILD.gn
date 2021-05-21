@@ -92,6 +92,7 @@ if (is_kernel) {
     sources = [ "syscalls.cc" ]
     deps = [
       ":headers",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/userabi:headers",
     ]
   }

@@ -381,6 +381,14 @@ void BootOptions::PrintValue(const GfxConsoleFont& value, FILE* out) {
   Enum<GfxConsoleFont>(EnumPrinter{value, out});
 }
 
+bool BootOptions::Parse(std::string_view value, SerialDebugSyscalls BootOptions::*member) {
+  return Enum<SerialDebugSyscalls>(EnumParser{value, &(this->*member)}).Check();
+}
+
+void BootOptions::PrintValue(const SerialDebugSyscalls& value, FILE* out) {
+  Enum<SerialDebugSyscalls>(EnumPrinter{value, out});
+}
+
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 
 bool BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {

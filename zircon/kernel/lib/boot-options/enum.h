@@ -52,6 +52,14 @@ constexpr auto Enum<EntropyTestSource> = [](auto&& Switch) {
 };
 
 template <>
+constexpr auto Enum<SerialDebugSyscalls> = [](auto&& Switch) {
+  return Switch  //
+      .Case("false", SerialDebugSyscalls::kDisabled)
+      .Case("true", SerialDebugSyscalls::kEnabled)
+      .Case("output-only", SerialDebugSyscalls::kOutputOnly);
+};
+
+template <>
 constexpr auto Enum<GfxConsoleFont> = [](auto&& Switch) {
   return Switch  //
       .Case("9x16", GfxConsoleFont::k9x16)
