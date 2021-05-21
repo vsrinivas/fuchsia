@@ -64,7 +64,22 @@ AccessibilityView::AccessibilityView(sys::ComponentContext* component_context,
 }
 
 void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
-  // TODO(fxb/68441): Implement.
+  for (const auto& event : events) {
+    if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx) {
+      const auto& gfx_event = event.gfx();
+      if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+        const auto& view_attached_event = gfx_event.view_attached_to_scene();
+        if (view_attached_event.view_id == a11y_view_->id()) {
+          a11y_view_properties_ = view_attached_event.properties;
+        }
+      } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
+        const auto& view_properties_changed_event = gfx_event.view_properties_changed();
+        if (view_properties_changed_event.view_id == a11y_view_->id()) {
+          a11y_view_properties_ = view_properties_changed_event.properties;
+        }
+      }
+    }
+  }
 }
 
 }  // namespace a11y

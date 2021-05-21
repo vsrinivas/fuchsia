@@ -42,6 +42,12 @@ class AccessibilityView : public AccessibilityViewInterface {
                     fuchsia::ui::scenic::ScenicPtr scenic);
   ~AccessibilityView() override = default;
 
+  // Returns the current a11y view properties if the a11y view is ready.
+  // If the a11y view is not yet ready, this method returns std::nullopt.
+  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() {
+    return a11y_view_properties_;
+  }
+
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
 
@@ -65,6 +71,10 @@ class AccessibilityView : public AccessibilityViewInterface {
   // Interface between the accessibility view and the scenic service
   // that inserts it into the scene graph.
   fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry_;
+
+  // Holds the a11y view properties.
+  // If not present, the a11y view has not yet been connected to the scene.
+  std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
 };
 
 }  // namespace a11y

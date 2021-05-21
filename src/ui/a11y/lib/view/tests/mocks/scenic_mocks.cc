@@ -183,10 +183,11 @@ void MockSession::SendGfxEvent(fuchsia::ui::gfx::Event event) {
   listener_->OnScenicEvent(std::move(events));
 }
 
-void MockSession::SendViewPropertiesChangedEvent() {
+void MockSession::SendViewPropertiesChangedEvent(uint32_t view_id,
+                                                 fuchsia::ui::gfx::ViewProperties properties) {
   fuchsia::ui::gfx::ViewPropertiesChangedEvent view_properties_changed_event = {
-      .view_id = 1u,
-      .properties = kViewProperties,
+      .view_id = view_id,
+      .properties = properties,
   };
   fuchsia::ui::gfx::Event event;
   event.set_view_properties_changed(view_properties_changed_event);
@@ -194,16 +195,18 @@ void MockSession::SendViewPropertiesChangedEvent() {
   SendGfxEvent(std::move(event));
 }
 
-void MockSession::SendViewDetachedFromSceneEvent() {
-  fuchsia::ui::gfx::ViewDetachedFromSceneEvent view_detached_from_scene_event = {.view_id = 1u};
+void MockSession::SendViewDetachedFromSceneEvent(uint32_t view_id) {
+  fuchsia::ui::gfx::ViewDetachedFromSceneEvent view_detached_from_scene_event = {.view_id =
+                                                                                     view_id};
   fuchsia::ui::gfx::Event event;
   event.set_view_detached_from_scene(view_detached_from_scene_event);
 
   SendGfxEvent(std::move(event));
 }
 
-void MockSession::SendViewAttachedToSceneEvent() {
-  fuchsia::ui::gfx::ViewAttachedToSceneEvent view_attached_to_scene_event = {.view_id = 1u};
+void MockSession::SendViewAttachedToSceneEvent(uint32_t view_id) {
+  fuchsia::ui::gfx::ViewAttachedToSceneEvent view_attached_to_scene_event = {
+      .view_id = view_id, .properties = kDefaultViewProperties};
   fuchsia::ui::gfx::Event event;
   event.set_view_attached_to_scene(view_attached_to_scene_event);
 

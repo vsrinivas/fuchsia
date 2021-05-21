@@ -96,6 +96,7 @@ TEST_F(AccessibilityViewTest, TestConstruction) {
   // Verify that a11y view was created.
   const auto& views = mock_session_->views();
   EXPECT_EQ(views.size(), 1u);
+  const auto a11y_view_id = views.begin()->second.id;
 
   // Verify that a11y view ref was passed to accessibility view registry.
   EXPECT_EQ(a11y::GetKoid(views.begin()->second.view_ref),
@@ -104,7 +105,50 @@ TEST_F(AccessibilityViewTest, TestConstruction) {
   // Verify that client view holder was created as a child of the a11y view.
   const auto& view_holders = mock_session_->view_holders();
   EXPECT_EQ(view_holders.size(), 1u);
-  EXPECT_EQ(view_holders.begin()->second.parent_id, views.begin()->second.id);
+  EXPECT_EQ(view_holders.begin()->second.parent_id, a11y_view_id);
+}
+
+TEST_F(AccessibilityViewTest, TestViewProperties) {
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+
+  a11y::AccessibilityView a11y_view(context_provider_.context(), std::move(scenic));
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_scenic_->create_session_called());
+
+  // Verify that a11y view was created.
+  const auto& views = mock_session_->views();
+  EXPECT_EQ(views.size(), 1u);
+  const auto a11y_view_id = views.begin()->second.id;
+
+  // Verify that a11y view does not yet have bounds.
+  EXPECT_FALSE(a11y_view.get_a11y_view_properties());
+
+  // Send "view attached to scene" event for a11y view.
+  mock_session_->SendViewAttachedToSceneEvent(a11y_view_id);
+
+  RunLoopUntilIdle();
+
+  // Verify that a11y view properties match the properties in the event.
+  auto a11y_view_properties = a11y_view.get_a11y_view_properties();
+  ASSERT_TRUE(a11y_view_properties);
+  // Compare a field that's nonzero in MockSession::kDefaultViewProperties.
+  EXPECT_EQ(a11y_view_properties->bounding_box.min.z,
+            MockSession::kDefaultViewProperties.bounding_box.min.z);
+
+  // Send "view properties changed" event for a11y view.
+  auto new_view_properties = MockSession::kDefaultViewProperties;
+  new_view_properties.bounding_box.min.z = 100;
+  mock_session_->SendViewPropertiesChangedEvent(a11y_view_id, new_view_properties);
+
+  RunLoopUntilIdle();
+
+  // Verify that a11y view properties reflect the change.
+  a11y_view_properties = a11y_view.get_a11y_view_properties();
+  ASSERT_TRUE(a11y_view_properties);
+  EXPECT_EQ(a11y_view_properties->bounding_box.min.z, new_view_properties.bounding_box.min.z);
 }
 
 }  // namespace

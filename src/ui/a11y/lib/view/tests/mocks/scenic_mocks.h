@@ -83,6 +83,9 @@ struct RectangleAttributes {
 
 class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
  public:
+  static constexpr fuchsia::ui::gfx::ViewProperties kDefaultViewProperties = {
+      .bounding_box = {.min = {.x = 10, .y = 5, .z = -100}, .max = {.x = 100, .y = 50, .z = 0}}};
+
   MockSession() : binding_(this) {}
   ~MockSession() override = default;
 
@@ -112,11 +115,12 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
   void SendGfxEvent(fuchsia::ui::gfx::Event event);
 
-  void SendViewPropertiesChangedEvent();
+  void SendViewPropertiesChangedEvent(uint32_t view_id,
+                                      fuchsia::ui::gfx::ViewProperties properties);
 
-  void SendViewDetachedFromSceneEvent();
+  void SendViewDetachedFromSceneEvent(uint32_t view_id);
 
-  void SendViewAttachedToSceneEvent();
+  void SendViewAttachedToSceneEvent(uint32_t view_id);
 
   const std::unordered_map<uint32_t, ViewHolderAttributes>& view_holders() { return view_holders_; }
 

@@ -499,14 +499,16 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
   // Update test node bounding box to reflect change in view properties.
   bounding_box = {.min = {.x = 0, .y = 0, .z = 0}, .max = {.x = 2.0, .y = 4.0, .z = 6.0}};
 
-  mock_session_->SendViewPropertiesChangedEvent();
+  mock_session_->SendViewPropertiesChangedEvent(1u /* view id */,
+                                                MockSession::kDefaultViewProperties);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(properties_changed_);
 }
 
 TEST_F(AnnotationViewTest, TestViewPropertiesChangedElevation) {
-  mock_session_->SendViewPropertiesChangedEvent();
+  mock_session_->SendViewPropertiesChangedEvent(1u /* view id */,
+                                                MockSession::kDefaultViewProperties);
   RunLoopUntilIdle();
 
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
@@ -533,12 +535,12 @@ TEST_F(AnnotationViewTest, TestViewDetachAndReattachEvents) {
   annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
 
   // ViewAttachedToSceneEvent() should have no effect before any highlights are drawn.
-  mock_session_->SendViewDetachedFromSceneEvent();
+  mock_session_->SendViewDetachedFromSceneEvent(1u /* view id */);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(view_detached_);
 
-  mock_session_->SendViewAttachedToSceneEvent();
+  mock_session_->SendViewAttachedToSceneEvent(1u /* view id */);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(view_attached_);
