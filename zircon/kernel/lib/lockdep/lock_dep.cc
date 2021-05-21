@@ -26,9 +26,8 @@
 
 namespace {
 
-// Event to wake up the loop detector thread when a new edge is added to the
-// lock dependency graph.
-AutounsignalEvent graph_edge_event;
+// Atomic flag used to indicate that a loop detection pass need to be performed.
+RelaxedAtomic<bool> loop_detection_graph_is_dirty{false};
 
 // Event to wait on the completion of a triggered loop detection pass. This is
 // primarily to bound the async loop detection report when testing.
@@ -41,15 +40,14 @@ DECLARE_SINGLETON_MUTEX(DetectionCompleteLock);
 // lock dependencies.
 int LockDepThread(void* /*arg*/) {
   while (true) {
-    __UNUSED zx_status_t error = graph_edge_event.Wait();
-
-    // Add some hysteresis to avoid re-triggering the loop detector on
-    // close successive updates to the graph and to give the inline
-    // validation reports a chance to print out first.
+    // Check to see if our graph has been flagged as dirty once every 2 seconds.
     Thread::Current::SleepRelative(ZX_SEC(2));
 
-    lockdep::LoopDetectionPass();
-    detection_complete_event.Signal();
+    if (loop_detection_graph_is_dirty.load()) {
+      loop_detection_graph_is_dirty.store(false);
+      lockdep::LoopDetectionPass();
+      detection_complete_event.Signal();
+    }
   }
   return 0;
 }
@@ -109,7 +107,7 @@ int CommandLockDep(int argc, const cmd_args* argv, uint32_t flags) {
 
 }  // anonymous namespace
 
-// Triggers a loop detection pass and waits for it to complete or timeout.
+// Wait for a loop detection pass to complete, or timeout.
 zx_status_t TriggerAndWaitForLoopDetection(zx_time_t deadline) {
   Guard<Mutex> guard{DetectionCompleteLock::Get()};
   detection_complete_event.Unsignal();
@@ -181,14 +179,11 @@ ThreadLockState* SystemGetThreadLockState() {
 // Initializes an instance of ThreadLockState.
 void SystemInitThreadLockState(ThreadLockState*) {}
 
-// Wakes up the loop detector thread to re-evaluate the dependency graph.
+// There is no explicit event based triggering mechanism for lockdep when used
+// in the kernel.  The loop detection thread will simply poll "dirty" flag once
+// every 2 seconds, clearing the flag and performing a check if the flag is set.
 void SystemTriggerLoopDetection() {
-  if (ThreadLock::Get()->lock().IsHeld()) {
-    AssertHeld<ThreadLock, IrqSave>(*ThreadLock::Get());
-    graph_edge_event.SignalLocked();
-  } else {
-    graph_edge_event.Signal();
-  }
+  loop_detection_graph_is_dirty.store(true);
 }
 
 }  // namespace lockdep
