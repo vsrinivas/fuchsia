@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{Event, Status},
     futures::StreamExt,
     io_conformance_util::io1_request_logger_factory::Io1RequestLoggerFactory,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
@@ -749,8 +749,11 @@ async fn rename_with_sufficient_rights() {
         let dest_token = get_token(&dest_dir).await;
 
         // Rename src/old.txt -> dest/new.txt.
-        let status = src_dir.rename("old.txt", dest_token, "new.txt").await.expect("rename failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        let status = src_dir
+            .rename2("old.txt", Event::from(dest_token), "new.txt")
+            .await
+            .expect("rename failed");
+        assert!(status.is_ok());
 
         // Check dest/new.txt was created and has correct contents.
         assert_eq!(read_file(&test_dir, "dest/new.txt").await, contents);
@@ -779,8 +782,12 @@ async fn rename_with_insufficient_rights() {
         let dest_token = get_token(&dest_dir).await;
 
         // Try renaming src/old.txt -> dest/new.txt.
-        let status = src_dir.rename("old.txt", dest_token, "new.txt").await.expect("rename failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        let status = src_dir
+            .rename2("old.txt", Event::from(dest_token), "new.txt")
+            .await
+            .expect("rename failed");
+        assert!(status.is_err());
+        assert_eq!(status.err().unwrap(), Status::BAD_HANDLE.into_raw());
     }
 }
 
@@ -803,15 +810,17 @@ async fn rename_with_slash_in_path_fails() {
 
         // Including a slash in the src or dest path should fail.
         let status = test_dir
-            .rename("src/old.txt", get_token(&dest_dir).await, "new.txt")
+            .rename2("src/old.txt", Event::from(get_token(&dest_dir).await), "new.txt")
             .await
             .expect("rename failed");
-        assert_eq!(Status::from_raw(status), Status::INVALID_ARGS);
+        assert!(status.is_err());
+        assert_eq!(status.err().unwrap(), Status::INVALID_ARGS.into_raw());
         let status = src_dir
-            .rename("old.txt", get_token(&dest_dir).await, "nested/new.txt")
+            .rename2("old.txt", Event::from(get_token(&dest_dir).await), "nested/new.txt")
             .await
             .expect("rename failed");
-        assert_eq!(Status::from_raw(status), Status::INVALID_ARGS);
+        assert!(status.is_err());
+        assert_eq!(status.err().unwrap(), Status::INVALID_ARGS.into_raw());
     }
 }
 

@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_io::{DirectoryProxy, FileProxy, SeekOrigin, CLONE_FLAG_SAME_RIGHTS},
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{Event, Status},
     io_util::{directory::*, file::*, node::OpenError},
     log::debug,
     std::path::Path,
@@ -134,8 +134,8 @@ impl Directory {
                 }
             }
         }?;
-        match self.proxy.rename(src_name, dst_token, dst_name).await {
-            Ok(raw_status_code) => Status::ok(raw_status_code),
+        match self.proxy.rename2(src_name, Event::from(dst_token), dst_name).await {
+            Ok(_) => Ok(()),
             Err(e) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)

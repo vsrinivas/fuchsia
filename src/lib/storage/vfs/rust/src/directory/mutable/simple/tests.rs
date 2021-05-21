@@ -29,6 +29,7 @@ use crate::{
 };
 
 use {
+    fidl::Event,
     fidl_fuchsia_io::{
         DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED,
@@ -149,12 +150,12 @@ fn rename_within_directory() {
         assert_rename_err!(
             &proxy,
             "file-does-not-exist",
-            root_token,
+            Event::from(root_token),
             "file-will-not-exist",
             Status::NOT_FOUND
         );
         root_token = assert_get_token!(&proxy);
-        assert_rename!(&proxy, "passwd", root_token, "fstab");
+        assert_rename!(&proxy, "passwd", Event::from(root_token), "fstab");
 
         open_as_file_assert_err!(&proxy, ro_flags, "passwd", Status::NOT_FOUND);
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
@@ -192,7 +193,7 @@ fn rename_across_directories() {
             token
         };
 
-        assert_rename!(&tmp, "fstab.new", etc_token, "fstab");
+        assert_rename!(&tmp, "fstab.new", Event::from(etc_token), "fstab");
 
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.new", Status::NOT_FOUND);
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
@@ -233,12 +234,12 @@ fn rename_across_directories_twice() {
         let etc_token = assert_get_token!(&etc);
         let tmp_token = assert_get_token!(&tmp);
 
-        assert_rename!(&etc, "fstab", tmp_token, "fstab.to-edit");
+        assert_rename!(&etc, "fstab", Event::from(tmp_token), "fstab.to-edit");
 
         open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.to-edit", "/dev/fs /");
 
-        assert_rename!(&tmp, "fstab.to-edit", etc_token, "fstab.updated");
+        assert_rename!(&tmp, "fstab.to-edit", Event::from(etc_token), "fstab.updated");
 
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab.updated", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
@@ -283,13 +284,13 @@ fn rename_within_directory_with_watchers() {
         assert_rename_err!(
             &proxy,
             "file-does-not-exist",
-            root_token,
+            Event::from(root_token),
             "file-will-not-exist",
             Status::NOT_FOUND
         );
 
         root_token = assert_get_token!(&proxy);
-        assert_rename!(&proxy, "passwd", root_token, "fstab");
+        assert_rename!(&proxy, "passwd", Event::from(root_token), "fstab");
 
         // If the unsuccessful rename produced events, they will be read first
         // instead of the expected events for the successful rename.
@@ -350,7 +351,7 @@ fn rename_across_directories_with_watchers() {
             watcher
         };
 
-        assert_rename!(&tmp, "fstab.new", etc_token, "fstab");
+        assert_rename!(&tmp, "fstab.new", Event::from(etc_token), "fstab");
 
         assert_watcher_one_message_watched_events!(tmp_watcher, { REMOVED, "fstab.new" });
         assert_watcher_one_message_watched_events!(etc_watcher, { ADDED, "fstab" });
@@ -413,7 +414,7 @@ fn rename_across_directories_twice_with_watchers() {
             watcher
         };
 
-        assert_rename!(&etc, "fstab", tmp_token, "fstab.to-edit");
+        assert_rename!(&etc, "fstab", Event::from(tmp_token), "fstab.to-edit");
 
         assert_watcher_one_message_watched_events!(etc_watcher, { REMOVED, "fstab" });
         assert_watcher_one_message_watched_events!(tmp_watcher, { ADDED, "fstab.to-edit" });
@@ -421,7 +422,7 @@ fn rename_across_directories_twice_with_watchers() {
         open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.to-edit", "/dev/fs /");
 
-        assert_rename!(&tmp, "fstab.to-edit", etc_token, "fstab.updated");
+        assert_rename!(&tmp, "fstab.to-edit", Event::from(etc_token), "fstab.updated");
 
         assert_watcher_one_message_watched_events!(tmp_watcher, { REMOVED, "fstab.to-edit" });
         assert_watcher_one_message_watched_events!(etc_watcher, { ADDED, "fstab.updated" });
@@ -464,7 +465,7 @@ fn rename_into_self_with_watchers() {
         open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
 
         let root_token = assert_get_token!(&proxy);
-        assert_rename!(&proxy, "passwd", root_token, "passwd");
+        assert_rename!(&proxy, "passwd", Event::from(root_token), "passwd");
 
         assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "passwd" });
         assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "passwd" });
@@ -517,7 +518,7 @@ fn rename_fails_for_read_only_source() {
         let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
         let tmp_token = assert_get_token!(&tmp);
 
-        assert_rename_err!(&etc, "fstab", tmp_token, "fstab", Status::BAD_HANDLE);
+        assert_rename_err!(&etc, "fstab", Event::from(tmp_token), "fstab", Status::BAD_HANDLE);
 
         assert_close!(etc);
         assert_close!(tmp);
@@ -825,7 +826,6 @@ fn link_fails_for_read_only_source() {
         assert_close!(etc);
         assert_close!(tmp);
         assert_close!(proxy);
-
     })
     .token_registry(token_registry::Simple::new())
     .run();

@@ -804,11 +804,9 @@ macro_rules! assert_get_token_err {
 #[macro_export]
 macro_rules! assert_rename {
     ($proxy:expr, $src:expr, $dst_parent_token:expr, $dst:expr) => {{
-        use $crate::test_utils::assertions::reexport::Status;
+        let status = $proxy.rename2($src, $dst_parent_token, $dst).await.expect("rename failed");
 
-        let status = $proxy.rename($src, $dst_parent_token, $dst).await.expect("rename failed");
-
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert!(status.is_ok());
     }};
 }
 
@@ -818,9 +816,10 @@ macro_rules! assert_rename_err {
     ($proxy:expr, $src:expr, $dst_parent_token:expr, $dst:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let status = $proxy.rename($src, $dst_parent_token, $dst).await.expect("rename failed");
+        let status = $proxy.rename2($src, $dst_parent_token, $dst).await.expect("rename failed");
 
-        assert_eq!(Status::from_raw(status), $expected_status);
+        assert!(status.is_err());
+        assert_eq!(status.err().unwrap(), $expected_status.into_raw());
     }};
 }
 

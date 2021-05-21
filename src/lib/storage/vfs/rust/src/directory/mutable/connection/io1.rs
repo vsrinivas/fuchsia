@@ -584,6 +584,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename() {
+        use fuchsia_zircon::Event;
+
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
 
@@ -593,8 +595,8 @@ mod tests {
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        let status = proxy.rename("src", token.unwrap(), "dest").await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        let status = proxy.rename2("src", Event::from(token.unwrap()), "dest").await.unwrap();
+        assert!(status.is_ok());
 
         let events = events.0.lock().unwrap();
         assert_eq!(

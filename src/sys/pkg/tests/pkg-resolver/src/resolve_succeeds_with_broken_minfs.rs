@@ -380,12 +380,12 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                         let (status, handle) = tempdir_proxy.get_token().await.unwrap();
                         responder.send(status, handle).unwrap();
                     }
-                    DirectoryRequest::Rename { src, dst, responder, .. } => {
+                    DirectoryRequest::Rename2 { src, dst, responder, .. } => {
                         if !files_to_fail_renames.contains(&src) {
                             panic!("unsupported rename from {} to {}", src, dst);
                         }
                         fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                        responder.send(Status::NOT_FOUND.into_raw()).unwrap();
+                        responder.send(&mut Err(Status::NOT_FOUND.into_raw())).unwrap();
                     }
                     other => {
                         panic!("unhandled request type for path {:?}: {:?}", path, other);

@@ -46,8 +46,6 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void ReadDirents(uint64_t max_bytes, ReadDirentsCallback callback) override;
   void Rewind(RewindCallback callback) override;
   void GetToken(GetTokenCallback callback) override;
-  void Rename(std::string src, zx::handle dst_parent_token, std::string dst,
-              RenameCallback callback) override;
   void Rename2(std::string src, zx::event dst_parent_token, std::string dst,
                Rename2Callback callback) override;
   void Link(std::string src, zx::handle dst_parent_token, std::string dst,

@@ -1633,19 +1633,19 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     return token_result->s;
   }
 
-  auto rename_result =
-      fidl::WireCall(old_storage.value().borrow())
-          .Rename(fidl::StringView::FromExternal(old_name), std::move(token_result->token),
-                  fidl::StringView::FromExternal(new_name));
+  auto rename_result = fidl::WireCall(old_storage.value().borrow())
+                           .Rename2(fidl::StringView::FromExternal(old_name),
+                                    zx::event(std::move(token_result->token)),
+                                    fidl::StringView::FromExternal(new_name));
   if (!rename_result.ok()) {
     LOG(ERROR, "failed to rename file (FIDL status: %s)", rename_result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return rename_result.status();
   }
-  if (rename_result->s != ZX_OK) {
-    LOG(ERROR, "failed to rename file (IO status: %d)", rename_result->s);
+  if (rename_result->result.is_err()) {
+    LOG(ERROR, "failed to rename file (IO status: %d)", rename_result->result.err());
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return rename_result->s;
+    return rename_result->result.err();
   }
 
   message->set_return_code(TEEC_SUCCESS);

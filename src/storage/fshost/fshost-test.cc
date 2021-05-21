@@ -168,7 +168,6 @@ class MockDirectoryAdminOpener : public fidl::WireServer<fio::DirectoryAdmin> {
   }
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override {}
   void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {}
-  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {}
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {}
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {}
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {}

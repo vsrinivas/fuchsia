@@ -79,7 +79,6 @@ class DeviceControllerConnection
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& _completer) override {}
   void Sync(SyncRequestView request, SyncCompleter::Sync& _completer) override {}
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& _completer) override {}
-  void Rename(RenameRequestView request, RenameCompleter::Sync& _completer) override {}
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& _completer) override {}
   void Link(LinkRequestView request, LinkCompleter::Sync& _completer) override {}
   void Watch(WatchRequestView request, WatchCompleter::Sync& _completer) override {}

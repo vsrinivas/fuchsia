@@ -372,11 +372,13 @@ TEST_P(RenameTest, Raw) {
   // Observe that paths are rejected.
   constexpr char src[] = "bravo/charlie";
   constexpr char dst[] = "bravo/delta";
-  auto rename_result = fidl::WireCall<fio::Directory>(caller.channel())
-                           .Rename(fidl::StringView(src), std::move(token_result.Unwrap()->token),
-                                   fidl::StringView(dst));
-  ASSERT_EQ(rename_result.status(), ZX_OK);
-  ASSERT_EQ(rename_result.Unwrap()->s, ZX_ERR_INVALID_ARGS);
+  auto rename_result =
+      fidl::WireCall<fio::Directory>(caller.channel())
+          .Rename2(fidl::StringView(src), zx::event(token_result.Unwrap()->token.get()),
+                   fidl::StringView(dst));
+  ASSERT_TRUE(rename_result.ok());
+  ASSERT_TRUE(rename_result.value().result.is_err());
+  ASSERT_EQ(rename_result.value().result.err(), ZX_ERR_INVALID_ARGS);
 
   // Clean up
   ASSERT_EQ(unlink(GetPath("alpha/bravo/charlie").c_str()), 0);

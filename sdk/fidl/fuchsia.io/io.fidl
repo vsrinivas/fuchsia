@@ -617,6 +617,7 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
+    [Transitional] // Rename is being removed, use Rename2 instead.
     Rename(string:MAX_PATH src, zx.handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Renames a node named `src` to the name `dst`, in a directory represented

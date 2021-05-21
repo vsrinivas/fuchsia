@@ -192,9 +192,6 @@ class DevfsFidlServer : public fidl::WireServer<fio::DirectoryAdmin> {
   void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
   }
-  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }

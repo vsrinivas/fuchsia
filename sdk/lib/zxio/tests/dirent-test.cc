@@ -121,10 +121,6 @@ class TestServer final : public fidl::WireServer<fio::Directory> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

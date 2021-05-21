@@ -573,10 +573,13 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
     ASSERT_EQ(result.status(), ZX_OK);
   }
   {
-    zx::channel s, c;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
-    auto result = client->Rename("", std::move(s), "",
-                                 [](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });
+    zx::event e;
+    fuchsia_io::wire::DirectoryRename2Result x;
+    ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
+    auto result = client->Rename2("", std::move(e), "", [](auto* ret) {
+      ASSERT_TRUE(ret->result.is_err());
+      ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
+    });
     ASSERT_EQ(result.status(), ZX_OK);
   }
   {

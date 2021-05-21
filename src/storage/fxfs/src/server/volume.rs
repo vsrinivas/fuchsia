@@ -281,6 +281,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_different_dirs() {
+        use fuchsia_zircon::Event;
+
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -305,7 +307,9 @@ mod tests {
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        Status::ok(src.rename("a", dst_token.unwrap(), "b").await.expect("FIDL call failed"))
+        src.rename2("a", Event::from(dst_token.unwrap()), "b")
+            .await
+            .expect("FIDL call failed")
             .expect("rename failed");
 
         assert_eq!(
@@ -327,6 +331,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_same_dir() {
+        use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -343,7 +348,9 @@ mod tests {
 
         let (status, src_token) = src.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        Status::ok(src.rename("a", src_token.unwrap(), "b").await.expect("FIDL call failed"))
+        src.rename2("a", Event::from(src_token.unwrap()), "b")
+            .await
+            .expect("FIDL call failed")
             .expect("rename failed");
 
         assert_eq!(
@@ -364,6 +371,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_overwrites_file() {
+        use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -401,7 +409,9 @@ mod tests {
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        Status::ok(src.rename("a", dst_token.unwrap(), "b").await.expect("FIDL call failed"))
+        src.rename2("a", Event::from(dst_token.unwrap()), "b")
+            .await
+            .expect("FIDL call failed")
             .expect("rename failed");
 
         assert_eq!(
@@ -425,6 +435,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_overwrites_dir() {
+        use fuchsia_zircon::Event;
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -457,7 +468,9 @@ mod tests {
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        Status::ok(src.rename("a", dst_token.unwrap(), "b").await.expect("FIDL call failed"))
+        src.rename2("a", Event::from(dst_token.unwrap()), "b")
+            .await
+            .expect("FIDL call failed")
             .expect("rename failed");
 
         assert_eq!(
