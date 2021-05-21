@@ -1,0 +1,72 @@
+{
+    "metrics": [
+        {
+            "event_codes": [],
+            "metric_id": 15,
+            "metric_type": "Integer",
+            "selector": "netstack.cmx:Networking Stat Counters:SocketCount"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 28,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters:SocketsCreated"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 29,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters:SocketsDestroyed"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 30,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters:PacketsSent"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 31,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters:PacketsReceived"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 32,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters:BytesSent"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 33,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters:BytesReceived"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 22,
+            "metric_type": "Integer",
+            "selector": "netstack.cmx:Networking Stat Counters/TCP:CurrentEstablished"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 34,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedClosed"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 35,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedResets"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 36,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedTimedout"
+        }
+    ],
+    "poll_rate_sec": 60,
+    "project_id": 1
+}

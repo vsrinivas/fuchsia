@@ -77,6 +77,7 @@ sampler_configuration("production_sampler") {
     "config/bthost.json",
     "config/ftl.json",
     "config/fvm.json",
+    "config/netstack.json",
     "config/sysmem.json",
     "config/system-update-committer.json",
     "config/connectivity-wlan.json",

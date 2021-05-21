@@ -355,20 +355,13 @@ func Main() {
 	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 
 	socketProviderImpl := providerImpl{ns: ns}
-	ns.stats = stats{
-		Stats: stk.Stats(),
-	}
-	statsObserver := statsObserver{}
-	statsObserver.init(func() {
-		cobaltClient.Register(&statsObserver)
-	})
-	go statsObserver.run(context.Background(), socketStatsTimerPeriod, &ns.stats, ns.stack)
+	ns.stats.init(ns)
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &statCounterInspectImpl{
 					name:  "Networking Stat Counters",
-					value: reflect.ValueOf(ns.stats),
+					value: reflect.ValueOf(&ns.stats).Elem(),
 				},
 			}).asService,
 		},

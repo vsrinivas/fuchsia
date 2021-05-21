@@ -396,3 +396,45 @@ async fn inspect_routing_table() -> Result {
 
     Ok(())
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn inspect_for_sampler() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let env = sandbox
+        .create_netstack_environment::<Netstack2, _>("inspect_for_sampler")
+        .expect("failed to create environment");
+    // Connect to netstack service to spawn a netstack instance.
+    let _netstack = env
+        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .expect("failed to connect to fuchsia.netstack/Netstack");
+
+    // We can pass any sample rate here. It is not used at all in this test.
+    const MINIMUM_SAMPLE_RATE_SEC: i64 = 60;
+    let sampler_config = sampler::config::SamplerConfig::from_directory(
+        MINIMUM_SAMPLE_RATE_SEC,
+        "/pkg/data/sampler-config",
+    )
+    .expect("SamplerConfig::from_directory failed");
+    let project_config = match &sampler_config.project_configs[..] {
+        [project_config] => project_config,
+        project_configs => panic!("expected one project_config but got {:#?}", project_configs),
+    };
+    for metric_config in &project_config.metrics {
+        let tree_selector = metric_config
+            .selector
+            .strip_prefix("netstack.cmx:")
+            .expect("failed to strip \"netstack.cmx:\"");
+        // Debug print data to make debugging easier in case of failures.
+        println!("tree_selector={:#?}", tree_selector);
+        let expected_key = metric_config.selector.split(":").last().expect("failed to find a key");
+
+        let data = get_inspect_data(&env, "netstack-debug.cmx", tree_selector, "counters")
+            .await
+            .expect("get_inspect_data failed");
+        let properties: Vec<_> = data
+            .property_iter()
+            .filter_map(|(_hierarchy_path, property_opt): (Vec<&String>, _)| property_opt)
+            .collect();
+        matches::assert_matches!(properties[..], [Property::Uint(key, _)] if key == expected_key);
+    }
+}

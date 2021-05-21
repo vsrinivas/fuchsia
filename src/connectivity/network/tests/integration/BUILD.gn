@@ -14,7 +14,6 @@ group("tests") {
 }
 
 tests = [
-  "cobalt",
   "dhcp",
   "dns",
   "fidl",
@@ -83,6 +82,9 @@ fuchsia_test_package("netstack-integration-tests") {
 
     # netemul-sandbox is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+
+    # sampler config is tested as part of inspect integration tests.
+    ":sampler-config",
   ]
 }
 
@@ -99,4 +101,9 @@ config_data("network-manager-config") {
   sources =
       [ "//src/connectivity/management/network-manager/config/default.json" ]
   outputs = [ "factory_config.json" ]
+}
+
+resource("sampler-config") {
+  sources = [ "//src/diagnostics/sampler/config/netstack.json" ]
+  outputs = [ "data/sampler-config/netstack.json" ]
 }

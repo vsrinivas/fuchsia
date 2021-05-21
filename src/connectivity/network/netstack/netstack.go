@@ -26,8 +26,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	networking_metrics "networking_metrics_golib"
-
 	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
@@ -62,15 +60,61 @@ func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
 	return onLinkV6Route(nicID, header.IPv6LinkLocalPrefix.Subnet())
 }
 
+var _ statCounter = (funcCounter)(nil)
+
+type funcCounter func() uint64
+
+func (f funcCounter) Value(...string) uint64 {
+	return f()
+}
+
 type stats struct {
 	tcpip.Stats
 	SocketCount      tcpip.StatCounter
 	SocketsCreated   tcpip.StatCounter
 	SocketsDestroyed tcpip.StatCounter
+	PacketsSent      funcCounter
+	PacketsReceived  funcCounter
+	BytesSent        funcCounter
+	BytesReceived    funcCounter
 }
 
-// Map from Cobalt metric ID to metric value.
-type nicStats map[uint32]uint64
+func (s *stats) init(ns *Netstack) {
+	s.Stats = ns.stack.Stats()
+	// TODO(https://fxbug.dev/76062): Implement netstack-global counters.
+	s.PacketsSent = func() uint64 {
+		nicInfos := ns.stack.NICInfo()
+		var c uint64 = 0
+		for _, info := range nicInfos {
+			c += info.Stats.Tx.Packets.Value()
+		}
+		return c
+	}
+	s.PacketsReceived = func() uint64 {
+		nicInfos := ns.stack.NICInfo()
+		var c uint64 = 0
+		for _, info := range nicInfos {
+			c += info.Stats.Rx.Packets.Value()
+		}
+		return c
+	}
+	s.BytesSent = func() uint64 {
+		nicInfos := ns.stack.NICInfo()
+		var c uint64 = 0
+		for _, info := range nicInfos {
+			c += info.Stats.Tx.Bytes.Value()
+		}
+		return c
+	}
+	s.BytesReceived = func() uint64 {
+		nicInfos := ns.stack.NICInfo()
+		var c uint64 = 0
+		for _, info := range nicInfos {
+			c += info.Stats.Rx.Bytes.Value()
+		}
+		return c
+	}
+}
 
 type cobaltClient struct {
 	mu struct {
@@ -133,143 +177,6 @@ func (c *cobaltClient) run(ctx context.Context, cobaltLogger *cobalt.LoggerWithC
 			}
 		}
 	}
-}
-
-var _ cobaltEventProducer = (*statsObserver)(nil)
-
-type statsObserver struct {
-	mu struct {
-		sync.Mutex
-		cobaltEvents []cobalt.CobaltEvent
-		hasEvents    func()
-	}
-}
-
-func (o *statsObserver) run(ctx context.Context, interval time.Duration, stats *stats, stk *stack.Stack) error {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	var lastCreated, lastDestroyed uint64
-	var lastTcpConnectionsClosed, lastTcpConnectionsReset, lastTcpConnectionsTimedOut uint64
-	previousTime := time.Now()
-	lastNICStats := make(map[tcpip.NICID]nicStats)
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case ts := <-ticker.C:
-			created := stats.SocketsCreated.Value()
-			destroyed := stats.SocketsDestroyed.Value()
-			tcpConnectionsClosed := stats.TCP.EstablishedClosed.Value()
-			tcpConnectionsReset := stats.TCP.EstablishedResets.Value()
-			tcpConnectionsTimedOut := stats.TCP.EstablishedTimedout.Value()
-
-			period := ts.Sub(previousTime).Microseconds()
-			previousTime = ts
-			events := []cobalt.CobaltEvent{
-				{
-					MetricId: networking_metrics.SocketCountMaxMetricId,
-					Payload:  eventCount(period, stats.SocketCount.Value()),
-				},
-				{
-					MetricId: networking_metrics.SocketsCreatedMetricId,
-					Payload:  eventCount(period, created-lastCreated),
-				},
-				{
-					MetricId: networking_metrics.SocketsDestroyedMetricId,
-					Payload:  eventCount(period, destroyed-lastDestroyed),
-				},
-				{
-					MetricId: networking_metrics.TcpConnectionsEstablishedTotalMetricId,
-					Payload:  eventCount(period, stats.TCP.CurrentEstablished.Value()),
-				},
-				{
-					MetricId: networking_metrics.TcpConnectionsClosedMetricId,
-					Payload:  eventCount(period, tcpConnectionsClosed-lastTcpConnectionsClosed),
-				},
-				{
-					MetricId: networking_metrics.TcpConnectionsResetMetricId,
-					Payload:  eventCount(period, tcpConnectionsReset-lastTcpConnectionsReset),
-				},
-				{
-					MetricId: networking_metrics.TcpConnectionsTimedOutMetricId,
-					Payload:  eventCount(period, tcpConnectionsTimedOut-lastTcpConnectionsTimedOut),
-				},
-			}
-
-			nicInfos := stk.NICInfo()
-			for nicid, info := range nicInfos {
-				packetsSent, packetsReceived := info.Stats.Tx.Packets.Value(), info.Stats.Rx.Packets.Value()
-				bytesSent, bytesReceived := info.Stats.Tx.Bytes.Value(), info.Stats.Rx.Bytes.Value()
-
-				lastStats, ok := lastNICStats[nicid]
-				if !ok {
-					lastStats = make(nicStats)
-					lastNICStats[nicid] = lastStats
-				}
-				deltaPacketsSent := packetsSent - lastStats[networking_metrics.PacketsSentMetricId]
-				deltaPacketsReceived := packetsReceived - lastStats[networking_metrics.PacketsReceivedMetricId]
-				deltaBytesSent := bytesSent - lastStats[networking_metrics.BytesSentMetricId]
-				deltaBytesReceived := bytesReceived - lastStats[networking_metrics.BytesReceivedMetricId]
-
-				lastStats[networking_metrics.PacketsSentMetricId] = packetsSent
-				lastStats[networking_metrics.PacketsReceivedMetricId] = packetsReceived
-				lastStats[networking_metrics.BytesSentMetricId] = bytesSent
-				lastStats[networking_metrics.BytesReceivedMetricId] = bytesReceived
-
-				// TODO(fxbug.dev/43237): log the NIC features (eth, WLAN, bridge) associated with each datapoint
-				events = append(
-					events,
-					cobalt.CobaltEvent{
-						MetricId: networking_metrics.PacketsSentMetricId,
-						Payload:  eventCount(period, deltaPacketsSent),
-					},
-					cobalt.CobaltEvent{
-						MetricId: networking_metrics.PacketsReceivedMetricId,
-						Payload:  eventCount(period, deltaPacketsReceived),
-					},
-					cobalt.CobaltEvent{
-						MetricId: networking_metrics.BytesSentMetricId,
-						Payload:  eventCount(period, deltaBytesSent),
-					},
-					cobalt.CobaltEvent{
-						MetricId: networking_metrics.BytesReceivedMetricId,
-						Payload:  eventCount(period, deltaBytesReceived),
-					},
-				)
-			}
-			o.mu.Lock()
-			o.mu.cobaltEvents = append(o.mu.cobaltEvents, events...)
-			hasEvents := o.mu.hasEvents
-			o.mu.Unlock()
-			if hasEvents == nil {
-				panic("statsObserver: hasEvents callback unspecified (ensure init has been called)")
-			}
-			hasEvents()
-			lastCreated = created
-			lastDestroyed = destroyed
-			lastTcpConnectionsClosed = tcpConnectionsClosed
-			lastTcpConnectionsReset = tcpConnectionsReset
-			lastTcpConnectionsTimedOut = tcpConnectionsTimedOut
-		}
-	}
-}
-
-func (o *statsObserver) init(hasEvents func()) {
-	o.mu.Lock()
-	o.mu.hasEvents = hasEvents
-	o.mu.Unlock()
-}
-
-func (o *statsObserver) events() []cobalt.CobaltEvent {
-	o.mu.Lock()
-	res := o.mu.cobaltEvents
-	o.mu.cobaltEvents = nil
-	o.mu.Unlock()
-	return res
-}
-
-func eventCount(period int64, count uint64) cobalt.EventPayload {
-	return cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(count)})
 }
 
 // endpointsMap is a map from a monotonically increasing uint64 value to tcpip.Endpoint.

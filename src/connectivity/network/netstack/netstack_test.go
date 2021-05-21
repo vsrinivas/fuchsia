@@ -1145,6 +1145,7 @@ func newNetstackWithStackNDPDispatcherAndNICRemovedHandler(t *testing.T, ndpDisp
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
 		nicRemovedHandlers: []NICRemovedHandler{h, f},
 	}
+	ns.stats.init(ns)
 	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 
