@@ -19,3 +19,13 @@ python_binary("gn_generate_cmd") {
     "//third_party/markupsafe",
   ]
 }
+
+if (is_host) {
+  action("envfile_for_build") {
+    script = "make_ffx_env.py"
+    inputs = []
+    deps = []
+    args = [ ".ffx.env" ]
+    outputs = [ "$root_build_dir/.ffx.env" ]
+  }
+}

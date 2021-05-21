@@ -68,18 +68,6 @@ template("ffx_action") {
   # action so that it will pick up the "gn_run_binary.sh" and hermetic deps
   # checking that's done with the compiled_action() template.
   compiled_action(target_name) {
-    # Use a builddir-specific environment, not the user's own environment.  This
-    # breaks hermetic deps because ffx needs to both read/write this file, for
-    # all ffx_action() template invocations, and so it can't be in `inputs` or
-    # `outputs`.
-    # TODO(fxbug.dev/76052): Remove this when ffx can be executed without any
-    # environment file being touched.
-    hermetic_deps = false
-    args = [
-             "--env",
-             rebase_path("${root_build_dir}/.ffx.env", root_build_dir),
-           ] + invoker.args
-
     forward_variables_from(invoker,
                            [
                              "data_deps",
@@ -96,6 +84,15 @@ template("ffx_action") {
                              "tool_output_name",
                              "visibility",
                            ])
+
+    # Use a builddir-specific environment, not the user's own environment.
+    args = [
+             "--env",
+             rebase_path("${root_build_dir}/.ffx.env", root_build_dir),
+           ] + invoker.args
+
+    deps += [ "//src/developer/ffx/build:envfile_for_build($host_toolchain)" ]
+    inputs += [ "$root_build_dir/.ffx.env" ]
 
     tool = "//src/developer/ffx:ffx_bin"
     tool_output_name = "ffx"
