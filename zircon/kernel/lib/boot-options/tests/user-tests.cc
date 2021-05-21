@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/test-types.h>
+#include <lib/boot-options/types.h>
 #include <lib/fit/defer.h>
 
 #include <zxtest/zxtest.h>
@@ -114,7 +116,6 @@ void CompareValues<SmallString>(const SmallString& lhs, const SmallString& rhs) 
 //
 template <typename OptionType>
 void TestParsing(std::string_view name, std::string_view to_set, OptionType expected_value) {
-  // TODO: use fbl::unique_FILE when available.
   FILE* f = tmpfile();
   auto cleanup = fit::defer([f]() { fclose(f); });
 
@@ -169,7 +170,6 @@ TEST(ParsingTests, TruthyBoolValues) {
 
   // A truthy value is by definition anything that isn't falsey (see above).
   ASSERT_NO_FATAL_FAILURES(TestParsing<bool>("test.option.bool", "test.option.bool=", true));
-
   ASSERT_NO_FATAL_FAILURES(
       TestParsing<bool>("test.option.bool", "test.option.bool=anything", true));
 }
@@ -287,6 +287,8 @@ TEST(UnparsingTests, BasicSmallStringValue) {
 
 TEST(ParsingTests, DefaultEnumValue) {
   ASSERT_NO_FATAL_FAILURES(TestParsing<TestEnum>("test.option.enum", "", TestEnum::kDefault));
+  ASSERT_NO_FATAL_FAILURES(
+      TestParsing<TestEnum>("test.option.enum", "test.option.enum=notanenum", TestEnum::kDefault));
 }
 
 TEST(ParsingTests, BasicEnumValues) {
@@ -318,6 +320,8 @@ TEST(UnparsingTests, BasicEnumValues) {
 
 TEST(ParsingTests, DefaultStructValue) {
   ASSERT_NO_FATAL_FAILURES(TestParsing<TestStruct>("test.option.struct", "", {}));
+  ASSERT_NO_FATAL_FAILURES(
+      TestParsing<TestStruct>("test.option.struct", "test.option.struct=notvalidthingy", {}));
 }
 
 TEST(ParsingTests, BasicStructValue) {
@@ -343,6 +347,8 @@ TEST(UnparsingTests, EmptyStructValue) {
 
 TEST(ParsingTests, DefaultRedatedHexValue) {
   ASSERT_NO_FATAL_FAILURES(TestParsing<RedactedHex>("test.option.redacted_hex", "", {}));
+  ASSERT_NO_FATAL_FAILURES(TestParsing<RedactedHex>("test.option.redacted_hex",
+                                                    "test.option.redacted_hex=THISISNOTHEX", {}));
 }
 
 TEST(ParsingTests, BasicRedatedHexValue) {
@@ -381,7 +387,6 @@ TEST(UnparsingTests, EmptyRedatedHexValue) {
 }
 
 TEST(ParsingTests, SetManyAdditivity) {
-  // TODO: use fbl::unique_FILE when available.
   FILE* f = tmpfile();
   auto cleanup = fit::defer([f]() { fclose(f); });
 
@@ -399,6 +404,45 @@ TEST(ParsingTests, SetManyAdditivity) {
   EXPECT_FALSE(options.test_bool);
   EXPECT_EQ(123, options.test_uint32);
   EXPECT_EQ(456, options.test_uint64);
+
+  char buff[kFileSizeMax];
+  size_t n = fread(buff, 1, kFileSizeMax, f);
+  ASSERT_EQ(0, ferror(f), "failed to read file: %s", strerror(errno));
+  ASSERT_EQ(0, n, "unexpected error while setting: %.*s", static_cast<int>(n), buff);
+}
+
+TEST(ParsingTests, UnknownValueResetsToDefault) {
+  FILE* f = tmpfile();
+  auto cleanup = fit::defer([f]() { fclose(f); });
+
+  BootOptions options;
+  // Needs to be backed by mutable storage, so Redact can update in place.
+  std::string command_line =
+      "test.option.uint32=1 test.option.uint64=1 "
+      "test.option.enum=value1 test.option.struct=test "
+      "test.option.uint32=notint test.option.uint64=notint "
+      "test.option.enum=notenum test.option.struct=xxxx";
+
+  // valid then invalid values.
+  options.SetMany(command_line, f);
+  EXPECT_EQ(123, options.test_uint32);
+  EXPECT_EQ(456, options.test_uint64);
+  EXPECT_EQ(TestStruct{}, options.test_struct);
+  EXPECT_EQ(TestEnum::kDefault, options.test_enum);
+
+  command_line =
+      "test.option.uint32=1 test.option.uint64=1 "
+      "test.option.enum=value1 test.option.struct=test "
+      "test.option.uint32=notint test.option.uint64=notint "
+      "test.option.enum=notenum test.option.struct=xxxx "
+      "test.option.uint32=1 test.option.uint64=1 "
+      "test.option.enum=value2 test.option.struct=test";
+  // Now repeat with a valid option after an unknown value.
+  options.SetMany(command_line, f);
+  EXPECT_EQ(1, options.test_uint32);
+  EXPECT_EQ(1, options.test_uint64);
+  EXPECT_TRUE(options.test_struct.present);
+  EXPECT_EQ(TestEnum::kValue2, options.test_enum);
 
   char buff[kFileSizeMax];
   size_t n = fread(buff, 1, kFileSizeMax, f);

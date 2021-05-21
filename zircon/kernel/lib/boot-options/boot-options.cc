@@ -7,15 +7,26 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/types.h>
 #include <lib/boot-options/word-view.h>
 #include <lib/stdcompat/algorithm.h>
 #include <zircon/compiler.h>
 
-#include "lib/boot-options/types.h"
-
 namespace {
+
+template <auto MemberPtr>
+constexpr auto kDefaultValue = MemberPtr;
+
+// Provides constants for the default value of each member.
+#define DEFINE_OPTION(name, type, member, init, doc) \
+  template <>                                        \
+  constexpr type kDefaultValue<&BootOptions::member> init;
+#include <lib/boot-options/options.inc>
+#undef DEFINE_OPTION
+
 #include "enum.h"
-}
+
+}  // namespace
 
 BootOptions* gBootOptions = nullptr;
 
@@ -175,9 +186,11 @@ BootOptions::WordResult BootOptions::ParseWord(std::string_view word) {
   // returns true when the key was known but the value was unparsable.
   if (auto option = FindOption(key)) {
     switch (*option) {
-#define DEFINE_OPTION(name, type, member, init, doc) \
-  case Index::member:                                \
-    Parse(value, &BootOptions::member);              \
+#define DEFINE_OPTION(name, type, member, init, doc)      \
+  case Index::member:                                     \
+    if (!Parse(value, &BootOptions::member)) {            \
+      this->member = kDefaultValue<&BootOptions::member>; \
+    }                                                     \
     break;
 #include <lib/boot-options/options.inc>
 #undef DEFINE_OPTION
@@ -237,10 +250,12 @@ void BootOptions::Show(bool defaults, FILE* out) {
 namespace {
 
 template <typename T>
-void ParseIntValue(std::string_view value, T& result) {
+bool ParseIntValue(std::string_view value, T& result) {
   if (auto parsed = BootOptions::ParseInt(value)) {
     result = static_cast<T>(*parsed);
+    return true;
   }
+  return false;
 }
 
 template <typename... Driver>
@@ -263,39 +278,41 @@ struct UartParser {
 
 // Overloads for various types.
 
-void BootOptions::Parse(std::string_view value, bool BootOptions::*member) {
+bool BootOptions::Parse(std::string_view value, bool BootOptions::*member) {
   // Any other value, even an empty value, means true.
   this->*member = value != "false" && value != "0" && value != "off";
+  return true;
 }
 
 void BootOptions::PrintValue(const bool& value, FILE* out) {
   fprintf(out, "%s", value ? "true" : "false");
 }
 
-void BootOptions::Parse(std::string_view value, uint64_t BootOptions::*member) {
-  ParseIntValue(value, this->*member);
+bool BootOptions::Parse(std::string_view value, uint64_t BootOptions::*member) {
+  return ParseIntValue(value, this->*member);
 }
 
 void BootOptions::PrintValue(const uint64_t& value, FILE* out) { fprintf(out, "%#" PRIx64, value); }
 
-void BootOptions::Parse(std::string_view value, uint32_t BootOptions::*member) {
-  ParseIntValue(value, this->*member);
+bool BootOptions::Parse(std::string_view value, uint32_t BootOptions::*member) {
+  return ParseIntValue(value, this->*member);
 }
 
 void BootOptions::PrintValue(const uint32_t& value, FILE* out) { fprintf(out, "%#" PRIx32, value); }
 
-void BootOptions::Parse(std::string_view value, uint8_t BootOptions::*member) {
-  ParseIntValue(value, this->*member);
+bool BootOptions::Parse(std::string_view value, uint8_t BootOptions::*member) {
+  return ParseIntValue(value, this->*member);
 }
 
 void BootOptions::PrintValue(const uint8_t& value, FILE* out) { fprintf(out, "%#" PRIx8, value); }
 
-void BootOptions::Parse(std::string_view value, SmallString BootOptions::*member) {
+bool BootOptions::Parse(std::string_view value, SmallString BootOptions::*member) {
   SmallString& result = this->*member;
   size_t wrote = value.copy(&result[0], result.size());
   // In the event of a value of size greater or equal to SmallString's capacity,
   // truncate to keep invariant that the string is NUL-terminated.
   result[std::min(wrote, result.size() - 1)] = '\0';
+  return true;
 }
 
 void BootOptions::PrintValue(const SmallString& value, FILE* out) {
@@ -303,12 +320,13 @@ void BootOptions::PrintValue(const SmallString& value, FILE* out) {
   fprintf(out, "%s", &value[0]);
 }
 
-void BootOptions::Parse(std::string_view value, RedactedHex BootOptions::*member) {
+bool BootOptions::Parse(std::string_view value, RedactedHex BootOptions::*member) {
   RedactedHex& result = this->*member;
   if (std::all_of(value.begin(), value.end(), isxdigit)) {
     result.len = value.copy(&result.hex[0], result.hex.size());
     Redact(value);
-  }
+  };
+  return true;
 }
 
 void BootOptions::PrintValue(const RedactedHex& value, FILE* out) {
@@ -317,44 +335,46 @@ void BootOptions::PrintValue(const RedactedHex& value, FILE* out) {
   }
 }
 
-void BootOptions::Parse(std::string_view value, uart::all::Driver BootOptions::*member) {
+bool BootOptions::Parse(std::string_view value, uart::all::Driver BootOptions::*member) {
   if (!uart::all::WithAllDrivers<UartParser>{this->*member}.Parse(value)) {
     // Probably has nowhere to go, but anyway.
     printf("WARN: Unrecognized serial console setting '%.*s' ignored\n",
            static_cast<int>(value.size()), value.data());
+    return false;
   }
+  return true;
 }
 
 void BootOptions::PrintValue(const uart::all::Driver& value, FILE* out) {
   std::visit([out](const auto& uart) { uart.Unparse(out); }, value);
 }
 
-void BootOptions::Parse(std::string_view value, OomBehavior BootOptions::*member) {
-  Enum<OomBehavior>(EnumParser{value, &(this->*member)});
+bool BootOptions::Parse(std::string_view value, OomBehavior BootOptions::*member) {
+  return Enum<OomBehavior>(EnumParser{value, &(this->*member)}).Check();
 }
 
 void BootOptions::PrintValue(const OomBehavior& value, FILE* out) {
   Enum<OomBehavior>(EnumPrinter{value, out});
 }
 
-void BootOptions::Parse(std::string_view value, EntropyTestSource BootOptions::*member) {
-  Enum<EntropyTestSource>(EnumParser{value, &(this->*member)});
+bool BootOptions::Parse(std::string_view value, EntropyTestSource BootOptions::*member) {
+  return Enum<EntropyTestSource>(EnumParser{value, &(this->*member)}).Check();
 }
 
 void BootOptions::PrintValue(const EntropyTestSource& value, FILE* out) {
   Enum<EntropyTestSource>(EnumPrinter{value, out});
 }
 
-void BootOptions::Parse(std::string_view value, PageTableEvictionPolicy BootOptions::*member) {
-  Enum<PageTableEvictionPolicy>(EnumParser{value, &(this->*member)});
+bool BootOptions::Parse(std::string_view value, PageTableEvictionPolicy BootOptions::*member) {
+  return Enum<PageTableEvictionPolicy>(EnumParser{value, &(this->*member)}).Check();
 }
 
 void BootOptions::PrintValue(const PageTableEvictionPolicy& value, FILE* out) {
   Enum<PageTableEvictionPolicy>(EnumPrinter{value, out});
 }
 
-void BootOptions::Parse(std::string_view value, GfxConsoleFont BootOptions::*member) {
-  Enum<GfxConsoleFont>(EnumParser{value, &(this->*member)});
+bool BootOptions::Parse(std::string_view value, GfxConsoleFont BootOptions::*member) {
+  return Enum<GfxConsoleFont>(EnumParser{value, &(this->*member)}).Check();
 }
 
 void BootOptions::PrintValue(const GfxConsoleFont& value, FILE* out) {
@@ -363,21 +383,23 @@ void BootOptions::PrintValue(const GfxConsoleFont& value, FILE* out) {
 
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 
-void BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {
-  Enum<TestEnum>(EnumParser{value, &(this->*member)});
+bool BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {
+  return Enum<TestEnum>(EnumParser{value, &(this->*member)}).Check();
 }
 
 void BootOptions::PrintValue(const TestEnum& value, FILE* out) {
   Enum<TestEnum>(EnumPrinter{value, out});
 }
 
-void BootOptions::Parse(std::string_view value, TestStruct BootOptions::*member) {
-  if (value == "test") {
-    (this->*member).present = true;
-  } else {
+bool BootOptions::Parse(std::string_view value, TestStruct BootOptions::*member) {
+  if (value != "test") {
     printf("WARN: Ignored unknown value '%.*s' for test option\n", static_cast<int>(value.size()),
            value.data());
+    return false;
   }
+
+  (this->*member).present = true;
+  return true;
 }
 
 void BootOptions::PrintValue(const TestStruct& value, FILE* out) { fprintf(out, "test"); }
@@ -386,8 +408,8 @@ void BootOptions::PrintValue(const TestStruct& value, FILE* out) { fprintf(out, 
 
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
-void BootOptions::Parse(std::string_view value, IntelHwpPolicy BootOptions::*member) {
-  Enum<IntelHwpPolicy>(EnumParser{value, &(this->*member)});
+bool BootOptions::Parse(std::string_view value, IntelHwpPolicy BootOptions::*member) {
+  return Enum<IntelHwpPolicy>(EnumParser{value, &(this->*member)}).Check();
 }
 
 void BootOptions::PrintValue(const IntelHwpPolicy& value, FILE* out) {

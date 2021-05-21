@@ -211,13 +211,13 @@ bool ParseUint32() {
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
-  // Unparsable values are ignored.
+  // Unparsable values are reset to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options->test_uint32 = 123u;
+    options->test_uint32 = 456;
     options->SetMany("test.option.uint32=not-a-uint32", &file);
     EXPECT_EQ(123u, options->test_uint32);
     EXPECT_EQ(0u, dummy.contents().size());
@@ -333,13 +333,13 @@ bool ParseUint64() {
     EXPECT_EQ(0u, dummy.contents().size());
   };
 
-  // Unparsable values are ignored.
+  // Unparsable values reset value to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     DummyFile dummy;
     FILE file{&dummy};
-    options->test_uint64 = 456u;
+    options->test_uint64 = 1234;
     options->SetMany("test.option.uint64=not-a-uint64", &file);
     EXPECT_EQ(456u, options->test_uint64);
     EXPECT_EQ(0u, dummy.contents().size());
@@ -546,7 +546,7 @@ bool ParseEnum() {
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
-  // Unparsable values are ignored.
+  // Unparsable values reset value to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
@@ -554,7 +554,7 @@ bool ParseEnum() {
     FILE file{&dummy};
     options->test_enum = TestEnum::kValue2;
     options->SetMany("test.option.enum=unknown", &file);
-    EXPECT_EQ(TestEnum::kValue2, options->test_enum);
+    EXPECT_EQ(TestEnum::kDefault, options->test_enum);
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
@@ -631,7 +631,7 @@ bool ParseStruct() {
     EXPECT_EQ(0u, dummy.contents().size());
   }
 
-  // Unparsable values are ignored.
+  // Unparsable values reset value to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
@@ -640,7 +640,7 @@ bool ParseStruct() {
 
     options->test_struct = TestStruct{.present = true};
     options->SetMany("test.option.struct=unparsable", &file);
-    EXPECT_TRUE(TestStruct{.present = true} == options->test_struct);  // No change.
+    EXPECT_TRUE(TestStruct{} == options->test_struct);  // No change.
     EXPECT_EQ(0u, dummy.contents().size());
   }
 

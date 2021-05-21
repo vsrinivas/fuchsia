@@ -9,6 +9,7 @@
 
 #include <lib/boot-options/types.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 
 #include <optional>
 #include <string_view>
@@ -21,7 +22,7 @@ constexpr bool Enum = false;  // Will cause errors since it's not callable.
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 template <>
 constexpr auto Enum<TestEnum> = [](auto&& Switch) {
-  Switch  //
+  return Switch  //
       .Case("default", TestEnum::kDefault)
       .Case("value1", TestEnum::kValue1)
       .Case("value2", TestEnum::kValue2);
@@ -30,14 +31,14 @@ constexpr auto Enum<TestEnum> = [](auto&& Switch) {
 
 template <>
 constexpr auto Enum<OomBehavior> = [](auto&& Switch) {
-  Switch  //
+  return Switch  //
       .Case("reboot", OomBehavior::kReboot)
       .Case("jobkill", OomBehavior::kJobKill);
 };
 
 template <>
 constexpr auto Enum<PageTableEvictionPolicy> = [](auto&& Switch) {
-  Switch  //
+  return Switch  //
       .Case("always", PageTableEvictionPolicy::kAlways)
       .Case("never", PageTableEvictionPolicy::kNever)
       .Case("on_request", PageTableEvictionPolicy::kOnRequest);
@@ -45,14 +46,14 @@ constexpr auto Enum<PageTableEvictionPolicy> = [](auto&& Switch) {
 
 template <>
 constexpr auto Enum<EntropyTestSource> = [](auto&& Switch) {
-  Switch  //
+  return Switch  //
       .Case("hw_rng", EntropyTestSource::kHwRng)
       .Case("jitterentropy", EntropyTestSource::kJitterEntropy);
 };
 
 template <>
 constexpr auto Enum<GfxConsoleFont> = [](auto&& Switch) {
-  Switch  //
+  return Switch  //
       .Case("9x16", GfxConsoleFont::k9x16)
       .Case("18x32", GfxConsoleFont::k18x32);
 };
@@ -61,7 +62,7 @@ constexpr auto Enum<GfxConsoleFont> = [](auto&& Switch) {
 
 template <>
 constexpr auto Enum<IntelHwpPolicy> = [](auto&& Switch) {
-  Switch  //
+  return Switch  //
       .Case("bios-specified", IntelHwpPolicy::kBiosSpecified)
       .Case("performance", IntelHwpPolicy::kPerformance)
       .Case("balanced", IntelHwpPolicy::kBalanced)
@@ -92,26 +93,39 @@ template <typename T>
 class EnumParser {
  public:
   EnumParser(std::string_view name, T* result) : name_(name), result_(result) {}
-
+  constexpr EnumParser(const EnumParser&) noexcept = delete;
+  constexpr EnumParser(EnumParser&& other) noexcept {
+    result_ = other.result_;
+    name_ = other.name_;
+    other.result_ = nullptr;
+  }
   ~EnumParser() {
-    if (result_) {
-      printf("WARN: Ignored unknown value '%.*s' for multiple-choice option\n",
-             static_cast<int>(name_.size()), name_.data());
+    ZX_DEBUG_ASSERT_MSG(result_ == nullptr, "Failed to call EnumParser::Check() value: %.*s",
+                        static_cast<int>(name_.size()), name_.data());
+  }
+
+  bool Check() {
+    T* actual = result_;
+    result_ = nullptr;
+    if (actual) {
+      printf("WARN: Ignored unknown value '%.*s' for multiple-choice option %p\n",
+             static_cast<int>(name_.size()), name_.data(), this);
       printf("WARN: Valid choices are:");
       Enum<T>(EnumEnumerator{[](std::string_view name) {
                                printf(" %.*s", static_cast<int>(name.size()), name.data());
                              },
-                             *result_});
+                             *actual});
       printf("\n");
     }
+    return actual == nullptr;
   }
 
-  constexpr EnumParser& Case(std::string_view name, T value) {
+  constexpr EnumParser&& Case(std::string_view name, T value) {
     if (result_ && name == name_) {
       *result_ = value;
       result_ = nullptr;
     }
-    return *this;
+    return std::move(*this);
   }
 
  private:

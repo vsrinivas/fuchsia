@@ -12,6 +12,7 @@
 // boot option documentation.
 #define BOOT_OPTIONS_TESTONLY_OPTIONS !BOOT_OPTIONS_GENERATOR
 
+#include <lib/uart/all.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
@@ -21,12 +22,11 @@
 #include <optional>
 #include <string_view>
 
+#include "types.h"
+
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 #include "test-types.h"
 #endif
-#include <lib/uart/all.h>
-
-#include "types.h"
 
 struct BootOptions;  // Declared below.
 
@@ -99,9 +99,9 @@ struct BootOptions {
   }
 
   // Overloads parse and print values of various types.
-  // If the string can't be parsed in Parse, the member is not written.
+  // |Parse| returns true on successfully parsing the value.
 #define OPTION_TYPE(T)                                  \
-  void Parse(std::string_view, T BootOptions::*member); \
+  bool Parse(std::string_view, T BootOptions::*member); \
   static void PrintValue(const T& value, FILE* out = stdout)
 
   OPTION_TYPE(bool);
