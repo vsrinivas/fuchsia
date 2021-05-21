@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
@@ -409,11 +408,11 @@ std::unique_ptr<SuspendHandle> DebuggedThread::InternalSuspend(bool synchronous)
   return suspend_handle;
 }
 
-zx::time DebuggedThread::DefaultSuspendDeadline() {
+TickTimePoint DebuggedThread::DefaultSuspendDeadline() {
   // Various events and environments can cause suspensions to take a long time, so this needs to
   // be a relatively long time. We don't generally expect error cases that take infinitely long so
   // there isn't much downside of a long timeout.
-  return zx::deadline_after(zx::msec(100));
+  return std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
 }
 
 // Note that everything in this function is racy because the thread state can change at any time,

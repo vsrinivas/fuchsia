@@ -10,7 +10,6 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 #include <zircon/features.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>

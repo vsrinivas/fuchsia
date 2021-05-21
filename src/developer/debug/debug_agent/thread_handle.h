@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_THREAD_HANDLE_H_
 
 #include <lib/zx/thread.h>
-#include <lib/zx/time.h>
 
 #include <optional>
 #include <vector>
@@ -14,6 +13,7 @@
 #include "src/developer/debug/debug_agent/debug_registers.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
 #include "src/developer/debug/debug_agent/suspend_handle.h"
+#include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/debug_agent/watchpoint_info.h"
 #include "src/developer/debug/ipc/records.h"
 
@@ -70,7 +70,7 @@ class ThreadHandle {
   // Waits for a previous suspend call to take effect. Does nothing if the thread is already
   // suspended. Returns true if we could find a valid suspension condition (either suspended or on
   // an exception). False if timeout or error.
-  virtual bool WaitForSuspension(zx::time deadline) const = 0;
+  virtual bool WaitForSuspension(TickTimePoint deadline) const = 0;
 
   // Registers -------------------------------------------------------------------------------------
 

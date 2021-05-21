@@ -9,6 +9,7 @@
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/general_registers.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
+#include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -102,8 +103,8 @@ class DebuggedThread {
   // keep track of how many suspensions this thread has. As long as there is a valid one, the
   // thread will remain suspended.
 
-  // The typical suspend deadline users should use when suspending.
-  static zx::time DefaultSuspendDeadline();
+  // The typical suspend deadline users should use when suspending from now.
+  static TickTimePoint DefaultSuspendDeadline();
 
   // Fills the thread status record. If full_stack is set, a full backtrace will be generated,
   // otherwise a minimal one will be generated.

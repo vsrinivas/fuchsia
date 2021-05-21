@@ -99,7 +99,7 @@ std::unique_ptr<SuspendHandle> MockThreadHandle::Suspend() {
   return std::make_unique<MockSuspendHandle>(suspend_count_);
 }
 
-bool MockThreadHandle::WaitForSuspension(zx::time deadline) const { return true; }
+bool MockThreadHandle::WaitForSuspension(TickTimePoint deadline) const { return true; }
 
 std::optional<GeneralRegisters> MockThreadHandle::GetGeneralRegisters() const {
   return general_registers_;

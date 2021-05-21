@@ -97,7 +97,7 @@ std::unique_ptr<SuspendHandle> ZirconThreadHandle::Suspend() {
   return std::make_unique<ZirconSuspendHandle>(std::move(token), thread_koid_);
 }
 
-bool ZirconThreadHandle::WaitForSuspension(zx::time deadline) const {
+bool ZirconThreadHandle::WaitForSuspension(TickTimePoint deadline) const {
   // The thread could already be suspended. This bypasses a wait cycle in that case.
   if (GetState().state == debug_ipc::ThreadRecord::State::kSuspended)
     return true;  // Already suspended, success.
@@ -129,7 +129,7 @@ bool ZirconThreadHandle::WaitForSuspension(zx::time deadline) const {
     if (status == ZX_OK && (observed & ZX_THREAD_SUSPENDED))
       return true;
 
-  } while (status == ZX_ERR_TIMED_OUT && zx::clock::get_monotonic() < deadline);
+  } while (status == ZX_ERR_TIMED_OUT && std::chrono::steady_clock::now() < deadline);
   return false;
 }
 

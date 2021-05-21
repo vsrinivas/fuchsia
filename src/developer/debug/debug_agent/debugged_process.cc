@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 #include <zircon/syscalls/exception.h>
 
 #include <utility>
@@ -658,7 +657,7 @@ std::vector<zx_koid_t> DebuggedProcess::ClientSuspendAllThreads(zx_koid_t except
   }
 
   // Wait on the notification for each thread.
-  zx::time deadline = DebuggedThread::DefaultSuspendDeadline();
+  auto deadline = DebuggedThread::DefaultSuspendDeadline();
   for (zx_koid_t thread_koid : suspended_thread_koids) {
     if (DebuggedThread* thread = GetThread(thread_koid))
       thread->thread_handle().WaitForSuspension(deadline);

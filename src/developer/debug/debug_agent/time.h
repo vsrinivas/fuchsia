@@ -7,10 +7,32 @@
 
 #include <stdint.h>
 
+#include <chrono>
+
 namespace debug_agent {
 
+// Used for cross-platform deadlines. The steady_clock is the same as a zx::time (this is
+// verified in the tests).
+//
+// To get the current time:
+//
+//    TickTimePoint now = std::chrono::steady_clock::now();
+//
+// The equivalent of zx::deadline_after is:
+//
+//    TickTimePoint deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(10)
+//
+// To convert to Zircon types:
+//
+//    zx_time ticks = time_tick_point.time_since_epoch().count()
+//    zx::time time(time_tick_point.time_since_epoch().count());
+//
+using TickTimePoint = std::chrono::time_point<std::chrono::steady_clock>;
+
 // Returns the current time as a timestamp for use in IPC messages.
-uint64_t GetNowTimestamp();
+inline uint64_t GetNowTimestamp() {
+  return std::chrono::steady_clock::now().time_since_epoch().count();
+}
 
 }  // namespace debug_agent
 
