@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,6 +21,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"go.fuchsia.dev/fuchsia/tools/artifactory"
+	"google.golang.org/api/googleapi"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 type memSink struct {
 	contents map[string][]byte
 	mutex    sync.RWMutex
+	err      error
 }
 
 func newMemSink() *memSink {
@@ -41,6 +44,9 @@ func newMemSink() *memSink {
 func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, *storage.ObjectAttrs, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
+	if s.err != nil {
+		return false, nil, s.err
+	}
 	if _, ok := s.contents[name]; !ok {
 		return false, nil, nil
 	}
@@ -243,5 +249,60 @@ func TestUploading(t *testing.T) {
 			t.Fatal(err)
 		}
 		sinkHasContents(t, sink, expected)
+	})
+
+	t.Run("transient errors identified", func(t *testing.T) {
+		// False for a regular error.
+		if isTransientError(errors.New("foo")) {
+			t.Fatal("non-transient error: got true, want false")
+		}
+		// False on HTTP response code 200.
+		gErr := new(googleapi.Error)
+		gErr.Code = 200
+		if isTransientError(gErr) {
+			t.Fatal("non-transient error: got true, want false")
+		}
+		// True for transient errors.
+		if !isTransientError(transientError{err: errors.New("foo")}) {
+			t.Fatal("explicit transient error: got false, want true")
+		}
+		// True on HTTP response code 500.
+		gErr.Code = 500
+		if !isTransientError(gErr) {
+			t.Fatal("googleapi transient error: got false, want true")
+		}
+
+		actual := map[string][]byte{
+			"a":       []byte("one"),
+			"b":       []byte("two"),
+			"c/d":     []byte("three"),
+			"c/e/f/g": []byte("four"),
+		}
+		expected := map[string][]byte{
+			"a":   []byte("one"),
+			"c/d": []byte("three"),
+		}
+
+		// Confirm no error on valid upload.
+		dir := newDirWithContents(t, actual)
+		sink := newMemSink()
+		ctx := context.Background()
+		files := getUploadFiles(dir, expected)
+		err := uploadFiles(ctx, files, sink, 1, "")
+		if isTransientError(err) {
+			t.Fatal("transient upload error: got true, want false")
+		}
+		// Check a non-transient error.
+		sink.err = errors.New("foo")
+		err = uploadFiles(ctx, files, sink, 1, "")
+		if isTransientError(err) {
+			t.Fatal("transient upload error: got true, want false")
+		}
+		// Now use a transient error.
+		sink.err = transientError{err: errors.New("foo")}
+		err = uploadFiles(ctx, files, sink, 1, "")
+		if !isTransientError(err) {
+			t.Fatal("transient upload error: got false, want true")
+		}
 	})
 }

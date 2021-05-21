@@ -97,6 +97,14 @@ const (
 	googleReservedFileMtime = "goog-reserved-file-mtime"
 )
 
+// Errors can be wrapped as transient, so that the the transient exit code
+// will be returned.
+type transientError struct {
+	err error
+}
+
+func (e transientError) Error() string { return e.err.Error() }
+
 type upCommand struct {
 	// GCS bucket to which build artifacts will be uploaded.
 	gcsBucket string
@@ -174,6 +182,12 @@ func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.uploadHostTests, "upload-host-tests", false, "whether or not to upload host tests and their runtime deps.")
 }
 
+func isTransientError(err error) bool {
+	_, transient := err.(transientError)
+	var apiErr *googleapi.Error
+	return transient || (errors.As(err, &apiErr) && apiErr.Code >= 500)
+}
+
 func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	args := f.Args()
 	if len(args) != 1 {
@@ -183,11 +197,10 @@ func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 
 	if err := cmd.execute(ctx, args[0]); err != nil {
 		logger.Errorf(ctx, "%v", err)
-		var apiErr *googleapi.Error
 		// Use a different exit code if the failure is a (likely transient)
 		// server error so the infrastructure knows to consider it as an infra
 		// failure.
-		if errors.As(err, &apiErr) && apiErr.Code >= 500 {
+		if isTransientError(err) {
 			return exitTransientError
 		}
 		return subcommands.ExitFailure
@@ -403,7 +416,8 @@ func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, *sto
 	if err == storage.ErrObjectNotExist {
 		return false, nil, nil
 	} else if err != nil {
-		return false, nil, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %w", name, err)
+		return false, nil,
+			transientError{err: fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %w", name, err)}
 	}
 	// Check if MD5 is not set, mark this as a miss, then write() function will
 	// handle the race.
