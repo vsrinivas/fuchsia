@@ -25,20 +25,20 @@ namespace {
 class DirentIteratorImpl {
  public:
   static zx_status_t Create(zxio_dirent_iterator_t* iterator, zxio_t* directory) {
-    zx::channel iterator_client_end, iterator_server_end;
-    zx_status_t status = zx::channel::create(0, &iterator_client_end, &iterator_server_end);
-    if (status != ZX_OK) {
-      return status;
+    auto iterator_ends = fidl::CreateEndpoints<fio2::DirectoryIterator>();
+    if (!iterator_ends.is_ok()) {
+      return iterator_ends.status_value();
     }
     RemoteV2 dir(directory);
-    status = fidl::WireCall<fio2::Directory>(dir.control())
-                 .Enumerate(fio2::wire::DirectoryEnumerateOptions(), std::move(iterator_server_end))
-                 .status();
+    auto status =
+        fidl::WireCall(fidl::UnownedClientEnd<fio2::Directory>(dir.control()))
+            .Enumerate(fio2::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server))
+            .status();
     if (status != ZX_OK) {
       return status;
     }
-    new (iterator) DirentIteratorImpl(
-        directory, fidl::WireSyncClient<fio2::DirectoryIterator>(std::move(iterator_client_end)));
+    new (iterator)
+        DirentIteratorImpl(directory, fidl::BindSyncClient(std::move(iterator_ends->client)));
     return ZX_OK;
   }
 

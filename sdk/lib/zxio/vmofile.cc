@@ -68,16 +68,15 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
 
 static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
+  auto ends = fidl::CreateEndpoints<fio::Node>();
+  if (!ends.is_ok()) {
+    return ends.status_value();
   }
-  auto result = file->control.Clone(fio::wire::kCloneFlagSameRights, std::move(remote));
+  auto result = file->control.Clone(fio::wire::kCloneFlagSameRights, std::move(ends->server));
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  *out_handle = local.release();
+  *out_handle = ends->client.TakeChannel().release();
   return ZX_OK;
 }
 

@@ -19,7 +19,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//examples/dotmatrix_display:bin2",
     "//garnet/public/lib/svc/cpp:cpp",
     "//garnet/public/lib/test_runner/cpp:cpp",
-    "//sdk/lib/zxio/*",
     "//src/bringup/bin/bootsvc:bootfs_loader_service_test",
     "//src/bringup/bin/bootsvc:lib",
     "//src/bringup/bin/bootsvc:util",
