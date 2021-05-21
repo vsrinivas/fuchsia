@@ -395,8 +395,9 @@ zx_status_t DriverHostContext::DeviceCreate(zx_driver_t* drv, const char* name, 
 zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
                                          const fbl::RefPtr<zx_device_t>& parent,
                                          const zx_device_prop_t* props, uint32_t prop_count,
-                                         const char* proxy_args, zx::vmo inspect,
-                                         zx::channel client_remote) {
+                                         const zx_device_str_prop_t* str_props,
+                                         uint32_t str_prop_count, const char* proxy_args,
+                                         zx::vmo inspect, zx::channel client_remote) {
   inspect_.DeviceAddStats().Update();
   auto mark_dead = fit::defer([&dev]() {
     if (dev) {
@@ -468,8 +469,8 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
 
   if (!(dev->flags() & DEV_FLAG_INSTANCE)) {
     // Add always consumes the handle
-    status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, std::move(inspect),
-                              std::move(client_remote));
+    status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, str_props, str_prop_count,
+                              std::move(inspect), std::move(client_remote));
     if (status < 0) {
       LOGD(ERROR, *dev, "Failed to add device %p to driver_manager: %s", dev.get(),
            zx_status_get_string(status));

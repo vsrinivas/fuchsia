@@ -15,6 +15,7 @@ typedef struct zx_device zx_device_t;
 typedef struct zx_driver zx_driver_t;
 typedef struct zx_protocol_device zx_protocol_device_t;
 typedef struct zx_device_prop zx_device_prop_t;
+typedef struct zx_device_str_prop zx_device_str_prop_t;
 typedef struct zx_driver_rec zx_driver_rec_t;
 
 typedef struct zx_bind_inst zx_bind_inst_t;
@@ -131,6 +132,12 @@ typedef struct device_add_args {
 
   // Number of device properties
   uint32_t prop_count;
+
+  // Optional list of device string properties.
+  zx_device_str_prop_t* str_props;
+
+  // Number of device string properties
+  uint32_t str_prop_count;
 
   // List of power_states that the device supports.
   // List cannot be more than MAX_DEVICE_POWER_STATES size.
@@ -331,6 +338,8 @@ typedef struct device_metadata {
 typedef struct composite_device_desc {
   const zx_device_prop_t* props;
   size_t props_count;
+  const zx_device_str_prop_t* str_props;
+  size_t str_props_count;
   const device_fragment_t* fragments;
   size_t fragments_count;
   uint32_t coresident_device_index;

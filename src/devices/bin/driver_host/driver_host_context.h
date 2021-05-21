@@ -42,8 +42,9 @@ class DriverHostContext {
   // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DriverManagerAdd(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                               const zx_device_prop_t* props, uint32_t prop_count, zx::vmo inspect,
-                               zx::channel client_remote) TA_REQ(api_lock_);
+                               const zx_device_prop_t* props, uint32_t prop_count,
+                               const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
+                               zx::vmo inspect, zx::channel client_remote) TA_REQ(api_lock_);
   // Note that DriverManagerRemove() takes a RefPtr rather than a const RefPtr&.
   // It intends to consume a reference.
   zx_status_t DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) TA_REQ(api_lock_);
@@ -51,8 +52,10 @@ class DriverHostContext {
   // |client_remote| will only be a valid handle if the device was added with
   // DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
   zx_status_t DeviceAdd(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
-                        const zx_device_prop_t* props, uint32_t prop_count, const char* proxy_args,
-                        zx::vmo inspect, zx::channel client_remote) TA_REQ(api_lock_);
+                        const zx_device_prop_t* props, uint32_t prop_count,
+                        const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
+                        const char* proxy_args, zx::vmo inspect, zx::channel client_remote)
+      TA_REQ(api_lock_);
 
   zx_status_t DeviceInit(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
   void DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
