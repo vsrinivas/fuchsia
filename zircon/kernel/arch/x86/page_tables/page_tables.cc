@@ -947,8 +947,8 @@ zx_status_t X86PageTableBase::HarvestMapping(volatile pt_entry_t* table, PageTab
   for (; index != NO_OF_PT_ENTRIES && new_cursor->size() != 0; ++index) {
     volatile pt_entry_t* e = table + index;
     pt_entry_t pt_val = *e;
-    // Skip unmapped pages (we may encounter these due to demand paging)
-    if (!IS_PAGE_PRESENT(pt_val)) {
+    // Skip unmapped pages, unaccessed large pages and unaccesed page tables.
+    if (!IS_PAGE_PRESENT(pt_val) || !(pt_val & X86_MMU_PG_A)) {
       new_cursor->SkipEntry(level);
       continue;
     }
@@ -957,7 +957,7 @@ zx_status_t X86PageTableBase::HarvestMapping(volatile pt_entry_t* table, PageTab
       bool vaddr_level_aligned = page_aligned(level, new_cursor->vaddr());
       // If the request covers the entire large page then harvest the accessed bit, otherewise we
       // just skip it.
-      if (vaddr_level_aligned && new_cursor->size() >= ps && (pt_val & X86_MMU_PG_A)) {
+      if (vaddr_level_aligned && new_cursor->size() >= ps) {
         const paddr_t paddr = paddr_from_pte(level, pt_val);
         const uint mmu_flags = pt_flags_to_mmu_flags(pt_val, level);
         const PtFlags term_flags = terminal_flags(level, mmu_flags);
