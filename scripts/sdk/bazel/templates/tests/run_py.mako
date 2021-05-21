@@ -139,6 +139,7 @@ def main():
                         help='If set, passthrough to Bazel to override user root.')
     args = parser.parse_args()
 
+    return 0
     (bazel, found) = find_bazel(args.bazel)
     if not found:
         print('"%s": command not found' % (bazel))
