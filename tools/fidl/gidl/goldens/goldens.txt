@@ -1,3 +1,5 @@
+dart_golden.dart.golden
 go_golden.go.golden
 hlcpp_golden.cc.golden
 llcpp_golden.cc.golden
+rust_golden.rs.golden
