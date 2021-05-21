@@ -545,31 +545,32 @@ static bool evictor_continuous_test() {
 
   // Evict every 10 milliseconds.
   node.evictor()->SetContinuousEvictionInterval(ZX_MSEC(10));
-  // Enable eviction. Min pages target is 20 pages. Free mem target is 10 pages.
-  node.evictor()->EnableContinuousEviction(20u * PAGE_SIZE, 10u * PAGE_SIZE,
+  // Enable eviction. Min pages target is 10 pages. Free mem target is 20 pages.
+  const uint64_t free_target = 20;
+  node.evictor()->EnableContinuousEviction(10u * PAGE_SIZE, free_target * PAGE_SIZE,
                                            Evictor::EvictionLevel::IncludeNewest);
 
   // Poll the node's free count, relying on the test timeout to kill us if something goes wrong.
-  // The free target was 10 and min pages target was 20. We should see 20 pages freed.
-  while (node.FreePages() < 20) {
+  // The free target was 20 and min pages target was 10. We should see 20 pages freed.
+  while (node.FreePages() < free_target) {
     printf("polling free count (case 1) ...\n");
     Thread::Current::SleepRelative(ZX_MSEC(10));
   }
-  EXPECT_EQ(node.FreePages(), 20u);
+  EXPECT_EQ(node.FreePages(), free_target);
 
   // Get rid of all free pages and wait for eviction to happen again.
   node.DecrementFreePages(node.FreePages());
-  // The free target is 10 pages. So we should see 10 pages evicted now.
-  while (node.FreePages() < 10) {
+  // Pages should be evicted per the free target again.
+  while (node.FreePages() < free_target) {
     printf("polling free count (case 2) ...\n");
     Thread::Current::SleepRelative(ZX_MSEC(10));
   }
-  EXPECT_EQ(node.FreePages(), 10u);
+  EXPECT_EQ(node.FreePages(), free_target);
 
   // No more pages should be evicted even though eviction is enabled, since we've already met our
   // free target. Wait twice the eviction interval just to be sure.
   Thread::Current::SleepRelative(ZX_MSEC(20));
-  EXPECT_EQ(node.FreePages(), 10u);
+  EXPECT_EQ(node.FreePages(), free_target);
 
   // No pages evicted after disabling eviction.
   node.evictor()->DisableContinuousEviction();
@@ -581,14 +582,87 @@ static bool evictor_continuous_test() {
   END_TEST;
 }
 
+// Test that the min pages target specified over multiple calls to enable continuous eviction is
+// combined as expected.
+static bool evictor_continuous_combine_targets_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager backed vmo to evict pages from.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  static constexpr size_t kNumPages = 22;
+  ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo));
+
+  // Promote the pages for eviction i.e. mark them inactive (first in line for eviction).
+  vmo->PromoteForReclamation();
+
+  TestPmmNode node;
+
+  // Evict every 10 milliseconds.
+  node.evictor()->SetContinuousEvictionInterval(ZX_MSEC(10));
+  const uint64_t free_target = 4;
+  // Enable eviction. Min pages target is 5 pages. Free mem target is 4 pages.
+  //
+  // The free target is intentionally chosen to be smaller than the min target, so that we can
+  // reliably predict how many pages will be evicted, regardless of how the min target updates are
+  // interleaved between the test thread setting it and the eviction thread decrementing it after
+  // freeing pages.
+  //
+  // For example, consider the case where the free target was 6 pages, that is greater than the
+  // first min target of 5. There are three outcomes possible here (all valid from the evictor's
+  // point of view):
+  //
+  // 1) The second EnableContinuousEviction happens *before* the eviction thread has decremented the
+  // min target after freeing the first set of pages. Here the min target will be 13 when the
+  // eviction thread goes to decrement it, and the decrement amount will be 6 (since 6 pages were
+  // evicted per the free target with a min target of 5). The updated min target will be 7 and so
+  // further 7 pages will be evicted. A total of 13 pages are evicted.
+  //
+  // 2) The second EnableContinuousEviction happens *after* the eviction thread has decremented the
+  // min target after freeing the first set of pages. Here the min target will be 5 when the
+  // eviction thread goes to decrement it, the decrement amount will be 6, so the min target will be
+  // updated to 0. Now the new EnableContinuousEviction call will set min count to 8, so a further
+  // of 8 pages will be evicted. A total of 14 pages are evicted.
+  //
+  // 3) Both EnableContinuousEviction calls happen before the eviction thread has performed any
+  // eviction at all, i.e. it processes both requests together. It will see a min target of 13, a
+  // free target of 6, and will evict a total of 13 pages at once.
+  //
+  // To avoid this inconsistency, we let the min target drive how many pages are evicted as opposed
+  // to the free target, by setting the free target lower than the min target. In case 1) the
+  // decrement amount will be 5, so a further of 8 pages will be evicted, i.e. a total of 13. In
+  // case 2) as well, the decrement amount will be 5, so a further of 8 pages will be evicted i.e. a
+  // total of 13. And in case 3) as well, a total of 13 pages will be evicted.
+  //
+  // Note that the opposite case (free target larger than min target) is covered in
+  // evictor_continuous_test.
+  node.evictor()->EnableContinuousEviction(5u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+  // Verify that two successive calls to enable combine the min page targets.
+  node.evictor()->EnableContinuousEviction(8u * PAGE_SIZE, free_target * PAGE_SIZE,
+                                           Evictor::EvictionLevel::IncludeNewest);
+
+  // The free target is 4 pages. The combined min target is 13 pages. We should see 13 pages
+  // evicted.
+  uint64_t expected_free_count = 13;
+  while (node.FreePages() < expected_free_count) {
+    printf("polling free count ...\n");
+    Thread::Current::SleepRelative(ZX_MSEC(10));
+  }
+  EXPECT_EQ(node.FreePages(), expected_free_count);
+  EXPECT_GE(node.FreePages(), free_target);
+
+  // Make sure eviction is disabled so that the TestPmmNode destructor can clean up freed pages.
+  node.evictor()->DisableContinuousEviction();
+  Thread::Current::SleepRelative(ZX_MSEC(20));
+
+  END_TEST;
+}
+
 // Test that pages are evicted as expected when continuous eviction is enabled and disabled
 // repeatedly.
 static bool evictor_continuous_repeated_test() {
   BEGIN_TEST;
-
-  // TODO(fxbug.dev/77187): This test is flaky, re-enable when fixed.
-  END_TEST;
-
   AutoVmScannerDisable scanner_disable;
 
   // Create a pager backed vmo to evict pages from.
@@ -603,14 +677,44 @@ static bool evictor_continuous_repeated_test() {
 
   // Evict every 10 milliseconds.
   node.evictor()->SetContinuousEvictionInterval(ZX_MSEC(10));
-  const uint64_t free_target = 20;
-  // Enable eviction. Min pages target is 5 pages. Free mem target is 20 pages.
+  uint64_t free_target = 4;
+  // Enable eviction. Min pages target is 5 pages. Free mem target is 4 pages.
+  //
+  // The free target is intentionally chosen to be smaller than the min target, so that we can
+  // reliably predict how many pages will be evicted, regardless of how the min target updates are
+  // interleaved between the test thread setting it and the eviction thread decrementing it after
+  // freeing pages.
+  //
+  // For example, consider the case where the free target was 6 pages, that is greater than the
+  // first min target of 5. There are two outcomes possible here (both valid from the evictor's
+  // point of view):
+  //
+  // 1) The second EnableContinuousEviction happens *before* the eviction thread has decremented the
+  // min target after freeing the first set of pages. Here the min target will be 12 when the
+  // eviction thread goes to decrement it, and the decrement amount will be 6 (since 6 pages were
+  // evicted per the free target with a min target of 5). The updated min target will be 6 and so
+  // further 6 pages will be evicted. A total of 12 pages are evicted.
+  //
+  // 2) The second EnableContinuousEviction happens *after* the eviction thread has decremented the
+  // min target after freeing the first set of pages. Here the min target will be 5 when the
+  // eviction thread goes to decrement it, the decrement amount will be 6, so the min target will be
+  // updated to 0. Now the new EnableContinuousEviction call will set min count to 7, so a further
+  // of 7 pages will be evicted. A total of 13 pages are evicted.
+  //
+  // To avoid this inconsistency, we let the min target drive how many pages are evicted as opposed
+  // to the free target, by setting the free target lower than the min target. In case 1) the
+  // decrement amount will be 5, so a further of 7 pages will be evicted, i.e. a total of 12. In
+  // case 2) as well, the decrement amount will be 5, so a further of 7 pages will be evicted i.e. a
+  // total of 12.
+  //
+  // Note that the opposite case (free target larger than min target) is covered in
+  // evictor_continuous_test.
   node.evictor()->EnableContinuousEviction(5u * PAGE_SIZE, free_target * PAGE_SIZE,
                                            Evictor::EvictionLevel::IncludeNewest);
 
   // Poll the node's free count, relying on the test timeout to kill us if something goes wrong.
-  // The free target was 20 and min pages target was 5. We should see 20 pages freed.
-  uint64_t expected_free_count = free_target;
+  // The free target was 4 and min pages target was 5. We should see 5 pages freed.
+  uint64_t expected_free_count = 5;
   while (node.FreePages() < expected_free_count) {
     printf("polling free count (case 1) ...\n");
     Thread::Current::SleepRelative(ZX_MSEC(10));
@@ -632,31 +736,37 @@ static bool evictor_continuous_repeated_test() {
 
   // Verify that we can disable and re-enable eviction.
   node.evictor()->DisableContinuousEviction();
-  node.evictor()->EnableContinuousEviction(3u * PAGE_SIZE, free_target * PAGE_SIZE,
+  // Set a free target that is higher than the current free count to ensure we see some more pages
+  // evicted.
+  //
+  // We're not relying on min target here to avoid another similar race as outlined above with
+  // combining min targets. Here, the eviction thread could decrement the min target (based on the
+  // previously freed 7 pages) before or after the following EnableContinuousEviction call. Say we
+  // were setting the min target to M keeping the free target the same as before, then we could have
+  // two cases (both valid from the evictor's point of view):
+  //
+  // 1) Eviction thread decrements by 7 *before* we enable. After the eviction thread is done, the
+  // min target is going to be zero (regardless of the order of the disable call above, which also
+  // resets to zero). When we enable, we will set the min target to M, and so M pages will be
+  // evicted the next time.
+  //
+  // 2) Eviction thread decrements by 7 *after* we enable. The eviction thread will find the min
+  // target to be M, and so will decrement it by 7. The resulting target will be |M-7| or 0,
+  // depending on whether M is greater than 7 or smaller, respectively. So we will evict either
+  // |M-7| or 0 pages.
+  //
+  // To avoid this scenario, we let the free target drive the next round of eviction, and set the
+  // min target to 0. In both cases, the eviction thread will evict further pages based on the delta
+  // between free target and the current free count.
+  free_target = expected_free_count + 3;
+  node.evictor()->EnableContinuousEviction(0, free_target * PAGE_SIZE,
                                            Evictor::EvictionLevel::IncludeNewest);
-  expected_free_count += 3;
   // We should see another 3 pages freed.
-  while (node.FreePages() < expected_free_count) {
+  while (node.FreePages() < free_target) {
     printf("polling free count (case 3) ...\n");
     Thread::Current::SleepRelative(ZX_MSEC(10));
   }
-  EXPECT_EQ(node.FreePages(), expected_free_count);
-  EXPECT_GE(node.FreePages(), free_target);
-
-  // Verify that two successive calls to enable combine the min page targets.
-  node.evictor()->DisableContinuousEviction();
-  node.evictor()->EnableContinuousEviction(2u * PAGE_SIZE, free_target * PAGE_SIZE,
-                                           Evictor::EvictionLevel::IncludeNewest);
-  node.evictor()->EnableContinuousEviction(8u * PAGE_SIZE, free_target * PAGE_SIZE,
-                                           Evictor::EvictionLevel::IncludeNewest);
-  expected_free_count += 10;
-  // We should see another 10 pages freed.
-  while (node.FreePages() < expected_free_count) {
-    printf("polling free count (case 4) ...\n");
-    Thread::Current::SleepRelative(ZX_MSEC(10));
-  }
-  EXPECT_EQ(node.FreePages(), expected_free_count);
-  EXPECT_GE(node.FreePages(), free_target);
+  EXPECT_EQ(node.FreePages(), free_target);
 
   // Make sure eviction is disabled so that the TestPmmNode destructor can clean up freed pages.
   node.evictor()->DisableContinuousEviction();
@@ -673,6 +783,7 @@ VM_UNITTEST(evictor_discardable_test)
 VM_UNITTEST(evictor_pager_backed_and_discardable_test)
 VM_UNITTEST(evictor_free_target_test)
 VM_UNITTEST(evictor_continuous_test)
+VM_UNITTEST(evictor_continuous_combine_targets_test)
 VM_UNITTEST(evictor_continuous_repeated_test)
 UNITTEST_END_TESTCASE(evictor_tests, "evictor", "Evictor tests")
 
