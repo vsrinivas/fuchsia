@@ -13,11 +13,19 @@ use {
     },
     fuchsia_zircon_status as zx_status,
     moniker::AbsoluteMoniker,
-    routing::{component_instance::ComponentInstanceInterface, config::RuntimeConfig},
+    routing::{
+        component_instance::ComponentInstanceInterface,
+        config::{CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+    },
     routing_test_helpers::{
         CheckUse, CommonRoutingTest, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder,
     },
-    std::{collections::HashMap, iter::FromIterator, path::Path, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        iter::FromIterator,
+        path::Path,
+        sync::Arc,
+    },
     thiserror::Error,
 };
 
@@ -31,14 +39,8 @@ struct RoutingTestBuilderForAnalyzer {
     root_url: String,
     decls_by_url: HashMap<String, ComponentDecl>,
     namespace_capabilities: Vec<CapabilityDecl>,
-}
-
-impl RoutingTestBuilderForAnalyzer {
-    fn build_runtime_config(&self) -> Arc<RuntimeConfig> {
-        let mut config = RuntimeConfig::default();
-        config.namespace_capabilities = self.namespace_capabilities.clone();
-        Arc::new(config)
-    }
+    capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
+    debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
 }
 
 #[async_trait]
@@ -52,22 +54,53 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
                 .into_iter()
                 .map(|(name, decl)| (format!("{}{}", TEST_URL_PREFIX, name), decl)),
         );
-        Self { root_url, decls_by_url, namespace_capabilities: Vec::new() }
+        Self {
+            root_url,
+            decls_by_url,
+            namespace_capabilities: Vec::new(),
+            capability_policy: HashMap::new(),
+            debug_capability_policy: HashMap::new(),
+        }
     }
 
     fn set_namespace_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
         self.namespace_capabilities = caps;
     }
 
+    /// Add a custom capability security policy to restrict routing of certain caps.
+    fn add_capability_policy(
+        &mut self,
+        key: CapabilityAllowlistKey,
+        allowlist: HashSet<AbsoluteMoniker>,
+    ) {
+        self.capability_policy.insert(key, allowlist);
+    }
+
+    /// Add a custom debug capability security policy to restrict routing of certain caps.
+    fn add_debug_capability_policy(
+        &mut self,
+        key: CapabilityAllowlistKey,
+        allowlist: HashSet<(AbsoluteMoniker, String)>,
+    ) {
+        self.debug_capability_policy.insert(key, allowlist);
+    }
+
     async fn build(self) -> RoutingTestForAnalyzer {
-        let config = self.build_runtime_config();
-        let tree = ComponentTreeBuilder::new(self.decls_by_url.clone())
-            .build(self.root_url.clone())
+        let mut config = RuntimeConfig::default();
+        config.namespace_capabilities = self.namespace_capabilities;
+
+        let mut security_policy = SecurityPolicy::default();
+        security_policy.capability_policy = self.capability_policy;
+        security_policy.debug_capability_policy = self.debug_capability_policy;
+        config.security_policy = security_policy;
+
+        let tree = ComponentTreeBuilder::new(self.decls_by_url)
+            .build(self.root_url)
             .tree
             .expect("failed to build ComponentTree");
 
         let model = ModelBuilderForAnalyzer::new()
-            .build(tree, config)
+            .build(tree, Arc::new(config))
             .await
             .expect("failed to build ComponentModelForAnalyzer");
         RoutingTestForAnalyzer { model }
@@ -415,6 +448,87 @@ mod tests {
     fn use_not_exposed() {
         block_on(async {
             CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new().test_use_not_exposed().await
+        });
+    }
+
+    #[test]
+    fn use_protocol_denied_by_capability_policy() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_denied_by_capability_policy()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_directory_with_alias_denied_by_capability_policy() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_directory_with_alias_denied_by_capability_policy()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_protocol_partial_chain_allowed_by_capability_policy() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_partial_chain_allowed_by_capability_policy()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_protocol_component_provided_capability_policy() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_component_provided_capability_policy()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_from_component_manager_namespace_denied_by_policy() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_from_component_manager_namespace_denied_by_policy()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_protocol_component_provided_debug_capability_policy_at_root_from_self() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_component_provided_debug_capability_policy_at_root_from_self()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_protocol_component_provided_debug_capability_policy_from_self() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_component_provided_debug_capability_policy_from_self()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_protocol_component_provided_debug_capability_policy_from_child() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_component_provided_debug_capability_policy_from_child()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_protocol_component_provided_debug_capability_policy_from_grandchild() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_protocol_component_provided_debug_capability_policy_from_grandchild()
+                .await
         });
     }
 }

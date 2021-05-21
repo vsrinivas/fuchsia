@@ -171,6 +171,22 @@ impl RoutingTestModelBuilder for RoutingTestBuilder {
         self.namespace_capabilities = caps;
     }
 
+    fn add_capability_policy(
+        &mut self,
+        key: CapabilityAllowlistKey,
+        allowlist: HashSet<AbsoluteMoniker>,
+    ) {
+        self.capability_policy.insert(key, allowlist);
+    }
+
+    fn add_debug_capability_policy(
+        &mut self,
+        key: CapabilityAllowlistKey,
+        allowlist: HashSet<(AbsoluteMoniker, String)>,
+    ) {
+        self.debug_capability_policy.insert(key, allowlist);
+    }
+
     async fn build(self) -> RoutingTest {
         self.build().await
     }
