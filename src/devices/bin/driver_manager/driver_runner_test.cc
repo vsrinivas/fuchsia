@@ -830,6 +830,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
             StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner).status_value());
 
   StartDriver(driver_runner, {.close = true});
+  ASSERT_EQ(1u, driver_runner.NumOrphanedNodes());
 }
 
 // Start the second driver, and then unbind its associated node.

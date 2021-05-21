@@ -132,6 +132,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
 
   fit::promise<inspect::Inspector> Inspect() const;
+  size_t NumOrphanedNodes() const;
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> StartRootDriver(std::string_view name);
 
@@ -170,6 +171,11 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   std::unordered_multimap<DriverUrl, CompositeArgs> composite_args_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverComponent>> drivers_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>> driver_hosts_;
+
+  // Orphaned nodes are nodes that have failed to bind to a driver, either
+  // because no matching driver could be found, or because the matching driver
+  // failed to start.
+  std::vector<std::weak_ptr<Node>> orphaned_nodes_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_RUNNER_H_

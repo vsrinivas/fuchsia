@@ -515,6 +515,8 @@ fit::promise<inspect::Inspector> DriverRunner::Inspect() const {
   return fit::make_ok_promise(inspector);
 }
 
+size_t DriverRunner::NumOrphanedNodes() const { return orphaned_nodes_.size(); }
+
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](fidl::ServerEnd<frunner::ComponentRunner> request) {
     fidl::BindServer(dispatcher_, std::move(request), this);
@@ -631,24 +633,30 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
 }
 
 void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
-  // TODO(fxbug.dev/76732): Handle nodes that are orphaned during binding.
   auto match_callback = [this, &node](fidl::WireResponse<fdf::DriverIndex::MatchDriver>* response) {
+    auto driver_node = &node;
+    auto orphaned = [this, &driver_node] {
+      orphaned_nodes_.push_back(driver_node->weak_from_this());
+    };
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to match Node '%s': %s", node.name().data(),
+      orphaned();
+      LOGF(ERROR, "Failed to match Node '%s': %s", driver_node->name().data(),
            zx_status_get_string(response->result.err()));
       return;
     }
     auto& matched_driver = response->result.response().driver;
     if (!matched_driver.has_url()) {
-      LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing", node.name().data());
+      orphaned();
+      LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing",
+           driver_node->name().data());
       return;
     }
-    auto driver_node = &node;
 
     // This is a composite driver, create a composite node for it.
     if (matched_driver.has_node_index() || matched_driver.has_num_nodes()) {
       auto composite = CreateCompositeNode(node, matched_driver);
       if (composite.is_error()) {
+        // CreateCompositeNode() handles orphaned nodes.
         return;
       }
       driver_node = *composite;
@@ -656,12 +664,14 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
 
     auto start_result = StartDriver(*driver_node, matched_driver.url().get());
     if (start_result.is_error()) {
-      LOGF(ERROR, "Failed to start driver '%s': %s", node.name().data(),
+      orphaned();
+      LOGF(ERROR, "Failed to start driver '%s': %s", driver_node->name().data(),
            zx_status_get_string(start_result.error_value()));
     }
   };
   auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
   if (!match_result.ok()) {
+    orphaned_nodes_.push_back(node.weak_from_this());
     LOGF(ERROR, "Failed to call match Node '%s': %s", node.name().data(),
          match_result.FormatDescription().c_str());
   }
@@ -671,6 +681,7 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
     Node& node, const fdf::wire::MatchedDriver& matched_driver) {
   auto it = AddToCompositeArgs(node.name(), matched_driver);
   if (it.is_error()) {
+    orphaned_nodes_.push_back(node.weak_from_this());
     return it.take_error();
   }
   auto& [_, nodes] = **it;
