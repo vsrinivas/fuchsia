@@ -152,8 +152,8 @@ source_set("cobalt") {
   sources = [ "cobalt.h" ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.cobalt.test",
+    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics.test",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/cobalt",

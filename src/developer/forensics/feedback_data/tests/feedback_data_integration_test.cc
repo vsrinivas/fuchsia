@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/test/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -421,17 +420,12 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckCobalt) {
   ASSERT_EQ(data_provider->GetSnapshot(GetSnapshotParameters(), &snapshot), ZX_OK);
 
   ASSERT_FALSE(snapshot.IsEmpty());
-  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::SnapshotGenerationFlow>(
-                  /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME),
-              UnorderedElementsAreArray({
-                  cobalt::SnapshotGenerationFlow::kSuccess,
-              }));
 
-  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::SnapshotVersion>(
-                  /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_EVENT_COUNT),
-              UnorderedElementsAreArray({
-                  cobalt::SnapshotVersion::kV_01,
-              }));
+  fake_cobalt_->RegisterExpectedEvent(cobalt::SnapshotGenerationFlow::kSuccess, 1);
+  fake_cobalt_->RegisterExpectedEvent(cobalt::SnapshotVersion::kV_01, 1);
+
+  EXPECT_TRUE(
+      fake_cobalt_->MeetsExpectedEvents(fuchsia::metrics::test::LogMethod::LOG_INTEGER, false));
 }
 
 TEST_F(FeedbackDataIntegrationTest,

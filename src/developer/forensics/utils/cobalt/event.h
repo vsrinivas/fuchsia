@@ -5,8 +5,6 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_COBALT_EVENT_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_COBALT_EVENT_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
-
 #include <ostream>
 #include <type_traits>
 
@@ -25,7 +23,7 @@ struct Event {
       : type(EventTypeForEventCode(dimension)),
         metric_id(MetricIDForEventCode(dimension)),
         dimensions({static_cast<uint32_t>(dimension)}),
-        count(0u) {
+        count(1u) {
     static_assert(std::is_enum<DimensionType>::value, "DimensionType must be an enum");
   }
 
@@ -36,19 +34,6 @@ struct Event {
         dimensions({static_cast<uint32_t>(dimension)}),
         count(count) {
     static_assert(std::is_enum<DimensionType>::value, "DimensionType must be an enum");
-  }
-
-  template <typename DimensionTypesH, typename... DimensionTypesT,
-            typename = std::enable_if_t<(std::is_enum_v<DimensionTypesT> && ...)>>
-  explicit Event(DimensionTypesH dimensions_h, DimensionTypesT... dimensions_t)
-      : type(EventType::kMultidimensionalEvent),
-        metric_id(MetricIDForEventCode(dimensions_h, dimensions_t...)),
-        dimensions(std::vector<uint32_t>({
-            static_cast<uint32_t>(dimensions_h),
-            static_cast<uint32_t>(dimensions_t)...,
-        })),
-        count(1u) {
-    static_assert(std::is_enum_v<DimensionTypesH>, "DimensionTypes must be enums");
   }
 
   std::string ToString() const;

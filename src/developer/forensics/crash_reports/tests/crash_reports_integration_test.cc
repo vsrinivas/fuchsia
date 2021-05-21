@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/cobalt/test/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
+#include <fuchsia/metrics/test/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/errors.h>
 
@@ -82,12 +82,11 @@ TEST_F(CrashReportsIntegrationTest, CrashRegister_SmokeTest) {
 TEST_F(CrashReportsIntegrationTest, CrashReporter_SmokeTest) {
   FileCrashReport();
 
-  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<cobalt::CrashState>(
-                  /*num_expected=*/2, fuchsia::cobalt::test::LogMethod::LOG_EVENT),
-              UnorderedElementsAreArray({
-                  cobalt::CrashState::kFiled,
-                  cobalt::CrashState::kArchived,
-              }));
+  fake_cobalt_->RegisterExpectedEvent(cobalt::CrashState::kFiled, 1);
+  fake_cobalt_->RegisterExpectedEvent(cobalt::CrashState::kArchived, 1);
+
+  EXPECT_TRUE(
+      fake_cobalt_->MeetsExpectedEvents(fuchsia::metrics::test::LogMethod::LOG_OCCURRENCE, false));
 }
 
 }  // namespace

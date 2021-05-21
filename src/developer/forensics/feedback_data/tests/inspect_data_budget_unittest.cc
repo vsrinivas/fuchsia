@@ -252,11 +252,11 @@ TEST_F(InspectDataBudgetTest, TestCobalt_BudgetEnabled) {
 
   RunLoopUntilIdle();
 
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::EventType::kMultidimensionalEvent,
-                                cobalt::kInspectBudgetMetricId, {}, 20971520),
-              }));
+  EXPECT_THAT(
+      ReceivedCobaltEvents(),
+      UnorderedElementsAreArray({
+          cobalt::Event(cobalt::EventType::kInteger, cobalt::kInspectBudgetMetricId, {}, 20971520),
+      }));
 }
 
 }  // namespace

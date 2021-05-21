@@ -83,7 +83,7 @@ void InspectDataBudget::UpdateBudget(
     inspect_last_ten_readings_.pop_front();
   }
 
-  cobalt_->LogEvent(cobalt::kInspectBudgetMetricId, data_budget_.value());
+  cobalt_->LogIntegerEvent(cobalt::kInspectBudgetMetricId, data_budget_.value());
 }
 
 }  // namespace forensics::feedback_data

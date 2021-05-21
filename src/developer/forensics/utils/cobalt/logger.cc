@@ -30,6 +30,23 @@ uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
   return zx::nsec(clock->Now().get()).to_usecs();
 }
 
+inline std::string StatusToString(fuchsia::metrics::Status status) {
+  switch (status) {
+    case fuchsia::metrics::Status::OK:
+      return "OK";
+    case fuchsia::metrics::Status::INVALID_ARGUMENTS:
+      return "INVALID_ARGUMENTS";
+    case fuchsia::metrics::Status::EVENT_TOO_BIG:
+      return "EVENT_TOO_BIG";
+    case fuchsia::metrics::Status::BUFFER_FULL:
+      return "BUFFER_FULL";
+    case fuchsia::metrics::Status::SHUT_DOWN:
+      return "SHUT_DOWN";
+    case fuchsia::metrics::Status::INTERNAL_ERROR:
+      return "INTERNAL_ERROR";
+  }
+};
+
 }  // namespace
 
 Logger::Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
@@ -40,7 +57,7 @@ Logger::Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirec
       logger_reconnection_backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u,
                                    /*max_delay=*/zx::hour(1)) {
   logger_.set_error_handler([this](zx_status_t status) {
-    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.cobalt.Logger";
+    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.metrics.MetricEventLogger";
     RetryConnectingToLogger();
   });
 
@@ -60,23 +77,29 @@ void Logger::Shutdown() {
   logger_.Unbind();
 }
 
-void Logger::ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request) {
+void Logger::ConnectToLogger(
+    ::fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> logger_request) {
   // Connect to the LoggerFactory.
-  logger_factory_ = services_->Connect<LoggerFactory>();
+  logger_factory_ = services_->Connect<fuchsia::metrics::MetricEventLoggerFactory>();
 
   logger_factory_.set_error_handler([](zx_status_t status) {
-    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.cobalt.LoggerFactory";
+    FX_PLOGS(WARNING, status) << "Lost connection with fuchsia.metrics.MetricEventLoggerFactory";
   });
 
-  // We don't need a long standing connection to the LoggerFactory so we unbind afer setting up the
-  // Logger.
-  logger_factory_->CreateLoggerFromProjectId(
-      kProjectId, std::move(logger_request), [this](Status status) {
+  // We don't need a long standing connection to the LoggerFactory so we unbind after setting up
+  // the Logger.
+  fuchsia::metrics::ProjectSpec project;
+  project.set_customer_id(1);
+  project.set_project_id(kProjectId);
+
+  logger_factory_->CreateMetricEventLogger(
+      std::move(project), std::move(logger_request), [this](fuchsia::metrics::Status status) {
         logger_factory_.Unbind();
 
-        if (status == Status::OK) {
+        if (status == fuchsia::metrics::Status::OK) {
+          FX_LOGS(INFO) << "Logger has been initialized";
           logger_reconnection_backoff_.Reset();
-        } else if (status == Status::SHUT_DOWN) {
+        } else if (status == fuchsia::metrics::Status::SHUT_DOWN) {
           FX_LOGS(INFO) << "Stopping logging Cobalt events";
           logger_.Unbind();
         } else {
@@ -137,8 +160,8 @@ void Logger::SendEvent(uint64_t event_id) {
   }
   Event& event = pending_events_.at(event_id);
 
-  auto cb = [this, event_id, &event](Status status) {
-    if (status != Status::OK) {
+  auto callback = [this, event_id, &event](fuchsia::metrics::Status status) {
+    if (status != fuchsia::metrics::Status::OK) {
       FX_LOGS(INFO) << StringPrintf("Cobalt logging error: status %s, event %s",
                                     StatusToString(status).c_str(), event.ToString().c_str());
     }
@@ -149,25 +172,11 @@ void Logger::SendEvent(uint64_t event_id) {
   };
 
   switch (event.type) {
+    case EventType::kInteger:
+      logger_->LogInteger(event.metric_id, event.count, event.dimensions, std::move(callback));
+      break;
     case EventType::kOccurrence:
-      logger_->LogEvent(event.metric_id, event.dimensions[0], std::move(cb));
-      break;
-    case EventType::kCount:
-      logger_->LogEventCount(event.metric_id, event.dimensions[0], /*component=*/"",
-                             /*period_duration_micros=*/0u, event.count, std::move(cb));
-      break;
-    case EventType::kTimeElapsed:
-      logger_->LogElapsedTime(event.metric_id, event.dimensions[0], /*component=*/"",
-                              /*elapsed_micros=*/event.usecs_elapsed, std::move(cb));
-      break;
-    case EventType::kMultidimensionalEvent:
-      fuchsia::cobalt::CobaltEvent cobalt_event;
-      cobalt_event.metric_id = event.metric_id;
-      cobalt_event.event_codes = event.dimensions;
-      cobalt_event.payload = fuchsia::cobalt::EventPayload::WithEventCount(
-          fuchsia::cobalt::CountEvent{.count = static_cast<int64_t>(event.count)});
-
-      logger_->LogCobaltEvent(std::move(cobalt_event), std::move(cb));
+      logger_->LogOccurrence(event.metric_id, event.count, event.dimensions, std::move(callback));
       break;
   }
 }

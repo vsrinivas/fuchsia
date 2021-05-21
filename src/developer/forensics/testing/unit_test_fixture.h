@@ -65,8 +65,9 @@ class UnitTestFixture : public gtest::TestLoopFixture {
     return logger_factory_server_->Events();
   }
 
-  bool WasLogEventCalled() { return logger_factory_server_->WasLogEventCalled(); }
-  bool WasLogEventCountCalled() { return logger_factory_server_->WasLogEventCountCalled(); }
+  bool WasMethodCalled(cobalt::EventType name) const {
+    return logger_factory_server_->WasMethodCalled(name);
+  }
 
   void CloseFactoryConnection() { logger_factory_server_->CloseConnection(); }
   void CloseLoggerConnection() { logger_factory_server_->CloseLoggerConnection(); }

@@ -17,7 +17,7 @@
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.WriteOnlyLog",
-            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

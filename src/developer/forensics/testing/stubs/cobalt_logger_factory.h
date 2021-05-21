@@ -5,8 +5,8 @@
 #ifndef SRC_DEVELOPER_FORENSICS_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_
 #define SRC_DEVELOPER_FORENSICS_TESTING_STUBS_COBALT_LOGGER_FACTORY_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl_test_base.h>
+#include <fuchsia/metrics/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl_test_base.h>
 
 #include <limits>
 #include <memory>
@@ -20,7 +20,7 @@ namespace stubs {
 
 // Defines the interface all stub logger factories must implement and provides common functionality.
 class CobaltLoggerFactoryBase
-    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::cobalt, LoggerFactory) {
+    : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::metrics, MetricEventLoggerFactory) {
  public:
   CobaltLoggerFactoryBase(std::unique_ptr<CobaltLoggerBase> logger) : logger_(std::move(logger)) {}
   virtual ~CobaltLoggerFactoryBase() {}
@@ -28,23 +28,13 @@ class CobaltLoggerFactoryBase
   const cobalt::Event& LastEvent() const { return logger_->LastEvent(); }
   const std::vector<cobalt::Event>& Events() const { return logger_->Events(); }
 
-  bool WasLogEventCalled() const { return logger_->WasLogEventCalled(); }
-  bool WasLogEventCountCalled() const { return logger_->WasLogEventCountCalled(); }
-  bool WasLogElapsedTimeCalled() const { return logger_->WasLogElapsedTimeCalled(); }
-  bool WasLogFrameRateCalled() const { return logger_->WasLogFrameRateCalled(); }
-  bool WasLogMemoryUsageCalled() const { return logger_->WasLogMemoryUsageCalled(); }
-  bool WasStartTimerCalled() const { return logger_->WasStartTimerCalled(); }
-  bool WasEndTimerCalled() const { return logger_->WasEndTimerCalled(); }
-  bool WasLogIntHistogramCalled() const { return logger_->WasLogIntHistogramCalled(); }
-  bool WasLogCustomEventCalled() const { return logger_->WasLogCustomEventCalled(); }
-  bool WasLogCobaltEventCalled() const { return logger_->WasLogCobaltEventCalled(); }
-  bool WasLogCobaltEventsCalled() const { return logger_->WasLogCobaltEventsCalled(); }
+  bool WasMethodCalled(cobalt::EventType name) const { return logger_->WasMethodCalled(name); }
 
   void CloseLoggerConnection();
 
  protected:
   std::unique_ptr<CobaltLoggerBase> logger_;
-  std::unique_ptr<::fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
+  std::unique_ptr<::fidl::Binding<fuchsia::metrics::MetricEventLogger>> logger_binding_;
 };
 
 // Always succeed in setting up the logger.
@@ -54,10 +44,11 @@ class CobaltLoggerFactory : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::move(logger)) {}
 
  private:
-  // |fuchsia::cobalt::LoggerFactory|
-  void CreateLoggerFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+  // |fuchsia::metrics::MetricEventLoggerFactory|
+  void CreateMetricEventLogger(
+      ::fuchsia::metrics::ProjectSpec project_spec,
+      ::fidl::InterfaceRequest<::fuchsia::metrics::MetricEventLogger> logger,
+      CreateMetricEventLoggerCallback callback) override;
 };
 
 // Always close the connection before setting up the logger.
@@ -67,10 +58,11 @@ class CobaltLoggerFactoryClosesConnection : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::make_unique<CobaltLoggerBase>()) {}
 
  private:
-  // |fuchsia::cobalt::LoggerFactory|
-  STUB_METHOD_CLOSES_CONNECTION(CreateLoggerFromProjectId, uint32_t,
-                                ::fidl::InterfaceRequest<fuchsia::cobalt::Logger>,
-                                LoggerFactory::CreateLoggerFromProjectIdCallback);
+  // |fuchsia::metrics::MetricEventLoggerFactory|
+  void CreateMetricEventLogger(
+      ::fuchsia::metrics::ProjectSpec project_spec,
+      ::fidl::InterfaceRequest<::fuchsia::metrics::MetricEventLogger> logger,
+      CreateMetricEventLoggerCallback callback) override;
 };
 
 // Fail to create the logger.
@@ -80,10 +72,11 @@ class CobaltLoggerFactoryFailsToCreateLogger : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::make_unique<CobaltLoggerBase>()) {}
 
  private:
-  // |fuchsia::cobalt::LoggerFactory|
-  void CreateLoggerFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+  // |fuchsia::metrics::MetricEventLoggerFactory|
+  void CreateMetricEventLogger(
+      ::fuchsia::metrics::ProjectSpec project_spec,
+      ::fidl::InterfaceRequest<::fuchsia::metrics::MetricEventLogger> logger,
+      CreateMetricEventLoggerCallback callback) override;
 };
 
 // Fail to create the logger until |succeed_after_| attempts have been made.
@@ -93,10 +86,11 @@ class CobaltLoggerFactoryCreatesOnRetry : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::make_unique<CobaltLogger>()), succeed_after_(succeed_after) {}
 
  private:
-  // |fuchsia::cobalt::LoggerFactory|
-  void CreateLoggerFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+  // |fuchsia::metrics::MetricEventLoggerFactory|
+  void CreateMetricEventLogger(
+      ::fuchsia::metrics::ProjectSpec project_spec,
+      ::fidl::InterfaceRequest<::fuchsia::metrics::MetricEventLogger> logger,
+      CreateMetricEventLoggerCallback callback) override;
 
   const uint64_t succeed_after_;
   uint64_t num_calls_ = 0;
@@ -110,10 +104,11 @@ class CobaltLoggerFactoryDelaysCallback : public CobaltLoggerFactoryBase {
       : CobaltLoggerFactoryBase(std::move(logger)), dispatcher_(dispatcher), delay_(delay) {}
 
  private:
-  // |fuchsia::cobalt::LoggerFactory|
-  void CreateLoggerFromProjectId(
-      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+  // |fuchsia::metrics::MetricEventLoggerFactory|
+  void CreateMetricEventLogger(
+      ::fuchsia::metrics::ProjectSpec project_spec,
+      ::fidl::InterfaceRequest<::fuchsia::metrics::MetricEventLogger> logger,
+      CreateMetricEventLoggerCallback callback) override;
 
   async_dispatcher_t* dispatcher_;
   zx::duration delay_;

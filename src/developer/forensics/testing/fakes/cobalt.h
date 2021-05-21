@@ -5,77 +5,144 @@
 #ifndef SRC_DEVELOPER_FORENSICS_TESTING_FAKES_COBALT_H_
 #define SRC_DEVELOPER_FORENSICS_TESTING_FAKES_COBALT_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <fuchsia/cobalt/test/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
+#include <fuchsia/metrics/test/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <iostream>
+#include <map>
 #include <memory>
+#include <utility>
+#include <vector>
 
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
 namespace fakes {
 
+using fuchsia::metrics::test::LogMethod;
+
 // A wrapper for getting events from a mock_cobalt component in integration tests.
+// This class is stateful because the connection to the fake component is stateful.
 class Cobalt {
  public:
+  using EventDimensions = std::vector<uint32_t>;
+  // key:<metric_id, dimensions>
+  using EventKey = std::pair<uint32_t, EventDimensions>;
+
   Cobalt(std::shared_ptr<sys::ServiceDirectory> environment_services);
   ~Cobalt();
 
-  template <typename EventCodeType>
-  std::vector<EventCodeType> GetAllEventsOfType(size_t num_expected,
-                                                fuchsia::cobalt::test::LogMethod log_method);
+  template <typename DimensionType>
+  void RegisterExpectedEvent(DimensionType dimension, uint32_t count);
+
+  void RegisterExpectedEvent(int metric_id, EventDimensions dimensions, uint32_t count);
+
+  // Verify that we receive the expected events in no particular order. If the ignore_extra_events
+  // flag is set, the test won't fail even if we receive duplicated or unexpected events. This
+  // method is stateful because the underlying FIDL call to the fake component is stateful.
+  bool MeetsExpectedEvents(LogMethod log_method, bool ignore_extra_events);
 
  private:
-  template <typename EventCodeType>
-  void GetNewEventsOfType(const std::vector<fuchsia::cobalt::CobaltEvent>& result,
-                          std::vector<EventCodeType>* all_events);
+  // Display events for debugging.
+  void DisplayEvents();
 
-  fuchsia::cobalt::test::LoggerQuerierSyncPtr logger_querier_;
+  fuchsia::metrics::test::MetricEventLoggerQuerierSyncPtr logger_querier_;
+
+  // <EventKey, Count>
+  std::map<EventKey, uint32_t> expected_events_;
+  std::map<EventKey, uint32_t> received_events_;
+  int remaining_event_count_ = 0;
 };
+
+std::ostream& operator<<(std::ostream& out, Cobalt::EventDimensions dimensions) {
+  out << "{";
+  for (uint32_t idx = 0; idx < dimensions.size(); idx++) {
+    out << dimensions[idx];
+
+    if (idx < dimensions.size() - 1) {
+      out << ", ";
+    }
+  }
+  out << "}";
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out, Cobalt::EventKey key) {
+  out << "{metric_id:" << key.first << ", dimensions:" << key.second << "}";
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out, std::map<Cobalt::EventKey, uint32_t> events) {
+  out << "{\n";
+  for (auto& [key, value] : events) {
+    out << "{key:" << key << ", value:" << value << "}\n";
+  }
+  out << "}";
+  return out;
+}
 
 Cobalt::Cobalt(std::shared_ptr<sys::ServiceDirectory> environment_services) {
   environment_services->Connect(logger_querier_.NewRequest());
 }
 
 Cobalt::~Cobalt() {
-  using fuchsia::cobalt::test::LogMethod;
+  using fuchsia::metrics::test::LogMethod;
   FX_CHECK(logger_querier_) << "logger_querier_ disconnected. Cannot reset mock_cobalt, aborting";
 
   // Reset the logger so tests can be run repeatedly.
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_EVENT) == ZX_OK)
-      << "Failed to reset EVENT events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_EVENT_COUNT) == ZX_OK)
-      << "Failed to reset EVENT_COUNT events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_ELAPSED_TIME) == ZX_OK)
-      << "Failed to reset ELAPSED_TIME events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_FRAME_RATE) == ZX_OK)
-      << "Failed to reset FRAME_RATE events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_MEMORY_USAGE) == ZX_OK)
-      << "Failed to reset MEMORY_USAGE events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_INT_HISTOGRAM) == ZX_OK)
-      << "Failed to reset INT_HISTOGRAM events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_COBALT_EVENT) == ZX_OK)
-      << "Failed to reset COBALT_EVENT events, aborting";
-  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_COBALT_EVENTS) == ZX_OK)
-      << "Failed to reset COBALT_EVENTS events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_OCCURRENCE) == ZX_OK)
+      << "Failed to reset OCCURRENCE events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_INTEGER) == ZX_OK)
+      << "Failed to reset LOG_INTEGER events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_INTEGER_HISTOGRAM) ==
+           ZX_OK)
+      << "Failed to reset LOG_INTEGER_HISTOGRAM events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_STRING) == ZX_OK)
+      << "Failed to reset LOG_STRING events, aborting";
+  FX_CHECK(logger_querier_->ResetLogger(cobalt::kProjectId, LogMethod::LOG_METRIC_EVENTS) == ZX_OK)
+      << "Failed to reset LOG_METRIC_EVENTS events, aborting";
 }
 
-template <typename EventCodeType>
-std::vector<EventCodeType> Cobalt::GetAllEventsOfType(size_t num_expected,
-                                                      fuchsia::cobalt::test::LogMethod log_method) {
-  std::vector<EventCodeType> all_events;
+void Cobalt::DisplayEvents() {
+  FX_LOGS(INFO) << "Received Events:" << received_events_;
+  FX_LOGS(INFO) << "Expected Events:" << expected_events_;
+}
 
+template <typename DimensionType>
+void Cobalt::RegisterExpectedEvent(DimensionType dimension, uint32_t count) {
+  RegisterExpectedEvent(MetricIDForEventCode(dimension), {static_cast<uint32_t>(dimension)}, count);
+}
+
+void Cobalt::RegisterExpectedEvent(int metric_id, EventDimensions dimensions, uint32_t count) {
+  auto key = EventKey{metric_id, dimensions};
+  FX_CHECK(expected_events_.count(key) == 0) << "Duplicated key:" << key;
+
+  expected_events_[key] = count;
+  remaining_event_count_ += static_cast<int>(count);
+}
+
+bool Cobalt::MeetsExpectedEvents(LogMethod log_method, bool ignore_extra_events) {
+  switch (log_method) {
+    case LogMethod::LOG_OCCURRENCE:
+    case LogMethod::LOG_INTEGER:
+      break;
+    default:
+      FX_NOTIMPLEMENTED() << "this log method testing is not yet implemented!";
+  }
+
+  // Get all events of type <log_method>
+  //
   // We may need to run WatchLogs() multiple times to collect all of the events generated by
   // our component. This is due to the fact that we are communicating with both the
-  // fuchsia.cobalt/Logger and fuchsia.cobalt.test/LoggerQuerier APIs and are provided no
-  // guarantees regarding the order in which messages are received. Thus it's conceivable (and
-  // will actually happen quite often) that the call to WatchLogs() (and maybe even ResetLogger())
-  // will get to the component serving both APIs before either of the calls to LogEvent() arrive
-  // and a response containing zero or one Cobalt events is received. So, if you wish to remove
-  // this for loop it is a prerequisite that you have figured out a way to guarantee the
-  // ordering of independent, asynchronous messages, made it so that you component only ever
+  // fuchsia.metrics/MetricEventLogger and fuchsia.metrics.test/MetricEventLoggerQuerier APIs and
+  // are provided no guarantees regarding the order in which messages are received. Thus it's
+  // conceivable (and will actually happen quite often) that the call to WatchLogs() (and maybe
+  // even ResetLogger()) will get to the component serving both APIs before either of the calls to
+  // LogEvent() arrive and a response containing zero or one Cobalt events is received. So, if you
+  // wish to remove this for loop it is a prerequisite that you have figured out a way to guarantee
+  // the ordering of independent, asynchronous messages, made it so that you component only ever
   // logs to Cobalt, or don't care about flakes in your tests.
   //
   // We can set an upper bound on the number of calls to the LoggerQuerier since calls to
@@ -83,31 +150,29 @@ std::vector<EventCodeType> Cobalt::GetAllEventsOfType(size_t num_expected,
   // cobalt events, in the worst case WatchLogs() is called before any events are received,
   // returning nothing. Then to get the rest of the N sent events we must make at most N calls to
   // WatchLogs() since we're guaranteed that each call will return with at least one new event.
-  for (size_t i = 0; i < num_expected + 1 && all_events.size() < num_expected; ++i) {
-    std::vector<fuchsia::cobalt::CobaltEvent> event_results;
+  while (remaining_event_count_ > 0) {
+    std::vector<fuchsia::metrics::MetricEvent> event_results;
     bool more;
 
-    FX_CHECK(logger_querier_->WatchLogs2(cobalt::kProjectId, log_method, &event_results, &more) ==
+    FX_CHECK(logger_querier_->WatchLogs(cobalt::kProjectId, log_method, &event_results, &more) ==
              ZX_OK);
     FX_CHECK(!more);
-    GetNewEventsOfType<EventCodeType>(event_results, &all_events);
-  }
 
-  return all_events;
-}
+    for (const auto& event : event_results) {
+      auto key = EventKey{event.metric_id, event.event_codes};
 
-template <typename EventCodeType>
-void Cobalt::GetNewEventsOfType(const std::vector<fuchsia::cobalt::CobaltEvent>& result,
-                                std::vector<EventCodeType>* all_events) {
-  for (const auto& event : result) {
-    FX_CHECK(event.metric_id == MetricIDForEventCode(static_cast<EventCodeType>(0)))
-        << "Expected metric id: "
-        << std::to_string(MetricIDForEventCode(static_cast<EventCodeType>(0))) << "\n"
-        << "Actual metic id:    " << std::to_string(event.metric_id);
-    for (const auto& event_code : event.event_codes) {
-      all_events->push_back(static_cast<EventCodeType>(event_code));
+      received_events_[key]++;
+
+      if (expected_events_.count(key) && received_events_[key] <= expected_events_[key]) {
+        remaining_event_count_--;
+      } else if (ignore_extra_events == false) {
+        FX_LOGS(ERROR) << "Found unexpected event:" << key;
+        return false;
+      }
     }
   }
+
+  return true;
 }
 
 }  // namespace fakes

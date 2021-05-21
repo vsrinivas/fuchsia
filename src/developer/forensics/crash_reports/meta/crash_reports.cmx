@@ -14,9 +14,9 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.DataProvider",
             "fuchsia.feedback.DeviceIdProvider",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.net.NameLookup",
             "fuchsia.net.http.Loader",
             "fuchsia.posix.socket.Provider",

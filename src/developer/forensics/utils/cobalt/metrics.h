@@ -11,126 +11,144 @@ namespace forensics {
 namespace cobalt {
 
 constexpr auto kProjectId = cobalt_registry::kProjectId;
-constexpr auto kInspectBudgetMetricId = cobalt_registry::kMaxInputInspectBudgetMetricId;
+constexpr auto kInspectBudgetMetricId = cobalt_registry::kMaxInputInspectBudgetMigratedMetricId;
 
 enum class CrashState {
-  kUnknown = cobalt_registry::CrashMetricDimensionState::Unknown,
-  kFiled = cobalt_registry::CrashMetricDimensionState::Filed,
-  kUploaded = cobalt_registry::CrashMetricDimensionState::Uploaded,
-  kArchived = cobalt_registry::CrashMetricDimensionState::Archived,
-  kGarbageCollected = cobalt_registry::CrashMetricDimensionState::GarbageCollected,
-  kDropped = cobalt_registry::CrashMetricDimensionState::Dropped,
-  kUploadThrottled = cobalt_registry::CrashMetricDimensionState::UploadThrottled,
-  kOnDeviceQuotaReached = cobalt_registry::CrashMetricDimensionState::OnDeviceQuotaReached,
-  kDeleted = cobalt_registry::CrashMetricDimensionState::Deleted,
+  kUnknown = cobalt_registry::CrashMigratedMetricDimensionState::Unknown,
+  kFiled = cobalt_registry::CrashMigratedMetricDimensionState::Filed,
+  kUploaded = cobalt_registry::CrashMigratedMetricDimensionState::Uploaded,
+  kArchived = cobalt_registry::CrashMigratedMetricDimensionState::Archived,
+  kGarbageCollected = cobalt_registry::CrashMigratedMetricDimensionState::GarbageCollected,
+  kDropped = cobalt_registry::CrashMigratedMetricDimensionState::Dropped,
+  kUploadThrottled = cobalt_registry::CrashMigratedMetricDimensionState::UploadThrottled,
+  kOnDeviceQuotaReached = cobalt_registry::CrashMigratedMetricDimensionState::OnDeviceQuotaReached,
+  kDeleted = cobalt_registry::CrashMigratedMetricDimensionState::Deleted,
 };
 
 enum class UploadAttemptState {
-  kUnknown = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Unknown,
-  kUploadAttempt = cobalt_registry::CrashUploadAttemptsMetricDimensionState::UploadAttempt,
-  kUploaded = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Uploaded,
-  kDeleted = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Deleted,
-  kGarbageCollected = cobalt_registry::CrashUploadAttemptsMetricDimensionState::GarbageCollected,
-  kUploadThrottled = cobalt_registry::CrashUploadAttemptsMetricDimensionState::UploadThrottled,
+  kUnknown = cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::Unknown,
+  kUploadAttempt = cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::UploadAttempt,
+  kUploaded = cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::Uploaded,
+  kDeleted = cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::Deleted,
+  kGarbageCollected =
+      cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::GarbageCollected,
+  kUploadThrottled =
+      cobalt_registry::CrashUploadAttemptsMigratedMetricDimensionState::UploadThrottled,
 };
 
 enum class TimedOutData {
-  kUnknown = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::Unknown,
-  kSystemLog = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::SystemLog,
-  kKernelLog = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::KernelLog,
-  kScreenshot = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::Screenshot,
-  kInspect = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::Inspect,
-  kChannel = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::Channel,
-  kProductInfo = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::ProductInfo,
-  kBoardInfo = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::BoardInfo,
+  kUnknown = cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::Unknown,
+  kSystemLog = cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::SystemLog,
+  kKernelLog = cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::KernelLog,
+  kScreenshot =
+      cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::Screenshot,
+  kInspect = cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::Inspect,
+  kChannel = cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::Channel,
+  kProductInfo =
+      cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::ProductInfo,
+  kBoardInfo = cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::BoardInfo,
   kLastRebootInfo =
-      cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::LastRebootInfo,
+      cobalt_registry::FeedbackDataCollectionTimeoutMigratedMetricDimensionData::LastRebootInfo,
 };
 
 enum class SnapshotGenerationFlow {
-  kUnknown = cobalt_registry::SnapshotGenerationDurationUsecsMetricDimensionFlow::Unknown,
-  kSuccess = cobalt_registry::SnapshotGenerationDurationUsecsMetricDimensionFlow::Success,
-  kFailure = cobalt_registry::SnapshotGenerationDurationUsecsMetricDimensionFlow::Failure,
+  kUnknown = cobalt_registry::SnapshotGenerationDurationUsecsMigratedMetricDimensionFlow::Unknown,
+  kSuccess = cobalt_registry::SnapshotGenerationDurationUsecsMigratedMetricDimensionFlow::Success,
+  kFailure = cobalt_registry::SnapshotGenerationDurationUsecsMigratedMetricDimensionFlow::Failure,
 };
 
 enum class LastRebootReason {
-  kUnknown = cobalt_registry::LastRebootUptimeMetricDimensionReason::Unknown,
-  kGenericGraceful = cobalt_registry::LastRebootUptimeMetricDimensionReason::GenericGraceful,
-  kGenericUngraceful = cobalt_registry::LastRebootUptimeMetricDimensionReason::GenericUngraceful,
-  kCold = cobalt_registry::LastRebootUptimeMetricDimensionReason::Cold,
-  kBriefPowerLoss = cobalt_registry::LastRebootUptimeMetricDimensionReason::BriefPowerLoss,
-  kBrownout = cobalt_registry::LastRebootUptimeMetricDimensionReason::Brownout,
-  kKernelPanic = cobalt_registry::LastRebootUptimeMetricDimensionReason::KernelPanic,
-  kSystemOutOfMemory = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemOutOfMemory,
+  kUnknown = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::Unknown,
+  kGenericGraceful =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::GenericGraceful,
+  kGenericUngraceful =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::GenericUngraceful,
+  kCold = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::Cold,
+  kBriefPowerLoss = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::BriefPowerLoss,
+  kBrownout = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::Brownout,
+  kKernelPanic = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::KernelPanic,
+  kSystemOutOfMemory =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::SystemOutOfMemory,
   kHardwareWatchdogTimeout =
-      cobalt_registry::LastRebootUptimeMetricDimensionReason::HardwareWatchdogTimeout,
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::HardwareWatchdogTimeout,
   kSoftwareWatchdogTimeout =
-      cobalt_registry::LastRebootUptimeMetricDimensionReason::SoftwareWatchdogTimeout,
-  kUserRequest = cobalt_registry::LastRebootUptimeMetricDimensionReason::UserRequest,
-  kSystemUpdate = cobalt_registry::LastRebootUptimeMetricDimensionReason::SystemUpdate,
-  kRetrySystemUpdate = cobalt_registry::LastRebootUptimeMetricDimensionReason::RetrySystemUpdate,
-  kZbiSwap = cobalt_registry::LastRebootUptimeMetricDimensionReason::ZbiSwap,
-  kHighTemperature = cobalt_registry::LastRebootUptimeMetricDimensionReason::HighTemperature,
-  kSessionFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SessionFailure,
-  kSysmgrFailure = cobalt_registry::LastRebootUptimeMetricDimensionReason::SysmgrFailure,
-  kFactoryDataReset = cobalt_registry::LastRebootUptimeMetricDimensionReason::FactoryDataReset,
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::SoftwareWatchdogTimeout,
+  kUserRequest = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::UserRequest,
+  kSystemUpdate = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::SystemUpdate,
+  kRetrySystemUpdate =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::RetrySystemUpdate,
+  kZbiSwap = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::ZbiSwap,
+  kHighTemperature =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::HighTemperature,
+  kSessionFailure = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::SessionFailure,
+  kSysmgrFailure = cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::SysmgrFailure,
+  kFactoryDataReset =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::FactoryDataReset,
   kCriticalComponentFailure =
-      cobalt_registry::LastRebootUptimeMetricDimensionReason::CriticalComponentFailure,
-  kRootJobTermination = cobalt_registry::LastRebootUptimeMetricDimensionReason::RootJobTermination,
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::CriticalComponentFailure,
+  kRootJobTermination =
+      cobalt_registry::LastRebootUptimeMigratedMetricDimensionReason::RootJobTermination,
 };
 
 enum class RebootReasonWriteResult {
-  kSuccess = cobalt_registry::RebootReasonPersistDurationUsecsMetricDimensionWriteResult::Success,
-  kFailure = cobalt_registry::RebootReasonPersistDurationUsecsMetricDimensionWriteResult::Failure,
+  kSuccess =
+      cobalt_registry::RebootReasonPersistDurationUsecsMigratedMetricDimensionWriteResult::Success,
+  kFailure =
+      cobalt_registry::RebootReasonPersistDurationUsecsMigratedMetricDimensionWriteResult::Failure,
 };
 
 enum class PreviousBootEncodingVersion {
-  kUnknown =
-      cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::Unknown,
-  kV_01 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V01,
-  kV_02 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V02,
-  kV_03 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V03,
-  kV_04 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V04,
-  kV_05 = cobalt_registry::PreviousBootLogCompressionRatioMetricDimensionEncodingVersion::V05,
+  kUnknown = cobalt_registry::
+      PreviousBootLogCompressionRatioMigratedMetricDimensionEncodingVersion::Unknown,
+  kV_01 =
+      cobalt_registry::PreviousBootLogCompressionRatioMigratedMetricDimensionEncodingVersion::V01,
+  kV_02 =
+      cobalt_registry::PreviousBootLogCompressionRatioMigratedMetricDimensionEncodingVersion::V02,
+  kV_03 =
+      cobalt_registry::PreviousBootLogCompressionRatioMigratedMetricDimensionEncodingVersion::V03,
+  kV_04 =
+      cobalt_registry::PreviousBootLogCompressionRatioMigratedMetricDimensionEncodingVersion::V04,
+  kV_05 =
+      cobalt_registry::PreviousBootLogCompressionRatioMigratedMetricDimensionEncodingVersion::V05,
 };
 
 enum class SnapshotVersion {
-  kUnknown = cobalt_registry::SnapshotSizeMetricDimensionVersion::Unknown,
-  kV_01 = cobalt_registry::SnapshotSizeMetricDimensionVersion::V01,
-  kV_02 = cobalt_registry::SnapshotSizeMetricDimensionVersion::V02,
-  kV_03 = cobalt_registry::SnapshotSizeMetricDimensionVersion::V03,
+  kUnknown = cobalt_registry::SnapshotSizeMigratedMetricDimensionVersion::Unknown,
+  kV_01 = cobalt_registry::SnapshotSizeMigratedMetricDimensionVersion::V01,
+  kV_02 = cobalt_registry::SnapshotSizeMigratedMetricDimensionVersion::V02,
+  kV_03 = cobalt_registry::SnapshotSizeMigratedMetricDimensionVersion::V03,
 };
 
 inline constexpr uint32_t MetricIDForEventCode(const SnapshotVersion version) {
-  return cobalt_registry::kSnapshotSizeMetricId;
+  return cobalt_registry::kSnapshotSizeMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const PreviousBootEncodingVersion version) {
-  return cobalt_registry::kPreviousBootLogCompressionRatioMetricId;
+  return cobalt_registry::kPreviousBootLogCompressionRatioMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const RebootReasonWriteResult write_result) {
-  return cobalt_registry::kRebootReasonPersistDurationUsecsMetricId;
+  return cobalt_registry::kRebootReasonPersistDurationUsecsMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const LastRebootReason reason) {
-  return cobalt_registry::kLastRebootUptimeMetricId;
+  return cobalt_registry::kLastRebootUptimeMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const SnapshotGenerationFlow snapshot) {
-  return cobalt_registry::kSnapshotGenerationDurationUsecsMetricId;
+  return cobalt_registry::kSnapshotGenerationDurationUsecsMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const TimedOutData data) {
-  return cobalt_registry::kFeedbackDataCollectionTimeoutMetricId;
+  return cobalt_registry::kFeedbackDataCollectionTimeoutMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const CrashState state) {
-  return cobalt_registry::kCrashMetricId;
+  return cobalt_registry::kCrashMigratedMetricId;
 }
 
 inline constexpr uint32_t MetricIDForEventCode(const UploadAttemptState state) {
-  return cobalt_registry::kCrashUploadAttemptsMetricId;
+  return cobalt_registry::kCrashUploadAttemptsMigratedMetricId;
 }
 
 namespace internal {
@@ -163,31 +181,30 @@ inline constexpr uint32_t MetricIDForEventCode(const EventCodeTypesH event_code,
   return checker.metric_id;
 }
 
+// Corresponds to |fuchsia::metrics::MetricEventLogger| public methods.
 enum class EventType {
+  kInteger,
   kOccurrence,
-  kCount,
-  kTimeElapsed,
-  kMultidimensionalEvent,
 };
 
 inline constexpr EventType EventTypeForEventCode(const SnapshotVersion version) {
-  return EventType::kCount;
+  return EventType::kInteger;
 }
 
 inline constexpr EventType EventTypeForEventCode(const PreviousBootEncodingVersion version) {
-  return EventType::kCount;
+  return EventType::kInteger;
 }
 
 inline constexpr EventType EventTypeForEventCode(const RebootReasonWriteResult write_result) {
-  return EventType::kTimeElapsed;
+  return EventType::kInteger;
 }
 
 inline constexpr EventType EventTypeForEventCode(const LastRebootReason reason) {
-  return EventType::kTimeElapsed;
+  return EventType::kInteger;
 }
 
 inline constexpr EventType EventTypeForEventCode(const SnapshotGenerationFlow snapshot) {
-  return EventType::kTimeElapsed;
+  return EventType::kInteger;
 }
 
 inline constexpr EventType EventTypeForEventCode(const TimedOutData data) {
@@ -199,7 +216,7 @@ inline constexpr EventType EventTypeForEventCode(const CrashState state) {
 }
 
 inline constexpr EventType EventTypeForEventCode(const UploadAttemptState state) {
-  return EventType::kCount;
+  return EventType::kOccurrence;
 }
 
 }  // namespace cobalt

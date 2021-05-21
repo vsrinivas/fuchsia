@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_COBALT_LOGGER_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_COBALT_LOGGER_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
@@ -27,24 +27,24 @@ namespace cobalt {
 // Log events to cobalt.
 class Logger {
  public:
-  // We expect fuchsia.cobalt.LoggerFactory to be in |services|.
+  // We expect fuchsia.metrics.MetricEventLoggerFactory to be in |services|.
   Logger(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
          std::unique_ptr<timekeeper::Clock> clock = std::make_unique<timekeeper::SystemClock>());
 
   // Log event with no dimensions.
-  void LogEvent(uint32_t metric_id, uint64_t count) {
-    LogEvent(Event(cobalt::EventType::kMultidimensionalEvent, metric_id, {}, count));
+  void LogIntegerEvent(uint32_t metric_id, uint64_t count) {
+    LogEvent(Event(cobalt::EventType::kInteger, metric_id, {}, count));
   }
 
-  // Log an occurrence event with fuchsia.cobalt.Logger with the provided parameters. If the service
+  // Log event with fuchsia.metrics.MetricEventLogger with the provided parameters. If the service
   // is not accessible, keep the parameters to try again later.
   template <typename... DimensionTypes>
   void LogOccurrence(DimensionTypes... dimensions) {
     LogEvent(Event(std::forward<DimensionTypes>(dimensions)...));
   }
 
-  // Log a count event with fuchsia.cobalt.Logger with the provided parameters. If the service is
-  // not accessible, keep the parameters to try again later.
+  // Log event with fuchsia.metrics.MetricEventLogger with the provided parameters. If the service
+  // is not accessible, keep the parameters to try again later.
   template <typename DimensionType>
   void LogCount(DimensionType dimension, uint64_t count) {
     LogEvent(Event(dimension, count));
@@ -55,8 +55,8 @@ class Logger {
   uint64_t StartTimer();
 
   // Log the time elapsed in microseconds since starting the timer with id |timer_id| with
-  // fuchsia.cobalt.Logger. If the service is not accessible, keep the parameters to try again
-  // later.
+  // fuchsia.metrics.MetricEventLogger. If the service is not accessible, keep the parameters to
+  // try again later.
   //
   // This does not stop the timer.
   template <typename DimensionType>
@@ -75,7 +75,8 @@ class Logger {
   void Shutdown();
 
  private:
-  void ConnectToLogger(::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger_request);
+  void ConnectToLogger(
+      ::fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> logger_request);
   void RetryConnectingToLogger();
   void LogEvent(Event event);
   void SendEvent(uint64_t event_id);
@@ -86,8 +87,8 @@ class Logger {
   std::shared_ptr<sys::ServiceDirectory> services_;
   std::unique_ptr<timekeeper::Clock> clock_;
 
-  fuchsia::cobalt::LoggerFactoryPtr logger_factory_;
-  fuchsia::cobalt::LoggerPtr logger_;
+  fuchsia::metrics::MetricEventLoggerFactoryPtr logger_factory_;
+  fuchsia::metrics::MetricEventLoggerPtr logger_;
 
   // An event is pending if it has been written into a channel, but has not been acknowledged by
   // the recipient.

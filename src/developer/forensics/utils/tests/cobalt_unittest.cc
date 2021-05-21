@@ -28,11 +28,10 @@ namespace {
 
 constexpr uint32_t kMaxQueueSize = 500u;
 constexpr CrashState kEventCode = CrashState::kFiled;
-constexpr CrashState kAnotherEventCode = CrashState::kUploaded;
+constexpr EventType kEventType = EventType::kOccurrence;
 constexpr uint64_t kCount = 2u;
 constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 
-using fuchsia::cobalt::Status;
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
@@ -54,11 +53,6 @@ class CobaltTest : public UnitTestFixture {
     events_.emplace_back(kEventCode, kCount);
   }
 
-  void LogMultidimensionalOccurrence() {
-    cobalt_->LogOccurrence(kEventCode, kAnotherEventCode);
-    events_.emplace_back(kEventCode, kAnotherEventCode);
-  }
-
   const std::vector<Event> SentCobaltEvents() { return events_; }
 
   // The lifetime of |clock_| is managed by |cobalt_|.
@@ -75,7 +69,6 @@ TEST_F(CobaltTest, Check_Log) {
   for (size_t i = 0; i < 5; ++i) {
     LogCount();
     LogOccurrence();
-    LogMultidimensionalOccurrence();
     RunLoopUntilIdle();
   }
 
@@ -109,7 +102,7 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
 
   for (size_t i = 0; i < 5; ++i) {
     LogOccurrence();
-    EXPECT_FALSE(WasLogEventCalled());
+    EXPECT_FALSE(WasMethodCalled(kEventType));
   }
   RunLoopUntilIdle();
 
@@ -193,7 +186,7 @@ TEST_F(CobaltTest, Check_ExponentialBackoff) {
 
   for (size_t i = 0; i < num_attempts - 1; ++i) {
     RunLoopFor(delay);
-    EXPECT_FALSE(WasLogEventCalled());
+    EXPECT_FALSE(WasMethodCalled(kEventType));
     delay *= retry_factor;
   }
   RunLoopFor(delay);
@@ -203,7 +196,7 @@ TEST_F(CobaltTest, Check_ExponentialBackoff) {
 
 TEST_F(CobaltTest, Check_LoopOutlivesCobalt) {
   // We set up a scenario in which |cobalt_| has posted a task on the loop to reconnect to
-  // fuchsia.cobalt/Logger and then is freed. This test should trigger ASAN if the task is not
+  // fuchsia.metrics/Logger and then is freed. This test should trigger ASAN if the task is not
   // cancelled.
   constexpr uint64_t num_attempts = 10u;
   SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactoryCreatesOnRetry>(num_attempts));
@@ -216,7 +209,7 @@ TEST_F(CobaltTest, Check_LoopOutlivesCobalt) {
   RunLoopUntilIdle();
   for (size_t i = 0; i < num_attempts / 2; ++i) {
     RunLoopFor(delay);
-    EXPECT_FALSE(WasLogEventCalled());
+    EXPECT_FALSE(WasMethodCalled(kEventType));
     delay *= retry_factor;
   }
   cobalt_.reset();

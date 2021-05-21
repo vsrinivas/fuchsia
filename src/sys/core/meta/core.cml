@@ -268,7 +268,6 @@
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#appmgr",
             to: [
-                "#last_reboot",
                 "#sampler",
                 "#system-updater",
             ],
@@ -463,6 +462,12 @@
                 "#log-stats",
                 "#sampler",
             ],
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#appmgr",
+            to: "#last_reboot",
+            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],

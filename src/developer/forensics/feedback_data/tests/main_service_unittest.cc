@@ -114,11 +114,12 @@ TEST_F(MainServiceTest, MovesPreviousBootLogs) {
   EXPECT_EQ(previous_log_contents, ReadFile(kPreviousLogsFilePath));
 
   // Verify the event type and metric_id.
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  MatchesCobaltEvent(cobalt::EventType::kCount,
-                                     cobalt_registry::kPreviousBootLogCompressionRatioMetricId),
-              }));
+  EXPECT_THAT(
+      ReceivedCobaltEvents(),
+      UnorderedElementsAreArray({
+          MatchesCobaltEvent(cobalt::EventType::kInteger,
+                             cobalt_registry::kPreviousBootLogCompressionRatioMigratedMetricId),
+      }));
 }
 
 TEST_F(MainServiceTest, DeletesUsedPreviousBootLogsAfterOneHours) {

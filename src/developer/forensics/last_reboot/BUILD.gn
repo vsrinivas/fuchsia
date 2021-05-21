@@ -83,8 +83,8 @@ source_set("reporter") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.metrics",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback/reboot_log",

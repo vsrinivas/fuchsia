@@ -222,8 +222,6 @@ executable("feedback_data_integration_test_exe") {
   deps = [
     ":zx_object_util",
     "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.logger",

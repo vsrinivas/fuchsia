@@ -51,7 +51,7 @@ source_set("cobalt") {
 
   public_deps = [
     ":fidl_server",
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.metrics",
     "//src/developer/forensics/utils/cobalt",
   ]
 

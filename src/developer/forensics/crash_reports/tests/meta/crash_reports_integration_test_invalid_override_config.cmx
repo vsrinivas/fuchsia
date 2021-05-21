@@ -2,12 +2,12 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/copy-forensics-invalid-crash-reports-override-config#meta/crash_reports.cmx",
                 "fuchsia.feedback.CrashReportingProductRegister": "fuchsia-pkg://fuchsia.com/copy-forensics-invalid-crash-reports-override-config#meta/crash_reports.cmx",
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake-data-provider#meta/fake_data_provider.cmx",
                 "fuchsia.feedback.DeviceIdProvider": "fuchsia-pkg://fuchsia.com/fake-device-id-provider#meta/fake_device_id_provider.cmx",
+                "fuchsia.metrics.MetricEventLoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
+                "fuchsia.metrics.test.MetricEventLoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
                 "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
@@ -22,9 +22,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.cobalt.test.LoggerQuerier",
             "fuchsia.feedback.CrashReporter",
-            "fuchsia.feedback.CrashReportingProductRegister"
+            "fuchsia.feedback.CrashReportingProductRegister",
+            "fuchsia.metrics.test.MetricEventLoggerQuerier"
         ]
     }
 }
