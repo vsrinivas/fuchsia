@@ -133,7 +133,8 @@ void DumpCommonDiagnostics(cpu_num_t cpu, FILE* output_target, FailureSeverity s
   DEBUG_ASSERT(arch_ints_disabled());
 
   auto& percpu = percpu::Get(cpu);
-  fprintf(output_target, "timer_ints: %lu\n", percpu.stats.timer_ints);
+  fprintf(output_target, "timer_ints: %lu, interrupts: %lu\n", percpu.stats.timer_ints,
+          percpu.stats.interrupts);
 
   if (ThreadLock::Get()->lock().HolderCpu() == cpu) {
     fprintf(output_target,
