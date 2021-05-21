@@ -756,6 +756,7 @@ action("check_vtables_in_rodata") {
   hermetic_deps = false
   script = "//scripts/clang/check-vtable-rodata.py"
   outputs = [ "$root_build_dir/$target_name" ]
+  depfile = "$root_build_dir/$target_name.d"
 
   # Ensure that all fuchsia binaries listed in `binaries.json` are created
   # first.
@@ -773,12 +774,19 @@ action("check_vtables_in_rodata") {
     "--readelf",
     rebase_path("$clang_prefix/llvm-readelf", root_build_dir),
 
+    # Write to a file.
+    "-o",
+    rebase_path(outputs[0], root_build_dir),
+
     # Run in `fuchsia` mode, which looks for `binaries.json` in the provided
     # output directory.
     "fuchsia",
 
     # Point to the output directory.
     rebase_path("$root_build_dir", root_build_dir),
+
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
   ]
 }
 

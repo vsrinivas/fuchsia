@@ -159,15 +159,15 @@ def find_sections(filename, readelf):
   return sections
 
 
-def check_vtables_in_dso(filename, readelf, excludes):
+def check_vtables_in_dso(filename, readelf, excludes, output):
   assert isinstance(excludes, set)
-  print("Checking", filename)
+  print("Checking", filename, file=output)
 
   symbols = find_vtable_symbols(filename, readelf)
-  print("Found {} vtables".format(len(symbols)))
+  print("Found {} vtables".format(len(symbols)), file=output)
 
   sections = find_sections(filename, readelf)
-  print("Found {} sections".format(len(sections)))
+  print("Found {} sections".format(len(sections)), file=output)
 
   # Find the rodata section.
   for i, section in enumerate(sections):
@@ -175,7 +175,7 @@ def check_vtables_in_dso(filename, readelf, excludes):
       rodata = i
       break
   else:
-    print("Could not find rodata in ", sections)
+    print("Could not find rodata in ", sections, file=output)
     return
 
   bad_vtables = []
@@ -184,23 +184,23 @@ def check_vtables_in_dso(filename, readelf, excludes):
       bad_vtables.append(vtable)
 
   assert not bad_vtables, f"Found vtables that aren't in rodata:\n{str(bad_vtables)}"
-  print("All vtables are in rodata :)")
+  print("All vtables are in rodata :)", file=output)
 
 
-def check_vtables_in_file(filename, readelf, excludes):
+def check_vtables_in_file(filename, readelf, excludes, output):
   if is_elf_file(filename):
     # FIXME: We should also be checking executables.
-    check_vtables_in_dso(filename, readelf, excludes)
+    check_vtables_in_dso(filename, readelf, excludes, output)
   else:
-    print("WARN: Could not recognize ELF file type for", filename)
+    print("WARN: Could not recognize ELF file type for", filename, file=sys.stderr)
 
 
-def check_vtables_in_dir(dirname, readelf, excludes):
+def check_vtables_in_dir(dirname, readelf, excludes, output):
   assert os.path.exists(dirname), "{} does not exist".format(dirname)
   for root, _, files in os.walk(dirname):
     for file in files:
       path = os.path.join(root, file)
-      check_vtables_in_file(path, readelf, excludes)
+      check_vtables_in_file(path, readelf, excludes, output)
 
 
 def check_file_main(args):
@@ -208,9 +208,9 @@ def check_file_main(args):
   excludes = set(args.exclude)
 
   if os.path.isfile(filename):
-    check_vtables_in_file(filename, args.readelf, excludes)
+    check_vtables_in_file(filename, args.readelf, excludes, args.output)
   else:
-    check_vtables_in_dir(filename, args.readelf, excludes)
+    check_vtables_in_dir(filename, args.readelf, excludes, args.output)
 
   return 0
 
@@ -219,10 +219,10 @@ def check_toolchain_main(args):
   excludes = set(args.exclude)
   check_vtables_in_dir(
       os.path.join(args.toolchain_dir, "lib", "aarch64-unknown-fuchsia"),
-      args.readelf, excludes)
+      args.readelf, excludes, args.output)
   check_vtables_in_dir(
       os.path.join(args.toolchain_dir, "lib", "x86_64-unknown-fuchsia"),
-      args.readelf, excludes)
+      args.readelf, excludes, args.output)
   return 0
 
 
@@ -243,19 +243,19 @@ def check_toolchain_multilib_main(args):
   for target in targets:
     for multilib in multilibs:
       p = Path(args.toolchain_dir) / "lib" / target / multilib
-      check_vtables_in_dir(p, args.readelf, excludes)
+      check_vtables_in_dir(p, args.readelf, excludes, args.output)
 
   # Check hwasan if exists
   p = Path(
       args.toolchain_dir
   ) / "lib" / "aarch64-unknown-fuchsia" / "relative-vtables+hwasan"
   if p.exists():
-    check_vtables_in_dir(p, args.readelf, excludes)
+    check_vtables_in_dir(p, args.readelf, excludes, args.output)
   p = Path(
       args.toolchain_dir
   ) / "lib" / "aarch64-unknown-fuchsia" / "relative-vtables+hwasan+noexcept"
   if p.exists():
-    check_vtables_in_dir(p, args.readelf, excludes)
+    check_vtables_in_dir(p, args.readelf, excludes, args.output)
 
   return 0
 
@@ -268,15 +268,21 @@ def check_fuchsia_main(args):
     import json
     binaries = json.load(f)
 
+  files = ["binaries.json"]
   for binary in binaries:
     if binary["os"] != "fuchsia":
       continue
 
     path = os.path.join(args.build, binary["debug"])
     if os.path.exists(path):
-      check_vtables_in_file(path, args.readelf, excludes)
+      check_vtables_in_file(path, args.readelf, excludes, args.output)
+      files.append(path)
     else:
-      print(f"Skipping {path}. This path does not exist.")
+      print(f"Skipping {path}. This path does not exist.", file=args.output)
+
+  if args.depfile:
+    with open(args.depfile, "w") as depfile:
+      depfile.write(f"{args.output.name}: {' '.join(files)}\n")
 
   return 0
 
@@ -293,6 +299,9 @@ def main():
                       action="append",
                       default=[],
                       help="Do not check if this class is in rodata.")
+  parser.add_argument("-o", "--output",
+                      type=argparse.FileType("w"), default="-",
+                      help="If provided, write to this output file rather than stdout")
 
   subparsers = parser.add_subparsers(dest="mode",
                                      help="Choose which mode this tool should run with.")
@@ -330,6 +339,8 @@ check all relevant fuchsia-target executables and DSOs in a fuchsia build.
       "build",
       type=os.path.abspath,
       help="Path to either the GN or ZN fuchsia build directory.")
+  fuchsia_parser.add_argument("--depfile",
+                              help="If provided, create this depfile.")
 
   multilib_parser = subparsers.add_parser("multilib",
       description="""
