@@ -9,7 +9,7 @@ use {
     serde_json::Value,
     std::{
         collections::HashMap,
-        convert::{Into, TryFrom, TryInto},
+        convert::Into,
         fs,
         io::{self, BufReader},
         path::PathBuf,
@@ -119,7 +119,8 @@ impl Sdk {
             }
         };
 
-        let sdk = Self::atoms_from_core_manifest(BufReader::new(file))?.try_into();
+        let sdk = Self::atoms_from_core_manifest(BufReader::new(file))?
+            .to_sdk(path.clone(), SdkAtoms::default_get_meta);
 
         sdk.map(|mut x: Sdk| {
             x.version = SdkVersion::InTree;
@@ -242,9 +243,13 @@ impl Sdk {
 }
 
 impl SdkAtoms {
-    fn to_sdk<T, U>(self, get_meta: T) -> Result<Sdk>
+    fn default_get_meta(meta_path: PathBuf) -> Result<BufReader<fs::File>> {
+        Ok(BufReader::new(fs::File::open(meta_path)?))
+    }
+
+    fn to_sdk<T, U>(self, path_prefix: PathBuf, get_meta: T) -> Result<Sdk>
     where
-        T: Fn(&str) -> Result<BufReader<U>>,
+        T: Fn(PathBuf) -> Result<BufReader<U>>,
         U: io::Read,
     {
         let mut metas = Vec::new();
@@ -258,19 +263,12 @@ impl SdkAtoms {
             let meta = real_paths
                 .get(&atom.meta)
                 .ok_or(anyhow!("Atom did not specify source for its metadata."))?;
+            let full_meta_path = path_prefix.join(meta);
 
-            metas.push(serde_json::from_reader(get_meta(meta)?)?);
+            metas.push(serde_json::from_reader(get_meta(full_meta_path)?)?);
         }
 
         Ok(Sdk { metas, real_paths: RealPaths::Map(real_paths), version: SdkVersion::Unknown })
-    }
-}
-
-impl TryFrom<SdkAtoms> for Sdk {
-    type Error = anyhow::Error;
-
-    fn try_from(atoms: SdkAtoms) -> Result<Sdk> {
-        atoms.to_sdk(|meta| Ok(BufReader::new(fs::File::open(meta)?)))
     }
 }
 
@@ -286,7 +284,7 @@ mod test {
           "files": [
             {
               "destination": "device/generic-arm64.json",
-              "source": "/fuchsia/out/default/gen/sdk/devices/generic-arm64.meta.json"
+              "source": "gen/sdk/devices/generic-arm64.meta.json"
             }
           ],
           "gn-label": "//sdk/devices:generic-arm64(//build/toolchain/fuchsia:x64)",
@@ -300,11 +298,11 @@ mod test {
           "files": [
             {
               "destination": "tools/x64/zxdb",
-              "source": "/fuchsia/out/default/host_x64/zxdb"
+              "source": "host_x64/zxdb"
             },
             {
               "destination": "tools/x64/zxdb-meta.json",
-              "source": "/fuchsia/out/default/host_x64/gen/src/developer/debug/zxdb/zxdb_sdk.meta.json"
+              "source": "host_x64/gen/src/developer/debug/zxdb/zxdb_sdk.meta.json"
             }
           ],
           "gn-label": "//src/developer/debug/zxdb:zxdb_sdk(//build/toolchain:host_x64)",
@@ -318,11 +316,11 @@ mod test {
           "files": [
             {
               "destination": "tools/arm64/symbol-index",
-              "source": "/fuchsia/out/default/host_arm64/symbol-index"
+              "source": "host_arm64/symbol-index"
             },
             {
               "destination": "tools/arm64/symbol-index-meta.json",
-              "source": "/fuchsia/out/default/host_arm64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
+              "source": "host_arm64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
             }
           ],
           "gn-label": "//tools/symbol-index:symbol_index_sdk(//build/toolchain:host_arm64)",
@@ -336,11 +334,11 @@ mod test {
           "files": [
             {
               "destination": "tools/symbol-index",
-              "source": "/fuchsia/out/default/host_x64/symbol-index"
+              "source": "host_x64/symbol-index"
             },
             {
               "destination": "tools/symbol-index-meta.json",
-              "source": "/fuchsia/out/default/host_x64/gen/tools/symbol-index/symbol_index_sdk_legacy.meta.json"
+              "source": "host_x64/gen/tools/symbol-index/symbol_index_sdk_legacy.meta.json"
             }
           ],
           "gn-label": "//tools/symbol-index:symbol_index_sdk_legacy(//build/toolchain:host_x64)",
@@ -354,11 +352,11 @@ mod test {
           "files": [
             {
               "destination": "tools/x64/symbol-index",
-              "source": "/fuchsia/out/default/host_x64/symbol-index"
+              "source": "host_x64/symbol-index"
             },
             {
               "destination": "tools/x64/symbol-index-meta.json",
-              "source": "/fuchsia/out/default/host_x64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
+              "source": "host_x64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
             }
           ],
           "gn-label": "//tools/symbol-index:symbol_index_sdk(//build/toolchain:host_x64)",
@@ -370,7 +368,11 @@ mod test {
       "ids": []
     }"#;
 
-    fn get_core_manifest_meta(name: &str) -> Result<BufReader<&'static [u8]>> {
+    const FAKE_ROOT: &str = "/fuchsia/out/default";
+
+    fn get_core_manifest_meta(name: PathBuf) -> Result<BufReader<&'static [u8]>> {
+        let name = &name.display().to_string();
+
         if name == "/fuchsia/out/default/gen/sdk/devices/generic-arm64.meta.json" {
             const META: &str = r#"{
               "description": "A generic arm64 device",
@@ -506,14 +508,11 @@ mod test {
         assert_eq!("device_profile", atoms[0].ty);
         assert_eq!(1, atoms[0].files.len());
         assert_eq!("device/generic-arm64.json", atoms[0].files[0].destination);
-        assert_eq!(
-            "/fuchsia/out/default/gen/sdk/devices/generic-arm64.meta.json",
-            atoms[0].files[0].source
-        );
+        assert_eq!("gen/sdk/devices/generic-arm64.meta.json", atoms[0].files[0].source);
 
         assert_eq!(2, atoms[1].files.len());
         assert_eq!("tools/x64/zxdb", atoms[1].files[0].destination);
-        assert_eq!("/fuchsia/out/default/host_x64/zxdb", atoms[1].files[0].source);
+        assert_eq!("host_x64/zxdb", atoms[1].files[0].source);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -521,7 +520,7 @@ mod test {
         let atoms =
             Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
 
-        let sdk = atoms.to_sdk(get_core_manifest_meta).unwrap();
+        let sdk = atoms.to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta).unwrap();
         assert_eq!(SdkVersion::Unknown, sdk.version);
 
         assert_eq!(5, sdk.metas.len());
@@ -537,9 +536,13 @@ mod test {
         let atoms =
             Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
 
-        let zxdb = atoms.to_sdk(get_core_manifest_meta).unwrap().get_host_tool("zxdb").unwrap();
+        let zxdb = atoms
+            .to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta)
+            .unwrap()
+            .get_host_tool("zxdb")
+            .unwrap();
 
-        assert_eq!(PathBuf::from("/fuchsia/out/default/host_x64/zxdb"), zxdb);
+        assert_eq!(PathBuf::from("host_x64/zxdb"), zxdb);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -547,10 +550,13 @@ mod test {
         let atoms =
             Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
 
-        let symbol_index =
-            atoms.to_sdk(get_core_manifest_meta).unwrap().get_host_tool("symbol-index").unwrap();
+        let symbol_index = atoms
+            .to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta)
+            .unwrap()
+            .get_host_tool("symbol-index")
+            .unwrap();
 
-        assert_eq!(PathBuf::from("/fuchsia/out/default/host_x64/symbol-index"), symbol_index);
+        assert_eq!(PathBuf::from("host_x64/symbol-index"), symbol_index);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
