@@ -4,7 +4,7 @@
 
 use super::common::EHandle;
 use crate::runtime::DurationExt;
-use fuchsia_zircon::{self as zx};
+use fuchsia_zircon as zx;
 use futures::task::AtomicWaker;
 use std::{
     cmp, ops,
@@ -18,6 +18,8 @@ use std::{
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Time(zx::Time);
+
+pub use zx::Duration;
 
 impl Time {
     /// Return the current time according to the global executor.

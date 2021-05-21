@@ -107,6 +107,7 @@ pub mod executor {
         }
     }
 
+    pub use std::time::Duration;
     pub use std::time::Instant as Time;
 }
 

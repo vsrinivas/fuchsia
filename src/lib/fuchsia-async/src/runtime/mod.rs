@@ -18,7 +18,7 @@ mod stub;
 use self::stub as implementation;
 
 pub use implementation::{
-    executor::{LocalExecutor, SendExecutor, TestExecutor, Time},
+    executor::{Duration, LocalExecutor, SendExecutor, TestExecutor, Time},
     task::Task,
     timer::Timer,
 };
@@ -58,6 +58,12 @@ pub trait WakeupTime {
 impl WakeupTime for std::time::Duration {
     fn into_time(self) -> Time {
         Time::now() + self.into()
+    }
+}
+
+impl DurationExt for std::time::Duration {
+    fn after_now(self) -> Time {
+        self.into_time()
     }
 }
 

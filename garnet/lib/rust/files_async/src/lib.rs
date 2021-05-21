@@ -9,18 +9,12 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
+    fuchsia_async::{Duration, DurationExt, TimeoutExt},
     fuchsia_zircon_status as zx_status,
     futures::future::BoxFuture,
-    std::{mem, str::Utf8Error},
-    thiserror::{self, Error},
-};
-
-#[cfg(target_os = "fuchsia")]
-use {
-    fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_zircon as zx,
     futures::stream::{self, BoxStream, StreamExt},
-    std::collections::VecDeque,
+    std::{collections::VecDeque, mem, str::Utf8Error},
+    thiserror::{self, Error},
 };
 
 /// Error returned by files_async library.
@@ -92,7 +86,6 @@ pub struct DirEntry {
     pub kind: DirentKind,
 }
 
-#[cfg(target_os = "fuchsia")]
 impl DirEntry {
     fn root() -> Self {
         Self { name: "".to_string(), kind: DirentKind::Directory }
@@ -119,10 +112,9 @@ impl DirEntry {
 /// proxy. The returned entries will not include ".".
 /// |timeout| can be provided optionally to specify the maximum time to wait for a directory to be
 /// read.
-#[cfg(target_os = "fuchsia")]
 pub fn readdir_recursive(
     dir: &DirectoryProxy,
-    timeout: Option<zx::Duration>,
+    timeout: Option<Duration>,
 ) -> BoxStream<'_, Result<DirEntry, Error>> {
     let mut pending = VecDeque::new();
     pending.push_back(DirEntry::root());
@@ -240,10 +232,9 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 /// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
 /// returned entries will not include "." or nodes from any subdirectories. Timeouts if the read
 /// takes longer than the given `timeout` duration.
-#[cfg(target_os = "fuchsia")]
 pub async fn readdir_with_timeout(
     dir: &DirectoryProxy,
-    timeout: zx::Duration,
+    timeout: Duration,
 ) -> Result<Vec<DirEntry>, Error> {
     readdir(&dir).on_timeout(timeout.after_now(), || Err(Error::Timeout)).await
 }
@@ -257,11 +248,10 @@ pub async fn dir_contains(dir: &DirectoryProxy, name: &str) -> Result<bool, Erro
 ///
 /// Timesout if reading the directory's entries takes longer than the given `timeout`
 /// duration.
-#[cfg(target_os = "fuchsia")]
 pub async fn dir_contains_with_timeout(
     dir: &DirectoryProxy,
     name: &str,
-    timeout: zx::Duration,
+    timeout: Duration,
 ) -> Result<bool, Error> {
     Ok(readdir_with_timeout(&dir, timeout).await?.iter().any(|e| e.name == name))
 }
@@ -384,7 +374,6 @@ mod tests {
         anyhow::Context as _,
         fidl::endpoints::create_proxy,
         fuchsia_async as fasync,
-        fuchsia_zircon::DurationNum,
         futures::{channel::oneshot, stream::StreamExt},
         io_util,
         proptest::prelude::*,
@@ -396,7 +385,14 @@ mod tests {
         },
     };
 
-    const LONG_DURATION: zx::Duration = zx::Duration::from_seconds(30);
+    #[cfg(target_os = "fuchsia")]
+    use fuchsia_zircon::DurationNum;
+
+    #[cfg(target_os = "fuchsia")]
+    const LONG_DURATION: Duration = Duration::from_seconds(30);
+
+    #[cfg(not(target_os = "fuchsia"))]
+    const LONG_DURATION: Duration = Duration::from_secs(30);
 
     proptest! {
         #[test]

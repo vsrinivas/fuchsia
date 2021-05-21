@@ -70,6 +70,7 @@ pub mod executor {
     use fuchsia_zircon_status as zx_status;
     use std::future::Future;
 
+    pub use std::time::Duration;
     /// A time relative to the executor's clock.
     pub use std::time::Instant as Time;
 
