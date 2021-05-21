@@ -64,10 +64,11 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
 class Remote : public zxtest::Test {
  public:
   void SetUp() final {
-    ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
+    auto control_client_end = fidl::CreateEndpoints(&control_server_);
+    ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
-    ASSERT_OK(
-        zxio_remote_init(&remote_, control_client_end_.release(), eventpair_to_client_.release()));
+    ASSERT_OK(zxio_remote_init(&remote_, control_client_end->TakeChannel().release(),
+                               eventpair_to_client_.release()));
   }
 
   template <typename ServerImpl>
@@ -79,7 +80,8 @@ class Remote : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    EXPECT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_end_),
+
+    EXPECT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_),
                                            server_.get()));
     if (status != ZX_OK) {
       return nullptr;
@@ -95,8 +97,8 @@ class Remote : public zxtest::Test {
 
  protected:
   zxio_storage_t remote_;
-  zx::channel control_client_end_;
-  zx::channel control_server_end_;
+  fidl::ServerEnd<fio::Node> control_server_;
+
   zx::eventpair eventpair_on_server_;
   zx::eventpair eventpair_to_client_;
   std::unique_ptr<TestServerBase> server_;

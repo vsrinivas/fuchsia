@@ -95,8 +95,9 @@ class TestServerBase : public fidl::WireServer<fio2::Directory> {
 class DirV2 : public zxtest::Test {
  public:
   void SetUp() final {
-    ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
-    ASSERT_OK(zxio_dir_v2_init(&dir_, control_client_end_.release()));
+    auto client_end = fidl::CreateEndpoints(&server_end_);
+    ASSERT_OK(client_end.status_value());
+    ASSERT_OK(zxio_dir_v2_init(&dir_, client_end->TakeChannel().release()));
   }
 
   template <typename ServerImpl>
@@ -108,8 +109,8 @@ class DirV2 : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    EXPECT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_end_),
-                                           server_.get()));
+    EXPECT_OK(
+        fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end_), server_.get()));
     if (status != ZX_OK) {
       return nullptr;
     }
@@ -124,8 +125,7 @@ class DirV2 : public zxtest::Test {
 
  protected:
   zxio_storage_t dir_;
-  zx::channel control_client_end_;
-  zx::channel control_server_end_;
+  fidl::ServerEnd<fio2::Directory> server_end_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };

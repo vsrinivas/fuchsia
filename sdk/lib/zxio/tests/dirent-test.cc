@@ -144,12 +144,13 @@ class TestServer final : public fidl::WireServer<fio::Directory> {
 class DirentTest : public zxtest::Test {
  public:
   void SetUp() final {
-    ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
-    ASSERT_OK(zxio_dir_init(&dir_, control_client_end_.release()));
+    auto control_ends = fidl::CreateEndpoints<fio::Directory>();
+    ASSERT_OK(control_ends.status_value());
+    ASSERT_OK(zxio_dir_init(&dir_, control_ends->client.TakeChannel().release()));
     server_ = std::make_unique<TestServer>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(loop_->StartThread("fake-filesystem"));
-    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_server_end_),
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_ends->server),
                                            server_.get()));
   }
 

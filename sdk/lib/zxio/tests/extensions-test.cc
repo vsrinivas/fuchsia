@@ -59,7 +59,9 @@ class ExtensionNode : public zxtest::Test {
  public:
   virtual ~ExtensionNode() { binding_->Unbind(); }
   void SetUp() final {
-    ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
+    auto server_end = fidl::CreateEndpoints(&client_end_);
+    ASSERT_OK(server_end.status_value());
+    server_end_ = std::move(server_end).value();
   }
 
   template <typename ServerImpl>
@@ -71,15 +73,14 @@ class ExtensionNode : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    auto binding =
-        fidl::BindServer(loop_->dispatcher(), std::move(control_server_end_), server_.get());
+    auto binding = fidl::BindServer(loop_->dispatcher(), std::move(server_end_), server_.get());
     binding_ = std::make_unique<fidl::ServerBindingRef<fuchsia_io::Node>>(std::move(binding));
     return static_cast<ServerImpl*>(server_.get());
   }
 
  protected:
-  zx::channel control_client_end_;
-  zx::channel control_server_end_;
+  fidl::ClientEnd<fuchsia_io::Node> client_end_;
+  fidl::ServerEnd<fuchsia_io::Node> server_end_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<fidl::ServerBindingRef<fuchsia_io::Node>> binding_;
   std::unique_ptr<async::Loop> loop_;
@@ -88,7 +89,7 @@ class ExtensionNode : public zxtest::Test {
 TEST_F(ExtensionNode, DefaultBehaviors) {
   zxio_node_t node;
   constexpr static zxio_extension_ops_t extension_ops = {};
-  zxio_node_init(&node, control_client_end_.release(), &extension_ops);
+  zxio_node_init(&node, client_end_.TakeChannel().release(), &extension_ops);
 
   TestServerBase* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
@@ -104,7 +105,7 @@ TEST_F(ExtensionNode, DefaultBehaviors) {
 TEST_F(ExtensionNode, CloseError) {
   zxio_node_t node;
   constexpr static zxio_extension_ops_t extension_ops = {};
-  zxio_node_init(&node, control_client_end_.release(), &extension_ops);
+  zxio_node_init(&node, client_end_.TakeChannel().release(), &extension_ops);
 
   class TestServer : public TestServerBase {
    public:
@@ -126,7 +127,7 @@ TEST_F(ExtensionNode, SkipClose) {
       .readv = nullptr,
       .writev = nullptr,
   };
-  zxio_node_init(&node, control_client_end_.release(), &extension_ops);
+  zxio_node_init(&node, client_end_.TakeChannel().release(), &extension_ops);
 
   TestServerBase* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
@@ -139,7 +140,7 @@ TEST_F(ExtensionNode, SkipClose) {
 TEST_F(ExtensionNode, OverrideOperations) {
   class MyIo : private zxio_node_t {
    public:
-    explicit MyIo(zx::channel client) {
+    explicit MyIo(fidl::ClientEnd<fuchsia_io::Node> client) {
       constexpr static zxio_extension_ops_t kExtensionOps = {
           .close = nullptr,
           .skip_close_call = false,
@@ -155,7 +156,7 @@ TEST_F(ExtensionNode, OverrideOperations) {
                 static_cast<MyIo*>(io)->write_called_.store(true);
                 return ZX_OK;
               }};
-      zxio_node_init(this, client.release(), &kExtensionOps);
+      zxio_node_init(this, client.TakeChannel().release(), &kExtensionOps);
     }
 
     ~MyIo() { ASSERT_OK(zxio_close(**this)); }
@@ -169,7 +170,7 @@ TEST_F(ExtensionNode, OverrideOperations) {
     std::atomic<bool> read_called_ = false;
     std::atomic<bool> write_called_ = false;
   };
-  MyIo node(std::move(control_client_end_));
+  MyIo node(std::move(client_end_));
 
   TestServerBase* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
@@ -186,7 +187,7 @@ TEST_F(ExtensionNode, OverrideOperations) {
 TEST_F(ExtensionNode, GetAttr) {
   zxio_node_t node;
   constexpr static zxio_extension_ops_t extension_ops = {};
-  zxio_node_init(&node, control_client_end_.release(), &extension_ops);
+  zxio_node_init(&node, client_end_.TakeChannel().release(), &extension_ops);
 
   constexpr static uint64_t kContentSize = 42;
 

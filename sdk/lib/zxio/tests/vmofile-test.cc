@@ -17,24 +17,24 @@ class VmoFileNonZeroOffsetTest : public zxtest::Test {
     ASSERT_OK(zx::vmo::create(300u, 0u, &backing));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
-    ASSERT_OK(zx::channel::create(0u, &h1, &h2));
+    auto client_end = fidl::CreateEndpoints(&server_);
+    ASSERT_OK(client_end.status_value());
 
-    ASSERT_OK(zxio_vmofile_init(&storage, fidl::WireSyncClient<fuchsia_io::File>(std::move(h1)),
+    ASSERT_OK(zxio_vmofile_init(&storage, fidl::BindSyncClient(std::move(client_end).value()),
                                 std::move(backing), /* offset */ 4, /* length */ len,
                                 /* seek */ 3));
     io = &storage.io;
   }
 
   void TearDown() override {
-    h2.reset();
+    server_.reset();
     ASSERT_STATUS(ZX_ERR_PEER_CLOSED, zxio_close(io));
   }
 
  protected:
   zx::vmo backing;
   size_t len = strlen(ALPHABET);
-  zx::channel h1;
-  zx::channel h2;
+  fidl::ServerEnd<fuchsia_io::File> server_;
   zxio_storage_t storage;
   zxio_t* io;
 };
@@ -115,11 +115,11 @@ TEST(VmoFileTest, GetExact) {
   ASSERT_OK(backing.write(ALPHABET, 0, len));
   ASSERT_OK(backing.write(ALPHABET, len, len + len));
 
-  zx::channel h1, h2;
-  ASSERT_OK(zx::channel::create(0u, &h1, &h2));
+  auto ends = fidl::CreateEndpoints<fuchsia_io::File>();
+  ASSERT_OK(ends.status_value());
 
   zxio_storage_t storage;
-  ASSERT_OK(zxio_vmofile_init(&storage, fidl::WireSyncClient<fuchsia_io::File>(std::move(h1)),
+  ASSERT_OK(zxio_vmofile_init(&storage, fidl::BindSyncClient(std::move(ends->client)),
                               std::move(backing), /* offset */ 0, /* length */ len, /* seek */ 3));
   zxio_t* io = &storage.io;
 
@@ -131,6 +131,6 @@ TEST(VmoFileTest, GetExact) {
   ASSERT_OK(vmo.read(dest, 0, 4));
   ASSERT_BYTES_EQ(ALPHABET, dest, 4);
 
-  h2.reset();
+  ends->server.reset();
   ASSERT_STATUS(ZX_ERR_PEER_CLOSED, zxio_close(io));
 }

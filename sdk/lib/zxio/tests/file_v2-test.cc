@@ -116,20 +116,19 @@ class FileV2 : public zxtest::Test {
   }
 
   zx_status_t OpenFile() {
-    zx::channel client_end, server_end;
-    zx_status_t status = zx::channel::create(0, &client_end, &server_end);
+    auto ends = fidl::CreateEndpoints<fio2::File>();
+    if (!ends.is_ok()) {
+      return ends.status_value();
+    }
+
+    auto status =
+        fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(ends->server), server_.get());
     if (status != ZX_OK) {
       return status;
     }
 
-    status =
-        fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    auto result = fidl::WireCall<fio2::File>(client_end.borrow())
-                      .Describe(fio2::wire::ConnectionInfoQuery::kRepresentation);
+    auto result =
+        fidl::WireCall(ends->client).Describe(fio2::wire::ConnectionInfoQuery::kRepresentation);
 
     if (result.status() != ZX_OK) {
       return status;
@@ -148,7 +147,8 @@ class FileV2 : public zxtest::Test {
       }
     }
 
-    return zxio_file_v2_init(&file_, client_end.release(), observer.release(), stream.release());
+    return zxio_file_v2_init(&file_, ends->client.TakeChannel().release(), observer.release(),
+                             stream.release());
   }
 
   void TearDown() final {

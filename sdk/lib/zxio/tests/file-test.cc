@@ -116,30 +116,29 @@ class File : public zxtest::Test {
     return static_cast<ServerImpl*>(server_.get());
   }
 
-  fit::result<zx::channel, zx_status_t> OpenConnection() {
-    zx::channel client_end, server_end;
-    zx_status_t status = zx::channel::create(0, &client_end, &server_end);
-    if (status != ZX_OK) {
-      return fit::error(status);
+  fit::result<fidl::ClientEnd<fio::File>, zx_status_t> OpenConnection() {
+    auto ends = fidl::CreateEndpoints<fio::File>();
+    if (!ends.is_ok()) {
+      return fit::error(ends.status_value());
     }
-    auto binding = fidl::BindServer(loop_->dispatcher(), std::move(server_end), server_.get());
+    auto binding = fidl::BindServer(loop_->dispatcher(), std::move(ends->server), server_.get());
     binding_ = std::make_unique<fidl::ServerBindingRef<fio::File>>(std::move(binding));
-    return fit::ok(std::move(client_end));
+    return fit::ok(std::move(ends->client));
   }
 
   zx_status_t OpenFile() {
-    fit::result<zx::channel, zx_status_t> client_end = OpenConnection();
+    auto client_end = OpenConnection();
     if (client_end.is_error()) {
       return client_end.error();
     }
-    auto result = fidl::WireCall<fio::File>(client_end.value().borrow()).Describe();
+    auto result = fidl::WireCall<fio::File>(client_end.value()).Describe();
 
     if (result.status() != ZX_OK) {
       return result.status();
     }
 
     EXPECT_TRUE(result->info.is_file());
-    return zxio_file_init(&file_, client_end.take_value().release(),
+    return zxio_file_init(&file_, client_end.value().TakeChannel().release(),
                           result->info.mutable_file().event.release(),
                           result->info.mutable_file().stream.release());
   }
@@ -367,12 +366,13 @@ TEST_F(File, ReadWriteStream) {
 class Remote : public File {
  public:
   zx_status_t OpenRemote() {
-    fit::result<zx::channel, zx_status_t> client_end = OpenConnection();
+    auto client_end = OpenConnection();
     if (client_end.is_error()) {
       return client_end.error();
     }
 
-    return zxio_remote_init(&file_, client_end.take_value().release(), ZX_HANDLE_INVALID);
+    return zxio_remote_init(&file_, client_end.take_value().TakeChannel().release(),
+                            ZX_HANDLE_INVALID);
   }
 };
 
