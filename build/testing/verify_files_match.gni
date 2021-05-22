@@ -17,29 +17,50 @@
 #   second (required)
 #     Path to the second file.
 #
+#   display_text_diff_on_failure (optional)
+#     If true, this displays the results of a diff on the files to show what the
+#     difference is.  Defaults to false.
+#
+#   Usual meanings (all invoker vars are forwarded)
+#     deps
+#     testonly
+#     etc.
 template("verify_files_match") {
   assert(defined(invoker.first), "first is a required parameter")
   assert(defined(invoker.second), "second is a required parameter")
 
   action(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "first",
+                             "second",
+                           ])
+
+    if (!defined(display_text_diff_on_failure)) {
+      display_text_diff_on_failure = false
+    }
 
     script = "//build/testing/verify_files_match.py"
 
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     inputs = [
-      first,
-      second,
+      invoker.first,
+      invoker.second,
     ]
 
     outputs = [ stamp_file ]
 
-    args = [
+    args = []
+    if (display_text_diff_on_failure) {
+      args += [ "--diff-on-failure" ]
+    }
+    args += [
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
-      rebase_path(first, root_build_dir),
-      rebase_path(second, root_build_dir),
+      rebase_path(invoker.first, root_build_dir),
+      rebase_path(invoker.second, root_build_dir),
     ]
   }
 }

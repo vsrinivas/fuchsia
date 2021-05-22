@@ -6,6 +6,7 @@
 import argparse
 import filecmp
 import sys
+import subprocess
 
 # Verifies that two files have matching contents.
 
@@ -14,14 +15,23 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
+    parser.add_argument(
+        '--diff-on-failure',
+        help='Run diff on the files if they differ',
+        action="store_true")
     parser.add_argument('first')
     parser.add_argument('second')
     args = parser.parse_args()
 
-
-
     if not filecmp.cmp(args.first, args.second):
-        print(f'Error: file contents differ:\n  {args.first}\n  {args.second}')
+        # Flush is used to make sure that the print statement occurs before the
+        # output of diff.
+        print(
+            f'Error: file contents differ:\n  {args.first}\n  {args.second}',
+            flush=True)
+        if args.diff_on_failure:
+            subprocess.call(
+                ['diff', args.first, args.second], stderr=sys.stdout)
         return 1
 
     with open(args.stamp, 'w') as stamp_file:
