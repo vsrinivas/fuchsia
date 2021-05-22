@@ -105,7 +105,7 @@ class BazelBuilder(Frontend):
             self.dest(crosstool_base, 'BUILD.crosstool'), 'crosstool',
             crosstool)
         self.write_file(
-            self.dest(crosstool_base, 'CROSSTOOL.in'), 'crosstool_in',
+            self.dest(crosstool_base, 'cc_toolchain_config.bzl.in'), 'cc_toolchain_config_bzl_in',
             crosstool)
         self.write_file(
             self.dest('build_defs', 'toolchain', 'BUILD'), 'toolchain_build',
@@ -122,7 +122,7 @@ class BazelBuilder(Frontend):
             self.dart_vendor_packages)
 
     def install_dart_library_atom(self, atom):
-        if not self.install:
+        if not self.has_dart or not self.install:
             return
 
         package_name = atom['name']

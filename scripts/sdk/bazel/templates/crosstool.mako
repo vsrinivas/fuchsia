@@ -2,6 +2,8 @@
 
 package(default_visibility = ["//visibility:public"])
 
+load(":cc_toolchain_config.bzl", "cc_toolchain_config")
+
 cc_toolchain_suite(
     name = "toolchain",
     toolchains = {
@@ -87,17 +89,26 @@ filegroup(
 ]
 
 [
+    cc_toolchain_config(
+        name = "crosstool-1.x.x-llvm-fuchsia-config-" + cpu,
+        cpu = cpu,
+    )
+    for cpu in TARGET_CPUS
+]
+
+[
     cc_toolchain(
         name = "cc-compiler-" + cpu,
         toolchain_identifier = "crosstool-1.x.x-llvm-fuchsia-" + cpu,
+        toolchain_config = "crosstool-1.x.x-llvm-fuchsia-config-" + cpu,
         all_files = ":every-file-" + cpu,
+        ar_files = ":compile",
         compiler_files = ":compile",
-        cpu = cpu,
         dwp_files = ":empty",
-        dynamic_runtime_libs = [":runtime-" + cpu],
+        dynamic_runtime_lib = ":runtime-" + cpu,
         linker_files = ":link-" + cpu,
         objcopy_files = ":objcopy",
-        static_runtime_libs = [":runtime-" + cpu],
+        static_runtime_lib = ":runtime-" + cpu,
         strip_files = ":runtime-" + cpu,
         supports_param_files = 1,
     )

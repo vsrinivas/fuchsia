@@ -40,13 +40,6 @@ class BazelTester(object):
         self.optional_flags = optional_flags
 
 
-    def _add_bazel_command_flags(self, command):
-        # The following flag is needed because some Dart build rules use a
-        # `cfg = "data"` construct that's now an error.
-        # TODO: remove this flag when we don't build Dart stuff in this SDK.
-        command += ['--incompatible_disallow_data_transition=false']
-
-
     def _add_bazel_startup_options(self, command):
         if self.with_output_user_root is not None:
             command += ['--output_user_root=%s' % self.with_output_user_root]
@@ -56,7 +49,6 @@ class BazelTester(object):
         invocation = [self.bazel_bin]
         self._add_bazel_startup_options(invocation)
         invocation += [command, '--keep_going']
-        self._add_bazel_command_flags(invocation)
         invocation += self.optional_flags
         invocation += targets
         job = Popen(invocation, cwd=SCRIPT_DIR)
@@ -76,7 +68,6 @@ class BazelTester(object):
         invocation = [self.bazel_bin]
         self._add_bazel_startup_options(invocation)
         invocation += ['query', query]
-        self._add_bazel_command_flags(invocation)
         return set(check_output(invocation, cwd=SCRIPT_DIR).decode().splitlines())
 
 
@@ -139,7 +130,6 @@ def main():
                         help='If set, passthrough to Bazel to override user root.')
     args = parser.parse_args()
 
-    return 0
     (bazel, found) = find_bazel(args.bazel)
     if not found:
         print('"%s": command not found' % (bazel))

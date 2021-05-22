@@ -15,7 +15,7 @@ def fuchsia_setup(with_toolchain = False):
     # Needed for the package component runner tool.
     git_repository(
         name = "subpar",
-        tag = "1.0.0",
+        tag = "2.0.0",
         remote = "https://fuchsia.googlesource.com/third_party/github.com/google/subpar.git",
     )
 
