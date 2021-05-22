@@ -53,6 +53,20 @@ Examples
   connect -u /path/to/socket
 )";
 
+// Displays the failed connection error message. Connections are normally initiated on startup
+// and it can be difficult to see the message with all the other normal startup messages. This
+// can confuse users who wonder why nothing is working. As a result, make the message really big.
+void DisplayConnectionFailed(const Err& err) {
+  OutputBuffer out;
+  out.Append(Syntax::kError, "╒═══════════════════════════════════════════╕\n│ ");
+  out.Append(Syntax::kHeading, "Connection to the debugged system failed. ");
+  out.Append(Syntax::kError, "│\n╘═══════════════════════════════════════════╛\n");
+  out.Append(err);
+  out.Append(Syntax::kError, "\n\nThe debugger will not be usable without connecting.\n\n");
+
+  Console::get()->Output(out);
+}
+
 Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
                    CommandCallback callback = nullptr) {
   SessionConnectionInfo connection_info;
@@ -94,7 +108,7 @@ Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
         if (err.has_error()) {
           // Don't display error message if they canceled the connection.
           if (err.type() != ErrType::kCanceled)
-            Console::get()->Output(err);
+            DisplayConnectionFailed(err);
         } else {
           OutputBuffer msg;
           msg.Append("Connected successfully.\n");

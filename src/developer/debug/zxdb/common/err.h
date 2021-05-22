@@ -9,31 +9,17 @@
 
 namespace zxdb {
 
+// Most errors are general but in some cases we need to programmatically know a particular error.
+// These errors are listed here.
 enum class ErrType {
-  kNone,
-
-  // Unspecified error type.
-  kGeneral,
-
-  // The operation was explicitly canceled.
-  kCanceled,
-
-  // There is no connection to the debug agent and this operation can't be
-  // completed.
-  kNoConnection,
-
-  // Data was corrupted between us and the debug agent.
-  kCorruptMessage,
-
-  // An invalid client API call.
-  kClientApi,
-
-  // Some problem getting input from the user (parse error, etc.).
-  kInput,
-
-  // The requested thing is not available because of optimization in the
-  // debugged program.
-  kOptimizedOut
+  kNone,            // No error.
+  kGeneral,         // Unspecified error type.
+  kCanceled,        // The operation was explicitly canceled.
+  kNoConnection,    // There is no connection to the debug agent.
+  kCorruptMessage,  // Data was corrupted between us and the debug agent.
+  kClientApi,       // An invalid client API call.
+  kInput,           // Some problem getting input from the user (parse error, etc.).
+  kOptimizedOut     // Not available because of optimization in the debugged program.
 };
 
 class Err {

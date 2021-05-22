@@ -788,11 +788,9 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   if (reply.version != debug_ipc::kProtocolVersion) {
     if (callback) {
       callback(
-          Err("ERROR: The IPC version of the debug_agent on the system (v%u) doesn't match\n"
-              "the zxdb frontend's IPC version (v%u). Make sure everything is up-to-date.\n"
-              "\n"
-              "Closing connection.",
-              reply.version, debug_ipc::kProtocolVersion));
+          Err("The IPC version of the debug_agent on the system (v%u) doesn't match\n"
+              "the zxdb frontend's IPC version (v%u).", reply.version,
+              debug_ipc::kProtocolVersion));
     }
     return;
   }
