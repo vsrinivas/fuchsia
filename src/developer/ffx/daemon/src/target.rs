@@ -279,147 +279,6 @@ pub struct BuildConfig {
     pub board_config: String,
 }
 
-struct TargetInner {
-    // id is the locally created "primary identifier" for this target.
-    id: u64,
-    // ids keeps track of additional ids discovered over Overnet, these could
-    // come from old Daemons, or other Daemons. The set should be used
-    ids: RefCell<HashSet<u64>>,
-    nodename: RefCell<Option<String>>,
-    state: RefCell<ConnectionState>,
-    last_response: RefCell<DateTime<Utc>>,
-    addrs: RefCell<BTreeSet<TargetAddrEntry>>,
-    // ssh_port if set overrides the global default configuration for ssh port,
-    // for this target.
-    ssh_port: RefCell<Option<u16>>,
-    // used for Fastboot
-    serial: RefCell<Option<String>>,
-    build_config: RefCell<Option<BuildConfig>>,
-    boot_timestamp_nanos: RefCell<Option<u64>>,
-    diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
-}
-
-impl Debug for TargetInner {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TargetInner")
-            .field("id", &self.id)
-            .field("ids", &self.ids.borrow().clone())
-            .field("nodename", &self.nodename.borrow().clone())
-            .field("state", &self.state.borrow().clone())
-            .field("last_response", &self.last_response.borrow().clone())
-            .field("addrs", &self.addrs.borrow().clone())
-            .field("ssh_port", &self.ssh_port.borrow().clone())
-            .field("serial", &self.serial.borrow().clone())
-            .field("boot_timestamp_nanos", &self.boot_timestamp_nanos.borrow().clone())
-            .finish()
-    }
-}
-
-impl TargetInner {
-    fn new(nodename: Option<String>) -> Self {
-        let id = random::<u64>();
-        let mut ids = HashSet::new();
-        ids.insert(id.clone());
-        Self {
-            id: id.clone(),
-            ids: RefCell::new(ids),
-            nodename: RefCell::new(nodename),
-            last_response: RefCell::new(Utc::now()),
-            state: RefCell::new(Default::default()),
-            addrs: RefCell::new(BTreeSet::new()),
-            ssh_port: RefCell::new(None),
-            serial: RefCell::new(None),
-            boot_timestamp_nanos: RefCell::new(None),
-            build_config: Default::default(),
-            diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
-        }
-    }
-
-    pub fn new_with_boot_timestamp(nodename: String, boot_timestamp_nanos: u64) -> Self {
-        Self {
-            boot_timestamp_nanos: RefCell::new(Some(boot_timestamp_nanos)),
-            ..Self::new(Some(nodename))
-        }
-    }
-
-    pub fn new_with_addrs(nodename: Option<String>, addrs: BTreeSet<TargetAddr>) -> Self {
-        Self {
-            addrs: RefCell::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
-            ..Self::new(nodename)
-        }
-    }
-
-    pub fn new_with_netsvc_addrs(nodename: Option<String>, addrs: BTreeSet<TargetAddr>) -> Self {
-        Self {
-            addrs: RefCell::new(
-                addrs.iter().map(|e| (*e, Utc::now(), false, true).into()).collect(),
-            ),
-            ..Self::new(nodename)
-        }
-    }
-
-    pub fn new_with_addr_entries(
-        nodename: Option<String>,
-        entries: BTreeSet<TargetAddrEntry>,
-    ) -> Self {
-        Self { addrs: RefCell::new(entries), ..Self::new(nodename) }
-    }
-
-    pub fn new_with_serial(serial: &str) -> Self {
-        Self { serial: RefCell::new(Some(serial.to_string())), ..Self::new(None) }
-    }
-
-    pub fn id(&self) -> u64 {
-        self.id.clone()
-    }
-
-    pub fn ids(&self) -> HashSet<u64> {
-        self.ids.borrow().clone()
-    }
-
-    pub fn has_id<'a, I>(&self, ids: I) -> bool
-    where
-        I: Iterator<Item = &'a u64>,
-    {
-        let my_ids = self.ids.borrow();
-        for id in ids {
-            if my_ids.contains(id) {
-                return true;
-            }
-        }
-        false
-    }
-
-    /// ssh_address returns the TargetAddr of the next SSH address to connect to for this target.
-    pub fn ssh_address(&self) -> Option<TargetAddr> {
-        ssh_address_from(self.addrs.borrow().iter())
-    }
-
-    pub fn netsvc_address(&self) -> Option<TargetAddr> {
-        use itertools::Itertools;
-        // Order e1 & e2 by most recent timestamp
-        let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
-        // TODO(fxb/76325) `.find(|t| t.netsvc)` doesn't work for some reason, using next()
-        self.addrs
-            .borrow()
-            .iter()
-            .sorted_by(|e1, e2| recency(e1, e2))
-            .next()
-            .map(|t| t.addr.clone())
-    }
-
-    /// Dependency injection constructor so we can insert a fake time for
-    /// testing.
-    #[cfg(test)]
-    pub fn new_with_time(nodename: String, time: DateTime<Utc>) -> Self {
-        Self { last_response: RefCell::new(time), ..Self::new(Some(nodename)) }
-    }
-
-    pub fn nodename_str(&self) -> String {
-        self.nodename.borrow().clone().unwrap_or("<unknown>".to_owned())
-    }
-}
-
 // TargetEventSynthesizer resolves by weak reference the embedded event
 // queue's need for a self reference.
 #[derive(Default)]
@@ -446,7 +305,23 @@ pub struct Target {
     host_pipe: Rc<RefCell<Option<Task<()>>>>,
     logger: Rc<RefCell<Option<Task<()>>>>,
 
-    inner: Rc<TargetInner>,
+    // id is the locally created "primary identifier" for this target.
+    id: u64,
+    // ids keeps track of additional ids discovered over Overnet, these could
+    // come from old Daemons, or other Daemons. The set should be used
+    ids: RefCell<HashSet<u64>>,
+    nodename: RefCell<Option<String>>,
+    state: RefCell<ConnectionState>,
+    last_response: RefCell<DateTime<Utc>>,
+    addrs: RefCell<BTreeSet<TargetAddrEntry>>,
+    // ssh_port if set overrides the global default configuration for ssh port,
+    // for this target.
+    ssh_port: RefCell<Option<u16>>,
+    // used for Fastboot
+    serial: RefCell<Option<String>>,
+    build_config: RefCell<Option<BuildConfig>>,
+    boot_timestamp_nanos: RefCell<Option<u64>>,
+    diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
 
     // The event synthesizer is retained on the target as a strong
     // reference, as the queue only retains a weak reference.
@@ -455,14 +330,29 @@ pub struct Target {
 
 impl Target {
     pub fn is_connected(&self) -> bool {
-        self.inner.state.borrow().is_connected()
+        self.state.borrow().is_connected()
     }
 
-    fn from_inner(inner: Rc<TargetInner>) -> Rc<Self> {
+    pub fn new() -> Rc<Self> {
         let target_event_synthesizer = Rc::new(TargetEventSynthesizer::default());
         let events = events::Queue::new(&target_event_synthesizer);
+
+        let id = random::<u64>();
+        let mut ids = HashSet::new();
+        ids.insert(id.clone());
+
         let target = Rc::new(Self {
-            inner,
+            id: id.clone(),
+            ids: RefCell::new(ids),
+            nodename: RefCell::new(None),
+            last_response: RefCell::new(Utc::now()),
+            state: RefCell::new(Default::default()),
+            addrs: RefCell::new(BTreeSet::new()),
+            ssh_port: RefCell::new(None),
+            serial: RefCell::new(None),
+            boot_timestamp_nanos: RefCell::new(None),
+            build_config: Default::default(),
+            diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
             events,
             host_pipe: Default::default(),
             logger: Default::default(),
@@ -472,29 +362,32 @@ impl Target {
         target
     }
 
-    pub fn new<S>(nodename: S) -> Rc<Self>
+    pub fn new_named<S>(nodename: S) -> Rc<Self>
     where
         S: Into<String>,
     {
-        let inner = Rc::new(TargetInner::new(Some(nodename.into())));
-        Self::from_inner(inner)
+        let target = Self::new();
+        target.nodename.replace(Some(nodename.into()));
+        target
     }
 
     pub fn new_with_boot_timestamp<S>(nodename: S, boot_timestamp_nanos: u64) -> Rc<Self>
     where
         S: Into<String>,
     {
-        let inner =
-            Rc::new(TargetInner::new_with_boot_timestamp(nodename.into(), boot_timestamp_nanos));
-        Self::from_inner(inner)
+        let target = Self::new_named(nodename);
+        target.boot_timestamp_nanos.replace(Some(boot_timestamp_nanos));
+        target
     }
 
     pub fn new_with_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
     where
         S: Into<String>,
     {
-        let inner = Rc::new(TargetInner::new_with_addrs(nodename.map(Into::into), addrs));
-        Self::from_inner(inner)
+        let target = Self::new();
+        target.nodename.replace(nodename.map(Into::into));
+        target.addrs_extend(addrs);
+        target
     }
 
     pub(crate) fn new_with_addr_entries<S, I>(nodename: Option<S>, entries: I) -> Rc<Self>
@@ -503,27 +396,36 @@ impl Target {
         I: Iterator<Item = TargetAddrEntry>,
     {
         use std::iter::FromIterator;
-        let inner = Rc::new(TargetInner::new_with_addr_entries(
-            nodename.map(Into::into),
-            BTreeSet::from_iter(entries),
-        ));
-        Self::from_inner(inner)
+        let target = Self::new();
+        target.nodename.replace(nodename.map(Into::into));
+        target.addrs.replace(BTreeSet::from_iter(entries));
+        target
     }
 
     pub fn new_with_netsvc_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
     where
         S: Into<String>,
     {
-        let inner = Rc::new(TargetInner::new_with_netsvc_addrs(nodename.map(Into::into), addrs));
-        let target = Self::from_inner(inner);
+        let target = Self::new();
+        target.nodename.replace(nodename.map(Into::into));
+        target.addrs.replace(addrs.iter().map(|e| (*e, Utc::now(), false, true).into()).collect());
         target.update_connection_state(|_| ConnectionState::Zedboot(Instant::now()));
         target
     }
 
     pub fn new_with_serial(serial: &str) -> Rc<Self> {
-        let inner = Rc::new(TargetInner::new_with_serial(serial));
-        let target = Self::from_inner(inner);
+        let target = Self::new();
+        target.serial.replace(Some(serial.to_string()));
         target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
+        target
+    }
+
+    /// Dependency injection constructor so we can insert a fake time for
+    /// testing.
+    #[cfg(test)]
+    pub fn new_with_time<S: Into<String>>(nodename: S, time: DateTime<Utc>) -> Rc<Self> {
+        let target = Self::new_named(nodename);
+        target.last_response.replace(time);
         target
     }
 
@@ -550,37 +452,52 @@ impl Target {
 
     // Get the locally minted identifier for the target
     pub fn id(&self) -> u64 {
-        self.inner.id()
+        self.id
     }
 
     // Get all known ids for the target
     pub fn ids(&self) -> HashSet<u64> {
-        self.inner.ids()
+        self.ids.borrow().clone()
     }
 
     pub fn has_id<'a, I>(&self, ids: I) -> bool
     where
         I: Iterator<Item = &'a u64>,
     {
-        self.inner.has_id(ids)
+        let my_ids = self.ids.borrow();
+        for id in ids {
+            if my_ids.contains(id) {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn merge_ids<'a, I>(&self, new_ids: I)
     where
         I: Iterator<Item = &'a u64>,
     {
-        let mut my_ids = self.inner.ids.borrow_mut();
+        let mut my_ids = self.ids.borrow_mut();
         for id in new_ids {
             my_ids.insert(*id);
         }
     }
 
+    /// ssh_address returns the TargetAddr of the next SSH address to connect to for this target.
     pub fn ssh_address(&self) -> Option<TargetAddr> {
-        self.inner.ssh_address()
+        ssh_address_from(self.addrs.borrow().iter())
     }
 
     pub fn netsvc_address(&self) -> Option<TargetAddr> {
-        self.inner.netsvc_address()
+        use itertools::Itertools;
+        // Order e1 & e2 by most recent timestamp
+        let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
+        self.addrs
+            .borrow()
+            .iter()
+            .sorted_by(|e1, e2| recency(e1, e2))
+            .find(|addr_entry| addr_entry.netsvc)
+            .map(|addr_entry| addr_entry.addr.clone())
     }
 
     pub fn ssh_address_info(&self) -> Option<bridge::TargetAddrInfo> {
@@ -599,14 +516,6 @@ impl Target {
         }
     }
 
-    /// Dependency injection constructor so we can insert a fake time for
-    /// testing.
-    #[cfg(test)]
-    pub fn new_with_time<S: Into<String>>(nodename: S, time: DateTime<Utc>) -> Rc<Self> {
-        let inner = Rc::new(TargetInner::new_with_time(nodename.into(), time));
-        Self::from_inner(inner)
-    }
-
     fn rcs_state(&self) -> bridge::RemoteControlState {
         match (self.is_host_pipe_running(), self.get_connection_state()) {
             (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
@@ -616,44 +525,44 @@ impl Target {
     }
 
     pub fn nodename(&self) -> Option<String> {
-        self.inner.nodename.borrow().clone()
+        self.nodename.borrow().clone()
     }
 
     pub fn nodename_str(&self) -> String {
-        self.inner.nodename_str()
+        self.nodename.borrow().clone().unwrap_or("<unknown>".to_owned())
     }
 
     pub fn set_nodename(&self, nodename: String) {
-        self.inner.nodename.borrow_mut().replace(nodename);
+        self.nodename.borrow_mut().replace(nodename);
     }
 
     pub fn boot_timestamp_nanos(&self) -> Option<u64> {
-        self.inner.boot_timestamp_nanos.borrow().clone()
+        self.boot_timestamp_nanos.borrow().clone()
     }
 
     pub fn update_boot_timestamp(&self, ts: Option<u64>) {
-        self.inner.boot_timestamp_nanos.replace(ts);
+        self.boot_timestamp_nanos.replace(ts);
     }
 
     pub fn stream_info(&self) -> Arc<DiagnosticsStreamer<'static>> {
-        self.inner.diagnostics_info.clone()
+        self.diagnostics_info.clone()
     }
 
     pub fn serial(&self) -> Option<String> {
-        self.inner.serial.borrow().clone()
+        self.serial.borrow().clone()
     }
 
     pub fn state(&self) -> ConnectionState {
-        self.inner.state.borrow().clone()
+        self.state.borrow().clone()
     }
 
     #[cfg(test)]
     pub fn set_state(&self, state: ConnectionState) {
-        self.inner.state.replace(state);
+        self.state.replace(state);
     }
 
     pub fn get_connection_state(&self) -> ConnectionState {
-        self.inner.state.borrow().clone()
+        self.state.borrow().clone()
     }
 
     /// Allows a client to atomically update the connection state based on what
@@ -689,7 +598,7 @@ impl Target {
             return;
         }
 
-        self.inner.state.replace(new_state);
+        self.state.replace(new_state);
 
         if self.get_connection_state().is_rcs() {
             self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
@@ -698,10 +607,7 @@ impl Target {
         }
 
         self.events
-            .push(TargetEvent::ConnectionStateChanged(
-                former_state,
-                self.inner.state.borrow().clone(),
-            ))
+            .push(TargetEvent::ConnectionStateChanged(former_state, self.state.borrow().clone()))
             .unwrap_or_else(|e| log::error!("Failed to push state change for {:?}: {:?}", self, e));
     }
 
@@ -713,28 +619,28 @@ impl Target {
     }
 
     pub fn usb(&self) -> (String, Option<Interface>) {
-        match self.inner.serial.borrow().as_ref() {
+        match self.serial.borrow().as_ref() {
             Some(s) => (s.to_string(), open_interface_with_serial(s).ok()),
             None => ("".to_string(), None),
         }
     }
 
     pub fn last_response(&self) -> DateTime<Utc> {
-        self.inner.last_response.borrow().clone()
+        self.last_response.borrow().clone()
     }
 
     pub fn build_config(&self) -> Option<BuildConfig> {
-        self.inner.build_config.borrow().clone()
+        self.build_config.borrow().clone()
     }
 
     pub fn addrs(&self) -> Vec<TargetAddr> {
-        let mut addrs = self.inner.addrs.borrow().iter().cloned().collect::<Vec<_>>();
+        let mut addrs = self.addrs.borrow().iter().cloned().collect::<Vec<_>>();
         addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         addrs.drain(..).map(|e| e.addr).collect()
     }
 
     pub fn drop_unscoped_link_local_addrs(&self) {
-        let mut addrs = self.inner.addrs.borrow_mut();
+        let mut addrs = self.addrs.borrow_mut();
 
         *addrs = addrs
             .clone()
@@ -751,7 +657,7 @@ impl Target {
     }
 
     pub fn drop_loopback_addrs(&self) {
-        let mut addrs = self.inner.addrs.borrow_mut();
+        let mut addrs = self.addrs.borrow_mut();
 
         *addrs = addrs
             .clone()
@@ -764,16 +670,15 @@ impl Target {
     }
 
     pub fn ssh_port(&self) -> Option<u16> {
-        self.inner.ssh_port.borrow().clone()
+        self.ssh_port.borrow().clone()
     }
 
     pub(crate) fn set_ssh_port(&self, port: Option<u16>) {
-        self.inner.ssh_port.replace(port);
+        self.ssh_port.replace(port);
     }
 
     pub(crate) fn manual_addrs(&self) -> Vec<TargetAddr> {
-        self.inner
-            .addrs
+        self.addrs
             .borrow()
             .iter()
             .filter_map(|entry| if entry.manual { Some(entry.addr.clone()) } else { None })
@@ -782,12 +687,12 @@ impl Target {
 
     #[cfg(test)]
     pub(crate) fn addrs_insert(&self, t: TargetAddr) {
-        self.inner.addrs.borrow_mut().replace(t.into());
+        self.addrs.borrow_mut().replace(t.into());
     }
 
     #[cfg(test)]
     pub fn new_autoconnected(n: &str) -> Rc<Self> {
-        let s = Self::new(n);
+        let s = Self::new_named(n);
         s.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(Instant::now())
@@ -797,7 +702,7 @@ impl Target {
 
     #[cfg(test)]
     pub(crate) fn addrs_insert_entry(&self, t: TargetAddrEntry) {
-        self.inner.addrs.borrow_mut().replace(t);
+        self.addrs.borrow_mut().replace(t);
     }
 
     fn addrs_extend<T>(&self, new_addrs: T)
@@ -805,7 +710,7 @@ impl Target {
         T: IntoIterator<Item = TargetAddr>,
     {
         let now = Utc::now();
-        let mut addrs = self.inner.addrs.borrow_mut();
+        let mut addrs = self.addrs.borrow_mut();
 
         for mut addr in new_addrs.into_iter() {
             // Do not add localhost to the collection during extend.
@@ -842,7 +747,7 @@ impl Target {
     }
 
     fn update_last_response(&self, other: DateTime<Utc>) {
-        let mut last_response = self.inner.last_response.borrow_mut();
+        let mut last_response = self.last_response.borrow_mut();
         if *last_response < other {
             *last_response = other;
         }
@@ -855,12 +760,12 @@ impl Target {
             None => bail!("Target identification missing a nodename: {:?}", identify),
         };
 
-        let target = Target::new(nodename);
+        let target = Target::new_named(nodename);
         target.update_last_response(Utc::now().into());
         if let Some(ids) = identify.ids {
             target.merge_ids(ids.iter());
         }
-        *target.inner.build_config.borrow_mut() =
+        *target.build_config.borrow_mut() =
             if identify.board_config.is_some() || identify.product_config.is_some() {
                 let p = identify.product_config.unwrap_or("<unknown>".to_string());
                 let b = identify.board_config.unwrap_or("<unknown>".to_string());
@@ -870,13 +775,13 @@ impl Target {
             };
 
         if let Some(serial) = identify.serial_number {
-            target.inner.serial.borrow_mut().replace(serial);
+            target.serial.borrow_mut().replace(serial);
         }
         if let Some(t) = identify.boot_timestamp_nanos {
-            target.inner.boot_timestamp_nanos.borrow_mut().replace(t);
+            target.boot_timestamp_nanos.borrow_mut().replace(t);
         }
         if let Some(addrs) = identify.addresses {
-            let mut taddrs = target.inner.addrs.borrow_mut();
+            let mut taddrs = target.addrs.borrow_mut();
             for addr in addrs.iter().map(|addr| TargetAddr::from(addr.clone())) {
                 taddrs.insert(addr.into());
             }
@@ -1036,7 +941,18 @@ impl From<&Target> for bridge::Target {
 
 impl Debug for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Target {{ {:?} }}", self.inner)
+        f.debug_struct("Target")
+            .field("id", &self.id)
+            .field("ids", &self.ids.borrow().clone())
+            .field("nodename", &self.nodename.borrow().clone())
+            .field("state", &self.state.borrow().clone())
+            .field("last_response", &self.last_response.borrow().clone())
+            .field("addrs", &self.addrs.borrow().clone())
+            .field("ssh_port", &self.ssh_port.borrow().clone())
+            .field("serial", &self.serial.borrow().clone())
+            .field("boot_timestamp_nanos", &self.boot_timestamp_nanos.borrow().clone())
+            // TODO(raggi): add task fields
+            .finish()
     }
 }
 
@@ -1396,10 +1312,10 @@ impl TargetCollection {
 
         if let Some(to_update) = to_update {
             if let Some(config) = new_target.build_config() {
-                to_update.inner.build_config.borrow_mut().replace(config);
+                to_update.build_config.borrow_mut().replace(config);
             }
             if let Some(serial) = new_target.serial() {
-                to_update.inner.serial.borrow_mut().replace(serial);
+                to_update.serial.borrow_mut().replace(serial);
             }
             if let Some(new_name) = new_target.nodename() {
                 to_update.set_nodename(new_name);
@@ -1530,27 +1446,23 @@ mod test {
     const DEFAULT_BOARD_CONFIG: &str = "x64";
     const TEST_SERIAL: &'static str = "test-serial";
 
-    fn clone_target(t: &Target) -> Rc<Target> {
-        let inner = Rc::new(TargetInner::clone(&t.inner));
-        Target::from_inner(inner)
-    }
-
-    impl Clone for TargetInner {
-        fn clone(&self) -> Self {
-            Self {
-                id: self.id.clone(),
-                ids: RefCell::new(self.ids.borrow().clone()),
-                nodename: RefCell::new(self.nodename.borrow().clone()),
-                last_response: RefCell::new(self.last_response.borrow().clone()),
-                state: RefCell::new(self.state.borrow().clone()),
-                addrs: RefCell::new(self.addrs.borrow().clone()),
-                ssh_port: RefCell::new(self.ssh_port.borrow().clone()),
-                serial: RefCell::new(self.serial.borrow().clone()),
-                boot_timestamp_nanos: RefCell::new(self.boot_timestamp_nanos.borrow().clone()),
-                diagnostics_info: self.diagnostics_info.clone(),
-                build_config: RefCell::new(self.build_config.borrow().clone()),
-            }
-        }
+    fn clone_target(target: &Target) -> Rc<Target> {
+        let new = Target::new();
+        new.nodename.replace(target.nodename());
+        // Note: ID is omitted deliberately, as ID merging is unconditional on
+        // match, which breaks some uses of this helper function.
+        new.ids.replace(target.ids.borrow().clone());
+        new.state.replace(target.state.borrow().clone());
+        new.addrs.replace(target.addrs.borrow().clone());
+        new.ssh_port.replace(target.ssh_port.borrow().clone());
+        new.serial.replace(target.serial.borrow().clone());
+        new.boot_timestamp_nanos.replace(target.boot_timestamp_nanos.borrow().clone());
+        new.build_config.replace(target.build_config.borrow().clone());
+        new.last_response.replace(target.last_response.borrow().clone());
+        // TODO(raggi): there are missing fields here, as there were before the
+        // refactor in which I introduce this comment. It should be a goal to
+        // remove this helper function over time.
+        new
     }
 
     fn fake_now() -> DateTime<Utc> {
@@ -1564,9 +1476,9 @@ mod test {
     impl PartialEq for Target {
         fn eq(&self, o: &Target) -> bool {
             self.nodename() == o.nodename()
-                && *self.inner.last_response.borrow() == *o.inner.last_response.borrow()
+                && *self.last_response.borrow() == *o.last_response.borrow()
                 && self.addrs() == o.addrs()
-                && *self.inner.state.borrow() == *o.inner.state.borrow()
+                && *self.state.borrow() == *o.state.borrow()
                 && self.build_config() == o.build_config()
         }
     }
@@ -1626,7 +1538,7 @@ mod test {
         assert_ne!(merged_target, t1);
         assert_ne!(merged_target, t2);
         assert_eq!(merged_target.addrs().len(), 2);
-        assert_eq!(*merged_target.inner.last_response.borrow(), fake_elapsed());
+        assert_eq!(*merged_target.last_response.borrow(), fake_elapsed());
         assert!(merged_target.addrs().contains(&(a1, 1).into()));
         assert!(merged_target.addrs().contains(&(a2, 1).into()));
 
@@ -1665,7 +1577,7 @@ mod test {
         assert_ne!(&merged_target, &t1);
         assert_ne!(&merged_target, &t2);
         assert_eq!(merged_target.addrs().len(), 1);
-        assert_eq!(*merged_target.inner.last_response.borrow(), fake_elapsed());
+        assert_eq!(*merged_target.last_response.borrow(), fake_elapsed());
         assert!(merged_target.addrs().contains(&(a1, 0).into()));
         assert!(!merged_target.addrs().contains(&(a2, 0).into()));
     }
@@ -1781,14 +1693,14 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_query_matches_nodename() {
         let query = TargetQuery::from("foo");
-        let target = Rc::new(Target::new("foo"));
+        let target = Rc::new(Target::new_named("foo"));
         assert!(query.matches(&target));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_by_addr() {
         let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
-        let t = Target::new("foo");
+        let t = Target::new_named("foo");
         t.addrs_insert(addr.clone());
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(clone_target(&t));
@@ -1798,7 +1710,7 @@ mod test {
 
         let addr: TargetAddr =
             (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
-        let t = Target::new("fooberdoober");
+        let t = Target::new_named("fooberdoober");
         t.addrs_insert(addr.clone());
         tc.merge_insert(clone_target(&t));
         assert_eq!(tc.get("fe80::dead:beef:beef:beef").unwrap(), t);
@@ -1809,7 +1721,7 @@ mod test {
     // Most of this is now handled in `task.rs`
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_disconnect_multiple_invocations() {
-        let t = Rc::new(Target::new("flabbadoobiedoo"));
+        let t = Rc::new(Target::new_named("flabbadoobiedoo"));
         {
             let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
             t.addrs_insert(addr);
@@ -1851,7 +1763,7 @@ mod test {
                 expected: bridge::RemoteControlState::Unknown,
             },
         ] {
-            let t = Target::new("schlabbadoo");
+            let t = Target::new_named("schlabbadoo");
             let a2 = IpAddr::V6(Ipv6Addr::new(
                 0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
             ));
@@ -1860,7 +1772,7 @@ mod test {
                 t.run_host_pipe();
             }
             {
-                *t.inner.state.borrow_mut() = if test.rcs_is_some {
+                *t.state.borrow_mut() = if test.rcs_is_some {
                     ConnectionState::Rcs(RcsConnection::new_with_proxy(
                         setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
                         &NodeId { id: 123 },
@@ -1875,12 +1787,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_into_bridge_target() {
-        let t = Target::new("cragdune-the-impaler");
+        let t = Target::new_named("cragdune-the-impaler");
         let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let a2 = IpAddr::V6(Ipv6Addr::new(
             0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
         ));
-        *t.inner.build_config.borrow_mut() = Some(BuildConfig {
+        *t.build_config.borrow_mut() = Some(BuildConfig {
             board_config: DEFAULT_BOARD_CONFIG.to_owned(),
             product_config: DEFAULT_PRODUCT_CONFIG.to_owned(),
         });
@@ -1904,7 +1816,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_new_target_event_synthesis() {
-        let t = Target::new("clopperdoop");
+        let t = Target::new_named("clopperdoop");
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(t.clone());
         let vec = tc.synthesize_events().await;
@@ -1957,10 +1869,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_event_synthesis_none_connected() {
-        let t = Target::new("clam-chowder-is-tasty");
-        let t2 = Target::new("this-is-a-crunchy-falafel");
-        let t3 = Target::new("i-should-probably-eat-lunch");
-        let t4 = Target::new("i-should-probably-eat-lunch");
+        let t = Target::new_named("clam-chowder-is-tasty");
+        let t2 = Target::new_named("this-is-a-crunchy-falafel");
+        let t3 = Target::new_named("i-should-probably-eat-lunch");
+        let t4 = Target::new_named("i-should-probably-eat-lunch");
 
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(t);
@@ -1997,9 +1909,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_events() {
-        let t = Target::new("clam-chowder-is-tasty");
-        let t2 = Target::new("this-is-a-crunchy-falafel");
-        let t3 = Target::new("i-should-probably-eat-lunch");
+        let t = Target::new_named("clam-chowder-is-tasty");
+        let t2 = Target::new_named("this-is-a-crunchy-falafel");
+        let t3 = Target::new_named("i-should-probably-eat-lunch");
 
         let tc = Rc::new(TargetCollection::new());
         let queue = events::Queue::new(&tc);
@@ -2036,7 +1948,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_event_fire() {
-        let t = Target::new("balaowihf");
+        let t = Target::new_named("balaowihf");
         let conn = RcsConnection::new_with_proxy(
             setup_fake_remote_control_service(false, "balaowihf".to_owned()),
             &NodeId { id: 1234 },
@@ -2078,7 +1990,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_update_connection_state() {
-        let t = Target::new("have-you-seen-my-cat");
+        let t = Target::new_named("have-you-seen-my-cat");
         let instant = Instant::now();
         let instant_clone = instant.clone();
         t.update_connection_state(move |s| {
@@ -2091,7 +2003,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_expire_state_mdns() {
-        let t = Target::new("yo-yo-ma-plays-that-cello-ya-hear");
+        let t = Target::new_named("yo-yo-ma-plays-that-cello-ya-hear");
         let then = Instant::now() - (MDNS_MAX_AGE + Duration::from_secs(1));
         t.update_connection_state(|_| ConnectionState::Mdns(then));
 
@@ -2110,7 +2022,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_expire_state_fastboot() {
-        let t = Target::new("platypodes-are-venomous");
+        let t = Target::new_named("platypodes-are-venomous");
         let then = Instant::now() - (FASTBOOT_MAX_AGE + Duration::from_secs(1));
         t.update_connection_state(|_| ConnectionState::Fastboot(then));
 
@@ -2129,7 +2041,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_expire_state_zedboot() {
-        let t = Target::new("platypodes-are-venomous");
+        let t = Target::new_named("platypodes-are-venomous");
         let then = Instant::now() - (ZEDBOOT_MAX_AGE + Duration::from_secs(1));
         t.update_connection_state(|_| ConnectionState::Zedboot(then));
 
@@ -2148,7 +2060,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_addresses_order_preserved() {
-        let t = Target::new("this-is-a-target-i-guess");
+        let t = Target::new_named("this-is-a-target-i-guess");
         let addrs_pre = vec![
             SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
             SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
@@ -2180,7 +2092,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_addresses_order() {
-        let t = Target::new("hi-hi-hi");
+        let t = Target::new_named("hi-hi-hi");
         let expected = SocketAddr::V6(SocketAddrV6::new(
             "fe80::4559:49b2:462d:f46b".parse().unwrap(),
             0,
@@ -2235,8 +2147,8 @@ mod test {
         // t2 is an incoming target that has the same address, but, it is
         // missing scope information, this is essentially what occurs when we
         // ask the target for its addresses.
-        let t2 = Target::new("this-is-a-crunchy-falafel");
-        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip, scope_id: 0 }.into());
+        let t2 = Target::new_named("this-is-a-crunchy-falafel");
+        t2.addrs.borrow_mut().replace(TargetAddr { ip, scope_id: 0 }.into());
 
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(t1);
@@ -2255,10 +2167,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_does_not_merge_different_ports_with_no_name() {
-        let ip = "::1".parse().unwrap();
+        let ip = "fe80::1".parse().unwrap();
 
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip, scope_id: 0 });
+        addr_set.replace(TargetAddr { ip, scope_id: 1 });
         let t1 = Target::new_with_addrs(Option::<String>::None, addr_set.clone());
         t1.set_ssh_port(Some(8022));
         let t2 = Target::new_with_addrs(Option::<String>::None, addr_set.clone());
@@ -2291,10 +2203,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_does_not_merge_different_ports() {
-        let ip = "::1".parse().unwrap();
+        let ip = "fe80::1".parse().unwrap();
 
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip, scope_id: 0 });
+        addr_set.replace(TargetAddr { ip, scope_id: 1 });
         let t1 = Target::new_with_addrs(Some("t1"), addr_set.clone());
         t1.set_ssh_port(Some(8022));
         let t2 = Target::new_with_addrs(Some("t2"), addr_set.clone());
@@ -2349,9 +2261,9 @@ mod test {
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
-        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t2 = Target::new_named("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue();
-        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1);
         tc.merge_insert(t2);
         let mut targets = tc.targets().into_iter();
@@ -2379,9 +2291,9 @@ mod test {
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
-        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t2 = Target::new_named("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue();
-        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1);
         tc.merge_insert(t2);
         let mut targets = tc.targets().into_iter();
@@ -2408,9 +2320,9 @@ mod test {
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
-        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t2 = Target::new_named("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue();
-        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1);
         tc.merge_insert(t2);
         let mut targets = tc.targets().into_iter();
@@ -2633,7 +2545,7 @@ mod test {
         // would come first. With filtering, though, the "this-is-connected"
         // target would be found.
         let t = Target::new_autoconnected("this-is-connected");
-        let t2 = Target::new("this-is-not-connected");
+        let t2 = Target::new_named("this-is-not-connected");
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(clone_target(&t2));
         tc.merge_insert(clone_target(&t));

@@ -1081,7 +1081,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_daemon_mdns_event_handler() {
-        let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
+        let t = Target::new_named("this-town-aint-big-enough-for-the-three-of-us");
 
         let tc = Rc::new(TargetCollection::new());
         tc.merge_insert(t.clone());
@@ -1281,7 +1281,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_expiry() {
         let mut daemon = Daemon::new();
-        let target = Target::new("goodbye-world");
+        let target = Target::new_named("goodbye-world");
         let then = Instant::now() - Duration::from_secs(600);
         target.update_connection_state(|_| ConnectionState::Mdns(then));
         daemon.target_collection.merge_insert(target.clone());

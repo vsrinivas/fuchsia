@@ -389,7 +389,7 @@ mod test {
     async fn setup(replies: Vec<Reply>) -> (Rc<Target>, FastbootProxy) {
         ffx_config::init_config_test().unwrap();
 
-        let target = Target::new("scooby-dooby-doo");
+        let target = Target::new_named("scooby-dooby-doo");
         let mut fb =
             FastbootImpl::<TestTransport>::new(target.clone(), Box::new(TestFactory::new(replies)));
         let (proxy, stream) = create_proxy_and_stream::<FastbootMarker>().unwrap();

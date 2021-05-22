@@ -309,7 +309,7 @@ mod test {
     }
 
     async fn setup() -> (Rc<Target>, TargetControlProxy) {
-        let target = Target::new("scooby-dooby-doo");
+        let target = Target::new_named("scooby-dooby-doo");
         let fastboot_proxy = Once::new();
         let _ = fastboot_proxy.get_or_init(setup_fastboot()).await;
         let remote_proxy = Once::new();

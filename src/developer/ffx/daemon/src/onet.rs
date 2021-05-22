@@ -259,7 +259,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_normal_operation() {
-        let target = crate::target::Target::new("flooooooooberdoober");
+        let target = crate::target::Target::new_named("flooooooooberdoober");
         let _conn = HostPipeConnection::new_with_cmd(
             Rc::downgrade(&target),
             start_child_normal_operation,
@@ -271,7 +271,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_internal_failure() {
         // TODO(awdavies): Verify the error matches.
-        let target = crate::target::Target::new("flooooooooberdoober");
+        let target = crate::target::Target::new_named("flooooooooberdoober");
         let conn = HostPipeConnection::new_with_cmd(
             Rc::downgrade(&target),
             start_child_internal_failure,
