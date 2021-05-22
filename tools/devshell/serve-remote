@@ -112,8 +112,13 @@ if [[ $? -ne 0 || -z "${target_addr}" ]]; then
   exit 1
 fi
 
+fx-export-device-address
+if [[ -z "${FX_SSH_PORT}" ]]; then
+  FX_SSH_PORT=22
+fi
+
 echo "Using remote ${host}:${dir}"
-echo "Using target device $(get-device-name)"
+echo "Using target device ${FX_DEVICE_NAME} (${FX_SSH_ADDR}:${FX_SSH_PORT})"
 
 
 # Use a dedicated ControlPath so script can manage a connection seperately from the user's. We
@@ -143,18 +148,30 @@ trap trap_exit EXIT
 
 ssh_tunnel_args=(
   -6 # We want ipv6 binds for the port forwards
-  -L "\*:8083:localhost:8083"     # fx serve
-  -R "8022:[${target_addr}]:22"   # fx shell
-  -R "2345:[${target_addr}]:2345" # fx debug
-  -R "8007:[${target_addr}]:8007" # Google-specific
-  -R "8443:[${target_addr}]:8443" # Google-specific
-  -R "9080:[${target_addr}]:80"   # SL4F_HTTP_PORT
+  -L "\*:8083:localhost:8083"                 # fx serve
+  -R "8022:[${FX_SSH_ADDR}]:${FX_SSH_PORT}"   # fx shell
   -o ExitOnForwardFailure=yes
   # Match google default server timeout so in spotty network situations the client doesn't timeout
   # before server (and leave the server process still holding on to tunneling port).
   -o ServerAliveInterval=30
   -o ServerAliveCountMax=20
 )
+
+# This is a rudimentary assumption that the device is reachable at FX_SSH_ADDR
+# iff it is listening on the default SSH port, which is often true, but in no
+# way guaranteed to be true. A better approach here would be to adjust to later
+# perform these forwards inside the device fowrarded link rather than at the
+# host link level.
+if [[ "${FX_SSH_PORT}" == 22 ]]; then
+  ssh_tunnel_args+=(
+    -R "2345:[${FX_SSH_ADDR}]:2345"             # fx debug
+    -R "8007:[${FX_SSH_ADDR}]:8007"             # Google-specific
+    -R "8443:[${FX_SSH_ADDR}]:8443"             # Google-specific
+    -R "9080:[${FX_SSH_ADDR}]:80"               # SL4F_HTTP_PORT
+  )
+else
+  echo >&2 "Note: tunnelled targets will not receive forwards for SL4F or debug"
+fi
 
 # Add additional ports to tunnel if specified.
 if "${has_tunnel_ports}"; then
