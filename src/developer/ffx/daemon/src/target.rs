@@ -33,7 +33,7 @@ use {
     std::fmt::{Debug, Display},
     std::hash::{Hash, Hasher},
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
-    std::rc::Rc,
+    std::rc::{Rc, Weak},
     std::sync::Arc,
     std::time::{Duration, Instant},
     timeout::{timeout, TimeoutError},
@@ -420,15 +420,26 @@ impl TargetInner {
     }
 }
 
+// TargetEventSynthesizer resolves by weak reference the embedded event
+// queue's need for a self reference.
+#[derive(Default)]
+struct TargetEventSynthesizer {
+    target: RefCell<Weak<Target>>,
+}
+
 #[async_trait(?Send)]
-impl EventSynthesizer<TargetEvent> for TargetInner {
+impl EventSynthesizer<TargetEvent> for TargetEventSynthesizer {
     async fn synthesize_events(&self) -> Vec<TargetEvent> {
-        match *self.state.borrow() {
-            ConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
-            _ => vec![],
+        match self.target.borrow().upgrade() {
+            Some(target) => match target.get_connection_state() {
+                ConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
+                _ => vec![],
+            },
+            None => vec![],
         }
     }
 }
+
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
@@ -436,6 +447,10 @@ pub struct Target {
     logger: Rc<RefCell<Option<Task<()>>>>,
 
     inner: Rc<TargetInner>,
+
+    // The event synthesizer is retained on the target as a strong
+    // reference, as the queue only retains a weak reference.
+    target_event_synthesizer: Rc<TargetEventSynthesizer>,
 }
 
 impl Target {
@@ -444,8 +459,17 @@ impl Target {
     }
 
     fn from_inner(inner: Rc<TargetInner>) -> Rc<Self> {
-        let events = events::Queue::new(&inner);
-        Rc::new(Self { inner, events, host_pipe: Default::default(), logger: Default::default() })
+        let target_event_synthesizer = Rc::new(TargetEventSynthesizer::default());
+        let events = events::Queue::new(&target_event_synthesizer);
+        let target = Rc::new(Self {
+            inner,
+            events,
+            host_pipe: Default::default(),
+            logger: Default::default(),
+            target_event_synthesizer,
+        });
+        target.target_event_synthesizer.target.replace(Rc::downgrade(&target));
+        target
     }
 
     pub fn new<S>(nodename: S) -> Rc<Self>
