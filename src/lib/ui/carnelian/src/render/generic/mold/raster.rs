@@ -21,7 +21,7 @@ pub(crate) struct Print {
 #[derive(Clone, Debug)]
 pub struct MoldRaster {
     pub(crate) prints: SmallVec<[Print; 1]>,
-    pub(crate) layer_id: Rc<RefCell<Option<mold::LayerId>>>,
+    pub(crate) layer_details: Rc<RefCell<Option<(mold::LayerId, Vector2D<f32>)>>>,
     pub(crate) translation: Vector2D<f32>,
 }
 
@@ -53,7 +53,7 @@ impl Add for MoldRaster {
         }
 
         self.prints.extend(other.prints);
-        self.layer_id = Rc::new(RefCell::new(None));
+        self.layer_details = Rc::new(RefCell::new(None));
         self
     }
 }
@@ -86,7 +86,7 @@ impl RasterBuilder<Mold> for MoldRasterBuilder {
     fn build(self) -> MoldRaster {
         MoldRaster {
             prints: self.prints,
-            layer_id: Rc::new(RefCell::new(None)),
+            layer_details: Rc::new(RefCell::new(None)),
             translation: Vector2D::zero(),
         }
     }

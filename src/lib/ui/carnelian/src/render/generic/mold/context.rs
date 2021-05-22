@@ -201,9 +201,12 @@ fn render_composition(
     }
 
     for (order, layer) in composition.layers.iter().rev().enumerate() {
-        let mut option = layer.raster.layer_id.borrow_mut();
-        let layer_id = option
-            .filter(|&layer_id| mold_composition.get(layer_id).is_some())
+        let mut option = layer.raster.layer_details.borrow_mut();
+        let layer_details = option
+            .filter(|&(layer_id, layer_translation)| {
+                mold_composition.get(layer_id).is_some()
+                    && layer.raster.translation == layer_translation
+            })
             .unwrap_or_else(|| {
                 let layer_id = mold_composition
                     .create_layer()
@@ -228,12 +231,12 @@ fn render_composition(
                     );
                 }
 
-                layer_id
+                (layer_id, layer.raster.translation)
             });
 
-        *option = Some(layer_id);
+        *option = Some(layer_details);
 
-        let maybe_mold_layer = mold_composition.get_mut(layer_id);
+        let maybe_mold_layer = mold_composition.get_mut(layer_details.0);
         if let Some(mold_layer) = maybe_mold_layer {
             mold_layer.enable().set_order(order as u16).set_style(mold::Style {
                 fill_rule: match layer.style.fill_rule {
