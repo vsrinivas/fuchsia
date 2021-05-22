@@ -4,7 +4,7 @@
 
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:flutter_driver/flutter_driver.dart';
-// import 'package:fidl_fuchsia_input/fidl_async.dart';
+import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -59,10 +59,8 @@ void main() {
     // Check that terminal was launched.
     expect(await ermine.isRunning(terminalUrl), isTrue);
 
-    // TODO(https://fxbug.dev/74682): Uncomment once fixed.
     // Use keyboard shortcut to close terminal.
-    // await ermine.twoKeyShortcut(Key.leftMeta, Key.w);
-    await ermine.driver.requestData('closeAll');
+    await ermine.twoKeyShortcut(Key.leftMeta, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks();
     expect(await ermine.isStopped(terminalUrl), isTrue);
   });
