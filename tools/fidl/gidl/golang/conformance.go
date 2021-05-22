@@ -22,6 +22,7 @@ package fidl_test
 import (
 	"math"
 	"reflect"
+	"runtime"
 	"testing"
 
 	"fidl/conformance"
@@ -34,6 +35,7 @@ import (
 var _ = math.Float32frombits
 var _ = reflect.Copy
 var _ = zx.HandleInvalid
+var _ = runtime.GOOS
 
 {{ if .EncodeSuccessCases }}
 func TestAllEncodeSuccessCases(t *testing.T) {
@@ -66,12 +68,14 @@ func TestAllDecodeSuccessCases(t *testing.T) {
 		handleDefs := {{ .HandleDefs }}
 		handles := createHandlesFromHandleDef(handleDefs)
 		var {{ .EqualityCheckKoidArrayVar }} []uint64
-		for _, h := range handles {
-			info, err := handleGetBasicInfo(&h)
-			if err != nil {
-				t.Fatal(err)
+		if runtime.GOOS == "fuchsia" {
+			for _, h := range handles {
+				info, err := handleGetBasicInfo(&h)
+				if err != nil {
+					t.Fatal(err)
+				}
+				{{ .EqualityCheckKoidArrayVar }} = append({{ .EqualityCheckKoidArrayVar }}, info.Koid)
 			}
-			{{ .EqualityCheckKoidArrayVar }} = append({{ .EqualityCheckKoidArrayVar }}, info.Koid)
 		}
 		{{- end }}
 		decodeSuccessCase{

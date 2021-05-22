@@ -106,12 +106,14 @@ func (b *equalityCheckBuilder) expectKoidEquals(actual string, expectedHandle gi
 	var handleVar = fmt.Sprintf("&%s.Handle", b.createAndAssignVar(actual))
 	infoVar := b.varSeq.next()
 	b.write(
-		`%s, err := handleGetBasicInfo(%s)
-if err != nil {
-	t.Fatal(err)
-}
+		`if runtime.GOOS == "fuchsia" {
+	%s, err := handleGetBasicInfo(%s)
+	if err != nil {
+		t.Fatal(err)
+	}
 `, infoVar, handleVar)
 	b.expectEquals(fmt.Sprintf("%s.Koid", infoVar), fmt.Sprintf("%s[%d]", b.koidArrayVar, expectedHandle))
+	b.write("}\n")
 }
 
 func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue interface{}, decl gidlmixer.Declaration) {
@@ -174,14 +176,16 @@ func (b *equalityCheckBuilder) visitHandle(actualExpr string, expectedValue gidl
 	}
 	infoVar := b.varSeq.next()
 	b.write(
-		`%s, err := handleGetBasicInfo(%s)
-if err != nil {
-	t.Fatal(err)
-}
+		`if runtime.GOOS == "fuchsia" {
+	%s, err := handleGetBasicInfo(%s)
+	if err != nil {
+		t.Fatal(err)
+	}
 `, infoVar, handleVar)
 	b.expectEquals(fmt.Sprintf("%s.Koid", infoVar), fmt.Sprintf("%s[%d]", b.koidArrayVar, expectedValue.Handle))
 	b.expectTrue(fmt.Sprintf("%[1]s.Type == %[2]d || %[2]d == zx.ObjectTypeNone", infoVar, expectedValue.Type))
 	b.expectTrue(fmt.Sprintf("%[1]s.Rights == %[2]d || %[2]d == zx.RightSameRights", infoVar, expectedValue.Rights))
+	b.write("}\n")
 }
 
 func (b *equalityCheckBuilder) visitStruct(actualExpr string, expectedValue gidlir.Record, decl *gidlmixer.StructDecl) {
@@ -229,7 +233,7 @@ t.Fatalf("expected unknown data for %[1]s at ordinal: %[2]d")
 			panic(fmt.Sprintf("field decl %s not found", fieldName))
 		}
 		goFieldName := fidlgen.ToUpperCamelCase(fieldName)
-		if expectedFieldValue, ok := expectedFieldValues[goFieldName]; ok {
+		if expectedFieldValue, ok := expectedFieldValues[fieldName]; ok {
 			b.assertTrue(fmt.Sprintf("%s.Has%s()", actualVar, goFieldName))
 			fieldVar := b.createAndAssignVar(fmt.Sprintf("%s.Get%s()", actualVar, goFieldName))
 			b.visit(fieldVar, expectedFieldValue, fieldDecl)
