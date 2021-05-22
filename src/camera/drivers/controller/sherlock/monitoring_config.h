@@ -24,7 +24,6 @@ namespace camera {
 namespace {
 
 // OutputStreamMLFR Parameters
-constexpr uint32_t kOutputStreamMlFRMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlFRWidth = 2176;
 constexpr uint32_t kOutputStreamMlFRHeight = 2720;
 constexpr uint32_t kOutputStreamMlFRFrameRate = 10;
@@ -32,7 +31,6 @@ constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMlFRPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
 // OutputStreamMLDS Parameters
-constexpr uint32_t kOutputStreamMlDSMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlDSWidth = 640;
 constexpr uint32_t kOutputStreamMlDSHeight = 512;
 constexpr uint32_t kOutputStreamMlDSFrameRate = 10;
@@ -42,7 +40,6 @@ constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMlDSPixelFormat =
 // OutputStreamMonitoring Parameters
 constexpr uint32_t kOutputStreamDSWidth = 1152;
 constexpr uint32_t kOutputStreamDSHeight = 1440;
-constexpr uint32_t kOutputStreamMonitoringMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMonitoringWidth = 1152;
 constexpr uint32_t kOutputStreamMonitoringHeight = 864;
 constexpr uint32_t kOutputStreamMonitoringWidth1 = 720;

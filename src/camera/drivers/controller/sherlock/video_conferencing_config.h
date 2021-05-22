@@ -37,18 +37,12 @@ constexpr uint32_t kGdcFRWidth = 2240;
 constexpr uint32_t kGdcFRHeight = 1792;
 
 // ML Video FR Parameters
-// ISP needs to hold on to 3 frames at any given point
-// DMA module has a queue for 3 frames - current, done & delay frame.
-constexpr uint32_t kMlFRMinBufferForCamping = 3;
-// GDC needs to hold on to 1 frame for processing.
-constexpr uint32_t kGdcBufferForCamping = 1;
 
 constexpr uint32_t kMlFRWidth = 640;
 constexpr uint32_t kMlFRHeight = 512;
 constexpr uint32_t kMlFRFrameRate = 5;
 
 // Video Conferencing FR Parameters
-constexpr uint32_t kVideoMinBufferForCamping = 3;
 constexpr uint32_t kVideoWidth = 1280;
 constexpr uint32_t kVideoHeight = 720;
 constexpr uint32_t kVideoWidth1 = 896;

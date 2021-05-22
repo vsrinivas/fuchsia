@@ -764,8 +764,8 @@ TEST_F(ControllerProtocolTest, TestMultipleFrameRates) {
   }
 
   EXPECT_EQ(fr_frame_index, 2u);
-  EXPECT_EQ(ds_frame_index, 4u);
-  EXPECT_EQ(ds_frame_count, 5u);
+  EXPECT_EQ(ds_frame_index, 3u);
+  EXPECT_EQ(ds_frame_count, 4u);
 }
 
 TEST_F(ControllerProtocolTest, TestFindGraphHead) {

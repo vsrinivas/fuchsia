@@ -24,7 +24,11 @@ constexpr auto kStreamTypeVideo = fuchsia::camera2::CameraStreamType::VIDEO_CONF
 constexpr auto kStreamTypeVideoExtendedFOV = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
                                              fuchsia::camera2::CameraStreamType::EXTENDED_FOV;
 constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONITORING;
-constexpr auto kNumBuffers = 5;
+
+// kNumBuffers represents the number of buffers to feed into the camera pipeline fakes.
+// Based on the current code, it is constrained to the size of the smallest buffer collection
+// involving the ISP. On Sherlock, this is 4.
+constexpr auto kNumBuffers = 4;
 
 }  // namespace camera
 

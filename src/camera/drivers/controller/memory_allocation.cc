@@ -83,10 +83,11 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
 
   // Set constraints
   for (uint32_t i = 0; i < num_constraints; i++) {
-    FX_LOGF(DEBUG, kTag, "Allocate %s with constraints %dx%d camp %d min %d", name.c_str(),
+    FX_LOGF(DEBUG, kTag, "Allocate %s with constraints %dx%d camp %d min %d max %d", name.c_str(),
             constraints[i].image_format_constraints[0].required_max_coded_width,
             constraints[i].image_format_constraints[0].required_max_coded_height,
-            constraints[i].min_buffer_count_for_camping, constraints[i].min_buffer_count);
+            constraints[i].min_buffer_count_for_camping, constraints[i].min_buffer_count,
+            constraints[i].max_buffer_count);
     status = buffer_collections[i]->SetConstraints(true, constraints[i]);
     if (status != ZX_OK) {
       FX_LOG(ERROR, kTag, "Failed to set buffer collection constraints");
@@ -105,6 +106,10 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     FX_LOG(ERROR, kTag, "Failed to allocate buffer collection.");
     return allocation_status;
   }
+
+  FX_LOGF(DEBUG, kTag, "Allocated %s count %d size %d", name.c_str(),
+          out_buffer_collection.buffers.buffer_count,
+          out_buffer_collection.buffers.settings.buffer_settings.size_bytes);
 
   // Leave first collection handle open to return
   out_buffer_collection.ptr = buffer_collections[0].Unbind().Bind();

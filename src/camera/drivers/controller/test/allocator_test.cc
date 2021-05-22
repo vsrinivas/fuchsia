@@ -79,8 +79,7 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestMonitorConfigFR"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count,
-            kOutputStreamMlDSMinBufferForCamping + kNumClientBuffers);
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumClientBuffers);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamMlFRHeight * kOutputStreamMlFRWidth);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -111,8 +110,7 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestVideoConfigFRGDC1"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count,
-            kMlFRMinBufferForCamping + kGdcBufferForCamping);
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kGdcBufferForCamping);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kIspFRWidth * kIspFRHeight);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -149,8 +147,9 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   constraints.push_back(ge2d_constraints);
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       constraints, buffer_collection, "TestvideoConfigGDC1GDC2"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kVideoMinBufferForCamping + kNumClientBuffers);
+                       constraints, buffer_collection, "TestVideoConfigGDC1GDC2"));
+  EXPECT_EQ(buffer_collection.buffers.buffer_count,
+            2 * kGdcBufferForCamping + kGe2dBufferForCamping);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kGdcFRWidth * kGdcFRHeight);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -183,7 +182,7 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestMonitorConfigDS"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kOutputStreamMonitoringMinBufferForCamping);
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kGdcBufferForCamping);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamDSHeight * kOutputStreamDSWidth);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -210,8 +209,7 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   // Allocating some buffer collection
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestConvertBufferCollection2TypeTest"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count,
-            kOutputStreamMlDSMinBufferForCamping + kNumClientBuffers);
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumClientBuffers);
 
   BufferCollectionHelper buffer_collection_helper(buffer_collection.buffers);
 

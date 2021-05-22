@@ -34,8 +34,8 @@ static fuchsia::camera2::hal::StreamConfig MLVideoFRConfig(bool extended_fov) {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kMlFRFrameRate);
-  stream.set_buffer_count_for_camping(kMlFRMinBufferForCamping);
-  stream.set_min_buffer_count(kMlFRMinBufferForCamping + kNumClientBuffers);
+  stream.set_buffer_count_for_camping(kExtraBuffers);
+  stream.set_min_buffer_count(kGdcBufferForCamping + kNumClientBuffers + kExtraBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -64,8 +64,8 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kVideoFrameRate);
-  stream.set_buffer_count_for_camping(0);
-  stream.set_min_buffer_count(kVideoMinBufferForCamping + kNumClientBuffers);
+  stream.set_buffer_count_for_camping(kGe2dBufferForCamping);
+  stream.set_min_buffer_count(kGe2dBufferForCamping + kNumClientBuffers + kExtraBuffers);
   return stream.ConvertToStreamConfig();
 };
 
@@ -128,7 +128,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo2Constraints() {
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kVideoMinBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -169,7 +169,7 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kVideoMinBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kGe2dBufferForCamping);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -227,8 +227,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo1OutputConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(0);
-  stream_constraints.set_min_buffer_count(kVideoMinBufferForCamping + kNumClientBuffers);
+  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -291,7 +290,7 @@ fuchsia::sysmem::BufferCollectionConstraints VideoConfigFullResConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kIspFRWidth, kIspFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kMlFRMinBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kIspBufferForCamping);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
