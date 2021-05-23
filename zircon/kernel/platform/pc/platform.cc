@@ -403,7 +403,8 @@ size_t efi_recover_crashlog(FILE* tgt) {
   // Otherwise, just return the length which would have been needed to hold the
   // entire log.
   if (tgt != nullptr) {
-    const int written = tgt->Write(ktl::string_view{static_cast<const char*>(last_crashlog), last_crashlog_len});
+    const int written =
+        tgt->Write(ktl::string_view{static_cast<const char*>(last_crashlog), last_crashlog_len});
     return (written < 0) ? 0 : written;
   } else {
     return last_crashlog_len;
@@ -667,6 +668,7 @@ void platform_early_init(void) {
   /* extract bootloader data while still accessible */
   /* this includes debug uart config, etc. */
   platform_save_bootloader_data();
+  FinishBootOptions();
 
   /* is the cmdline option to bypass dlog set ? */
   dlog_bypass_init();

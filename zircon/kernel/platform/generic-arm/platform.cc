@@ -510,6 +510,7 @@ void platform_early_init(void) {
   zbi_root = reinterpret_cast<zbi_header_t*>(ramdisk_base);
   // walk the zbi structure and process all the items
   ProcessZbiEarly(zbi_root);
+  FinishBootOptions();
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();

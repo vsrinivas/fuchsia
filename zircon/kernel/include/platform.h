@@ -117,6 +117,7 @@ __END_CDECLS
 // TODO(53594): Eventually `gCmdline` will be entirely replaced by
 // `gBootOptions` and physboot will hand off the latter;
 void ParseBootOptions(ktl::string_view cmdline);
+void FinishBootOptions();
 
 namespace affine {
 class Ratio;  // Fwd decl.

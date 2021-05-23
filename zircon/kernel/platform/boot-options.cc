@@ -10,21 +10,25 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
+namespace {
+
 // TODO(53594): A no-op destination for spurious warnings for the duration of
 // the migration.
 struct NullFile {
   int Write(ktl::string_view s) { return static_cast<int>(s.size()); }
 };
 
+BootOptions gBootOptionsInstance;
+
+}  // namespace
+
 void ParseBootOptions(ktl::string_view cmdline) {
-  static BootOptions boot_options;
   // TODO(53594): Set `complain` to `stdout` once we have migrated all
   // cmdline arguments to BootOptions; until then, we suppress spurious
   // complaints about unrecognized options.
   NullFile null;
   FILE complain{&null};
-  boot_options.SetMany(cmdline, &complain);
-  gBootOptions = &boot_options;
+  gBootOptionsInstance.SetMany(cmdline, &complain);
 
   // Note: it is intentional that we build up `gBootOptions` before
   // `gCmdline`, as the former can redact information of which we do not
@@ -32,3 +36,5 @@ void ParseBootOptions(ktl::string_view cmdline) {
   ZX_ASSERT(cmdline.back() == '\0');
   gCmdline.Append(cmdline.data());
 }
+
+void FinishBootOptions() { gBootOptions = &gBootOptionsInstance; }
