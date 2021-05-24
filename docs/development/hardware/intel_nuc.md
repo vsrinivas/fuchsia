@@ -84,17 +84,37 @@ If you want to remotely manage the device, see [Remote Management for NUC](nuc-r
 1. Follow the [getting started guidelines](/docs/get-started/README.md). Make sure to
 use the board configuration `x64` when running `fx set`. For example `fx set core.x64`.
 
-## 5. Pave Fuchsia {#pave-fuchsia}
+## 5. Prepare a bootstrap USB drive {#prepare-usb}
+
+Before installing Fuchsia to a device you need to prepare a bootable USB drive. On a NUC, Fuchsia
+boots via a chain of bootloaders. The instructions below will create a drive containing the first
+two steps in the chain: [Gigaboot](/src/firmware/gigaboot) and [Zedboot](/docs/glossary.md#zedboot).
+Gigaboot is a UEFI boot shim with some limited functionality including
+[netbooting](/docs/development/kernel/getting_started.md#network_booting), and flashing. By default,
+Gigaboot will chain into Zedboot, which is a bootloader built on top of Zircon and either boots into
+Fuchsia or allows you to pave your device. To get started you want to boot into Zedboot and pave
+Fuchsia to your device's storage.
 
 1. Plug your USB key into your build workstation.
 1. Identify the path to your USB key by running `fx list-usb-disks`.
 1. Create a Zedboot USB by running `fx mkzedboot /path/to/usb/disk`.
+
+For more detailed instructions on preparing a bootable USB drive, see
+[this guide](/docs/development/hardware/usb_setup.md).
+
+## 6. Pave Fuchsia {#pave-fuchsia}
+
 1. Plug the Zedboot USB key into the NUC and boot it.
 1. When Zedboot is started, press Alt+F3 to switch to a command line prompt.
 1. Run `lsblk` on the device. Take note of the HDD or SSD's block device path.
     1. An example path looks like `/dev/sys/platform/pci/00:17.0/ahci/sata0/block`
-1. Run `install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>` on the device to
-   wipe and initialize the partition tables on the NUC. Use the block device path from the previous
-   step.
+1. Run `install-disk-image init-partition-tables --block-device <BLOCK_DEVICE_PATH>` on the device
+   to wipe and initialize the partition tables on the NUC. Use the block device path from the
+   previous step.
 1. Run `fx serve` on your workstation to install Fuchsia on the NUC.
 1. After paving is completed, disconnect the USB key.
+
+Fuchsia is now installed on your device, when you reboot the device it will load Gigaboot, then
+Zedboot, then Fuchsia all from your device's storage. You no longer need the USB drive. If you need
+to pave a new version of Fuchsia, you can run `fx reboot -r` on your workstation to reboot the
+device into Zedboot.

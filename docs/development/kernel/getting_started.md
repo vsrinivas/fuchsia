@@ -176,7 +176,7 @@ $BUILDDIR/tools/zbi -o extra.bootfs manifest
 On the booted Zircon system, the files in the bootfs will appear under /boot, so
 in the above manifest example, the "hosts" file would appear at /boot/etc/hosts.
 
-## Network Booting
+## Network Booting {#network-booting}
 
 Network booting is supported via two mechanisms: Gigaboot and Zirconboot.
 Gigaboot is an EFI based bootloader whereas zirconboot is a mechanism that
