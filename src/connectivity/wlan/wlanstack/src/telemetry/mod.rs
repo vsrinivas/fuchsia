@@ -1648,7 +1648,7 @@ mod tests {
                         last_rssi: -90i64,
                         last_snr: 1i64,
                         locally_initiated: true,
-                        reason_code: 3u64,
+                        reason_code: 131072u64 + 3u64,
                         disconnect_source: "source: mlme, reason: LeavingNetworkDeauth, mlme_event_name: DeauthenticateIndication",
                         time_since_channel_switch: 1337i64,
                     }

@@ -406,8 +406,9 @@ impl DisconnectSource {
         }
     }
 
-    /// Get the 802.11 reason code if disconnect comes from AP or MLME, or (1u32 << 16) plus the
-    /// corresponding enum value if it's a user disconnect reason.
+    /// If disconnect comes from AP, then get the 802.11 reason code.
+    /// If disconnect comes from MLME, return (1u32 << 17) + reason code.
+    /// If disconnect comes from user, return (1u32 << 16) + user disconnect reason.
     /// This is mainly used for metric.
     pub fn reason_code(&self) -> u32 {
         match self {
@@ -415,7 +416,8 @@ impl DisconnectSource {
                 ap_reason_code.into_primitive() as u32
             }
             DisconnectSource::Mlme(DisconnectCause { reason_code: mlme_reason_code, .. }) => {
-                mlme_reason_code.into_primitive() as u32
+                let mlme_reason_code = mlme_reason_code.into_primitive() as u32;
+                (1u32 << 17) + mlme_reason_code
             }
             DisconnectSource::User(reason) => (1u32 << 16) + *reason as u32,
         }
@@ -486,8 +488,11 @@ mod tests {
             })
             .reason_code()
         );
+
+        // These values are used in metrics, so making sure they don't change without us being
+        // aware of it.
         assert_eq!(
-            fidl_ieee80211::ReasonCode::ReasonInactivity.into_primitive() as u32,
+            131072u32 + fidl_ieee80211::ReasonCode::ReasonInactivity.into_primitive() as u32,
             DisconnectSource::Mlme(DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
                 mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
@@ -495,8 +500,6 @@ mod tests {
             .reason_code()
         );
 
-        // These values are used in metrics, so making sure they don't change without us being
-        // aware of it.
         assert_eq!(
             65536u32,
             DisconnectSource::User(fidl_sme::UserDisconnectReason::Unknown).reason_code()

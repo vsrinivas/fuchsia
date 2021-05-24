@@ -2210,7 +2210,7 @@ mod tests {
             state_events: {
                 "0": contains {
                     disconnect_ctx: {
-                        reason_code: 10u64,
+                        reason_code: 131072u64 + 10u64,
                         locally_initiated: true,
                     }
                 }
