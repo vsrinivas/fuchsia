@@ -41,35 +41,38 @@ class Clusters extends StatelessWidget {
         }
       }
     });
-    return AnimatedBuilder(
-      animation: Listenable.merge([
-        model.overviewVisibility,
-        clustersModel.fullscreenStoryNotifier,
-      ]),
+    return GestureDetector(
+      onTapDown: (_) => model.onCancel(),
       child: AnimatedBuilder(
-        animation: clustersModel,
-        builder: (context, child) => Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: Container(
-                color: ErmineStyle.kBackgroundColor,
-                child: PageView.builder(
-                  controller: pageController,
-                  scrollDirection: Axis.horizontal,
-                  itemCount: clustersModel.clusters.length,
-                  itemBuilder: (context, index) {
-                    final cluster = clustersModel.clusters[index];
-                    return Cluster(model: cluster);
-                  },
+        animation: Listenable.merge([
+          model.overviewVisibility,
+          clustersModel.fullscreenStoryNotifier,
+        ]),
+        child: AnimatedBuilder(
+          animation: clustersModel,
+          builder: (context, child) => Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: Container(
+                  color: ErmineStyle.kBackgroundColor,
+                  child: PageView.builder(
+                    controller: pageController,
+                    scrollDirection: Axis.horizontal,
+                    itemCount: clustersModel.clusters.length,
+                    itemBuilder: (context, index) {
+                      final cluster = clustersModel.clusters[index];
+                      return Cluster(model: cluster);
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      builder: (context, child) => Offstage(
-        offstage: model.isFullscreen || model.overviewVisibility.value,
-        child: child,
+        builder: (context, child) => Offstage(
+          offstage: model.isFullscreen || model.overviewVisibility.value,
+          child: child,
+        ),
       ),
     );
   }

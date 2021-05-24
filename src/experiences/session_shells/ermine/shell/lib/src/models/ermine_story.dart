@@ -108,6 +108,10 @@ class ErmineStory {
   set fullscreen(bool value) => fullscreenNotifier.value = value;
   bool get isImmersive => fullscreenNotifier.value == true;
 
+  ValueNotifier<bool> hittestableNotifier = ValueNotifier(true);
+  bool get hittestable => hittestableNotifier.value;
+  set hittestable(bool value) => hittestableNotifier.value = value;
+
   void delete() {
     fuchsiaViewConnectionNotifier.value?.dispose();
     fuchsiaViewConnectionNotifier.value = null;
@@ -196,7 +200,7 @@ class ErmineStory {
     this.viewRef = viewRef;
     viewController = vc;
     viewController.viewRendered.addListener(onViewAvailable);
-    viewController?.didPresent();
+    viewController.didPresent();
   }
 
   void onViewAvailable() {
@@ -208,7 +212,7 @@ class ErmineStory {
   Future<void> requestFocus() async {
     // [requestFocus] is called for 'every' post render of ChildView widget,
     // even when that child view is not focused. Skip focusing those views here.
-    if (fuchsiaViewConnection == null || !focused) {
+    if (fuchsiaViewConnection == null || !focused || !hittestable) {
       return;
     }
 

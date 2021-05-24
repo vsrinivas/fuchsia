@@ -4,14 +4,13 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:tiler/tiler.dart' show Tiler, TileModel;
-import 'package:fuchsia_scenic_flutter/fuchsia_view.dart' show FuchsiaView;
 import 'package:ermine_ui/ermine_ui.dart' as ermine_ui;
+import 'package:flutter/material.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart' show FuchsiaView;
+import 'package:tiler/tiler.dart' show Tiler, TileModel;
 
 import '../../models/cluster_model.dart';
 import '../../models/ermine_story.dart';
-import 'post_render.dart';
 import 'tile_chrome.dart';
 import 'tile_sizer.dart';
 import 'tile_tab.dart';
@@ -68,46 +67,48 @@ class Cluster extends StatelessWidget {
                 animation: Listenable.merge([
                   story.nameNotifier,
                   story.focusedNotifier,
+                  story.hittestableNotifier,
                 ]),
                 builder: (context, child) => TileChrome(
                   name: story.name,
                   showTitle: !custom,
                   focused: story.focused,
-                  child: PostRender(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        FuchsiaView(controller: story.fuchsiaViewConnection),
-                        AnimatedBuilder(
-                            animation: Listenable.merge([
-                              story.childViewAvailableNotifier,
-                              isDelayOver
-                            ]),
-                            // Displays a loading indicator if the child view
-                            // is not available within [_kDelay] after launching
-                            // the element.
-                            builder: (context, child) {
-                              final isAvailable =
-                                  story.childViewAvailableNotifier.value;
-                              final showPlaceHolder = isDelayOver.value;
-                              if (!isAvailable && showPlaceHolder) {
-                                return Container(
-                                  alignment: Alignment.center,
-                                  child: ermine_ui.LoadingIndicator(
-                                    description: 'Launching ${story.name}...',
-                                  ),
-                                );
-                              } else if (!isAvailable && !showPlaceHolder) {
-                                Timer(Duration(milliseconds: _kDelay), () {
-                                  isDelayOver.value = true;
-                                });
-                              } else if (isAvailable) {
-                                isDelayOver.value = false;
-                              }
-                              return Offstage();
-                            }),
-                      ],
-                    ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      FuchsiaView(
+                        controller: story.fuchsiaViewConnection,
+                        hitTestable: story.hittestable,
+                      ),
+                      AnimatedBuilder(
+                          animation: Listenable.merge([
+                            story.childViewAvailableNotifier,
+                            isDelayOver,
+                          ]),
+                          // Displays a loading indicator if the child view
+                          // is not available within [_kDelay] after launching
+                          // the element.
+                          builder: (context, child) {
+                            final isAvailable =
+                                story.childViewAvailableNotifier.value;
+                            final showPlaceHolder = isDelayOver.value;
+                            if (!isAvailable && showPlaceHolder) {
+                              return Container(
+                                alignment: Alignment.center,
+                                child: ermine_ui.LoadingIndicator(
+                                  description: 'Launching ${story.name}...',
+                                ),
+                              );
+                            } else if (!isAvailable && !showPlaceHolder) {
+                              Timer(Duration(milliseconds: _kDelay), () {
+                                isDelayOver.value = true;
+                              });
+                            } else if (isAvailable) {
+                              isDelayOver.value = false;
+                            }
+                            return Offstage();
+                          }),
+                    ],
                   ),
                   onTap: story.focus,
                   onDelete: story.delete,

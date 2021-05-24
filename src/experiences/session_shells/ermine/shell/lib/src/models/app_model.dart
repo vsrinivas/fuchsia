@@ -215,6 +215,17 @@ class AppModel {
 
     alertsModel.addListener(onAlertChanged);
 
+    Listenable.merge([
+      statusVisibility,
+      askVisibility,
+      helpVisibility,
+    ]).addListener(() {
+      // Disable pointer hittesting on stories if overlays are visible.
+      for (final story in clustersModel.stories) {
+        story.hittestable = !overlaysVisible;
+      }
+    });
+
     // Add inspect data when requested.
     _inspect.onDemand('ermine', _onInspect);
 
