@@ -213,14 +213,14 @@ impl ProfileObserver {
 /// and the Profile Test Server. This node acts as a facade between the profile
 /// under test and the Test Server. If the PiconetMemberSpec passed in contains
 /// a Channel then PeerObserver events will be forwarded to that channel.
-/// Any `additional_capabilities` will be routed from the profile to above the
-/// test root - to be accessible in the test realm's outgoing directory.
+/// `additional_capabilities` specifies capability routings for any protocols used/exposed
+/// by the profile.
 async fn add_profile<'a>(
     builder: &mut RealmBuilder,
     spec: &'a mut PiconetMemberSpec,
     server_moniker: String,
     profile_url: String,
-    additional_capabilities: Vec<Capability>,
+    additional_capabilities: Vec<CapabilityRoute>,
 ) -> Result<(), Error> {
     let mock_piconet_member_name = interposer_name_for_profile(&spec.name);
     add_mock_piconet_component(
@@ -264,12 +264,8 @@ async fn add_profile<'a>(
             ],
         )?;
 
-        for capability in additional_capabilities {
-            builder.add_route(CapabilityRoute {
-                capability,
-                source: RouteEndpoint::component(spec.name.to_string()),
-                targets: vec![RouteEndpoint::AboveRoot],
-            })?;
+        for route in additional_capabilities {
+            builder.add_route(route)?;
         }
     }
     Ok(())
@@ -582,13 +578,15 @@ impl ProfileTestHarnessV2 {
         name: String,
         profile_url: String,
     ) -> Result<ProfileObserver, Error> {
-        self.add_profile_with_capabilities(name, profile_url, vec![]).await
+        self.add_profile_with_capabilities(name, profile_url, vec![], vec![]).await
     }
 
     /// Add a profile with moniker `name` to the test topology.
     /// The profile should be accessible via the provided `profile_url` and will be launched
     /// during the test.
-    /// `additional_capabilities` specifies any capabilities provided by the profile to be
+    /// `use_capabilities` specifies any capabilities used by the profile that will be
+    /// provided outside the test realm.
+    /// `expose_capabilities` specifies any capabilities provided by the profile to be
     /// available in the outgoing directory of the test realm root.
     ///
     /// Returns an observer for the launched profile.
@@ -596,10 +594,22 @@ impl ProfileTestHarnessV2 {
         &mut self,
         name: String,
         profile_url: String,
-        additional_capabilities: Vec<Capability>,
+        use_capabilities: Vec<Capability>,
+        expose_capabilities: Vec<Capability>,
     ) -> Result<ProfileObserver, Error> {
         let (mut spec, request_stream) = PiconetMemberSpec::for_profile(name);
-        self.add_profile_from_spec(&mut spec, profile_url, additional_capabilities).await?;
+        let mut caps = routes_from_capabilities(
+            use_capabilities,
+            RouteEndpoint::AboveRoot,
+            vec![RouteEndpoint::Component(spec.name.clone())],
+        );
+        caps.extend(routes_from_capabilities(
+            expose_capabilities,
+            RouteEndpoint::Component(spec.name.clone()),
+            vec![RouteEndpoint::AboveRoot],
+        ));
+
+        self.add_profile_from_spec(&mut spec, profile_url, caps).await?;
         Ok(ProfileObserver::new(request_stream, spec.id))
     }
 
@@ -607,17 +617,28 @@ impl ProfileTestHarnessV2 {
         &mut self,
         spec: &mut PiconetMemberSpec,
         profile_url: String,
-        additional_capabilities: Vec<Capability>,
+        capabilities: Vec<CapabilityRoute>,
     ) -> Result<(), Error> {
-        add_profile(
-            &mut self.builder,
-            spec,
-            self.ps_moniker.clone(),
-            profile_url,
-            additional_capabilities,
-        )
-        .await
+        add_profile(&mut self.builder, spec, self.ps_moniker.clone(), profile_url, capabilities)
+            .await
     }
+}
+
+/// Builds a set of capability routes from `capabilities` that will be routed from
+/// `source` to the `targets`.
+pub fn routes_from_capabilities(
+    capabilities: Vec<Capability>,
+    source: RouteEndpoint,
+    targets: Vec<RouteEndpoint>,
+) -> Vec<CapabilityRoute> {
+    capabilities
+        .into_iter()
+        .map(|capability| CapabilityRoute {
+            capability,
+            source: source.clone(),
+            targets: targets.clone(),
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -827,16 +848,19 @@ mod tests {
         let profile_name = "test-profile-member";
         let profile_moniker: Moniker = vec![profile_name.to_string()].into();
 
-        // Add a profile with a fake URL and some fake additional capabilities.
+        // Add a profile with a fake URL and some fake use & expose capabilities.
         let fake_cap1 = "Foo".to_string();
         let fake_cap2 = "Bar".to_string();
-        let additional_capabilities =
+        let expose_capabilities =
             vec![Capability::protocol(fake_cap1.clone()), Capability::protocol(fake_cap2.clone())];
+        let fake_cap3 = "Cat".to_string();
+        let use_capabilities = vec![Capability::protocol(fake_cap3.clone())];
         let _profile_member = test_harness
             .add_profile_with_capabilities(
                 profile_name.to_string(),
                 "fuchsia-pkg://fuchsia.com/example#meta/example.cm".to_string(),
-                additional_capabilities,
+                use_capabilities,
+                expose_capabilities,
             )
             .await
             .expect("failed to add profile");
@@ -863,9 +887,19 @@ mod tests {
             target: ExposeTarget::Parent,
             target_name: fake_capability_name2.clone(),
         });
+        // `Cat` is used by the profile and exposed from above the test root.
+        let fake_capability_name3 = CapabilityName(fake_cap3);
+        let fake_capability_offer3 = OfferDecl::Protocol(OfferProtocolDecl {
+            source: OfferSource::Parent,
+            source_name: fake_capability_name3.clone(),
+            target: OfferTarget::Child(profile_name.to_string()),
+            target_name: fake_capability_name3,
+            dependency_type: DependencyType::Strong,
+        });
 
         let root = topology.get_decl_mut(&vec![].into()).expect("unable to get root decl");
         assert!(root.exposes.contains(&fake_capability_expose1));
         assert!(root.exposes.contains(&fake_capability_expose2));
+        assert!(root.offers.contains(&fake_capability_offer3));
     }
 }

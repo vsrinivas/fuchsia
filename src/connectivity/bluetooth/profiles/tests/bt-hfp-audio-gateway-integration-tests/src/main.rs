@@ -169,6 +169,7 @@ async fn test_hfp_search_and_connect() {
         .add_profile_with_capabilities(
             HFP_AG_MONIKER.to_string(),
             HFP_AG_URL_V2.to_string(),
+            vec![],
             additional_capabilities,
         )
         .await
@@ -268,6 +269,7 @@ async fn test_hfp_full_slc_init_procedure() {
         .add_profile_with_capabilities(
             HFP_AG_MONIKER.to_string(),
             HFP_AG_URL_V2.to_string(),
+            vec![],
             additional_capabilities,
         )
         .await
