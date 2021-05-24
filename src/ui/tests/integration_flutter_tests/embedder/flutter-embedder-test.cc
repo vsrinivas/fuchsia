@@ -69,7 +69,7 @@ const std::vector<std::pair<const char*, const char*>> GetInjectedServices() {
 }
 
 TEST_F(FlutterEmbedderTests, BasicLegacyEmbedding) {
-  RunAppWithArgs(kParentViewUrl, {"--no-usePlatformView"});
+  RunAppWithArgs(kParentViewUrl, {"--no-useFuchsiaView"});
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(
@@ -82,7 +82,7 @@ TEST_F(FlutterEmbedderTests, BasicLegacyEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTests, HittestLegacyEmbedding) {
-  RunAppWithArgs(kParentViewUrl, {"--no-usePlatformView"});
+  RunAppWithArgs(kParentViewUrl, {"--no-useFuchsiaView"});
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -101,7 +101,7 @@ TEST_F(FlutterEmbedderTests, HittestLegacyEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTests, HittestDisabledLegacyEmbedding) {
-  RunAppWithArgs(kParentViewUrl, {"--no-hitTestable", "--no-usePlatformView"});
+  RunAppWithArgs(kParentViewUrl, {"--no-hitTestable", "--no-useFuchsiaView"});
 
   // Take screenshots until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -122,7 +122,7 @@ TEST_F(FlutterEmbedderTests, HittestDisabledLegacyEmbedding) {
 }
 
 TEST_F(FlutterEmbedderTests, BasicLegacyEmbeddingWithOverlay) {
-  RunAppWithArgs(kParentViewUrl, {"--showOverlay", "--no-usePlatformView"});
+  RunAppWithArgs(kParentViewUrl, {"--showOverlay", "--no-useFuchsiaView"});
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(
@@ -138,7 +138,7 @@ TEST_F(FlutterEmbedderTests, BasicLegacyEmbeddingWithOverlay) {
 }
 
 TEST_F(FlutterEmbedderTests, HittestLegacyEmbeddingWithOverlay) {
-  RunAppWithArgs(kParentViewUrl, {"--showOverlay", "--no-usePlatformView"});
+  RunAppWithArgs(kParentViewUrl, {"--showOverlay", "--no-useFuchsiaView"});
 
   // Take screenshot until we see the child-view's embedded color.
   ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
@@ -159,7 +159,7 @@ TEST_F(FlutterEmbedderTests, HittestLegacyEmbeddingWithOverlay) {
   }));
 }
 
-TEST_F(FlutterEmbedderTests, DISABLED_BasicPlatformViewEmbedding) {
+TEST_F(FlutterEmbedderTests, BasicFuchsiaViewEmbedding) {
   RunAppWithArgs(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -172,7 +172,7 @@ TEST_F(FlutterEmbedderTests, DISABLED_BasicPlatformViewEmbedding) {
       }));
 }
 
-TEST_F(FlutterEmbedderTests, DISABLED_HittestPlatformViewEmbedding) {
+TEST_F(FlutterEmbedderTests, HittestFuchsiaViewEmbedding) {
   RunAppWithArgs(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -191,7 +191,7 @@ TEST_F(FlutterEmbedderTests, DISABLED_HittestPlatformViewEmbedding) {
   }));
 }
 
-TEST_F(FlutterEmbedderTests, DISABLED_HittestDisabledPlatformViewEmbedding) {
+TEST_F(FlutterEmbedderTests, HittestDisabledFuchsiaViewEmbedding) {
   RunAppWithArgs(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -212,7 +212,7 @@ TEST_F(FlutterEmbedderTests, DISABLED_HittestDisabledPlatformViewEmbedding) {
       }));
 }
 
-TEST_F(FlutterEmbedderTests, DISABLED_BasicPlatformViewEmbeddingWithOverlay) {
+TEST_F(FlutterEmbedderTests, BasicFuchsiaViewEmbeddingWithOverlay) {
   RunAppWithArgs(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -228,7 +228,7 @@ TEST_F(FlutterEmbedderTests, DISABLED_BasicPlatformViewEmbeddingWithOverlay) {
       }));
 }
 
-TEST_F(FlutterEmbedderTests, DISABLED_HittestPlatformViewEmbeddingWithOverlay) {
+TEST_F(FlutterEmbedderTests, HittestFuchsiaViewEmbeddingWithOverlay) {
   RunAppWithArgs(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.

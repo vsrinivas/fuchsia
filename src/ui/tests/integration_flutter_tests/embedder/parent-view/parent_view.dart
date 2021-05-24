@@ -11,6 +11,7 @@ import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 
@@ -23,22 +24,18 @@ Future<void> main(List<String> args) async {
     ..addFlag('showOverlay', defaultsTo: false)
     ..addFlag('hitTestable', defaultsTo: true)
     ..addFlag('focusable', defaultsTo: true)
-    ..addFlag('usePlatformView', defaultsTo: true);
+    ..addFlag('useFuchsiaView', defaultsTo: true);
   final arguments = parser.parse(args);
   for (final option in arguments.options) {
     print('parent-view: $option: ${arguments[option]}');
   }
 
   final childViewToken = _launchApp(_kChildAppUrl);
-  final connection = ChildViewConnection(
-    childViewToken,
-    usePlatformView: arguments['usePlatformView'],
-  );
-
   runApp(MaterialApp(
     debugShowCheckedModeBanner: false,
     home: TestApp(
-      connection,
+      childViewToken,
+      useFuchsiaView: arguments['useFuchsiaView'],
       showOverlay: arguments['showOverlay'],
       hitTestable: arguments['hitTestable'],
       focusable: arguments['focusable'],
@@ -50,19 +47,23 @@ class TestApp extends StatelessWidget {
   static const _black = Color.fromARGB(255, 0, 0, 0);
   static const _blue = Color.fromARGB(255, 0, 0, 255);
 
-  final ChildViewConnection connection;
+  final FuchsiaViewConnection connection;
+  final ChildViewConnection legacyConnection;
   final bool showOverlay;
   final bool hitTestable;
   final bool focusable;
 
   final _backgroundColor = ValueNotifier(_blue);
 
-  TestApp(
-    this.connection, {
-    this.showOverlay = false,
-    this.hitTestable = true,
-    this.focusable = true,
-  });
+  TestApp(ViewHolderToken childViewToken,
+      {this.showOverlay = false,
+      this.hitTestable = true,
+      this.focusable = true,
+      bool useFuchsiaView = true})
+      : connection =
+            useFuchsiaView ? FuchsiaViewConnection(childViewToken) : null,
+        legacyConnection =
+            useFuchsiaView ? null : ChildViewConnection(childViewToken);
 
   @override
   Widget build(BuildContext context) {
@@ -79,11 +80,7 @@ class TestApp extends StatelessWidget {
                   FractionallySizedBox(
                     widthFactor: 0.33,
                     heightFactor: 0.33,
-                    child: ChildView(
-                      connection: connection,
-                      hitTestable: hitTestable,
-                      focusable: focusable,
-                    ),
+                    child: _buildChildView(),
                   ),
                   if (showOverlay)
                     FractionallySizedBox(
@@ -105,6 +102,20 @@ class TestApp extends StatelessWidget {
             );
           }),
     );
+  }
+
+  Widget _buildChildView() {
+    return (connection != null)
+        ? FuchsiaView(
+            controller: connection,
+            hitTestable: hitTestable,
+            focusable: focusable,
+          )
+        : ChildView(
+            connection: legacyConnection,
+            hitTestable: hitTestable,
+            focusable: focusable,
+          );
   }
 }
 
