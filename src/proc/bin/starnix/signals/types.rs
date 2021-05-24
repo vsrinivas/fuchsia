@@ -35,7 +35,7 @@ impl From<u32> for UncheckedSignal {
 #[derive(Debug, Clone)]
 pub struct Signal {
     /// The signal number, guaranteed to be a value between 1..=NUM_SIGNALS.
-    number: u32,
+    pub number: u32,
 
     /// The name of the signal, if one was supplied when the signal was constructed.
     name: &'static str,

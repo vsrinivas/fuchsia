@@ -23,6 +23,7 @@ use crate::logging::*;
 use crate::mm::MemoryManager;
 use crate::not_implemented;
 use crate::signals::types::*;
+use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::types::*;
 
 pub struct Kernel {
@@ -525,25 +526,42 @@ impl Task {
     }
 
     // TODO(lindkvist): Implement proper signal sending.
-    pub fn send_signal(&self, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
+    pub fn send_signal(&self, unchecked_signal: &UncheckedSignal) -> Result<SyscallResult, Errno> {
         // 0 is a sentinel value used to do permission checks.
         let sentinel_signal = UncheckedSignal::from(0);
         if *unchecked_signal == sentinel_signal {
-            return Ok(());
+            return Ok(SUCCESS);
         }
 
         let signal = Signal::try_from(unchecked_signal)?;
         if signal.mask() & *self.signal_mask.lock() == 0 {
-            if let Some(waiter_condvar) =
-                self.thread_group.kernel.scheduler.write().remove_suspended_task(self.id)
-            {
-                waiter_condvar.notify_all();
-            }
+            let signal_actions = self.thread_group.signal_actions.read();
+            // TODO(lindkvist): Handle default actions correctly.
+            return match signal_actions.get(&signal) {
+                SignalAction::Cont => {
+                    self.wake();
+                    Ok(SUCCESS)
+                }
+                SignalAction::Core => Ok(SyscallResult::Exit(1)),
+                SignalAction::Ignore => Ok(SUCCESS),
+                SignalAction::Stop => Ok(SyscallResult::Exit(1)),
+                SignalAction::Term => Ok(SyscallResult::Exit(1)),
+                SignalAction::Custom(action) => Ok(SyscallResult::HandleSignal(signal, *action)),
+            };
         } else {
             let mut scheduler = self.thread_group.kernel.scheduler.write();
             scheduler.add_pending_signal(self.id, signal);
         }
-        Ok(())
+        Ok(SUCCESS)
+    }
+
+    /// Wakes the task from call to `sigsuspend`.
+    pub fn wake(&self) {
+        if let Some(waiter_condvar) =
+            self.thread_group.kernel.scheduler.write().remove_suspended_task(self.id)
+        {
+            waiter_condvar.notify_all();
+        }
     }
 }
 

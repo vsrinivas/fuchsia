@@ -5,6 +5,7 @@
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use crate::signals::signal_handling::*;
 use crate::signals::*;
 use crate::syscalls::*;
 use crate::task::{Task, ThreadGroup};
@@ -247,8 +248,11 @@ pub fn sys_tgkill(
         return Err(EPERM);
     }
 
-    target.send_signal(&unchecked_signal)?;
+    target.send_signal(&unchecked_signal)
+}
 
+pub fn sys_rt_sigreturn(ctx: &mut SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    restore_from_signal_handler(ctx);
     Ok(SUCCESS)
 }
 
@@ -830,7 +834,7 @@ mod tests {
             let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
             let user_ref = UserRef::<sigset_t>::new(addr);
 
-            let sigset: sigset_t = !Signal::SIGPOLL.mask();
+            let sigset: sigset_t = !Signal::SIGCONT.mask();
             ctx.task.mm.write_object(user_ref, &sigset).expect("failed to set action");
 
             assert_eq!(
@@ -851,7 +855,7 @@ mod tests {
         }
 
         // Signal the suspended task with a signal that is not blocked (only SIGPOLL in this test).
-        let _ = sys_kill(&ctx, first_task_id, UncheckedSignal::from(SIGPOLL));
+        let _ = sys_kill(&ctx, first_task_id, UncheckedSignal::from(SIGCONT));
 
         // Wait for the sigsuspend to complete.
         let _ = thread.join();

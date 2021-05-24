@@ -28,6 +28,7 @@ use std::sync::Arc;
 use crate::auth::Credentials;
 use crate::fs::*;
 use crate::not_implemented;
+use crate::signals::signal_handling::*;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
@@ -121,6 +122,10 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
             Ok(SyscallResult::Success(return_value)) => {
                 strace!("-> {:#x}", return_value);
                 ctx.registers.rax = return_value;
+            }
+            Ok(SyscallResult::HandleSignal(signal, action)) => {
+                strace!("-> executing signal handler for: {:?}", signal);
+                dispatch_signal_handler(&mut ctx, signal, action);
             }
             Err(errno) => {
                 strace!("!-> {}", errno);
