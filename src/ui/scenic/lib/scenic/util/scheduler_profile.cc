@@ -41,7 +41,7 @@ zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx
   status = provider.GetDeadlineProfile(capacity.get(), deadline.get(), period.get(), "scenic/main",
                                        &fidl_status, &profile);
   if (status != ZX_OK || fidl_status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to request profile: " << status << ", " << fidl_status;
+    FX_LOGS(ERROR) << "Failed to request profile: " << status << ", " << fidl_status;
     return {};
   }
 

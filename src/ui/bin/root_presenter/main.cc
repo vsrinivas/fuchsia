@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<sys::ComponentContext> component_context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  root_presenter::App app(component_context.get(), [&loop] { loop.Quit(); });
+  root_presenter::App app(component_context.get(), loop.dispatcher());
 
   loop.Run();
   return 0;
