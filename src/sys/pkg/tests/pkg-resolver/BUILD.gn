@@ -788,10 +788,20 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":pkg-resolver-integration-tests",
-    "//src/sys/pkg/bin/pm:pm",
-  ]
+  public_deps = [ "//src/sys/pkg/bin/pm:pm" ]
+
+  if (!is_coverage) {
+    # TODO: Re-enable these tests in coverage builder when they are not flaky.
+    #
+    # Related bugs:
+    # https://fxbug.dev/76421
+    # https://fxbug.dev/77085
+    # https://fxbug.dev/77258
+    # https://fxbug.dev/77272
+    # https://fxbug.dev/77274
+    # https://fxbug.dev/77331
+    public_deps += [ ":pkg-resolver-integration-tests" ]
+  }
 }
 
 resource_tree("empty-repo") {
