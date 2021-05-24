@@ -160,7 +160,7 @@ impl ObjectManager {
         if let Some(associated_object) = associated_object {
             associated_object.will_apply_mutation(&mutation);
         }
-        object.apply_mutation(mutation, replay).await;
+        object.apply_mutation(mutation, checkpoint.file_offset, replay).await;
     }
 
     // Drops a transaction.  This is called automatically when a transaction is dropped.  If the
@@ -295,7 +295,7 @@ pub trait Mutations: Send + Sync {
     /// method will get called when the transaction commits, which can either be during live
     /// operation or during journal replay, in which case |replay| will be true.  Also see
     /// ObjectManager's apply_mutation method.
-    async fn apply_mutation(&self, mutation: Mutation, replay: bool);
+    async fn apply_mutation(&self, mutation: Mutation, log_offset: u64, replay: bool);
 
     /// Called when a transaction fails to commit.
     fn drop_mutation(&self, mutation: Mutation);

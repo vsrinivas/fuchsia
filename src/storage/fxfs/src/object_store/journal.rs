@@ -190,7 +190,9 @@ impl Journal {
             ObjectStore::new_empty(None, super_block.root_parent_store_object_id, filesystem);
 
         while let Some(item) = reader.next_item().await? {
-            root_parent.apply_mutation(Mutation::insert_object(item.key, item.value), true).await;
+            root_parent
+                .apply_mutation(Mutation::insert_object(item.key, item.value), 0, true)
+                .await;
         }
 
         {
@@ -548,8 +550,9 @@ impl Journal {
         // relies on written data being observable.
         root_parent_store.device().flush().await?;
 
-        // TODO(csuter): Here is the point where we should notify the allocator that it can now use
-        // pending deallocations so long as they've been written to the journal.
+        // Tell the allocator that we flushed the device so that it can now start using space that
+        // was deallocated.
+        self.objects.allocator().did_flush_device(journal_file_checkpoint.file_offset).await;
 
         let mut new_super_block = self.inner.lock().unwrap().super_block.clone();
         let old_checkpoint_offset = new_super_block.journal_checkpoint.file_offset;

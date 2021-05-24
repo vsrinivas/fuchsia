@@ -579,6 +579,9 @@ pub(super) async fn merge_into<K: Debug + OrdLowerBound, V: Debug>(
     if let Some(item) = mut_merge_iter.take_item() {
         mut_merge_iter.insert(item);
     }
+    if let RawIterator::Mut(mut iter) = mut_merge_iter.iter {
+        iter.commit_and_wait().await;
+    }
     Ok(())
 }
 

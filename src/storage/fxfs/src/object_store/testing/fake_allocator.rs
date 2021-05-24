@@ -80,11 +80,13 @@ impl Allocator for FakeAllocator {
     fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
         self
     }
+
+    async fn did_flush_device(&self, _flush_log_offset: u64) {}
 }
 
 #[async_trait]
 impl Mutations for FakeAllocator {
-    async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
+    async fn apply_mutation(&self, _mutation: Mutation, _log_offset: u64, _replay: bool) {}
 
     fn drop_mutation(&self, _mutation: Mutation) {}
 

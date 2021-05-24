@@ -202,14 +202,16 @@ mod tests {
         // Reopen the graveyard and check that we see the objects we added.
         let graveyard =
             Graveyard::open(&root_store, graveyard.object_id()).await.expect("open failed");
-        let layer_set = graveyard.store().tree().layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = graveyard.iter(&mut merger).await.expect("iter failed");
-        assert_eq!(iter.get().expect("missing entry"), (2, 3));
-        iter.advance().await.expect("advance failed");
-        assert_eq!(iter.get().expect("missing entry"), (3, 4));
-        iter.advance().await.expect("advance failed");
-        assert_eq!(iter.get(), None);
+        {
+            let layer_set = graveyard.store().tree().layer_set();
+            let mut merger = layer_set.merger();
+            let mut iter = graveyard.iter(&mut merger).await.expect("iter failed");
+            assert_eq!(iter.get().expect("missing entry"), (2, 3));
+            iter.advance().await.expect("advance failed");
+            assert_eq!(iter.get().expect("missing entry"), (3, 4));
+            iter.advance().await.expect("advance failed");
+            assert_eq!(iter.get(), None);
+        }
 
         // Remove one of the objects.
         let mut transaction =

@@ -233,6 +233,9 @@ pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
 
     /// Inserts the given item immediately prior to the item the iterator is currently pointing at.
     fn insert(&mut self, item: Item<K, V>);
+
+    /// Commits changes and waits for any existing readers to finish.
+    async fn commit_and_wait(&mut self);
 }
 
 /// Trait for writing new layers.

@@ -31,6 +31,7 @@ use {
     std::{
         any::Any,
         cmp::min,
+        collections::{HashMap, VecDeque},
         ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
     },
@@ -65,6 +66,10 @@ pub trait Allocator: Send + Sync {
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations>;
 
     fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
+
+    /// Called when the device has been flush and indicates what the journal log offset was when
+    /// that happened.
+    async fn did_flush_device(&self, flush_log_offset: u64);
 }
 
 // Our allocator implementation tracks extents with a reference count.  At time of writing, these
@@ -153,6 +158,15 @@ struct Inner {
     // This value is the up-to-date count of the number of allocated bytes whereas the value in
     // `info` is the value as it was when we last flushed.
     allocated_bytes: i64,
+    // Deallocations that are part of a transaction but haven't been committed yet.  This is keyed
+    // by the start of the range for the original deallocation request and serves as a way to find
+    // the entry in this hash when the allocation is committed, but isn't necessarily part of any
+    // range that is actually being deallocated.
+    uncommitted_deallocations: HashMap<u64, Vec<Range<u64>>>,
+    // Committed deallocations that we cannot use until they are flushed to the device.  Each entry
+    // in this list is the log file offset at which it was committed and an array of deallocations
+    // that occurred at that time.
+    committed_deallocations: VecDeque<(u64, Vec<Range<u64>>)>,
 }
 
 impl SimpleAllocator {
@@ -170,6 +184,8 @@ impl SimpleAllocator {
                 opened: false,
                 dropped_allocations: Vec::new(),
                 allocated_bytes: 0,
+                uncommitted_deallocations: HashMap::new(),
+                committed_deallocations: VecDeque::new(),
             }),
             allocation_lock: futures::lock::Mutex::new(()),
         }
@@ -357,6 +373,7 @@ impl Allocator for SimpleAllocator {
             .await
             .unwrap();
         let mut allocated_bytes_delta = 0;
+        let mut deallocs = Vec::new();
         while let Some(ItemRef {
             key: AllocatorKey { device_range, .. },
             value: AllocatorValue { delta, .. },
@@ -368,11 +385,17 @@ impl Allocator for SimpleAllocator {
             if *delta == 1 {
                 if let Some(overlap) = dealloc_range.intersect(&device_range) {
                     allocated_bytes_delta -= overlap.length() as i64;
+                    deallocs.push(overlap);
                 }
             }
             iter.advance().await.unwrap();
         }
         if allocated_bytes_delta != 0 {
+            self.inner
+                .lock()
+                .unwrap()
+                .uncommitted_deallocations
+                .insert(dealloc_range.start, deallocs);
             self.update_allocated_bytes_delta(transaction, allocated_bytes_delta);
         }
     }
@@ -384,23 +407,76 @@ impl Allocator for SimpleAllocator {
     fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
         self
     }
+
+    async fn did_flush_device(&self, flush_log_offset: u64) {
+        // First take out the deallocations that we now know to be flushed.  The list is maintained
+        // in order, so we can stop on the first entry that we find that should not be unreserved
+        // yet.
+        let deallocs = {
+            let mut inner = self.inner.lock().unwrap();
+            if let Some((index, _)) = inner
+                .committed_deallocations
+                .iter()
+                .enumerate()
+                .find(|(_, (dealloc_log_offset, _))| *dealloc_log_offset > flush_log_offset)
+            {
+                let mut deallocs = inner.committed_deallocations.split_off(index);
+                // Swap because we want the opposite of what split_off does.
+                std::mem::swap(&mut inner.committed_deallocations, &mut deallocs);
+                deallocs
+            } else {
+                std::mem::take(&mut inner.committed_deallocations)
+            }
+        };
+        // Now we can erase those elements from reserved_allocations (whilst we're not holding the
+        // lock on inner).
+        for (_, ranges) in deallocs {
+            for device_range in ranges {
+                self.reserved_allocations
+                    .erase(
+                        Item::new(AllocatorKey { device_range }, AllocatorValue { delta: 0 })
+                            .as_item_ref(),
+                    )
+                    .await;
+            }
+        }
+    }
 }
 
 #[async_trait]
 impl Mutations for SimpleAllocator {
-    async fn apply_mutation(&self, mutation: Mutation, replay: bool) {
+    async fn apply_mutation(&self, mutation: Mutation, log_offset: u64, replay: bool) {
         match mutation {
             Mutation::Allocator(AllocatorMutation(item)) => {
+                // We currently rely on barriers here between inserting/removing from reserved
+                // allocations and merging into the tree.  These barriers are present whilst we use
+                // skip_list_layer's commit_and_wait method, rather than just commit.
+                if !replay && item.value.delta < 0 {
+                    let deallocs = self
+                        .inner
+                        .lock()
+                        .unwrap()
+                        .uncommitted_deallocations
+                        .remove(&item.key.device_range.start)
+                        .unwrap();
+                    for device_range in deallocs.iter().cloned() {
+                        self.reserved_allocations
+                            .insert(AllocatorItem::new(
+                                AllocatorKey { device_range },
+                                AllocatorValue { delta: 1 },
+                            ))
+                            .await;
+                    }
+                    self.inner
+                        .lock()
+                        .unwrap()
+                        .committed_deallocations
+                        .push_back((log_offset, deallocs));
+                }
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item.clone(), &lower_bound).await;
-                // Whilst it might be tempting to just remove the item from reserved_allocations
-                // directly here, it's not safe to do so since there is no synchronisation with
-                // allocate that ensures it will definitely see the insertion if we've removed the
-                // item from reserved_allocations.  If we use dropped_allocations, then it is
-                // guaranteed because the merge_into above is observable when a new merger is
-                // created.
                 if item.value.delta > 0 {
-                    self.inner.lock().unwrap().dropped_allocations.push(item);
+                    self.reserved_allocations.erase(item.as_item_ref()).await;
                 }
             }
             // TODO(csuter): Since Seal and Compact are no longer being used for just trees, we
@@ -436,8 +512,16 @@ impl Mutations for SimpleAllocator {
 
     fn drop_mutation(&self, mutation: Mutation) {
         match mutation {
-            Mutation::Allocator(AllocatorMutation(item)) if item.value.delta > 0 => {
-                self.inner.lock().unwrap().dropped_allocations.push(item);
+            Mutation::Allocator(AllocatorMutation(item)) => {
+                if item.value.delta > 0 {
+                    self.inner.lock().unwrap().dropped_allocations.push(item);
+                } else {
+                    self.inner
+                        .lock()
+                        .unwrap()
+                        .uncommitted_deallocations
+                        .remove(&item.key.device_range.start);
+                }
             }
             _ => {}
         }

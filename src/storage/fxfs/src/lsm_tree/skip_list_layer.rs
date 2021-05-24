@@ -104,15 +104,16 @@ pub struct SkipListLayer<K, V> {
 }
 
 struct ReadCounts<K, V> {
-    // Readers can be in one of two epochs.  After a write, if there are nodes that need to be
-    // freed, and existing readers, the epoch changes and new readers will be in a new epoch.  When
-    // all the old readers finish, the nodes can be freed.
-    epoch: u8,
+    // After a write, if there are nodes that need to be freed, and existing readers, the epoch
+    // changes and new readers will be in a new epoch.  When all the old readers finish, the nodes
+    // can be freed.
+    epoch: u64,
 
-    // These are the counts of active readers for each epoch.
+    // We only allow two epochs to be live at any point in time.  These are the counts of active
+    // readers for each of those two epochs, and this is indexed by the lowest bit of epoch.
     counts: [u16; 2],
 
-    // This is the waker for a writer.
+    // A waker waiting for the read count to drop to zero.
     waker: Option<Waker>,
 
     // A list of nodes to be freed once the read counts have reached zero.
@@ -206,6 +207,9 @@ impl<K: Key, V: Value> Layer<K, V> for SkipListLayer<K, V> {
     }
 }
 
+// The methods here all use commit_and_wait (rather than just using commit via drop) for now because
+// it provides a barrier such that upon return, callers can assume that all other threads will see
+// the mutation.
 #[async_trait]
 impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer<K, V> {
     fn as_layer(self: Arc<Self>) -> Arc<dyn Layer<K, V>> {
@@ -221,6 +225,7 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
             assert_ne!(found_item.key, &item.key);
         }
         iter.insert(item);
+        iter.commit_and_wait().await;
     }
 
     // Replaces or inserts the given item.
@@ -232,6 +237,7 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
             }
         }
         iter.insert(item);
+        iter.commit_and_wait().await;
     }
 
     async fn merge_into(&self, item: Item<K, V>, lower_bound: &K, merge_fn: MergeFn<K, V>) {
@@ -254,8 +260,8 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
 struct SkipListLayerIter<'a, K, V> {
     skip_list: &'a SkipListLayer<K, V>,
 
-    // The epoch for the reader count.
-    epoch: usize,
+    // The epoch for this reader.
+    epoch: u64,
 
     // The current node.
     node: Option<&'a SkipListNode<K, V>>,
@@ -265,9 +271,9 @@ impl<'a, K: OrdUpperBound, V> SkipListLayerIter<'a, K, V> {
     fn new(skip_list: &'a SkipListLayer<K, V>, bound: Bound<&K>) -> Self {
         let epoch = {
             let mut read_counts = skip_list.read_counts.lock().unwrap();
-            let epoch = read_counts.epoch as usize;
-            read_counts.counts[epoch] += 1;
-            epoch
+            let index = (read_counts.epoch & 1) as usize;
+            read_counts.counts[index] += 1;
+            read_counts.epoch
         };
         let (included, key) = match bound {
             Bound::Unbounded => {
@@ -304,14 +310,13 @@ impl<'a, K: OrdUpperBound, V> SkipListLayerIter<'a, K, V> {
 
 impl<K, V> Drop for SkipListLayerIter<'_, K, V> {
     fn drop(&mut self) {
-        if self.epoch != usize::MAX {
-            let mut read_counts = self.skip_list.read_counts.lock().unwrap();
-            read_counts.counts[self.epoch] -= 1;
-            if read_counts.counts[self.epoch] == 0 && read_counts.epoch != self.epoch as u8 {
-                read_counts.free_erase_list(self.skip_list);
-                if let Some(waker) = read_counts.waker.take() {
-                    waker.wake();
-                }
+        let mut read_counts = self.skip_list.read_counts.lock().unwrap();
+        let index = (self.epoch & 1) as usize;
+        read_counts.counts[index] -= 1;
+        if read_counts.counts[index] == 0 && read_counts.epoch != self.epoch {
+            read_counts.free_erase_list(self.skip_list);
+            if let Some(waker) = read_counts.waker.take() {
+                waker.wake();
             }
         }
     }
@@ -373,7 +378,7 @@ impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
         // Before we proceed, we should wait for any old readers on the other epoch to finish.
         poll_fn(|cx| {
             let mut read_counts = skip_list.read_counts.lock().unwrap();
-            if read_counts.counts[1 - read_counts.epoch as usize] == 0 {
+            if read_counts.counts[(read_counts.epoch & 1 ^ 1) as usize] == 0 {
                 Poll::Ready(())
             } else {
                 read_counts.waker = Some(cx.waker().clone());
@@ -429,12 +434,16 @@ impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
     }
 }
 
-impl<K, V> Drop for SkipListLayerIterMut<'_, K, V> {
-    fn drop(&mut self) {
+impl<K, V> SkipListLayerIterMut<'_, K, V> {
+    // Commits the changes but doesn't wait for readers to finish.  Returns the new epoch if the
+    // epoch changed.  If `force_epoch_change` is true, the epoch will be changed if there are
+    // existing readers even if it is not necessary (because no elements need to be freed); this
+    // gives callers a mechanism to wait for existing readers to finish.
+    fn commit(&mut self, force_epoch_change: bool) -> Option<u64> {
         // Splice the changes into the list.
         let prev_pointers = match self.insertion_point.take() {
             Some(prev_pointers) => prev_pointers,
-            None => return,
+            None => return None,
         };
 
         // Keep track of the first node that we might need to erase later.
@@ -459,17 +468,31 @@ impl<K, V> Drop for SkipListLayerIterMut<'_, K, V> {
 
         // Switch the epoch so that we can track when existing readers have finished.
         let mut read_counts = self.skip_list.read_counts.lock().unwrap();
+        let has_readers = read_counts.counts[(read_counts.epoch & 1) as usize] > 0;
         if let Some(start) = maybe_erase {
             let end = self.prev_pointers[0].get_ptr(0);
             if start as *mut _ != end {
                 read_counts.erase_list = start..end;
-                if read_counts.counts[read_counts.epoch as usize] == 0 {
-                    read_counts.free_erase_list(self.skip_list);
+                if has_readers {
+                    read_counts.epoch = read_counts.epoch.wrapping_add(1);
+                    return Some(read_counts.epoch);
                 } else {
-                    read_counts.epoch = 1 - read_counts.epoch;
+                    read_counts.free_erase_list(self.skip_list);
                 }
             }
         }
+        if force_epoch_change && has_readers {
+            read_counts.erase_list = std::ptr::null_mut()..std::ptr::null_mut();
+            read_counts.epoch = read_counts.epoch.wrapping_add(1);
+            return Some(read_counts.epoch);
+        }
+        None
+    }
+}
+
+impl<K, V> Drop for SkipListLayerIterMut<'_, K, V> {
+    fn drop(&mut self) {
+        self.commit(false);
     }
 }
 
@@ -564,6 +587,21 @@ impl<K: Key + Clone, V: Value + Clone> LayerIteratorMut<K, V> for SkipListLayerI
             }
         }
     }
+
+    async fn commit_and_wait(&mut self) {
+        if let Some(epoch) = self.commit(true) {
+            poll_fn(|cx| {
+                let mut read_counts = self.skip_list.read_counts.lock().unwrap();
+                if read_counts.counts[(epoch & 1 ^ 1) as usize] > 0 {
+                    read_counts.waker = Some(cx.waker().clone());
+                    Poll::Pending
+                } else {
+                    Poll::Ready(())
+                }
+            })
+            .await;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -581,9 +619,12 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
-        futures::{future::join_all, join},
-        std::ops::Bound,
-        std::time::{Duration, Instant},
+        futures::{channel::oneshot::channel, future::join_all, join},
+        std::{
+            ops::Bound,
+            sync::Mutex,
+            time::{Duration, Instant},
+        },
     };
 
     #[derive(
@@ -1041,5 +1082,29 @@ mod tests {
                 })
             );
         }
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_commit_and_wait_waits() {
+        let skip_list = SkipListLayer::new(100);
+        let (send, recv) = channel();
+        let writer_done = Mutex::new(false);
+        join!(
+            async {
+                recv.await.unwrap();
+                let mut iter =
+                    SkipListLayerIterMut::new(&skip_list, std::ops::Bound::Unbounded).await;
+                iter.insert(Item::new(TestKey(1), 2));
+                iter.commit_and_wait().await;
+                *writer_done.lock().unwrap() = true;
+            },
+            async {
+                let _iter = skip_list.seek(Bound::Unbounded).await.unwrap();
+                send.send(()).unwrap();
+                // This is a halting problem so all we can do is sleep.
+                fasync::Timer::new(Duration::from_millis(100)).await;
+                assert_eq!(*writer_done.lock().unwrap(), false);
+            }
+        );
     }
 }

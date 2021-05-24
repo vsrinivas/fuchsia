@@ -539,7 +539,7 @@ impl ObjectStore {
 
 #[async_trait]
 impl Mutations for ObjectStore {
-    async fn apply_mutation(&self, mutation: Mutation, replay: bool) {
+    async fn apply_mutation(&self, mutation: Mutation, _log_offset: u64, replay: bool) {
         // It's not safe to fully open a store until replay is fully complete (because
         // subsequent mutations could render current records invalid). The exception to
         // this is the root parent object store which contains the extents for the journal
