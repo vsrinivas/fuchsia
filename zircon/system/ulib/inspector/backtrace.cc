@@ -151,6 +151,12 @@ static std::vector<Frame> unwind_from_shadow_call_stack(zx_handle_t process, zx_
   // below.
   uint64_t lr = regs.lr;
 
+  // If the SCS isn't setup yet, r18 will be 0.
+  if (!regs.r[18]) {
+    frames.push_back({lr, "from lr"});
+    return frames;
+  }
+
   // ssp points to the last entry in the SCS. r18 points to the next free slot in the SCS.
   uint64_t ssp = regs.r[18] - 8;
   uint64_t scs_page[PAGE_SIZE / 8];
