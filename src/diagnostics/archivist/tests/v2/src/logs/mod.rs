@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod attribution;
+mod crash;
 mod lifecycle;
 mod redaction;
 mod sorting;

@@ -36,6 +36,22 @@ rustc_binary("log_and_exit_component_bin") {
   sources = [ "src/log_and_exit.rs" ]
 }
 
+rustc_binary("log_and_crash_component_bin") {
+  testonly = true
+  output_name = "log_and_crash"
+  edition = "2018"
+  source_root = "src/log_and_crash.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+
+  sources = [ "src/log_and_crash.rs" ]
+}
+
 fuchsia_component("stub_inspect_component") {
   testonly = true
   deps = [ ":stub_inspect_component_bin" ]
@@ -55,10 +71,18 @@ fuchsia_component("log_and_exit_component") {
   manifest = "meta/log-and-exit.cml"
 }
 
+fuchsia_component("log_and_crash_component") {
+  component_name = "log-and-crash"
+  testonly = true
+  deps = [ ":log_and_crash_component_bin" ]
+  manifest = "meta/log-and-crash.cml"
+}
+
 group("components") {
   testonly = true
   deps = [
     ":component_with_children",
+    ":log_and_crash_component",
     ":log_and_exit_component",
     ":stub_inspect_component",
   ]

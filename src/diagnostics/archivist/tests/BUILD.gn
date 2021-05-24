@@ -12,7 +12,6 @@ group("tests") {
     "logs-basic-integration",
     "logs-budget",
     "logs-connector",
-    "logs-from-crash",
     "logs-stop",
     "logs-unattributed-sinks",
     "logs/cpp:test-spec",
