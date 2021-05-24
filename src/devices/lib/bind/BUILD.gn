@@ -72,6 +72,7 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/bind_composite.rs",
     "src/bind_library.rs",
     "src/bind_program.rs",
     "src/bind_program_v2_constants.rs",

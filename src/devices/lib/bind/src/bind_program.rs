@@ -136,7 +136,7 @@ fn if_statement(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> 
     Ok((to, Statement::If { span, blocks, else_block }))
 }
 
-fn statement_block(input: NomSpan) -> IResult<NomSpan, Vec<Statement>, BindParserError> {
+pub fn statement_block(input: NomSpan) -> IResult<NomSpan, Vec<Statement>, BindParserError> {
     let block_start = ws(map_err(tag("{"), BindParserError::IfBlockStart));
     let block_end = ws(map_err(tag("}"), BindParserError::IfBlockEnd));
     delimited(block_start, many1(ws(statement)), block_end)(input)

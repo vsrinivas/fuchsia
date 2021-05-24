@@ -128,8 +128,20 @@ impl From<BindParserError> for UserError {
                 Some(span),
                 false,
             ),
+            BindParserError::NoNodes(span) => UserError::new(
+                "E028",
+                "Composite bind rules must contain at least one node.",
+                Some(span),
+                false,
+            ),
             BindParserError::Eof(span) => {
                 UserError::new("E025", "Expected end of file.", Some(span), false)
+            }
+            BindParserError::CompositeKeyword(span) => {
+                UserError::new("E029", "Expected 'fragment' keyword.", Some(span), false)
+            }
+            BindParserError::NodeKeyword(span) => {
+                UserError::new("E030", "Expected 'fragment' keyword.", Some(span), false)
             }
             BindParserError::UnterminatedComment => {
                 UserError::new("E023", "Found an unterminated multiline comment.", None, false)

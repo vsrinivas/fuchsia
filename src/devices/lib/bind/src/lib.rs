@@ -5,6 +5,7 @@
 // This crate doesn't comply with all 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
 
+pub mod bind_composite;
 pub mod bind_library;
 mod bind_program;
 pub mod bind_program_v2_constants;

@@ -114,7 +114,10 @@ pub enum BindParserError {
     TrueKeyword(String),
     FalseKeyword(String),
     NoStatements(String),
+    NoNodes(String),
     Eof(String),
+    CompositeKeyword(String),
+    NodeKeyword(String),
     UnterminatedComment,
     Unknown(String, ErrorKind),
 }
