@@ -336,13 +336,6 @@ additional system predictability for benchmarking or other workloads.
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 
-## kernel.page-scanner.promote-no-clones=\<bool>
-
-This option, false by default, allows the scanner to evict first the pages owned
-by pager backed VMOs with no clones. VMOs with no clones are meant to approximate
-inactive VMOs. Evicting inactive pages first is expected to free up memory that
-remains free for longer, and can be more effective at relieving memory pressure.
-
 ## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial
