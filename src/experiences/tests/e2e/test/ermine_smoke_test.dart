@@ -41,8 +41,10 @@ void main() {
   });
 
   test('Text input, pointer input and keyboard shortcut', () async {
+    print('Launching terminal...');
     await ermine.enterTextInAsk('terminal', gotoOverview: true);
 
+    print('Verifying terminal in Ask results...');
     // Verify the auto-complete list has terminal in it.
     final terminalFinder = find.descendant(
       of: find.byType('AskSuggestionList'),
@@ -52,13 +54,21 @@ void main() {
     final askResult = await ermine.driver.getText(terminalFinder);
     expect(askResult, 'terminal');
 
+    print('Tap on terminal Ask result');
     // Tap on 'terminal' auto-complete result.
     final center = await ermine.driver.getCenter(terminalFinder);
     await ermine.tap(center);
 
+    print('Verifying terminal view is visible');
     // Check that terminal was launched.
     expect(await ermine.isRunning(terminalUrl), isTrue);
+    expect(await ermine.waitForView(terminalUrl), isNotNull);
 
+    print('Tap in the center of terminal to set input focus');
+    final terminalCenter = await ermine.driver.getCenter(find.text('terminal'));
+    await ermine.tap(terminalCenter);
+
+    print('Verifying Meta+w shortcut is closing terminal');
     // Use keyboard shortcut to close terminal.
     await ermine.twoKeyShortcut(Key.leftMeta, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks();
