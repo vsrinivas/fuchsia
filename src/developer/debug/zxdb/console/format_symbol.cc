@@ -268,7 +268,7 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
 
   out.Append(Syntax::kHeading, "\n  DWARF tag: ");
   out.Append(DwarfTagToString(type->tag(), true) + "\n");
-  out.Append(FormatCompilationUnitAndModule(1, type));
+  out.Append(FormatCompilationUnitAndModule(0, type));
   out.Append(Syntax::kHeading, "  Byte size: ");
   out.Append(std::to_string(type->byte_size()) + "\n");
 
@@ -277,6 +277,9 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
     out.Append(Syntax::kHeading, "  DWARF base type: ");
     out.Append(BaseType::BaseTypeToString(base_type->base_type(), true) + "\n");
   } else if (const Collection* collection = type->AsCollection()) {
+    out.Append(Syntax::kHeading, "  Calling convention: ");
+    out.Append(Collection::CallingConventionToString(collection->calling_convention()));
+    out.Append("\n");
     out.Append(FormatCollectionMembers(process_symbols, collection));
   } else if (const ModifiedType* modified = type->AsModifiedType()) {
     if (modified->tag() == DwarfTag::kTypedef) {

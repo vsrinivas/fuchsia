@@ -19,7 +19,7 @@ class Collection final : public Type {
 
   // Heuristically-derived special type of a collection.
   enum SpecialType {
-    // Not known to be special, a normal union, struct, or class.
+    // Not known to be special: a normal union, struct, or class.
     kNotSpecial = 0,
 
     // In Rust enums are represented as collections with a variant part. See variant_part() below.
@@ -45,6 +45,15 @@ class Collection final : public Type {
     //   let h = FileHandle(1);
     kRustTupleStruct
   };
+
+  // The values are the DW_CC_* calling conventions from DWARF. The other values don't apply to
+  // collections.
+  enum CallingConvention {
+    kNormalCall = 1,  // Default or unspecified.
+    kPassByReference = 4,
+    kPassByValue = 5,
+  };
+  static const char* CallingConventionToString(CallingConvention cc);
 
   // Symbol overrides.
   const Collection* AsCollection() const override;
@@ -75,6 +84,9 @@ class Collection final : public Type {
   const std::vector<LazySymbol>& template_params() const { return template_params_; }
   void set_template_params(std::vector<LazySymbol> p) { template_params_ = std::move(p); }
 
+  CallingConvention calling_convention() const { return calling_convention_; }
+  void set_calling_convention(CallingConvention cc) { calling_convention_ = cc; }
+
   // Heuristic that attempts to determine whether this collection has special
   // meaning in the current programming language.
   SpecialType GetSpecialType() const;
@@ -103,6 +115,7 @@ class Collection final : public Type {
   LazySymbol variant_part_;
   std::vector<LazySymbol> inherited_from_;
   std::vector<LazySymbol> template_params_;
+  CallingConvention calling_convention_ = kNormalCall;
 
   // Lazily computed special type of this collection.
   mutable std::optional<SpecialType> special_type_;

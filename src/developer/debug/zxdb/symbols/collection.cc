@@ -16,6 +16,18 @@ Collection::Collection(DwarfTag tag, std::string name) : Type(tag) {
 
 Collection::~Collection() = default;
 
+const char* Collection::CallingConventionToString(CallingConvention cc) {
+  switch (cc) {
+    case kNormalCall:
+      return "DW_CC_normal";
+    case kPassByReference:
+      return "DW_CC_pass_by_reference";
+    case kPassByValue:
+      return "DW_CC_pass_by_value";
+  }
+  return "<invalid>";
+}
+
 const Collection* Collection::AsCollection() const { return this; }
 
 Collection::SpecialType Collection::GetSpecialType() const {

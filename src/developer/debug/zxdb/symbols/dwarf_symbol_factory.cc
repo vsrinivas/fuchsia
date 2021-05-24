@@ -448,6 +448,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
   llvm::Optional<bool> is_declaration;
   decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
 
+  llvm::Optional<uint64_t> calling_convention;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_calling_convention, &calling_convention);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -489,6 +492,15 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
   result->set_variant_part(variant_part);
   if (is_declaration)
     result->set_is_declaration(*is_declaration);
+
+  if (calling_convention) {
+    if (*calling_convention == Collection::kNormalCall ||
+        *calling_convention == Collection::kPassByReference ||
+        *calling_convention == Collection::kPassByValue) {
+      result->set_calling_convention(
+          static_cast<Collection::CallingConvention>(*calling_convention));
+    }
+  }
 
   if (parent)
     result->set_parent(MakeUncachedLazy(parent));

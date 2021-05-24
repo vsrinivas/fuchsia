@@ -110,7 +110,8 @@ TEST(FormatSymbol, Collection) {
   const char kExpectedHeader[] =
       "Type: MyStruct\n"
       "  DWARF tag: DW_TAG_structure_type (0x13)\n"
-      "  Byte size: 12\n";
+      "  Byte size: 12\n"
+      "  Calling convention: DW_CC_normal\n";
   const char kMembers[] =  // Split off to allow re-use below.
       "  Members:\n"
       "       Offset Size Name         Type\n"
