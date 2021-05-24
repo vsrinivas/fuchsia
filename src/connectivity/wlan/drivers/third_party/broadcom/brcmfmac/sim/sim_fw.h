@@ -299,8 +299,14 @@ class SimFirmware {
   zx_status_t IovarRxchainGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarSnrGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarSsidSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarStbcTxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                             size_t value_len);
+  zx_status_t IovarStbcTxGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarTlvSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
   zx_status_t IovarTlvGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarTxstreamsSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                size_t value_len);
+  zx_status_t IovarTxstreamsGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarVerGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarVhtModeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarWmeAcStaGet(uint16_t ifidx, void* value_out, size_t value_len);
@@ -567,6 +573,8 @@ class SimFirmware {
   uint32_t mchan_ = 1;  // This feature is enabled by default in firmware.
   uint32_t ampdu_ba_wsize_ = 64;
   uint32_t fakefrag_ = 0;
+  int32_t stbc_tx_ = 0;     // 0 = disabled, 1 = enabled, -1 = auto
+  uint32_t txstreams_ = 1;  // Number of Tx streams
 
   std::unordered_map<std::string, SimIovar> iovar_table_;
 };

@@ -161,6 +161,28 @@ TEST_F(FirmwareConfigTest, MchanDisabledSoftAp) {
   EXPECT_EQ(kMchanState, iovar);
 }
 
+TEST_F(FirmwareConfigTest, StbcTxAndTxstreams) {
+  Init();
+
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, 0);
+  int32_t stbc_tx = 1;
+  // Since default txstreams is 1, setting stbc_tx to 1 should fail
+  zx_status_t status = brcmf_fil_iovar_int_set(ifp, "stbc_tx", stbc_tx, nullptr);
+  EXPECT_NE(status, ZX_OK);
+  // Since default txstreams is 1, setting stbc_tx to 0 should succeed
+  stbc_tx = 0;
+  status = brcmf_fil_iovar_int_set(ifp, "stbc_tx", stbc_tx, nullptr);
+  EXPECT_EQ(status, ZX_OK);
+  // Now set txstreams to 2
+  uint32_t txstreams = 2;
+  status = brcmf_fil_iovar_int_set(ifp, "txstreams", txstreams, nullptr);
+  EXPECT_EQ(status, ZX_OK);
+  // Since txstreams is now 2, setting stbc_tx to 1 should succeed
+  stbc_tx = 1;
+  status = brcmf_fil_iovar_int_set(ifp, "stbc_tx", stbc_tx, nullptr);
+  EXPECT_EQ(status, ZX_OK);
+}
+
 }  // namespace
 }  // namespace brcmfmac
 }  // namespace wlan

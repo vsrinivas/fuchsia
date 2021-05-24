@@ -5,14 +5,14 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 
 #include <optional>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
@@ -85,7 +85,7 @@ constexpr wifi_config_t wifi_config = {
     .iovar_table =
         {
             {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
-            {IOVAR_STR_TYPE, {"stbc_tx"}, 1},
+            {IOVAR_STR_TYPE, {"stbc_tx"}, 0},  // since tx_streams is 1
             {IOVAR_STR_TYPE, {"stbc_rx"}, 1},
             {IOVAR_CMD_TYPE, {.iovar_cmd = BRCMF_C_SET_PM}, 0},
             {IOVAR_CMD_TYPE, {.iovar_cmd = BRCMF_C_SET_FAKEFRAG}, 1},

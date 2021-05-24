@@ -93,7 +93,7 @@ constexpr wifi_config_t wifi_config = {
     .iovar_table =
         {
             {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
-            {IOVAR_STR_TYPE, {"stbc_tx"}, 1},
+            {IOVAR_STR_TYPE, {"stbc_tx"}, 0},  // since tx_streams is 1
             {IOVAR_STR_TYPE, {"stbc_rx"}, 1},
             {IOVAR_CMD_TYPE, {.iovar_cmd = BRCMF_C_SET_PM}, 0},
             {IOVAR_CMD_TYPE, {.iovar_cmd = BRCMF_C_SET_FAKEFRAG}, 1},

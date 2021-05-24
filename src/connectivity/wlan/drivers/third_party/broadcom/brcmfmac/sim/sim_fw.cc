@@ -114,7 +114,10 @@ static const IovarMetadata kIovarInfoTable[] = {
     {"rxchain", sizeof(uint32_t), nullptr, &SimFirmware::IovarRxchainGet},
     {"snr", sizeof(int32_t), nullptr, &SimFirmware::IovarSnrGet},
     {"ssid", sizeof(brcmf_ssid_le), &SimFirmware::IovarSsidSet, nullptr},
+    {"stbc_tx", sizeof(int32_t), &SimFirmware::IovarStbcTxSet, &SimFirmware::IovarStbcTxGet},
     {"tlv", sizeof(uint32_t), &SimFirmware::IovarTlvSet, &SimFirmware::IovarTlvGet},
+    {"txstreams", sizeof(uint32_t), &SimFirmware::IovarTxstreamsSet,
+     &SimFirmware::IovarTxstreamsGet},
     {"ver", strlen(kFirmwareVer) + 1, nullptr, &SimFirmware::IovarVerGet},
     {"vht_mode", sizeof(uint32_t), nullptr, &SimFirmware::IovarVhtModeGet},
     {"wme_ac_sta", sizeof(edcf_acparam_t) * 4, nullptr, &SimFirmware::IovarWmeAcStaGet},
@@ -2042,6 +2045,46 @@ zx_status_t SimFirmware::IovarBcnTimeoutSet(uint16_t ifidx, int32_t bsscfgidx, c
 zx_status_t SimFirmware::IovarBcnTimeoutGet(uint16_t ifidx, void* value_out, size_t value_len) {
   BRCMF_DBG(SIM, "get Beacon Timeout value: %u", beacon_timeout_);
   memcpy(value_out, &beacon_timeout_, sizeof(uint32_t));
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarStbcTxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                        size_t value_len) {
+  auto stbc_tx = reinterpret_cast<const int32_t*>(value);
+  if (*stbc_tx != -1 && *stbc_tx != 0 && *stbc_tx != 1) {
+    BRCMF_ERR("stbc_tx: %d has to be 0, 1 or -1", *stbc_tx);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (txstreams_ == 1 && *stbc_tx == 1) {
+    BRCMF_ERR("stbc_tx cannot be set to 1 when txstreams is 1");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  stbc_tx_ = *stbc_tx;
+  BRCMF_DBG(SIM, "set stbc tx value: %u", stbc_tx_);
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarStbcTxGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  BRCMF_DBG(SIM, "get stbc_tx value: %u", stbc_tx_);
+  memcpy(value_out, &stbc_tx_, sizeof(int32_t));
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarTxstreamsSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                           size_t value_len) {
+  auto txstreams = reinterpret_cast<const uint32_t*>(value);
+  if (*txstreams >= 1) {
+    txstreams_ = *txstreams;
+    BRCMF_DBG(SIM, "set txstreams value: %u", *txstreams);
+    return ZX_OK;
+  }
+  BRCMF_ERR("txstreams: %d has to be atleast >= 1", *txstreams);
+  return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t SimFirmware::IovarTxstreamsGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  BRCMF_DBG(SIM, "get txstreams value: %u", txstreams_);
+  memcpy(value_out, &txstreams_, sizeof(uint32_t));
   return ZX_OK;
 }
 
