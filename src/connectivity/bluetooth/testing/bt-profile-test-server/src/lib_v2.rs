@@ -69,12 +69,13 @@ fn mock_profile_service_path(mock: &PiconetMemberSpec) -> String {
 }
 
 pub struct PiconetMember {
+    id: bt_types::PeerId,
     profile_svc: bredr::ProfileProxy,
 }
 
 impl PiconetMember {
-    pub fn new(profile_service: bredr::ProfileProxy) -> Self {
-        Self { profile_svc: profile_service }
+    pub fn peer_id(&self) -> bt_types::PeerId {
+        self.id
     }
 
     pub fn new_from_spec(
@@ -82,6 +83,7 @@ impl PiconetMember {
         realm: &RealmInstance,
     ) -> Result<Self, anyhow::Error> {
         Ok(Self {
+            id: mock.id,
             profile_svc: mock
                 .get_profile_proxy(realm)
                 .context("failed to open mock's profile proxy")?,
@@ -136,12 +138,16 @@ impl PiconetMember {
 /// Helper designed to observe what a real profile implementation is doing.
 pub struct ProfileObserver {
     observer_stream: bredr::PeerObserverRequestStream,
-    pub profile_id: bt_types::PeerId,
+    profile_id: bt_types::PeerId,
 }
 
 impl ProfileObserver {
     pub fn new(stream: bredr::PeerObserverRequestStream, id: bt_types::PeerId) -> Self {
         Self { observer_stream: stream, profile_id: id }
+    }
+
+    pub fn peer_id(&self) -> bt_types::PeerId {
+        self.profile_id
     }
 
     /// Expects a request over the PeerObserver protocol for this MockPeer.

@@ -65,7 +65,7 @@ async fn test_avrcp_target_service_advertisement() -> Result<(), Error> {
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
     let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } =
         service_found_fut.await?;
-    assert_eq!(profile_observer.profile_id, peer_id.into());
+    assert_eq!(profile_observer.peer_id(), peer_id.into());
     responder.send()?;
 
     Ok(())
@@ -88,7 +88,7 @@ async fn test_avrcp_controller_service_advertisement() -> Result<(), Error> {
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
     let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } =
         service_found_fut.await?;
-    assert_eq!(profile_observer.profile_id, peer_id.into());
+    assert_eq!(profile_observer.peer_id(), peer_id.into());
     responder.send()?;
 
     Ok(())
@@ -126,7 +126,7 @@ async fn test_avrcp_search_and_connect() -> Result<(), Error> {
     // We then expect AVRCP to attempt to connect to Peer #1.
     let _channel = match connect_requests.select_next_some().await? {
         bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
-            assert_eq!(profile_observer.profile_id, peer_id.into());
+            assert_eq!(profile_observer.peer_id(), peer_id.into());
             channel
         }
     };
@@ -166,7 +166,7 @@ async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
     // We then expect AVRCP to attempt to connect to Peer #1.
     match connect_requests.select_next_some().await? {
         bredr::ConnectionReceiverRequest::Connected { peer_id, .. } => {
-            assert_eq!(profile_observer.profile_id, peer_id.into());
+            assert_eq!(profile_observer.peer_id(), peer_id.into());
         }
     };
 
@@ -181,7 +181,7 @@ async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
         ..bredr::L2capParameters::new_empty()
     };
     let params = bredr::ConnectParameters::L2cap(l2cap);
-    let channel = peer1.make_connection(profile_observer.profile_id, params).await?;
+    let channel = peer1.make_connection(profile_observer.peer_id(), params).await?;
     let channel: Channel = channel.try_into()?;
 
     // The observer of bt-avrcp.cm should be notified of the connection attempt.
@@ -245,7 +245,7 @@ async fn test_remote_initiates_browse_channel_before_control() -> Result<(), Err
     // We then expect AVRCP to attempt to connect to Peer #1.
     match connect_requests.select_next_some().await? {
         bredr::ConnectionReceiverRequest::Connected { peer_id, .. } => {
-            assert_eq!(profile_observer.profile_id, peer_id.into());
+            assert_eq!(profile_observer.peer_id(), peer_id.into());
         }
     };
     // Peer #1 tries to initiate a browse channel connection.
@@ -254,7 +254,7 @@ async fn test_remote_initiates_browse_channel_before_control() -> Result<(), Err
         ..bredr::L2capParameters::new_empty()
     };
     let params = bredr::ConnectParameters::L2cap(l2cap);
-    let channel = peer1.make_connection(profile_observer.profile_id, params).await?;
+    let channel = peer1.make_connection(profile_observer.peer_id(), params).await?;
     let channel: Channel = channel.try_into()?;
 
     // The observer of bt-avrcp.cm should be notified of the connection attempt.

@@ -10,18 +10,17 @@ rustc_test("tests_bin") {
   source_root = "src/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/bt-profile-test-server:lib",
     "//src/connectivity/bluetooth/testing/test-call-manager",
     "//src/connectivity/lib/at-commands",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",
@@ -32,7 +31,7 @@ rustc_test("tests_bin") {
 }
 
 fuchsia_test_component("bt_hfp_audio_gateway_integration_tests") {
-  manifest = "meta/bt-hfp-audio-gateway-integration-tests.cmx"
+  manifest = "meta/bt-hfp-audio-gateway-integration-tests.cml"
   deps = [ ":tests_bin" ]
 }
 
@@ -48,6 +47,18 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
       max_severity = "ERROR"
     }
   }
+
+  deps = [
+    # The HFP component + the default configuration file used by it.
+    "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:default_config",
+
+    # Profile Test Server
+    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+
+    # Fuchsia Component Test library component
+    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
+  ]
 }
 
 group("tests") {

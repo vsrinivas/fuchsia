@@ -3,31 +3,32 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::format_err,
     at_commands::{self as at, SerDe},
     bitflags::bitflags,
-    bt_profile_test_server_client::{MockPeer, ProfileTestHarness},
-    fidl::{
-        encoding::Decodable,
-        endpoints::{ServerEnd, ServiceMarker},
-    },
+    bt_profile_test_server_client::v2::{PiconetMember, ProfileTestHarnessV2},
+    fidl::{encoding::Decodable, endpoints::DiscoverableService},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::HfpMarker,
-    fidl_fuchsia_sys::EnvironmentOptions,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
-    fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceObj},
+    fuchsia_component_test::{builder::Capability, RealmInstance},
     fuchsia_zircon::Duration,
     futures::{stream::StreamExt, TryFutureExt},
     matches::assert_matches,
     std::convert::TryInto,
-    test_call_manager::{TestCallManager, HFP_AG_URL},
+    test_call_manager::TestCallManager,
 };
 
-/// SDP Attribute ID for the Supported Features of HFP.
-/// Defined in Assigned Numbers for SDP
-/// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
-const ATTR_ID_HFP_SUPPORTED_FEATURES: u16 = 0x0311;
+/// HFP-AG component V2 URL.
+const HFP_AG_URL_V2: &str =
+    "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-integration-tests#meta/bt-hfp-audio-gateway.cm";
+
+/// The moniker for the HFP-AG component under test.
+const HFP_AG_MONIKER: &str = "bt-hfp-ag-profile";
+
+/// The moniker for a mock piconet member.
+const MOCK_PICONET_MEMBER_MONIKER: &str = "mock-peer";
 
 /// Timeout for data received over a Channel.
 ///
@@ -37,6 +38,11 @@ const ATTR_ID_HFP_SUPPORTED_FEATURES: u16 = 0x0311;
 ///      fail
 ///   c) short enough to fail before the overall infra-imposed test timeout (currently 5 minutes)
 const CHANNEL_TIMEOUT: Duration = Duration::from_seconds(2 * 60);
+
+/// SDP Attribute ID for the Supported Features of HFP.
+/// Defined in Assigned Numbers for SDP
+/// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
+const ATTR_ID_HFP_SUPPORTED_FEATURES: u16 = 0x0311;
 
 bitflags! {
     /// Defined in HFP v1.8, Table 5.2
@@ -50,11 +56,6 @@ bitflags! {
         const ENHANCED_VOICE_RECOGNITION           = 0b0100_0000;
         const ENHANCED_VOICE_RECOGNITION_TEXT      = 0b1000_0000;
     }
-}
-
-fn hfp_launch_info() -> bredr::LaunchInfo {
-    let url = Some(HFP_AG_URL.to_string());
-    bredr::LaunchInfo { component_url: url.clone(), ..bredr::LaunchInfo::EMPTY }
 }
 
 /// Make the SDP definition for an HFP Hands Free service.
@@ -91,60 +92,40 @@ fn hfp_hf_service_definition() -> bredr::ServiceDefinition {
 
 /// Tests that HFP correctly advertises it's services and can be
 /// discovered by another peer in the mock piconet.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_hfp_ag_service_advertisement() {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
 
-    // Create MockPeer #1 to be driven by the test.
-    let id1 = PeerId(1);
-    let remote_peer = test_harness.register_peer(id1).await.unwrap();
+    // Add a mock piconet member.
+    let spec = test_harness
+        .add_mock_piconet_member(MOCK_PICONET_MEMBER_MONIKER.to_string())
+        .await
+        .expect("failed to add mock piconet member");
+    // Add the HFP profile under test.
+    let hfp_under_test = test_harness
+        .add_profile(HFP_AG_MONIKER.to_string(), HFP_AG_URL_V2.to_string())
+        .await
+        .expect("failed to add HFP profile");
 
-    // Peer #1 adds a search for HFP AG in the piconet.
+    let test_topology = test_harness.build().await.unwrap();
+
+    // Get the piconet member to be driven by this test and register a search for AGs in
+    // the piconet.
+    let remote_peer = PiconetMember::new_from_spec(spec, &test_topology)
+        .expect("failed to create piconet member from spec");
     let mut results_requests = remote_peer
         .register_service_search(
             bredr::ServiceClassProfileIdentifier::HandsfreeAudioGateway,
             vec![],
         )
-        .await
         .unwrap();
 
-    // MockPeer #2 is the profile-under-test: HFP.
-    let id2 = PeerId(2);
-    let hfp_under_test = test_harness.register_peer(id2).await.unwrap();
-    hfp_under_test.launch_profile(hfp_launch_info()).await.expect("launch profile should be ok");
-
-    // We expect Peer #1 to discover HFP's service advertisement.
+    // Expect the test-driven piconet member to discover the HFP component.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
     let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } =
-        service_found_fut.await.unwrap();
-    assert_eq!(id2, peer_id.into());
+        service_found_fut.await.expect("Error in search request");
+    assert_eq!(hfp_under_test.peer_id(), peer_id.into());
     responder.send().unwrap();
-}
-
-fn launch_hfp(
-    url: &str,
-) -> (ServiceFs<ServiceObj<'_, fidl::Channel>>, NestedEnvironment, fuchsia_component::client::App) {
-    let mut fs = ServiceFs::new();
-    fs.add_service_at(bredr::ProfileMarker::NAME, |chan| Some(chan));
-    let options = EnvironmentOptions {
-        inherit_parent_services: true,
-        use_parent_runners: false,
-        kill_on_oom: false,
-        delete_storage_on_death: false,
-    };
-    let env = fs.create_salted_nested_environment_with_options(&"hfp", options).unwrap();
-    let app = fuchsia_component::client::launch(env.launcher(), url.to_string(), None).unwrap();
-    (fs, env, app)
-}
-
-async fn connect_profile_to_peer(
-    peer: &mut MockPeer,
-    fs: &mut ServiceFs<ServiceObj<'_, fidl::Channel>>,
-) -> Result<(), Error> {
-    let channel = fs.next().await.ok_or(format_err!("Connection expected from hfp component"))?;
-    let server_end = ServerEnd::<bredr::ProfileMarker>::new(channel);
-    peer.connect_proxy(server_end).await?;
-    Ok(())
 }
 
 /// Expects a connection request on the `connect_requests` stream from the `other` peer.
@@ -162,41 +143,55 @@ async fn expect_connection(
     }
 }
 
+/// Returns a TestCallManager that uses the Hfp protocol provided by the test `topology`.
+async fn setup_test_call_manager(topology: &RealmInstance) -> TestCallManager {
+    let hfp_protocol = topology.root.connect_to_protocol_at_exposed_dir::<HfpMarker>().unwrap();
+    let facade = TestCallManager::new();
+    facade.register_manager(hfp_protocol).await.unwrap();
+    facade
+}
+
 /// Tests that HFP correctly searches for Handsfree, discovers a mock peer
 /// providing it, and attempts to connect to the mock peer.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_hfp_search_and_connect() {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
 
-    // MockPeer #1 is driven by the test.
-    let id1 = PeerId(0x1111);
-    let mut remote_peer = test_harness.register_peer(id1).await.unwrap();
+    // Add a mock piconet member.
+    let spec = test_harness
+        .add_mock_piconet_member(MOCK_PICONET_MEMBER_MONIKER.to_string())
+        .await
+        .expect("failed to add mock piconet member");
+    // Add the HFP profile under test. Specify the `f.b.hfp.Hfp` protocol as an additional
+    // capability so that the TestCallManager can access it from the test realm service directory.
+    let additional_capabilities = vec![Capability::protocol(HfpMarker::SERVICE_NAME)];
+    let mut hfp_under_test = test_harness
+        .add_profile_with_capabilities(
+            HFP_AG_MONIKER.to_string(),
+            HFP_AG_URL_V2.to_string(),
+            additional_capabilities,
+        )
+        .await
+        .expect("failed to add HFP profile");
 
-    // Peer #1 advertises an HFP HF service.
+    let test_topology = test_harness.build().await.unwrap();
+    // Once the test realm has been built, we can grab the piconet member to be driven
+    // by this test.
+    let remote_peer = PiconetMember::new_from_spec(spec, &test_topology)
+        .expect("failed to create piconet member from spec");
+
+    // Remote peer advertises an HFP HF service.
     let service_defs = vec![hfp_hf_service_definition()];
-    let mut connect_requests =
-        remote_peer.register_service_advertisement(service_defs).await.unwrap();
+    let mut connect_requests = remote_peer.register_service_advertisement(service_defs).unwrap();
 
-    // MockPeer #2 is the profile-under-test: HFP.
-    let id2 = PeerId(0x2222);
-    let mut hfp_under_test = test_harness.register_peer(id2).await.unwrap();
-
-    // Launch hfp component and wire it up to MockPeer #2
-    let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
-    connect_profile_to_peer(&mut hfp_under_test, &mut fs).await.unwrap();
-
-    let proxy = app.connect_to_protocol::<HfpMarker>().unwrap();
-    let facade = TestCallManager::new();
-    facade.register_manager(proxy).await.unwrap();
+    // Set up the test call manager to interact with the HFP protocol.
+    let _facade = setup_test_call_manager(&test_topology).await;
 
     // We expect HFP to discover Peer #1's service advertisement.
-    assert_matches!(hfp_under_test.expect_observer_service_found_request(id1).await, Ok(()));
+    hfp_under_test.expect_observer_service_found_request(remote_peer.peer_id()).await.unwrap();
 
     // We then expect HFP to attempt to connect to Peer #1.
-    let _channel = expect_connection(&mut connect_requests, id2).await;
-
-    // The observer of Peer #1 should be relayed of the connection attempt.
-    assert_matches!(remote_peer.expect_observer_connection_request(id2).await, Ok(()));
+    let _channel = expect_connection(&mut connect_requests, hfp_under_test.peer_id()).await;
 }
 
 /// Expects data on the provided `channel` and verifies the contents with the `expected` AT
@@ -257,38 +252,44 @@ const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
 /// Note: This integration test validates that the expected responses are received, but
 /// does not validate individual field values (e.g the exact features or exact indicators) as
 /// this is implementation specific.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_hfp_full_slc_init_procedure() {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
 
-    // MockPeer #1 is driven by the test.
-    let id1 = PeerId(0x55);
-    let mut remote_peer = test_harness.register_peer(id1).await.unwrap();
+    // Add a mock piconet member.
+    let spec = test_harness
+        .add_mock_piconet_member(MOCK_PICONET_MEMBER_MONIKER.to_string())
+        .await
+        .expect("failed to add mock piconet member");
+    // Add the HFP profile under test. Specify the `f.b.hfp.Hfp` protocol as an additional
+    // capability so that the TestCallManager can access it from the test realm service directory.
+    let additional_capabilities = vec![Capability::protocol(HfpMarker::SERVICE_NAME)];
+    let mut hfp_under_test = test_harness
+        .add_profile_with_capabilities(
+            HFP_AG_MONIKER.to_string(),
+            HFP_AG_URL_V2.to_string(),
+            additional_capabilities,
+        )
+        .await
+        .expect("failed to add HFP profile");
+    let hfp_peer_id = hfp_under_test.peer_id();
+
+    let test_topology = test_harness.build().await.unwrap();
+    let remote_peer = PiconetMember::new_from_spec(spec, &test_topology)
+        .expect("failed to create piconet member from spec");
 
     // Peer #1 advertises an HFP HF service.
     let service_defs = vec![hfp_hf_service_definition()];
-    let mut connect_requests =
-        remote_peer.register_service_advertisement(service_defs).await.unwrap();
+    let mut connect_requests = remote_peer.register_service_advertisement(service_defs).unwrap();
 
-    // MockPeer #2 is the profile-under-test: HFP.
-    let id2 = PeerId(0x66);
-    let mut hfp_under_test = test_harness.register_peer(id2).await.unwrap();
-
-    // Launch hfp component and wire it up to MockPeer #2
-    let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
-    connect_profile_to_peer(&mut hfp_under_test, &mut fs).await.unwrap();
-
-    let proxy = app.connect_to_protocol::<HfpMarker>().unwrap();
-    let facade = TestCallManager::new();
-    facade.register_manager(proxy).await.unwrap();
+    // Set up the test call manager to interact with the HFP protocol.
+    let _facade = setup_test_call_manager(&test_topology).await;
 
     // We expect HFP to discover Peer #1's service advertisement.
-    assert_matches!(hfp_under_test.expect_observer_service_found_request(id1).await, Ok(()));
+    hfp_under_test.expect_observer_service_found_request(remote_peer.peer_id()).await.unwrap();
 
     // We then expect HFP to attempt to connect to Peer #1.
-    let mut remote = expect_connection(&mut connect_requests, id2).await;
-    // The observer of Peer #1 should be relayed of the connection attempt.
-    assert_matches!(remote_peer.expect_observer_connection_request(id2).await, Ok(()));
+    let mut remote = expect_connection(&mut connect_requests, hfp_peer_id).await;
 
     // Peer sends its HF features to the HFP component (AG) - we expect HFP to send
     // its AG features back.
