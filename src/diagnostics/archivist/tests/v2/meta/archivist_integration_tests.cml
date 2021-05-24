@@ -15,6 +15,11 @@
             rights: [ "r*" ],
             path: "/hub",
         },
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: "stopped",
+            from: "framework",
+        },
     ],
     offer: [
         {

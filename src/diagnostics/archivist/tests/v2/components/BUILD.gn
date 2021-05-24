@@ -1,0 +1,65 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("stub_inspect_component_bin") {
+  testonly = true
+  output_name = "stub_inspect_component"
+  edition = "2018"
+  source_root = "src/stub_inspect_component.rs"
+  deps = [
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/stub_inspect_component.rs" ]
+}
+
+rustc_binary("log_and_exit_component_bin") {
+  testonly = true
+  output_name = "log_and_exit"
+  edition = "2018"
+  source_root = "src/log_and_exit.rs"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/log_and_exit.rs" ]
+}
+
+fuchsia_component("stub_inspect_component") {
+  testonly = true
+  deps = [ ":stub_inspect_component_bin" ]
+  manifest = "meta/stub_inspect_component.cml"
+}
+
+fuchsia_component("component_with_children") {
+  testonly = true
+  deps = [ ":stub_inspect_component_bin" ]
+  manifest = "meta/component_with_children.cml"
+}
+
+fuchsia_component("log_and_exit_component") {
+  testonly = true
+  component_name = "log-and-exit"
+  deps = [ ":log_and_exit_component_bin" ]
+  manifest = "meta/log-and-exit.cml"
+}
+
+group("components") {
+  testonly = true
+  deps = [
+    ":component_with_children",
+    ":log_and_exit_component",
+    ":stub_inspect_component",
+  ]
+}

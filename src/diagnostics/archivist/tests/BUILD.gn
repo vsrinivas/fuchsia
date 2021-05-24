@@ -13,7 +13,6 @@ group("tests") {
     "logs-budget",
     "logs-connector",
     "logs-from-crash",
-    "logs-lifecycle",
     "logs-stop",
     "logs-unattributed-sinks",
     "logs/cpp:test-spec",

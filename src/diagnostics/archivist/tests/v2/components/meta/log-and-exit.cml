@@ -2,6 +2,6 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/logs_when_launched",
+        binary: "bin/log_and_exit",
     },
 }

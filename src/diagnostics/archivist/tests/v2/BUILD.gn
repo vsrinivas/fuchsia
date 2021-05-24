@@ -7,33 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/diagnostics/archivist/build/pipeline.gni")
 
-rustc_binary("stub_inspect_component_bin") {
-  output_name = "stub_inspect_component"
-  edition = "2018"
-  source_root = "components/stub_inspect_component.rs"
-  deps = [
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
-  ]
-
-  sources = [ "components/stub_inspect_component.rs" ]
-}
-
-fuchsia_component("stub_inspect_component") {
-  deps = [ ":stub_inspect_component_bin" ]
-  manifest = "meta/stub_inspect_component.cml"
-}
-
-fuchsia_component("component_with_children") {
-  deps = [ ":stub_inspect_component_bin" ]
-  manifest = "meta/component_with_children.cml"
-}
-
 rustc_test("integration_tests_bin") {
   output_name = "archivist_integration_tests"
   edition = "2018"
@@ -45,6 +18,7 @@ rustc_test("integration_tests_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/archivist:lib",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
@@ -52,11 +26,13 @@ rustc_test("integration_tests_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/syslog/rust:syslog-listener",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:difference",
     "//third_party/rust_crates:futures",
@@ -114,9 +90,8 @@ fuchsia_test_package("archivist-integration-tests-v2") {
   test_components = [ ":archivist_integration_tests" ]
   deps = [
     ":archivist_for_integration",
-    ":component_with_children",
-    ":stub_inspect_component",
     ":test_archivist_config",
+    "components",
     "//src/diagnostics/iquery/test/test_component",
   ]
 }

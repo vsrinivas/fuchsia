@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-fn main() {
-    fuchsia_syslog::init().unwrap();
+#[fuchsia::component]
+async fn main() {
     tracing::info!("Hello, world!");
 }
