@@ -255,8 +255,8 @@ impl DisplayMetrics {
     const GOOGLE_PIXELBOOK_GO_2K_DIMENSIONS: (u32, u32) = (1920, 1080);
 
     /// The dimensions used to determine whether or not the device dimensions correspond to
-    /// a 24 inch 4k monitor. Used to set a default display pixel density.
-    const MONITOR_24_IN_4K_DIMENSIONS: (u32, u32) = (3840, 2160);
+    /// a Google Pixelbook Go with a 4K display. Used to set a default display pixel density.
+    const GOOGLE_PIXELBOOK_GO_4K_DIMENSIONS: (u32, u32) = (3840, 2160);
 
     /// The dimensions used to determine whether or not the device dimensions correspond to
     /// a 24 inch monitor. Used to set a default display pixel density.
@@ -280,8 +280,8 @@ impl DisplayMetrics {
     /// The display pixel density used for a Google Pixelbook Go with a 2K display.
     const GOOGLE_PIXELBOOK_GO_2K_DENSITY: f32 = 6.5354;
 
-    /// The display pixel density used for a 24 inch 4K monitor.
-    const MONITOR_24_IN_4K_DENSITY: f32 = 7.323761;
+    /// The display pixel density used for a Google Pixelbook Go with a 4K display.
+    const GOOGLE_PIXELBOOK_GO_4K_DENSITY: f32 = 8.345;
 
     /// The display pixel density used for a 24 inch monitor.
     const MONITOR_24_IN_DENSITY: f32 = 4.16;
@@ -313,7 +313,9 @@ impl DisplayMetrics {
             DisplayMetrics::GOOGLE_PIXELBOOK_GO_2K_DIMENSIONS => {
                 DisplayMetrics::GOOGLE_PIXELBOOK_GO_2K_DENSITY
             }
-            DisplayMetrics::MONITOR_24_IN_4K_DIMENSIONS => DisplayMetrics::MONITOR_24_IN_4K_DENSITY,
+            DisplayMetrics::GOOGLE_PIXELBOOK_GO_4K_DIMENSIONS => {
+                DisplayMetrics::GOOGLE_PIXELBOOK_GO_4K_DENSITY
+            }
             DisplayMetrics::MONITOR_24_IN_DIMENSIONS => DisplayMetrics::MONITOR_24_IN_DENSITY,
             DisplayMetrics::MONITOR_27_IN_2K_DIMENSIONS => DisplayMetrics::MONITOR_27_IN_2K_DENSITY,
             _ => DisplayMetrics::DEFAULT_DENSITY,
@@ -324,7 +326,7 @@ impl DisplayMetrics {
         match (size_in_pixels.width as u32, size_in_pixels.height as u32) {
             DisplayMetrics::ACER_SWITCH_12_ALPHA_DIMENSIONS => ViewingDistance::Close,
             DisplayMetrics::GOOGLE_PIXELBOOK_DIMENSIONS => ViewingDistance::Close,
-            DisplayMetrics::MONITOR_24_IN_4K_DIMENSIONS => ViewingDistance::Near,
+            DisplayMetrics::GOOGLE_PIXELBOOK_GO_4K_DIMENSIONS => ViewingDistance::Near,
             DisplayMetrics::MONITOR_24_IN_DIMENSIONS => ViewingDistance::Near,
             DisplayMetrics::MONITOR_27_IN_2K_DIMENSIONS => ViewingDistance::Near,
             _ => ViewingDistance::Close,
