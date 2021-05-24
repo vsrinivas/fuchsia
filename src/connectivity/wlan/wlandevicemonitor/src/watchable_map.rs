@@ -93,7 +93,6 @@ where
         self.inner.lock().map.clone()
     }
 
-    #[cfg(test)]
     pub fn get<Q: ?Sized>(&self, k: &Q) -> Option<Arc<V>>
     where
         K: ::std::borrow::Borrow<Q>,

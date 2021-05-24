@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_serve_phys_exits_when_watching_devices_fails() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (phys, _phy_events) = PhyMap::new();
         let phys = Arc::new(phys);
         let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_serve_phy_adds_and_removes_phy() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (phys, mut phy_events) = PhyMap::new();
         let phys = Arc::new(phys);
         let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
