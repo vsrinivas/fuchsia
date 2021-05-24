@@ -28,6 +28,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/assembly:ffx_assembly",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
+      "//src/developer/ffx/plugins/cts:ffx_cts",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin",
       "//src/developer/ffx/plugins/doctor:ffx_doctor",
       "//src/developer/ffx/plugins/efi:ffx_efi",
