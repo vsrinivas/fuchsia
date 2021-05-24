@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_LOCATION_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_DWARF_LOCATION_H_
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/variable_location.h"
 #include "src/lib/containers/cpp/array_view.h"
@@ -23,21 +24,36 @@ namespace zxdb {
 // VariableLocation.
 //
 // On error this will return an empty VariableLocation.
-VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
-                                        const llvm::DWARFFormValue& form,
+VariableLocation DecodeVariableLocation(llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form,
                                         const UncachedLazySymbol& source);
 
-// Low-level decode for a variable location description. The data should start at the beginning
-// of the location list to parse, and cover as much data as the location list could possibly
-// cover (normally the end of the .debug_loc section).
+// Low-level decode for a DWARF 4 variable location description. The data should start at the
+// beginning of the location list to parse, and cover as much data as the location list could
+// possibly cover (normally the end of the .debug_loc section).
 //
 // The source is the symbol that created this location entry, it will be passed to the
 // VariableLocation.
 //
 // On error this will return an empty VariableLocation.
-VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
-                                    containers::array_view<uint8_t> data,
-                                    const UncachedLazySymbol& source);
+VariableLocation DecodeDwarf4LocationList(TargetPointer unit_base_addr,
+                                          containers::array_view<uint8_t> data,
+                                          const UncachedLazySymbol& source);
+
+// Low-level decode for a DWARF 5 variable location description. The data should start at the
+// beginning of the location list to parse, and cover as much data as the location list could
+// possibly cover (normally the end of the .debug_loclist section).
+//
+// The index_to_addr function will convert an "addrx" index into the .debug_addr table to the
+// corresponding module-relative address. It should return nullopt on failure.
+//
+// The source is the symbol that created this location entry, it will be passed to the
+// VariableLocation.
+//
+// On error this will return an empty VariableLocation.
+VariableLocation DecodeDwarf5LocationList(
+    TargetPointer unit_base_addr, containers::array_view<uint8_t> data,
+    fit::function<std::optional<TargetPointer>(uint64_t)>& index_to_addr,
+    const UncachedLazySymbol& source);
 
 }  // namespace zxdb
 
