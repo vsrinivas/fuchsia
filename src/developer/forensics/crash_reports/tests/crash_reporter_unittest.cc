@@ -153,9 +153,9 @@ class CrashReporterTest : public UnitTestFixture {
   // Sets up the underlying crash reporter using the given |config| and |crash_server|.
   void SetUpCrashReporter(
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
-    auto snapshot_manager = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), &clock_, kSnapshotSharedRequestWindow,
-        kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
+    SnapshotManager snapshot_manager(dispatcher(), services(), &clock_,
+                                     kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath,
+                                     StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
     auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
 
     crash_server_ = crash_server.get();

@@ -48,13 +48,13 @@ class MainServiceTest : public UnitTestFixture {
     SetUpNetworkReachabilityProviderServer();
 
     main_service_ =
-        MainService::TryCreate(dispatcher(), services(), &clock_, info_context_,
-                               Config{
-                                   .crash_server = CrashServerConfig{
-                                       /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                                   },
-                                   .daily_per_product_quota = 100u,
-                               });
+        MainService::Create(dispatcher(), services(), &clock_, info_context_,
+                            Config{
+                                .crash_server = CrashServerConfig{
+                                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+                                },
+                                .daily_per_product_quota = 100u,
+                            });
     FX_CHECK(main_service_);
     RunLoopUntilIdle();
   }

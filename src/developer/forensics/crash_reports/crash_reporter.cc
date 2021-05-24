@@ -92,13 +92,13 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 
 }  // namespace
 
-std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
+std::unique_ptr<CrashReporter> CrashReporter::Create(
     async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
     timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
     AnnotationMap default_annotations, CrashRegister* crash_register) {
-  std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
-      dispatcher, services, clock, kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath,
-      kSnapshotAnnotationsMaxSize, kSnapshotArchivesMaxSize);
+  SnapshotManager snapshot_manager(dispatcher, services, clock, kSnapshotSharedRequestWindow,
+                                   kGarbageCollectedSnapshotsPath, kSnapshotAnnotationsMaxSize,
+                                   kSnapshotArchivesMaxSize);
 
   auto tags = std::make_unique<LogTags>();
 
@@ -110,11 +110,13 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
       std::move(crash_server));
 }
 
-CrashReporter::CrashReporter(
-    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
-    timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
-    AnnotationMap default_annotations, CrashRegister* crash_register, std::unique_ptr<LogTags> tags,
-    std::unique_ptr<SnapshotManager> snapshot_manager, std::unique_ptr<CrashServer> crash_server)
+CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
+                             const std::shared_ptr<sys::ServiceDirectory>& services,
+                             timekeeper::Clock* clock,
+                             const std::shared_ptr<InfoContext>& info_context, Config config,
+                             AnnotationMap default_annotations, CrashRegister* crash_register,
+                             std::unique_ptr<LogTags> tags, SnapshotManager snapshot_manager,
+                             std::unique_ptr<CrashServer> crash_server)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -125,7 +127,7 @@ CrashReporter::CrashReporter(
       snapshot_manager_(std::move(snapshot_manager)),
       crash_server_(std::move(crash_server)),
       queue_(dispatcher_, services_, info_context, tags_.get(), crash_server_.get(),
-             snapshot_manager_.get()),
+             &snapshot_manager_),
       product_quotas_(dispatcher_, config.daily_per_product_quota),
       info_(info_context),
       network_watcher_(dispatcher_, *services_),
@@ -152,7 +154,7 @@ CrashReporter::CrashReporter(
 
 void CrashReporter::PersistAllCrashReports() {
   queue_.StopUploading();
-  snapshot_manager_->Shutdown();
+  snapshot_manager_.Shutdown();
 }
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
@@ -203,7 +205,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
             product_quotas_.DecrementRemainingQuota(product);
 
-            auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
+            auto snapshot_uuid_promise = snapshot_manager_.GetSnapshotUuid(kSnapshotTimeout);
             auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
             auto product_promise = ::fit::make_ok_promise(std::move(product));
 
@@ -228,7 +230,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
                 std::optional<Report> final_report = MakeReport(
                     std::move(report), report_id, snapshot_uuid,
-                    snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
+                    snapshot_manager_.GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
                     device_id, default_annotations_, product, is_hourly_snapshot);
                 if (!final_report.has_value()) {
                   return ::fit::error(

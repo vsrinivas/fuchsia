@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "src/developer/forensics/crash_reports/annotation_map.h"
-#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/crash_register.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
@@ -20,38 +19,7 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-const char kDefaultConfigPath[] = "/pkg/data/crash_reports/default_config.json";
-const char kOverrideConfigPath[] = "/config/data/crash_reports/override_config.json";
 const char kCrashRegisterPath[] = "/tmp/crash_register.json";
-
-}  // namespace
-
-std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    timekeeper::Clock* clock,
-                                                    std::shared_ptr<InfoContext> info_context) {
-  std::optional<Config> config_opt = std::nullopt;
-  if (files::IsFile(kOverrideConfigPath)) {
-    if (config_opt = ParseConfig(kOverrideConfigPath); !config_opt.has_value()) {
-      FX_LOGS(ERROR) << "Failed to read override config file at " << kOverrideConfigPath
-                     << " - falling back to default config file";
-    }
-  }
-
-  if (!config_opt.has_value()) {
-    if (config_opt = ParseConfig(kDefaultConfigPath); !config_opt.has_value()) {
-      FX_LOGS(ERROR) << "Failed to read default config file at " << kDefaultConfigPath;
-
-      FX_LOGS(FATAL) << "Failed to set up main service";
-      return nullptr;
-    }
-  }
-
-  return MainService::TryCreate(dispatcher, std::move(services), clock, std::move(info_context),
-                                std::move(config_opt.value()));
-}
-
-namespace {
 
 ErrorOr<std::string> ReadStringFromFile(const std::string& filepath) {
   std::string content;
@@ -64,11 +32,11 @@ ErrorOr<std::string> ReadStringFromFile(const std::string& filepath) {
 
 }  // namespace
 
-std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<sys::ServiceDirectory> services,
-                                                    timekeeper::Clock* clock,
-                                                    std::shared_ptr<InfoContext> info_context,
-                                                    Config config) {
+std::unique_ptr<MainService> MainService::Create(async_dispatcher_t* dispatcher,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 timekeeper::Clock* clock,
+                                                 std::shared_ptr<InfoContext> info_context,
+                                                 Config config) {
   const ErrorOr<std::string> build_version = ReadStringFromFile("/config/build-info/version");
 
   AnnotationMap default_annotations;
@@ -85,13 +53,8 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
   std::unique_ptr<CrashRegister> crash_register = std::make_unique<CrashRegister>(
       dispatcher, services, info_context, build_version, kCrashRegisterPath);
 
-  auto crash_reporter =
-      CrashReporter::TryCreate(dispatcher, services, clock, info_context, config,
-                               std::move(default_annotations), crash_register.get());
-  if (!crash_reporter) {
-    FX_LOGS(FATAL) << "Failed to set up main service";
-    return nullptr;
-  }
+  auto crash_reporter = CrashReporter::Create(dispatcher, services, clock, info_context, config,
+                                              std::move(default_annotations), crash_register.get());
 
   return std::unique_ptr<MainService>(new MainService(
       dispatcher, std::move(services), std::move(info_context), std::move(config),

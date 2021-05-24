@@ -29,19 +29,12 @@ namespace crash_reports {
 // etc.
 class MainService {
  public:
-  // Static factory methods.
-  //
-  // Returns nullptr if the main service cannot be instantiated, e.g.,
-  // because the config cannot be parsed or the crash reporter instantiated.
-  static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
-                                                std::shared_ptr<sys::ServiceDirectory> services,
-                                                timekeeper::Clock* clock,
-                                                std::shared_ptr<InfoContext> info_context);
-  static std::unique_ptr<MainService> TryCreate(async_dispatcher_t* dispatcher,
-                                                std::shared_ptr<sys::ServiceDirectory> services,
-                                                timekeeper::Clock* clock,
-                                                std::shared_ptr<InfoContext> info_context,
-                                                Config config);
+  // Static factory method. Never returns a nullptr.
+  static std::unique_ptr<MainService> Create(async_dispatcher_t* dispatcher,
+                                             std::shared_ptr<sys::ServiceDirectory> services,
+                                             timekeeper::Clock* clock,
+                                             std::shared_ptr<InfoContext> info_context,
+                                             Config config);
 
   // Place the component in a state where it expects to be stopped soon. This includes:
   //  * Immediately persisting all future and pending crash reports without snapshots.

@@ -36,10 +36,8 @@ namespace crash_reports {
 
 class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
-  // Static factory method.
-  //
-  // Returns nullptr if the crash reporter cannot be instantiated.
-  static std::unique_ptr<CrashReporter> TryCreate(
+  // Static factory method. Never returns nullptr.
+  static std::unique_ptr<CrashReporter> Create(
       async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
       timekeeper::Clock* clock, const std::shared_ptr<InfoContext>& info_context, Config config,
       AnnotationMap default_annotations, CrashRegister* crash_register);
@@ -49,7 +47,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
                 AnnotationMap default_annotations, CrashRegister* crash_register,
-                std::unique_ptr<LogTags> tags, std::unique_ptr<SnapshotManager> snapshot_manager,
+                std::unique_ptr<LogTags> tags, SnapshotManager snapshot_manager,
                 std::unique_ptr<CrashServer> crash_server);
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
@@ -70,7 +68,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   AnnotationMap default_annotations_;
   CrashRegister* crash_register_;
   const UtcTimeProvider utc_provider_;
-  std::unique_ptr<SnapshotManager> snapshot_manager_;
+  SnapshotManager snapshot_manager_;
   std::unique_ptr<CrashServer> crash_server_;
   Queue queue_;
 

@@ -11,28 +11,58 @@
 
 #include <utility>
 
+#include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/main_service.h"
 #include "src/developer/forensics/utils/component/component.h"
+#include "src/lib/files/file.h"
 
 namespace forensics {
 namespace crash_reports {
+namespace {
+
+const char kDefaultConfigPath[] = "/pkg/data/crash_reports/default_config.json";
+const char kOverrideConfigPath[] = "/config/data/crash_reports/override_config.json";
+
+std::optional<Config> GetConfig() {
+  std::optional<Config> config;
+  if (files::IsFile(kOverrideConfigPath)) {
+    if (config = ParseConfig(kOverrideConfigPath); !config) {
+      FX_LOGS(ERROR) << "Failed to read override config file at " << kOverrideConfigPath
+                     << " - falling back to default config file";
+    }
+  }
+
+  if (!config) {
+    if (config = ParseConfig(kDefaultConfigPath); !config) {
+      FX_LOGS(ERROR) << "Failed to read default config file at " << kDefaultConfigPath;
+    }
+  }
+
+  return config;
+}
+
+}  // namespace
 
 int main() {
   syslog::SetTags({"forensics", "crash"});
 
   forensics::component::Component component;
 
+  auto config = GetConfig();
+  if (!config) {
+    FX_LOGS(FATAL) << "Failed to set up crash reporter";
+    return EXIT_FAILURE;
+  }
+
   timekeeper::SystemClock clock;
 
   auto info_context = std::make_shared<InfoContext>(component.InspectRoot(), &clock,
                                                     component.Dispatcher(), component.Services());
 
-  std::unique_ptr<MainService> main_service = MainService::TryCreate(
-      component.Dispatcher(), component.Services(), &clock, std::move(info_context));
-  if (!main_service) {
-    return EXIT_FAILURE;
-  }
+  std::unique_ptr<MainService> main_service =
+      MainService::Create(component.Dispatcher(), component.Services(), &clock,
+                          std::move(info_context), std::move(*config));
 
   // fuchsia.feedback.CrashReporter
   component.AddPublicService(::fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter>(
