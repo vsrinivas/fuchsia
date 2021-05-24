@@ -203,14 +203,16 @@ func (c *CompositeRepo) AddRepo(repo Repository) {
 }
 
 func (c *CompositeRepo) GetBuildObject(buildID string) (FileCloser, error) {
+	var err error
+	var file FileCloser
 	for _, repo := range c.repos {
-		file, err := repo.GetBuildObject(buildID)
+		file, err = repo.GetBuildObject(buildID)
 		if err != nil {
 			continue
 		}
 		return file, nil
 	}
-	return nil, fmt.Errorf("could not find file for %s", buildID)
+	return nil, fmt.Errorf("could not find file for %s: %v", buildID, err)
 }
 
 type NewBuildIDRepo string

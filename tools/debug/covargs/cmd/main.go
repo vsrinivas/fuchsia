@@ -143,7 +143,13 @@ func readSymbolizerOutput(outputFiles []string) (map[string]symbolize.DumpEntry,
 		}
 
 		for _, dump := range output {
-			dumps[dump.Name] = dump
+			if existingDump, ok := dumps[dump.Name]; ok {
+				existingDump.Modules = append(existingDump.Modules, dump.Modules...)
+				existingDump.Segments = append(existingDump.Segments, dump.Segments...)
+				dumps[dump.Name] = existingDump
+			} else {
+				dumps[dump.Name] = dump
+			}
 		}
 	}
 
