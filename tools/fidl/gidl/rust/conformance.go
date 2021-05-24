@@ -28,7 +28,7 @@ use {
 	matches::assert_matches,
 };
 
-const V1_CONTEXT: &Context = &Context {};
+const _V1_CONTEXT: &Context = &Context {};
 
 {{ range .EncodeSuccessCases }}
 {{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
@@ -329,7 +329,7 @@ func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
 func encodingContext(wireFormat gidlir.WireFormat) string {
 	switch wireFormat {
 	case gidlir.V1WireFormat:
-		return "V1_CONTEXT"
+		return "_V1_CONTEXT"
 	default:
 		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
 	}
