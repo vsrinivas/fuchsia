@@ -202,7 +202,7 @@ where
 {
     let mut data = String::default();
     reader.read_to_string(&mut data).context("Cannot read the config")?;
-    serde_json5::from_str(&data).context("Cannot parse the config")
+    serde_json::from_str(&data).context("Cannot parse the config")
 }
 
 #[cfg(test)]
@@ -213,19 +213,19 @@ mod tests {
     fn product_from_json_file() {
         let json = r#"
             {
-              version_file: "path/to/version",
-              epoch_file: "path/to/epoch",
-              extra_packages_for_base_package: ["package0"],
-              base_packages: ["package1", "package2"],
-              cache_packages: ["package3", "package4"],
-              kernel_image: "path/to/kernel",
-              kernel_cmdline: ["arg1", "arg2"],
-              bootfs_files: [
+              "version_file": "path/to/version",
+              "epoch_file": "path/to/epoch",
+              "extra_packages_for_base_package": ["package0"],
+              "base_packages": ["package1", "package2"],
+              "cache_packages": ["package3", "package4"],
+              "kernel_image": "path/to/kernel",
+              "kernel_cmdline": ["arg1", "arg2"],
+              "bootfs_files": [
                 {
-                    source: "path/to/source",
-                    destination: "path/to/destination",
-                },
-              ],
+                    "source": "path/to/source",
+                    "destination": "path/to/destination"
+                }
+              ]
             }
         "#;
 
@@ -238,9 +238,9 @@ mod tests {
     fn product_from_minimal_json_file() {
         let json = r#"
             {
-              version_file: "path/to/version",
-              epoch_file: "path/to/epoch",
-              kernel_image: "path/to/kernel",
+              "version_file": "path/to/version",
+              "epoch_file": "path/to/epoch",
+              "kernel_image": "path/to/kernel"
             }
         "#;
 
@@ -253,54 +253,54 @@ mod tests {
     fn board_from_json_file() {
         let json = r#"
             {
-              board_name: "my-board",
-              vbmeta: {
-                partition: "name",
-                kernel_partition: "zircon",
-                key: "path/to/key",
-                key_metadata: "path/to/metadata",
+              "board_name": "my-board",
+              "vbmeta": {
+                "partition": "name",
+                "kernel_partition": "zircon",
+                "key": "path/to/key",
+                "key_metadata": "path/to/metadata"
               },
-              bootloaders: [
+              "bootloaders": [
                 {
-                  partition: "name",
-                  name: "name",
-                  type: "bl2",
-                  source: "path/to/file/on/host",
-                },
+                  "partition": "name",
+                  "name": "name",
+                  "type": "bl2",
+                  "source": "path/to/file/on/host"
+                }
               ],
-              zbi: {
-                partition: "name",
-                name: "fuchsia",
-                max_size: 100,
-                embed_fvm_in_zbi: false,
-                compression: "zstd.max",
+              "zbi": {
+                "partition": "name",
+                "name": "fuchsia",
+                "max_size": 100,
+                "embed_fvm_in_zbi": false,
+                "compression": "zstd.max"
               },
-              fvm: {
-                partition: "name",
-                slice_size: 100,
-                reserved_slices: 100,
-                filesystems: [
+              "fvm": {
+                "partition": "name",
+                "slice_size": 100,
+                "reserved_slices": 100,
+                "filesystems": [
                   {
-                    type: "minfs",
-                    name: "data",
-                    minimum_inodes: 100,
-                    minimum_data_size: 100,
-                    maximum_bytes: 100,
+                    "type": "minfs",
+                    "name": "data",
+                    "minimum_inodes": 100,
+                    "minimum_data_size": 100,
+                    "maximum_bytes": 100
                   },
                   {
-                    type: "blobfs",
-                    name: "blobfs",
-                    minimum_inodes: 100,
-                    minimum_data_size: 100,
-                    maximum_bytes: 100,
-                    layout_format: "padded|compact",
-                  },
-                ],
+                    "type": "blobfs",
+                    "name": "blobfs",
+                    "minimum_inodes": 100,
+                    "minimum_data_size": 100,
+                    "maximum_bytes": 100,
+                    "layout_format": "padded|compact"
+                  }
+                ]
               },
-              recovery: {
-                zbi: "path/to/recovery.zbi",
-                vbmeta: "path/to/recovery.vbmeta",
-              },
+              "recovery": {
+                "zbi": "path/to/recovery.zbi",
+                "vbmeta": "path/to/recovery.vbmeta"
+              }
             }
          "#;
 
@@ -313,23 +313,23 @@ mod tests {
     fn board_from_minimal_json_file() {
         let json = r#"
             {
-              board_name: "my-board",
-              vbmeta: {
-                partition: "name",
-                kernel_partition: "zircon",
-                key: "path/to/key",
-                key_metadata: "path/to/metadata",
+              "board_name": "my-board",
+              "vbmeta": {
+                "partition": "name",
+                "kernel_partition": "zircon",
+                "key": "path/to/key",
+                "key_metadata": "path/to/metadata"
               },
-              zbi: {
-                partition: "name",
+              "zbi": {
+                "partition": "name"
               },
-              fvm: {
-                partition: "name",
+              "fvm": {
+                "partition": "name"
               },
-              recovery: {
-                zbi: "path/to/recovery.zbi",
-                vbmeta: "path/to/recovery.vbmeta",
-              },
+              "recovery": {
+                "zbi": "path/to/recovery.zbi",
+                "vbmeta": "path/to/recovery.vbmeta"
+              }
             }
          "#;
 
