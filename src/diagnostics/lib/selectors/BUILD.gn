@@ -28,7 +28,7 @@ rustc_library("selectors") {
 }
 
 fuchsia_unittest_package("selectors-test") {
-  manifest = "meta/selectors-lib-test.cmx"
+  manifest = "meta/selectors-lib-test.cml"
   deps = [ ":selectors_test" ]
 }
 

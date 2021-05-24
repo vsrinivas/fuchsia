@@ -21,7 +21,6 @@ rustc_library("injectable-time") {
 }
 
 fuchsia_unittest_package("injectable-time-test") {
-  manifest = "meta/injectable-time-test.cmx"
   deps = [ ":injectable-time_test" ]
 }
 
