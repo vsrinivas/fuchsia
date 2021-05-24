@@ -67,4 +67,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   CRASH = 0x1F,
   GOLDFISH_SYNC = 0x20,
   PCI = 0x21,
+  POWER_SENSOR = 0x22,
 };

@@ -287,6 +287,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_CRASH         0x1F
 #define PDEV_DID_TEST_GOLDFISH_SYNC 0x20
 #define PDEV_DID_TEST_PCI           0x21
+#define PDEV_DID_TEST_POWER_SENSOR  0x22
 
 // ARM
 #define PDEV_VID_ARM                0x12

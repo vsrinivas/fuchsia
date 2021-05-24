@@ -147,6 +147,7 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1d/test-goldfish-address-space", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:20/test-goldfish-sync", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:21/test-pci", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:22/test-power-sensor", &st, 0), 0);
 
   // Check that we see multiple entries that begin with "fragment-" for a device that is a
   // fragment of multiple composites

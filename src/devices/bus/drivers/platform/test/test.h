@@ -44,6 +44,7 @@ class TestBoard : public TestBoardType {
   zx_status_t PwmInit();
   zx_status_t RpmbInit();
   zx_status_t VregInit();
+  zx_status_t PowerSensorInit();
   zx_status_t TestInit();
   int Thread();
 

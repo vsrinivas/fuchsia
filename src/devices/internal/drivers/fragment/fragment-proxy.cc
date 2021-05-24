@@ -103,6 +103,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_PCI:
       proto->ops = &pci_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_POWER_SENSOR:
+      proto->ops = &power_sensor_protocol_ops_;
+      return ZX_OK;
     default:
       zxlogf(ERROR, "%s unsupported protocol \'%u\'", __func__, proto_id);
       return ZX_ERR_NOT_SUPPORTED;
@@ -1138,6 +1141,17 @@ zx_status_t FragmentProxy::DsiConnect(zx::channel server) {
   req.op = DsiOp::CONNECT;
   zx_handle_t handle = server.release();
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
+}
+
+zx_status_t FragmentProxy::PowerSensorConnectServer(zx::channel server) {
+  PowerSensorProxyRequest req = {};
+  PowerSensorProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_POWER_SENSOR;
+  req.op = PowerSensorOp::CONNECT_SERVER;
+
+  zx_handle_t channel = server.release();
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
+             nullptr);
 }
 
 const zx_driver_ops_t driver_ops = []() {

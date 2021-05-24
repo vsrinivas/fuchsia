@@ -19,6 +19,7 @@
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
+#include <fuchsia/hardware/power/sensor/cpp/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/cpp/banjo.h>
@@ -69,7 +70,8 @@ class FragmentProxy : public FragmentProxyBase,
                       // TOOD(fxbug.dev/32978): PciProxyBase implements
                       // ddk::PciProtocol so it can be shared between the two
                       // PCI drivers until migration is complete.
-                      public ddk::PciProtocol<FragmentProxy> {
+                      public ddk::PciProtocol<FragmentProxy>,
+                      public ddk::PowerSensorProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -199,6 +201,9 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
   zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+
+  // Power sensor
+  zx_status_t PowerSensorConnectServer(zx::channel server);
 
  private:
   zx::channel rpc_;

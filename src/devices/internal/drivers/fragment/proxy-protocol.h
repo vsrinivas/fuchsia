@@ -482,6 +482,20 @@ struct PciRpcResponse {
   };
 };
 
+// ZX_PROTOCOL_POWER_SENSOR proxy support.
+enum class PowerSensorOp {
+  CONNECT_SERVER,
+};
+
+struct PowerSensorProxyRequest {
+  ProxyRequest header;
+  PowerSensorOp op;
+};
+
+struct PowerSensorProxyResponse {
+  ProxyResponse header;
+};
+
 }  // namespace fragment
 
 #endif  // SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_

@@ -49,6 +49,7 @@ driver_module("test-board") {
     "test-gpio.cc",
     "test-i2c.cc",
     "test-pci.cc",
+    "test-power-sensor.cc",
     "test-power.cc",
     "test-pwm.cc",
     "test-rpmb.cc",
@@ -401,6 +402,7 @@ driver_module("test-composite") {
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.power:fuchsia.hardware.power_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
@@ -476,6 +478,7 @@ isolated_devmgr_unittest_package("platform-bus-test") {
     ":test-i2c",
     ":test-pci",
     ":test-power",
+    ":test-power-sensor",
     ":test-pwm",
     ":test-rpmb",
     ":test-spi",
@@ -565,6 +568,31 @@ test("platform-bus-bti") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+bind_rules("test-power-sensor-bind") {
+  rules = "test/test-power-sensor.bind"
+  output = "test-power-sensor-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/test.platform",
+  ]
+}
+
+driver_module("test-power-sensor") {
+  configs += [ "//build/config:all_source" ]
+  sources = [ "test/power-sensor.cc" ]
+  deps = [
+    ":test-power-sensor-bind",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_banjo_cpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
 }
 
 isolated_devmgr_unittest_package("platform-bus-bti-test") {
