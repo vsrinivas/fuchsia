@@ -519,6 +519,27 @@ interface Hasher {
 }
 ```
 
+### Testing
+
+#### GIDL Conformance Testing
+
+GIDL is a test definition language and tool that is used in conjunction with
+FIDL to define conformance tests. These tests are standardized across bindings
+and ensure consistency in implementation of encoders and decoders and coverage
+of corner cases.
+
+#### Deep equality of decoded objects
+
+Comparing object equality can be tricky and particularly so in the case of
+decoded FIDL objects. During decode, zx_handle_replace may be called on
+handles if they have more handle rights than needed. When this happens, the
+initial input handle will be closed and a new handle will be created to
+replace it with reduced rights.
+
+Because of this, handle values cannot be directly compared. Instead,
+handles can be compared by checking that their koid (kernel id), type and
+rights are the same.
+
 ## Related Documents
 
 * [RFC-0024: Mandatory Source Compatibility][rfc0024]
