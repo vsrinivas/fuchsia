@@ -522,7 +522,7 @@ func TestLinkDown(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1, addr1NIC2, addr3NIC2}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -536,7 +536,7 @@ func TestLinkDown(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -550,25 +550,45 @@ func TestLinkDown(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
 }
 
-func dnsServersAddressesDiff(addresses []tcpip.FullAddress, servers []dns.Server) string {
-	// Map []dns.Server -> []tcpip.FullAddress. We'd prefer to use a cmp.Transformer here, but that
-	// doesn't work for contravariant (or simply different) types.
-	//
-	// See https://github.com/google/go-cmp/issues/261.
-	var serverAddresses []tcpip.FullAddress
-	if servers != nil {
-		serverAddresses = make([]tcpip.FullAddress, len(servers))
-		for i := range servers {
-			serverAddresses[i] = servers[i].Address
+var dnsServerTcpIpFullAddressOpts = []cmp.Option{
+	// Asymmetric application of transformers is not supported in go-cmp. IOW we
+	// write this asymmetric transformer of dns.Server -> tcpip.FullAddress as a
+	// symmetric transformer that handles both input types; go-cmp internally
+	// upcasts invariant operands to interface{}.
+	cmp.FilterValues(func(x, y interface{}) bool {
+		for _, v := range []interface{}{x, y} {
+			switch v.(type) {
+			case []dns.Server:
+			case []tcpip.FullAddress:
+			default:
+				return false
+			}
 		}
-	}
-	return cmp.Diff(addresses, serverAddresses, cmpopts.SortSlices(func(left, right tcpip.FullAddress) bool {
+		return true
+	}, cmp.Transformer("ToTcpIpAddress", func(v interface{}) []tcpip.FullAddress {
+		switch v := v.(type) {
+		case []dns.Server:
+			if v == nil {
+				return nil
+			}
+			out := make([]tcpip.FullAddress, len(v))
+			for i := range v {
+				out[i] = v[i].Address
+			}
+			return out
+		case []tcpip.FullAddress:
+			return v
+		default:
+			panic(fmt.Sprintf("value of unexpected type %#v", v))
+		}
+	})),
+	cmpopts.SortSlices(func(left, right tcpip.FullAddress) bool {
 		if left, right := left.NIC, right.NIC; left != right {
 			return left < right
 		}
@@ -579,7 +599,7 @@ func dnsServersAddressesDiff(addresses []tcpip.FullAddress, servers []dns.Server
 			return left < right
 		}
 		return false
-	}))
+	}),
 }
 
 func TestRecursiveDNSServers(t *testing.T) {
@@ -629,7 +649,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	{
 		want := []tcpip.FullAddress(nil)
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -639,7 +659,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -649,7 +669,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1, addr1NIC2, addr3NIC2}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -659,7 +679,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1NIC1, addr2NIC1}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Errorf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -670,7 +690,7 @@ func TestRecursiveDNSServers(t *testing.T) {
 		clock.Advance(incrementalTimeout)
 		want := []tcpip.FullAddress(nil)
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			if elapsedTime < shortLifetimeTimeout {
 				continue
 			}
@@ -722,7 +742,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	{
 		want := []tcpip.FullAddress{addr1, addr2, addr3}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -736,7 +756,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 		clock.Advance(incrementalTimeout)
 		want := []tcpip.FullAddress{addr2, addr3}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			if elapsedTime < middleLifetimeTimeout {
 				continue
 			}
@@ -753,7 +773,7 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 		clock.Advance(incrementalTimeout)
 		want := []tcpip.FullAddress{addr2, addr3}
 		got := ns.dnsConfig.GetServersCache()
-		if diff := dnsServersAddressesDiff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, dnsServerTcpIpFullAddressOpts...); diff != "" {
 			t.Fatalf("GetServerCache() mismatch (-want +got):\n%s", diff)
 		}
 	}
