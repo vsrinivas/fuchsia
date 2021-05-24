@@ -1223,3 +1223,17 @@
   reviewers: [ 'andresoportus@google.com', 'chaselatta@google.com', 'cpu@google.com', 'dgilhooley@google.com', 'robtsuk@google.com', 'surajmalhotra@google.com', 'travisg@google.com']
   submitted: '2021-04-21'
   reviewed: '2021-05-04'
+
+- name: 'RFC-0095'
+  title: 'Build and assemble Workstation out-of-tree'
+  short_description: 'Creates a workflow which allows users to build and assemble the Workstation product outside of fuchsia.git.'
+  authors: ['chaselatta@google.com']
+  file: '0095_build_and_assemble_workstation_out_of_tree.md'
+  area: ['General']
+  issue: ['']
+  gerrit_change_id: ['506567']
+  status: 'Accepted'
+  reviewers: ['jeremymanson@google.com', 'jjosh@google.com', 'shayba@google.com', 'pascallouis@google.com', 'jamesr@google.com', 'maruel@google.com']
+  submitted: '2021-03-24'
+  reviewed: '2021-05-19'
+
