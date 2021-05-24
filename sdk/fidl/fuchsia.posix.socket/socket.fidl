@@ -397,6 +397,21 @@ enum TcpCongestionControl {
     CUBIC = 2;
 };
 
+/// TCP state machine state.
+enum TcpState {
+    ESTABLISHED = 1;
+    SYN_SENT = 2;
+    SYN_RECV = 3;
+    FIN_WAIT1 = 4;
+    FIN_WAIT2 = 5;
+    TIME_WAIT = 6;
+    CLOSE = 7;
+    CLOSE_WAIT = 8;
+    LAST_ACK = 9;
+    LISTEN = 10;
+    CLOSING = 11;
+};
+
 /// TCP congestion control state machine state.
 enum TcpCongestionControlState {
     OPEN = 0;
@@ -408,7 +423,7 @@ enum TcpCongestionControlState {
 
 /// TCP protocol state.
 table TcpInfo {
-    1: reserved; // uint8_t tcpi_state;
+    1: TcpState state;
     2: TcpCongestionControlState ca_state;
     3: reserved; // uint8_t tcpi_retransmits;
     4: reserved; // uint8_t tcpi_probes;

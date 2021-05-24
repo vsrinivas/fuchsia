@@ -104,6 +104,16 @@ type endpoint struct {
 
 // HandleLinkResolutionFailure implements stack.LinkResolvableNetworkEndpoint.
 func (e *endpoint) HandleLinkResolutionFailure(pkt *stack.PacketBuffer) {
+	// If we are operating as a router, return an ICMP error to the original
+	// packet's sender.
+	if pkt.NetworkPacketInfo.IsForwardedPacket {
+		// TODO(gvisor.dev/issue/6005): Propagate asynchronously generated ICMP
+		// errors to local endpoints.
+		e.protocol.returnError(&icmpReasonHostUnreachable{}, pkt)
+		e.stats.ip.Forwarding.Errors.Increment()
+		e.stats.ip.Forwarding.HostUnreachable.Increment()
+		return
+	}
 	// handleControl expects the entire offending packet to be in the packet
 	// buffer's data field.
 	pkt = stack.NewPacketBuffer(stack.PacketBufferOptions{
@@ -898,7 +908,6 @@ func (e *endpoint) handleValidatedPacket(h header.IPv4, pkt *stack.PacketBuffer)
 		case *ip.ErrNoRoute:
 			stats.ip.Forwarding.Unrouteable.Increment()
 		case *ip.ErrParameterProblem:
-			e.protocol.stack.Stats().MalformedRcvdPackets.Increment()
 			stats.ip.MalformedPacketsReceived.Increment()
 		case *ip.ErrMessageTooLong:
 			stats.ip.Forwarding.PacketTooBig.Increment()
@@ -935,7 +944,6 @@ func (e *endpoint) handleValidatedPacket(h header.IPv4, pkt *stack.PacketBuffer)
 					_ = e.protocol.returnError(&icmpReasonParamProblem{
 						pointer: optProblem.Pointer,
 					}, pkt)
-					e.protocol.stack.Stats().MalformedRcvdPackets.Increment()
 					e.stats.ip.MalformedPacketsReceived.Increment()
 				}
 				return
@@ -1008,7 +1016,6 @@ func (e *endpoint) handleValidatedPacket(h header.IPv4, pkt *stack.PacketBuffer)
 				_ = e.protocol.returnError(&icmpReasonParamProblem{
 					pointer: optProblem.Pointer,
 				}, pkt)
-				e.protocol.stack.Stats().MalformedRcvdPackets.Increment()
 				stats.ip.MalformedPacketsReceived.Increment()
 			}
 			return

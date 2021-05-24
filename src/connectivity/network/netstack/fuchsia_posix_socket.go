@@ -2177,18 +2177,51 @@ func (s *streamSocketImpl) GetTcpInfo(fidl.Context) (socket.StreamSocketGetTcpIn
 		return socket.StreamSocketGetTcpInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var info socket.TcpInfo
-	switch state := value.CcState; state {
-	case tcpip.Open:
-		info.CaState = socket.TcpCongestionControlStateOpen
-	case tcpip.RTORecovery:
-		info.CaState = socket.TcpCongestionControlStateLoss
-	case tcpip.FastRecovery, tcpip.SACKRecovery:
-		info.CaState = socket.TcpCongestionControlStateRecovery
-	case tcpip.Disorder:
-		info.CaState = socket.TcpCongestionControlStateDisorder
-	default:
-		panic(fmt.Sprintf("unknown congestion control state: %d", state))
-	}
+	info.SetCaState(func() socket.TcpCongestionControlState {
+		switch state := value.CcState; state {
+		case tcpip.Open:
+			return socket.TcpCongestionControlStateOpen
+		case tcpip.RTORecovery:
+			return socket.TcpCongestionControlStateLoss
+		case tcpip.FastRecovery, tcpip.SACKRecovery:
+			return socket.TcpCongestionControlStateRecovery
+		case tcpip.Disorder:
+			return socket.TcpCongestionControlStateDisorder
+		default:
+			panic(fmt.Sprintf("unknown congestion control state: %d", state))
+		}
+	}())
+	info.SetState(func() socket.TcpState {
+		switch state := tcp.EndpointState(value.State); state {
+		case tcp.StateEstablished:
+			return socket.TcpStateEstablished
+		case tcp.StateSynSent:
+			return socket.TcpStateSynSent
+		case tcp.StateSynRecv:
+			return socket.TcpStateSynRecv
+		case tcp.StateFinWait1:
+			return socket.TcpStateFinWait1
+		case tcp.StateFinWait2:
+			return socket.TcpStateFinWait2
+		case tcp.StateTimeWait:
+			return socket.TcpStateTimeWait
+		case tcp.StateClose:
+			return socket.TcpStateClose
+		case tcp.StateCloseWait:
+			return socket.TcpStateCloseWait
+		case tcp.StateLastAck:
+			return socket.TcpStateLastAck
+		case tcp.StateListen:
+			return socket.TcpStateListen
+		case tcp.StateClosing:
+			return socket.TcpStateClosing
+		// Endpoint states internal to netstack.
+		case tcp.StateInitial, tcp.StateBound, tcp.StateConnecting, tcp.StateError:
+			return socket.TcpStateClose
+		default:
+			panic(fmt.Sprintf("unknown state: %d", state))
+		}
+	}())
 	info.SetRtoUsec(uint32(value.RTO.Microseconds()))
 	info.SetRttUsec(uint32(value.RTT.Microseconds()))
 	info.SetRttVarUsec(uint32(value.RTTVar.Microseconds()))

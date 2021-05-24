@@ -343,6 +343,7 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, tcpip.Error) {
 		for i := range slice {
 			slice[i] = 0xff
 		}
+		info.tcpi_state = C.uint8_t(v.State)
 		info.tcpi_rto = C.uint(v.RTO.Microseconds())
 		info.tcpi_rtt = C.uint(v.RTT.Microseconds())
 		info.tcpi_rttvar = C.uint(v.RTTVar.Microseconds())

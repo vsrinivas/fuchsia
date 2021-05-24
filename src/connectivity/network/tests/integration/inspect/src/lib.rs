@@ -209,6 +209,9 @@ async fn inspect_nic() -> Result {
                 Neighbor: {
                     UnreachableEntryLookups: 0u64,
                 },
+                MalformedL4RcvdPackets: 0u64,
+                UnknownL3ProtocolRcvdPackets: 0u64,
+                UnknownL4ProtocolRcvdPackets: 0u64,
             },
             "Network Endpoint Stats": {
                 ARP: contains {},
@@ -248,6 +251,9 @@ async fn inspect_nic() -> Result {
                 Neighbor: {
                     UnreachableEntryLookups: AnyProperty,
                 },
+                MalformedL4RcvdPackets: 0u64,
+                UnknownL3ProtocolRcvdPackets: 0u64,
+                UnknownL4ProtocolRcvdPackets: 0u64,
             },
             "Ethernet Info": {
                 Filepath: "",
@@ -309,6 +315,9 @@ async fn inspect_nic() -> Result {
                 Neighbor: {
                     UnreachableEntryLookups: AnyProperty,
                 },
+                MalformedL4RcvdPackets: 0u64,
+                UnknownL3ProtocolRcvdPackets: 0u64,
+                UnknownL4ProtocolRcvdPackets: 0u64,
             },
             "Network Device Info": {
                 TxDrops: AnyProperty,

@@ -51,6 +51,7 @@ func TestStatCounterInspectImpl(t *testing.T) {
 	children := v.ListChildren()
 
 	if diff := cmp.Diff([]string{
+		"NICs",
 		"ICMP",
 		"IGMP",
 		"IP",
@@ -73,15 +74,12 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
-	s.UnknownProtocolRcvdPackets.IncrementBy(1)
-	s.MalformedRcvdPackets.IncrementBy(2)
+	s.NICs.MalformedL4RcvdPackets.IncrementBy(2)
 	s.DroppedPackets.IncrementBy(3)
 
 	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
 		Metrics: []inspect.Metric{
-			{Key: "UnknownProtocolRcvdPackets", Value: inspect.MetricValueWithUintValue(s.UnknownProtocolRcvdPackets.Value())},
-			{Key: "MalformedRcvdPackets", Value: inspect.MetricValueWithUintValue(s.MalformedRcvdPackets.Value())},
 			{Key: "DroppedPackets", Value: inspect.MetricValueWithUintValue(s.DroppedPackets.Value())},
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {

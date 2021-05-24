@@ -298,6 +298,34 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
   // server.
   memset(&info, 0xff, sizeof(info));
 
+  if (value.has_state()) {
+    info.tcpi_state = [](fsocket::wire::TcpState state) {
+      switch (state) {
+        case fsocket::wire::TcpState::kEstablished:
+          return TCP_ESTABLISHED;
+        case fsocket::wire::TcpState::kSynSent:
+          return TCP_SYN_SENT;
+        case fsocket::wire::TcpState::kSynRecv:
+          return TCP_SYN_RECV;
+        case fsocket::wire::TcpState::kFinWait1:
+          return TCP_FIN_WAIT1;
+        case fsocket::wire::TcpState::kFinWait2:
+          return TCP_FIN_WAIT2;
+        case fsocket::wire::TcpState::kTimeWait:
+          return TCP_TIME_WAIT;
+        case fsocket::wire::TcpState::kClose:
+          return TCP_CLOSE;
+        case fsocket::wire::TcpState::kCloseWait:
+          return TCP_CLOSE_WAIT;
+        case fsocket::wire::TcpState::kLastAck:
+          return TCP_LAST_ACK;
+        case fsocket::wire::TcpState::kListen:
+          return TCP_LISTEN;
+        case fsocket::wire::TcpState::kClosing:
+          return TCP_CLOSING;
+      }
+    }(value.state());
+  }
   if (value.has_ca_state()) {
     info.tcpi_ca_state = [](fsocket::wire::TcpCongestionControlState ca_state) {
       switch (ca_state) {

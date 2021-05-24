@@ -661,11 +661,14 @@ func TestBridge(t *testing.T) {
 
 					for name, s := range stacks {
 						stats := s.Stats()
-						if n := stats.UnknownProtocolRcvdPackets.Value(); n != 0 {
-							t.Errorf("stack %s received %d UnknownProtocolRcvdPackets", name, n)
+						if n := stats.NICs.UnknownL3ProtocolRcvdPackets.Value(); n != 0 {
+							t.Errorf("stack %s received %d UnknownL3ProtocolRcvdPackets", name, n)
 						}
-						if n := stats.MalformedRcvdPackets.Value(); n != 0 {
-							t.Errorf("stack %s received %d MalformedRcvdPackets", name, n)
+						if n := stats.NICs.UnknownL4ProtocolRcvdPackets.Value(); n != 0 {
+							t.Errorf("stack %s received %d UnknownL4ProtocolRcvdPackets", name, n)
+						}
+						if n := stats.NICs.MalformedL4RcvdPackets.Value(); n != 0 {
+							t.Errorf("stack %s received %d MalformedL4RcvdPackets", name, n)
 						}
 						if n := stats.DroppedPackets.Value(); n != 0 {
 							t.Errorf("stack %s received %d DroppedPackets", name, n)

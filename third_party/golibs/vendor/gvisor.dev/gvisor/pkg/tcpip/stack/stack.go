@@ -40,13 +40,6 @@ import (
 )
 
 const (
-	// ageLimit is set to the same cache stale time used in Linux.
-	ageLimit = 1 * time.Minute
-	// resolutionTimeout is set to the same ARP timeout used in Linux.
-	resolutionTimeout = 1 * time.Second
-	// resolutionAttempts is set to the same ARP retries used in Linux.
-	resolutionAttempts = 3
-
 	// DefaultTOS is the default type of service value for network endpoints.
 	DefaultTOS = 0
 )
@@ -804,7 +797,7 @@ type NICInfo struct {
 	// MTU is the maximum transmission unit.
 	MTU uint32
 
-	Stats NICStats
+	Stats tcpip.NICStats
 
 	// NetworkStats holds the stats of each NetworkEndpoint bound to the NIC.
 	NetworkStats map[tcpip.NetworkProtocolNumber]NetworkEndpointStats
@@ -856,7 +849,7 @@ func (s *Stack) NICInfo() map[tcpip.NICID]NICInfo {
 			ProtocolAddresses: nic.primaryAddresses(),
 			Flags:             flags,
 			MTU:               nic.LinkEndpoint.MTU(),
-			Stats:             nic.stats,
+			Stats:             nic.stats.local,
 			NetworkStats:      netStats,
 			Context:           nic.context,
 			ARPHardwareType:   nic.LinkEndpoint.ARPHardwareType(),
