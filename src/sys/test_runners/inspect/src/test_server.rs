@@ -23,6 +23,29 @@ use {
     std::sync::Arc,
 };
 
+const NANOS_IN_SECONDS: f64 = 1_000_000_000.0;
+
+/// Output a log for the test. Automatically prepends the current monotonic time.
+macro_rules! test_stdout {
+    ($logger:ident, $format:literal) => {
+        let formatted_with_time = format!(
+            "[{:05.3}] {}\n",
+            (Time::get_monotonic().into_nanos() as f64 / NANOS_IN_SECONDS),
+            $format
+        );
+        $logger.write(formatted_with_time.as_bytes()).ok()
+    };
+    ($logger:ident, $format:literal, $($content:expr),*) => {
+        let formatted = format!($format, $($content, )*);
+        let formatted_with_time = format!(
+            "[{:05.3}] {}\n",
+            (Time::get_monotonic().into_nanos() as f64 / NANOS_IN_SECONDS),
+            formatted
+        );
+        $logger.write(formatted_with_time.as_bytes()).ok()
+    };
+}
+
 /// Implements `fuchsia.test.Suite` and runs provided test.
 pub struct TestServer {
     spec: ProgramSpec,
@@ -64,7 +87,7 @@ impl TestServer {
         let case = match spec.cases.get(case) {
             Some(case) => case,
             None => {
-                logs.write(b"Failed to find test case\n").ok();
+                test_stdout!(logs, "Failed to find test case");
                 return false;
             }
         };
@@ -75,12 +98,12 @@ impl TestServer {
             Accessor::Legacy => "/svc/fuchsia.diagnostics.RealLegacyMetricsArchiveAccessor",
         };
 
-        logs.write(format!("Reading `{}` from `{}`\n", case.key, svc).as_bytes()).ok();
+        test_stdout!(logs, "Reading `{}` from `{}`", case.key, svc);
 
         let context = match EvaluationContext::try_from(case) {
             Ok(c) => c,
             Err(e) => {
-                logs.write(format!("Failed to set up evaluation: {:?}\n", e).as_bytes()).ok();
+                test_stdout!(logs, "Failed to set up evaluation: {:?}\n", e);
                 return false;
             }
         };
@@ -96,12 +119,12 @@ impl TestServer {
             {
                 Ok(p) => p,
                 Err(e) => {
-                    logs.write(format!("Failed to connect to accessor: {:?}\n", e).as_bytes()).ok();
+                    test_stdout!(logs, "Failed to connect to accessor: {:?}", e);
                     return false;
                 }
             };
 
-            logs.write("Attempting read\n".as_bytes()).ok();
+            test_stdout!(logs, "Attempting read");
 
             match ArchiveReader::new()
                 .retry_if_empty(false)
@@ -114,32 +137,28 @@ impl TestServer {
                 Ok(json) => {
                     match context.run(&serde_json::to_string_pretty(&json).unwrap_or_default()) {
                         Ok(_) => {
-                            logs.write("Test case passed\n".as_bytes()).ok();
+                            test_stdout!(logs, "Test case passed");
                             return true;
                         }
                         Err(e) => {
-                            logs.write(format!("Test case attempt failed: {}\n", e).as_bytes())
-                                .ok();
+                            test_stdout!(logs, "Test case attempt failed: {}", e);
                         }
                     }
                 }
                 Err(e) => {
-                    logs.write(format!("Failed to obtain data: {}\n", e).as_bytes()).ok();
+                    test_stdout!(logs, "Failed to obtain data: {}", e);
                 }
             }
 
             let sleep_time = Duration::from_seconds(1);
 
             if end_time - Time::get_monotonic() >= Duration::from_seconds(0) {
-                logs.write(
-                    format!(
-                        "Retrying after {}s, timeout after {}s",
-                        sleep_time.into_seconds(),
-                        (end_time - Time::get_monotonic()).into_seconds(),
-                    )
-                    .as_bytes(),
-                )
-                .ok();
+                test_stdout!(
+                    logs,
+                    "Retrying after {}s, timeout after {}s",
+                    sleep_time.into_seconds(),
+                    (end_time - Time::get_monotonic()).into_seconds()
+                );
                 fasync::Timer::new(Time::after(sleep_time)).await;
             }
         }
