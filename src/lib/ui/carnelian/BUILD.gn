@@ -182,26 +182,6 @@ rustc_binary("font_metrics") {
   ]
 }
 
-rustc_binary("infinite_scroll") {
-  version = "0.1.0"
-  edition = "2018"
-  source_root = "examples/infinite_scroll.rs"
-  sources = [ "examples/infinite_scroll.rs" ]
-  deps = [
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/ui/carnelian",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:lipsum",
-    "//third_party/rust_crates:rand",
-  ]
-}
-
 rustc_binary("ink") {
   version = "0.1.0"
   edition = "2018"
@@ -502,14 +482,13 @@ resource("virtcon_config") {
   outputs = [ "data/config/carnelian.toml" ]
 }
 
-resource("shaders") {
-  sources = [
-    "src/render/shaders/copy.comp.spv",
-    "src/render/shaders/motioncopy-srgb.comp.spv",
-    "src/render/shaders/motioncopy-unorm.comp.spv",
-  ]
-  outputs = [ "data/shaders/{{source_file_part}}" ]
-}
+# TODO: add example that makes use of a pre-copy shader.
+# resource("shaders") {
+#  sources = [
+#    "src/render/shaders/copy.comp.spv",
+#  ]
+#  outputs = [ "data/shaders/{{source_file_part}}" ]
+# }
 
 # A custom template for carnelian examples to support
 # dynamic enabling of the vulkan validation layers
@@ -548,13 +527,6 @@ carnelian_examples = [
   },
   {
     name = "gamma"
-  },
-  {
-    name = "infinite_scroll"
-    additional_deps = [
-      ":robotoslab",
-      ":shaders",
-    ]
   },
   {
     name = "ink"

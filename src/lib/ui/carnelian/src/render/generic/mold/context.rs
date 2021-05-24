@@ -242,8 +242,6 @@ fn render_composition(
                 fill_rule: match layer.style.fill_rule {
                     FillRule::NonZero => mold::FillRule::NonZero,
                     FillRule::EvenOdd => mold::FillRule::EvenOdd,
-                    // TODO(dtiselice): Implement WholeTile.
-                    FillRule::WholeTile => mold::FillRule::NonZero,
                 },
                 fill: match &layer.style.fill {
                     Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),

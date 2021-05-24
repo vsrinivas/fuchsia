@@ -18,7 +18,7 @@ use {
         ViewAssistantPtr, ViewKey,
     },
     euclid::{
-        default::{Point2D, Rect, Vector2D},
+        default::{Point2D, Rect},
         point2, size2,
     },
     fuchsia_trace_provider,
@@ -187,7 +187,7 @@ impl ViewAssistant for PngViewAssistant {
         let clear_layer = rendering.clear_raster.iter().map(|raster| Layer {
             raster: raster.clone(),
             style: Style {
-                fill_rule: FillRule::WholeTile,
+                fill_rule: FillRule::NonZero,
                 fill: Fill::Solid(background),
                 blend_mode: BlendMode::Over,
             },
@@ -207,8 +207,6 @@ impl ViewAssistant for PngViewAssistant {
         let ext = RenderExt {
             post_copy: dst_rect.intersection(&output_rect).map(|visible_rect| PostCopy {
                 image,
-                color: background,
-                exposure_distance: Vector2D::zero(),
                 copy_region: CopyRegion {
                     src_offset: (visible_rect.origin - dst_rect.origin).to_point().to_u32(),
                     dst_offset: visible_rect.origin.to_u32(),

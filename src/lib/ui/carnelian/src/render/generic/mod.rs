@@ -95,10 +95,6 @@ pub struct PreCopy<B: Backend> {
 pub struct PostCopy<B: Backend> {
     /// Destination image to copy to. Must be different from render image.
     pub image: B::Image,
-    /// Border color.
-    pub color: Color,
-    /// Motion exposure distance.
-    pub exposure_distance: Vector2D<i32>,
     /// Copy region properties.
     pub copy_region: CopyRegion,
 }
@@ -200,8 +196,6 @@ pub enum FillRule {
     NonZero,
     /// Points with odd non-zero numbers are filled.
     EvenOdd,
-    /// Points are always filled. Useful for clearing.
-    WholeTile,
 }
 
 #[derive(Clone, Copy, Debug)]

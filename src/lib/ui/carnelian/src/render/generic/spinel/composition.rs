@@ -26,7 +26,6 @@ fn group_layers(
         let fill_rule_len = match style.fill_rule {
             FillRule::NonZero => 1,
             FillRule::EvenOdd => 1,
-            FillRule::WholeTile => 0,
         };
         let fill_len = match &style.fill {
             Fill::Solid(..) => 3,
@@ -69,7 +68,6 @@ fn group_layers(
                 cmds[cursor] = SpnCommand::SpnStylingOpcodeCoverEvenodd;
                 cursor += 1;
             }
-            FillRule::WholeTile => {}
         }
 
         match &style.fill {

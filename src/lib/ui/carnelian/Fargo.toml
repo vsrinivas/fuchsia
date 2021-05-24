@@ -42,8 +42,6 @@ additional_static_libraries = [
 
 data_files = [
     { src = "src/render/shaders/copy.comp.spv", dst = "data/shaders/copy.comp.spv"},
-    { src = "src/render/shaders/motioncopy-unorm.comp.spv", dst = "data/shaders/motioncopy-unorm.comp.spv"},
-    { src = "src/render/shaders/motioncopy-srgb.comp.spv", dst = "data/shaders/motioncopy-srgb.comp.spv"},
     { src = "examples/static/lenna.png", dst = "data/static/lenna.png"},
     { src = "examples/static/baboon.png", dst = "data/static/baboon.png"},
     { src = "examples/static/cross.png", dst = "data/static/cross.png"},

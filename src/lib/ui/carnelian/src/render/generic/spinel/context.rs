@@ -52,19 +52,6 @@ struct CopyParams {
     extent: u32,          // uint  at 20 (4 byte aligned)
 }
 
-// Matches struct in motioncopy.comp. See shader source for field descriptions.
-#[repr(C)]
-#[derive(Debug, Default)]
-struct MotionCopyParams {
-    src_offset: [i32; 2], // ivec2 at 0  (8  byte aligned)
-    src_dims: [i32; 2],   // ivec2 at 8  (8  byte aligned)
-    dst_offset: [i32; 2], // ivec2 at 16 (8  byte aligned)
-    dxdy: [i32; 2],       // ivec2 at 24 (8  byte aligned)
-    border: [f32; 4],     // vec4  at 32 (16 byte aligned)
-    exposure: u32,        // uint  at 48 (4  byte aligned)
-    extent: u32,          // uint  at 52 (4  byte aligned)
-}
-
 #[derive(Debug)]
 struct VulkanShader {
     pipeline: vk::Pipeline,
@@ -177,8 +164,7 @@ impl VulkanShader {
 }
 
 const DESCRIPTOR_SET_PRE_PROCESS: usize = 0;
-const DESCRIPTOR_SET_POST_PROCESS: usize = 1;
-const DESCRIPTOR_SET_COUNT: usize = 2;
+const DESCRIPTOR_SET_COUNT: usize = 1;
 
 const STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2: u32 = 1_000_059_000;
 
@@ -196,7 +182,6 @@ struct VulkanContext {
     descriptor_set_layout: vk::DescriptorSetLayout,
     descriptor_sets: Vec<vk::DescriptorSet>,
     copy_shader: Option<VulkanShader>,
-    motioncopy_shader: Option<VulkanShader>,
 }
 
 #[derive(Debug)]
@@ -728,7 +713,6 @@ impl SpinelContext {
                 descriptor_set_layout,
                 descriptor_sets,
                 copy_shader: None,
-                motioncopy_shader: None,
             },
             images: vec![],
             index_map: HashMap::new(),
@@ -892,22 +876,6 @@ impl Context<Spinel> for SpinelContext {
             group_count_y: 1,
             group_count_z: 1,
         };
-        let mut rs_image_post_process_params = MotionCopyParams::default();
-        let mut rs_image_post_process = SpnVkRenderSubmitExtImageProcess {
-            ext: ptr::null_mut(),
-            type_: SpnVkRenderSubmitExtType::SpnVkRenderSubmitExtTypeImagePostProcess,
-            access_mask: vk::ACCESS_SHADER_READ_BIT,
-            pipeline: 0,
-            pipeline_layout: 0,
-            descriptor_set_count: 0,
-            descriptor_sets: ptr::null(),
-            push_offset: 0,
-            push_size: mem::size_of::<MotionCopyParams>() as u32,
-            push_values: &rs_image_post_process_params as *const _ as *const c_void,
-            group_count_x: 1,
-            group_count_y: 1,
-            group_count_z: 1,
-        };
         let mut rs_image_post_copy = SpnVkRenderSubmitExtImagePostCopyToImage {
             ext: ptr::null_mut(),
             type_: SpnVkRenderSubmitExtType::SpnVkRenderSubmitExtTypeImagePostCopyToImage,
@@ -1035,175 +1003,71 @@ impl Context<Spinel> for SpinelContext {
             rs_image_ext = &mut rs_image_pre_process as *mut _ as *mut c_void;
         }
 
-        if let Some(PostCopy { image: dst_image_id, color, exposure_distance, copy_region }) =
-            ext.post_copy
-        {
+        if let Some(PostCopy { image: dst_image_id, copy_region }) = ext.post_copy {
             if dst_image_id == image_id {
                 panic!("PostCopy.image must be different from the render image");
             }
 
-            if exposure_distance.x.abs() > 1 || exposure_distance.y.abs() > 1 {
-                let motioncopy_shader_name = match self.vulkan.format {
-                    vk::FORMAT_B8G8R8A8_SRGB | vk::FORMAT_R8G8B8A8_SRGB => "motioncopy-srgb",
-                    vk::FORMAT_B8G8R8A8_UNORM | vk::FORMAT_R8G8B8A8_UNORM => "motioncopy-unorm",
-                    _ => panic!("Unsupported image format {}", self.vulkan.format),
-                };
-                let motioncopy_shader = self.vulkan.motioncopy_shader.get_or_insert_with(|| {
-                    VulkanShader::new(
-                        vk,
-                        device,
-                        descriptor_set_layout,
-                        motioncopy_shader_name,
-                        mem::size_of::<MotionCopyParams>(),
-                    )
-                });
-                rs_image_post_process.pipeline = motioncopy_shader.pipeline;
-                rs_image_post_process.pipeline_layout = motioncopy_shader.pipeline_layout;
+            let mut src_y = copy_region.src_offset.y;
+            let mut dst_y = copy_region.dst_offset.y;
+            let mut height = copy_region.extent.height;
 
-                let dst_image = self
-                    .images
-                    .get(dst_image_id.0 as usize)
-                    .expect(&format!("invalid PostCopy image {:?}", dst_image_id));
-                if dst_image.layout() != vk::IMAGE_LAYOUT_GENERAL {
-                    dst_image.layout_transition(
-                        vk::IMAGE_LAYOUT_GENERAL,
-                        vk::PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                        vk::ACCESS_SHADER_WRITE_BIT,
-                    );
+            self.image_post_copy_regions.clear();
+
+            while height > 0 {
+                let rows = height.min(image.height() - src_y);
+                let mut width = copy_region.extent.width;
+                let mut src_x = copy_region.src_offset.x;
+                let mut dst_x = copy_region.dst_offset.x;
+
+                while width > 0 {
+                    let columns = width.min(image.width() - src_x);
+
+                    self.image_post_copy_regions.push(vk::ImageCopy {
+                        srcSubresource: vk::ImageSubresourceLayers {
+                            aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+                            mipLevel: 0,
+                            baseArrayLayer: 0,
+                            layerCount: 1,
+                        },
+                        srcOffset: vk::Offset3D { x: src_x as i32, y: src_y as i32, z: 0 },
+                        dstSubresource: vk::ImageSubresourceLayers {
+                            aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
+                            mipLevel: 0,
+                            baseArrayLayer: 0,
+                            layerCount: 1,
+                        },
+                        dstOffset: vk::Offset3D { x: dst_x as i32, y: dst_y as i32, z: 0 },
+                        extent: vk::Extent3D { width: columns, height: rows, depth: 1 },
+                    });
+
+                    width -= columns;
+                    dst_x += columns;
+                    src_x = 0;
                 }
 
-                update_descriptor_set(
-                    &self.vulkan.vk,
-                    device,
-                    image,
-                    dst_image,
-                    self.vulkan.descriptor_sets[DESCRIPTOR_SET_POST_PROCESS],
-                );
-                rs_image_post_process.descriptor_set_count = 1;
-                rs_image_post_process.descriptor_sets =
-                    &self.vulkan.descriptor_sets[DESCRIPTOR_SET_POST_PROCESS];
-
-                // TODO: Combined X+Y exposure support.
-                if exposure_distance.x != 0 && exposure_distance.y != 0 {
-                    panic!("x and y exposure_distance cannot be used at the same time");
-                }
-
-                let mut extent = None;
-                let mut groups = 0;
-                for i in 0..2 {
-                    let src_offset = copy_region.src_offset.to_array();
-                    let dst_offset = copy_region.dst_offset.to_array();
-                    let region_extent = copy_region.extent.to_array();
-                    let exposure_distance = exposure_distance.to_array();
-
-                    match exposure_distance[i].cmp(&0) {
-                        Ordering::Less => {
-                            // Copy forward.
-                            rs_image_post_process_params.src_offset[i] = src_offset[i] as i32;
-                            rs_image_post_process_params.dst_offset[i] = dst_offset[i] as i32;
-                            rs_image_post_process_params.dxdy[i] = 1;
-                            extent = Some(region_extent[i]);
-                        }
-                        Ordering::Equal => {
-                            // Copy direction is not important.
-                            rs_image_post_process_params.src_offset[i] = src_offset[i] as i32;
-                            rs_image_post_process_params.dst_offset[i] = dst_offset[i] as i32;
-                            rs_image_post_process_params.dxdy[i] = 0;
-                            groups = region_extent[i]
-                        }
-                        Ordering::Greater => {
-                            // Copy backwards.
-                            rs_image_post_process_params.src_offset[i] =
-                                (src_offset[i] + region_extent[i]) as i32 - 1;
-                            rs_image_post_process_params.dst_offset[i] =
-                                (dst_offset[i] + region_extent[i]) as i32 - 1;
-                            rs_image_post_process_params.dxdy[i] = -1;
-                            extent = Some(region_extent[i]);
-                        }
-                    }
-                }
-
-                let extent = extent.unwrap_or_else(|| {
-                    // Copy rows forward if direction is not important for either dimension.
-                    rs_image_post_process_params.dxdy[0] = 1;
-                    groups = copy_region.extent.height;
-                    copy_region.extent.width
-                });
-                let exposure_amount =
-                    extent.min((exposure_distance.x.abs() + exposure_distance.y.abs()) as u32);
-
-                rs_image_post_process_params.exposure = exposure_amount;
-                rs_image_post_process_params.extent = extent - exposure_amount;
-                rs_image_post_process_params.src_dims =
-                    [image.width() as i32, image.height() as i32];
-                rs_image_post_process_params.border = color.to_linear_premult_rgba();
-                const LOCAL_SIZE_X: u32 = 48;
-                // TODO: Clip output to extent instead of rounding up.
-                rs_image_post_process.group_count_x = (groups + LOCAL_SIZE_X - 1) / LOCAL_SIZE_X;
-                rs_image_post_process.ext = rs_image_ext;
-                rs_image_ext = &mut rs_image_post_process as *mut _ as *mut c_void;
-            } else {
-                let mut src_y = copy_region.src_offset.y;
-                let mut dst_y = copy_region.dst_offset.y;
-                let mut height = copy_region.extent.height;
-
-                self.image_post_copy_regions.clear();
-
-                while height > 0 {
-                    let rows = height.min(image.height() - src_y);
-                    let mut width = copy_region.extent.width;
-                    let mut src_x = copy_region.src_offset.x;
-                    let mut dst_x = copy_region.dst_offset.x;
-
-                    while width > 0 {
-                        let columns = width.min(image.width() - src_x);
-
-                        self.image_post_copy_regions.push(vk::ImageCopy {
-                            srcSubresource: vk::ImageSubresourceLayers {
-                                aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
-                                mipLevel: 0,
-                                baseArrayLayer: 0,
-                                layerCount: 1,
-                            },
-                            srcOffset: vk::Offset3D { x: src_x as i32, y: src_y as i32, z: 0 },
-                            dstSubresource: vk::ImageSubresourceLayers {
-                                aspectMask: vk::IMAGE_ASPECT_COLOR_BIT,
-                                mipLevel: 0,
-                                baseArrayLayer: 0,
-                                layerCount: 1,
-                            },
-                            dstOffset: vk::Offset3D { x: dst_x as i32, y: dst_y as i32, z: 0 },
-                            extent: vk::Extent3D { width: columns, height: rows, depth: 1 },
-                        });
-
-                        width -= columns;
-                        dst_x += columns;
-                        src_x = 0;
-                    }
-
-                    height -= rows;
-                    dst_y += rows;
-                    src_y = 0;
-                }
-
-                let dst_image = self
-                    .images
-                    .get(dst_image_id.0 as usize)
-                    .expect(&format!("invalid PostCopy image {:?}", dst_image_id));
-                if dst_image.layout() != vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL {
-                    dst_image.layout_transition(
-                        vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                        vk::PIPELINE_STAGE_TRANSFER_BIT,
-                        vk::ACCESS_TRANSFER_WRITE_BIT,
-                    );
-                }
-
-                rs_image_post_copy.region_count = self.image_post_copy_regions.len() as u32;
-                rs_image_post_copy.regions = self.image_post_copy_regions.as_ptr();
-                rs_image_post_copy.dst = dst_image.image();
-                rs_image_post_copy.ext = rs_image_ext;
-                rs_image_ext = &mut rs_image_post_copy as *mut _ as *mut c_void;
+                height -= rows;
+                dst_y += rows;
+                src_y = 0;
             }
+
+            let dst_image = self
+                .images
+                .get(dst_image_id.0 as usize)
+                .expect(&format!("invalid PostCopy image {:?}", dst_image_id));
+            if dst_image.layout() != vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL {
+                dst_image.layout_transition(
+                    vk::IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    vk::PIPELINE_STAGE_TRANSFER_BIT,
+                    vk::ACCESS_TRANSFER_WRITE_BIT,
+                );
+            }
+
+            rs_image_post_copy.region_count = self.image_post_copy_regions.len() as u32;
+            rs_image_post_copy.regions = self.image_post_copy_regions.as_ptr();
+            rs_image_post_copy.dst = dst_image.image();
+            rs_image_post_copy.ext = rs_image_ext;
+            rs_image_ext = &mut rs_image_post_copy as *mut _ as *mut c_void;
 
             post_image_layout = vk::IMAGE_LAYOUT_GENERAL;
         }
@@ -1325,14 +1189,6 @@ impl Drop for SpinelContext {
                 ptr::null(),
             );
             if let Some(shader) = self.vulkan.copy_shader.take() {
-                self.vulkan.vk.DestroyPipeline(self.vulkan.device, shader.pipeline, ptr::null());
-                self.vulkan.vk.DestroyPipelineLayout(
-                    self.vulkan.device,
-                    shader.pipeline_layout,
-                    ptr::null(),
-                );
-            }
-            if let Some(shader) = self.vulkan.motioncopy_shader.take() {
                 self.vulkan.vk.DestroyPipeline(self.vulkan.device, shader.pipeline, ptr::null());
                 self.vulkan.vk.DestroyPipelineLayout(
                     self.vulkan.device,

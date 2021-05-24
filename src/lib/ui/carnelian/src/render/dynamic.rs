@@ -71,10 +71,6 @@ pub struct PreCopy {
 pub struct PostCopy {
     /// Destination image to copy to. Must be different from render image.
     pub image: Image,
-    /// Border color.
-    pub color: Color,
-    /// Motion exposure distance.
-    pub exposure_distance: Vector2D<i32>,
     /// Copy region properties.
     pub copy_region: CopyRegion,
 }
@@ -219,8 +215,6 @@ impl Context {
                             } else {
                                 panic!("mismatched backends");
                             },
-                            color: post_copy.color,
-                            exposure_distance: post_copy.exposure_distance,
                             copy_region: generic::CopyRegion {
                                 src_offset: post_copy.copy_region.src_offset,
                                 dst_offset: post_copy.copy_region.dst_offset,
@@ -269,8 +263,6 @@ impl Context {
                             } else {
                                 panic!("mismatched backends");
                             },
-                            color: post_copy.color,
-                            exposure_distance: post_copy.exposure_distance,
                             copy_region: generic::CopyRegion {
                                 src_offset: post_copy.copy_region.src_offset,
                                 dst_offset: post_copy.copy_region.dst_offset,

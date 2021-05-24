@@ -101,11 +101,6 @@ around the screen.
 
 These examples use the render mechanism directly, instead of using scenes and facets.
 
-### infinite_scroll
-
-This example exercises some techniques for scrolling. Some of what it does is not currently
-supported by the scene system, and might never be.
-
 ### ink
 
 This example demonstrate efficient drawing on devices with stylus support.
