@@ -90,12 +90,38 @@ resource("syscalls_test_bin") {
 }
 
 fuchsia_component("syscalls_test") {
+  testonly = true
   check_references = false
   manifest = "meta/syscalls_test.cml"
   deps = [
     ":syscalls_test_bin",
     ":system_bin",
   ]
+}
+
+template("gvisor_test_component") {
+  test_name = target_name
+
+  resource("${test_name}_bin") {
+    sources =
+        [ "//prebuilt/starnix/tests/syscalls/linux-amd64/linux/${test_name}" ]
+    outputs = [ "root/system/bin/${test_name}" ]
+  }
+
+  fuchsia_component(test_name) {
+    forward_variables_from(invoker, "*")
+
+    testonly = true
+    check_references = false
+    manifest = "meta/${test_name}.cml"
+    deps = [
+      ":${test_name}_bin",
+      ":android_system_image",
+    ]
+  }
+}
+
+gvisor_test_component("brk_test") {
 }
 
 fuchsia_test_package("test_android_distro") {
@@ -107,6 +133,7 @@ fuchsia_test_package("test_android_distro") {
   ]
 
   test_components = [
+    ":brk_test",
     ":sh_test",
     ":syscalls_test",
   ]
