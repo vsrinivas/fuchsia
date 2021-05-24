@@ -74,6 +74,7 @@ product_bootfs_labels += [
 cache_package_labels += [
   "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/experiences/tests/e2e:end_to_end_deps",
+  "//src/experiences/tests/performance:performance_deps",
 ]
 
 cache_package_labels -=
@@ -83,6 +84,7 @@ cache_package_labels -=
 # used by the tests.
 host_labels += [
   "//src/experiences/tests/e2e:test",
+  "//src/experiences/tests/performance:test",
   "//src/tests/end_to_end/copy_files:test",
 ]
 
