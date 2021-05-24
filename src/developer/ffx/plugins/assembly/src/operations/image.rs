@@ -23,17 +23,22 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let (product, board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
 
-    let base_package = construct_base_package(&outdir, &gendir, &product)?;
-    let base_merkle = MerkleTree::from_reader(&base_package)
-        .context("Failed to calculate the base merkle")?
-        .root();
-    println!("Base merkle: {}", &base_merkle);
+    let base_merkle = if has_base_package(&product) {
+        let base_package = construct_base_package(&outdir, &gendir, &product)?;
+        let base_merkle = MerkleTree::from_reader(&base_package)
+            .context("Failed to calculate the base merkle")?
+            .root();
+        println!("Base merkle: {}", &base_merkle);
+        Some(base_merkle)
+    } else {
+        None
+    };
 
     if !full {
         return Ok(());
     }
 
-    let zbi_path = construct_zbi(&outdir, &gendir, &product, Some(base_merkle))?;
+    let zbi_path = construct_zbi(&outdir, &gendir, &product, base_merkle)?;
     let vbmeta_path = construct_vbmeta(&outdir, &board, &zbi_path)?;
     let _update_pkg_path =
         construct_update(&outdir, &gendir, &product, &board, &zbi_path, &vbmeta_path, base_merkle)?;
@@ -51,6 +56,12 @@ fn read_configs(
         from_reader(&mut product).context("Failed to read the product config")?;
     let board: BoardConfig = from_reader(&mut board).context("Failed to read the board config")?;
     Ok((product, board))
+}
+
+fn has_base_package(product: &ProductConfig) -> bool {
+    return !(product.base_packages.is_empty()
+        && product.cache_packages.is_empty()
+        && product.extra_packages_for_base_package.is_empty());
 }
 
 fn construct_base_package(
@@ -192,7 +203,7 @@ fn construct_update(
     board: &BoardConfig,
     zbi: impl AsRef<Path>,
     vbmeta: impl AsRef<Path>,
-    base_merkle: Hash,
+    base_merkle: Option<Hash>,
 ) -> Result<PathBuf> {
     // Create the board name file.
     // TODO(fxbug.dev/76326): Create a better system for writing intermediate files.
@@ -201,13 +212,20 @@ fn construct_update(
 
     // Add several files to the update package.
     let mut update_pkg_builder = UpdatePackageBuilder::new();
-    update_pkg_builder.add_file(&product.epoch_file, "epoch.json")?;
-    update_pkg_builder.add_file(&product.version_file, "version")?;
+    if let Some(epoch_file) = &product.epoch_file {
+        update_pkg_builder.add_file(epoch_file, "epoch.json")?;
+    }
+    if let Some(version_file) = &product.version_file {
+        update_pkg_builder.add_file(version_file, "version")?;
+    }
     update_pkg_builder.add_file(&board_name, "board")?;
     update_pkg_builder.add_file(zbi, "zbi")?;
     update_pkg_builder.add_file(vbmeta, "fuchsia.vbmeta")?;
-    update_pkg_builder.add_file(&board.recovery.zbi, "zedboot")?;
-    update_pkg_builder.add_file(&board.recovery.vbmeta, "recovery.vbmeta")?;
+
+    if let Some(recovery_config) = &board.recovery {
+        update_pkg_builder.add_file(&recovery_config.zbi, "zedboot")?;
+        update_pkg_builder.add_file(&recovery_config.vbmeta, "recovery.vbmeta")?;
+    }
 
     // Add the bootloaders.
     for bootloader in &board.bootloaders {
@@ -225,10 +243,12 @@ fn construct_update(
     add_packages_to_update(&product.base_packages)?;
     add_packages_to_update(&product.cache_packages)?;
 
-    // Add the base package merkle.
-    // TODO(fxbug.dev/76986): Do not hardcode the base package path.
-    update_pkg_builder
-        .add_package(PackagePath::from_name_and_variant("system_image", "0")?, base_merkle)?;
+    if let Some(base_merkle) = base_merkle {
+        // Add the base package merkle.
+        // TODO(fxbug.dev/76986): Do not hardcode the base package path.
+        update_pkg_builder
+            .add_package(PackagePath::from_name_and_variant("system_image", "0")?, base_merkle)?;
+    }
 
     // Build the update package and return its path.
     let update_package_path = outdir.as_ref().join("update.far");

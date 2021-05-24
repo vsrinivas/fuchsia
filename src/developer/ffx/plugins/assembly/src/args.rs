@@ -87,13 +87,16 @@ pub struct ImageArgs {
     /// settings specific to the product being assembled.
     #[argh(option)]
     pub product: PathBuf,
+
     /// the configuration file that specifies the packages, binaries, and
     /// settings specific to the board being assembled.
     #[argh(option)]
     pub board: PathBuf,
+
     /// the directory to write assembled outputs to.
     #[argh(option)]
     pub outdir: PathBuf,
+
     /// the directory to write generated intermediate files to.
     #[argh(option)]
     pub gendir: Option<PathBuf>,
