@@ -174,6 +174,47 @@ impl TargetFormatter for JsonTargetFormatter {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum StringifiedField {
+    String(String),
+    Array(Vec<String>),
+}
+
+impl Default for StringifiedField {
+    fn default() -> Self {
+        StringifiedField::String(String::new())
+    }
+}
+
+impl StringifiedField {
+    fn len(&self) -> usize {
+        match self {
+            StringifiedField::String(_s) => 1,
+            StringifiedField::Array(a) => a.len(),
+        }
+    }
+
+    fn string_len(&self) -> usize {
+        match self {
+            StringifiedField::String(s) => s.len(),
+            StringifiedField::Array(a) => a.iter().map(|s| s.len()).max().unwrap_or(0),
+        }
+    }
+
+    fn at_index(&self, index: usize) -> Option<String> {
+        match self {
+            StringifiedField::String(s) => {
+                if index == 0 {
+                    Some(s.clone())
+                } else {
+                    None
+                }
+            }
+            StringifiedField::Array(a) => a.get(index).cloned(),
+        }
+    }
+}
+
 // Convenience macro to make potential addition/removal of fields less likely
 // to affect internal logic. Other functions that construct these targets will
 // fail to compile if more fields are added.
@@ -187,9 +228,10 @@ macro_rules! make_structs_and_support_functions {
         }
 
         impl Limits {
-            fn update(&mut self, target: &StringifiedTarget) {
+            fn update(&mut self, target: &mut StringifiedTarget) {
                 $(
-                    self.$field = max(self.$field, target.$field.len());
+                    self.$field = max(self.$field, target.$field.string_len());
+                    target.__longest_array = max(target.__longest_array, target.$field.len());
                 )*
             }
 
@@ -204,9 +246,21 @@ macro_rules! make_structs_and_support_functions {
 
         #[derive(Debug, PartialEq, Eq)]
         struct StringifiedTarget {
+            __longest_array: usize,
             $(
-                $field: String,
+                $field: StringifiedField,
             )*
+        }
+
+        impl Default for StringifiedTarget {
+            fn default() -> Self {
+                Self {
+                    __longest_array: 0,
+                    $(
+                        $field: StringifiedField::default(),
+                    )*
+                }
+            }
         }
 
         #[derive(Serialize, Debug, PartialEq, Eq)]
@@ -222,20 +276,23 @@ macro_rules! make_structs_and_support_functions {
     (@print_func $nodename:ident, $last_field:ident, $($field:ident),* $(,)?) => {
         #[inline]
         fn format_fields(target: &StringifiedTarget, limits: &Limits, default_nodename: &str) -> String {
-            let mut s = String::with_capacity(limits.capacity());
-            write!(s, "{:width$}",
-                   if target.$nodename == default_nodename {
-                       format!("{}*", target.$nodename)
-                   } else {
-                       target.$nodename.clone()
-                   },
-                   width = limits.$nodename + PADDING_SPACES).unwrap();
-            $(
-                write!(s, "{:width$}", target.$field, width = limits.$field + PADDING_SPACES).unwrap();
-            )*
-            // Skips spaces on the end.
-            write!(s, "{}", target.$last_field).unwrap();
-            s
+            fn format_fields_(target: &StringifiedTarget, limits: &Limits, default_nodename: &str, index: usize) -> String {
+                let mut s = String::with_capacity(limits.capacity());
+                let nodename = match target.$nodename.at_index(index) {
+                    Some(nodename) if nodename == default_nodename => format!("{}*", nodename),
+                    Some(nodename) => nodename,
+                    None => String::new(),
+                };
+                write!(s, "{:width$}", nodename, width = limits.$nodename + PADDING_SPACES).unwrap();
+                $(
+                    write!(s, "{:width$}", target.$field.at_index(index).unwrap_or_else(String::new), width = limits.$field + PADDING_SPACES).unwrap();
+                )*
+                // Skips spaces on the end.
+                write!(s, "{}", target.$last_field.at_index(index).unwrap_or_else(String::new)).unwrap();
+                s
+            }
+
+            (0..target.__longest_array).map(|i| format_fields_(target, limits, default_nodename, i)).collect::<Vec<_>>().join("\n")
         }
     };
 }
@@ -277,8 +334,13 @@ impl StringifiedTarget {
             v.drain(..)
                 .map(|a| StringifiedTarget::from_target_addr_info(a))
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(",; ")
         )
+    }
+
+    fn field_from_addresses(v: Vec<bridge::TargetAddrInfo>) -> StringifiedField {
+        let all_addresses = StringifiedTarget::from_addresses(v);
+        StringifiedField::Array(all_addresses.split(';').map(String::from).collect::<Vec<_>>())
     }
 
     fn from_rcs_state(r: bridge::RemoteControlState) -> String {
@@ -320,18 +382,21 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
             ),
         };
         Ok(Self {
-            nodename: target.nodename.unwrap_or("<unknown>".to_string()),
-            serial: target.serial_number.unwrap_or("<unknown>".to_string()),
-            addresses: StringifiedTarget::from_addresses(
+            nodename: StringifiedField::String(target.nodename.unwrap_or("<unknown>".to_string())),
+            serial: StringifiedField::String(
+                target.serial_number.unwrap_or("<unknown>".to_string()),
+            ),
+            addresses: StringifiedTarget::field_from_addresses(
                 target.addresses.ok_or(StringifyError::MissingAddresses)?,
             ),
-            rcs_state: StringifiedTarget::from_rcs_state(
+            rcs_state: StringifiedField::String(StringifiedTarget::from_rcs_state(
                 target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
-            ),
-            target_type,
-            target_state: StringifiedTarget::from_target_state(
+            )),
+            target_type: StringifiedField::String(target_type),
+            target_state: StringifiedField::String(StringifiedTarget::from_target_state(
                 target.target_state.ok_or(StringifyError::MissingTargetState)?,
-            ),
+            )),
+            ..Default::default()
         })
     }
 }
@@ -383,21 +448,22 @@ impl TryFrom<Vec<bridge::Target>> for TabularTargetFormatter {
         // First target is the table header in this case, since the formatting
         // for the table header is (for now) identical to the rest of the
         // targets
-        let initial = vec![StringifiedTarget {
-            nodename: NAME.to_string(),
-            serial: SERIAL.to_string(),
-            addresses: ADDRS.to_string(),
-            rcs_state: RCS.to_string(),
-            target_type: TYPE.to_string(),
-            target_state: STATE.to_string(),
+        let mut initial = vec![StringifiedTarget {
+            nodename: StringifiedField::String(NAME.to_string()),
+            serial: StringifiedField::String(SERIAL.to_string()),
+            addresses: StringifiedField::String(ADDRS.to_string()),
+            rcs_state: StringifiedField::String(RCS.to_string()),
+            target_type: StringifiedField::String(TYPE.to_string()),
+            target_state: StringifiedField::String(STATE.to_string()),
+            ..Default::default()
         }];
         let mut limits = Limits::default();
-        limits.update(&initial[0]);
+        limits.update(&mut initial[0]);
 
         let acc = Self { targets: initial, limits };
         Ok(targets.drain(..).try_fold(acc, |mut a, t| {
-            let s = StringifiedTarget::try_from(t)?;
-            a.limits.update(&s);
+            let mut s = StringifiedTarget::try_from(t)?;
+            a.limits.update(&mut s);
             a.targets.push(s);
             Ok(a)
         })?)
