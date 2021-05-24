@@ -97,14 +97,13 @@ struct Part {
 
 impl Sdk {
     pub fn from_build_dir(path: PathBuf) -> Result<Self> {
+        let mut manifest_path = path.clone();
         let file = if cfg!(target_arch = "x86_64") {
-            let mut manifest_path = path.clone();
             manifest_path.push("host_x64/sdk/manifest/host_tools.modular");
-            fs::File::open(manifest_path).map_err(Into::into)
+            fs::File::open(&manifest_path).map_err(Into::into)
         } else if cfg!(target_arch = "aarch64") {
-            let mut manifest_path = path.clone();
             manifest_path.push("host_arm64/sdk/manifest/host_tools.modular");
-            fs::File::open(manifest_path).map_err(Into::into)
+            fs::File::open(&manifest_path).map_err(Into::into)
         } else {
             Err(anyhow!("Host architecture not supported"))
         }
@@ -113,13 +112,12 @@ impl Sdk {
         let file = match file {
             Ok(file) => file,
             Err(e) => {
-                let mut manifest_path = path.clone();
-                manifest_path.push("sdk/manifest/core");
-                fs::File::open(manifest_path).map_err(|_| e)?
+                manifest_path = path.join("sdk/manifest/core");
+                fs::File::open(&manifest_path).map_err(|_| e)?
             }
         };
 
-        let sdk = Self::atoms_from_core_manifest(BufReader::new(file))?
+        let sdk = Self::atoms_from_core_manifest(manifest_path, BufReader::new(file))?
             .to_sdk(path.clone(), SdkAtoms::default_get_meta);
 
         sdk.map(|mut x: Sdk| {
@@ -128,13 +126,16 @@ impl Sdk {
         })
     }
 
-    fn atoms_from_core_manifest<T>(reader: BufReader<T>) -> Result<SdkAtoms>
+    fn atoms_from_core_manifest<T>(manifest_path: PathBuf, reader: BufReader<T>) -> Result<SdkAtoms>
     where
         T: io::Read,
     {
-        let atoms: SdkAtoms = serde_json::from_reader(reader)?;
+        let atoms: serde_json::Result<SdkAtoms> = serde_json::from_reader(reader);
 
-        Ok(atoms)
+        match atoms {
+            Ok(result) => Ok(result),
+            Err(e) => Err(anyhow!("Can't read json file {:?}: {:?}", manifest_path, e)),
+        }
     }
 
     pub fn from_sdk_dir(path: PathBuf) -> Result<Self> {
@@ -265,7 +266,14 @@ impl SdkAtoms {
                 .ok_or(anyhow!("Atom did not specify source for its metadata."))?;
             let full_meta_path = path_prefix.join(meta);
 
-            metas.push(serde_json::from_reader(get_meta(full_meta_path)?)?);
+            let json_metas = serde_json::from_reader(get_meta(full_meta_path.clone())?);
+
+            match json_metas {
+                Ok(result) => metas.push(result),
+                Err(e) => {
+                    return Err(anyhow!("Can't read json file {:?}: {:?}", full_meta_path, e))
+                }
+            }
         }
 
         Ok(Sdk { metas, real_paths: RealPaths::Map(real_paths), version: SdkVersion::Unknown })
@@ -494,8 +502,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest() {
+        let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
         let atoms =
-            Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
+            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
+                .unwrap();
 
         assert!(atoms.ids.is_empty());
 
@@ -517,8 +527,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest_to_sdk() {
+        let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
         let atoms =
-            Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
+            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
+                .unwrap();
 
         let sdk = atoms.to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta).unwrap();
         assert_eq!(SdkVersion::Unknown, sdk.version);
@@ -533,8 +545,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest_host_tool() {
+        let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
         let atoms =
-            Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
+            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
+                .unwrap();
 
         let zxdb = atoms
             .to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta)
@@ -547,8 +561,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest_host_tool_multi_arch() {
+        let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
         let atoms =
-            Sdk::atoms_from_core_manifest(BufReader::new(CORE_MANIFEST.as_bytes())).unwrap();
+            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
+                .unwrap();
 
         let symbol_index = atoms
             .to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta)
