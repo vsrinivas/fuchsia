@@ -176,7 +176,7 @@ pub fn sys_kill(
             if !task.can_signal(&target, &unchecked_signal) {
                 return Err(EPERM);
             }
-            target.send_signal(&unchecked_signal)?;
+            send_signal(&target, &unchecked_signal)?;
         }
         pid if pid == -1 => {
             // "If pid equals -1, then sig is sent to every process for which
@@ -248,7 +248,7 @@ pub fn sys_tgkill(
         return Err(EPERM);
     }
 
-    target.send_signal(&unchecked_signal)
+    send_signal(&target, &unchecked_signal)
 }
 
 pub fn sys_rt_sigreturn(ctx: &mut SyscallContext<'_>) -> Result<SyscallResult, Errno> {
@@ -285,7 +285,7 @@ where
             last_error = EPERM;
         }
 
-        match leader.send_signal(unchecked_signal) {
+        match send_signal(&leader, unchecked_signal) {
             Ok(_) => sent_signal = true,
             Err(errno) => last_error = errno,
         }

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::signals::Signal;
-use crate::syscalls::SyscallContext;
-use crate::types::sigaction_t;
-use crate::types::UserAddress;
+use crate::signals::{Signal, SignalAction, UncheckedSignal};
+use crate::syscalls::{SyscallContext, SyscallResult, SUCCESS};
+use crate::task::Task;
+use crate::types::{sigaction_t, Errno, UserAddress};
 use fuchsia_zircon::sys::zx_thread_state_general_regs_t;
+use std::convert::TryFrom;
 
 /// The size of the red zone.
 ///
@@ -102,5 +103,46 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     ctx.registers = signal_stack_frame.registers;
 
     // If the task is suspended, wake it.
-    ctx.task.wake();
+    wake(ctx.task);
+}
+
+pub fn send_signal(
+    task: &Task,
+    unchecked_signal: &UncheckedSignal,
+) -> Result<SyscallResult, Errno> {
+    // 0 is a sentinel value used to do permission checks.
+    let sentinel_signal = UncheckedSignal::from(0);
+    if *unchecked_signal == sentinel_signal {
+        return Ok(SUCCESS);
+    }
+
+    let signal = Signal::try_from(unchecked_signal)?;
+    if signal.mask() & *task.signal_mask.lock() == 0 {
+        let signal_actions = task.thread_group.signal_actions.read();
+        // TODO(lindkvist): Handle default actions correctly.
+        return match signal_actions.get(&signal) {
+            SignalAction::Cont => {
+                wake(task);
+                Ok(SUCCESS)
+            }
+            SignalAction::Core => Ok(SUCCESS),
+            SignalAction::Ignore => Ok(SUCCESS),
+            SignalAction::Stop => Ok(SUCCESS),
+            SignalAction::Term => Ok(SUCCESS),
+            SignalAction::Custom(action) => Ok(SyscallResult::HandleSignal(signal, *action)),
+        };
+    } else {
+        let mut scheduler = task.thread_group.kernel.scheduler.write();
+        scheduler.add_pending_signal(task.id, signal);
+    }
+    Ok(SUCCESS)
+}
+
+/// Wakes the task from call to `sigsuspend`.
+fn wake(task: &Task) {
+    if let Some(waiter_condvar) =
+        task.thread_group.kernel.scheduler.write().remove_suspended_task(task.id)
+    {
+        waiter_condvar.notify_all();
+    }
 }
