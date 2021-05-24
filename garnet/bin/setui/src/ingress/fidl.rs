@@ -4,6 +4,7 @@
 
 use crate::base::{Dependency, Entity, SettingType};
 use crate::ingress::registration::{self, Registrant, Registrar};
+use crate::job::source::Seeder;
 use crate::service::message::Delegate;
 use fidl_fuchsia_settings::{
     AccessibilityRequestStream, AudioRequestStream, DeviceRequestStream, DisplayRequestStream,
@@ -73,8 +74,9 @@ pub mod display {
 /// [Register] defines the closure implemented for interfaces to bring up support. Each interface
 /// handler is given access to the MessageHub [Delegate] for communication within the service and
 /// [ServiceFsDir] to register as the designated handler for the interface.
-pub type Register =
-    Box<dyn for<'a> FnOnce(Delegate, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync>;
+pub type Register = Box<
+    dyn for<'a> FnOnce(&Delegate, &Seeder, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync,
+>;
 
 impl From<&Interface> for Vec<Dependency> {
     fn from(item: &Interface) -> Self {
@@ -147,7 +149,9 @@ impl From<&Interface> for Register {
     fn from(item: &Interface) -> Self {
         let interface = item.clone();
         Box::new(
-            move |delegate: Delegate, service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
+            move |delegate: &Delegate,
+                  _seeder: &Seeder,
+                  service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
                 let delegate = delegate.clone();
                 match interface {
                     Interface::Audio => {
@@ -236,6 +240,7 @@ mod tests {
     use crate::base::{Dependency, Entity, SettingType};
     use crate::handler::base::{Payload, Request};
     use crate::ingress::registration::Registrant;
+    use crate::job::source::Seeder;
     use crate::message::base::MessengerType;
     use crate::service;
     use fidl_fuchsia_settings::PrivacyMarker;
@@ -250,6 +255,13 @@ mod tests {
     async fn test_fidl_bringup() {
         let mut fs = ServiceFs::new();
         let delegate = service::message::create_hub();
+        let job_manager_signature = delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("messenger should be created")
+            .0
+            .get_signature();
+        let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
 
         let setting_type = SettingType::Privacy;
 
@@ -268,7 +280,7 @@ mod tests {
             .1;
 
         // Register and consume Registrant.
-        registrant.register(delegate.clone(), &mut fs.root_dir());
+        registrant.register(&delegate, &job_seeder, &mut fs.root_dir());
 
         // Spawn nested environment.
         let nested_environment =

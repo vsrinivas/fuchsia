@@ -28,6 +28,8 @@ use {
     crate::ingress::registration::Registrant,
     crate::input::input_controller::InputController,
     crate::intl::intl_controller::IntlController,
+    crate::job::manager::Manager,
+    crate::job::source::Seeder,
     crate::light::light_controller::LightController,
     crate::monitor::base as monitor_base,
     crate::night_mode::night_mode_controller::NightModeController,
@@ -219,15 +221,17 @@ pub struct Environment {
     pub nested_environment: Option<NestedEnvironment>,
     pub delegate: Delegate,
     pub entities: HashSet<Entity>,
+    pub job_seeder: Seeder,
 }
 
 impl Environment {
     pub fn new(
         nested_environment: Option<NestedEnvironment>,
         delegate: Delegate,
+        job_seeder: Seeder,
         entities: HashSet<Entity>,
     ) -> Environment {
-        Environment { nested_environment, delegate, entities }
+        Environment { nested_environment, delegate, job_seeder, entities }
     }
 }
 
@@ -386,7 +390,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     async fn prepare_env(
         mut self,
         runtime: Runtime,
-    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, Delegate, HashSet<Entity>), Error> {
+    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, Delegate, Seeder, HashSet<Entity>), Error>
+    {
         let mut fs = ServiceFs::new();
 
         let service_dir;
@@ -485,9 +490,13 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             })
             .unwrap_or(self.agent_blueprints);
 
+        let job_manager_signature = Manager::spawn(&delegate).await;
+        let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
+
         let entities = create_environment(
             service_dir,
             delegate.clone(),
+            job_seeder.clone(),
             settings,
             self.registrants,
             policies,
@@ -502,7 +511,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         .await
         .map_err(|err| format_err!("could not create environment: {:?}", err))?;
 
-        Ok((fs, delegate, entities))
+        Ok((fs, delegate, job_seeder, entities))
     }
 
     pub fn spawn(self, mut executor: fasync::LocalExecutor) -> Result<(), Error> {
@@ -519,11 +528,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         match self.prepare_env(Runtime::Nested(env_name)).await {
-            Ok((mut fs, delegate, entities)) => {
+            Ok((mut fs, delegate, job_seeder, entities)) => {
                 let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
                 fasync::Task::spawn(fs.collect()).detach();
 
-                Ok(Environment::new(nested_environment, delegate, entities))
+                Ok(Environment::new(nested_environment, delegate, job_seeder, entities))
             }
             Err(error) => Err(error),
         }
@@ -699,6 +708,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     delegate: service::message::Delegate,
+    job_seeder: Seeder,
     components: HashSet<SettingType>,
     registrants: Vec<Registrant>,
     policies: HashSet<PolicyType>,
@@ -753,7 +763,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     for registrant in registrants {
         if registrant.get_dependencies().iter().all(|dependency| dependency.is_fulfilled(&entities))
         {
-            registrant.register(delegate.clone(), &mut service_dir);
+            registrant.register(&delegate, &job_seeder, &mut service_dir);
         }
     }
 

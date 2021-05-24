@@ -27,6 +27,7 @@ impl<T> Scoped<T> {
 pub mod registration {
     use super::fidl;
     use crate::base::Dependency;
+    use crate::job::source::Seeder;
     use crate::service::message::Delegate;
     use fuchsia_component::server::{ServiceFsDir, ServiceObj};
     use std::collections::HashSet;
@@ -40,7 +41,9 @@ pub mod registration {
         #[cfg(test)]
         Test(Box<dyn FnOnce() + Send + Sync>),
         #[cfg(test)]
-        TestWithDelegate(Box<dyn FnOnce(Delegate) + Send + Sync>),
+        TestWithDelegate(Box<dyn FnOnce(&Delegate) + Send + Sync>),
+        #[cfg(test)]
+        TestWithSeeder(Box<dyn FnOnce(&Seeder) + Send + Sync>),
     }
 
     impl Registrar {
@@ -48,12 +51,13 @@ pub mod registration {
         /// [Registrar].
         pub fn register<'a>(
             self,
-            delegate: Delegate,
+            delegate: &Delegate,
+            job_seeder: &Seeder,
             service_dir: &mut ServiceFsDir<'_, ServiceObj<'a, ()>>,
         ) {
             match self {
                 Registrar::Fidl(register_fn) => {
-                    register_fn(delegate, service_dir);
+                    register_fn(delegate, job_seeder, service_dir);
                 }
                 #[cfg(test)]
                 Registrar::Test(register_fn) => {
@@ -62,6 +66,10 @@ pub mod registration {
                 #[cfg(test)]
                 Registrar::TestWithDelegate(register_fn) => {
                     register_fn(delegate);
+                }
+                #[cfg(test)]
+                Registrar::TestWithSeeder(register_fn) => {
+                    register_fn(job_seeder);
                 }
             }
         }
@@ -83,10 +91,11 @@ pub mod registration {
 
         pub fn register<'a>(
             self,
-            delegate: Delegate,
+            delegate: &Delegate,
+            job_seeder: &Seeder,
             service_dir: &mut ServiceFsDir<'_, ServiceObj<'a, ()>>,
         ) {
-            self.registrar.register(delegate, service_dir);
+            self.registrar.register(delegate, job_seeder, service_dir);
         }
     }
 
@@ -116,6 +125,8 @@ pub mod registration {
 mod tests {
     use super::registration::{Builder, Registrar};
     use crate::base::{Dependency, Entity, SettingType};
+    use crate::job::source::Seeder;
+    use crate::message::base::MessengerType;
     use crate::service;
     use fuchsia_component::server::ServiceFs;
     use matches::assert_matches;
@@ -135,8 +146,17 @@ mod tests {
         // Verify added dependency.
         assert!(registrant.get_dependencies().contains(&dependency));
 
+        let delegate = service::message::create_hub();
+        let job_manager_signature = delegate
+            .create(MessengerType::Unbound)
+            .await
+            .expect("messenger should be created")
+            .0
+            .get_signature();
+        let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
+
         // Register and consume Registrant.
-        registrant.register(service::message::create_hub(), &mut fs.root_dir());
+        registrant.register(&service::message::create_hub(), &job_seeder, &mut fs.root_dir());
 
         // Verify registration occurred.
         assert_matches!(rx.await, Ok(()));

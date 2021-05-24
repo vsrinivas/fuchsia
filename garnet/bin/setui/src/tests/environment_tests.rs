@@ -14,15 +14,19 @@ use {
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::ingress::fidl,
     crate::ingress::registration,
+    crate::job::source::Error,
+    crate::job::{self, Job},
     crate::message::base::{filter, Audience, MessengerType},
     crate::service::Payload,
     crate::service_context::ServiceContext,
     crate::tests::fakes::base::create_setting_handler,
     crate::tests::fakes::service_registry::ServiceRegistry,
     crate::tests::message_utils::verify_payload,
+    crate::tests::scaffold::workload::channel,
     crate::{service, Environment, EnvironmentBuilder},
     fuchsia_async as fasync,
     futures::future::BoxFuture,
+    futures::FutureExt,
     futures::StreamExt,
     matches::assert_matches,
     std::sync::Arc,
@@ -145,6 +149,7 @@ async fn test_bringup() {
     let (request_in_tx, mut request_in_rx) = futures::channel::mpsc::unbounded::<Request>();
     let registrant = registration::Builder::new(registration::Registrar::TestWithDelegate(
         Box::new(move |delegate| {
+            let delegate = delegate.clone();
             fasync::Task::spawn(async move {
                 while let Some(request) = request_in_rx.next().await {
                     let messenger = delegate
@@ -197,7 +202,7 @@ async fn test_dependency_generation() {
             .add_dependency(Dependency::Entity(entity.clone()))
             .build();
 
-    let Environment { nested_environment: _, delegate: _, entities } =
+    let Environment { entities, .. } =
         EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
             .registrants(vec![registrant])
             .spawn_nested(ENV_NAME)
@@ -209,7 +214,7 @@ async fn test_dependency_generation() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_interface_consolidation() {
-    let Environment { nested_environment: _, delegate: _, entities } =
+    let Environment { entities, .. } =
         EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
             .fidl_interfaces(&[
                 fidl::Interface::Display(fidl::display::InterfaceFlags::BASE),
@@ -221,4 +226,35 @@ async fn test_display_interface_consolidation() {
 
     assert!(entities.contains(&Entity::Handler(SettingType::Display)));
     assert!(entities.contains(&Entity::Handler(SettingType::LightSensor)));
+}
+
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_job_sourcing() {
+    // Create channel to send the current job state.
+    let (job_state_tx, mut job_state_rx) = futures::channel::mpsc::unbounded::<channel::State>();
+
+    // Create a new job stream with an Job that will signal when it is executed.
+    let job_stream = async move {
+        Ok(Job::new(job::work::Load::Independent(Box::new(channel::Workload::new(job_state_tx)))))
+            as Result<Job, Error>
+    }
+    .into_stream();
+
+    // Build a registrant with the stream.
+    let registrant = registration::Builder::new(registration::Registrar::TestWithSeeder(Box::new(
+        move |seeder| {
+            seeder.seed(job_stream);
+        },
+    )))
+    .build();
+
+    // Build environment with the registrant.
+    let _ = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
+        .registrants(vec![registrant])
+        .spawn_nested(ENV_NAME)
+        .await
+        .expect("environment should be built");
+
+    // Ensure job is executed.
+    assert_matches!(job_state_rx.next().await, Some(channel::State::Execute));
 }

@@ -55,11 +55,7 @@ impl Seeder {
 
     // TODO(fxbug.dev/70534): Use Manager to handle FIDL requests.
     #[allow(dead_code)]
-    pub async fn seed<
-        J: Into<Job>,
-        E: Into<Error>,
-        T: 'static + Stream<Item = Result<J, E>> + Send,
-    >(
+    pub fn seed<J: Into<Job>, E: Into<Error>, T: 'static + Stream<Item = Result<J, E>> + Send>(
         &self,
         source: T,
     ) {
@@ -281,7 +277,7 @@ mod tests {
         }
         .into_stream();
 
-        seeder.seed(job_stream).await;
+        seeder.seed(job_stream);
 
         assert_matches!(receptor.next_of::<Payload>().await, Ok((Payload::Source(_), _)));
     }

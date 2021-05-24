@@ -10,6 +10,35 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+pub mod channel {
+    use crate::job;
+    use crate::service::message::Messenger;
+    use async_trait::async_trait;
+    use futures::channel::mpsc::UnboundedSender;
+
+    #[derive(Debug)]
+    pub enum State {
+        Execute,
+    }
+
+    pub struct Workload {
+        state_sender: UnboundedSender<State>,
+    }
+
+    impl Workload {
+        pub fn new(state_sender: UnboundedSender<State>) -> Self {
+            Self { state_sender }
+        }
+    }
+
+    #[async_trait]
+    impl job::work::Independent for Workload {
+        async fn execute(self: Box<Self>, _messenger: Messenger) {
+            self.state_sender.unbounded_send(State::Execute).expect("should succeed");
+        }
+    }
+}
+
 /// [StubWorkload] provides a blank workload to be a placeholder in tests.
 pub struct StubWorkload;
 
