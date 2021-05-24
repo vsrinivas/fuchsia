@@ -4,7 +4,7 @@
 
 use crate::{constants::*, test_topology};
 use anyhow::Error;
-use diagnostics_reader::{ArchiveReader, Inspect};
+use diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect};
 use difference::assert_diff;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fuchsia_component_test::RealmInstance;
@@ -19,17 +19,80 @@ const TEST_ARCHIVIST_MONIKER: &str = "archivist";
 
 lazy_static! {
     static ref UNIFIED_SINGLE_VALUE_GOLDEN: &'static str =
-        include_str!("../test_data/unified_reader_single_value_golden.json");
+        include_str!("../../test_data/unified_reader_single_value_golden.json");
     static ref UNIFIED_ALL_GOLDEN: &'static str =
-        include_str!("../test_data/unified_reader_all_golden.json");
+        include_str!("../../test_data/unified_reader_all_golden.json");
     static ref UNIFIED_FULL_FILTER_GOLDEN: &'static str =
-        include_str!("../test_data/unified_reader_full_filter_golden.json");
+        include_str!("../../test_data/unified_reader_full_filter_golden.json");
     static ref FEEDBACK_SINGLE_VALUE_GOLDEN: &'static str =
-        include_str!("../test_data/feedback_reader_single_value_golden.json");
+        include_str!("../../test_data/feedback_reader_single_value_golden.json");
     static ref FEEDBACK_ALL_GOLDEN: &'static str =
-        include_str!("../test_data/feedback_reader_all_golden.json");
+        include_str!("../../test_data/feedback_reader_all_golden.json");
     static ref FEEDBACK_NONOVERLAPPING_SELECTORS_GOLDEN: &'static str =
-        include_str!("../test_data/feedback_reader_nonoverlapping_selectors_golden.json");
+        include_str!("../../test_data/feedback_reader_nonoverlapping_selectors_golden.json");
+}
+
+#[fuchsia::test]
+async fn read_components_inspect() {
+    let mut builder = test_topology::create(test_topology::Options::default())
+        .await
+        .expect("create base topology");
+    test_topology::add_component(&mut builder, "child", STUB_INSPECT_COMPONENT_URL)
+        .await
+        .expect("add child");
+
+    let instance = builder.build().create().await.expect("create instance");
+
+    let accessor =
+        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+    let data = ArchiveReader::new()
+        .with_archive(accessor)
+        .add_selector("child:root")
+        .retry_if_empty(true)
+        .with_minimum_schema_count(1)
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
+        "fuchsia.inspect.Health": {
+            status: "OK",
+            start_timestamp_nanos: AnyProperty,
+        }
+    });
+}
+
+#[fuchsia::test]
+async fn read_components_single_selector() {
+    let mut builder = test_topology::create(test_topology::Options::default())
+        .await
+        .expect("create base topology");
+    test_topology::add_component(&mut builder, "child_a", STUB_INSPECT_COMPONENT_URL)
+        .await
+        .expect("add child a");
+    test_topology::add_component(&mut builder, "child_b", STUB_INSPECT_COMPONENT_URL)
+        .await
+        .expect("add child b");
+    let instance = builder.build().create().await.expect("create instance");
+
+    let accessor =
+        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+    let data = ArchiveReader::new()
+        .with_archive(accessor)
+        .add_selector("child_a:root")
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+
+    // Only inspect from child_a should be reported
+    assert_eq!(data.len(), 1);
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
+        "fuchsia.inspect.Health": {
+            status: "OK",
+            start_timestamp_nanos: AnyProperty,
+        }
+    });
+    assert_eq!(data[0].moniker, "child_a");
 }
 
 #[fuchsia::test]

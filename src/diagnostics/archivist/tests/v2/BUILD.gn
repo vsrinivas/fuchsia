@@ -43,9 +43,17 @@ rustc_test("integration_tests_bin") {
 
   sources = [
     "src/constants.rs",
+    "src/inspect/mod.rs",
+    "src/inspect/out_directory.rs",
+    "src/inspect/reader.rs",
+    "src/inspect/recursive_glob.rs",
+    "src/inspect/truncation.rs",
     "src/lib.rs",
-    "src/logs.rs",
-    "src/reader.rs",
+    "src/logs/attribution.rs",
+    "src/logs/lifecycle.rs",
+    "src/logs/mod.rs",
+    "src/logs/redaction.rs",
+    "src/logs/sorting.rs",
     "src/test_topology.rs",
   ]
   inputs = [
