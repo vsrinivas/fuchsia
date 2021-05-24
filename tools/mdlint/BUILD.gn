@@ -19,6 +19,8 @@ go_library("gopkg") {
     "core/tokenizer.go",
     "core/tokenizer_test.go",
     "main.go",
+    "rules/bad_headers.go",
+    "rules/bad_headers_test.go",
     "rules/bad_lists.go",
     "rules/bad_lists_test.go",
     "rules/casing_of_anchors.go",

@@ -36,7 +36,8 @@ Configure
 
 Then test
 
-    fx test mdlint_tests
+    fx test mdlint_core_tests
+    fx test mdlint_rules_tests
 
 ## Implementation
 
