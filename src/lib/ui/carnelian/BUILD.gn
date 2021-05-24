@@ -338,6 +338,23 @@ rustc_binary("rive") {
   ]
 }
 
+rustc_binary("textgrid") {
+  version = "0.1.0"
+  edition = "2018"
+  source_root = "examples/textgrid.rs"
+  sources = [ "examples/textgrid.rs" ]
+  deps = [
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:euclid",
+  ]
+}
+
 test_package("carnelian-render-tests") {
   deps = [ ":carnelian_test" ]
 
@@ -454,6 +471,11 @@ resource("roboto") {
   outputs = [ "data/fonts/{{source_file_part}}" ]
 }
 
+resource("robotomono") {
+  sources = [ "//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf" ]
+  outputs = [ "data/fonts/{{source_file_part}}" ]
+}
+
 resource("static_images") {
   sources = [
     "examples/static/baboon.png",
@@ -473,6 +495,14 @@ resource("static_rives") {
     "examples/static/fuchsia.riv",
     "examples/static/juice.riv",
     "examples/static/knight.riv",
+  ]
+  outputs = [ "data/static/{{source_file_part}}" ]
+}
+
+resource("static_txts") {
+  sources = [
+    "examples/static/nyancat.txt",
+    "examples/static/spinningcursor.txt",
   ]
   outputs = [ "data/static/{{source_file_part}}" ]
 }
@@ -552,6 +582,13 @@ carnelian_examples = [
   {
     name = "rive"
     additional_deps = [ ":static_rives" ]
+  },
+  {
+    name = "textgrid"
+    additional_deps = [
+      ":robotomono",
+      ":static_txts",
+    ]
   },
 ]
 

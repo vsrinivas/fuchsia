@@ -9,12 +9,12 @@
 
 use crate::{
     color::Color,
-    geometry::{Coord, Corners, Point, Rect},
+    geometry::{Coord, Corners, Point, Rect, Size},
     render::{Context as RenderContext, Path, PathBuilder, Raster, RasterBuilder},
 };
 use anyhow::{Context, Error};
 use euclid::{
-    default::{Box2D, Size2D, Transform2D},
+    default::{Box2D, Size2D, Transform2D, Vector2D},
     point2, vec2, Angle,
 };
 use fuchsia_zircon::{self as zx};
@@ -607,9 +607,63 @@ impl Text {
     }
 }
 
+/// Struct containing text grid details.
+pub struct TextGrid {
+    font_size: f32,
+    baseline: Vector2D<f32>,
+    cell_size: Size,
+}
+
+impl TextGrid {
+    /// Creates a new text grid.
+    pub fn new(cell_size: Size, cell_padding: f32) -> Self {
+        let font_size = cell_size.height - cell_padding;
+        let baseline = Vector2D::new(0.0, font_size - cell_padding);
+
+        Self { font_size, baseline, cell_size }
+    }
+}
+
+/// Struct containing data needed to render a text grid cell.
+pub struct TextGridCell {
+    /// Raster.
+    pub raster: Option<Raster>,
+}
+
+impl TextGridCell {
+    pub fn new(
+        context: &mut RenderContext,
+        column: usize,
+        row: usize,
+        c: char,
+        grid: &TextGrid,
+        face: &FontFace,
+        glyph_map: &mut GlyphMap,
+    ) -> TextGridCell {
+        let raster = if let Some(glyph_index) = face.face.glyph_index(c) {
+            let glyphs = &mut glyph_map.glyphs;
+            let font_size = grid.font_size;
+            let glyph = glyphs
+                .entry(glyph_index)
+                .or_insert_with(|| Glyph::new(context, face, font_size, Some(glyph_index)));
+            let cell_position = Point::new(
+                grid.cell_size.width * column as f32,
+                grid.cell_size.height * row as f32,
+            );
+            let char_position = cell_position + grid.baseline;
+
+            Some(glyph.raster.clone().translate(char_position.to_vector().to_i32()))
+        } else {
+            None
+        };
+
+        Self { raster }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{GlyphMap, Text};
+    use super::{GlyphMap, Size, Text, TextGrid, TextGridCell};
     use crate::{
         drawing::{DisplayRotation, FontFace},
         render::{
@@ -679,5 +733,38 @@ mod tests {
             expected_size,
             text.bounding_box.size
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_textgridcell() {
+        let size = size2(800, 800);
+        let mut buffer_allocator = BufferCollectionAllocator::new(
+            size.width,
+            size.height,
+            fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
+            FrameUsage::Cpu,
+            3,
+        )
+        .expect("BufferCollectionAllocator::new");
+        let context_token = buffer_allocator
+            .duplicate_token()
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
+                panic!("Timed out while waiting for duplicate_token")
+            })
+            .await
+            .expect("token");
+        let mold_context = generic::Mold::new_context(context_token, size, DisplayRotation::Deg0);
+        let _buffers_result = buffer_allocator
+            .allocate_buffers(true)
+            .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
+                panic!("Timed out while waiting for sysmem bufers")
+            })
+            .await;
+        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let mut glyphs = GlyphMap::new();
+        let grid = TextGrid::new(Size::new(16.0, 32.0), 2.0);
+        let a_cell =
+            TextGridCell::new(&mut render_context, 0, 0, 'a', &grid, &FONT_FACE, &mut glyphs);
+        assert!(a_cell.raster.is_some(), "Expected some raster");
     }
 }

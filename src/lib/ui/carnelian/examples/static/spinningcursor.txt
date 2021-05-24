@@ -1,0 +1,107 @@
+$ ls -la
+dr-x------    1 0        0                 0 Jan 01  1970 .
+drwx------    1 0        0                 0 Jul 21 23:33 bin
+dr--------    1 0        0                 0 Jan 01  1970 blob
+dr--------    7 0        0                 0 Jan 01  1970 boot
+dr-x------    1 0        0                 0 Jan 01  1970 config
+drw-------    6 0        0              8192 May 21 12:47 data
+drw-------    1 0        0                 0 Jan 01  1970 dev
+dr--------    1 0        0                 0 Jan 01  1970 hub
+drw-------    1 0        0                 0 Jan 01  1970 hub-v2
+drwx------    1 0        0                 0 Jul 21 23:33 pkg
+drwx------    1 0        0                 0 Jul 21 23:33 pkgfs
+dr--------    1 0        0                 0 Jan 01  1970 svc
+drwx------    1 0        0                 0 Jul 21 23:33 system
+dr--------    6 0        0                 0 May 21 22:12 tmp
+$ work
+working... |
+
+$ ls -la
+dr-x------    1 0        0                 0 Jan 01  1970 .
+drwx------    1 0        0                 0 Jul 21 23:33 bin
+dr--------    1 0        0                 0 Jan 01  1970 blob
+dr--------    7 0        0                 0 Jan 01  1970 boot
+dr-x------    1 0        0                 0 Jan 01  1970 config
+drw-------    6 0        0              8192 May 21 12:47 data
+drw-------    1 0        0                 0 Jan 01  1970 dev
+dr--------    1 0        0                 0 Jan 01  1970 hub
+drw-------    1 0        0                 0 Jan 01  1970 hub-v2
+drwx------    1 0        0                 0 Jul 21 23:33 pkg
+drwx------    1 0        0                 0 Jul 21 23:33 pkgfs
+dr--------    1 0        0                 0 Jan 01  1970 svc
+drwx------    1 0        0                 0 Jul 21 23:33 system
+dr--------    6 0        0                 0 May 21 22:12 tmp
+$ work
+working... /
+
+$ ls -la
+dr-x------    1 0        0                 0 Jan 01  1970 .
+drwx------    1 0        0                 0 Jul 21 23:33 bin
+dr--------    1 0        0                 0 Jan 01  1970 blob
+dr--------    7 0        0                 0 Jan 01  1970 boot
+dr-x------    1 0        0                 0 Jan 01  1970 config
+drw-------    6 0        0              8192 May 21 12:47 data
+drw-------    1 0        0                 0 Jan 01  1970 dev
+dr--------    1 0        0                 0 Jan 01  1970 hub
+drw-------    1 0        0                 0 Jan 01  1970 hub-v2
+drwx------    1 0        0                 0 Jul 21 23:33 pkg
+drwx------    1 0        0                 0 Jul 21 23:33 pkgfs
+dr--------    1 0        0                 0 Jan 01  1970 svc
+drwx------    1 0        0                 0 Jul 21 23:33 system
+dr--------    6 0        0                 0 May 21 22:12 tmp
+$ work
+working... -
+
+$ ls -la
+dr-x------    1 0        0                 0 Jan 01  1970 .
+drwx------    1 0        0                 0 Jul 21 23:33 bin
+dr--------    1 0        0                 0 Jan 01  1970 blob
+dr--------    7 0        0                 0 Jan 01  1970 boot
+dr-x------    1 0        0                 0 Jan 01  1970 config
+drw-------    6 0        0              8192 May 21 12:47 data
+drw-------    1 0        0                 0 Jan 01  1970 dev
+dr--------    1 0        0                 0 Jan 01  1970 hub
+drw-------    1 0        0                 0 Jan 01  1970 hub-v2
+drwx------    1 0        0                 0 Jul 21 23:33 pkg
+drwx------    1 0        0                 0 Jul 21 23:33 pkgfs
+dr--------    1 0        0                 0 Jan 01  1970 svc
+drwx------    1 0        0                 0 Jul 21 23:33 system
+dr--------    6 0        0                 0 May 21 22:12 tmp
+$ work
+working... \
+
+$ ls -la
+dr-x------    1 0        0                 0 Jan 01  1970 .
+drwx------    1 0        0                 0 Jul 21 23:33 bin
+dr--------    1 0        0                 0 Jan 01  1970 blob
+dr--------    7 0        0                 0 Jan 01  1970 boot
+dr-x------    1 0        0                 0 Jan 01  1970 config
+drw-------    6 0        0              8192 May 21 12:47 data
+drw-------    1 0        0                 0 Jan 01  1970 dev
+dr--------    1 0        0                 0 Jan 01  1970 hub
+drw-------    1 0        0                 0 Jan 01  1970 hub-v2
+drwx------    1 0        0                 0 Jul 21 23:33 pkg
+drwx------    1 0        0                 0 Jul 21 23:33 pkgfs
+dr--------    1 0        0                 0 Jan 01  1970 svc
+drwx------    1 0        0                 0 Jul 21 23:33 system
+dr--------    6 0        0                 0 May 21 22:12 tmp
+$ work
+working... -
+
+$ ls -la
+dr-x------    1 0        0                 0 Jan 01  1970 .
+drwx------    1 0        0                 0 Jul 21 23:33 bin
+dr--------    1 0        0                 0 Jan 01  1970 blob
+dr--------    7 0        0                 0 Jan 01  1970 boot
+dr-x------    1 0        0                 0 Jan 01  1970 config
+drw-------    6 0        0              8192 May 21 12:47 data
+drw-------    1 0        0                 0 Jan 01  1970 dev
+dr--------    1 0        0                 0 Jan 01  1970 hub
+drw-------    1 0        0                 0 Jan 01  1970 hub-v2
+drwx------    1 0        0                 0 Jul 21 23:33 pkg
+drwx------    1 0        0                 0 Jul 21 23:33 pkgfs
+dr--------    1 0        0                 0 Jan 01  1970 svc
+drwx------    1 0        0                 0 Jul 21 23:33 system
+dr--------    6 0        0                 0 May 21 22:12 tmp
+$ work
+working... \

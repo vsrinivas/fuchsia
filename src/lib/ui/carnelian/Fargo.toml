@@ -53,4 +53,7 @@ data_files = [
     { src = "../../../../prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf", dst = "data/fonts/Roboto-Regular.ttf"},
     { src = "../../../../prebuilt/third_party/fonts/droidserif/DroidSerif-Regular.ttf", dst = "data/fonts/DroidSerif-Regular.ttf"},
     { src = "../../../../prebuilt/third_party/fonts/shortstack/ShortStack-Regular.ttf", dst = "data/fonts/ShortStack-Regular.ttf"},
+    { src = "../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf", dst = "data/fonts/RobotoMono-Regular.ttf"},
+    { src = "examples/static/nyancat.txt", dst = "data/static/nyancat.txt"},
+    { src = "examples/static/spinningcursor.txt", dst = "data/static/spinningcursor.txt"},
 ]
