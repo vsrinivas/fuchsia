@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/memalloc.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
@@ -12,7 +13,6 @@
 #include <cstdlib>
 #include <memory>
 
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -36,7 +36,7 @@ auto IsOkAndHolds(X matcher) {
 // Create an Allocator and associated storage.
 template <size_t Elements = 100>
 struct AllocatorAndStorage {
-  AllocatorAndStorage() : data(), allocator(fbl::Span(data.data(), data.size())) {}
+  AllocatorAndStorage() : data(), allocator(cpp20::span(data.data(), data.size())) {}
   std::array<RangeStorage, Elements> data;
   Allocator allocator;
 };
@@ -50,7 +50,7 @@ TEST(Range, Equality) {
 }
 
 TEST(Allocator, EmptyAllocator) {
-  Allocator allocator{fbl::Span<RangeStorage>{}};
+  Allocator allocator{cpp20::span<RangeStorage>{}};
   EXPECT_THAT(allocator.Allocate(1), HasError(ZX_ERR_NO_RESOURCES));
 }
 
@@ -263,7 +263,7 @@ TEST(Allocator, RemoveRange) {
 }
 
 TEST(Allocator, IterateEmpty) {
-  Allocator allocator{fbl::Span<RangeStorage>{}};
+  Allocator allocator{cpp20::span<RangeStorage>{}};
 
   // Expect the iterator begin and end to be the same.
   EXPECT_EQ(allocator.begin(), allocator.end());

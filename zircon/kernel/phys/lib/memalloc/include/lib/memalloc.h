@@ -7,13 +7,13 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_INCLUDE_LIB_MEMALLOC_H_
 #define ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_INCLUDE_LIB_MEMALLOC_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 
 #include <cstddef>
 #include <optional>
 
 #include <fbl/intrusive_double_list.h>
-#include <fbl/span.h>
 
 namespace memalloc {
 
@@ -78,7 +78,7 @@ class RangeStorage {
 // A range allocator class.
 //
 // Space for book-keeping is provided by the caller during construction, via
-// the "fbl::Span<RangeStorage>" parameter. One RangeStory entry is used for
+// the "cpp20::span<RangeStorage>" parameter. One RangeStory entry is used for
 // every non-contiguous range tracked by the allocator:
 //
 //   // Create an allocator that can store up to 100 ranges.
@@ -101,7 +101,7 @@ class Allocator {
   // Create a new allocator, using the given span for book keeping.
   //
   // The memory at `nodes` must outlive this class instance.
-  explicit Allocator(fbl::Span<RangeStorage> storage);
+  explicit Allocator(cpp20::span<RangeStorage> storage);
 
   // Prevent copy / assign.
   Allocator(const Allocator&) = delete;

@@ -5,14 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/memalloc.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/span.h>
+#include <fbl/algorithm.h>
 
 namespace memalloc {
 
@@ -63,7 +63,7 @@ bool RangesConnected(const Range& a, const Range& b) {
 
 }  // namespace
 
-Allocator::Allocator(fbl::Span<RangeStorage> storage) {
+Allocator::Allocator(cpp20::span<RangeStorage> storage) {
   for (RangeStorage& s : storage) {
     free_list_.push_front(new (s.AsRangeNode()) RangeNode{});
   }

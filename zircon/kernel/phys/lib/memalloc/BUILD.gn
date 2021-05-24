@@ -20,6 +20,7 @@ zx_library("memalloc") {
   sources = [ "allocator.cc" ]
 
   deps = [
+    "//sdk/lib/stdcompat",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
@@ -29,7 +30,9 @@ zx_library("memalloc") {
   }
 
   public_deps = [
-    # <lib/memalloc.h> has #include <fbl/algorithm.h>.
+    "//sdk/lib/stdcompat:headers",
+
+    # <lib/memalloc.h> has #include <fbl/intrusive_double_list.h>.
     "//zircon/system/ulib/fbl:headers",
 
     # <lib/memalloc.h> has #include <zx/status.h>.
