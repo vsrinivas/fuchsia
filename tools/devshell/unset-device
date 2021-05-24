@@ -17,6 +17,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 fx-standard-switches "$@"
 fx-config-read
 
+if [[ -n $(get-device-raw) ]]; then
+  fx-command-run ffx target remove $(get-device-raw)
+fi
+
 if [[ -n "${FUCHSIA_BUILD_DIR}" ]]; then
   rm -f "${FUCHSIA_BUILD_DIR}.device"
 fi
