@@ -8,7 +8,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/bin/root_presenter/tests/fakes/fake_focuser.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_session.h"
@@ -21,7 +20,8 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   FakeScenic();
   ~FakeScenic() override;
 
-  std::vector<std::unique_ptr<FakeSession>>& fakeSessions() { return fake_sessions_; }
+  FakeFocuser* fakeFocuser() { return &fake_focuser_; }
+  FakeSession* fakeSession() { return &fake_session_; }
 
   void NotImplemented_(const std::string& name) final {}
 
@@ -38,14 +38,13 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   void CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
                       fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
                       fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
-
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  std::vector<std::unique_ptr<FakeFocuser>> fake_focusers_;
-  std::vector<std::unique_ptr<FakeSession>> fake_sessions_;
+  FakeFocuser fake_focuser_;
+  FakeSession fake_session_;
 };
 
 }  // namespace testing

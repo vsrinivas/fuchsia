@@ -55,7 +55,7 @@ class ColorTransformHandlerTest : public gtest::TestLoopFixture {
     fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
         listener_handle.NewRequest();
     fake_scenic_.CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
-    fake_session_ = fake_scenic_.fakeSessions().front().get();
+    fake_session_ = fake_scenic_.fakeSession();
     session_ =
         std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
     safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
