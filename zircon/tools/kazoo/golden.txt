@@ -250,6 +250,10 @@ TEXT ·Sys_channel_call_etc_finish(SB),NOSPLIT,$0
 TEXT ·Sys_channel_call_etc(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc(SB)
 
+// func Sys_clock_get(clock_id uint32, out *Time) Status
+TEXT ·Sys_clock_get(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_clock_get(SB)
+
 // func Sys_clock_get_monotonic() Time
 TEXT ·Sys_clock_get_monotonic(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_clock_get_monotonic(SB)
@@ -998,6 +1002,10 @@ func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *Ch
 
 //go:noescape
 //go:nosplit
+func Sys_clock_get(clock_id uint32, out *Time) Status
+
+//go:noescape
+//go:nosplit
 func Sys_clock_get_monotonic() Time
 
 //go:noescape
@@ -1739,6 +1747,10 @@ TEXT ·Sys_channel_call_etc_finish(SB),NOSPLIT,$0
 // func Sys_channel_call_etc(handle Handle, options uint32, deadline Time, args *ChannelCallEtcArgs, actual_bytes *uint32, actual_handles *uint32) Status
 TEXT ·Sys_channel_call_etc(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_channel_call_etc(SB)
+
+// func Sys_clock_get(clock_id uint32, out *Time) Status
+TEXT ·Sys_clock_get(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_clock_get(SB)
 
 // func Sys_clock_get_monotonic() Time
 TEXT ·Sys_clock_get_monotonic(SB),NOSPLIT,$0
@@ -2731,6 +2743,23 @@ TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$0-44
 	BL vdso_zx_channel_call_etc(SB)
 	MOVW R0, ret+40(FP)
 	BL runtime·exitsyscall(SB)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_clock_get(clock_id uint32, out unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_clock_get(SB),NOSPLIT,$0-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW clock_id+0(FP), R0
+	MOVD out+8(FP), R1
+	BL vdso_zx_clock_get(SB)
+	MOVW R0, ret+16(FP)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -5864,6 +5893,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_channel_call_etc_noretry", 0xc3a3e7d6, &vdso_zx_channel_call_etc_noretry},
 	{"_zx_channel_call_etc_finish", 0xd3cdf704, &vdso_zx_channel_call_etc_finish},
 	{"_zx_channel_call_etc", 0x8639e344, &vdso_zx_channel_call_etc},
+	{"_zx_clock_get", 0x3fb5d7c0, &vdso_zx_clock_get},
 	{"_zx_clock_get_monotonic", 0xb00e6115, &vdso_zx_clock_get_monotonic},
 	{"_zx_clock_get_monotonic_via_kernel", 0x3dc12b54, &vdso_zx_clock_get_monotonic_via_kernel},
 	{"_zx_clock_create", 0x8d73ce14, &vdso_zx_clock_create},
@@ -6049,6 +6079,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_channel_call_etc_noretry zx_channel_call_etc_noretry
 //go:cgo_import_dynamic vdso_zx_channel_call_etc_finish zx_channel_call_etc_finish
 //go:cgo_import_dynamic vdso_zx_channel_call_etc zx_channel_call_etc
+//go:cgo_import_dynamic vdso_zx_clock_get zx_clock_get
 //go:cgo_import_dynamic vdso_zx_clock_get_monotonic zx_clock_get_monotonic
 //go:cgo_import_dynamic vdso_zx_clock_get_monotonic_via_kernel zx_clock_get_monotonic_via_kernel
 //go:cgo_import_dynamic vdso_zx_clock_create zx_clock_create
@@ -6233,6 +6264,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_channel_call_etc_noretry vdso_zx_channel_call_etc_noretry
 //go:linkname vdso_zx_channel_call_etc_finish vdso_zx_channel_call_etc_finish
 //go:linkname vdso_zx_channel_call_etc vdso_zx_channel_call_etc
+//go:linkname vdso_zx_clock_get vdso_zx_clock_get
 //go:linkname vdso_zx_clock_get_monotonic vdso_zx_clock_get_monotonic
 //go:linkname vdso_zx_clock_get_monotonic_via_kernel vdso_zx_clock_get_monotonic_via_kernel
 //go:linkname vdso_zx_clock_create vdso_zx_clock_create
@@ -6461,6 +6493,10 @@ func vdsoCall_zx_channel_call_etc_finish(deadline int64, args unsafe.Pointer, ac
 //go:noescape
 //go:nosplit
 func vdsoCall_zx_channel_call_etc(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_clock_get(clock_id uint32, out unsafe.Pointer) int32
 
 //go:noescape
 //go:nosplit
@@ -7150,6 +7186,7 @@ var (
 	vdso_zx_channel_call_etc_noretry uintptr
 	vdso_zx_channel_call_etc_finish uintptr
 	vdso_zx_channel_call_etc uintptr
+	vdso_zx_clock_get uintptr
 	vdso_zx_clock_get_monotonic uintptr
 	vdso_zx_clock_get_monotonic_via_kernel uintptr
 	vdso_zx_clock_create uintptr
@@ -7719,6 +7756,27 @@ TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$8-44
 	CALL AX
 	MOVL AX, ret+40(FP)
 	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_clock_get(clock_id uint32, out unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_clock_get(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL clock_id+0(FP), DI
+	MOVQ out+8(FP), SI
+	MOVQ vdso_zx_clock_get(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -12318,6 +12376,34 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         {
           "name": "actual_handles",
           "type": "uint32_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "clock_get",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Acquire", "the", "current", "time", "."
+      ],
+      "requirements": [
+      ],
+      "arguments": [
+        {
+          "name": "clock_id",
+          "type": "zx_clock_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "out",
+          "type": "zx_time_t",
           "is_array": true,
           "attributes": [
           ]
@@ -18968,6 +19054,11 @@ VDSO_SYSCALL(channel_call_etc, zx_status_t, /* no attributes */, 6,
     user_out_ptr<uint32_t> actual_bytes,
     user_out_ptr<uint32_t> actual_handles))
 
+KERNEL_SYSCALL(clock_get, zx_status_t, /* no attributes */, 2,
+    (clock_id, out), (
+    zx_clock_t clock_id,
+    user_out_ptr<zx_time_t> out))
+
 VDSO_SYSCALL(clock_get_monotonic, zx_time_t, /* no attributes */, 0,
     (), (void))
 
@@ -20135,6 +20226,12 @@ syscall_result wrapper_channel_call_etc_noretry(zx_handle_t handle, uint32_t opt
 syscall_result wrapper_channel_call_etc_finish(zx_time_t deadline, zx_channel_call_etc_args_t* args, uint32_t* actual_bytes, uint32_t* actual_handles, uint64_t pc) {
     return do_syscall(ZX_SYS_channel_call_etc_finish, pc, &VDso::ValidSyscallPC::channel_call_etc_finish, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_channel_call_etc_finish(deadline, make_user_inout_ptr(args), make_user_out_ptr(actual_bytes), make_user_out_ptr(actual_handles));
+        return result;
+    });
+}
+syscall_result wrapper_clock_get(zx_clock_t clock_id, zx_time_t* out, uint64_t pc) {
+    return do_syscall(ZX_SYS_clock_get, pc, &VDso::ValidSyscallPC::clock_get, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_clock_get(clock_id, make_user_out_ptr(out));
         return result;
     });
 }
@@ -21471,6 +21568,11 @@ VDSO_SYSCALL(channel_call_etc, zx_status_t, /* no attributes */, 6,
     uint32_t* actual_bytes,
     uint32_t* actual_handles))
 
+KERNEL_SYSCALL(clock_get, zx_status_t, /* no attributes */, 2,
+    (clock_id, out), (
+    zx_clock_t clock_id,
+    zx_time_t* out))
+
 VDSO_SYSCALL(clock_get_monotonic, zx_time_t, /* no attributes */, 0,
     (), (void))
 
@@ -22642,6 +22744,11 @@ _ZX_SYSCALL_DECL(channel_call_etc, zx_status_t, /* no attributes */, 6,
     uint32_t* actual_bytes,
     uint32_t* actual_handles))
 
+_ZX_SYSCALL_DECL(clock_get, zx_status_t, /* no attributes */, 2,
+    (clock_id, out), (
+    zx_clock_t clock_id,
+    zx_time_t* out))
+
 _ZX_SYSCALL_DECL(clock_get_monotonic, zx_time_t, /* no attributes */, 0,
     (), (void))
 
@@ -23730,6 +23837,11 @@ extern {
         actual_handles: *mut u32
         ) -> zx_status_t;
 
+    pub fn zx_clock_get(
+        clock_id: zx_clock_t,
+        out: *mut zx_time_t
+        ) -> zx_status_t;
+
     pub fn zx_clock_get_monotonic(
         ) -> zx_time_t;
 
@@ -24807,162 +24919,163 @@ extern {
 #define ZX_SYS_channel_call_finish 9
 #define ZX_SYS_channel_call_etc_noretry 10
 #define ZX_SYS_channel_call_etc_finish 11
-#define ZX_SYS_clock_get_monotonic_via_kernel 12
-#define ZX_SYS_clock_create 13
-#define ZX_SYS_clock_read 14
-#define ZX_SYS_clock_get_details 15
-#define ZX_SYS_clock_update 16
-#define ZX_SYS_cprng_draw_once 17
-#define ZX_SYS_cprng_add_entropy 18
-#define ZX_SYS_debug_read 19
-#define ZX_SYS_debug_write 20
-#define ZX_SYS_debug_send_command 21
-#define ZX_SYS_debuglog_create 22
-#define ZX_SYS_debuglog_write 23
-#define ZX_SYS_debuglog_read 24
-#define ZX_SYS_event_create 25
-#define ZX_SYS_eventpair_create 26
-#define ZX_SYS_exception_get_thread 27
-#define ZX_SYS_exception_get_process 28
-#define ZX_SYS_fifo_create 29
-#define ZX_SYS_fifo_read 30
-#define ZX_SYS_fifo_write 31
-#define ZX_SYS_framebuffer_get_info 32
-#define ZX_SYS_framebuffer_set_range 33
-#define ZX_SYS_futex_wait 34
-#define ZX_SYS_futex_wake 35
-#define ZX_SYS_futex_requeue 36
-#define ZX_SYS_futex_wake_single_owner 37
-#define ZX_SYS_futex_requeue_single_owner 38
-#define ZX_SYS_futex_get_owner 39
-#define ZX_SYS_guest_create 40
-#define ZX_SYS_guest_set_trap 41
-#define ZX_SYS_handle_close 42
-#define ZX_SYS_handle_close_many 43
-#define ZX_SYS_handle_duplicate 44
-#define ZX_SYS_handle_replace 45
-#define ZX_SYS_interrupt_create 46
-#define ZX_SYS_interrupt_bind 47
-#define ZX_SYS_interrupt_wait 48
-#define ZX_SYS_interrupt_destroy 49
-#define ZX_SYS_interrupt_ack 50
-#define ZX_SYS_interrupt_trigger 51
-#define ZX_SYS_interrupt_bind_vcpu 52
-#define ZX_SYS_iommu_create 53
-#define ZX_SYS_ioports_request 54
-#define ZX_SYS_ioports_release 55
-#define ZX_SYS_job_create 56
-#define ZX_SYS_job_set_policy 57
-#define ZX_SYS_job_set_critical 58
-#define ZX_SYS_ktrace_read 59
-#define ZX_SYS_ktrace_control 60
-#define ZX_SYS_ktrace_write 61
-#define ZX_SYS_nanosleep 62
-#define ZX_SYS_ticks_get_via_kernel 63
-#define ZX_SYS_msi_allocate 64
-#define ZX_SYS_msi_create 65
-#define ZX_SYS_mtrace_control 66
-#define ZX_SYS_object_wait_one 67
-#define ZX_SYS_object_wait_many 68
-#define ZX_SYS_object_wait_async 69
-#define ZX_SYS_object_signal 70
-#define ZX_SYS_object_signal_peer 71
-#define ZX_SYS_object_get_property 72
-#define ZX_SYS_object_set_property 73
-#define ZX_SYS_object_get_info 74
-#define ZX_SYS_object_get_child 75
-#define ZX_SYS_object_set_profile 76
-#define ZX_SYS_pager_create 77
-#define ZX_SYS_pager_create_vmo 78
-#define ZX_SYS_pager_detach_vmo 79
-#define ZX_SYS_pager_supply_pages 80
-#define ZX_SYS_pager_op_range 81
-#define ZX_SYS_pc_firmware_tables 82
-#define ZX_SYS_pci_get_nth_device 83
-#define ZX_SYS_pci_enable_bus_master 84
-#define ZX_SYS_pci_reset_device 85
-#define ZX_SYS_pci_config_read 86
-#define ZX_SYS_pci_config_write 87
-#define ZX_SYS_pci_cfg_pio_rw 88
-#define ZX_SYS_pci_get_bar 89
-#define ZX_SYS_pci_map_interrupt 90
-#define ZX_SYS_pci_query_irq_mode 91
-#define ZX_SYS_pci_set_irq_mode 92
-#define ZX_SYS_pci_init 93
-#define ZX_SYS_pci_add_subtract_io_range 94
-#define ZX_SYS_pmt_unpin 95
-#define ZX_SYS_port_create 96
-#define ZX_SYS_port_queue 97
-#define ZX_SYS_port_wait 98
-#define ZX_SYS_port_cancel 99
-#define ZX_SYS_process_exit 100
-#define ZX_SYS_process_create 101
-#define ZX_SYS_process_start 102
-#define ZX_SYS_process_read_memory 103
-#define ZX_SYS_process_write_memory 104
-#define ZX_SYS_profile_create 105
-#define ZX_SYS_resource_create 106
-#define ZX_SYS_smc_call 107
-#define ZX_SYS_socket_create 108
-#define ZX_SYS_socket_write 109
-#define ZX_SYS_socket_read 110
-#define ZX_SYS_socket_shutdown 111
-#define ZX_SYS_stream_create 112
-#define ZX_SYS_stream_writev 113
-#define ZX_SYS_stream_writev_at 114
-#define ZX_SYS_stream_readv 115
-#define ZX_SYS_stream_readv_at 116
-#define ZX_SYS_stream_seek 117
-#define ZX_SYS_syscall_test_0 118
-#define ZX_SYS_syscall_test_1 119
-#define ZX_SYS_syscall_test_2 120
-#define ZX_SYS_syscall_test_3 121
-#define ZX_SYS_syscall_test_4 122
-#define ZX_SYS_syscall_test_5 123
-#define ZX_SYS_syscall_test_6 124
-#define ZX_SYS_syscall_test_7 125
-#define ZX_SYS_syscall_test_8 126
-#define ZX_SYS_syscall_test_wrapper 127
-#define ZX_SYS_syscall_test_handle_create 128
-#define ZX_SYS_system_get_event 129
-#define ZX_SYS_system_mexec 130
-#define ZX_SYS_system_mexec_payload_get 131
-#define ZX_SYS_system_powerctl 132
-#define ZX_SYS_task_suspend 133
-#define ZX_SYS_task_suspend_token 134
-#define ZX_SYS_task_create_exception_channel 135
-#define ZX_SYS_task_kill 136
-#define ZX_SYS_thread_exit 137
-#define ZX_SYS_thread_create 138
-#define ZX_SYS_thread_start 139
-#define ZX_SYS_thread_read_state 140
-#define ZX_SYS_thread_write_state 141
-#define ZX_SYS_timer_create 142
-#define ZX_SYS_timer_set 143
-#define ZX_SYS_timer_cancel 144
-#define ZX_SYS_vcpu_create 145
-#define ZX_SYS_vcpu_resume 146
-#define ZX_SYS_vcpu_interrupt 147
-#define ZX_SYS_vcpu_read_state 148
-#define ZX_SYS_vcpu_write_state 149
-#define ZX_SYS_vmar_allocate 150
-#define ZX_SYS_vmar_destroy 151
-#define ZX_SYS_vmar_map 152
-#define ZX_SYS_vmar_unmap 153
-#define ZX_SYS_vmar_protect 154
-#define ZX_SYS_vmar_op_range 155
-#define ZX_SYS_vmo_create 156
-#define ZX_SYS_vmo_read 157
-#define ZX_SYS_vmo_write 158
-#define ZX_SYS_vmo_get_size 159
-#define ZX_SYS_vmo_set_size 160
-#define ZX_SYS_vmo_op_range 161
-#define ZX_SYS_vmo_create_child 162
-#define ZX_SYS_vmo_set_cache_policy 163
-#define ZX_SYS_vmo_replace_as_executable 164
-#define ZX_SYS_vmo_create_contiguous 165
-#define ZX_SYS_vmo_create_physical 166
-#define ZX_SYS_COUNT 167
+#define ZX_SYS_clock_get 12
+#define ZX_SYS_clock_get_monotonic_via_kernel 13
+#define ZX_SYS_clock_create 14
+#define ZX_SYS_clock_read 15
+#define ZX_SYS_clock_get_details 16
+#define ZX_SYS_clock_update 17
+#define ZX_SYS_cprng_draw_once 18
+#define ZX_SYS_cprng_add_entropy 19
+#define ZX_SYS_debug_read 20
+#define ZX_SYS_debug_write 21
+#define ZX_SYS_debug_send_command 22
+#define ZX_SYS_debuglog_create 23
+#define ZX_SYS_debuglog_write 24
+#define ZX_SYS_debuglog_read 25
+#define ZX_SYS_event_create 26
+#define ZX_SYS_eventpair_create 27
+#define ZX_SYS_exception_get_thread 28
+#define ZX_SYS_exception_get_process 29
+#define ZX_SYS_fifo_create 30
+#define ZX_SYS_fifo_read 31
+#define ZX_SYS_fifo_write 32
+#define ZX_SYS_framebuffer_get_info 33
+#define ZX_SYS_framebuffer_set_range 34
+#define ZX_SYS_futex_wait 35
+#define ZX_SYS_futex_wake 36
+#define ZX_SYS_futex_requeue 37
+#define ZX_SYS_futex_wake_single_owner 38
+#define ZX_SYS_futex_requeue_single_owner 39
+#define ZX_SYS_futex_get_owner 40
+#define ZX_SYS_guest_create 41
+#define ZX_SYS_guest_set_trap 42
+#define ZX_SYS_handle_close 43
+#define ZX_SYS_handle_close_many 44
+#define ZX_SYS_handle_duplicate 45
+#define ZX_SYS_handle_replace 46
+#define ZX_SYS_interrupt_create 47
+#define ZX_SYS_interrupt_bind 48
+#define ZX_SYS_interrupt_wait 49
+#define ZX_SYS_interrupt_destroy 50
+#define ZX_SYS_interrupt_ack 51
+#define ZX_SYS_interrupt_trigger 52
+#define ZX_SYS_interrupt_bind_vcpu 53
+#define ZX_SYS_iommu_create 54
+#define ZX_SYS_ioports_request 55
+#define ZX_SYS_ioports_release 56
+#define ZX_SYS_job_create 57
+#define ZX_SYS_job_set_policy 58
+#define ZX_SYS_job_set_critical 59
+#define ZX_SYS_ktrace_read 60
+#define ZX_SYS_ktrace_control 61
+#define ZX_SYS_ktrace_write 62
+#define ZX_SYS_nanosleep 63
+#define ZX_SYS_ticks_get_via_kernel 64
+#define ZX_SYS_msi_allocate 65
+#define ZX_SYS_msi_create 66
+#define ZX_SYS_mtrace_control 67
+#define ZX_SYS_object_wait_one 68
+#define ZX_SYS_object_wait_many 69
+#define ZX_SYS_object_wait_async 70
+#define ZX_SYS_object_signal 71
+#define ZX_SYS_object_signal_peer 72
+#define ZX_SYS_object_get_property 73
+#define ZX_SYS_object_set_property 74
+#define ZX_SYS_object_get_info 75
+#define ZX_SYS_object_get_child 76
+#define ZX_SYS_object_set_profile 77
+#define ZX_SYS_pager_create 78
+#define ZX_SYS_pager_create_vmo 79
+#define ZX_SYS_pager_detach_vmo 80
+#define ZX_SYS_pager_supply_pages 81
+#define ZX_SYS_pager_op_range 82
+#define ZX_SYS_pc_firmware_tables 83
+#define ZX_SYS_pci_get_nth_device 84
+#define ZX_SYS_pci_enable_bus_master 85
+#define ZX_SYS_pci_reset_device 86
+#define ZX_SYS_pci_config_read 87
+#define ZX_SYS_pci_config_write 88
+#define ZX_SYS_pci_cfg_pio_rw 89
+#define ZX_SYS_pci_get_bar 90
+#define ZX_SYS_pci_map_interrupt 91
+#define ZX_SYS_pci_query_irq_mode 92
+#define ZX_SYS_pci_set_irq_mode 93
+#define ZX_SYS_pci_init 94
+#define ZX_SYS_pci_add_subtract_io_range 95
+#define ZX_SYS_pmt_unpin 96
+#define ZX_SYS_port_create 97
+#define ZX_SYS_port_queue 98
+#define ZX_SYS_port_wait 99
+#define ZX_SYS_port_cancel 100
+#define ZX_SYS_process_exit 101
+#define ZX_SYS_process_create 102
+#define ZX_SYS_process_start 103
+#define ZX_SYS_process_read_memory 104
+#define ZX_SYS_process_write_memory 105
+#define ZX_SYS_profile_create 106
+#define ZX_SYS_resource_create 107
+#define ZX_SYS_smc_call 108
+#define ZX_SYS_socket_create 109
+#define ZX_SYS_socket_write 110
+#define ZX_SYS_socket_read 111
+#define ZX_SYS_socket_shutdown 112
+#define ZX_SYS_stream_create 113
+#define ZX_SYS_stream_writev 114
+#define ZX_SYS_stream_writev_at 115
+#define ZX_SYS_stream_readv 116
+#define ZX_SYS_stream_readv_at 117
+#define ZX_SYS_stream_seek 118
+#define ZX_SYS_syscall_test_0 119
+#define ZX_SYS_syscall_test_1 120
+#define ZX_SYS_syscall_test_2 121
+#define ZX_SYS_syscall_test_3 122
+#define ZX_SYS_syscall_test_4 123
+#define ZX_SYS_syscall_test_5 124
+#define ZX_SYS_syscall_test_6 125
+#define ZX_SYS_syscall_test_7 126
+#define ZX_SYS_syscall_test_8 127
+#define ZX_SYS_syscall_test_wrapper 128
+#define ZX_SYS_syscall_test_handle_create 129
+#define ZX_SYS_system_get_event 130
+#define ZX_SYS_system_mexec 131
+#define ZX_SYS_system_mexec_payload_get 132
+#define ZX_SYS_system_powerctl 133
+#define ZX_SYS_task_suspend 134
+#define ZX_SYS_task_suspend_token 135
+#define ZX_SYS_task_create_exception_channel 136
+#define ZX_SYS_task_kill 137
+#define ZX_SYS_thread_exit 138
+#define ZX_SYS_thread_create 139
+#define ZX_SYS_thread_start 140
+#define ZX_SYS_thread_read_state 141
+#define ZX_SYS_thread_write_state 142
+#define ZX_SYS_timer_create 143
+#define ZX_SYS_timer_set 144
+#define ZX_SYS_timer_cancel 145
+#define ZX_SYS_vcpu_create 146
+#define ZX_SYS_vcpu_resume 147
+#define ZX_SYS_vcpu_interrupt 148
+#define ZX_SYS_vcpu_read_state 149
+#define ZX_SYS_vcpu_write_state 150
+#define ZX_SYS_vmar_allocate 151
+#define ZX_SYS_vmar_destroy 152
+#define ZX_SYS_vmar_map 153
+#define ZX_SYS_vmar_unmap 154
+#define ZX_SYS_vmar_protect 155
+#define ZX_SYS_vmar_op_range 156
+#define ZX_SYS_vmo_create 157
+#define ZX_SYS_vmo_read 158
+#define ZX_SYS_vmo_write 159
+#define ZX_SYS_vmo_get_size 160
+#define ZX_SYS_vmo_set_size 161
+#define ZX_SYS_vmo_op_range 162
+#define ZX_SYS_vmo_create_child 163
+#define ZX_SYS_vmo_set_cache_policy 164
+#define ZX_SYS_vmo_replace_as_executable 165
+#define ZX_SYS_vmo_create_contiguous 166
+#define ZX_SYS_vmo_create_physical 167
+#define ZX_SYS_COUNT 168
 ----- syscall-numbers.h END -----
 
 

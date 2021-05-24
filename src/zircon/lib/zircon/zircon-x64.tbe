@@ -15,6 +15,7 @@ Symbols:
   _zx_channel_write: { Type: Func }
   _zx_channel_write_etc: { Type: Func }
   _zx_clock_create: { Type: Func }
+  _zx_clock_get:   { Type: Func }
   _zx_clock_get_details: { Type: Func }
   _zx_clock_get_monotonic: { Type: Func }
   _zx_clock_read:  { Type: Func }
@@ -194,6 +195,7 @@ Symbols:
   zx_channel_write: { Type: Func, Weak: true }
   zx_channel_write_etc: { Type: Func, Weak: true }
   zx_clock_create: { Type: Func, Weak: true }
+  zx_clock_get:    { Type: Func, Weak: true }
   zx_clock_get_details: { Type: Func, Weak: true }
   zx_clock_get_monotonic: { Type: Func, Weak: true }
   zx_clock_read:   { Type: Func, Weak: true }

@@ -79,15 +79,25 @@ class UtcFixture : public zxtest::Test {
   }
 
   zx_time_t test_clock_get_now() const {
-    // NoClock tests cannot get the clock and should never even try
-    static_assert(Type != FixtureType::kNoClock);
-
-    // This should never fail.  If it does, it is an indication of
-    // panic-worthy corruption in our test environment.
-    zx_time_t ret;
-    zx_status_t res = test_clock_.read(&ret);
-    ZX_ASSERT(res == ZX_OK);
-    return ret;
+    if constexpr (Type == FixtureType::kNoClock) {
+      // TODO(johngro): Clean this up when UTC in the kernel goes away.  For
+      // now, if there is no handle based clock available to the runtime, it
+      // will fall back on kernel UTC.  Once we switch away from that, these
+      // tests will need to be updated to expect the behavior we choose to
+      // implement in the case where a runtime is not provided a UTC reference
+      // at startup.
+      zx_time_t ret;
+      zx_status_t res = zx_clock_get(ZX_CLOCK_UTC, &ret);
+      ZX_ASSERT(res == ZX_OK);
+      return ret;
+    } else {
+      // This should never fail.  If it does, it is an indication of
+      // panic-worthy corruption in our test environment.
+      zx_time_t ret;
+      zx_status_t res = test_clock_.read(&ret);
+      ZX_ASSERT(res == ZX_OK);
+      return ret;
+    }
   }
 
   void test_clock_get_details(zx_clock_details_v1* details_out) {
