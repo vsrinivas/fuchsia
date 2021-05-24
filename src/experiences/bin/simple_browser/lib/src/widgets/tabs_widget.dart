@@ -197,7 +197,6 @@ class _TabsWidgetState extends State<TabsWidget>
         child: Container(
           width: _kTabBarHeight,
           height: _kTabBarHeight,
-          color: _browserTheme.buttonColor,
           child: Center(
             child: AnimatedBuilder(
               animation: button.isEnabled,
