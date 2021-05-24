@@ -54,10 +54,6 @@ Adapter:
     Local UUIDs:    None
 ```
 
-**NOTE**: _fuchsia.bluetooth.sys replaces the deprecated
-[fuchsia.bluetooth.control](/sdk/fidl/fuchsia.bluetooth.control) API, which contiues to be
-supported. The bt-cli tool currently uses the deprecated API._
-
 ### Tools
 
 See the [bluetooth/tools](tools/) package for more information on
@@ -136,7 +132,7 @@ example:
   ```
   ...
     "fuchsia.bluetooth.bredr.Profile":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-    "fuchsia.bluetooth.control.Control": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
+    "fuchsia.bluetooth.sys.Access": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
     "fuchsia.bluetooth.gatt.Server":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
     "fuchsia.bluetooth.le.Central":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
     "fuchsia.bluetooth.le.Peripheral":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",

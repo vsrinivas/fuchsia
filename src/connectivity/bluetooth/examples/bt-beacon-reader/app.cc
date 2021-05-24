@@ -4,7 +4,6 @@
 
 #include "app.h"
 
-#include <fuchsia/bluetooth/control/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>

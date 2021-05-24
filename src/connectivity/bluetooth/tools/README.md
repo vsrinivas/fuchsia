@@ -79,7 +79,7 @@ $ bt-snoop-cli --help
 ## bt-cli
 
 `bt-cli` is a command-line interface for the Generic Access Profile (using the
-[control](../../../public/fidl/fuchsia.bluetooth.control/control.fidl) FIDL interfaces).
+[fuchsia.bluetooth.sys](../../../public/fidl/fuchsia.bluetooth.sys) FIDL interfaces).
 This can be used to query available Bluetooth controllers, to perform dual-mode
 discovery and connection procedures, and to respond to pairing requests.
 

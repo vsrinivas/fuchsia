@@ -56,7 +56,7 @@ product may need both roles (but not simultaneously).
 When switching, the previous role is stopped.  Any peers connected to it are
 disconnected from the audio, but are _not_ disconnected from the piconet.
 
-Peers can be disconnected using the [Control](/sdk/fidl/fuchsia.bluetooth.control/control.fidl) API.
+Peers can be disconnected using the [Access](/sdk/fidl/fuchsia.bluetooth.sys/access.fidl) API.
 
 One AudioMode API provider is included here as `bt-a2dp-manager`.  To include
 this service and the required components to run sink and source, add these packages
