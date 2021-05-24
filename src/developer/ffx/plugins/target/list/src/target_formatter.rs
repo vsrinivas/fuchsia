@@ -408,7 +408,33 @@ impl TryFrom<Vec<bridge::Target>> for TabularTargetFormatter {
 mod test {
     use super::*;
     use fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address};
+    use lazy_static::lazy_static;
     use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+
+    lazy_static! {
+        static ref EMPTY_FORMATTER_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_empty_formatter_golden");
+        static ref ONE_TARGET_WITH_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_one_target_with_default_golden");
+        static ref ONE_TARGET_NO_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_one_target_no_default_golden");
+        static ref EMPTY_NODENAME_WITH_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_empty_nodename_with_default_golden");
+        static ref EMPTY_NODENAME_NO_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_empty_nodename_no_default_golden");
+        static ref SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_simple_formatter_with_default_golden");
+        static ref DEVICE_FINDER_FORMAT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_device_finder_format_golden");
+        static ref ADDRESSES_FORMAT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_addresses_format_golden");
+        static ref BUILD_CONFIG_FULL_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_build_config_full_golden");
+        static ref BUILD_CONFIG_PRODUCT_MISSING_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_build_config_product_missing_golden");
+        static ref BUILD_CONFIG_BOARD_MISSING_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_build_config_board_missing_golden");
+    }
 
     fn make_valid_target() -> bridge::Target {
         bridge::Target {
@@ -438,7 +464,7 @@ mod test {
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0].len(), 50); // Just some manual math.
-        assert_eq!(&lines[0], "NAME    SERIAL    TYPE    STATE    ADDRS/IP    RCS");
+        assert_eq!(lines.join("\n"), EMPTY_FORMATTER_GOLDEN.to_string());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -462,25 +488,11 @@ mod test {
         .unwrap();
         let lines = formatter.lines(Some("fooberdoober"));
         assert_eq!(lines.len(), 3);
-
-        // TODO(awdavies): This can probably function better via golden files.
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
-        assert_eq!(
-            &lines[1],
-            "fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
-        );
-        assert_eq!(&lines[2], "lorberding      <unknown>    Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
+        assert_eq!(lines.join("\n"), ONE_TARGET_WITH_DEFAULT_GOLDEN.to_string());
 
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 3);
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
-        assert_eq!(
-            &lines[1],
-            "fooberdoober    <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
-        );
-        assert_eq!(&lines[2], "lorberding      <unknown>    Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
+        assert_eq!(lines.join("\n"), ONE_TARGET_NO_DEFAULT_GOLDEN.to_string());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -505,25 +517,11 @@ mod test {
         .unwrap();
         let lines = formatter.lines(Some("fooberdoober"));
         assert_eq!(lines.len(), 3);
-
-        // TODO(awdavies): This can probably function better via golden files.
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
-        assert_eq!(
-            &lines[1],
-            "fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
-        );
-        assert_eq!(&lines[2], "<unknown>       cereal       Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
+        assert_eq!(lines.join("\n"), EMPTY_NODENAME_WITH_DEFAULT_GOLDEN.to_string());
 
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 3);
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE       STATE      ADDRS/IP                                           RCS");
-        assert_eq!(
-            &lines[1],
-            "fooberdoober    <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N"
-        );
-        assert_eq!(&lines[2], "<unknown>       cereal       Unknown    Unknown    [fe80::101:101:101:101%137]                        N");
+        assert_eq!(lines.join("\n"), EMPTY_NODENAME_NO_DEFAULT_GOLDEN.to_string());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -547,15 +545,11 @@ mod test {
         .unwrap();
         let lines = formatter.lines(Some("fooberdoober"));
         assert_eq!(lines.len(), 2);
-
-        // TODO(awdavies): This can probably function better via golden files.
-        assert_eq!(&lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
-        assert_eq!(&lines[1], "fe80::101:101:101:101%137 ");
+        assert_eq!(lines.join("\n"), SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
 
         let lines = formatter.lines(None);
         assert_eq!(lines.len(), 2);
-        assert_eq!(&lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
-        assert_eq!(&lines[1], "fe80::101:101:101:101%137 ");
+        assert_eq!(lines.join("\n"), SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
     }
 
     #[test]
@@ -601,8 +595,7 @@ mod test {
         ))
         .unwrap();
         let lines = formatter.lines(None);
-        assert_eq!(lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
-        assert_eq!(lines[1], "101:101:101:101:101:101:101:101 fooberdoober");
+        assert_eq!(lines.join("\n"), DEVICE_FINDER_FORMAT_GOLDEN.to_string());
     }
 
     #[test]
@@ -613,8 +606,7 @@ mod test {
         ))
         .unwrap();
         let lines = formatter.lines(None);
-        assert_eq!(lines[0], "101:101:101:101:101:101:101:101");
-        assert_eq!(lines[1], "101:101:101:101:101:101:101:101");
+        assert_eq!(lines.join("\n"), ADDRESSES_FORMAT_GOLDEN.to_string());
     }
 
     #[test]
@@ -626,9 +618,7 @@ mod test {
         t.product_config = Some(p);
         let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           RCS");
-        assert_eq!(&lines[1], "fooberdoober    <unknown>    default.board    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N");
+        assert_eq!(lines.join("\n"), BUILD_CONFIG_FULL_GOLDEN.to_string());
     }
 
     #[test]
@@ -639,9 +629,7 @@ mod test {
         t.product_config = None;
         let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           RCS");
-        assert_eq!(&lines[1], "fooberdoober    <unknown>    <unknown>.x64    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N");
+        assert_eq!(lines.join("\n"), BUILD_CONFIG_PRODUCT_MISSING_GOLDEN.to_string());
     }
 
     #[test]
@@ -652,9 +640,7 @@ mod test {
         t.product_config = Some(p);
         let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
         let lines = formatter.lines(None);
-        assert_eq!(&lines[0],
-                   "NAME            SERIAL       TYPE             STATE      ADDRS/IP                                           RCS");
-        assert_eq!(&lines[1], "fooberdoober    <unknown>    foo.<unknown>    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    N");
+        assert_eq!(lines.join("\n"), BUILD_CONFIG_BOARD_MISSING_GOLDEN.to_string());
     }
 
     #[test]

@@ -13,6 +13,7 @@ ffx_plugin("ffx_list") {
     "//src/developer/ffx/daemon:lib",
     "//src/developer/ffx/lib/netext:lib",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -22,5 +23,19 @@ ffx_plugin("ffx_list") {
     "src/args.rs",
     "src/lib.rs",
     "src/target_formatter.rs",
+  ]
+
+  inputs = [
+    "test_data/target_formatter_addresses_format_golden",
+    "test_data/target_formatter_build_config_board_missing_golden",
+    "test_data/target_formatter_build_config_full_golden",
+    "test_data/target_formatter_build_config_product_missing_golden",
+    "test_data/target_formatter_device_finder_format_golden",
+    "test_data/target_formatter_empty_formatter_golden",
+    "test_data/target_formatter_empty_nodename_no_default_golden",
+    "test_data/target_formatter_empty_nodename_with_default_golden",
+    "test_data/target_formatter_one_target_no_default_golden",
+    "test_data/target_formatter_one_target_with_default_golden",
+    "test_data/target_formatter_simple_formatter_with_default_golden",
   ]
 }
