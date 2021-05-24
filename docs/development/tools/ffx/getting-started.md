@@ -117,7 +117,7 @@ NOTE: if the default target has been set, and you are unable to run that command
 against the target, [reach out](#contacting_the_ffx_team) to the `ffx` team.
 
 Then the next time you list targets you should see that an `RCS` connection
-isn't active.
+is active.
 
 ```sh
 $ fx ffx target list
