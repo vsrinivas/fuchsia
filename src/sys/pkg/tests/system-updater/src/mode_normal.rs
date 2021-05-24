@@ -11,7 +11,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn updates_the_system() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -74,7 +74,7 @@ async fn updates_the_system() {
 
 #[fasync::run_singlethreaded(test)]
 async fn requires_zbi() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -117,7 +117,7 @@ async fn requires_zbi() {
 
 #[fasync::run_singlethreaded(test)]
 async fn updates_the_system_with_progress() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")

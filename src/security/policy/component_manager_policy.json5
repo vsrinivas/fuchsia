@@ -203,7 +203,6 @@
                     "/core/appmgr",
                     "/core/pkg-cache",
                     "/core/pkg-resolver",
-                    "/core/system-updater",
                 ],
             },
             {
@@ -253,30 +252,6 @@
                 ],
             },
             {
-                source_moniker: "/bootstrap/fshost",
-                source: "component",
-                source_name: "build-info",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap",
-                    "/bootstrap/fshost",
-                    "/core",
-                    "/core/system-updater",
-                ],
-            },
-            {
-                source_moniker: "/bootstrap/fshost",
-                source: "component",
-                source_name: "deprecated-misc-storage",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap",
-                    "/bootstrap/fshost",
-                    "/core",
-                    "/core/system-updater",
-                ],
-            },
-            {
                 // We restrict access to PackageResolver because it gives direct access to package
                 // handles which provide executability which bypass VX security policy.
                 source_moniker: "/core/pkg-resolver",
@@ -298,7 +273,6 @@
                     // allowlist for v1 components accessing pkg-resolver.
                     "/core/appmgr",
                     "/core/universe-resolver",
-                    "/core/system-updater",
                 ],
             },
             {
@@ -311,7 +285,6 @@
                 target_monikers: [
                     "/core/appmgr",
                     "/core/pkg-resolver",
-                    "/core/system-updater",
                 ],
             },
             {

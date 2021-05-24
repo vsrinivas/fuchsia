@@ -14,7 +14,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn progress_reporting_fetch_multiple_packages() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     let pkg1_url = pinned_pkg_url!("package1/0", "aa");
     let pkg2_url = pinned_pkg_url!("package2/0", "bb");
@@ -94,7 +94,7 @@ async fn progress_reporting_fetch_multiple_packages() {
 
 #[fasync::run_singlethreaded(test)]
 async fn monitor_fails_when_no_update_running() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     // There is no update underway, so the monitor should not attach.
     assert_matches!(monitor_update(None, &env.installer_proxy()).await, Ok(None));
@@ -104,7 +104,7 @@ async fn monitor_fails_when_no_update_running() {
 
 #[fasync::run_singlethreaded(test)]
 async fn monitor_connects_to_existing_attempt() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     let update_pkg = env
         .resolver
@@ -143,7 +143,7 @@ async fn monitor_connects_to_existing_attempt() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeed_additional_start_requests_when_compatible() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     let update_pkg = env
         .resolver
@@ -190,7 +190,7 @@ async fn succeed_additional_start_requests_when_compatible() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fail_additional_start_requests_when_not_compatible() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .package("update", UPDATE_HASH)

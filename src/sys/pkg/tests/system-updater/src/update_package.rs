@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_invalid_package_name() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     // Name the update package something other than "update" and assert that the process fails to
     // validate the update package.
@@ -62,7 +62,7 @@ async fn rejects_invalid_package_name() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_if_package_unavailable() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .mock_resolve_failure(UPDATE_PKG_URL, fidl_fuchsia_pkg::ResolveError::PackageNotFound);
@@ -96,7 +96,7 @@ async fn fails_if_package_unavailable() {
 
 #[fasync::run_singlethreaded(test)]
 async fn uses_custom_update_package() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")

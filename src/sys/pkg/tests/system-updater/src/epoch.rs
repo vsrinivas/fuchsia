@@ -11,7 +11,7 @@ use {
 /// When epoch.json is in an unexpected format, we should expect to fail with the Internal reason.
 #[fasync::run_singlethreaded(test)]
 async fn invalid_epoch() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))

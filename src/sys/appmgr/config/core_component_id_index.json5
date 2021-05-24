@@ -172,7 +172,13 @@
         },
         {
             instance_id: "5bd5150caf1ff36c0c48bd26ef276c7ebe01b17b7919dba84abed3ab7d7bd48b",
-            moniker: "/core/system-updater",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx",
+                realm_path: [
+                    "app",
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "426871d8856f43fc8433ad9049bf188454d038dc6295e0c59fd3401d72f25a48",

@@ -14,7 +14,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_package_resolver_connect_error() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::PackageResolver).build().await;
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::PackageResolver).build();
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -46,7 +46,7 @@ async fn fails_on_package_resolver_connect_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_update_package_fetch_error() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -99,7 +99,7 @@ async fn fails_on_update_package_fetch_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_content_package_fetch_error() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     let pkg1_url = pinned_pkg_url!("package1/0", "aa");
     let pkg2_url = pinned_pkg_url!("package2/0", "00");
@@ -210,7 +210,7 @@ async fn fails_on_content_package_fetch_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_when_package_cache_sync_fails() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
     env.cache_service.set_sync_response(Err(Status::INTERNAL));
     env.resolver
         .register_package("update", "upd4t3")
@@ -257,7 +257,7 @@ async fn assert_prepare_failure_reason(
     resolve_error: fidl_fuchsia_pkg::ResolveError,
     expected_reason: PrepareFailureReason,
 ) {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
     env.resolver.mock_resolve_failure(UPDATE_PKG_URL, resolve_error);
 
     let mut attempt = env.start_update().await.unwrap();
@@ -315,7 +315,7 @@ async fn assert_fetch_failure_reason(
     resolve_error: fidl_fuchsia_pkg::ResolveError,
     expected_reason: FetchFailureReason,
 ) {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))

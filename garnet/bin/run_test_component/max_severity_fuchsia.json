@@ -209,6 +209,10 @@
             "url": "fuchsia-pkg://fuchsia.com/system_recovery_tests#meta/system_recovery_bin_test.cmx"
         },
         {
+            "max_severity": "FATAL",
+            "url": "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-test.cmx"
+        },
+        {
             "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/telephony-tests#meta/tel_fake_at_query.cmx"
         },

@@ -32,6 +32,7 @@ group("e2e_tests") {
 # Targets to include in the base package set for the core product.
 group("core") {
   public_deps = [
+    ":core_config",
     "bin/pkg-cache",
     "bin/pkg-resolver",
     "bin/pkgfs",
@@ -74,6 +75,11 @@ group("system-update-checker") {
     "bin/system-update-checker:config",
   ]
   deps = [ "//build/validate:non_production_tag" ]
+}
+
+merge_sysmgr_config("core_config") {
+  output = "pkg.config"
+  deps = [ "bin/system-updater:config" ]
 }
 
 group("omaha-client") {

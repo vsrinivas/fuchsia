@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn validates_board() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.set_board_name("x64");
 
@@ -25,7 +25,7 @@ async fn validates_board() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_mismatched_board() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.set_board_name("x64");
 

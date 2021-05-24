@@ -6,7 +6,7 @@ use {super::*, pretty_assertions::assert_eq};
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_paver_connect_error() {
-    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).build().await;
+    let env = TestEnv::builder().unregister_protocol(Protocol::Paver).build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -39,8 +39,7 @@ async fn fails_on_image_write_error() {
                 _ => Status::OK,
             }))
         })
-        .build()
-        .await;
+        .build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -95,7 +94,7 @@ async fn fails_on_image_write_error() {
 
 #[fasync::run_singlethreaded(test)]
 async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -151,8 +150,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
 async fn writes_to_both_configs_if_abr_not_supported() {
     let env = TestEnv::builder()
         .paver_service(|builder| builder.boot_manager_close_with_epitaph(Status::NOT_SUPPORTED))
-        .build()
-        .await;
+        .build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -207,8 +205,7 @@ async fn does_not_update_with_unhealthy_current_partition() {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
                 .current_config(current_config)
         })
-        .build()
-        .await;
+        .build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -261,8 +258,7 @@ async fn does_not_update_if_alternate_cant_be_marked_unbootable() {
                 }))
                 .current_config(current_config)
         })
-        .build()
-        .await;
+        .build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -324,7 +320,7 @@ async fn writes_to_a_if_abr_supported_and_current_config_r() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_called_legacy_zedboot() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -378,7 +374,7 @@ async fn writes_recovery_called_legacy_zedboot() {
 // TODO(fxbug.dev/52356): drop this duplicate test when "zedboot" is no longer allowed/used.
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -431,7 +427,7 @@ async fn writes_recovery() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_vbmeta() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -490,7 +486,7 @@ async fn writes_recovery_vbmeta() {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_fuchsia_vbmeta() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -545,10 +541,8 @@ async fn writes_fuchsia_vbmeta() {
 async fn update_with_current_config(
     current_config: paver::Configuration,
 ) -> Vec<SystemUpdaterInteraction> {
-    let env = TestEnv::builder()
-        .paver_service(|builder| builder.current_config(current_config))
-        .build()
-        .await;
+    let env =
+        TestEnv::builder().paver_service(|builder| builder.current_config(current_config)).build();
 
     env.resolver
         .register_package("update", "upd4t3")

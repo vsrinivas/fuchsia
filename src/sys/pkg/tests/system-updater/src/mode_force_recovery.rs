@@ -20,7 +20,7 @@ fn force_recovery_json() -> String {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_and_force_reboots_into_it() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -89,7 +89,7 @@ async fn writes_recovery_and_force_reboots_into_it() {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboots_regardless_of_reboot_arg() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -105,7 +105,7 @@ async fn reboots_regardless_of_reboot_arg() {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboots_regardless_of_reboot_controller() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -135,7 +135,7 @@ async fn reboots_regardless_of_reboot_controller() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_zbi() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -174,7 +174,7 @@ async fn rejects_zbi() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rejects_skip_recovery_flag() {
-    let env = TestEnv::builder().build().await;
+    let env = TestEnv::builder().build();
 
     env.resolver
         .register_package("update", "upd4t3")

@@ -42,7 +42,6 @@ recovery_packages = [
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
-  "//src/sys/appmgr:core_component_id_index",
   "//src/sys/core",
   "//src/sys/pkg:recovery",
   "//src/sys/stash:pkg",
