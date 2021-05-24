@@ -12,7 +12,7 @@
 
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -26,7 +26,7 @@ class CrashServer {
   enum UploadStatus { kSuccess, kFailure, kThrottled };
 
   CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
-              SnapshotManager* snapshot_manager, LogTags* tags);
+              LogTags* tags);
 
   virtual ~CrashServer() {}
 
@@ -35,12 +35,12 @@ class CrashServer {
   // Returns whether the request was successful, defined as returning a HTTP status code in the
   // range [200-203]. In case of success, |server_report_id| is set to the crash report id on the
   // server.
-  virtual UploadStatus MakeRequest(const Report& report, std::string* server_report_id);
+  virtual UploadStatus MakeRequest(const Report& report, Snapshot snapshot,
+                                   std::string* server_report_id);
 
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
   const std::string url_;
-  SnapshotManager* snapshot_manager_;
   LogTags* tags_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashServer);

@@ -159,9 +159,6 @@ class CrashReporterTest : public UnitTestFixture {
     auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
 
     crash_server_ = crash_server.get();
-    if (crash_server_) {
-      crash_server_->AddSnapshotManager(snapshot_manager.get());
-    }
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config,

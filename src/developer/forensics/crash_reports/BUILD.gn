@@ -142,6 +142,7 @@ source_set("crash_server") {
     ":log_tags",
     ":report",
     ":sized_data_reader",
+    ":snapshot_manager",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

@@ -222,19 +222,13 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
   return true;
 }
 
-std::optional<Report> Store::Get(const ReportId report_id) {
-  if (!Contains(report_id)) {
-    return std::nullopt;
-  }
+Report Store::Get(const ReportId report_id) {
+  FX_CHECK(Contains(report_id)) << "Contains() should be called before any Get()";
 
   auto& root_metadata = RootFor(report_id);
   auto attachment_files = root_metadata.ReportAttachments(report_id, /*absolute_paths=*/
                                                           false);
   auto attachment_paths = root_metadata.ReportAttachments(report_id, /*absolute_paths=*/true);
-
-  if (attachment_files.empty()) {
-    return std::nullopt;
-  }
 
   AnnotationMap annotations;
   std::map<std::string, SizedData> attachments;
@@ -244,7 +238,7 @@ std::optional<Report> Store::Get(const ReportId report_id) {
   for (size_t i = 0; i < attachment_files.size(); ++i) {
     if (attachment_files[i] == "annotations.json") {
       if (!ReadAnnotations(attachment_paths[i], &annotations)) {
-        return std::nullopt;
+        continue;
       }
     } else if (attachment_files[i] == "snapshot_uuid.txt") {
       if (!ReadSnapshotUuid(attachment_paths[i], &snapshot_uuid)) {
@@ -253,7 +247,7 @@ std::optional<Report> Store::Get(const ReportId report_id) {
     } else {
       SizedData attachment;
       if (!ReadAttachment(attachment_paths[i], &attachment)) {
-        return std::nullopt;
+        continue;
       }
 
       if (attachment_files[i] == "minidump.dmp") {
@@ -277,7 +271,21 @@ std::vector<ReportId> Store::GetReports() const {
   return all_reports;
 }
 
-bool Store::Contains(const ReportId report_id) const {
+bool Store::Contains(const ReportId report_id) {
+  // Keep the in-memory and on-disk knowledge of the store in sync in case the
+  // filesystem has deleted the report content. This is done here because it is a natural
+  // synchronization point and any operation acting on a report must call Contains in order to 
+  // safely proceed.
+  if (tmp_metadata_.Contains(report_id) &&
+      !files::IsDirectory(tmp_metadata_.ReportDirectory(report_id))) {
+    tmp_metadata_.Delete(report_id);
+  }
+
+  if (cache_metadata_.Contains(report_id) &&
+      !files::IsDirectory(cache_metadata_.ReportDirectory(report_id))) {
+    cache_metadata_.Delete(report_id);
+  }
+
   return tmp_metadata_.Contains(report_id) || cache_metadata_.Contains(report_id);
 }
 

@@ -45,7 +45,7 @@ class Store {
 
   // Gets a report from the store. If no report exists for |id| or there is an error reading the
   // report from the filesystem, return std::nullopt.
-  std::optional<Report> Get(ReportId id);
+  Report Get(ReportId id);
 
   // Returns true if a report with ReportId |id| is removed from the store.
   bool Remove(ReportId id);
@@ -54,8 +54,7 @@ class Store {
 
   std::vector<ReportId> GetReports() const;
 
-  // Exposed for testing purposes.
-  bool Contains(ReportId id) const;
+  bool Contains(ReportId id);
 
  private:
   // The root that the report with ReportId |id| is stored under.

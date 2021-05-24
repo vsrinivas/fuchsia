@@ -102,8 +102,7 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
 
   auto tags = std::make_unique<LogTags>();
 
-  auto crash_server =
-      std::make_unique<CrashServer>(services, kCrashServerUrl, snapshot_manager.get(), tags.get());
+  auto crash_server = std::make_unique<CrashServer>(services, kCrashServerUrl, tags.get());
 
   return std::make_unique<CrashReporter>(
       dispatcher, std::move(services), clock, std::move(info_context), config,

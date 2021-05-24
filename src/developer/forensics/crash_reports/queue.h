@@ -42,11 +42,11 @@ class Queue {
   // Add a report to the queue.
   bool Add(Report report);
 
-  uint64_t Size() const;
-  bool IsEmpty() const;
+  uint64_t Size() const { return pending_reports_.size(); }
+  bool IsEmpty() const { return pending_reports_.empty(); }
+  ReportId LatestReport() { return pending_reports_.back().report_id; }
   bool Contains(ReportId report_id) const;
-  ReportId LatestReport() { return pending_reports_.back(); }
-  bool HasHourlyReport() const { return hourly_report_.has_value(); }
+  bool HasHourlyReport() const;
   bool IsPeriodicUploadScheduled() const {
     return upload_all_every_fifteen_minutes_task_.is_pending();
   }
@@ -55,6 +55,16 @@ class Queue {
   void StopUploading();
 
  private:
+  // Information about a report that needs to be uploaded, including its id and whether it's the
+  // sole hourly report.
+  struct PendingReport {
+    PendingReport(const ReportId report_id, const bool is_hourly_report)
+        : report_id(report_id), is_hourly_report(is_hourly_report) {}
+
+    ReportId report_id;
+    bool is_hourly_report;
+  };
+
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the
   // queue. Returns the number of reports successfully uploaded.
   size_t UploadAll();
@@ -88,11 +98,7 @@ class Queue {
 
   ReportingPolicy reporting_policy_{ReportingPolicy::kUndecided};
 
-  std::vector<ReportId> pending_reports_;
-
-  // The hourly report is stored separately to avoid having more than one hourly report at a
-  // time.
-  std::optional<ReportId> hourly_report_;
+  std::deque<PendingReport> pending_reports_;
 
   async::TaskClosure upload_all_every_fifteen_minutes_task_;
 

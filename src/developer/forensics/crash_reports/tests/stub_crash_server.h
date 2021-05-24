@@ -21,17 +21,14 @@ extern const char kStubServerReportId[];
 class StubCrashServer : public CrashServer {
  public:
   explicit StubCrashServer(const std::vector<CrashServer::UploadStatus>& request_return_values)
-      : CrashServer(nullptr, kStubCrashServerUrl, nullptr, nullptr),
-        request_return_values_(request_return_values),
-        snapshot_manager_() {
+      : CrashServer(nullptr, kStubCrashServerUrl, nullptr),
+        request_return_values_(request_return_values) {
     next_return_value_ = request_return_values_.cbegin();
   }
 
   ~StubCrashServer();
 
-  void AddSnapshotManager(SnapshotManager* snapshot_manager);
-
-  CrashServer::UploadStatus MakeRequest(const Report& report,
+  CrashServer::UploadStatus MakeRequest(const Report& report, Snapshot snapshot,
                                         std::string* server_report_id) override;
 
   // Whether the crash server expects at least one more call to MakeRequest().
@@ -46,8 +43,6 @@ class StubCrashServer : public CrashServer {
  private:
   const std::vector<CrashServer::UploadStatus> request_return_values_;
   std::vector<CrashServer::UploadStatus>::const_iterator next_return_value_;
-
-  SnapshotManager* snapshot_manager_;
 
   AnnotationMap latest_annotations_;
   std::vector<std::string> latest_attachment_keys_;

@@ -149,10 +149,10 @@ CrashServer::UploadStatus HTTPTransportService::Execute(std::string* response_bo
 }  // namespace
 
 CrashServer::CrashServer(std::shared_ptr<sys::ServiceDirectory> services, const std::string& url,
-                         SnapshotManager* snapshot_manager, LogTags* tags)
-    : services_(services), url_(url), snapshot_manager_(snapshot_manager), tags_(tags) {}
+                         LogTags* tags)
+    : services_(services), url_(url), tags_(tags) {}
 
-CrashServer::UploadStatus CrashServer::MakeRequest(const Report& report,
+CrashServer::UploadStatus CrashServer::MakeRequest(const Report& report, Snapshot snapshot,
                                                    std::string* server_report_id) {
   std::vector<SizedDataReader> attachment_readers;
   attachment_readers.reserve(report.Attachments().size() + 2u /*minidump and snapshot*/);
@@ -181,12 +181,14 @@ CrashServer::UploadStatus CrashServer::MakeRequest(const Report& report,
   }
 
   // Add the snapshot archive and annotations.
-  auto snapshot = snapshot_manager_->GetSnapshot(report.SnapshotUuid());
   if (const auto archive = snapshot.LockArchive(); archive) {
     attachment_readers.emplace_back(archive->value);
     file_readers.emplace(archive->key, &attachment_readers.back());
   }
 
+  // Take the union of the snapshot annotations and the annotations in the crash report. More often
+  // than not these sets are the same, however if the snapshot manager has dropped the snapshot some
+  // reason, e.g., reboot or garbage collection, the annotations will be disjoint.
   if (const auto annotations = snapshot.LockAnnotations(); annotations) {
     for (const auto& [key, value] : annotations->Raw()) {
       http_multipart_builder.SetFormData(key, value);

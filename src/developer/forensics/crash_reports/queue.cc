@@ -36,27 +36,35 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
 
   // Note: The upload attempt data is lost when the component stops and all reports start with
   // upload attempts of 0.
-  pending_reports_ = store_.GetReports();
-  std::sort(pending_reports_.begin(), pending_reports_.end());
+  for (const auto& report_id : store_.GetReports()) {
+    // It could technically be an hourly snapshot, but the snapshot has not been persisted so it is
+    // okay to have another one here.
+    pending_reports_.emplace_back(report_id, false /*not a known hourly report*/);
+  }
+  std::sort(pending_reports_.begin(), pending_reports_.end(),
+            [](const PendingReport& lhs, const PendingReport& rhs) {
+              return lhs.report_id <= rhs.report_id;
+            });
 
   if (!pending_reports_.empty()) {
     std::vector<std::string> report_id_strs;
-    for (const auto& report_id : pending_reports_) {
-      report_id_strs.push_back(std::to_string(report_id));
+    for (const auto& pending_report : pending_reports_) {
+      report_id_strs.push_back(std::to_string(pending_report.report_id));
     }
     FX_LOGS(INFO) << "Initializing queue with reports: " << fxl::JoinStrings(report_id_strs, " ");
   }
 }
 
-uint64_t Queue::Size() const {
-  return pending_reports_.size() + (uint64_t)hourly_report_.has_value();
-}
-bool Queue::IsEmpty() const { return pending_reports_.empty() && !hourly_report_.has_value(); }
-
 bool Queue::Contains(const ReportId report_id) const {
-  return std::find(pending_reports_.begin(), pending_reports_.end(), report_id) !=
-             pending_reports_.end() ||
-         (hourly_report_.has_value() && hourly_report_.value() == report_id);
+  return std::find_if(pending_reports_.cbegin(), pending_reports_.cend(),
+                      [=](const PendingReport& r) { return r.report_id == report_id; }) !=
+         pending_reports_.cend();
+}
+
+bool Queue::HasHourlyReport() const {
+  return std::find_if(pending_reports_.cbegin(), pending_reports_.cend(),
+                      [=](const PendingReport& r) { return r.is_hourly_report; }) !=
+         pending_reports_.cend();
 }
 
 void Queue::StopUploading() {
@@ -77,13 +85,12 @@ bool Queue::Add(Report report) {
     }
   }
 
-  const auto report_id = report.Id();
-  const auto is_hourly_report = report.IsHourlyReport();
+  PendingReport pending_report(report.Id(), report.IsHourlyReport());
 
   // If an hourly report is already present, don't delete it and don't store a new one. This is
-  // done to preserve the data from the first hourly report that wasn't successfully uploaded and
-  // will have the best chance of containing data on why.
-  if (report.IsHourlyReport() && hourly_report_.has_value()) {
+  // done to preserve the data from the report_id hourly report that wasn't successfully uploaded
+  // and will have the best chance of containing data on why.
+  if (report.IsHourlyReport() && HasHourlyReport()) {
     Delete(report.Id());
     return true;
   }
@@ -93,31 +100,24 @@ bool Queue::Add(Report report) {
 
   for (const auto& id : garbage_collected_reports) {
     GarbageCollect(id);
-    pending_reports_.erase(std::remove_if(pending_reports_.begin(), pending_reports_.end(),
-                                          [&](const ReportId id) {
-                                            return std::find(garbage_collected_reports.cbegin(),
-                                                             garbage_collected_reports.cend(),
-                                                             report_id) !=
-                                                   garbage_collected_reports.cend();
-                                          }),
-                           pending_reports_.end());
+    if (auto remove = std::remove_if(pending_reports_.begin(), pending_reports_.end(),
+                                     [=](const PendingReport& r) { return r.report_id == id; });
+        remove != pending_reports_.end()) {
+      pending_reports_.erase(remove, pending_reports_.end());
+    }
   }
 
   if (!success) {
-    FreeResources(report_id);
+    FreeResources(pending_report.report_id);
     return false;
   }
 
   if (reporting_policy_ == ReportingPolicy::kArchive) {
-    Archive(report_id);
+    Archive(pending_report.report_id);
     return true;
   }
 
-  if (!is_hourly_report) {
-    pending_reports_.push_back(report_id);
-  } else {
-    hourly_report_ = report_id;
-  }
+  pending_reports_.push_back(pending_report);
 
   return true;
 }
@@ -127,7 +127,8 @@ bool Queue::Upload(const Report& report) {
   info_.RecordUploadAttemptNumber(upload_attempts_[report.Id()]);
 
   std::string server_report_id;
-  const auto response = crash_server_->MakeRequest(report, &server_report_id);
+  const auto response = crash_server_->MakeRequest(
+      report, snapshot_manager_->GetSnapshot(report.SnapshotUuid()), &server_report_id);
 
   switch (response) {
     case CrashServer::UploadStatus::kSuccess:
@@ -158,8 +159,8 @@ void Queue::GarbageCollect(const ReportId report_id) {
 }
 
 void Queue::FreeResources(const ReportId report_id) {
-  if (const auto report = store_.Get(report_id); report != std::nullopt) {
-    FreeResources(std::move(report.value()));
+  if (store_.Contains(report_id)) {
+    FreeResources(store_.Get(report_id));
     return;
   }
 
@@ -176,40 +177,25 @@ void Queue::FreeResources(const Report& report) {
 }
 
 size_t Queue::UploadAll() {
-  std::vector<ReportId> new_pending_reports;
-  for (const auto& report_id : pending_reports_) {
-    std::optional<Report> report = store_.Get(report_id);
-    if (!report.has_value()) {
-      // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the
-      // report is deleted from the store by an external influence, e.g., the filesystem flushes
-      // /cache.
-      FreeResources(report_id);
+  std::deque<PendingReport> new_pending_reports;
+  for (const auto& pending_report : pending_reports_) {
+    // |pending_reports_| is kept in sync with |store_| so Get should only ever fail if the
+    // report is deleted from the store by an external influence, e.g., the filesystem flushes
+    // /cache.
+    if (!store_.Contains(pending_report.report_id)) {
+      FreeResources(pending_report.report_id);
       continue;
     }
 
-    if (!Upload(report.value())) {
-      new_pending_reports.push_back(report_id);
+    if (!Upload(store_.Get(pending_report.report_id))) {
+      new_pending_reports.push_back(pending_report);
     }
   }
 
   pending_reports_.swap(new_pending_reports);
 
-  bool uploaded_hourly_report{false};
-  if (hourly_report_.has_value()) {
-    const auto report_id = hourly_report_.value();
-    std::optional<Report> report = store_.Get(report_id);
-    if (!report.has_value()) {
-      // This should only happen if the report is deleted from the store by an external influence,
-      // e.g., the filesystem flushes /cache.
-      FreeResources(report_id);
-    } else if (Upload(report.value())) {
-      hourly_report_ = std::nullopt;
-      uploaded_hourly_report = true;
-    }
-  }
-
   // |new_pending_reports| now contains the pending reports before attempting to upload them.
-  return new_pending_reports.size() - pending_reports_.size() + (size_t)uploaded_hourly_report;
+  return new_pending_reports.size() - pending_reports_.size();
 }
 
 void Queue::Delete(const ReportId report_id) {
@@ -219,15 +205,10 @@ void Queue::Delete(const ReportId report_id) {
 
 void Queue::DeleteAll() {
   FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports", Size());
-  for (const auto& report_id : pending_reports_) {
+  for (const auto& [report_id, _] : pending_reports_) {
     Delete(report_id);
   }
   pending_reports_.clear();
-
-  if (hourly_report_.has_value()) {
-    Delete(hourly_report_.value());
-  }
-  hourly_report_ = std::nullopt;
 
   store_.RemoveAll();
 }

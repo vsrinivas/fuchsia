@@ -148,7 +148,6 @@ class QueueTest : public UnitTestFixture {
         dispatcher(), services(), &clock_, zx::sec(5), kGarbageCollectedSnapshotsPath,
         StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results);
-    crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
     InitQueue();
   }
