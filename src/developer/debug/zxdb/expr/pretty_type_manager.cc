@@ -195,6 +195,22 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   cpp_.emplace_back(
       InternalGlob("std::__2::atomic<*>"),
       std::make_unique<PrettyWrappedValue>("std::atomic", "(", ")", "__a_.__a_value"));
+
+  // std::mutex. std::mutex has a member __m_ which is a __libcpp_mutex_t a.k.a. pthread_mutex_t.
+  // Our pthread implementation stores the owning thread handle (not koid) in the "_m_lock" member.
+  // Valid handles always have the low bit set. This is cleared to mark the contested state so we
+  // need to set it back to get the valid handle. This is delicate but the information is extremely
+  // useful for certain kinds of debugging.
+  cpp_.emplace_back(InternalGlob("std::__2::mutex"),
+                    std::make_unique<PrettyStruct>(GetterList{
+                        {"owning_thread_handle", "__m_._m_lock ? (__m_._m_lock | 1) : 0"}}));
+
+  // These locking primitives cause a lot of useless variable spew so just hide the internals. We
+  // can probably provide some more useful information with some research about their workings.
+  cpp_.emplace_back(InternalGlob("std::__2::condition_variable"),
+                    std::make_unique<PrettyStruct>(GetterList{}));
+  cpp_.emplace_back(InternalGlob("std::__2::shared_mutex"),
+                    std::make_unique<PrettyStruct>(GetterList{}));
 }
 
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {
