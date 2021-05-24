@@ -41,6 +41,7 @@ pub enum SdkVersion {
 }
 
 pub struct Sdk {
+    path_prefix: PathBuf,
     metas: Vec<Value>,
     real_paths: RealPaths,
     version: SdkVersion,
@@ -117,13 +118,13 @@ impl Sdk {
             }
         };
 
-        let sdk = Self::atoms_from_core_manifest(manifest_path, BufReader::new(file))?
-            .to_sdk(path.clone(), SdkAtoms::default_get_meta);
-
-        sdk.map(|mut x: Sdk| {
-            x.version = SdkVersion::InTree;
-            x
-        })
+        // If we are able to parse the json file into atoms, creates a Sdk object from the atoms.
+        Self::from_sdk_atoms(
+            path,
+            Self::atoms_from_core_manifest(manifest_path, BufReader::new(file))?,
+            Self::open_meta,
+            SdkVersion::InTree,
+        )
     }
 
     fn atoms_from_core_manifest<T>(manifest_path: PathBuf, reader: BufReader<T>) -> Result<SdkAtoms>
@@ -138,10 +139,11 @@ impl Sdk {
         }
     }
 
-    pub fn from_sdk_dir(path: PathBuf) -> Result<Self> {
-        let manifest_path = path.join("meta/manifest.json");
+    pub fn from_sdk_dir(path_prefix: PathBuf) -> Result<Self> {
+        let manifest_path = path_prefix.join("meta/manifest.json");
         let mut version = SdkVersion::Unknown;
 
+        let real_paths = RealPaths::Prefix(path_prefix.clone());
         Self::metas_from_sdk_manifest(
             BufReader::new(
                 fs::File::open(manifest_path.clone())
@@ -149,14 +151,14 @@ impl Sdk {
             ),
             &mut version,
             |meta| {
-                let meta_path = path.join(meta);
+                let meta_path = path_prefix.join(meta);
 
                 fs::File::open(meta_path.clone())
                     .context(format!("opening sdk path: {:?}", meta_path))
                     .map(BufReader::new)
             },
         )
-        .map(|metas| Sdk { metas, real_paths: RealPaths::Prefix(path), version })
+        .map(|metas| Sdk { path_prefix, metas, real_paths, version })
     }
 
     fn metas_from_sdk_manifest<M, T>(
@@ -188,6 +190,16 @@ impl Sdk {
     }
 
     pub fn get_host_tool(&self, name: &str) -> Result<PathBuf> {
+        match self.get_host_tool_relative_path(name) {
+            Ok(path) => {
+                let result = self.path_prefix.join(path);
+                Ok(result)
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    fn get_host_tool_relative_path(&self, name: &str) -> Result<PathBuf> {
         self.real_paths.produce(
             self.metas
                 .iter()
@@ -239,34 +251,52 @@ impl Sdk {
     /// For tests only
     #[doc(hidden)]
     pub fn get_empty_sdk_with_version(version: SdkVersion) -> Self {
-        Sdk { metas: Vec::new(), real_paths: RealPaths::Prefix(PathBuf::new()), version }
+        Sdk {
+            path_prefix: PathBuf::new(),
+            metas: Vec::new(),
+            real_paths: RealPaths::Prefix(PathBuf::new()),
+            version,
+        }
     }
-}
 
-impl SdkAtoms {
-    fn default_get_meta(meta_path: PathBuf) -> Result<BufReader<fs::File>> {
-        Ok(BufReader::new(fs::File::open(meta_path)?))
+    /// Opens a meta file with the given path. Returns a buffered reader.
+    fn open_meta(file_path: &PathBuf) -> Result<BufReader<fs::File>> {
+        let file = fs::File::open(&file_path);
+        match file {
+            Ok(file) => Ok(BufReader::new(file)),
+            Err(error) => return Err(anyhow!("Can't open {:?}: {:?}", file_path, error)),
+        }
     }
 
-    fn to_sdk<T, U>(self, path_prefix: PathBuf, get_meta: T) -> Result<Sdk>
+    /// Allocates a new Sdk using the given atoms.
+    ///
+    /// All the meta files specified in the atoms are loaded.
+    /// The creation succeed only if all the meta files have been loaded successfully.
+    fn from_sdk_atoms<T, U>(
+        path_prefix: PathBuf,
+        atoms: SdkAtoms,
+        get_meta: T,
+        version: SdkVersion,
+    ) -> Result<Self>
     where
-        T: Fn(PathBuf) -> Result<BufReader<U>>,
+        T: Fn(&PathBuf) -> Result<BufReader<U>>,
         U: io::Read,
     {
         let mut metas = Vec::new();
         let mut real_paths = HashMap::new();
 
-        for atom in self.atoms.iter() {
+        for atom in atoms.atoms.iter() {
             for file in atom.files.iter() {
                 real_paths.insert(file.destination.clone(), file.source.clone());
             }
 
-            let meta = real_paths
+            let meta_file_name = real_paths
                 .get(&atom.meta)
                 .ok_or(anyhow!("Atom did not specify source for its metadata."))?;
-            let full_meta_path = path_prefix.join(meta);
+            let full_meta_path = path_prefix.join(meta_file_name);
 
-            let json_metas = serde_json::from_reader(get_meta(full_meta_path.clone())?);
+            let reader = get_meta(&full_meta_path);
+            let json_metas = serde_json::from_reader(reader?);
 
             match json_metas {
                 Ok(result) => metas.push(result),
@@ -276,7 +306,7 @@ impl SdkAtoms {
             }
         }
 
-        Ok(Sdk { metas, real_paths: RealPaths::Map(real_paths), version: SdkVersion::Unknown })
+        Ok(Sdk { path_prefix, metas, real_paths: RealPaths::Map(real_paths), version })
     }
 }
 
@@ -376,11 +406,8 @@ mod test {
       "ids": []
     }"#;
 
-    const FAKE_ROOT: &str = "/fuchsia/out/default";
-
-    fn get_core_manifest_meta(name: PathBuf) -> Result<BufReader<&'static [u8]>> {
-        let name = &name.display().to_string();
-
+    fn get_core_manifest_meta(file_path: &PathBuf) -> Result<BufReader<&'static [u8]>> {
+        let name = file_path.to_str().unwrap();
         if name == "/fuchsia/out/default/gen/sdk/devices/generic-arm64.meta.json" {
             const META: &str = r#"{
               "description": "A generic arm64 device",
@@ -528,12 +555,15 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest_to_sdk() {
         let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
-        let atoms =
-            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
-                .unwrap();
+        let atoms = Sdk::atoms_from_core_manifest(
+            manifest_path.clone(),
+            BufReader::new(CORE_MANIFEST.as_bytes()),
+        )
+        .unwrap();
 
-        let sdk = atoms.to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta).unwrap();
-        assert_eq!(SdkVersion::Unknown, sdk.version);
+        let sdk =
+            Sdk::from_sdk_atoms(manifest_path, atoms, get_core_manifest_meta, SdkVersion::Unknown)
+                .unwrap();
 
         assert_eq!(5, sdk.metas.len());
         assert_eq!(
@@ -546,33 +576,35 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest_host_tool() {
         let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
-        let atoms =
-            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
+        let atoms = Sdk::atoms_from_core_manifest(
+            manifest_path.clone(),
+            BufReader::new(CORE_MANIFEST.as_bytes()),
+        )
+        .unwrap();
+
+        let sdk =
+            Sdk::from_sdk_atoms(manifest_path, atoms, get_core_manifest_meta, SdkVersion::Unknown)
                 .unwrap();
+        let zxdb = sdk.get_host_tool("zxdb").unwrap();
 
-        let zxdb = atoms
-            .to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta)
-            .unwrap()
-            .get_host_tool("zxdb")
-            .unwrap();
-
-        assert_eq!(PathBuf::from("host_x64/zxdb"), zxdb);
+        assert_eq!(PathBuf::from("/fuchsia/out/default/host_x64/zxdb"), zxdb);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_core_manifest_host_tool_multi_arch() {
         let manifest_path: PathBuf = PathBuf::from("/fuchsia/out/default");
-        let atoms =
-            Sdk::atoms_from_core_manifest(manifest_path, BufReader::new(CORE_MANIFEST.as_bytes()))
+        let atoms = Sdk::atoms_from_core_manifest(
+            manifest_path.clone(),
+            BufReader::new(CORE_MANIFEST.as_bytes()),
+        )
+        .unwrap();
+
+        let sdk =
+            Sdk::from_sdk_atoms(manifest_path, atoms, get_core_manifest_meta, SdkVersion::Unknown)
                 .unwrap();
+        let symbol_index = sdk.get_host_tool("symbol-index").unwrap();
 
-        let symbol_index = atoms
-            .to_sdk(PathBuf::from(FAKE_ROOT), get_core_manifest_meta)
-            .unwrap()
-            .get_host_tool("symbol-index")
-            .unwrap();
-
-        assert_eq!(PathBuf::from("host_x64/symbol-index"), symbol_index);
+        assert_eq!(PathBuf::from("/fuchsia/out/default/host_x64/symbol-index"), symbol_index);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -602,6 +634,7 @@ mod test {
         .unwrap();
 
         let sdk = Sdk {
+            path_prefix: PathBuf::new(),
             metas,
             real_paths: RealPaths::Prefix(PathBuf::from("/foo/bar")),
             version: SdkVersion::Unknown,
