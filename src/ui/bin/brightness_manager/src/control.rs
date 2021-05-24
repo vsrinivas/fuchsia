@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::backlight::BacklightControl;
-use crate::sender_channel::SenderChannel;
-use crate::sensor::SensorControl;
-use async_trait::async_trait;
-use std::cmp;
 use std::sync::Arc;
+use std::{fs, io};
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlRequest as BrightnessControlRequest, ControlWatchAutoBrightnessAdjustmentResponder,
     ControlWatchAutoBrightnessResponder, ControlWatchCurrentBrightnessResponder,
@@ -26,8 +23,11 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use splines::{Interpolation, Key, Spline};
-use std::{fs, io};
 use watch_handler::{Sender, WatchHandler};
+
+use crate::backlight::BacklightControl;
+use crate::sender_channel::SenderChannel;
+use crate::sensor::SensorControl;
 
 // Delay between sensor reads
 const SLOW_SCAN_TIMEOUT_MS: i64 = 2000;
@@ -43,12 +43,16 @@ const BRIGHTNESS_USER_MULTIPLIER_MIN: f32 = 0.25;
 const BRIGHTNESS_TABLE_FILE_PATH: &str = "/data/brightness_table";
 const BRIGHTNESS_MINIMUM_CHANGE: f32 = 0.00001;
 
-// Gives pleasing, smooth brightness ramp up and down
-const BRIGHTNESS_STEP_SIZE: f32 = 0.001;
-// Time between brightness steps. Any longer than this and the screen noticeably shimmers
-const MAX_BRIGHTNESS_STEP_TIME_MS: i64 = 100;
+// Minimum time between brightness steps. 50 ms is the configured ramp time of the backlight.
+// It'll do its smoothing within this, so there is no need to send events more frequently.
+const BRIGHTNESS_MIN_STEP_TIME_MS: f64 = 50_f64;
 // Brightness changes should take this time unless we exceed the MAX_BRIGHTNESS_STEP_TIME
 const BRIGHTNESS_CHANGE_DURATION_MS: i64 = 2000;
+// The number of possible values for the backlight hardware (0 - 4095)
+// This is used to ensure we are not trying to set 1.0, 1.2, 1.4, 1.6, 1.8, 2.0
+// Which would actually set 1, 1, 1, 2, 2, 2
+// Instead we set 1 and 2 over a longer period of time.
+const BACKLIGHT_GRANULARITY: f64 = 4095_f64;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct BrightnessPoint {
@@ -140,6 +144,7 @@ impl Sender<f32> for WatcherAdjustmentResponder {
     }
 }
 
+#[derive(Debug)]
 pub struct Control {
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
@@ -374,7 +379,10 @@ impl Control {
             fx_log_info!("Auto-brightness off, brightness set to {}", value);
             handle.abort();
         }
-        self.auto_sender_channel.lock().await.send_value(false);
+        {
+            // Hold the lock for as little time as possible
+            self.auto_sender_channel.lock().await.send_value(false);
+        }
         let current_sender_channel = self.current_sender_channel.clone();
         set_brightness(
             value,
@@ -385,9 +393,9 @@ impl Control {
         .await;
     }
 
-    async fn set_manual_brightness_smooth(&mut self, value: f32, duration: i64) {
-        let duration_nanos = Duration::from_nanos(duration);
-        *BRIGHTNESS_CHANGE_DURATION.lock().await = duration_nanos.into_millis().millis();
+    async fn set_manual_brightness_smooth(&mut self, value: f32, duration_ns: i64) {
+        let duration = Duration::from_nanos(duration_ns);
+        *BRIGHTNESS_CHANGE_DURATION.lock().await = duration;
         let value = num_traits::clamp(value, 0.0, 1.0);
         self.set_manual_brightness(value).await;
     }
@@ -570,8 +578,8 @@ fn generate_spline(table: &BrightnessTable) -> Spline<f32, f32> {
 }
 
 // TODO(kpt) Move this and other functions into Control so that they can share the struct
+// Then we won't need all these global locked variables.
 /// Runs the main auto-brightness code.
-/// This task monitors its running boolean and terminates if it goes false.
 
 async fn get_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>) -> f32 {
     let backlight = backlight.lock().await;
@@ -587,6 +595,13 @@ async fn get_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>) -> 
             *LAST_SET_BRIGHTNESS.lock().await
         }
     }
+}
+
+async fn set_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>, value: f64) {
+    let mut backlight = backlight.lock().await;
+    backlight
+        .set_brightness(value)
+        .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e));
 }
 
 async fn read_sensor_and_get_brightness(
@@ -625,7 +640,7 @@ async fn set_brightness(
 ) {
     let value = num_traits::clamp(value, 0.0, 1.0);
     let current_value = get_current_brightness(backlight.clone()).await;
-    if (current_value - value).abs() >= BRIGHTNESS_STEP_SIZE {
+    if (current_value - value).abs() >= BRIGHTNESS_MINIMUM_CHANGE {
         let mut set_brightness_abort_handle = set_brightness_abort_handle.lock().await;
         if let Some(handle) = set_brightness_abort_handle.take() {
             handle.abort();
@@ -644,8 +659,6 @@ async fn set_brightness(
         )
         .detach();
         *set_brightness_abort_handle = Some(abort_handle);
-    } else if (current_value - value).abs() > BRIGHTNESS_MINIMUM_CHANGE {
-        set_brightness_impl(value, backlight, current_sender_channel).await;
     }
 }
 
@@ -655,69 +668,73 @@ async fn set_brightness_impl(
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
     let current_value = get_current_brightness(backlight.clone()).await;
-    let mut backlight = backlight.lock().await;
-    let set_brightness = |value| {
-        backlight
-            .set_brightness(value)
-            .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
-    };
+    let backlight = backlight.clone();
     let current_sender_channel = current_sender_channel.clone();
-    set_brightness_slowly(
-        current_value,
-        value,
-        set_brightness,
-        *BRIGHTNESS_CHANGE_DURATION.lock().await,
-        current_sender_channel,
-    )
-    .await;
+    let brightness_change_duration = BRIGHTNESS_CHANGE_DURATION.lock().await;
+    let duration = *brightness_change_duration;
+    drop(brightness_change_duration);
+    set_brightness_slowly(current_value, value, backlight, duration, current_sender_channel).await;
 }
 
-/// Change the brightness of the screen slowly to `nits` nits. We don't want to change the screen
-/// suddenly so we smooth the transition by doing it in a series of small steps.
-/// The time per step can be changed if needed e.g. to fade up slowly and down quickly.
-/// When testing we set time_per_step to zero.
+/// Change the brightness of the screen slowly. We don't want to change the screen
+/// suddenly so we smooth the transition by doing it in a series of small steps over
+/// a given time. The backlight granularity is taken into account to avoid very small
+/// changes to brightness that don't actually change the final value in the I2C register.
 async fn set_brightness_slowly(
     current_value: f32,
     to_value: f32,
-    mut set_brightness: impl FnMut(f64),
+    backlight: Arc<Mutex<dyn BacklightControl>>,
     duration: Duration,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
-    let mut current_value = current_value;
-    let to_value = num_traits::clamp(to_value, 0.0, 1.0);
+    let mut current_value = current_value as f64;
+    let to_value = num_traits::clamp(to_value, 0.0, 1.0) as f64;
     assert!(to_value <= 1.0);
     assert!(current_value <= 1.0);
     let current_sender_channel = current_sender_channel.clone();
     let difference = to_value - current_value;
-    let steps = (difference.abs() / BRIGHTNESS_STEP_SIZE) as u16;
+    if difference.abs() < BRIGHTNESS_MINIMUM_CHANGE as f64 {
+        return;
+    }
+    let mut time_per_step =
+        duration.into_millis() as f64 / (BACKLIGHT_GRANULARITY * difference.abs());
+    if time_per_step < BRIGHTNESS_MIN_STEP_TIME_MS {
+        // Too frequent, let's slow it down. It will still look smooth.
+        time_per_step = BRIGHTNESS_MIN_STEP_TIME_MS;
+    }
+    let sleep_time = Duration::from_millis(time_per_step as i64);
+    let steps = (duration.into_millis() as f64 / time_per_step) as i64;
     if steps > 0 {
-        let time_per_step = cmp::min(duration / steps, MAX_BRIGHTNESS_STEP_TIME_MS.millis());
-        let step_size = difference / steps as f32;
-        for _i in 0..steps {
+        let step_size = difference / steps as f64;
+        for _i in 1..steps {
             let current_sender_channel = current_sender_channel.clone();
             current_value = current_value + step_size;
-            set_brightness(current_value as f64);
-            current_sender_channel.lock().await.send_value(current_value);
-            if time_per_step.into_millis() > 0 {
-                fuchsia_async::Timer::new(time_per_step.after_now()).await;
-            }
+            set_current_brightness(backlight.clone(), current_value).await;
+            current_sender_channel.lock().await.send_value(current_value as f32);
+            // TODO(kpt): Timer::new() should take a Duration but gets an error
+            fuchsia_async::Timer::new(sleep_time.after_now()).await;
         }
     }
-    // Make sure we get to the correct value, there may be rounding errors
-    set_brightness(to_value as f64);
-    current_sender_channel.lock().await.send_value(current_value);
-    *LAST_SET_BRIGHTNESS.lock().await = to_value;
+    // Make sure we get to the correct value
+    set_current_brightness(backlight.clone(), to_value).await;
+    current_sender_channel.lock().await.send_value(to_value as f32);
+    *LAST_SET_BRIGHTNESS.lock().await = to_value as f32;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::path::Path;
+
+    use anyhow::{format_err, Error};
+    use async_trait::async_trait;
+    use fuchsia_async::TestExecutor;
+    use futures::executor::block_on;
+    use futures::pin_mut;
 
     use crate::sender_channel::SenderChannel;
     use crate::sensor::AmbientLightInputRpt;
-    use anyhow::{format_err, Error};
-    use async_trait::async_trait;
-    use std::path::Path;
+
+    use super::*;
 
     struct MockSensor {
         illuminence: u16,
@@ -804,6 +821,7 @@ mod tests {
 
         let adjustment_sender_channel: SenderChannel<f32> = SenderChannel::new();
         let adjustment_sender_channel = Arc::new(Mutex::new(adjustment_sender_channel));
+
         Control {
             sensor,
             backlight,
@@ -1006,105 +1024,102 @@ mod tests {
         assert_eq!(1.0, new_adjust);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_brightness_slowly_send_value() {
-        let control = generate_control_struct(400, 0.5).await;
+    fn assert_float_f32(expected: f32, value: f32) {
+        assert!(
+            (expected - value as f32).abs() < 0.00001,
+            "expected {}, found {}",
+            expected,
+            value
+        );
+    }
+
+    #[test]
+    fn test_set_brightness_slowly_send_value() {
+        // Need to use a TestExecutor with fake time to run past the timeouts without delay
+        let mut exec = TestExecutor::new_with_fake_time().expect("executor needed");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let control = block_on(generate_control_struct(400, 0.5));
         let (channel_sender, mut channel_receiver) = futures::channel::mpsc::unbounded::<f32>();
-        control.current_sender_channel.lock().await.add_sender_channel(channel_sender).await;
-        let set_brightness = |_| {};
-        set_brightness_slowly(0.4, 0.5, set_brightness, 0.millis(), control.current_sender_channel)
-            .await;
+        {
+            let mut channel = block_on(control.current_sender_channel.lock());
+            block_on(channel.add_sender_channel(channel_sender));
+        }
 
-        assert_eq!(cmp_float(0.4, channel_receiver.next().await.unwrap()), true);
-        assert_eq!(cmp_float(0.4, channel_receiver.next().await.unwrap()), true);
-        for _i in 0..13 {
-            channel_receiver.next().await;
+        // This will produce 10 50ms steps of 0.002 brightness
+        let future = set_brightness_slowly(
+            0.4,
+            0.42,
+            control.backlight,
+            500.millis(),
+            control.current_sender_channel,
+        );
+        pin_mut!(future);
+
+        for _i in 1..10 {
+            assert!(exec.run_until_stalled(&mut future).is_pending());
+            if let Some(deadline) = exec.wake_next_timer() {
+                let deadline = deadline.into_nanos().nanos();
+                assert_eq!(50, deadline.into_millis());
+            } else {
+                panic!("Timer has no value");
+            }
         }
-        assert_eq!(cmp_float(0.41, channel_receiver.next().await.unwrap()), true);
-        for _i in 0..4 {
-            channel_receiver.next().await;
-        }
-        assert_eq!(cmp_float(0.42, channel_receiver.next().await.unwrap()), true);
-        for _i in 0..19 {
-            channel_receiver.next().await;
-        }
-        assert_eq!(cmp_float(0.44, channel_receiver.next().await.unwrap()), true);
-        for _i in 0..58 {
-            channel_receiver.next().await;
-        }
-        assert_eq!(cmp_float(0.50, channel_receiver.next().await.unwrap()), true);
+        // Make sure we have finished
+        assert!(exec.run_until_stalled(&mut future).is_ready());
+
+        // Check the receiver's results
+        assert_float_f32(0.402, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.404, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.406, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.408, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.410, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.412, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.414, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.416, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.418, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.420, block_on(channel_receiver.next()).unwrap());
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_brightness_slowly_in_range() {
-        let control = generate_control_struct(400, 0.5).await;
-        let mut result = Vec::new();
-        let set_brightness = |nits| {
-            result.push(nits as f32);
-        };
-        set_brightness_slowly(0.4, 0.8, set_brightness, 0.millis(), control.current_sender_channel)
-            .await;
-        assert_eq!(401, result.len(), "wrong length");
-        assert_eq!(cmp_float(0.4, result[0]), true);
-        assert_eq!(cmp_float(0.4, result[1]), true);
-        assert_eq!(cmp_float(0.41, result[15]), true);
-        assert_eq!(cmp_float(0.42, result[20]), true);
-        assert_eq!(cmp_float(0.44, result[40]), true);
-        assert_eq!(cmp_float(0.50, result[100]), true);
-        assert_eq!(cmp_float(0.55, result[150]), true);
-        assert_eq!(cmp_float(0.60, result[200]), true);
-        assert_eq!(cmp_float(0.65, result[250]), true);
-        assert_eq!(cmp_float(0.70, result[300]), true);
-        assert_eq!(cmp_float(0.75, result[350]), true);
-        assert_eq!(cmp_float(0.80, result[399]), true);
-    }
+    #[test]
+    fn test_set_brightness_slowly_long_timeout() {
+        // Need to use a TestExecutor with fake time to run past the timeouts without delay
+        let mut exec = TestExecutor::new_with_fake_time().expect("executor needed");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_brightness_slowly_min() {
-        let control = generate_control_struct(400, 0.5).await;
-        let mut result = Vec::new();
-        let set_brightness = |nits| {
-            result.push(nits as f32);
-        };
-        set_brightness_slowly(0.4, 0.0, set_brightness, 0.millis(), control.current_sender_channel)
-            .await;
-        assert_eq!(401, result.len(), "wrong length");
-        assert_eq!(cmp_float(0.39, result[0]), true);
-        assert_eq!(cmp_float(0.39, result[1]), true);
-        assert_eq!(cmp_float(0.38, result[15]), true);
-        assert_eq!(cmp_float(0.38, result[20]), true);
-        assert_eq!(cmp_float(0.35, result[40]), true);
-        assert_eq!(cmp_float(0.30, result[100]), true);
-        assert_eq!(cmp_float(0.25, result[150]), true);
-        assert_eq!(cmp_float(0.20, result[200]), true);
-        assert_eq!(cmp_float(0.15, result[250]), true);
-        assert_eq!(cmp_float(0.10, result[300]), true);
-        assert_eq!(cmp_float(0.05, result[350]), true);
-        assert_eq!(cmp_float(0.00, result[399]), true);
-    }
+        let control = block_on(generate_control_struct(400, 0.5));
+        let (channel_sender, mut channel_receiver) = futures::channel::mpsc::unbounded::<f32>();
+        {
+            let mut channel = block_on(control.current_sender_channel.lock());
+            block_on(channel.add_sender_channel(channel_sender));
+        }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_brightness_slowly_max() {
-        let control = generate_control_struct(400, 0.5).await;
-        let mut result = Vec::new();
-        let set_brightness = |nits| {
-            result.push(nits as f32);
-        };
-        set_brightness_slowly(0.9, 1.2, set_brightness, 0.millis(), control.current_sender_channel)
-            .await;
-        assert_eq!(101, result.len(), "wrong length");
-        assert_eq!(cmp_float(0.90, result[0]), true);
-        assert_eq!(cmp_float(0.90, result[1]), true);
-        assert_eq!(cmp_float(0.91, result[10]), true);
-        assert_eq!(cmp_float(0.92, result[20]), true);
-        assert_eq!(cmp_float(0.93, result[30]), true);
-        assert_eq!(cmp_float(0.94, result[40]), true);
-        assert_eq!(cmp_float(0.95, result[50]), true);
-        assert_eq!(cmp_float(0.96, result[60]), true);
-        assert_eq!(cmp_float(0.97, result[70]), true);
-        assert_eq!(cmp_float(0.98, result[80]), true);
-        assert_eq!(cmp_float(0.99, result[90]), true);
-        assert_eq!(cmp_float(1.00, result[100]), true);
+        // This will produce 2 approx 5sec steps of -0.00025 brightness
+        let future = set_brightness_slowly(
+            0.0006,
+            0.0001,
+            control.backlight,
+            10.seconds(),
+            control.current_sender_channel,
+        );
+        pin_mut!(future);
+
+        for _i in 1..2 {
+            assert!(exec.run_until_stalled(&mut future).is_pending());
+            if let Some(deadline) = exec.wake_next_timer() {
+                let deadline = deadline.into_nanos().nanos();
+                assert!(deadline > 4500.millis());
+                assert!(deadline < 5000.millis());
+            } else {
+                panic!("Timer has no value");
+            }
+        }
+        // Make sure we have finished
+        assert!(exec.run_until_stalled(&mut future).is_ready());
+
+        // Check the receiver's results
+        assert_float_f32(0.00035, block_on(channel_receiver.next()).unwrap());
+        assert_float_f32(0.0001, block_on(channel_receiver.next()).unwrap());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1147,7 +1162,7 @@ mod tests {
         }
         // It should not have reached the final value yet.
         // We know that set_brightness_slowly, at the bottom of the task, finishes at the correct
-        // nits value from other tests if it has sufficient time.
+        // value from other tests if it has sufficient time.
         let backlight = backlight.lock().await;
 
         assert_ne!(cmp_float(0.04, backlight.get_brightness().await.unwrap() as f32), true);
@@ -1257,7 +1272,6 @@ mod tests {
     fn test_set_manual_brightness_updates_brightness_small_change() {
         const TARGET_BRIGHTNESS: f32 = 0.0006;
         const ORIGINAL_BRIGHTNESS: f32 = 0.001;
-        assert!((TARGET_BRIGHTNESS - ORIGINAL_BRIGHTNESS).abs() < BRIGHTNESS_STEP_SIZE);
         assert!((TARGET_BRIGHTNESS - ORIGINAL_BRIGHTNESS).abs() > BRIGHTNESS_MINIMUM_CHANGE);
 
         let mut exec = fasync::TestExecutor::new().unwrap();

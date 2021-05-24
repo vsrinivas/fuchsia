@@ -117,19 +117,17 @@ mod tests {
             Ok(fidl_fuchsia_hardware_backlight::DeviceRequest::GetStateNormalized {
                 responder,
             }) => {
-                fx_log_info!("====== got GetStateNormalized");
                 let response = backlight_command;
                 let _ = responder.send(&mut Ok(response));
             }
             Ok(fidl_fuchsia_hardware_backlight::DeviceRequest::GetMaxAbsoluteBrightness {
                 responder,
             }) => {
-                fx_log_info!("====== GetMaxAbsoluteBrightness");
                 if let Err(e) = responder.send(&mut Ok(250.0)) {
                     panic!("Failed to reply to GetMaxAbsoluteBrightness: {}", e);
                 }
             }
-            request => panic!("====== Unexpected request: {:?}", request),
+            request => panic!("Unexpected request: {:?}", request),
         }
     }
 
