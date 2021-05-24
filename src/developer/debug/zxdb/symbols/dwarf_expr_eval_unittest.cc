@@ -850,8 +850,8 @@ TEST_F(DwarfExprEvalTest, ImplicitValue) {
   // clang-format on
   DoEvalTest(bad_program, false, DwarfExprEval::Completion::kSync, kExpected,
              DwarfExprEval::ResultType::kValue,
-             "ERROR: \"DWARF implicit value length too long: 0x10.\"",
-             "DWARF implicit value length too long: 0x10.");
+             "ERROR: \"Not enough data for DWARF implicit value.\"",
+             "Not enough data for DWARF implicit value.");
 }
 
 TEST_F(DwarfExprEvalTest, Piece_Value) {

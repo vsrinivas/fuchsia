@@ -51,16 +51,27 @@ class DataExtractor {
   // will stop there.
   void Advance(size_t bytes) { cur_ = std::min(cur_ + bytes, data_.size()); }
 
+  // Sets the current location to the given absolute index. If it advances past the end, it will
+  // stop there.
+  void Seek(size_t new_offset) { cur_ = std::min(data_.size(), new_offset); }
+
   // Copies the given number of bytes into the |dest| buffer and advances the current position.
   // Returns true on success. False means there weren't enough bytes to read.
   bool ReadBytes(size_t bytes, void* dest) {
     if (!CanRead(bytes))
       return false;
 
-    memcpy(dest, &data_[cur_], bytes);
-    cur_ += bytes;
+    if (bytes) {
+      memcpy(dest, &data_[cur_], bytes);
+      cur_ += bytes;
+    }
     return true;
   }
+
+  // Reads a DWARF signed or unsigned "LEB128"-encoded value from the stream. This encoding is a
+  // UTF-8-like variable-length integer encoding.
+  std::optional<int64_t> ReadSleb128();
+  std::optional<uint64_t> ReadUleb128();
 
  private:
   containers::array_view<uint8_t> data_;

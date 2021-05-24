@@ -12,6 +12,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/register_desc.h"
+#include "src/developer/debug/zxdb/common/data_extractor.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
@@ -20,10 +21,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-
-namespace llvm {
-class DataExtractor;
-}  // namespace llvm
 
 namespace zxdb {
 
@@ -167,7 +164,7 @@ class DwarfExprEval {
   Completion PushRegisterWithOffset(int dwarf_register_number, int128_t offset);
 
   // These read constant data from the current index in the stream. The size of the data is in
-  // byte_size, and the result will be extended to 64 bits according to the type.
+  // byte_size, and the result will be extended to a stack entry according to the type.
   //
   // They return true if the value was read, false if there wasn't enough data (they will issue the
   // error internally, the calling code should just return on failure).
@@ -206,8 +203,8 @@ class DwarfExprEval {
   // will be relocated according to the module's address offset.
   Completion OpAddrBase(ResultType result_type, const char* op_name);
 
-  // Operations. On call, the expr_index_ will index the byte following the opcode, and on return
-  // expr_index_ will index the next instruction (any parameters will be consumed).
+  // Operations. On call, the data extractor will read at the byte following the opcode, and on
+  // return it will point to the next instruction (any parameters will be consumed).
   //
   // Some functions handle more than one opcode. In these cases, the opcode name for string output
   // is passed in as op_name.
@@ -268,7 +265,7 @@ class DwarfExprEval {
   fxl::RefPtr<SymbolDataProvider> data_provider_;
   SymbolContext symbol_context_;
 
-  // The expression. See also expr_index_.
+  // The expression. See also data_extractor_ which points into here.
   DwarfExpr expr_;
 
   // Determines if a string describing the expression is being generated instead of evaluating
@@ -276,15 +273,10 @@ class DwarfExprEval {
   StringOutput string_output_mode_ = StringOutput::kNone;
   std::string string_output_;  // Result when string_output_mode_ != kNone;
 
-  // Index into expr_.data() data of the next thing to read. This is a uint64_t to integrate with
-  // LLVM DataExtractor.
-  uint64_t expr_index_ = 0;
-
   CompletionCallback completion_callback_;  // Null in string printing mode (it's synchronous).
   bool in_completion_callback_ = false;     // To check for lifetime errors.
 
-  // Allocated on the heap to avoid exposing LLVM headers.
-  std::unique_ptr<llvm::DataExtractor> data_extractor_;
+  DataExtractor data_extractor_;
 
   // The result type. Normally expressions compute pointers unless explicitly tagged as a value.
   // This tracks the current "simple" expression result type. For "composite" operations that

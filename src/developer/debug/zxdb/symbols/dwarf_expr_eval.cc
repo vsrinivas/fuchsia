@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/DataExtractor.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
@@ -106,15 +105,8 @@ void DwarfExprEval::SetUp(fxl::RefPtr<SymbolDataProvider> data_provider,
   data_provider_ = std::move(data_provider);
   symbol_context_ = symbol_context;
   expr_ = std::move(expr);
-  expr_index_ = 0;
   completion_callback_ = std::move(cb);
-
-  if (!expr_.data().empty()) {
-    // Assume little-endian.
-    data_extractor_ = std::make_unique<llvm::DataExtractor>(
-        llvm::StringRef(reinterpret_cast<const char*>(&expr_.data()[0]), expr_.data().size()), true,
-        kTargetPointerSize);
-  }
+  data_extractor_ = DataExtractor(expr_.data());
 }
 
 bool DwarfExprEval::ContinueEval() {
@@ -127,7 +119,7 @@ bool DwarfExprEval::ContinueEval() {
 
   do {
     // Check for successfully reaching the end of the stream.
-    if (!is_complete_ && expr_index_ == expr_.data().size()) {
+    if (!is_complete_ && data_extractor_.done()) {
       if (is_string_output())
         return true;  // Only expecting to produce a string.
 
@@ -166,14 +158,13 @@ bool DwarfExprEval::ContinueEval() {
 
 DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   FX_DCHECK(!is_complete_);
-  FX_DCHECK(expr_index_ < expr_.data().size());
+  FX_DCHECK(!data_extractor_.done());
 
   // Clear any current register information. See current_register_id_ declaration for more.
   current_register_id_ = debug_ipc::RegisterID::kUnknown;
 
-  // Opcode is next byte in the data buffer. Consume it.
-  uint8_t op = expr_.data()[expr_index_];
-  expr_index_++;
+  // Opcode is next byte in the data buffer. Consume it (we already checked there's data).
+  uint8_t op = *data_extractor_.Read<uint8_t>();
 
   // Literals 0-31.
   if (op >= llvm::dwarf::DW_OP_lit0 && op <= llvm::dwarf::DW_OP_lit31) {
@@ -430,43 +421,85 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
 }
 
 bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
-  uint64_t old_expr_index = expr_index_;
-  *output = data_extractor_->getSigned(&expr_index_, byte_size);
-  if (old_expr_index == expr_index_) {
-    ReportError("Bad number format in DWARF expression.");
-    return false;
+  switch (byte_size) {
+    case 1:
+      if (auto v = data_extractor_.Read<int8_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
+    case 2:
+      if (auto v = data_extractor_.Read<int16_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
+    case 4:
+      if (auto v = data_extractor_.Read<int32_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
+    case 8:
+      if (auto v = data_extractor_.Read<int64_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
   }
-  return true;
+
+  ReportError("Bad number format in DWARF expression.");
+  return false;
 }
 
 bool DwarfExprEval::ReadUnsigned(int byte_size, StackEntry* output) {
-  uint64_t old_expr_index = expr_index_;
-  *output = data_extractor_->getUnsigned(&expr_index_, byte_size);
-  if (old_expr_index == expr_index_) {
-    ReportError("Bad number format in DWARF expression.");
-    return false;
+  switch (byte_size) {
+    case 1:
+      if (auto v = data_extractor_.Read<uint8_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
+    case 2:
+      if (auto v = data_extractor_.Read<uint16_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
+    case 4:
+      if (auto v = data_extractor_.Read<uint32_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
+    case 8:
+      if (auto v = data_extractor_.Read<uint64_t>()) {
+        *output = *v;
+        return true;
+      }
+      break;
   }
-  return true;
+
+  ReportError("Bad number format in DWARF expression.");
+  return false;
 }
 
 bool DwarfExprEval::ReadLEBSigned(SignedStackEntry* output) {
-  uint64_t old_expr_index = expr_index_;
-  *output = data_extractor_->getSLEB128(&expr_index_);
-  if (old_expr_index == expr_index_) {
-    ReportError("Bad number format in DWARF expression.");
-    return false;
+  if (auto result = data_extractor_.ReadSleb128()) {
+    *output = *result;
+    return true;
   }
-  return true;
+  ReportError("Bad number format in DWARF expression.");
+  return false;
 }
 
 bool DwarfExprEval::ReadLEBUnsigned(StackEntry* output) {
-  uint64_t old_expr_index = expr_index_;
-  *output = data_extractor_->getULEB128(&expr_index_);
-  if (old_expr_index == expr_index_) {
-    ReportError("Bad number format in DWARF expression.");
-    return false;
+  if (auto result = data_extractor_.ReadUleb128()) {
+    *output = *result;
+    return true;
   }
-  return true;
+  ReportError("Bad number format in DWARF expression.");
+  return false;
 }
 
 void DwarfExprEval::ReadMemory(
@@ -842,16 +875,16 @@ DwarfExprEval::Completion DwarfExprEval::OpImplicitValue() {
   StackEntry len = 0;
   if (!ReadLEBUnsigned(&len))
     return Completion::kSync;
-  if (len > sizeof(StackEntry) || expr_index_ + static_cast<size_t>(len) > expr_.data().size()) {
+  if (len > sizeof(StackEntry)) {
     ReportError(fxl::StringPrintf("DWARF implicit value length too long: 0x%x.",
                                   static_cast<unsigned>(len)));
     return Completion::kSync;
   }
 
   StackEntry value = 0;
-  if (len > 0) {
-    memcpy(&value, &expr_.data()[expr_index_], static_cast<size_t>(len));
-    Skip(len);
+  if (!data_extractor_.ReadBytes(static_cast<size_t>(len), &value)) {
+    ReportError("Not enough data for DWARF implicit value.");
+    return Completion::kSync;
   }
 
   if (is_string_output()) {
@@ -1214,16 +1247,14 @@ DwarfExprEval::Completion DwarfExprEval::OpTlsAddr(const char* op_name) {
 }
 
 void DwarfExprEval::Skip(SignedStackEntry amount) {
-  SignedStackEntry new_index = static_cast<SignedStackEntry>(expr_index_) + amount;
-  if (new_index >= static_cast<SignedStackEntry>(expr_.data().size())) {
-    // Skip to or past the end just terminates the program.
-    expr_index_ = expr_.data().size();
-  } else if (new_index < 0) {
+  SignedStackEntry new_index = static_cast<SignedStackEntry>(data_extractor_.cur()) + amount;
+  if (new_index < 0) {
     // Skip before beginning is an error.
     ReportError("DWARF expression skips out-of-bounds.");
-  } else {
-    expr_index_ = static_cast<uint32_t>(new_index);
   }
+
+  // The Seek() call will clamp to the end which will just mark the expression terminated.
+  data_extractor_.Seek(static_cast<size_t>(new_index));
 }
 
 std::string DwarfExprEval::GetRegisterName(int reg_number) const {

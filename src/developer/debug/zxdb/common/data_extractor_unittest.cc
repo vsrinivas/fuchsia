@@ -10,6 +10,46 @@
 
 namespace zxdb {
 
+TEST(DataExtractor, Empty) {
+  DataExtractor ext;
+  EXPECT_TRUE(ext.done());
+  EXPECT_EQ(0u, ext.cur());
+
+  ext.Advance(1);
+  EXPECT_EQ(0u, ext.cur());
+
+  ext.Seek(1);
+  EXPECT_EQ(0u, ext.cur());
+
+  EXPECT_FALSE(ext.Read<uint8_t>());
+}
+
+TEST(DataExtractor, SeekAdvance) {
+  std::vector<uint8_t> buffer{0x01, 0x02, 0x03, 0x04};
+  DataExtractor ext(buffer);
+  EXPECT_EQ(0u, ext.cur());
+
+  ext.Advance(2);
+  EXPECT_EQ(2u, ext.cur());
+
+  ext.Advance(2);
+  EXPECT_EQ(4u, ext.cur());
+
+  // Should stop at the end.
+  ext.Advance(2);
+  EXPECT_EQ(4u, ext.cur());
+
+  // Seek back tot he beginning.
+  ext.Seek(0);
+  EXPECT_EQ(0u, ext.cur());
+
+  // Advance and Seek clamps to the end.
+  ext.Advance(2000);
+  EXPECT_EQ(4u, ext.cur());
+  ext.Seek(2000);
+  EXPECT_EQ(4u, ext.cur());
+}
+
 TEST(DataExtractor, Numbers) {
   // clang-format off
   std::vector<uint8_t> buffer{
@@ -75,6 +115,82 @@ TEST(DataExtractor, Manual) {
   // Here cur + read_size overflows.
   ext.Advance(2);
   EXPECT_FALSE(ext.CanRead(big_read));
+}
+
+// Test a long encoded number with the high bit not set.
+TEST(DataExtractor, ReadLeb128_NoHighBit) {
+  //                          |--- First ----|  |- Following
+  std::vector<uint8_t> buffer{0xe5, 0x8e, 0x26, 0x04};
+
+  // Read unsigned value.
+  DataExtractor ext(buffer);
+  std::optional<uint64_t> result_u = ext.ReadUleb128();
+  ASSERT_TRUE(result_u);
+  EXPECT_EQ(624485ul, *result_u);
+
+  // Read following value.
+  result_u = ext.ReadUleb128();
+  ASSERT_TRUE(result_u);
+  EXPECT_EQ(4ul, *result_u);
+
+  // Read signed value. The high bit on this is not set so the result should be the same.
+  ext = DataExtractor(buffer);
+  std::optional<int64_t> result_s = ext.ReadSleb128();
+  ASSERT_TRUE(result_s);
+  EXPECT_EQ(624485l, *result_s);
+
+  // Read following value.
+  result_s = ext.ReadSleb128();
+  ASSERT_TRUE(result_s);
+  EXPECT_EQ(4l, *result_s);
+
+  // Reached the end of the data, can't read any more.
+  result_u = ext.ReadUleb128();
+  EXPECT_FALSE(result_u);
+  result_s = ext.ReadSleb128();
+  EXPECT_FALSE(result_s);
+}
+
+// The high bit is set on this one so that the signed one should be sign-extended.
+TEST(DataExtractor, ReadLeb128_HighBit) {
+  //                          |--- First ----|  |- Following
+  std::vector<uint8_t> buffer{0xc0, 0xbb, 0x78, 0x7f};
+
+  // Read unsigned value.
+  DataExtractor ext(buffer);
+  std::optional<uint64_t> result_u = ext.ReadUleb128();
+  ASSERT_TRUE(result_u);
+  EXPECT_EQ(1973696ul, *result_u);
+
+  // Read following value.
+  result_u = ext.ReadUleb128();
+  ASSERT_TRUE(result_u);
+  EXPECT_EQ(0x7ful, *result_u);
+
+  // Read signed value, should be sign-extended to negative.
+  ext = DataExtractor(buffer);
+  std::optional<int64_t> result_s = ext.ReadSleb128();
+  ASSERT_TRUE(result_s);
+  EXPECT_EQ(-123456l, *result_s);
+
+  // Read following value.
+  result_s = ext.ReadSleb128();
+  ASSERT_TRUE(result_s);
+  EXPECT_EQ(-1l, *result_s);
+}
+
+TEST(DataExtractor, ReadLeb128_Error) {
+  // Empty buffer.
+  std::vector<uint8_t> empty;
+  DataExtractor ext(empty);
+  EXPECT_FALSE(ext.ReadSleb128());
+  EXPECT_FALSE(ext.ReadUleb128());
+
+  // This buffer has no value without the high bit set so the number won't terminate.
+  std::vector<uint8_t> buffer{0xc0, 0xbb};
+  ext = DataExtractor(buffer);
+  EXPECT_FALSE(ext.ReadSleb128());
+  EXPECT_FALSE(ext.ReadUleb128());
 }
 
 }  // namespace zxdb
