@@ -3,17 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/dist/resource.gni")
+import("//sdk/cts/build/cts_copy_to_sdk.gni")
 import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # A resource that can be used in CTS.
 #
 # An equivalent to the in-tree `resource`, but ensures dependencies are allowed
-# in CTS.
+# in CTS. Creates an SDK atom so that this target can be released in the CTS SDK.
 #
 # Example:
 # ```
 # cts_resource("my-bin") {
+#  suite_name = "my_test_suite"
 #  sources = [ "test_bins/my_bin" ]
 #  outputs = [ "bin/my_bin" ]
 # }
@@ -31,10 +33,16 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     See copy() for details.
 #     Type: list(file)
 #
+#   suite_name (required)
+#     Name of the test suite this executable belongs to.
+#     The sources for this target will be placed in tests/$suite_name
+#     Type: string
+#
 # See resource() for other parameters.
 #
 template("cts_resource") {
   assert(defined(invoker.sources), "Sources must be defined.")
+  assert(defined(invoker.suite_name), "Suite name must be defined.")
 
   if (defined(invoker.deps) && invoker.deps != []) {
     cts_element("${target_name}_verify_deps") {
@@ -44,7 +52,7 @@ template("cts_resource") {
   }
 
   resource(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [ "suite_name" ])
     if (defined(deps) && deps != []) {
       deps += [
         ":${target_name}_cts_file",
@@ -53,6 +61,16 @@ template("cts_resource") {
     } else {
       deps = [ ":${target_name}_cts_file" ]
     }
+  }
+
+  cts_copy_to_sdk(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "suite_name",
+                             "testonly",
+                           ])
   }
 
   write_cts_file(target_name) {

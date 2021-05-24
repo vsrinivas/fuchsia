@@ -3,16 +3,18 @@
 # found in the LICENSE file.
 
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_source_library.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # An executable that can be used in CTS.
 #
 # An equivalent to the built-in executable, but ensures dependencies are allowed
-# in CTS.
+# in CTS. Creates an SDK atom so that this target can be released in the CTS SDK.
 #
 # Example:
 # ```
 # cts_executable("my-test") {
+#   suite_name = "my_test_suite"
 #   deps = [ "//zircon/public/lib/zxtest" ]
 #   sources = [ "//sdk/cts/tests/my_test/my_test.cc" ]
 #   testonly = true
@@ -20,10 +22,13 @@ import("//sdk/cts/build/write_cts_file.gni")
 # ```
 #
 # Parameters
-#   sources (required)
-#     List of files to create an executable from.
-#     Type: list(labels)
+#   suite_name (required)
+#     Name of the test suite this executable belongs to.
+#     The sources for this target will be placed in tests/$suite_name
+#     Type: string
 template("cts_executable") {
+  assert(defined(invoker.suite_name), "Suite name must be defined.")
+
   if (defined(invoker.deps) && invoker.deps != []) {
     cts_element("${target_name}_verify_deps") {
       deps = invoker.deps
@@ -32,7 +37,12 @@ template("cts_executable") {
   }
 
   executable(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "non_cts_deps",
+                             "suite_name",
+                           ])
     if (defined(deps) && deps != []) {
       deps += [
         ":${target_name}_cts_file",
@@ -41,6 +51,21 @@ template("cts_executable") {
     } else {
       deps = [ ":${target_name}_cts_file" ]
     }
+  }
+
+  # TODO(75000): Remove non_cts_deps
+  # non_cts_deps should only be used as a stopgap to moving existing CTS tests
+  # into the CTS archive.
+  cts_source_library(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "non_cts_deps",
+                             "public",
+                             "sources",
+                             "suite_name",
+                             "testonly",
+                           ])
   }
 
   write_cts_file(target_name) {

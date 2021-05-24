@@ -16,7 +16,7 @@ gidl_hlcpp_conformance("conformance_test_sources") {
   fidl = conformance_suite_fidl_target
   deps = [
     ":test_util",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
     deps += [ ":handle_util" ]
@@ -25,6 +25,8 @@ gidl_hlcpp_conformance("conformance_test_sources") {
 
 cts_source_set("host_test_sources") {
   testonly = true
+
+  suite_name = "fidl"
 
   sources = [
     "//sdk/lib/fidl/cpp/internal/bitset_unittest.cc",
@@ -48,12 +50,14 @@ cts_source_set("host_test_sources") {
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/stdcompat",
     "//sdk/testing/fidl:fidl_test",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
 cts_source_set("test_sources") {
   testonly = true
+
+  suite_name = "fidl"
 
   # TODO(jamesr): Make this an sdk source set
   # sdk_name = "fidl_cpp_tests"
@@ -88,10 +92,10 @@ cts_source_set("test_sources") {
     "//sdk/testing/fidl:fidl_test_handles",
     "//sdk/testing/fidl:test",
     "//sdk/testing/fidl:test_support",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 
   public_configs = [ "//sdk/config" ]
@@ -101,16 +105,20 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
   visibility = [ ":*" ]
   testonly = true
 
+  suite_name = "fidl"
+
   output_name = "fidl_hlcpp_conformance_tests"
 
   deps = [
-    ":conformance_test_sources",
     "//sdk/testing/fidl:test",
     "//sdk/testing/fidl:test_support",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(75000): Add GIDL to the CTS archive.
+  non_cts_deps = [ ":conformance_test_sources" ]
 }
 
 cts_fuchsia_unittest_component("fidl_hlcpp_conformance_tests") {
@@ -122,6 +130,8 @@ cts_executable("fidl_hlcpp_unit_tests_bin") {
   visibility = [ ":*" ]
   testonly = true
 
+  suite_name = "fidl"
+
   output_name = "fidl_hlcpp_unit_tests"
 
   deps = [
@@ -129,9 +139,9 @@ cts_executable("fidl_hlcpp_unit_tests_bin") {
     ":test_sources",
     "//sdk/testing/fidl:test",
     "//sdk/testing/fidl:test_support",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -152,7 +162,7 @@ if (is_host) {
     output_name = "fidl_hlcpp_unit_tests"
     deps = [
       ":host_test_sources",
-      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/zxtest",
     ]
   }
 
@@ -160,12 +170,13 @@ if (is_host) {
     output_name = "fidl_hlcpp_conformance_tests"
     deps = [
       ":conformance_test_sources",
-      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/zxtest",
     ]
   }
 }
 
 cts_fidl("union_migration_test_fidl") {
+  suite_name = "fidl"
   name = "fidl.test.unionmigration"
 
   sources = [ "union_migration.test.fidl" ]
@@ -173,6 +184,8 @@ cts_fidl("union_migration_test_fidl") {
 
 cts_source_set("test_util") {
   testonly = true
+
+  suite_name = "fidl"
 
   sources = [ "test/test_util.h" ]
 
@@ -185,6 +198,8 @@ cts_source_set("test_util") {
 cts_source_set("handle_util") {
   testonly = true
 
+  suite_name = "fidl"
+
   sources = [
     "test/handle_util.cc",
     "test/handle_util.h",
@@ -193,11 +208,30 @@ cts_source_set("handle_util") {
   public_deps = [ "//zircon/public/lib/zx" ]
 }
 
+cts_copy_to_sdk("build") {
+  testonly = true
+  suite_name = "fidl"
+  sources = [ "BUILD.gn" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
     ":fidl_hlcpp_tests",
     ":fidl_hlcpp_unit_tests_host($host_toolchain)",
+  ]
+}
+
+sdk_molecule("test_sdks") {
+  testonly = true
+  deps = [
+    ":build_sdk",
+    ":fidl_hlcpp_conformance_tests_bin_sdk",
+    ":fidl_hlcpp_unit_tests_bin_sdk",
+    ":handle_util_sdk",
+    ":host_test_sources_sdk",
+    ":test_sources_sdk",
+    ":test_util_sdk",
   ]
 }

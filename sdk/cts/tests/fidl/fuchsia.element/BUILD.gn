@@ -7,6 +7,7 @@ import("//sdk/cts/build/cts.gni")
 import("//src/session/build/session_config.gni")
 
 cts_executable("element-manager-test-bin") {
+  suite_name = "fuchsia.element"
   output_name = "element-manager-test"
   testonly = true
 
@@ -16,13 +17,14 @@ cts_executable("element-manager-test-bin") {
     "//sdk/fidl/fuchsia.element",
     "//sdk/lib/sys/cpp",
     "//sdk/testing/fidl:fidl_test",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
 cts_fuchsia_component("element-manager-test") {
+  suite_name = "fuchsia.element"
   manifest = "meta/element-manager-test.cmx"
   testonly = true
 
@@ -39,7 +41,8 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
   test_components = [ ":element-manager-test" ]
 }
 
-executable("reference-element-bin") {
+cts_executable("reference-element-bin") {
+  suite_name = "fuchsia.element"
   output_name = "reference-element"
   testonly = true
 
@@ -51,13 +54,15 @@ executable("reference-element-bin") {
   ]
 }
 
-fuchsia_component("reference-element") {
+cts_fuchsia_component("reference-element") {
+  suite_name = "fuchsia.element"
   manifest = "meta/reference-element.cml"
   testonly = true
   deps = [ ":reference-element-bin" ]
 }
 
-executable("reference-session-bin") {
+cts_executable("reference-session-bin") {
+  suite_name = "fuchsia.element"
   output_name = "reference-session"
   testonly = true
 
@@ -69,13 +74,14 @@ executable("reference-session-bin") {
   ]
 }
 
-fuchsia_component("reference-session") {
+cts_fuchsia_component("reference-session") {
+  suite_name = "fuchsia.element"
   manifest = "meta/reference-session.cml"
   testonly = true
   deps = [ ":reference-session-bin" ]
 }
 
-fuchsia_package("fuchsia-element-reference") {
+cts_fuchsia_package("fuchsia-element-reference") {
   testonly = true
   deps = [
     ":reference-element",
@@ -85,6 +91,12 @@ fuchsia_package("fuchsia-element-reference") {
 
 session_config("reference-session-config") {
   config = "reference_session_config.json"
+}
+
+cts_copy_to_sdk("build") {
+  testonly = true
+  suite_name = "fuchsia.element"
+  sources = [ "BUILD.gn" ]
 }
 
 group("tests") {
@@ -99,5 +111,18 @@ group("tests") {
     "//src/session/bin/component_manager:component_manager_sfw",
     "//src/session/bin/element_manager",
     "//src/session/bin/session_manager",
+  ]
+}
+
+sdk_molecule("test_sdks") {
+  testonly = true
+  deps = [
+    ":build_sdk",
+    ":element-manager-test-bin_sdk",
+    ":element-manager-test_sdk",
+    ":reference-element-bin_sdk",
+    ":reference-element_sdk",
+    ":reference-session-bin_sdk",
+    ":reference-session_sdk",
   ]
 }

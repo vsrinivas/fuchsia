@@ -10,22 +10,26 @@ group("components") {
 }
 
 cts_executable("cts-package-manager-sample-bin") {
+  suite_name = "package_manager/components"
   testonly = true
   sources = [ "hello_world.cc" ]
 }
 
 cts_executable("cts-package-manager-sample-bin2") {
+  suite_name = "package_manager/components"
   testonly = true
   sources = [ "hello_world2.cc" ]
 }
 
 cts_fuchsia_component("cts-package-manager-sample") {
+  suite_name = "package_manager/components"
   testonly = true
   manifest = "meta/package-manager-sample.cmx"
   deps = [ ":cts-package-manager-sample-bin" ]
 }
 
 cts_fuchsia_component("cts-package-manager-sample2") {
+  suite_name = "package_manager/components"
   testonly = true
   manifest = "meta/package-manager-sample2.cmx"
   deps = [ ":cts-package-manager-sample-bin2" ]
@@ -36,5 +40,21 @@ cts_fuchsia_package("cts-package-manager-sample-component") {
   deps = [
     ":cts-package-manager-sample",
     ":cts-package-manager-sample2",
+  ]
+}
+
+cts_copy_to_sdk("build") {
+  testonly = true
+  suite_name = "package_manager/components"
+  sources = [ "BUILD.gn" ]
+}
+
+sdk_molecule("components_sdks") {
+  testonly = true
+  deps = [
+    ":cts-package-manager-sample-bin2_sdk",
+    ":cts-package-manager-sample-bin_sdk",
+    ":cts-package-manager-sample2_sdk",
+    ":cts-package-manager-sample_sdk",
   ]
 }

@@ -4,6 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_source_library.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # Declares a FIDL Library that can be used in CTS.
@@ -29,7 +30,7 @@ template("cts_fidl") {
   }
 
   fidl(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [ "suite_name" ])
     if (invoker_deps != []) {
       if (defined(non_fidl_deps)) {
         non_fidl_deps += [ ":${target_name}_verify_deps" ]
@@ -43,6 +44,16 @@ template("cts_fidl") {
     } else {
       non_fidl_deps = [ ":${target_name}_cts_file" ]
     }
+  }
+
+  cts_source_library(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "testonly",
+                             "deps",
+                             "suite_name",
+                           ])
   }
 
   write_cts_file(target_name) {

@@ -7,11 +7,6 @@ import("//build/sdk/sdk_atom.gni")
 # This should not be called directly, but through the other CTS build rules.
 #
 # Parameters
-#
-#   sources (required)
-#     A list of sources to include in the atom.
-#     Type: list(labels)
-#
 #   suite_name (required)
 #     Name of the test suite this executable belongs to.
 #     This will determine where in the SDK these files are grouped.
@@ -31,6 +26,14 @@ template("cts_source_library") {
   sdk_metadata_sources = []
   sdk_metas = []
 
+  all_sources = []
+  if (defined(invoker.sources)) {
+    all_sources += invoker.sources
+  }
+  if (defined(invoker.public)) {
+    all_sources += invoker.public
+  }
+
   if (defined(invoker.deps)) {
     foreach(dep, invoker.deps) {
       full_label = get_label_info(dep, "label_no_toolchain")
@@ -43,24 +46,22 @@ template("cts_source_library") {
     }
   }
 
-  if (defined(invoker.sources)) {
-    foreach(file, invoker.sources) {
-      extension = get_path_info(file, "extension")
-      destination = "${file_base}/${file}"
+  foreach(file, all_sources) {
+    extension = get_path_info(file, "extension")
+    destination = "${file_base}/${file}"
 
-      if (extension == "h") {
-        sdk_metadata_headers += [ destination ]
-      } else {
-        sdk_metadata_sources += [ destination ]
-      }
-
-      sdk_files += [
-        {
-          source = file
-          dest = destination
-        },
-      ]
+    if (extension == "h") {
+      sdk_metadata_headers += [ destination ]
+    } else {
+      sdk_metadata_sources += [ destination ]
     }
+
+    sdk_files += [
+      {
+        source = file
+        dest = destination
+      },
+    ]
   }
 
   metadata_file = "${target_gen_dir}/${target_name}.sdk_meta.json"
@@ -110,8 +111,8 @@ template("cts_source_library") {
       ":${metadata_target_name}",
     ]
 
-    if (defined(invoker.non_sdk_deps)) {
-      non_sdk_deps += invoker.non_sdk_deps
+    if (defined(invoker.non_cts_deps)) {
+      non_sdk_deps += invoker.non_cts_deps
     }
   }
 }
