@@ -43,15 +43,17 @@ pub struct Device {
 }
 
 /// An interface for acquiring a proxy to a FIDL service.
+#[async_trait::async_trait]
 pub trait ServiceConnector<S: fidl::endpoints::ServiceMarker> {
     /// Acquires a proxy to the parameterized FIDL interface.
-    fn connect(&self) -> Result<S::Proxy, Error>;
+    async fn connect(&self) -> Result<S::Proxy, Error>;
 }
 
 /// An interface for acquiring all system dependencies required by net-cli.
 ///
 /// FIDL dependencies are specified as supertraits. These supertraits are a complete enumeration of
 /// all FIDL dependencies required by net-cli.
+#[async_trait::async_trait]
 pub trait NetCliDepsConnector:
     ServiceConnector<fstack::StackMarker>
     + ServiceConnector<fnetstack::NetstackMarker>
@@ -70,7 +72,7 @@ pub trait NetCliDepsConnector:
     /// device node within the client's namespace. The semantics of path and of this method are
     /// likely to be unstable as Fuchsia system device discovery mechanisms are undergoing active
     /// change.
-    fn connect_device(&self, path: &str) -> Result<Device, Error>;
+    async fn connect_device(&self, devfs_path: &str) -> Result<Device, Error>;
 }
 
 pub async fn do_root<C: NetCliDepsConnector>(
@@ -161,18 +163,18 @@ async fn tabulate_interfaces_info(interfaces: Vec<fstack::InterfaceInfo>) -> Res
     Ok(t.to_string())
 }
 
-fn connect_with_context<S, C>(connector: &C) -> Result<S::Proxy, Error>
+async fn connect_with_context<S, C>(connector: &C) -> Result<S::Proxy, Error>
 where
     C: ServiceConnector<S>,
     S: fidl::endpoints::ServiceMarker,
 {
-    connector.connect().with_context(|| format!("failed to connect to {}", S::NAME))
+    connector.connect().await.with_context(|| format!("failed to connect to {}", S::NAME))
 }
 
 async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Result<(), Error> {
     match cmd {
         IfEnum::List(IfList { name_pattern }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let mut response = stack.list_interfaces().await.context("error getting response")?;
             if let Some(name_pattern) = name_pattern {
                 let () = shortlist_interfaces(&name_pattern, &mut response);
@@ -182,9 +184,9 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 .context("error tabulating interface info")?;
             println!("{}", result);
         }
-        IfEnum::Add(IfAdd { path }) => match connector.connect_device(&path) {
+        IfEnum::Add(IfAdd { path }) => match connector.connect_device(&path).await {
             Ok(Device { topological_path, dev }) => {
-                let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+                let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
                 let id = fstack_ext::exec_fidl!(
                     stack.add_ethernet_interface(&topological_path, dev),
                     "error adding interface"
@@ -196,7 +198,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
             }
         },
         IfEnum::Del(IfDel { id }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () = fstack_ext::exec_fidl!(
                 stack.del_ethernet_interface(id),
                 "error removing interface"
@@ -204,25 +206,25 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
             info!("Deleted interface {}", id);
         }
         IfEnum::Get(IfGet { id }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let info =
                 fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
             println!("{}", fstack_ext::InterfaceInfo::from(info));
         }
         IfEnum::Enable(IfEnable { id }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
                 fstack_ext::exec_fidl!(stack.enable_interface(id), "error enabling interface")?;
             info!("Interface {} enabled", id);
         }
         IfEnum::Disable(IfDisable { id }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
                 fstack_ext::exec_fidl!(stack.disable_interface(id), "error disabling interface")?;
             info!("Interface {} disabled", id);
         }
         IfEnum::Addr(IfAddr { addr_cmd }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             match addr_cmd {
                 IfAddrEnum::Add(IfAddrAdd { id, addr, prefix }) => {
                     let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
@@ -257,7 +259,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
             }
         }
         IfEnum::Bridge(IfBridge { ids }) => {
-            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
+            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
             let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
             if result.status != fidl_fuchsia_netstack::Status::Ok {
                 return Err(anyhow::anyhow!("{:?}: {}", result.status, result.message));
@@ -270,7 +272,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
 }
 
 async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Result<(), Error> {
-    let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+    let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
         FwdEnum::List(_) => {
             let response =
@@ -328,7 +330,7 @@ async fn do_route<C: NetCliDepsConnector>(
     cmd: opts::RouteEnum,
     connector: &C,
 ) -> Result<(), Error> {
-    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
+    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
     match cmd {
         RouteEnum::List(RouteList {}) => {
             let response =
@@ -389,7 +391,7 @@ async fn do_filter<C: NetCliDepsConnector>(
     cmd: opts::FilterEnum,
     connector: &C,
 ) -> Result<(), Error> {
-    let filter = connect_with_context::<ffilter::FilterMarker, _>(connector)?;
+    let filter = connect_with_context::<ffilter::FilterMarker, _>(connector).await?;
     match cmd {
         FilterEnum::Enable(_) => {
             let () = filter_fidl!(filter.enable(true), "error enabling filter")?;
@@ -456,7 +458,7 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
     cmd: opts::IpFwdEnum,
     connector: &C,
 ) -> Result<(), Error> {
-    let stack = connect_with_context::<fstack::StackMarker, _>(connector)?;
+    let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
         IpFwdEnum::Enable(IpFwdEnable {}) => {
             let () = stack
@@ -477,7 +479,7 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
 }
 
 async fn do_log<C: NetCliDepsConnector>(cmd: opts::LogEnum, connector: &C) -> Result<(), Error> {
-    let log = connect_with_context::<fstack::LogMarker, _>(connector)?;
+    let log = connect_with_context::<fstack::LogMarker, _>(connector).await?;
     match cmd {
         LogEnum::SetLevel(LogSetLevel { log_level }) => {
             let () = fstack_ext::exec_fidl!(
@@ -500,7 +502,7 @@ async fn do_metric<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         MetricEnum::Set(MetricSet { id, metric }) => {
-            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
+            let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
             let result = netstack.set_interface_metric(id, metric).await?;
             if result.status != fidl_fuchsia_netstack::Status::Ok {
                 Err(anyhow::anyhow!("{:?}: {}", result.status, result.message))
@@ -513,7 +515,7 @@ async fn do_metric<C: NetCliDepsConnector>(
 }
 
 async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> Result<(), Error> {
-    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector)?;
+    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
     let (dhcp, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
     match cmd {
@@ -539,41 +541,44 @@ async fn do_neigh<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         NeighEnum::Add(NeighAdd { interface, ip, mac }) => {
-            let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
+            let controller =
+                connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_add(interface, ip.into(), mac.into(), controller)
                 .await
                 .context("failed during neigh add command")?;
             info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
         }
         NeighEnum::Clear(NeighClear { interface, ip_version }) => {
-            let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
+            let controller =
+                connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_clear(interface, ip_version, controller)
                 .await
                 .context("failed during neigh clear command")?;
             info!("Cleared entries for interface {}", interface);
         }
         NeighEnum::Del(NeighDel { interface, ip }) => {
-            let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
+            let controller =
+                connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_del(interface, ip.into(), controller)
                 .await
                 .context("failed during neigh del command")?;
             info!("Deleted entry {} for interface {}", ip, interface);
         }
         NeighEnum::List(NeighList {}) => {
-            let view = connect_with_context::<fneighbor::ViewMarker, _>(connector)?;
+            let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
             let () = print_neigh_entries(false /* watch_for_changes */, view)
                 .await
                 .context("error listing neighbor entries")?;
         }
         NeighEnum::Watch(NeighWatch {}) => {
-            let view = connect_with_context::<fneighbor::ViewMarker, _>(connector)?;
+            let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
             let () = print_neigh_entries(true /* watch_for_changes */, view)
                 .await
                 .context("error watching for changes to the neighbor table")?;
         }
         NeighEnum::Config(NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
             NeighConfigEnum::Get(NeighGetConfig { interface, ip_version }) => {
-                let view = connect_with_context::<fneighbor::ViewMarker, _>(connector)?;
+                let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
                 let () = print_neigh_config(interface, ip_version, view)
                     .await
                     .context("failed during neigh config get command")?;
@@ -607,7 +612,8 @@ async fn do_neigh<C: NetCliDepsConnector>(
                     max_reachability_confirmations,
                     ..fneighbor::UnreachabilityConfig::EMPTY
                 };
-                let controller = connect_with_context::<fneighbor::ControllerMarker, _>(connector)?;
+                let controller =
+                    connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
                 let () = update_neigh_config(interface, ip_version, updates, controller)
                     .await
                     .context("failed during neigh config update command")?;
@@ -781,8 +787,9 @@ mod tests {
         netstack: Option<NetstackProxy>,
     }
 
+    #[async_trait::async_trait]
     impl ServiceConnector<StackMarker> for TestConnector {
-        fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
             match &self.stack {
                 Some(stack) => Ok(stack.clone()),
                 None => Err(anyhow::anyhow!("connector has no stack instance")),
@@ -790,8 +797,11 @@ mod tests {
         }
     }
 
+    #[async_trait::async_trait]
     impl ServiceConnector<NetstackMarker> for TestConnector {
-        fn connect(&self) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(
+            &self,
+        ) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
             match &self.netstack {
                 Some(netstack) => Ok(netstack.clone()),
                 None => Err(anyhow::anyhow!("connector has no netstack instance")),
@@ -799,32 +809,39 @@ mod tests {
         }
     }
 
+    #[async_trait::async_trait]
     impl ServiceConnector<ffilter::FilterMarker> for TestConnector {
-        fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect filter unimplemented for test connector"))
         }
     }
 
+    #[async_trait::async_trait]
     impl ServiceConnector<LogMarker> for TestConnector {
-        fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect log unimplemented for test connector"))
         }
     }
 
+    #[async_trait::async_trait]
     impl ServiceConnector<fneighbor::ControllerMarker> for TestConnector {
-        fn connect(&self) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(
+            &self,
+        ) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor controller unimplemented for test connector"))
         }
     }
 
+    #[async_trait::async_trait]
     impl ServiceConnector<fneighbor::ViewMarker> for TestConnector {
-        fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor view unimplemented for test connector"))
         }
     }
 
+    #[async_trait::async_trait]
     impl NetCliDepsConnector for TestConnector {
-        fn connect_device(&self, _devfs_path: &str) -> Result<Device, Error> {
+        async fn connect_device(&self, _path: &str) -> Result<Device, Error> {
             Err(anyhow::anyhow!("connect interface unimplmented for test connector"))
         }
     }

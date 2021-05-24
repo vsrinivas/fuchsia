@@ -45,44 +45,53 @@ fn logger_init() -> Result<(), SetLoggerError> {
 
 struct Connector;
 
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
-    fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
         connect_to_protocol::<fstack::StackMarker>()
     }
 }
 
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
-    fn connect(&self) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
         connect_to_protocol::<fnetstack::NetstackMarker>()
     }
 }
 
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<ffilter::FilterMarker> for Connector {
-    fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
         connect_to_protocol::<ffilter::FilterMarker>()
     }
 }
 
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
-    fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
         connect_to_protocol::<fstack::LogMarker>()
     }
 }
 
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for Connector {
-    fn connect(&self) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(
+        &self,
+    ) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
         connect_to_protocol::<fneighbor::ControllerMarker>()
     }
 }
 
+#[async_trait::async_trait]
 impl net_cli::ServiceConnector<fneighbor::ViewMarker> for Connector {
-    fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
         connect_to_protocol::<fneighbor::ViewMarker>()
     }
 }
 
+#[async_trait::async_trait]
 impl net_cli::NetCliDepsConnector for Connector {
-    fn connect_device(&self, path: &str) -> Result<net_cli::Device, Error> {
+    async fn connect_device(&self, path: &str) -> Result<net_cli::Device, Error> {
         let dev = std::fs::File::open(path)
             .with_context(|| format!("failed to open device at {}", path))?;
         let topological_path =

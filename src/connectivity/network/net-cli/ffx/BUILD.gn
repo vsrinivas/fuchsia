@@ -1,0 +1,24 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_net") {
+  args_deps = [ "//src/connectivity/network/net-cli:lib" ]
+  deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//src/connectivity/network/net-cli:lib",
+    "//src/diagnostics/lib/selectors",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:async-trait",
+  ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
+}

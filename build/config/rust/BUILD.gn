@@ -147,6 +147,7 @@ config("allow_unused_results") {
     "//src/connectivity/location/*",
     "//src/connectivity/lowpan/*",
     "//src/connectivity/management/*",
+    "//src/connectivity/network/net-cli/ffx/*",
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
     "//src/connectivity/network/netstack3/*",
     "//src/connectivity/openthread/*",
