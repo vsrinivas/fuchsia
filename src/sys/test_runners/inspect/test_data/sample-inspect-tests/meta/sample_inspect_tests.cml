@@ -4,7 +4,7 @@
     include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
     program: {
         accessor: "ALL",
-        timeout_seconds: "30",
+        timeout_seconds: "60",
         cases: [
             // Check archivist has any data
             "bootstrap/archivist:root",
