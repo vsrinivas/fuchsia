@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <lib/zbitl/items/mem_config.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>

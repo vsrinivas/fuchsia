@@ -10,7 +10,7 @@ import("//build/zircon/migrated_targets.gni")
 
 zx_library("memalloc") {
   sdk = "source"
-  sdk_headers = [ "lib/memalloc.h" ]
+  sdk_headers = [ "lib/memalloc/allocator.h" ]
   sdk_migrated = true
 
   host = true
@@ -32,19 +32,19 @@ zx_library("memalloc") {
   public_deps = [
     "//sdk/lib/stdcompat:headers",
 
-    # <lib/memalloc.h> has #include <fbl/intrusive_double_list.h>.
+    # <lib/memalloc/allocator.h> has #include <fbl/intrusive_double_list.h>.
     "//zircon/system/ulib/fbl:headers",
 
-    # <lib/memalloc.h> has #include <zx/status.h>.
+    # <lib/memalloc/allocator.h> has #include <zx/status.h>.
     "//src/zircon/lib/zircon:headers",
 
-    # <lib/memalloc.h> has #include <lib/zx/status.h>.
+    # <lib/memalloc/allocator.h> has #include <lib/zx/status.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
 }
 
 test("memalloc-test") {
-  sources = [ "allocator_test.cc" ]
+  sources = [ "allocator-test.cc" ]
   deps = [
     ":memalloc",
     "//src/lib/fxl/test:gtest_main",

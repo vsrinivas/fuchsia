@@ -7,7 +7,7 @@
 #include "legacy-boot.h"
 
 #include <inttypes.h>
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <zircon/assert.h>
 
 #include <ktl/limits.h>

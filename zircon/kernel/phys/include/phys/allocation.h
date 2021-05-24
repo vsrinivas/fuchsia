@@ -16,7 +16,7 @@
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 
-// This is just forward-declared; <lib/memalloc.h> declares it fully.
+// This is just forward-declared; <lib/memalloc/allocator.h> declares it fully.
 namespace memalloc {
 class Allocator;
 }  // namespace memalloc
@@ -67,7 +67,7 @@ class Allocation {
 
   // Get the allocator instance used to construct Allocation objects.  Every
   // call returns the same object, but the first may initialize it.  Note
-  // separate #include <lib/memalloc.h> is necessary to use the instance.
+  // separate #include <lib/memalloc/allocator.h> is necessary to use the instance.
   [[gnu::const]] static memalloc::Allocator& GetAllocator();
 
   // This makes GetAllocator().RemoveRange() calls for standard ranges.

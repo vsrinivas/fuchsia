@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <lib/zbitl/error_stdio.h>
 #include <stdio.h>
 #include <stdlib.h>

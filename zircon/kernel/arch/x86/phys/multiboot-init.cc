@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/boot/e820.h>

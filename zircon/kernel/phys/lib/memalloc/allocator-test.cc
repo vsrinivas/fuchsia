@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>

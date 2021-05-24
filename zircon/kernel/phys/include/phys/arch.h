@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ARCH_H_
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ARCH_H_
 
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <lib/zbitl/items/mem_config.h>
 
 // Perform any architecture-specific set up.

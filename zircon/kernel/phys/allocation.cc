@@ -8,7 +8,7 @@
 
 #include <lib/arch/sysreg.h>
 #include <lib/arch/x86/system.h>
-#include <lib/memalloc.h>
+#include <lib/memalloc/allocator.h>
 #include <zircon/assert.h>
 
 #include <fbl/no_destructor.h>
