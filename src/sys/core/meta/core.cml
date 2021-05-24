@@ -506,6 +506,7 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
+                "#soundplayer",
                 "#ssh-key-manager",
                 "#starnix_manager",
                 "#stash",
