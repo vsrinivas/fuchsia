@@ -182,6 +182,13 @@ async fn start_component(
         .ok_or_else(|| anyhow!("No root in component manifest"))?
         .to_owned();
     let binary_path = CString::new(runner::get_program_binary(&start_info)?)?;
+
+    let args = runner::get_program_strvec(&start_info, "args")
+        .map(|args| {
+            args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
+        })
+        .unwrap_or(Ok(vec![]))?;
+
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
 
     let pkg = fio::DirectorySynchronousProxy::new(
@@ -208,7 +215,9 @@ async fn start_component(
     let task_owner =
         Task::new(&kernel, &binary_path, files, FileSystem::new(root), Credentials::new(3), None)?;
 
-    let argv = vec![binary_path];
+    let mut argv = vec![binary_path];
+    argv.extend(args.into_iter());
+
     let start_info = task_owner.task.exec(&argv[0], &argv, &vec![])?;
 
     spawn_task(task_owner, start_info.to_registers(), |result| {
