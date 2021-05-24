@@ -214,7 +214,8 @@ VmAspace::~VmAspace() {
   // destroy the arch portion of the aspace
   // TODO(teisenbe): Move this to Destroy().  Currently can't move since
   // ProcessDispatcher calls Destroy() from the context of a thread in the
-  // aspace.
+  // aspace and HarvestAllUserPageTables assumes the arch_aspace is valid if
+  // the aspace is in the global list.
   zx_status_t status = arch_aspace_.Destroy();
   DEBUG_ASSERT(status == ZX_OK);
 }
@@ -690,15 +691,15 @@ void VmAspace::HarvestAllUserPageTables(NonTerminalAction action) {
   Guard<Mutex> guard{&aspace_list_lock};
 
   for (auto& a : aspaces) {
-    a.HarvestUserPageTables(action);
+    if (a.is_user()) {
+      // The arch_aspace is only destroyed in the VmAspace destructor *after* the aspace is removed
+      // from the aspaces list. As we presently hold the aspace_list_lock we know that this
+      // destructor has not completed, and so the arch_aspace has not been destroyed. Even if the
+      // actual VmAspace has been destroyed, it is still completely safe to walk to the hardware
+      // page tables, there just will not be anything there.
+      zx_status_t __UNUSED result =
+          a.arch_aspace().HarvestNonTerminalAccessed(a.base(), a.size() / PAGE_SIZE, action);
+      DEBUG_ASSERT(result == ZX_OK);
+    }
   }
-}
-
-void VmAspace::HarvestUserPageTables(NonTerminalAction action) {
-  Guard<Mutex> guard{&lock_};
-  if (!is_user() || aspace_destroyed_)
-    return;
-  zx_status_t __UNUSED result =
-      arch_aspace().HarvestNonTerminalAccessed(base(), size() / PAGE_SIZE, action);
-  DEBUG_ASSERT(result == ZX_OK);
 }

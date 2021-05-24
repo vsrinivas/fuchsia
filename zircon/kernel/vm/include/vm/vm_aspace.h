@@ -97,10 +97,6 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   using NonTerminalAction = ArchVmAspace::NonTerminalAction;
   static void HarvestAllUserPageTables(NonTerminalAction action);
 
-  // If this is a user aspace instructs the backing arch aspace to free any unaccessed page tables
-  // using ArchVmAspace::HarvestNonTerminalAccessed() and the supplied |NonTerminalAction|.
-  void HarvestUserPageTables(NonTerminalAction action);
-
   // Traverses the VM tree rooted at this node, in depth-first pre-order. If
   // any methods of |ve| return false, the traversal stops and this method
   // returns false. Returns true otherwise.
