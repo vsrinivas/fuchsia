@@ -20,6 +20,7 @@ dart_library("zircon") {
     "src/errors.dart",
     "src/eventpair.dart",
     "src/fakes/handle.dart",
+    "src/fakes/handle_disposition.dart",
     "src/fakes/handle_waiter.dart",
     "src/fakes/system.dart",
     "src/fakes/zircon_fakes.dart",
@@ -37,6 +38,7 @@ dart_test_component("unittests_component") {
   sources = [
     "channel_test.dart",
     "eventpair_test.dart",
+    "handle_disposition_test.dart",
     "handle_test.dart",
     "socket_test.dart",
     "vmo_test.dart",

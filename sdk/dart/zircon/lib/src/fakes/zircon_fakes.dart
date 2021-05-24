@@ -8,5 +8,6 @@ import 'dart:convert' show utf8;
 import 'dart:typed_data';
 
 part 'handle.dart';
+part 'handle_disposition.dart';
 part 'handle_waiter.dart';
 part 'system.dart';
