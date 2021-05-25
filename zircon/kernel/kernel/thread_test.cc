@@ -14,6 +14,8 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <fbl/array.h>
+#include <kernel/auto_lock.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/event.h>
@@ -568,6 +570,133 @@ bool runtime_test() {
   END_TEST;
 }
 
+bool migrate_stress_test() {
+  BEGIN_TEST;
+
+  // Get number of CPUs in the system.
+  int active_cpus = ktl::popcount(mp_get_active_mask());
+  printf("Found %d active CPU(s)\n", active_cpus);
+  if (active_cpus <= 1) {
+    printf("Test can only proceed with multiple active CPUs.\n");
+    return true;
+  }
+
+  // The worker thread body.
+  //
+  // Each thread spins ensuring that it is only running on a single, particular
+  // CPU. The migration function below updates which CPU the thread is allowed
+  // to run on.
+  struct ThreadState {
+    Thread* thread;
+    ktl::atomic<bool> should_stop = false;
+    ktl::atomic<bool> started = false;
+
+    // Prevent reporting lock violations inside the migration function to avoid reentering the
+    // scheduler and interfering with the migration function state.
+    // TODO(fxbug.dev/77329): Figure out how to support violation reporting in sensitive code paths.
+    DECLARE_SPINLOCK(ThreadState, lockdep::LockFlagsReportingDisabled) lock;
+
+    cpu_num_t allowed_cpu TA_GUARDED(lock) = 0;
+    bool is_migrating TA_GUARDED(lock) = false;
+  };
+
+  auto worker_body = +[](void* arg) -> int {
+    ThreadState* state = static_cast<ThreadState*>(arg);
+    state->started = true;
+
+    while (!state->should_stop.load(ktl::memory_order_relaxed)) {
+      {
+        Guard<SpinLock, IrqSave> guard(&state->lock);
+        ZX_ASSERT_MSG(!state->is_migrating,
+                      "Worker thread scheduled between MigrationStage::Before and "
+                      "MigrationStage::After being called.\n");
+        ZX_ASSERT_MSG(arch_curr_cpu_num() == state->allowed_cpu,
+                      "Worker thread running on unexpected CPU: expected = %d, running on = %d\n",
+                      state->allowed_cpu, arch_curr_cpu_num());
+      }
+      Thread::Current::Yield();
+    }
+    return 0;
+  };
+
+  // CPU that all threads start running on. Can be any valid CPU.
+  const cpu_num_t starting_cpu = arch_curr_cpu_num();
+
+  // Create threads.
+  const int num_threads = active_cpus;
+  fbl::AllocChecker ac;
+  fbl::Array<ThreadState> threads(new (&ac) ThreadState[num_threads], num_threads);
+  ZX_ASSERT(ac.check());
+  for (int i = 0; i < num_threads; i++) {
+    // Create the thread.
+    threads[i].thread =
+        Thread::Create("migrate_stress_test worker", worker_body, &threads[i], DEFAULT_PRIORITY);
+    ASSERT_NONNULL(threads[i].thread, "Thread::Create failed.");
+    {
+      Guard<SpinLock, IrqSave> guard(&threads[i].lock);
+      threads[i].allowed_cpu = starting_cpu;
+    }
+
+    auto migrate_fn = [&state = threads[i]](Thread* thread, Thread::MigrateStage stage) {
+      Guard<SpinLock, IrqSave> guard(&state.lock);
+      switch (stage) {
+        case Thread::MigrateStage::Before:
+          ZX_ASSERT_MSG(!state.is_migrating, "Thread is already migrating");
+          ZX_ASSERT_MSG(state.allowed_cpu == arch_curr_cpu_num(),
+                        "Migrate function called on incorrect CPU.");
+          state.allowed_cpu = -1;
+          state.is_migrating = true;
+          break;
+
+        case Thread::MigrateStage::After:
+          ZX_ASSERT(state.is_migrating);
+          state.is_migrating = false;
+          state.allowed_cpu = arch_curr_cpu_num();
+          break;
+
+        case Thread::MigrateStage::Exiting:
+          break;
+      }
+    };
+
+    // Set the migration function to ensure that `allowed_cpu` keeps up to date.
+    threads[i].thread->SetMigrateFn(migrate_fn);
+
+    // Start running on `starting_cpu`.
+    threads[i].thread->SetSoftCpuAffinity(1 << starting_cpu);
+    threads[i].thread->Resume();
+  }
+
+  // Wait for the worker threads to execute at least once to ensure the migrate function gets
+  // called. Threads that have never executed are moved without calling the migrate function, which
+  // could cause this test to incorrectly assert in the worker loop.
+  for (const auto& thread_state : threads) {
+    while (!thread_state.started) {
+      Thread::Current::SleepRelative(ZX_USEC(100));
+    }
+  }
+
+  // Mutate threads as they run.
+  for (int i = 0; i < 100000; i++) {
+    for (size_t j = 0; j < threads.size(); j++) {
+      const cpu_mask_t affinity = (i + j) & mp_get_active_mask();
+      if (affinity) {
+        threads[j].thread->SetSoftCpuAffinity(affinity);
+      }
+    }
+    Thread::Current::Yield();
+  }
+
+  // Join threads.
+  for (auto& thread : threads) {
+    thread.should_stop.store(true);
+    int ret;
+    thread.thread->Join(&ret, ZX_TIME_INFINITE);
+  }
+
+  END_TEST;
+}
+
 bool backtrace_test() {
   BEGIN_TEST;
 
@@ -625,6 +754,7 @@ UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_an
 UNITTEST("set_migrate_fn_test", set_migrate_fn_test)
 UNITTEST("set_migrate_ready_threads_test", set_migrate_ready_threads_test)
 UNITTEST("migrate_unpinned_threads_test", migrate_unpinned_threads_test)
+UNITTEST("migrate_stress_test", migrate_stress_test)
 UNITTEST("runtime_test", runtime_test)
 UNITTEST("backtrace_test", backtrace_test)
 UNITTEST("scoped_allocation_disabled_test", scoped_allocation_disabled_test)
