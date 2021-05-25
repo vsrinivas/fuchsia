@@ -305,7 +305,6 @@ source_set("main") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/component",
-    "//src/lib/timekeeper:system",
     "//zircon/public/lib/zx",
   ]
 

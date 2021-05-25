@@ -13,7 +13,6 @@
 #include "src/developer/forensics/feedback_data/main_service.h"
 #include "src/developer/forensics/utils/component/component.h"
 #include "src/lib/files/file.h"
-#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -22,11 +21,10 @@ int main() {
   syslog::SetTags({"forensics", "feedback"});
 
   forensics::component::Component component;
-  timekeeper::SystemClock clock;
 
   std::unique_ptr<MainService> main_service =
       MainService::TryCreate(component.Dispatcher(), component.Services(), component.InspectRoot(),
-                             &clock, component.IsFirstInstance());
+                             component.Clock(), component.IsFirstInstance());
   if (!main_service) {
     return EXIT_FAILURE;
   }

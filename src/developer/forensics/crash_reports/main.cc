@@ -7,7 +7,6 @@
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/timekeeper/system_clock.h>
 
 #include <utility>
 
@@ -55,13 +54,11 @@ int main() {
     return EXIT_FAILURE;
   }
 
-  timekeeper::SystemClock clock;
-
-  auto info_context = std::make_shared<InfoContext>(component.InspectRoot(), &clock,
+  auto info_context = std::make_shared<InfoContext>(component.InspectRoot(), component.Clock(),
                                                     component.Dispatcher(), component.Services());
 
-  std::unique_ptr<MainService> main_service =
-      MainService::Create(component.Dispatcher(), component.Services(), &clock,
+  auto main_service =
+      MainService::Create(component.Dispatcher(), component.Services(), component.Clock(),
                           std::move(info_context), std::move(*config));
 
   // fuchsia.feedback.CrashReporter

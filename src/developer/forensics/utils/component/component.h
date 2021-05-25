@@ -15,6 +15,9 @@
 
 #include <memory>
 
+#include "src/lib/timekeeper/clock.h"
+#include "src/lib/timekeeper/system_clock.h"
+
 namespace forensics {
 namespace component {
 
@@ -32,6 +35,7 @@ class Component {
   async_dispatcher_t* Dispatcher();
   std::shared_ptr<sys::ServiceDirectory> Services();
   inspect::Node* InspectRoot();
+  timekeeper::Clock* Clock();
 
   zx_status_t RunLoop();
   void ShutdownLoop();
@@ -62,6 +66,7 @@ class Component {
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<sys::ComponentContext> context_;
   sys::ComponentInspector inspector_;
+  timekeeper::SystemClock clock_;
   size_t instance_index_;
 
   std::unique_ptr<fuchsia::process::lifecycle::Lifecycle> lifecycle_;

@@ -39,6 +39,7 @@ Component::Component()
       dispatcher_(loop_.dispatcher()),
       context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       inspector_(context_.get()),
+      clock_(),
       instance_index_(InitialInstanceIndex()),
       lifecycle_(nullptr),
       lifecycle_connection_(nullptr) {
@@ -50,6 +51,7 @@ Component::Component(async_dispatcher_t* dispatcher, std::unique_ptr<sys::Compon
       dispatcher_(dispatcher),
       context_(std::move(context)),
       inspector_(context_.get()),
+      clock_(),
       instance_index_(InitialInstanceIndex()),
       lifecycle_(nullptr),
       lifecycle_connection_(nullptr) {
@@ -61,6 +63,8 @@ async_dispatcher_t* Component::Dispatcher() { return dispatcher_; }
 std::shared_ptr<sys::ServiceDirectory> Component::Services() { return context_->svc(); }
 
 inspect::Node* Component::InspectRoot() { return &(inspector_.root()); }
+
+timekeeper::Clock* Component::Clock() { return &clock_; }
 
 bool Component::IsFirstInstance() const { return instance_index_ == 1; }
 

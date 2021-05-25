@@ -18,6 +18,8 @@ source_set("component") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/timekeeper",
+    "//src/lib/timekeeper:system",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

@@ -193,7 +193,6 @@ source_set("main") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils/component",
-    "//src/lib/timekeeper:system",
   ]
 
   visibility += [ "//src/developer/forensics:*" ]
