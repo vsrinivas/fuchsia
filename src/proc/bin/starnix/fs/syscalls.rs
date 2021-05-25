@@ -158,24 +158,32 @@ fn open_internal(
     fio_flags: u32,
     mode: mode_t,
 ) -> Result<FileHandle, Errno> {
-    if dir_fd != FdNumber::AT_FDCWD {
-        not_implemented!("dirfds are unimplemented");
-        return Err(EINVAL);
-    }
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = task.mm.read_c_string(user_path, &mut buf)?;
-    strace!(
-        "open_internal({}, {}, {:#x}, {:#o})",
-        dir_fd,
-        String::from_utf8_lossy(path),
-        fio_flags,
-        mode
-    );
+    let mut path = task.mm.read_c_string(user_path, &mut buf)?;
     if path[0] != b'/' {
+        if dir_fd != FdNumber::AT_FDCWD {
+            not_implemented!("dirfds are unimplemented");
+            return Err(EINVAL);
+        }
+        strace!(
+            "open_internal({}, {}, {:#x}, {:#o})",
+            dir_fd,
+            String::from_utf8_lossy(path),
+            fio_flags,
+            mode
+        );
         not_implemented!("non-absolute paths are unimplemented");
         return Err(ENOENT);
+    } else {
+        path = &path[1..];
+        strace!(
+            "open_internal(<nofd> {}, {:#x}, {:#o})",
+            String::from_utf8_lossy(path),
+            fio_flags,
+            mode
+        );
     }
-    let path = &path[1..];
+
     // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
     let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
 
