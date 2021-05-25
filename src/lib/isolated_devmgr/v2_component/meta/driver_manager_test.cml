@@ -17,6 +17,9 @@
             rights: [ "rw*" ],
             path: "/dev",
         },
+        {
+            protocol: [ "fuchsia.device.manager.Administrator" ],
+        },
     ],
     use: [
         {
@@ -43,6 +46,10 @@
     expose: [
         {
             directory: "dev",
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.device.manager.Administrator" ],
             from: "self",
         },
     ],

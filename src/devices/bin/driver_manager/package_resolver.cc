@@ -17,24 +17,6 @@ namespace fio = fuchsia_io;
 
 namespace internal {
 
-zx::status<zx::vmo> PackageResolver::FetchDriverVmo(const component::FuchsiaPkgUrl& package_url) {
-  if (!resolver_client_.channel().is_valid()) {
-    zx_status_t status = ConnectToResolverService();
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to connect to package resolver service");
-      return zx::error(status);
-    }
-  }
-  auto result = Resolve(package_url);
-  if (!result.is_ok()) {
-    LOGF(ERROR, "Failed to resolve package url %s, err %d", package_url.ToString().c_str(),
-         result.status_value());
-    return zx::error(result.status_value());
-  }
-
-  return LoadDriver(&result.value() /* package_dir */, package_url);
-}
-
 zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::string& package_url) {
   component::FuchsiaPkgUrl parsed_url;
   if (!parsed_url.Parse(std::string(package_url))) {
@@ -42,19 +24,35 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  auto result = FetchDriverVmo(parsed_url);
-  if (result.is_error()) {
-    return result.take_error();
+  auto package_dir_result = Resolve(parsed_url);
+  if (!package_dir_result.is_ok()) {
+    LOGF(ERROR, "Failed to resolve package url %s, err %d", parsed_url.ToString().c_str(),
+         package_dir_result.status_value());
+    return package_dir_result.take_error();
   }
+
+  auto driver_vmo_result = LoadDriver(&package_dir_result.value(), parsed_url);
+  if (driver_vmo_result.status_value()) {
+    return driver_vmo_result.take_error();
+  }
+
   Driver* driver = nullptr;
   DriverLoadCallback callback = [&driver](Driver* d, const char* version) mutable { driver = d; };
 
   zx_status_t status = load_driver_vmo(boot_args_, std::string_view(parsed_url.resource_path()),
-                                       std::move(result.value()), std::move(callback));
-
+                                       std::move(driver_vmo_result.value()), std::move(callback));
   if (status != ZX_OK) {
     return zx::error(status);
   }
+
+  fbl::unique_fd package_dir_fd;
+  status = fdio_fd_create(package_dir_result.value().client_end().TakeChannel().release(),
+                          package_dir_fd.reset_and_get_address());
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to create package_dir_fd: %sd", zx_status_get_string(status));
+    return zx::error(status);
+  }
+  driver->package_dir = std::move(package_dir_fd);
   return zx::ok(std::unique_ptr<Driver>(driver));
 }
 
@@ -76,6 +74,13 @@ zx_status_t PackageResolver::ConnectToResolverService() {
 
 zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
     const component::FuchsiaPkgUrl& package_url) {
+  if (!resolver_client_.channel().is_valid()) {
+    zx_status_t status = ConnectToResolverService();
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to connect to package resolver service");
+      return zx::error(status);
+    }
+  }
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);
   if (status != ZX_OK) {

@@ -823,6 +823,20 @@ zx_status_t Coordinator::AddCompositeDevice(
   return ZX_OK;
 }
 
+static zx_status_t LoadFirmwareAt(int fd, const char* path, zx::vmo* vmo, size_t* size) {
+  fbl::unique_fd firmware_fd(openat(fd, path, O_RDONLY));
+  if (firmware_fd.get() < 0) {
+    if (errno != ENOENT) {
+      return ZX_ERR_IO;
+    }
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  *size = lseek(firmware_fd.get(), 0, SEEK_END);
+  zx_status_t status = fdio_get_vmo_clone(firmware_fd.get(), vmo->reset_and_get_address());
+  return status;
+}
+
 zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname,
                                       const char* path, zx::vmo* vmo, size_t* size) {
   const std::string fwdirs[] = {
@@ -843,24 +857,23 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
     directories_to_check = std::size(fwdirs);
   }
 
-  int fd, fwfd;
   for (unsigned n = 0; n < directories_to_check; n++) {
-    if ((fd = open(fwdirs[n].c_str(), O_RDONLY, O_DIRECTORY)) < 0) {
+    fbl::unique_fd fd(open(fwdirs[n].c_str(), O_RDONLY, O_DIRECTORY));
+    if (fd.get() < 0) {
       continue;
     }
-    fwfd = openat(fd, path, O_RDONLY);
-    close(fd);
-    if (fwfd >= 0) {
-      *size = lseek(fwfd, 0, SEEK_END);
-      zx_status_t r = fdio_get_vmo_clone(fwfd, vmo->reset_and_get_address());
-      close(fwfd);
-      return r;
-    }
-    if (errno != ENOENT) {
-      return ZX_ERR_IO;
+    zx_status_t status = LoadFirmwareAt(fd.get(), path, vmo, size);
+    if (status == ZX_OK || status != ZX_ERR_NOT_FOUND) {
+      return status;
     }
   }
-  return ZX_ERR_NOT_FOUND;
+
+  const Driver* driver = LibnameToDriver(driver_libname);
+  if (driver == nullptr || !driver->package_dir.is_valid()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  auto package_path = std::string("lib/firmware/") + path;
+  return LoadFirmwareAt(driver->package_dir.get(), package_path.c_str(), vmo, size);
 }
 
 // Returns true if the parent path is equal to or specifies a child device of the parent.

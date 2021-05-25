@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/ddk/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
@@ -15,6 +16,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
+#include <fbl/unique_fd.h>
 
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;
@@ -36,6 +38,9 @@ struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   zx::vmo dso_vmo;
 
   fbl::String libname;
+
+  // If this is valid, it's the root directory of the Driver's package.
+  fbl::unique_fd package_dir;
 
   // If true, this driver never tries to match against new devices.
   bool never_autoselect = false;

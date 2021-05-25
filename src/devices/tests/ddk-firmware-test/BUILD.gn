@@ -17,10 +17,11 @@ bind_rules("ddk-firmware-test-bind") {
   rules = "test-driver.bind"
   output = "test-driver-bind.h"
 
-  deps = [ "//src/devices/bind/test.platform" ]
+  deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
 driver_module("ddk-firmware-test") {
+  test = true
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",

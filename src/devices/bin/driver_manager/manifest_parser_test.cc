@@ -43,3 +43,15 @@ TEST(ManifestParserTest, BootUrlToPath) {
   ASSERT_EQ(result.status_value(), ZX_OK);
   ASSERT_EQ(result.value(), "/boot/driver/my-driver.so");
 }
+
+TEST(ManifestParserTest, FuchsiaUrlToBasePath) {
+  auto result = GetBasePathFromUrl("fuchsia-pkg://fuchsia.com/my-package#driver/my-driver.so");
+  ASSERT_EQ(result.status_value(), ZX_OK);
+  ASSERT_EQ(result.value(), "/pkgfs/packages/my-package/0");
+}
+
+TEST(ManifestParserTest, BootUrlToBasePath) {
+  auto result = GetBasePathFromUrl("fuchsia-boot:///#driver/my-driver.so");
+  ASSERT_EQ(result.status_value(), ZX_OK);
+  ASSERT_EQ(result.value(), "/boot");
+}

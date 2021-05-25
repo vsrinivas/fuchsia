@@ -1,4 +1,3 @@
-using test.platform;
+using fuchsia.test;
 
-fuchsia.BIND_PLATFORM_DEV_VID == test.platform.BIND_PLATFORM_DEV_VID.TEST;
-fuchsia.BIND_PLATFORM_DEV_PID == test.platform.BIND_PLATFORM_DEV_PID.FIRMWARE;
+fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.PARENT;

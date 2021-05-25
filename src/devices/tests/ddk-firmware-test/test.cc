@@ -21,19 +21,13 @@ class FirmwareTest : public zxtest::Test {
   ~FirmwareTest() override = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.load_drivers.push_back("/boot/driver/ddk-firmware-test.so");
-
-    board_test::DeviceEntry dev = {};
-    dev.vid = PDEV_VID_TEST;
-    dev.pid = PDEV_PID_FIRMWARE_TEST;
-    dev.did = 0;
-    args.device_list.push_back(dev);
+    args.load_drivers.push_back("/boot/driver/test/ddk-firmware-test.so");
 
     zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr_);
     ASSERT_OK(status);
     fbl::unique_fd fd;
-    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
-        devmgr_.devfs_root(), "sys/platform/11:15:0/ddk-firmware-test", &fd));
+    ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                            "test/ddk-firmware-test", &fd));
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
     ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);

@@ -40,9 +40,6 @@ class PackageResolver : public PackageResolverInterface {
   zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override;
 
  private:
-  // Fetches the driver shared library from |package_url|.
-  zx::status<zx::vmo> FetchDriverVmo(const component::FuchsiaPkgUrl& package_url);
-
   // Connects to the package resolver service if not already connected.
   zx_status_t ConnectToResolverService();
 

@@ -32,6 +32,27 @@ zx::status<std::string> GetResourcePath(std::string_view url) {
 
 }  // namespace
 
+zx::status<std::string> GetBasePathFromUrl(const std::string& url) {
+  if (IsFuchsiaPkgScheme(url)) {
+    component::FuchsiaPkgUrl package_url;
+    if (!package_url.Parse(url)) {
+      LOGF(ERROR, "Failed to parse fuchsia url: %s", url.c_str());
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    return zx::ok(fxl::Substitute("/pkgfs/packages/$0/$1", package_url.package_name(),
+                                  package_url.variant()));
+  }
+  if (IsFuchsiaBootScheme(url)) {
+    auto resource_path = GetResourcePath(url);
+    if (resource_path.is_error()) {
+      LOGF(ERROR, "Failed to parse boot url: %s", url.c_str());
+      return resource_path;
+    }
+    return zx::ok("/boot");
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
 zx::status<std::string> GetPathFromUrl(const std::string& url) {
   if (IsFuchsiaPkgScheme(url)) {
     component::FuchsiaPkgUrl package_url;
