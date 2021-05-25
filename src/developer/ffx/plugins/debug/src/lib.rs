@@ -11,12 +11,12 @@ use {
 };
 
 #[ffx_core::ffx_plugin(
-    "zxdb_enabled",
+    "debug_enabled",
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
 )]
 pub async fn debug(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
-    cmd: ffx_zxdb_plugin_args::DebugCommand,
+    cmd: ffx_debug_plugin_args::DebugCommand,
 ) -> Result<(), Error> {
     let sdk = ffx_config::get_sdk().await?;
     let zxdb_path = sdk.get_host_tool("zxdb")?;

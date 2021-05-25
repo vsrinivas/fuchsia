@@ -30,6 +30,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
       "//src/developer/ffx/plugins/cts:ffx_cts",
       "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin",
+      "//src/developer/ffx/plugins/debug:ffx_debug_plugin",
       "//src/developer/ffx/plugins/doctor:ffx_doctor",
       "//src/developer/ffx/plugins/efi:ffx_efi",
       "//src/developer/ffx/plugins/emulator:ffx_emulator",
@@ -45,7 +46,6 @@ if (is_host) {
       "//src/developer/ffx/plugins/target:ffx_target",
       "//src/developer/ffx/plugins/trace:ffx_trace",
       "//src/developer/ffx/plugins/version:ffx_version",
-      "//src/developer/ffx/plugins/zxdb:ffx_zxdb_plugin",
       "//src/sys/run_test_suite/ffx/test:ffx_test",
     ]
 

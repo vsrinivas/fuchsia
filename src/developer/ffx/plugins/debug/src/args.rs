@@ -8,6 +8,6 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "debug", description = "Start a debugging session.")]
 pub struct DebugCommand {
-    #[argh(positional, default = "String::from(\"/tmp/zxdb.socket\")")]
+    #[argh(positional, default = "String::from(\"/tmp/debug_agent.socket\")")]
     pub socket_location: String,
 }
