@@ -315,17 +315,6 @@ following values:
 The option allows a notice to be printed when the root job is either:
 terminated, or has no jobs and no processes.
 
-## kernel.page-scanner.zero-page-scans-per-second=\<num>
-
-This option, 20000 by default, configures the maximal number of candidate pages
-the zero page scanner will consider every second.
-
-Setting to zero means no zero page scanning will occur. This can provide
-additional system predictability for benchmarking or other workloads.
-
-The page scanner must be running for this option to have any effect. It can be
-enabled at boot with the `kernel.page-scanner.start-at-boot` option.
-
 ## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial

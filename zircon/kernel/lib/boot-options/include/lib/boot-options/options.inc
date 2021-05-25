@@ -487,6 +487,22 @@ Every action the scanner performs can be individually configured and disabled.
 If all actions are disabled then enabling the scanner has no effect.
 )""")
 
+DEFINE_OPTION("kernel.page-scanner.zero-page-scans-per-second", uint64_t,
+              page_scanner_zero_page_scans_per_second, {20000}, R"""(
+This option configures the maximal number of candidate pages the zero
+page scanner will consider every second.
+
+Setting to zero means no zero page scanning will occur. This can provide
+additional system predictability for benchmarking or other workloads.
+
+The page scanner must be running for this option to have any effect. It can be
+enabled at boot with the `kernel.page-scanner.start-at-boot` option.
+
+This value was chosen to consume, in the worst case, 5% CPU on a lower-end
+arm device. Individual configurations may wish to tune this higher (or lower)
+as needed.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
