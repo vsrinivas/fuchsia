@@ -118,3 +118,27 @@ resource union VectorOfArrayOfEventInUnionWithReducedRights {
 resource struct VectorOfArrayOfEventInUnionWithReducedRightsStruct {
     VectorOfArrayOfEventInUnionWithReducedRights u;
 };
+
+resource struct ArrayOfVectorOfEventInStructWithDefaultRights {
+    array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+};
+
+resource struct VectorOfArrayOfEventInStructWithDefaultRights {
+    vector<array<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+};
+
+resource table ArrayOfVectorOfEventInTableWithDefaultRights {
+    1: array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+};
+
+resource struct ArrayOfVectorOfEventInTableWithDefaultRightsStruct {
+    ArrayOfVectorOfEventInTableWithDefaultRights t;
+};
+
+resource union ArrayOfVectorOfEventInUnionWithDefaultRights {
+    1: array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+};
+
+resource struct ArrayOfVectorOfEventInUnionWithDefaultRightsStruct {
+    ArrayOfVectorOfEventInUnionWithDefaultRights u;
+};

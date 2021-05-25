@@ -419,7 +419,8 @@ decode_failure("DecodeHandleHasWrongType") {
 }
 
 decode_success("DecodeHandleHasExtraRights") {
-    bindings_allowlist = [llcpp, hlcpp, go, rust],
+    // Rust does not support GIDL tests involving reducing rights.
+    bindings_allowlist = [llcpp, hlcpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },
@@ -636,8 +637,9 @@ encode_success("EncodeVectorOfArrayOfEventInUnion") {
 // the vector and arrays.
 // Test whether handles in an array of a vector in a struct use the correct
 // rights by reducing the rights.
-decode_success("DecodeArrayOfVectorOfEventInStructRights") {
-    bindings_allowlist = [llcpp, hlcpp, go, rust],
+decode_success("DecodeArrayOfVectorOfEventInStructExtraRights") {
+    // Rust does not support GIDL tests involving reducing rights.
+    bindings_allowlist = [llcpp, hlcpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },
@@ -657,6 +659,28 @@ decode_success("DecodeArrayOfVectorOfEventInStructRights") {
     value = ArrayOfVectorOfEventInStructWithReducedRights {
         h: [[restrict(#0, rights: basic)]],
     },
+}
+
+decode_failure("DecodeArrayOfVectorOfEventInStructHasTooFewRights") {
+    bindings_allowlist = [llcpp, hlcpp, go, rust],
+    handle_defs = {
+        #0 = event(rights: basic),
+    },
+    type = ArrayOfVectorOfEventInStructWithDefaultRights,
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = MISSING_REQUIRED_HANDLE_RIGHTS
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -691,8 +715,9 @@ decode_failure("DecodeArrayOfVectorOfEventInStructType") {
 // the vector and arrays.
 // Test whether handles in a vector of an array in a struct use the correct
 // rights by reducing the rights.
-decode_success("DecodeVectorOfArrayOfEventInStructRights") {
-    bindings_allowlist = [llcpp, hlcpp, go, rust],
+decode_success("DecodeVectorOfArrayOfEventInStructExtraRights") {
+    // Rust does not support GIDL tests involving reducing rights.
+    bindings_allowlist = [llcpp, hlcpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },
@@ -712,6 +737,28 @@ decode_success("DecodeVectorOfArrayOfEventInStructRights") {
     value = VectorOfArrayOfEventInStructWithReducedRights {
         h: [[restrict(#0, rights: basic)]],
     },
+}
+
+decode_failure("DecodeVectorOfArrayOfEventInStructHasTooFewRights") {
+    bindings_allowlist = [llcpp, hlcpp, go, rust],
+    handle_defs = {
+        #0 = event(rights: basic),
+    },
+    type = VectorOfArrayOfEventInStructWithDefaultRights,
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+            repeat(0xff):4,
+            padding:4
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = MISSING_REQUIRED_HANDLE_RIGHTS
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -746,8 +793,9 @@ decode_failure("DecodeVectorOfArrayOfEventInStructType") {
 // the vector and arrays.
 // Test whether handles in an array of a vector in a table use the correct
 // rights by reducing the rights.
-decode_success("DecodeArrayOfVectorOfEventInTableRights") {
-    bindings_allowlist = [llcpp, hlcpp, go, rust],
+decode_success("DecodeArrayOfVectorOfEventInTableExtraRights") {
+    // Rust does not support GIDL tests involving reducing rights.
+    bindings_allowlist = [llcpp, hlcpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },
@@ -775,6 +823,34 @@ decode_success("DecodeArrayOfVectorOfEventInTableRights") {
             h: [[restrict(#0, rights: basic)]],
         },
     },
+}
+
+decode_failure("DecodeArrayOfVectorOfEventInTableHasTooFewRights") {
+    bindings_allowlist = [llcpp, hlcpp, go, rust],
+    handle_defs = {
+        #0 = event(rights: basic),
+    },
+    type = ArrayOfVectorOfEventInTableWithDefaultRightsStruct,
+    bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = MISSING_REQUIRED_HANDLE_RIGHTS
 }
 
 // Vector and arrays can't hold handle type information in some bindings
@@ -815,8 +891,9 @@ decode_failure("DecodeArrayOfVectorOfEventInTableType") {
 // the vector and arrays.
 // Test whether handles in an array of a vector in a union use the correct
 // rights by reducing the rights.
-decode_success("DecodeArrayOfVectorOfEventInUnionRights") {
-    bindings_allowlist = [llcpp, hlcpp, go, rust],
+decode_success("DecodeArrayOfVectorOfEventInUnionExtraRights") {
+    // Rust does not support GIDL tests involving reducing rights.
+    bindings_allowlist = [llcpp, hlcpp, go],
     handle_defs = {
         #0 = event(rights: event_default),
     },
@@ -842,6 +919,32 @@ decode_success("DecodeArrayOfVectorOfEventInUnionRights") {
             h: [[restrict(#0, rights: basic)]],
         },
     },
+}
+
+decode_failure("DecodeArrayOfVectorOfEventInUnionHasTooFewRights") {
+    bindings_allowlist = [llcpp, hlcpp, go, rust],
+    handle_defs = {
+        #0 = event(rights: basic),
+    },
+    type = ArrayOfVectorOfEventInUnionWithDefaultRightsStruct,
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(24):4, num(1):4,
+            repeat(0xff):8,
+
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+    },
+    handles = {
+        v1 = [
+            #0,
+        ],
+    },
+    err = MISSING_REQUIRED_HANDLE_RIGHTS
 }
 
 // Vector and arrays can't hold handle type information in some bindings

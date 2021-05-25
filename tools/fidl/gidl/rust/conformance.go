@@ -65,18 +65,23 @@ fn test_{{ .Name }}_encode() {
 fn test_{{ .Name }}_decode() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
-	let handle_defs = create_handles(&{{ .HandleDefs }});
+	let handle_definitions = &{{ .HandleDefs }};
+	let handle_defs = create_handles(handle_definitions);
 	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
 	{{- else }}
+	let handle_definitions: Vec<HandleDef> = Vec::new();
 	let mut handles = Vec::new();
 	{{- end }}
-	let mut handle_infos : Vec::<_> = handles.drain(..).map(|h| {
+	let mut handle_infos : Vec::<_> = handles.drain(..).zip(handle_definitions.iter()).map(|(h, hd)| {
 		HandleInfo {
 			handle: h,
-			object_type: ObjectType::NONE,
-			rights: Rights::SAME_RIGHTS,
+			object_type: match hd.subtype {
+				HandleSubtype::Event => ObjectType::EVENT,
+				HandleSubtype::Channel => ObjectType::CHANNEL,
+			},
+			rights: hd.rights,
 		}
 	}).collect();
 	let value = &mut {{ .ValueType }}::new_empty();
