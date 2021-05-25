@@ -1040,6 +1040,97 @@ func TestRunFFXDoctor(t *testing.T) {
 	}
 }
 
+func TestMapToDeviceConfig(t *testing.T) {
+
+	tests := []struct {
+		jsonString   string
+		deviceConfig DeviceConfig
+		deviceName   string
+	}{
+		{
+			jsonString: `{
+				  "test-device1": {
+					"bucket": "",
+					"device-ip": "",
+					"device-name": "test-device1",
+					"image": "",
+					"package-port": "",
+					"package-repo": "",
+					"ssh-port": ""
+				  }
+				}
+				`,
+			deviceName: "test-device1",
+			deviceConfig: DeviceConfig{
+				DeviceName: "test-device1",
+				IsDefault:  false,
+			},
+		},
+		{
+			jsonString: `{
+				  "test-device1": {
+					"bucket": "",
+					"device-ip": "localhost",
+					"device-name": "test-device1",
+					"image": "",
+					"package-port": 8888,
+					"package-repo": "",
+					"ssh-port": 1022
+				  }
+				}
+				`,
+			deviceName: "test-device1",
+			deviceConfig: DeviceConfig{
+				DeviceName:  "test-device1",
+				DeviceIP:    "localhost",
+				SSHPort:     "1022",
+				PackagePort: "8888",
+			},
+		},
+		// Test case for unmarshalling being changed to be string
+		// values for numbers
+		{
+			jsonString: `{
+				  "test-device1": {
+					"bucket": "",
+					"device-ip": "localhost",
+					"device-name": "test-device1",
+					"image": "",
+					"package-port": "8888",
+					"package-repo": "",
+					"ssh-port": "1022"
+				  }
+				}
+				`,
+			deviceName: "test-device1",
+			deviceConfig: DeviceConfig{
+				DeviceName:  "test-device1",
+				DeviceIP:    "localhost",
+				PackagePort: "8888",
+				SSHPort:     "1022",
+			},
+		},
+	}
+
+	for i, test := range tests {
+		var data map[string]interface{}
+		err := json.Unmarshal([]byte(test.jsonString), &data)
+		if err != nil {
+			t.Errorf("Error parsing json for %v: %v", i, err)
+		}
+
+		actualDevice, ok := mapToDeviceConfig(data[test.deviceName])
+		if !ok {
+			t.Errorf("Error mapping to DeviceConfig %v: %v", i, data)
+		}
+		expected := test.deviceConfig
+		if actualDevice != expected {
+			t.Errorf("Test %v: unexpected deviceConfig: %v. Expected %v", i, actualDevice, expected)
+		}
+	}
+
+}
+
 func helperCommandForInitEnv(command string, s ...string) (cmd *exec.Cmd) {
 	cs := []string{"-test.run=TestFakeFfx", "--"}
 	cs = append(cs, command)

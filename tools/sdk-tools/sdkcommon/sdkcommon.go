@@ -1187,8 +1187,11 @@ func mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
 			if key == DefaultKey {
 				continue
 			}
-			if val, ok := deviceData[key].(string); ok {
-				value = val
+			// Use Sprintf to convert the value into a string.
+			// This is done since some values are numeric and are
+			// not unmarshalled as strings.
+			if val, ok := deviceData[key]; ok {
+				value = fmt.Sprintf("%v", val)
 			} else {
 				fmt.Fprintf(os.Stderr, "Cannot get %v from %v", key, deviceData)
 				continue
