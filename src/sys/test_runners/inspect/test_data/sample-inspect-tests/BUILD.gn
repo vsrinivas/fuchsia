@@ -10,6 +10,17 @@ fuchsia_component("sample-component") {
   component_name = "sample_inspect_tests"
 }
 
-fuchsia_test_package("sample-inspect-tests") {
+fuchsia_test_package("sample-inspect-tests-pkg") {
+  package_name = "sample-inspect-tests"
   test_components = [ ":sample-component" ]
+}
+
+group("sample-inspect-tests") {
+  testonly = true
+  deps = []
+
+  # TODO(fxbug.dev/77403) - reenable tests on coverage builders.
+  if (!is_coverage) {
+    deps += [ ":sample-inspect-tests-pkg" ]
+  }
 }
