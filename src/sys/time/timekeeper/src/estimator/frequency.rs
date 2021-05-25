@@ -4,6 +4,7 @@
 
 use {
     crate::{enums::FrequencyDiscardReason, time_source::Sample},
+    chrono::{Datelike, Duration, TimeZone, Utc},
     fuchsia_zircon as zx,
     std::mem,
 };
@@ -111,12 +112,26 @@ impl EstimationWindow {
         Ok(numerator / denominator)
     }
 
-    /// Returns true if this `EstimationWindow` overlaps the 24hour smearing window centered on a
+    /// Returns true if this `EstimationWindow` overlaps the 24 hour smearing window centered on a
     /// potential leap second.
     fn overlaps_leap_second(&self) -> bool {
-        // TODO(jsankey): Implement this method before we encounter a leap second. This will be
-        // Dec 2021 at the earliest.
-        false
+        let window_start_utc = Utc.timestamp_nanos(self.initial_utc.into_nanos());
+        let window_end_utc =
+            Utc.timestamp_nanos((self.initial_utc + FREQUENCY_ESTIMATION_WINDOW).into_nanos());
+        // The month is sufficient to tell us which leap second insertion point we are potentially
+        // close to.
+        let leap_second = match window_start_utc.month() {
+            1 => Utc.ymd(window_start_utc.year(), 1, 1),
+            6 | 7 => Utc.ymd(window_start_utc.year(), 7, 1),
+            12 => Utc.ymd(window_start_utc.year() + 1, 1, 1),
+            _ => return false,
+        }
+        .and_hms(0, 0, 0);
+        // If the start of the estimation window is less than 12 hours after the leap second and the
+        // end of the estimation window is less than 12 hours before the leap second, the estimation
+        // window will overlap the 24 hour smearing period centered on the leap second.
+        window_end_utc > (leap_second - Duration::hours(12))
+            && window_start_utc < (leap_second + Duration::hours(12))
     }
 }
 
@@ -221,6 +236,8 @@ mod test {
 
     // This time is nowhere near a leap second.
     const TEST_UTC_STR: &str = "2021-03-25T13:22:52-08:00";
+    // This time overlaps a potential leap second.
+    const LEAP_UTC_STR: &str = "2021-06-30T23:59:59+00:00";
 
     /// Creates a single sample with the supplied times and the standard standard deviation
     /// Initial UTC is specified as an RFC3339 string.
@@ -301,6 +318,7 @@ mod test {
         assert_eq!(window.add_sample(&earlier), Err(AddSampleError::BeforeWindow));
         assert_eq!(window.add_sample(&later), Err(AddSampleError::AfterWindow));
     }
+
     #[fuchsia::test]
     fn estimation_window_insufficient_samples() {
         let initial_sample = create_sample(TEST_UTC_STR, INITIAL_MONO);
@@ -309,6 +327,34 @@ mod test {
             window.add_sample(&sample).unwrap();
         }
         assert_eq!(window.frequency(), Err(GetFrequencyError::InsufficientSamples));
+    }
+
+    #[fuchsia::test]
+    fn estimation_window_overlaps_leap_second() {
+        let times_and_overlaps = [
+            ("2021-06-29T11:59:59+00:00", false),
+            ("2021-06-29T12:00:01+00:00", true),
+            ("2021-06-30T23:59:59+00:00", true),
+            ("2021-07-01T11:59:59+00:00", true),
+            ("2021-07-01T12:00:01+00:00", false),
+            ("2021-07-01T04:59:59-07:00", true),
+            ("2021-07-01T05:00:01-07:00", false),
+            ("2021-09-01T00:00:01+00:00", false),
+            ("2021-12-30T11:59:59+00:00", false),
+            ("2021-12-30T12:00:01+00:00", true),
+            ("2022-01-01T11:59:59+00:00", true),
+            ("2022-01-01T12:00:01+00:00", false),
+        ];
+        for (time, overlap) in times_and_overlaps {
+            let window = EstimationWindow::new(&create_sample(time, INITIAL_MONO));
+            assert_eq!(
+                window.overlaps_leap_second(),
+                overlap,
+                "Leap second overlap of {} should be {}",
+                time,
+                overlap
+            );
+        }
     }
 
     #[fuchsia::test]
@@ -375,5 +421,20 @@ mod test {
             assert_eq!(estimator.update(&mut samples.remove(0)), Ok(None));
         }
         assert_estimator_update(&mut estimator, &mut samples.remove(0), 0.999, 1);
+    }
+
+    #[fuchsia::test]
+    fn frequency_estimator_overlaps_leap_second() {
+        let mut samples = vec![create_sample(LEAP_UTC_STR, INITIAL_MONO)];
+        extend_sample_set(&mut samples, 25, 1.hour() + 1.second(), 0.999);
+
+        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0));
+        for _ in 0..23 {
+            assert_eq!(estimator.update(&mut samples.remove(0)), Ok(None));
+        }
+        assert_eq!(
+            estimator.update(&mut samples.remove(0)),
+            Err(FrequencyDiscardReason::PotentialLeapSecond)
+        );
     }
 }
