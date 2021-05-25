@@ -55,6 +55,7 @@ static_library("lib") {
     "socket_connection.h",
     "software_breakpoint.cc",
     "software_breakpoint.h",
+    "stdio_handles.h",
     "system_interface.cc",
     "system_interface.h",
     "thread_handle.h",

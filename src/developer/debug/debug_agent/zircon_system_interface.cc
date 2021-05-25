@@ -44,4 +44,6 @@ std::unique_ptr<ComponentLauncher> ZirconSystemInterface::GetComponentLauncher()
   return std::make_unique<ComponentLauncher>(services_);
 }
 
+std::string ZirconSystemInterface::GetSystemVersion() { return zx_system_get_version_string(); }
+
 }  // namespace debug_agent

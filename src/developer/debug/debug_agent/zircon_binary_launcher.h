@@ -26,8 +26,7 @@ class ZirconBinaryLauncher final : public BinaryLauncher {
   ~ZirconBinaryLauncher() override;
 
   zx_status_t Setup(const std::vector<std::string>& argv) override;
-  zx::socket ReleaseStdout() override;
-  zx::socket ReleaseStderr() override;
+  StdioHandles ReleaseStdioHandles() override;
   std::unique_ptr<ProcessHandle> GetProcess() const override;
   zx_status_t Start() override;
 
@@ -42,8 +41,7 @@ class ZirconBinaryLauncher final : public BinaryLauncher {
 
   // The stdout/stderr local socket endpoints. Will be valid if Setup successfully transferred them
   // to the process.
-  zx::socket out_;
-  zx::socket err_;
+  StdioHandles stdio_handles_;
 };
 
 }  // namespace debug_agent

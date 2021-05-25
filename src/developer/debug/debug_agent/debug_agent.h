@@ -210,7 +210,7 @@ class DebugAgent : public RemoteAPI,
   // happened and we can communicate it to the client.
   struct ExpectedComponent {
     ComponentDescription description;
-    ComponentHandles handles;
+    StdioHandles handles;
     fuchsia::sys::ComponentControllerPtr controller;
   };
   std::map<std::string, ExpectedComponent> expected_components_;

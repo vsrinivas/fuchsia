@@ -53,8 +53,7 @@ ComponentLauncher::ComponentLauncher(std::shared_ptr<sys::ServiceDirectory> serv
     : services_(std::move(services)) {}
 
 zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
-                                       ComponentDescription* description,
-                                       ComponentHandles* handles) {
+                                       ComponentDescription* description, StdioHandles* handles) {
   FX_DCHECK(services_);
   FX_DCHECK(!argv.empty());
 

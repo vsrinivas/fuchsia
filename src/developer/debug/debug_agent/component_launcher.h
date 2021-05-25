@@ -11,6 +11,7 @@
 #include <string>
 
 #include "lib/sys/cpp/service_directory.h"
+#include "src/developer/debug/debug_agent/stdio_handles.h"
 #include "src/developer/debug/shared/component_utils.h"
 
 namespace debug_agent {
@@ -24,11 +25,6 @@ struct ComponentDescription {
   std::string filter;
 };
 
-struct ComponentHandles {
-  zx::socket out;
-  zx::socket err;
-};
-
 // Class designed to help setup a component and then launch it. These setups are
 // necessary because the agent needs some information about how the component
 // will be launch before it actually launches it. This is because the debugger
@@ -40,7 +36,7 @@ class ComponentLauncher {
   // Will fail if |argv| is invalid. The first element should be the component
   // url needed to launch.
   zx_status_t Prepare(std::vector<std::string> argv, ComponentDescription* description,
-                      ComponentHandles* handles);
+                      StdioHandles* handles);
 
   // The launcher has to be already successfully prepared.
   // The lifetime of the controller is bound to the lifetime of the component.

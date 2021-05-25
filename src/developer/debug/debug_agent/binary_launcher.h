@@ -11,9 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace zx {
-class socket;
-}
+#include "src/developer/debug/debug_agent/stdio_handles.h"
 
 namespace debug_agent {
 
@@ -30,8 +28,7 @@ class BinaryLauncher {
 
   // It is possibly that Setup fails to obtain valid sockets from the process being launched. If
   // that is the case, both sockets will be in the initial state (ie. is_valid() == false).
-  virtual zx::socket ReleaseStdout() = 0;
-  virtual zx::socket ReleaseStderr() = 0;
+  virtual StdioHandles ReleaseStdioHandles() = 0;
 
   // Accessor for a copy of the process handle, valid between Setup() and Start().
   virtual std::unique_ptr<ProcessHandle> GetProcess() const = 0;

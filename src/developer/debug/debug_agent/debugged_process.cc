@@ -87,18 +87,17 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
     : debug_agent_(debug_agent),
       process_handle_(std::move(create_info.handle)),
       from_limbo_(create_info.from_limbo) {
-  // If create_info out or err are not valid, calling Init on the
-  // BufferedZxSocket will fail and leave it in an invalid state. This is
-  // expected if the io sockets could be obtained from the inferior.
-  stdout_.Init(std::move(create_info.out));
-  stderr_.Init(std::move(create_info.err));
+  // If create_info out or err are not valid, calling Init on the BufferedZxSocket will fail and
+  // leave it in an invalid state. This is expected if the io sockets could be obtained from the
+  // inferior.
+  stdout_.Init(std::move(create_info.stdio.out));
+  stderr_.Init(std::move(create_info.stdio.err));
 }
 
 DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
 
 void DebuggedProcess::DetachFromProcess() {
-  // 1. Remove installed software breakpoints.
-  //    We need to tell each thread that this will happen.
+  // 1. Remove installed software breakpoints. We need to tell each thread that this will happen.
   for (auto& [address, breakpoint] : software_breakpoints_) {
     for (auto& [thread_koid, thread] : threads_) {
       thread->WillDeleteProcessBreakpoint(breakpoint.get());
@@ -110,8 +109,7 @@ void DebuggedProcess::DetachFromProcess() {
   hardware_breakpoints_.clear();
   watchpoints_.clear();
 
-  // 2. Resume threads.
-  // Technically a 0'ed request would work, but being explicit is future-proof.
+  // 2. Resume threads. Technically a 0'ed request would work, but being explicit is future-proof.
   debug_ipc::ResumeRequest resume_request = {};
   resume_request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
   resume_request.ids.push_back({.process = koid(), .thread = 0});

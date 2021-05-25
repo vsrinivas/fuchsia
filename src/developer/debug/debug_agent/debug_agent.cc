@@ -398,8 +398,7 @@ void DebugAgent::OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& re
 
 void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
                            debug_ipc::SysInfoReply* reply) {
-  reply->version = std::string(zx_system_get_version_string());
-
+  reply->version = system_interface_->GetSystemVersion();
   reply->num_cpus = system_interface_->GetNumCpus();
   reply->memory_mb = system_interface_->GetPhysicalMemory() / kMegabyte;
 
@@ -811,8 +810,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
     return;
 
   DebuggedProcessCreateInfo create_info(launcher->GetProcess());
-  create_info.out = launcher->ReleaseStdout();
-  create_info.err = launcher->ReleaseStderr();
+  create_info.stdio = launcher->ReleaseStdioHandles();
 
   // The DebuggedProcess must be attached to the new process' exception port before actually
   // Starting the process to avoid racing with the program initialization.
@@ -840,7 +838,7 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   std::unique_ptr<ComponentLauncher> launcher = system_interface_->GetComponentLauncher();
 
   ComponentDescription description;
-  ComponentHandles handles;
+  StdioHandles handles;
   zx_status_t status = launcher->Prepare(request.argv, &description, &handles);
   if (status != ZX_OK) {
     reply->status = status;
@@ -915,12 +913,12 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
 
 void DebugAgent::OnProcessStart(const std::string& filter,
                                 std::unique_ptr<ProcessHandle> process_handle) {
+  StdioHandles stdio;
+
   ComponentDescription description;
-  ComponentHandles handles;
-  auto it = expected_components_.find(filter);
-  if (it != expected_components_.end()) {
+  if (auto it = expected_components_.find(filter); it != expected_components_.end()) {
     description = std::move(it->second.description);
-    handles = std::move(it->second.handles);
+    stdio = std::move(it->second.handles);
 
     // Add to the list of running components.
     running_components_[description.component_id] = std::move(it->second.controller);
@@ -947,8 +945,7 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   stream()->Write(writer.MessageComplete());
 
   DebuggedProcessCreateInfo create_info(std::move(process_handle));
-  create_info.out = std::move(handles.out);
-  create_info.err = std::move(handles.err);
+  create_info.stdio = std::move(stdio);
 
   DebuggedProcess* new_process = nullptr;
   AddDebuggedProcess(std::move(create_info), &new_process);

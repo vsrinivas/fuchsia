@@ -15,6 +15,7 @@
 #include "src/developer/debug/debug_agent/module_list.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
 #include "src/developer/debug/debug_agent/process_handle_observer.h"
+#include "src/developer/debug/debug_agent/stdio_handles.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -37,8 +38,7 @@ struct DebuggedProcessCreateInfo {
   std::unique_ptr<ProcessHandle> handle;
 
   // Optional.
-  zx::socket out;  // stdout.
-  zx::socket err;  // stderr.
+  StdioHandles stdio;
 
   // Whether this process was obtained via a process limbo.
   // This is relevant when attempting to kill the process, as handles obtained via the limbo do not

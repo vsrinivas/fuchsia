@@ -26,8 +26,8 @@ zx_status_t ZirconBinaryLauncher::Setup(const std::vector<std::string>& argv) {
   builder_.CloneNamespace();
   builder_.CloneEnvironment();
 
-  out_ = AddStdioEndpoint(STDOUT_FILENO);
-  err_ = AddStdioEndpoint(STDERR_FILENO);
+  stdio_handles_.out = AddStdioEndpoint(STDOUT_FILENO);
+  stdio_handles_.err = AddStdioEndpoint(STDERR_FILENO);
 
   return builder_.Prepare(nullptr);
 }
@@ -51,7 +51,6 @@ zx::socket ZirconBinaryLauncher::AddStdioEndpoint(int fd) {
   return local;
 }
 
-zx::socket ZirconBinaryLauncher::ReleaseStdout() { return std::move(out_); }
-zx::socket ZirconBinaryLauncher::ReleaseStderr() { return std::move(err_); }
+StdioHandles ZirconBinaryLauncher::ReleaseStdioHandles() { return std::move(stdio_handles_); }
 
 }  // namespace debug_agent

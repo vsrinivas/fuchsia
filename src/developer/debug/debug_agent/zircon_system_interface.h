@@ -28,6 +28,7 @@ class ZirconSystemInterface final : public SystemInterface {
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
   std::unique_ptr<ComponentLauncher> GetComponentLauncher() const override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
+  std::string GetSystemVersion() override;
 
  private:
   ZirconJobHandle root_job_;

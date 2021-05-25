@@ -59,6 +59,9 @@ class SystemInterface {
   // case it will be !Valid(). The reference is owned by this class.
   virtual LimboProvider& GetLimboProvider() = 0;
 
+  // Returns a string representation of the current system version.
+  virtual std::string GetSystemVersion() = 0;
+
   // Non-virtual helpers ---------------------------------------------------------------------------
   //
   // These all use the virtual interface above to implement their functionality.

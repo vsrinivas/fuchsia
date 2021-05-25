@@ -27,6 +27,7 @@ class MockSystemInterface final : public SystemInterface {
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
   std::unique_ptr<ComponentLauncher> GetComponentLauncher() const override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
+  std::string GetSystemVersion() override { return "Mock version"; }
 
  private:
   MockJobHandle root_job_;
