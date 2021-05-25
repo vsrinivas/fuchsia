@@ -17,7 +17,7 @@ interface. In contrast, Windows does not provide a systemwide libc in
 its stable win32 interface.
 
 On Fuchsia the story is a bit different from Posix systems. First, the
-Zircon kernel (Fuchsia's microkernel) does not provide a typical
+Zircon kernel (Fuchsia's kernel) does not provide a typical
 Posix system call interface. So a Posix function like `open` can't
 call a Zircon `open` syscall. Secondly, Fuchsia implements some parts
 of Posix, but omits large parts of the Posix model. Most conspicuously
@@ -48,7 +48,7 @@ exhaustively): file I/O, BSD sockets, and pthreads.
 
 #### File I/O and BSD sockets
 
-Recall that Zircon is a microkernel that is not in the business of
+Recall that Zircon is a kernel that is not in the business of
 implementing file I/O. Instead, other Fuchsia userspace services
 provide filesystems. libc itself defines weak symbols for Posix file
 I/O functions such as `open`, `write`, and `fstat`. However, all these

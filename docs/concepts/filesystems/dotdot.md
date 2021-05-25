@@ -1,9 +1,9 @@
 # Dot Dot Considered Harmful
 
 Child processes on Fuchsia are only capable of accessing the resources provided
-to them -- this is an essential idea encompassing microkernels, and other
-“capability-based” systems. If a handle is provided to a service, access to
-that handle implies the client can use it.
+to them -- this is an essential idea encompassing “capability-based” systems. If
+a handle is provided to a service, access to that handle implies the client can
+use it.
 
 Intuitively, this concept can be applied to filesystems: If a handle is
 provided to a directory, it should imply access to resources within that

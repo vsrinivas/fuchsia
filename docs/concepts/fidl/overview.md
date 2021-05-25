@@ -461,10 +461,10 @@ the client and server code.
 
 ## Why Use FIDL?
 
-Fuchsia extensively relies on IPC since it has a microkernel architecture
-wherein most functionality is implemented in user space outside of the kernel,
-including privileged components such as device drivers. Consequently the IPC
-mechanism must be efficient, deterministic, robust, and easy to use:
+Fuchsia extensively relies on IPC since most functionality is implemented in
+user space outside of the kernel, including privileged components such as device
+drivers. Consequently the IPC mechanism must be efficient, deterministic,
+robust, and easy to use:
 
 **IPC efficiency** pertains to the computational overhead required to generate,
 transfer, and consume messages between processes. IPC will be involved in all

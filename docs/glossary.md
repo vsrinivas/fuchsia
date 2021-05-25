@@ -1061,8 +1061,8 @@ completing the installation Zedboot will reboot into the newly installed system.
 
 ### **Zircon** {#zircon}
 
-Zircon is the [microkernel](https://en.wikipedia.org/wiki/Microkernel) and
-lowest level userspace components (driver runtime environment, core drivers,
+Zircon is the [kernel](https://en.wikipedia.org/wiki/Kernel_(operating_system))
+and lowest level userspace components (driver runtime environment, core drivers,
 libc, etc) at the core of Fuchsia. In a traditional monolithic kernel, many of
 the userspace components of Zircon would be part of the kernel itself.
 

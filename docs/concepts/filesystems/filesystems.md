@@ -2,10 +2,10 @@
 
 This document seeks to describe a high-level view of the Fuchsia filesystems,
 from their initialization, discussion of standard filesystem operations (such as
-Open, Read, Write, etc), and the quirks of implementing user-space filesystems
-on top of a microkernel. Additionally, this document describes the VFS-level
-walking through a namespace, which can be used to communicate with non-storage
-entities (such as system services).
+Open, Read, Write, etc), and the quirks of implementing user-space filesystems.
+Additionally, this document describes the VFS-level walking through a namespace,
+which can be used to communicate with non-storage entities (such as system
+services).
 
 ## Filesystems are Services
 
