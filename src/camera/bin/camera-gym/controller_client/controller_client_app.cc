@@ -23,6 +23,8 @@ namespace camera {
 // How to search for the service using Hub:
 static char kGlobStr[] =
     "/hub/r/session-*/*/c/camera-gym-manual.cmx/*/out/svc/fuchsia.camera.gym.Controller";
+static char kGlobStrNoSession[] =
+    "/hub/c/camera-gym-manual.cmx/*/out/svc/fuchsia.camera.gym.Controller";
 static char kRegexStr[] = "/camera-gym-manual.cmx/(\\d+)";
 
 std::vector<Service> FindCameraGyms();
@@ -65,7 +67,6 @@ static bool FindServicesForPath(char* glob_str, char* regex_str, std::vector<Ser
   bool service_exists = glob(glob_str, 0, nullptr, &glob_buf) == 0;
   std::regex name_regex(regex_str);
   if (!service_exists) {
-    fprintf(stderr, "ERROR: Service does not exist\n");
     return false;
   }
   for (size_t i = 0; i < glob_buf.gl_pathc; ++i) {
@@ -82,7 +83,11 @@ static bool FindServicesForPath(char* glob_str, char* regex_str, std::vector<Ser
 
 std::vector<Service> FindCameraGyms() {
   std::vector<Service> gyms;
-  FindServicesForPath(kGlobStr, kRegexStr, &gyms);
+  if (!FindServicesForPath(kGlobStr, kRegexStr, &gyms)) {
+    if (!FindServicesForPath(kGlobStrNoSession, kRegexStr, &gyms)) {
+      fprintf(stderr, "ERROR: Service does not exist\n");
+    }
+  }
   return gyms;
 }
 

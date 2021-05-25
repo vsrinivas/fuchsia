@@ -40,6 +40,12 @@ camera-gym must be started in manual mode. (Use "fx camera-gym --manual".)
 
 There are short scripts that run these configs + streams in cycles:
 
+### How to Run Manual Mode Without Session
+
+camera-gym can be started in manual mode without a session running:
+
+fx shell present_view fuchsia-pkg://fuchsia.com/camera-gym#meta/camera-gym-manual.cmx
+
 ### How to Run Manual Mode Scripts
 
 test_simple.sh
