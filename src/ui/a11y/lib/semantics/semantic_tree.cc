@@ -74,6 +74,10 @@ Node MergeNodes(const Node& old_node, Node new_node) {
     output.set_transform(new_node.transform());
   }
 
+  if (new_node.has_container_id()) {
+    output.set_container_id(new_node.container_id());
+  }
+
   return output;
 }
 

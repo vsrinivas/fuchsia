@@ -13,6 +13,7 @@
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/commands.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
@@ -314,27 +315,45 @@ TEST_F(SemanticTreeTest, PartialUpdateCopiesNewInfo) {
     updates.emplace_back(CreateTestNode(2u, "node2"));
     EXPECT_TRUE(tree_->Update(std::move(updates)));
   }
+
   EXPECT_EQ(tree_->Size(), 3u);
   SemanticTree::TreeUpdates updates;
   // Partial update of the root node with a new label.
-  // Please note that there are two partial updates on the root node, and the
+  // Please note that there are three partial updates on the root node, and the
   // partial update must always be applied on top of the existing one.
-  // Sets additional fields to the node.
   auto first_root_update = CreateTestNode(SemanticTree::kRootNodeId, "root", {1, 2, 10});
   first_root_update.set_role(fuchsia::accessibility::semantics::Role::UNKNOWN);
   first_root_update.mutable_states()->set_selected(true);
   updates.emplace_back(std::move(first_root_update));
-  auto second_root_update = CreateTestNode(SemanticTree::kRootNodeId, "updated label");
+
+  auto second_root_update = CreateTestNode(SemanticTree::kRootNodeId, "root");
   second_root_update.mutable_states()->set_selected(false);
+  second_root_update.set_actions({fuchsia::accessibility::semantics::Action::DEFAULT,
+                                  fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN});
   updates.emplace_back(std::move(second_root_update));
+
+  auto third_root_update = CreateTestNode(SemanticTree::kRootNodeId, "updated label");
+  fuchsia::ui::gfx::BoundingBox box;
+  box.max.z = 10.f;
+  third_root_update.set_location(box);
+  third_root_update.set_transform(
+      scenic::NewMatrix4Value({2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1}).value);
+  third_root_update.set_container_id(2u);
+  updates.emplace_back(std::move(third_root_update));
+
   updates.emplace_back(CreateTestNode(10, "node 10"));
 
   EXPECT_TRUE(tree_->Update(std::move(updates)));
   EXPECT_EQ(tree_->Size(), 4u);
+
+  // Verify that the contents of the root node represent a merge of the three
+  // updates.
   auto root = tree_->GetNode(SemanticTree::kRootNodeId);
   EXPECT_EQ(root->attributes().label(), "updated label");
-
-  // Check that prior data is still present.
+  EXPECT_EQ(root->actions().size(), 2u);
+  EXPECT_EQ(root->location().max.z, 10.f);
+  EXPECT_EQ(root->transform().matrix[0], 2);
+  EXPECT_EQ(root->container_id(), 2u);
   EXPECT_THAT(root->child_ids(), testing::ElementsAre(1, 2, 10));
   EXPECT_EQ(root->role(), fuchsia::accessibility::semantics::Role::UNKNOWN);
   EXPECT_FALSE(root->states().selected());
