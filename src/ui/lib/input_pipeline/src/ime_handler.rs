@@ -121,7 +121,7 @@ fn create_key_event(
             fidl_ui_input3::NonPrintableKey::Backspace,
         )),
         // Printable keys get code points as key meanings.
-        _ => keymaps::hid_usage_to_code_point(hid_usage, modifier_state)
+        _ => keymaps::US_QWERTY.hid_usage_to_code_point(hid_usage, modifier_state)
             .map(fidl_ui_input3::KeyMeaning::Codepoint)
             .map_err(|e| {
                 fx_log_err!(

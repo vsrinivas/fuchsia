@@ -16,11 +16,11 @@ use fuchsia_async::{self as fasync, Time, TimeoutExt};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Duration};
 use futures::{TryFutureExt, TryStreamExt};
-use input_synthesis::{keymaps::QWERTY_MAP, usages::input3_key_to_hid_usage};
+use input_synthesis::usages::input3_key_to_hid_usage;
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use std::{
     collections::{HashMap, HashSet},
-    fs::{self},
+    fs,
     hash::{Hash, Hasher},
     iter::FromIterator,
     path::{Path, PathBuf},
@@ -121,22 +121,6 @@ mod mouse_tests {
             device_id: device_id_tests::create_test_device_id(),
             event_type: EventType::Mouse(mouse_event),
         }
-    }
-}
-
-fn code_point_from_usage(hid_usage: usize, shift: bool) -> Option<u32> {
-    if hid_usage < QWERTY_MAP.len() {
-        if let Some(map_entry) = QWERTY_MAP[hid_usage] {
-            if shift {
-                map_entry.1.and_then(|shifted_char| Some(shifted_char as u32))
-            } else {
-                Some(map_entry.0 as u32)
-            }
-        } else {
-            None
-        }
-    } else {
-        None
     }
 }
 
@@ -669,8 +653,11 @@ impl InputReportHandler {
             modifiers: &Modifiers,
         ) -> Event {
             let hid_usage = input3_key_to_hid_usage(key);
-            let hid_usage_size = hid_usage as usize;
-            let code_point = code_point_from_usage(hid_usage_size, modifiers.shift);
+            let code_point = input_synthesis::keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
+                hid_usage,
+                modifiers.shift,
+                modifiers.caps_lock,
+            );
             let keyboard_event =
                 keyboard::Event { phase, code_point, hid_usage, modifiers: Modifiers::default() };
             Event {
@@ -1209,7 +1196,11 @@ impl ScenicInputHandler {
         let device_id = self.keyboard_device_id.clone();
         let hid_usage = input3_key_to_hid_usage(key);
         let modifiers = Modifiers::from_pressed_keys_3(&self.pressed_keys);
-        let code_point = code_point_from_usage(hid_usage as usize, modifiers.shift);
+        let code_point = input_synthesis::keymaps::US_QWERTY.hid_usage_to_code_point_for_mods(
+            hid_usage,
+            modifiers.shift,
+            modifiers.caps_lock,
+        );
         let keyboard_event = keyboard::Event { code_point, hid_usage, modifiers, phase };
 
         let event = Event {

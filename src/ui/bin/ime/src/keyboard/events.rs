@@ -178,7 +178,7 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
 
         let code_point = match event.code_point() {
             Some(code_point) => code_point,
-            None => keymaps::hid_usage_to_code_point(
+            None => keymaps::US_QWERTY.hid_usage_to_code_point(
                 hid_usage,
                 &keymaps::ModifierState {
                     caps_lock: caps_lock == ui_input::MODIFIER_CAPS_LOCK,

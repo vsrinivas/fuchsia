@@ -350,7 +350,7 @@ pub(crate) async fn text(
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
     let mut input_device = registry.add_keyboard_device()?;
-    let key_sequence = InverseKeymap::new(keymaps::QWERTY_MAP)
+    let key_sequence = InverseKeymap::new(&keymaps::US_QWERTY)
         .derive_key_sequence(&input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
 

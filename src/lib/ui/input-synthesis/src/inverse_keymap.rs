@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 use fidl_fuchsia_ui_input::KeyboardReport;
 
+use crate::keymaps;
 use crate::usages::Usages;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -50,17 +51,11 @@ impl InverseKeymap {
     ///
     /// ```
     /// # use crate::inverse_keymap::InverseKeymap;
-    /// let qwerty_map = &[
-    ///     // ...
-    ///     Some(('a', Some('A'))),
-    ///     Some(('b', Some('B'))),
-    ///     Some(('c', Some('C'))),
-    ///     // ...
-    /// ];
+    /// # use crate::keymaps::US_QWERTY;
     ///
-    /// let _keymap = InverseKeymap::new(&qwerty_map);
+    /// let _keymap = InverseKeymap::new(&US_QWERTY);
     /// ```
-    pub fn new(keymap: &[Option<(char, Option<char>)>]) -> Self {
+    pub fn new(keymap: &keymaps::Keymap<'_>) -> Self {
         let mut map = HashMap::new();
 
         // A real keymap is not invertible, so multiple keys can produce the same effect.  For
@@ -68,17 +63,18 @@ impl InverseKeymap {
         // the inverse keymap.  By iterating over the forward keymap in reverse, we give priority
         // to more "conventional" keys, i.e. a key `1` will always be used instead of numeric
         // keypad `1`.  A similar idea is applied in all match arms below.
-        for (usage, entry) in keymap.iter().enumerate().rev() {
+        for (usage, key_levels) in keymap.as_ref().iter().enumerate().rev() {
+            let entry = key_levels.as_ref().map(|kl| (kl.ch, kl.shift_ch));
             match entry {
                 Some((ch, Some(shift_ch))) if ch == shift_ch => {
-                    map.insert(*ch, KeyStroke { usage: usage as u32, shift: Shift::DontCare });
+                    map.insert(ch, KeyStroke { usage: usage as u32, shift: Shift::DontCare });
                 }
                 Some((ch, Some(shift_ch))) => {
-                    map.insert(*ch, KeyStroke { usage: usage as u32, shift: Shift::No });
-                    map.insert(*shift_ch, KeyStroke { usage: usage as u32, shift: Shift::Yes });
+                    map.insert(ch, KeyStroke { usage: usage as u32, shift: Shift::No });
+                    map.insert(shift_ch, KeyStroke { usage: usage as u32, shift: Shift::Yes });
                 }
                 Some((ch, None)) => {
-                    map.insert(*ch, KeyStroke { usage: usage as u32, shift: Shift::No });
+                    map.insert(ch, KeyStroke { usage: usage as u32, shift: Shift::No });
                 }
                 _ => (),
             }
@@ -167,8 +163,6 @@ impl InverseKeymap {
 
 #[cfg(test)]
 mod tests {
-    use crate::keymaps::QWERTY_MAP;
-
     use super::*;
 
     macro_rules! reports {
@@ -185,7 +179,7 @@ mod tests {
 
     #[test]
     fn shift_map() {
-        let keymap = InverseKeymap::new(QWERTY_MAP);
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
 
         assert_eq!(keymap.map[&'a'].shift, Shift::No);
         assert_eq!(keymap.map[&'A'].shift, Shift::Yes);
@@ -193,7 +187,7 @@ mod tests {
 
     #[test]
     fn lowercase() {
-        let keymap = InverseKeymap::new(QWERTY_MAP);
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
 
         assert_eq!(
             keymap.derive_key_sequence("lowercase"),
@@ -214,7 +208,7 @@ mod tests {
 
     #[test]
     fn numerics() {
-        let keymap = InverseKeymap::new(QWERTY_MAP);
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
 
         assert_eq!(
             keymap.derive_key_sequence("0123456789"),
@@ -236,7 +230,7 @@ mod tests {
 
     #[test]
     fn internet_text_entry() {
-        let keymap = InverseKeymap::new(QWERTY_MAP);
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
 
         assert_eq!(
             keymap.derive_key_sequence("http://127.0.0.1:8080"),
@@ -278,7 +272,7 @@ mod tests {
 
     #[test]
     fn sentence() {
-        let keymap = InverseKeymap::new(QWERTY_MAP);
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
 
         assert_eq!(
             keymap.derive_key_sequence("Hello, world!"),
@@ -307,7 +301,7 @@ mod tests {
 
     #[test]
     fn hold_shift() {
-        let keymap = InverseKeymap::new(QWERTY_MAP);
+        let keymap = InverseKeymap::new(&keymaps::US_QWERTY);
 
         assert_eq!(
             keymap.derive_key_sequence("ALL'S WELL!"),
