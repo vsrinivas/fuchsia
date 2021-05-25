@@ -14,6 +14,9 @@ group("performance_deps") {
   public_deps = [ "//src/experiences/bin/ermine_testserver" ]
 }
 
+_service_account =
+    "fuchsia-e2e-auth@fuchsia-cloud-api-for-test.iam.gserviceaccount.com"
+
 dart_test("experiences_ermine_session_shell_performance_test") {
   sources = [ "workstation_performance_navigation_test.dart" ]
 
@@ -37,11 +40,15 @@ dart_test("experiences_ermine_session_shell_performance_test") {
       dimensions = {
         device_type = "AEMU"
       }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
     },
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
       }
+      service_account = _service_account
+      tags = [ "e2e-fyi" ]
     },
   ]
 }
