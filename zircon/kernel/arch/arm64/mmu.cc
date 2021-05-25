@@ -50,6 +50,15 @@
 using LocalTraceDuration =
     TraceDuration<TraceEnabled<LOCAL_KTRACE_ENABLE>, KTRACE_GRP_VM, TraceContext::Thread>;
 
+// Use one of the ignored bits for a software simulated accessed flag for non-terminal entries.
+// TODO: Once the hardware setting of the terminal AF is supported usage of this for non-terminal AF
+// will have to become optional as we rely on the software terminal fault to set the non-terminal
+// bits.
+#define MMU_PTE_ATTR_RES_SOFTWARE_AF BM(55, 1, 1)
+// Ensure we picked a bit that is actually part of the software controlled bits.
+static_assert((MMU_PTE_ATTR_RES_SOFTWARE & MMU_PTE_ATTR_RES_SOFTWARE_AF) ==
+              MMU_PTE_ATTR_RES_SOFTWARE_AF);
+
 static_assert(((long)KERNEL_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(((long)KERNEL_ASPACE_BASE >> MMU_KERNEL_SIZE_SHIFT) == -1, "");
 static_assert(MMU_KERNEL_SIZE_SHIFT <= 48, "");
@@ -693,7 +702,11 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           // do this prior to writing the pte we cannot defer it using the consistency manager.
           __dmb(ARM_MB_ISHST);
 
-          pte = page_table_paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
+          // When new pages are mapped they they have their AF set, under the assumption they are
+          // being mapped due to being accessed, and this lets us avoid an accessed fault. Since new
+          // terminal mappings start with the AF flag set, we then also need to start non-terminal
+          // mappings as having the AF set.
+          pte = page_table_paddr | MMU_PTE_L012_DESCRIPTOR_TABLE | MMU_PTE_ATTR_RES_SOFTWARE_AF;
           update_pte(&page_table[index], pte);
           // We do not need to sync the walker, despite writing a new entry, as this is a
           // non-terminal entry and so is irrelevant to the walker anyway.
@@ -702,6 +715,11 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           break;
         }
         case MMU_PTE_L012_DESCRIPTOR_TABLE:
+          // Similar to creating a page table, if we end up mapping a page lower down in this
+          // hierarchy then it will start off as accessed. As such we set the accessed flag on the
+          // way down.
+          pte |= MMU_PTE_ATTR_RES_SOFTWARE_AF;
+          update_pte(&page_table[index], pte);
           page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
           LTRACEF("found page table %#" PRIxPTR "\n", page_table_paddr);
           next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
@@ -860,12 +878,17 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
       // if block simplifies the overall logic.
     } else if (index_shift > page_size_shift &&
                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
-      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-      volatile pte_t* next_page_table =
-          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
-      chunk_size = HarvestAccessedPageTable(entry_limit, vaddr, vaddr_rem, chunk_size,
-                                            index_shift - (page_size_shift - 3), page_size_shift,
-                                            next_page_table, accessed_callback, cm);
+      // Check for our emulated non-terminal AF so we can potentially skip the recursion.
+      // TODO: make this optional when hardware AF is supported (see todo on
+      // MMU_PTE_ATTR_RES_SOFTWARE_AF for details)
+      if (pte & MMU_PTE_ATTR_RES_SOFTWARE_AF) {
+        const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+        volatile pte_t* next_page_table =
+            static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+        chunk_size = HarvestAccessedPageTable(entry_limit, vaddr, vaddr_rem, chunk_size,
+                                              index_shift - (page_size_shift - 3), page_size_shift,
+                                              next_page_table, accessed_callback, cm);
+      }
     } else if (is_pte_valid(pte)) {
       if (pte & MMU_PTE_ATTR_AF) {
         const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
@@ -929,6 +952,9 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
       // block simplifies the overall logic.
     } else if (index_shift > page_size_shift &&
                (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
+      // Set the software bit we use to represent that this page table has been accessed.
+      pte |= MMU_PTE_ATTR_RES_SOFTWARE_AF;
+      update_pte(&page_table[index], pte);
       const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
@@ -956,6 +982,13 @@ bool ArmArchVmAspace::FreeUnaccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, 
       vaddr, vaddr_rel, size, index_shift, page_size_shift, page_table);
   bool have_accessed = false;
 
+  if (index_shift <= page_size_shift) {
+    // Do not bother processing the leaf nodes and just assume they have accessed pages. The only
+    // time this would not be true is in a race where the only accessed pages got manually
+    // unmapped.
+    return true;
+  }
+
   while (size) {
     const vaddr_t vaddr_rem = vaddr_rel & block_mask;
     const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
@@ -969,16 +1002,19 @@ bool ArmArchVmAspace::FreeUnaccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, 
       volatile pte_t* next_page_table =
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
-      // Recurse down and see if anything was accessed.
-      const bool accessed =
-          FreeUnaccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                                  page_size_shift, next_page_table, cm);
-      if (accessed) {
-        // We don't want to bail right now since there are other sub-hierarchies we might be able to
-        // reclaim, but we need to remember to tell our caller that we still have some accessed
-        // items.
-        have_accessed = true;
-      } else {
+      bool accessed = false;
+      // Check for our software emulated non-terminal access flag.
+      // TODD: make this optional when hardware AF is supported (see todo on
+      // MMU_PTE_ATTR_RES_SOFTWARE_AF for details)
+      if (pte & MMU_PTE_ATTR_RES_SOFTWARE_AF) {
+        // This entry was accessed in the past, but there might be parts of the sub hierarchy that
+        // can be freed. Doing so could cause the page table to become empty, so we may still need
+        // to free it.
+        accessed = FreeUnaccessedPageTable(vaddr, vaddr_rem, chunk_size,
+                                           index_shift - (page_size_shift - 3), page_size_shift,
+                                           next_page_table, cm);
+      }
+      if (!accessed) {
         UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
                        page_size_shift, next_page_table, cm);
         DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
@@ -988,10 +1024,18 @@ bool ArmArchVmAspace::FreeUnaccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, 
         // page to the PMM until after the tlb is flushed.
         cm.FlushEntry(vaddr, false);
         FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift, cm);
+      } else {
+        // The entry is staying around, so lets remove the accessed flag from it.
+        pte &= ~MMU_PTE_ATTR_RES_SOFTWARE_AF;
+        update_pte(&page_table[index], pte);
+        have_accessed = true;
       }
-    } else if (is_pte_valid(pte) && (pte & MMU_PTE_ATTR_AF)) {
-      // Found a recently accessed page, can immediately abort as we are processing a leaf node.
-      return true;
+    } else if (is_pte_valid(pte)) {
+      // As we avoid processing leaf page tables, this case only happens if we found a large page
+      // mapping. We do not support harvesting accessed bits of large pages, so we just assume this
+      // is accessed, but we want to continue processing to find any other page table hierarchies
+      // to process.
+      have_accessed = true;
     }
     vaddr += chunk_size;
     vaddr_rel += chunk_size;
