@@ -24,7 +24,7 @@ rustc_test("test") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust",
-    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
 

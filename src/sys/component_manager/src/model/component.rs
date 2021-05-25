@@ -612,25 +612,30 @@ impl ComponentInstance {
         Ok(())
     }
 
+    /// Connects `server_chan` to this instance's exposed directory if it has
+    /// been resolved. Component must be resolved or destroyed before using
+    /// this function, otherwise it will panic.
     pub async fn open_exposed(&self, server_chan: &mut zx::Channel) -> Result<(), ModelError> {
-        let execution = self.lock_execution().await;
-        if execution.runtime.is_none() {
-            return Err(RoutingError::source_instance_stopped(&self.abs_moniker).into());
+        let state = self.lock_state().await;
+        match &*state {
+            InstanceState::Resolved(resolved_instance_state) => {
+                let exposed_dir = &resolved_instance_state.exposed_dir;
+                // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always open
+                // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
+                // the same directory rights as the parent directory connection.
+                let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+                let server_chan = channel::take_channel(server_chan);
+                let server_end = ServerEnd::new(server_chan);
+                exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
+                Ok(())
+            }
+            InstanceState::Destroyed => {
+                Err(ModelError::instance_not_found(self.abs_moniker().clone()))
+            }
+            _ => {
+                panic!("Component must be resolved or destroyed before using this function")
+            }
         }
-        let exposed_dir = &execution
-            .runtime
-            .as_ref()
-            .expect("bind_instance_open_exposed: no runtime")
-            .exposed_dir;
-
-        // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always open
-        // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
-        // the same directory rights as the parent directory connection.
-        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
-        let server_chan = channel::take_channel(server_chan);
-        let server_end = ServerEnd::new(server_chan);
-        exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
-        Ok(())
     }
 
     /// Binds to the component instance in this instance, starting it if it's not already running.
@@ -817,10 +822,20 @@ pub struct ResolvedInstanceState {
     next_dynamic_instance_id: InstanceId,
     /// The set of named Environments defined by this instance.
     environments: HashMap<String, Arc<Environment>>,
+    /// Hosts a directory mapping the component's exposed capabilities.
+    exposed_dir: ExposedDir,
 }
 
 impl ResolvedInstanceState {
-    pub async fn new(component: &Arc<ComponentInstance>, decl: ComponentDecl) -> Self {
+    pub async fn new(
+        component: &Arc<ComponentInstance>,
+        decl: ComponentDecl,
+    ) -> Result<Self, ModelError> {
+        let exposed_dir = ExposedDir::new(
+            ExecutionScope::new(),
+            WeakComponentInstance::new(&component),
+            decl.clone(),
+        )?;
         let mut state = Self {
             execution_scope: ExecutionScope::new(),
             decl: decl.clone(),
@@ -828,9 +843,10 @@ impl ResolvedInstanceState {
             live_children: HashMap::new(),
             next_dynamic_instance_id: 1,
             environments: Self::instantiate_environments(component, &decl),
+            exposed_dir,
         };
         state.add_static_children(component, &decl).await;
-        state
+        Ok(state)
     }
 
     /// Returns a reference to the component's validated declaration.
@@ -912,6 +928,11 @@ impl ResolvedInstanceState {
     /// Returns a child `ComponentInstance`. The child may or may not be live.
     pub fn get_child(&self, cm: &ChildMoniker) -> Option<Arc<ComponentInstance>> {
         self.children.get(cm).map(|i| i.clone())
+    }
+
+    /// Returns the exposed directory bound to this instance.
+    pub fn get_exposed_dir(&self) -> &ExposedDir {
+        &self.exposed_dir
     }
 
     /// Extends an absolute moniker with the live child with partial moniker `p`. Returns `None`
@@ -1056,9 +1077,6 @@ pub struct Runtime {
     /// A client handle to the component instance's runtime directory hosted by the runner.
     pub runtime_dir: Option<DirectoryProxy>,
 
-    /// Hosts a directory mapping the component's exposed capabilities.
-    pub exposed_dir: ExposedDir,
-
     /// Used to interact with the Runner to influence the component's execution.
     pub controller: Option<ComponentController>,
 
@@ -1140,7 +1158,6 @@ impl Runtime {
         namespace: Option<IncomingNamespace>,
         outgoing_dir: Option<DirectoryProxy>,
         runtime_dir: Option<DirectoryProxy>,
-        exposed_dir: ExposedDir,
         controller: Option<fcrunner::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
         let timestamp = zx::Time::get_monotonic();
@@ -1148,7 +1165,6 @@ impl Runtime {
             namespace,
             outgoing_dir,
             runtime_dir,
-            exposed_dir,
             controller: controller.map(ComponentController::new),
             timestamp,
             exit_listener: None,
@@ -1312,7 +1328,7 @@ pub mod tests {
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
-                test_helpers::{self, component_decl_with_test_runner, ActionsTest, ComponentInfo},
+                test_helpers::{component_decl_with_test_runner, ActionsTest, ComponentInfo},
             },
         },
         cm_rust::EventMode,
@@ -1771,47 +1787,6 @@ pub mod tests {
             })),
             exec.run_until_stalled(&mut stop_fut)
         );
-    }
-
-    // The "exposed dir" of a component is hosted by component manager on behalf of
-    // a running component. This test makes sure that when a component is stopped,
-    // the exposed dir is no longer being served.
-    #[fuchsia::test]
-    async fn stop_component_closes_exposed_dir() {
-        let test = RoutingTest::new(
-            "root",
-            vec![(
-                "root",
-                ComponentDeclBuilder::new()
-                    .protocol(cm_rust::ProtocolDecl {
-                        name: "foo".into(),
-                        source_path: "/svc/foo".try_into().unwrap(),
-                    })
-                    .expose(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-                        source: cm_rust::ExposeSource::Self_,
-                        source_name: "foo".try_into().expect("bad cap path"),
-                        target: cm_rust::ExposeTarget::Parent,
-                        target_name: "foo".try_into().expect("bad cap path"),
-                    }))
-                    .build(),
-            )],
-        )
-        .await;
-        let component =
-            test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
-        let (node_proxy, server_end) =
-            fidl::endpoints::create_proxy::<fio::NodeMarker>().expect("failed to create endpoints");
-        let mut server_end = server_end.into_channel();
-        component.open_exposed(&mut server_end).await.expect("failed to open exposed dir");
-
-        // Ensure that the directory is open to begin with.
-        let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
-        assert!(test_helpers::dir_contains(&proxy, ".", "foo").await);
-
-        component.stop_instance(false).await.expect("failed to stop instance");
-
-        // The directory should have received a PEER_CLOSED signal.
-        proxy.on_closed().await.expect("failed waiting for channel to close");
     }
 
     #[fuchsia::test]

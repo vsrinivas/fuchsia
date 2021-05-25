@@ -15,7 +15,7 @@ const TEST_CONFIG_PATH: &str = "/pkg/data/cm_config";
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_restricted_capability_allowed() -> Result<(), Error> {
-    let (_test, realm) =
+    let (_test, realm, _event_stream) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
     let child_name = "policy_allowed";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
@@ -28,7 +28,7 @@ async fn verify_restricted_capability_allowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_restrited_capability_disallowed() -> Result<(), Error> {
-    let (_test, realm) =
+    let (_test, realm, _event_stream) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
     let child_name = "policy_denied";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
@@ -41,7 +41,7 @@ async fn verify_restrited_capability_disallowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_unrestricted_capability_allowed() -> Result<(), Error> {
-    let (_test, realm) =
+    let (_test, realm, _event_stream) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
     let child_name = "policy_not_violated";
     let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");

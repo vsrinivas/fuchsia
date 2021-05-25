@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{events::*, matcher::*},
     diagnostics_data::{Data, Logs, Severity},
     diagnostics_reader::{ArchiveReader, SubscriptionResultsStream},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_async::{OnSignals, Task},
-    fuchsia_zircon as zx,
+    fuchsia_async::Task,
+    fuchsia_component::client,
     futures::StreamExt,
 };
 
@@ -35,14 +36,25 @@ struct MessageAssertion {
 // through argv once ArchiveAccesor is exposed from Test Runner.
 #[fuchsia::test]
 async fn test_components_logs_to_stdout() {
-    let realm = fuchsia_component::client::realm().unwrap();
+    let realm = client::realm().expect("failed to connect to fuchsia.sys2.Realm");
+
+    let event_source = EventSource::from_proxy(
+        client::connect_to_protocol::<fsys::EventSourceMarker>()
+            .expect("failed to connect to fuchsia.sys2.EventSource"),
+    );
+
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
+        .await
+        .expect("failed to create event stream");
 
     let mut subscription = launch_embedded_archivist().await;
 
     // Doing this in loop as opposed to separate test cases ensures linear
     // execution for Archivist's log streams.
     for (component, message_assertions) in get_all_test_components().iter() {
-        start_child_component_and_wait_for_exit(&realm, &component).await;
+        start_child_component(&realm, &component).await;
+        wait_for_stop(&mut event_stream, &component).await;
 
         // Golang prints messages to stdout and stderr when it finds it's missing any of the stdio
         // handles. Ignore messages that come from the runtime so we can match on our expectations.
@@ -133,7 +145,7 @@ async fn launch_embedded_archivist() -> SubscriptionResultsStream<Logs> {
     subscription
 }
 
-async fn start_child_component_and_wait_for_exit(realm: &fsys::RealmProxy, component: &Component) {
+async fn start_child_component(realm: &fsys::RealmProxy, component: &Component) {
     let mut collection_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_owned() };
     let child_decl = fsys::ChildDecl {
         name: Some(component.moniker.to_owned()),
@@ -154,13 +166,21 @@ async fn start_child_component_and_wait_for_exit(realm: &fsys::RealmProxy, compo
         collection: Some(COLLECTION_NAME.to_owned()),
     };
 
-    let (client_end, server_end) = create_endpoints::<DirectoryMarker>().unwrap();
+    let (_, server_end) = create_endpoints::<DirectoryMarker>().unwrap();
     realm
         .bind_child(&mut child_ref, server_end)
         .await
         .expect("failed to make FIDL call")
         .expect("failed to bind child");
-    OnSignals::new(&client_end, zx::Signals::CHANNEL_PEER_CLOSED).await.unwrap();
+}
+
+async fn wait_for_stop(event_stream: &mut EventStream, component: &Component) {
+    EventMatcher::ok()
+        .stop(Some(ExitStatusMatcher::Clean))
+        .moniker(component.moniker.to_owned())
+        .wait::<Stopped>(event_stream)
+        .await
+        .expect("failed to observe events");
 }
 
 #[track_caller]

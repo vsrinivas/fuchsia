@@ -21,10 +21,10 @@ async fn main() {
     let mut child_ref = fsys::ChildRef { name: "trigger".to_string(), collection: None };
     let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
     realm
-        .bind_child(&mut child_ref, server_end)
+        .open_exposed_dir(&mut child_ref, server_end)
         .await
-        .expect(&format!("bind_child failed"))
-        .expect(&format!("failed to bind to child"));
+        .expect(&format!("open_exposed_dir failed"))
+        .expect(&format!("failed to open exposed dir of child"));
     let trigger = client::connect_to_protocol_at_dir_root::<ftest::TriggerMarker>(&exposed_dir)
         .expect("failed to open trigger service");
     info!("Invoking trigger");

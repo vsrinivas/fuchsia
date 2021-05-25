@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Error},
+    component_events::{events::*, matcher::*},
     fidl::endpoints::Proxy,
     fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
@@ -21,7 +22,7 @@ const COMPONENT_MANAGER_DEATH_TIMEOUT: i64 = 5;
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
-    let (mut test, realm) =
+    let (mut test, realm, _event) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_not_requested";
@@ -58,7 +59,7 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
-    let (mut test, realm) =
+    let (mut test, realm, _event_stream) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_allowed";
@@ -97,7 +98,7 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_allowed() -> Result<(), Error> {
-    let (mut test, realm) =
+    let (mut test, realm, _event_stream) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
     let child_name = "policy_allowed";
@@ -123,19 +124,15 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_denied() -> Result<(), Error> {
-    let (_test, realm) =
+    let (_test, realm, mut event_stream) =
         start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL, TEST_CONFIG_PATH).await?;
 
-    // This security policy is enforced inside the ELF runner. The component will fail to launch
-    // because of the denial, but BindChild will return success because the runtime successfully
-    // asks the runner to start the component. We watch for the exposed_dir to get dropped to
-    // detect the launch failure.
-    // N.B. We could alternatively look for a Started and then a Stopped event to verify that the
-    // component failed to launch, but fxbug.dev/53414 prevented that at the time this was written.
     let child_name = "policy_denied";
-    let exposed_dir = bind_child(&realm, child_name).await.expect("bind should succeed");
+    let _ = bind_child(&realm, child_name).await.expect("bind should succeed");
 
-    exposed_dir.on_closed().await.expect("failed to wait for exposed_dir PEER_CLOSED");
+    let mut matcher = EventMatcher::ok().moniker(format!("./{}:0", child_name));
+    matcher.expect_match::<Started>(&mut event_stream).await;
+    matcher.expect_match::<Stopped>(&mut event_stream).await;
 
     Ok(())
 }

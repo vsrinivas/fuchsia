@@ -42,6 +42,28 @@ protocol Realm {
     BindChild(ChildRef child,
               request<fuchsia.io.Directory> exposed_dir) -> () error fuchsia.component.Error;
 
+    /// Opens the exposed directory of a child component instance. When this
+    /// function successfully returns, `exposed_dir` is bound to a directory
+    /// that contains the capabilities which the child exposed to its realm
+    /// via `ComponentDecl.exposes` (specified via "expose" declarations in
+    /// the component's manifest). The child component will not start as a
+    /// result of this call. Instead, starting will occur iff the parent binds
+    /// to one of the capabilities contained within `exposed_dir`.
+    ///
+    /// `exposed_dir` is open as long as `child` exists.
+    ///
+    /// NOTE: `OpenExposedDir` does not support pipelining with `CreateChild`.
+    /// If `OpenExposedDir` is called on an instance before `CreateChild`
+    /// successfully returns, it may return `INSTANCE_NOT_FOUND`.
+    ///
+    /// Errors:
+    /// - `INVALID_ARGUMENTS`: `child` is not a valid child reference.
+    /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
+    /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
+    OpenExposedDir(ChildRef child,
+                   request<fuchsia.io.Directory> exposed_dir) -> () error fuchsia.component.Error;
+
     /// Creates a child component instance dynamically. When this function
     /// returns successfully, the instance exists, but it may not be running.
     ///

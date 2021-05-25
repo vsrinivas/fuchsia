@@ -10,7 +10,6 @@ use {
             WeakComponentInstance,
         },
         error::ModelError,
-        exposed_dir::ExposedDir,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
         namespace::IncomingNamespace,
         runner::Runner,
@@ -24,7 +23,6 @@ use {
     log::*,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
-    vfs::execution_scope::ExecutionScope,
 };
 
 /// Starts a component instance.
@@ -185,7 +183,6 @@ async fn make_execution_runtime(
     ModelError,
 > {
     // Create incoming/outgoing directories, and populate them.
-    let exposed_dir = ExposedDir::new(ExecutionScope::new(), component.clone(), decl.clone())?;
     let (outgoing_dir_client, outgoing_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let (runtime_dir_client, runtime_dir_server) =
@@ -210,7 +207,6 @@ async fn make_execution_runtime(
         Some(namespace),
         outgoing_dir_client,
         runtime_dir_client,
-        exposed_dir,
         Some(controller),
     )?;
     let start_info = fcrunner::ComponentStartInfo {

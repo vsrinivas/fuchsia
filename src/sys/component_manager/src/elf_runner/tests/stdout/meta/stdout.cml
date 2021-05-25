@@ -18,6 +18,11 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: "stopped",
+            from: "framework",
+        },
     ],
     offer: [
         {

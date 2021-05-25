@@ -66,6 +66,9 @@ class FakeRealm : public fidl::WireServer<fuchsia_sys2::Realm> {
   void ListChildren(ListChildrenRequestView request,
                     ListChildrenCompleter::Sync& completer) override {}
 
+  void OpenExposedDir(OpenExposedDirRequestView request,
+                      OpenExposedDirCompleter::Sync& completer) override {}
+
  private:
   fidl::ServerEnd<fuchsia_io::Directory> exposed_dir_;
 };

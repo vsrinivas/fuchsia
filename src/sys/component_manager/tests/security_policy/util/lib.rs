@@ -22,7 +22,7 @@ pub async fn start_policy_test(
     component_manager_url: &str,
     root_component_url: &str,
     config_path: &str,
-) -> Result<(OpaqueTest, fsys::RealmProxy), Error> {
+) -> Result<(OpaqueTest, fsys::RealmProxy, EventStream), Error> {
     let test = OpaqueTestBuilder::new(root_component_url)
         .component_manager_url(component_manager_url)
         .config(config_path)
@@ -30,7 +30,10 @@ pub async fn start_policy_test(
         .await?;
     let event_source = test.connect_to_event_source().await?;
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Stopped::NAME],
+            EventMode::Async,
+        )])
         .await?;
     event_source.start_component_tree().await;
 
@@ -40,7 +43,7 @@ pub async fn start_policy_test(
 
     let realm = connect_to_root_service::<fsys::RealmMarker>(&test)
         .context("failed to connect to root sys2.Realm")?;
-    Ok((test, realm))
+    Ok((test, realm, event_stream))
 }
 
 pub async fn bind_child(

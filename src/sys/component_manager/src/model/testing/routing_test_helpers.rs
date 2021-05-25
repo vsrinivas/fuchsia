@@ -7,10 +7,9 @@ use {
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         config::{CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
-        model::component::ComponentInstance,
         model::{
             binding::Binder,
-            component::BindReason,
+            component::{BindReason, ComponentInstance, InstanceState},
             error::ModelError,
             hooks::HooksRegistration,
             model::Model,
@@ -1390,12 +1389,19 @@ pub mod capability_util {
             .await
             .expect(&format!("component not found {}", abs_moniker));
         model.bind(abs_moniker, &BindReason::Eager).await.expect("failed to bind instance");
-        let execution = component.lock_execution().await;
-        let runtime = execution.runtime.as_ref().expect("not resolved");
-        let flags = OPEN_RIGHT_READABLE;
-
-        let vns_path = to_fvfs_path(path);
-        runtime.exposed_dir.open(flags, open_mode, vns_path, server_end);
+        let state = component.lock_state().await;
+        match &*state {
+            InstanceState::Resolved(resolved_instance_state) => {
+                let flags = OPEN_RIGHT_READABLE;
+                let vns_path = to_fvfs_path(path);
+                resolved_instance_state
+                    .get_exposed_dir()
+                    .open(flags, open_mode, vns_path, server_end);
+            }
+            _ => {
+                panic!("Attempted to open exposed dir of unresolved component: {}", abs_moniker);
+            }
+        }
     }
 
     // This function should reproduce the logic of `crate::storage::generate_storage_path`

@@ -8,7 +8,7 @@ use {
         channel,
         config::RuntimeConfig,
         model::{
-            component::{BindReason, WeakComponentInstance},
+            component::{BindReason, ComponentInstance, WeakComponentInstance},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::Model,
@@ -145,6 +145,10 @@ impl RealmCapabilityHost {
                 .await;
                 responder.send(&mut res)?;
             }
+            fsys::RealmRequest::OpenExposedDir { responder, child, exposed_dir } => {
+                let mut res = Self::open_exposed_dir(component, child, exposed_dir).await;
+                responder.send(&mut res)?;
+            }
         }
         Ok(())
     }
@@ -176,65 +180,81 @@ impl RealmCapabilityHost {
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fcomponent::Error> {
-        let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        let child = {
-            let state = component.lock_resolved_state().await.map_err(|e| match e {
-                ComponentInstanceError::ResolveFailed { moniker, err, .. } => {
-                    debug!("failed to resolve instance with moniker {}: {}", moniker, err);
-                    fcomponent::Error::InstanceCannotResolve
-                }
-                e => {
-                    error!("failed to resolve InstanceState: {}", e);
-                    fcomponent::Error::Internal
-                }
-            })?;
-            state.get_live_child(&partial_moniker).map(|r| r.clone())
-        };
-        let mut exposed_dir = exposed_dir.into_channel();
-        if let Some(child) = child {
-            let res = child
-                .bind(&BindReason::BindChild { parent: component.abs_moniker.clone() })
-                .await
-                .map_err(|e| match e {
-                    ModelError::ResolverError { err, .. } => {
-                        debug!("failed to resolve child: {}", err);
-                        fcomponent::Error::InstanceCannotResolve
+        match Self::get_child(component, child.clone()).await? {
+            Some(child) => {
+                let mut exposed_dir = exposed_dir.into_channel();
+                let res = child
+                    .bind(&BindReason::BindChild { parent: component.moniker.clone() })
+                    .await
+                    .map_err(|e| match e {
+                        ModelError::ResolverError { err, .. } => {
+                            debug!("failed to resolve child: {}", err);
+                            fcomponent::Error::InstanceCannotResolve
+                        }
+                        ModelError::RunnerError { err } => {
+                            debug!("failed to start child: {}", err);
+                            fcomponent::Error::InstanceCannotStart
+                        }
+                        e => {
+                            error!("bind() failed: {}", e);
+                            fcomponent::Error::Internal
+                        }
+                    })?
+                    .open_exposed(&mut exposed_dir)
+                    .await;
+                match res {
+                    Ok(()) => (),
+                    Err(ModelError::RoutingError {
+                        err: RoutingError::SourceInstanceStopped { .. },
+                    }) => {
+                        // TODO(fxbug.dev/54109): The runner may have decided to not run the component. Perhaps a
+                        // security policy prevented it, or maybe there was some other issue.
+                        // Unfortunately these failed runs may or may not have occurred by this point,
+                        // but we want to be consistent about how bind_child responds to these errors.
+                        // Since this call succeeds if the runner hasn't yet decided to not run the
+                        // component, we need to also succeed if the runner has already decided to not
+                        // run the component, because otherwise the result of this call will be
+                        // inconsistent.
+                        ()
                     }
-                    ModelError::RunnerError { err } => {
-                        debug!("failed to start child: {}", err);
-                        fcomponent::Error::InstanceCannotStart
+                    Err(e) => {
+                        debug!("open_exposed() failed: {}", e);
+                        return Err(fcomponent::Error::Internal);
                     }
-                    e => {
-                        error!("bind() failed: {}", e);
-                        fcomponent::Error::Internal
-                    }
-                })?
-                .open_exposed(&mut exposed_dir)
-                .await;
-            match res {
-                Ok(()) => (),
-                Err(ModelError::RoutingError {
-                    err: RoutingError::SourceInstanceStopped { .. },
-                }) => {
-                    // TODO(fxbug.dev/54109): The runner may have decided to not run the component. Perhaps a
-                    // security policy prevented it, or maybe there was some other issue.
-                    // Unfortunately these failed runs may or may not have occurred by this point,
-                    // but we want to be consistent about how bind_child responds to these errors.
-                    // Since this call succeeds if the runner hasn't yet decided to not run the
-                    // component, we need to also succeed if the runner has already decided to not
-                    // run the component, because otherwise the result of this call will be
-                    // inconsistent.
-                    ()
-                }
-                Err(e) => {
-                    debug!("open_exposed() failed: {}", e);
-                    return Err(fcomponent::Error::Internal);
                 }
             }
-        } else {
-            debug!("bind_child() failed: instance not found {:?}", child);
-            return Err(fcomponent::Error::InstanceNotFound);
+            None => {
+                debug!("bind_child() failed: instance not found {:?}", child);
+                return Err(fcomponent::Error::InstanceNotFound);
+            }
+        }
+        Ok(())
+    }
+
+    async fn open_exposed_dir(
+        component: &WeakComponentInstance,
+        child: fsys::ChildRef,
+        exposed_dir: ServerEnd<DirectoryMarker>,
+    ) -> Result<(), fcomponent::Error> {
+        match Self::get_child(component, child.clone()).await? {
+            Some(child) => {
+                // Resolve child in order to instantiate exposed_dir.
+                let _ = child.resolve().await.map_err(|_| {
+                    return fcomponent::Error::InstanceCannotResolve;
+                })?;
+                let mut exposed_dir = exposed_dir.into_channel();
+                let () = child.open_exposed(&mut exposed_dir).await.map_err(|e| match e {
+                    ModelError::InstanceShutDown { .. } => fcomponent::Error::InstanceDied,
+                    _ => {
+                        debug!("open_exposed() failed: {}", e);
+                        fcomponent::Error::Internal
+                    }
+                })?;
+            }
+            None => {
+                debug!("open_exposed_dir() failed: instance not found {:?}", child);
+                return Err(fcomponent::Error::InstanceNotFound);
+            }
         }
         Ok(())
     }
@@ -349,6 +369,25 @@ impl RealmCapabilityHost {
             Ok(capability_provider)
         }
     }
+
+    async fn get_child(
+        parent: &WeakComponentInstance,
+        child: fsys::ChildRef,
+    ) -> Result<Option<Arc<ComponentInstance>>, fcomponent::Error> {
+        let parent = parent.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
+        let state = parent.lock_resolved_state().await.map_err(|e| match e {
+            ComponentInstanceError::ResolveFailed { moniker, err, .. } => {
+                debug!("failed to resolve instance with moniker {}: {}", moniker, err);
+                return fcomponent::Error::InstanceCannotResolve;
+            }
+            e => {
+                error!("failed to resolve InstanceState: {}", e);
+                return fcomponent::Error::Internal;
+            }
+        })?;
+        let partial_moniker = PartialMoniker::new(child.name, child.collection);
+        Ok(state.get_live_child(&partial_moniker).map(|r| r.clone()))
+    }
 }
 
 #[async_trait]
@@ -424,6 +463,7 @@ mod tests {
             components: Vec<(&'static str, ComponentDecl)>,
             component_moniker: AbsoluteMoniker,
             events: Vec<CapabilityName>,
+            event_mode: EventMode,
         ) -> Self {
             // Init model.
             let config = RuntimeConfig { list_children_batch_size: 2, ..Default::default() };
@@ -452,7 +492,7 @@ mod tests {
                     .subscribe(
                         events
                             .into_iter()
-                            .map(|event| EventSubscription::new(event, EventMode::Sync))
+                            .map(|event| EventSubscription::new(event, event_mode.clone()))
                             .collect(),
                     )
                     .await
@@ -516,6 +556,7 @@ mod tests {
             ],
             vec!["system:0"].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
 
@@ -557,6 +598,7 @@ mod tests {
             ],
             vec!["system:0"].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
 
@@ -690,6 +732,7 @@ mod tests {
             ],
             vec!["system:0"].into(),
             events,
+            EventMode::Sync,
         )
         .await;
 
@@ -808,6 +851,7 @@ mod tests {
             ],
             vec!["system:0"].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
 
@@ -880,6 +924,7 @@ mod tests {
             ],
             vec![].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
         let mut out_dir = OutDir::new();
@@ -933,6 +978,7 @@ mod tests {
             ],
             vec![].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
         test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
@@ -982,6 +1028,7 @@ mod tests {
             ],
             vec![].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
         test.mock_runner.cause_failure("unrunnable");
@@ -1038,6 +1085,7 @@ mod tests {
             ],
             vec![].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
         test.mock_runner.cause_failure("unrunnable");
@@ -1079,6 +1127,7 @@ mod tests {
             ],
             vec![].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
 
@@ -1134,6 +1183,7 @@ mod tests {
             vec![("root", ComponentDeclBuilder::new().add_transient_collection("coll").build())],
             vec![].into(),
             vec![],
+            EventMode::Sync,
         )
         .await;
 
@@ -1158,6 +1208,154 @@ mod tests {
             let err = test
                 .realm_proxy
                 .list_children(&mut collection_ref, server_end)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InstanceDied);
+        }
+    }
+
+    #[fuchsia::test]
+    async fn open_exposed_dir() {
+        let events = vec![EventType::Resolved.into(), EventType::Started.into()];
+        let mut test = RealmCapabilityTest::new(
+            vec![
+                ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
+                (
+                    "system",
+                    ComponentDeclBuilder::new()
+                        .protocol(ProtocolDeclBuilder::new("foo").path("/svc/foo").build())
+                        .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                            source: ExposeSource::Self_,
+                            source_name: "foo".into(),
+                            target_name: "hippo".into(),
+                            target: ExposeTarget::Parent,
+                        }))
+                        .build(),
+                ),
+            ],
+            vec![].into(),
+            events,
+            EventMode::Async,
+        )
+        .await;
+        let mut out_dir = OutDir::new();
+        out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
+        test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
+
+        // Open exposed directory of child.
+        let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
+        let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
+        let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
+
+        // Assert that child was resolved.
+        let stream = test.event_stream().expect("event_stream empty");
+        let event = stream.wait_until(EventType::Resolved, vec!["system:0"].into()).await;
+        assert!(event.is_some());
+
+        // Assert that event stream doesn't have any outstanding messages.
+        // This ensures that EventType::Started for "system:0" has not been
+        // registered.
+        let event = stream.wait_until(EventType::Started, vec!["system:0"].into()).now_or_never();
+        assert!(event.is_none());
+
+        // Now that it was asserted that "system:0" has yet to start,
+        // assert that it starts after making connection below.
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &PathBuf::from("hippo"),
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open hippo service");
+        let event = stream.wait_until(EventType::Started, vec!["system:0"].into()).await;
+        assert!(event.is_some());
+        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+        let res = echo_proxy.echo_string(Some("hippos")).await;
+        assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
+
+        // Verify topology matches expectations.
+        let expected_urls = &["test:///root_resolved", "test:///system_resolved"];
+        test.mock_runner.wait_for_urls(expected_urls).await;
+        assert_eq!("(system)", test.hook.print());
+    }
+
+    #[fuchsia::test]
+    async fn open_exposed_dir_errors() {
+        let mut test = RealmCapabilityTest::new(
+            vec![
+                (
+                    "root",
+                    ComponentDeclBuilder::new()
+                        .add_lazy_child("system")
+                        .add_lazy_child("unresolvable")
+                        .add_lazy_child("unrunnable")
+                        .build(),
+                ),
+                ("system", component_decl_with_test_runner()),
+                ("unrunnable", component_decl_with_test_runner()),
+            ],
+            vec![].into(),
+            vec![],
+            EventMode::Sync,
+        )
+        .await;
+        test.mock_runner.cause_failure("unrunnable");
+
+        // Instance not found.
+        {
+            let mut child_ref = fsys::ChildRef { name: "missing".to_string(), collection: None };
+            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let err = test
+                .realm_proxy
+                .open_exposed_dir(&mut child_ref, server_end)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InstanceNotFound);
+        }
+
+        // Instance cannot resolve.
+        {
+            let mut child_ref =
+                fsys::ChildRef { name: "unresolvable".to_string(), collection: None };
+            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let err = test
+                .realm_proxy
+                .open_exposed_dir(&mut child_ref, server_end)
+                .await
+                .expect("fidl call failed")
+                .expect_err("unexpected success");
+            assert_eq!(err, fcomponent::Error::InstanceCannotResolve);
+        }
+
+        // Instance can't run.
+        {
+            let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
+            let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
+            let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
+            let node_proxy = io_util::open_node(
+                &dir_proxy,
+                &PathBuf::from("hippo"),
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_SERVICE,
+            )
+            .expect("failed to open hippo service");
+            let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+            let res = echo_proxy.echo_string(Some("hippos")).await;
+            assert!(res.is_err());
+        }
+
+        // Instance died.
+        {
+            test.drop_component();
+            let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
+            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+            let err = test
+                .realm_proxy
+                .open_exposed_dir(&mut child_ref, server_end)
                 .await
                 .expect("fidl call failed")
                 .expect_err("unexpected success");
