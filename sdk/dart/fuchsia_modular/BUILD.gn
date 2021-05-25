@@ -93,17 +93,10 @@ dart_test_component("integration-tests-component") {
   sources = [
     "internal/component_context_integ_test.dart",
     "lifecycle/internal/lifecycle_impl_test.dart",
-
-    # TODO(fxb/70818): Add this source back after fuchsia_modular_testing is migrated to fuchisa.git.
-    # "service_connection/agent_service_connection_integ_test.dart",
   ]
 
   deps = [
     ":fuchsia_modular",
-
-    # TODO(fxb/70818): Add these dependencies back after fuchsia_modular_testing is migrated to fuchisa.git.
-    # "//sdk/dart/fuchsia_modular_testing",
-    # "//sdk/dart/fuchsia_modular_testing:test_fidl",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.modular",
