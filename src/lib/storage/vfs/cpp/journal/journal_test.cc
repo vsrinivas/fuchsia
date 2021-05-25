@@ -13,6 +13,7 @@
 #include <array>
 #include <memory>
 #include <optional>
+#include <thread>
 #include <vector>
 
 #include <block-client/cpp/fake-device.h>

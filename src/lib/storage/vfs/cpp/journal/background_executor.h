@@ -7,12 +7,12 @@
 
 #include <lib/fit/promise.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
-#include <thread>
 
 namespace fs {
 
@@ -27,7 +27,7 @@ class BackgroundExecutor final : public fit::executor {
   BackgroundExecutor(BackgroundExecutor&&) = delete;
   BackgroundExecutor& operator=(const BackgroundExecutor&) = delete;
   BackgroundExecutor& operator=(BackgroundExecutor&&) = delete;
-  ~BackgroundExecutor();
+  ~BackgroundExecutor() override;
 
   // Schedules a unit of work to be processed in a background thread.
   //
@@ -41,7 +41,7 @@ class BackgroundExecutor final : public fit::executor {
   // Executor which dispatches all scheduled tasks.
   fit::single_threaded_executor executor_;
   // Thread which periodically updates all pending data allocations.
-  std::thread thrd_;
+  thrd_t thrd_;
 
   // Protects access to the "terminate_" task.
   //

@@ -41,6 +41,8 @@ static_library("journal") {
     "//zircon/third_party/ulib/cksum",
   ]
 
+  configs += [ "//build/config:all_source" ]
+
   if (is_fuchsia) {
     sources += [
       "background_executor.cc",
