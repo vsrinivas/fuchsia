@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 34;
+constexpr uint32_t kProtocolVersion = 35;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -473,6 +473,10 @@ struct NotifyException {
   // This vector will not contain the thread that was stopped (the "thread" member above), and it
   // will not contain threads that were already stopped at the time of the exception.
   std::vector<ThreadRecord> other_affected_threads;
+
+  // If automation was requested, then this contains the memory requested
+  // Otherwise this is just an empty vector.
+  std::vector<MemoryBlock> memory_blocks;
 };
 
 // Indicates the loaded modules may have changed. The entire list of current

@@ -372,6 +372,11 @@ struct BreakpointSettings {
   // If any process specifies a nonzero thread_koid, it must be the only process (a breakpoint can
   // apply either to all threads in a set of processes, or exactly one thread globally).
   std::vector<ProcessBreakpointSettings> locations;
+
+  // Handles the automatic collection of memory if it's requested.
+  bool has_automation = false;
+
+  std::vector<debug_ipc::AutomationInstruction> instructions;
 };
 
 struct BreakpointStats {

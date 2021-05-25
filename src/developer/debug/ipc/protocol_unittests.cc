@@ -474,6 +474,28 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   initial.breakpoint.name = "Some name";
   initial.breakpoint.stop = debug_ipc::Stop::kProcess;
   initial.breakpoint.locations.resize(1);
+  initial.breakpoint.has_automation = true;
+
+  initial.breakpoint.instructions.emplace_back();
+
+  AutomationOperand address;
+  AutomationOperand length;
+  AutomationOperand struct_pointer_offset;
+  AutomationOperand struct_length_offset;
+  uint32_t item_size = 32;
+  std::vector<AutomationCondition> conditions;
+  address.InitRegister(RegisterID::kARMv8_x0);
+  length.InitRegisterTimesConstant(RegisterID::kARMv8_x1, 4);
+  struct_pointer_offset.InitConstant(8);
+  struct_length_offset.InitConstant(16);
+
+  conditions.emplace_back();
+  conditions.emplace_back();
+  conditions[0].InitEquals(address, 0xdeadbeef);
+  conditions[1].InitMaskAndEquals(length, 0, 1);
+
+  initial.breakpoint.instructions[0].InitLoadLoopMemory(
+      address, length, struct_pointer_offset, struct_length_offset, item_size, conditions);
 
   ProcessBreakpointSettings& pr_settings = initial.breakpoint.locations.back();
   pr_settings.id = {.process = 1234, .thread = 14612};
@@ -487,12 +509,75 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   EXPECT_EQ(initial.breakpoint.type, second.breakpoint.type);
   EXPECT_EQ(initial.breakpoint.name, second.breakpoint.name);
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
+  EXPECT_EQ(initial.breakpoint.has_automation, second.breakpoint.has_automation);
   ASSERT_EQ(initial.breakpoint.locations.size(), second.breakpoint.locations.size());
 
   EXPECT_EQ(initial.breakpoint.locations[0].id, second.breakpoint.locations[0].id);
   EXPECT_EQ(initial.breakpoint.locations[0].address, second.breakpoint.locations[0].address);
   EXPECT_EQ(initial.breakpoint.locations[0].address_range,
             second.breakpoint.locations[0].address_range);
+
+  ASSERT_EQ(initial.breakpoint.instructions.size(), second.breakpoint.instructions.size());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].kind(), second.breakpoint.instructions[0].kind());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].address().kind(),
+            second.breakpoint.instructions[0].address().kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].address().index(),
+            second.breakpoint.instructions[0].address().index());
+  EXPECT_EQ(initial.breakpoint.instructions[0].address().value(),
+            second.breakpoint.instructions[0].address().value());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].length().kind(),
+            second.breakpoint.instructions[0].length().kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].length().index(),
+            second.breakpoint.instructions[0].length().index());
+  EXPECT_EQ(initial.breakpoint.instructions[0].length().value(),
+            second.breakpoint.instructions[0].length().value());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].extra_1().kind(),
+            second.breakpoint.instructions[0].extra_1().kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].extra_1().index(),
+            second.breakpoint.instructions[0].extra_1().index());
+  EXPECT_EQ(initial.breakpoint.instructions[0].extra_1().value(),
+            second.breakpoint.instructions[0].extra_1().value());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].extra_2().kind(),
+            second.breakpoint.instructions[0].extra_2().kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].extra_2().index(),
+            second.breakpoint.instructions[0].extra_2().index());
+  EXPECT_EQ(initial.breakpoint.instructions[0].extra_2().value(),
+            second.breakpoint.instructions[0].extra_2().value());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].value(), second.breakpoint.instructions[0].value());
+
+  ASSERT_EQ(initial.breakpoint.instructions[0].conditions().size(),
+            second.breakpoint.instructions[0].conditions().size());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[0].kind(),
+            second.breakpoint.instructions[0].conditions()[0].kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[0].operand().kind(),
+            second.breakpoint.instructions[0].conditions()[0].operand().kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[0].operand().index(),
+            second.breakpoint.instructions[0].conditions()[0].operand().index());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[0].operand().value(),
+            second.breakpoint.instructions[0].conditions()[0].operand().value());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[0].constant(),
+            second.breakpoint.instructions[0].conditions()[0].constant());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[0].mask(),
+            second.breakpoint.instructions[0].conditions()[0].mask());
+
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[1].kind(),
+            second.breakpoint.instructions[0].conditions()[1].kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[1].operand().kind(),
+            second.breakpoint.instructions[0].conditions()[1].operand().kind());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[1].operand().index(),
+            second.breakpoint.instructions[0].conditions()[1].operand().index());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[1].operand().value(),
+            second.breakpoint.instructions[0].conditions()[1].operand().value());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[1].constant(),
+            second.breakpoint.instructions[0].conditions()[1].constant());
+  EXPECT_EQ(initial.breakpoint.instructions[0].conditions()[1].mask(),
+            second.breakpoint.instructions[0].conditions()[1].mask());
 }
 
 TEST(Protocol, AddOrChangeBreakpointReply) {
@@ -935,6 +1020,17 @@ TEST(Protocol, NotifyException) {
   initial.other_affected_threads.emplace_back();
   initial.other_affected_threads[0].id = {.process = 667788, .thread = 990011};
 
+  initial.memory_blocks.resize(2);
+  initial.memory_blocks[0].address = 876234;
+  initial.memory_blocks[0].valid = true;
+  initial.memory_blocks[0].size = 12;
+  for (uint64_t i = 0; i < initial.memory_blocks[0].size; i++)
+    initial.memory_blocks[0].data.push_back(static_cast<uint8_t>(i));
+
+  initial.memory_blocks[1].address = 89362454;
+  initial.memory_blocks[1].valid = false;
+  initial.memory_blocks[1].size = 0;
+
   NotifyException second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyException,
                                                &ReadNotifyException));
@@ -963,6 +1059,19 @@ TEST(Protocol, NotifyException) {
 
   ASSERT_EQ(initial.other_affected_threads.size(), second.other_affected_threads.size());
   EXPECT_EQ(initial.other_affected_threads[0].id, second.other_affected_threads[0].id);
+
+  ASSERT_EQ(initial.memory_blocks.size(), second.memory_blocks.size());
+
+  EXPECT_EQ(initial.memory_blocks[0].address, second.memory_blocks[0].address);
+  EXPECT_EQ(initial.memory_blocks[0].valid, second.memory_blocks[0].valid);
+  EXPECT_EQ(initial.memory_blocks[0].size, second.memory_blocks[0].size);
+  EXPECT_EQ(second.memory_blocks[0].size, second.memory_blocks[0].data.size());
+  EXPECT_EQ(initial.memory_blocks[0].data, second.memory_blocks[0].data);
+
+  EXPECT_EQ(initial.memory_blocks[1].address, second.memory_blocks[1].address);
+  EXPECT_EQ(initial.memory_blocks[1].valid, second.memory_blocks[1].valid);
+  EXPECT_EQ(initial.memory_blocks[1].size, second.memory_blocks[1].size);
+  EXPECT_TRUE(second.memory_blocks[1].data.empty());
 }
 
 TEST(Protocol, NotifyModules) {

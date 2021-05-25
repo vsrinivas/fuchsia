@@ -132,6 +132,29 @@ void Serialize(const ProcessBreakpointSettings& settings, MessageWriter* writer)
   Serialize(settings.address_range, writer);
 }
 
+void Serialize(const debug_ipc::AutomationOperand& operand, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(operand.kind()));
+  writer->WriteUint32(operand.index());
+  writer->WriteUint32(operand.value());
+}
+
+void Serialize(const debug_ipc::AutomationCondition& condition, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(condition.kind()));
+  Serialize(condition.operand(), writer);
+  writer->WriteUint64(condition.constant());
+  writer->WriteUint64(condition.mask());
+}
+
+void Serialize(const debug_ipc::AutomationInstruction& instruction, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(instruction.kind()));
+  Serialize(instruction.address(), writer);
+  Serialize(instruction.length(), writer);
+  Serialize(instruction.extra_1(), writer);
+  Serialize(instruction.extra_2(), writer);
+  writer->WriteUint32(instruction.value());
+  Serialize(instruction.conditions(), writer);
+}
+
 void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteUint32(settings.id);
   writer->WriteUint32(static_cast<uint32_t>(settings.type));
@@ -139,6 +162,8 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   writer->WriteBool(settings.one_shot);
   writer->WriteUint32(static_cast<uint32_t>(settings.stop));
   Serialize(settings.locations, writer);
+  writer->WriteBool(settings.has_automation);
+  Serialize(settings.instructions, writer);
 }
 
 void Serialize(const ConfigAction& action, MessageWriter* writer) {
@@ -694,7 +719,9 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
 
   if (!Deserialize(reader, &notify->hit_breakpoints))
     return false;
-  return Deserialize(reader, &notify->other_affected_threads);
+  if (!Deserialize(reader, &notify->other_affected_threads))
+    return false;
+  return Deserialize(reader, &notify->memory_blocks);
 }
 
 bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {

@@ -19,6 +19,67 @@ bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
   return Deserialize(reader, &settings->address_range);
 }
 
+bool Deserialize(MessageReader* reader, AutomationOperand* operand) {
+  uint32_t kind;
+  uint32_t index;
+  uint32_t value;
+
+  if (!reader->ReadUint32(&kind))
+    return false;
+  if (!reader->ReadUint32(&index))
+    return false;
+  if (!reader->ReadUint32(&value))
+    return false;
+  operand->InitRaw(static_cast<AutomationOperandKind>(kind), index, value);
+  return true;
+}
+
+bool Deserialize(MessageReader* reader, AutomationCondition* condition) {
+  uint32_t kind;
+  AutomationOperand operand;
+  uint64_t constant;
+  uint64_t mask;
+
+  if (!reader->ReadUint32(&kind))
+    return false;
+  if (!Deserialize(reader, &operand))
+    return false;
+  if (!reader->ReadUint64(&constant))
+    return false;
+  if (!reader->ReadUint64(&mask))
+    return false;
+  condition->InitRaw(static_cast<AutomationConditionKind>(kind), operand, constant, mask);
+  return true;
+}
+
+bool Deserialize(MessageReader* reader, AutomationInstruction* instruction) {
+  uint32_t kind;
+  AutomationOperand address;
+  AutomationOperand length;
+  AutomationOperand extra_1;
+  AutomationOperand extra_2;
+  uint32_t value;
+  std::vector<AutomationCondition> conditions;
+
+  if (!reader->ReadUint32(&kind))
+    return false;
+  if (!Deserialize(reader, &address))
+    return false;
+  if (!Deserialize(reader, &length))
+    return false;
+  if (!Deserialize(reader, &extra_1))
+    return false;
+  if (!Deserialize(reader, &extra_2))
+    return false;
+  if (!reader->ReadUint32(&value))
+    return false;
+  if (!Deserialize(reader, &conditions))
+    return false;
+  instruction->InitRaw(static_cast<AutomationInstructionKind>(kind), address, length, extra_1,
+                       extra_2, value, std::move(conditions));
+  return true;
+}
+
 bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
   if (!reader->ReadUint32(&settings->id))
     return false;
@@ -38,7 +99,13 @@ bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
     return false;
   settings->stop = static_cast<Stop>(stop);
 
-  return Deserialize(reader, &settings->locations);
+  if (!Deserialize(reader, &settings->locations))
+    return false;
+
+  if (!reader->ReadBool(&settings->has_automation))
+    return false;
+
+  return Deserialize(reader, &settings->instructions);
 }
 
 bool Deserialize(MessageReader* reader, ConfigAction* action) {
@@ -609,6 +676,7 @@ void WriteNotifyException(const NotifyException& notify, MessageWriter* writer) 
   writer->WriteBytes(&notify.exception, sizeof(notify.exception));
   Serialize(notify.hit_breakpoints, writer);
   Serialize(notify.other_affected_threads, writer);
+  Serialize(notify.memory_blocks, writer);
 }
 
 void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
