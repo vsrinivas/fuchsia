@@ -16,7 +16,7 @@ use std::fmt::Debug;
 
 use fidl_fuchsia_hardware_ethertap as ethertap;
 use fidl_fuchsia_net_interfaces as net_interfaces;
-use fidl_fuchsia_netemul_environment as netemul_environment;
+use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
@@ -174,17 +174,17 @@ pub async fn wait_for_non_loopback_interface_up<
     }
 }
 
-/// Gets inspect data in environment.
+/// Gets inspect data in realm.
 ///
 /// Returns the resulting inspect data for `component`, filtered by
 /// `tree_selector` and with inspect file starting with `file_prefix`.
 pub async fn get_inspect_data<'a>(
-    env: &netemul::TestEnvironment<'a>,
+    realm: &netemul::TestRealm<'a>,
     component: impl Into<String>,
     tree_selector: impl Into<String>,
     file_prefix: &str,
 ) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
-    let archive = env
+    let archive = realm
         .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
         .context("failed to connect to archive accessor")?;
 
@@ -194,8 +194,8 @@ pub async fn get_inspect_data<'a>(
             diagnostics_reader::ComponentSelector::new(vec![component.into()])
                 .with_tree_selector(tree_selector.into()),
         )
-        // Enable `retry_if_empty` to prevent races in test environment bringup
-        // where we may end up reaching `ArchiveReader` before it has observed
+        // Enable `retry_if_empty` to prevent races in test realm bringup where
+        // we may end up reaching `ArchiveReader` before it has observed
         // Netstack starting.
         //
         // Eventually there will be support for lifecycle streams, with which
@@ -264,13 +264,13 @@ pub async fn send_ra_with_router_lifetime<'a>(
     .await
 }
 
-/// Sets up an environment with a network with no required services.
+/// Sets up a realm with a network with no required services.
 pub async fn setup_network<E, S>(
     sandbox: &netemul::TestSandbox,
     name: S,
 ) -> Result<(
     netemul::TestNetwork<'_>,
-    netemul::TestEnvironment<'_>,
+    netemul::TestRealm<'_>,
     netstack::NetstackProxy,
     netemul::TestInterface<'_>,
     netemul::TestFakeEndpoint<'_>,
@@ -279,27 +279,22 @@ where
     E: netemul::Endpoint,
     S: Copy + Into<String> + EthertapName,
 {
-    setup_network_with::<E, S, _>(
-        sandbox,
-        name,
-        std::iter::empty::<netemul_environment::LaunchService>(),
-    )
-    .await
+    setup_network_with::<E, S, _>(sandbox, name, std::iter::empty::<fnetemul::ChildDef>()).await
 }
 
-/// Sets up an environment with required services and a network used for tests
+/// Sets up a realm with required services and a network used for tests
 /// requiring manual packet inspection and transmission.
 ///
-/// Returns the network, environment, netstack client, interface (added to the
+/// Returns the network, realm, netstack client, interface (added to the
 /// netstack and up) and a fake endpoint used to read and write raw ethernet
 /// packets.
 pub async fn setup_network_with<E, S, I>(
     sandbox: &netemul::TestSandbox,
     name: S,
-    services: I,
+    children: I,
 ) -> Result<(
     netemul::TestNetwork<'_>,
-    netemul::TestEnvironment<'_>,
+    netemul::TestRealm<'_>,
     netstack::NetstackProxy,
     netemul::TestInterface<'_>,
     netemul::TestFakeEndpoint<'_>,
@@ -308,17 +303,17 @@ where
     E: netemul::Endpoint,
     S: Copy + Into<String> + EthertapName,
     I: IntoIterator,
-    I::Item: Into<netemul_environment::LaunchService>,
+    I::Item: Into<fnetemul::ChildDef>,
 {
     let network = sandbox.create_network(name).await.context("failed to create network")?;
-    let environment = sandbox
-        .create_netstack_environment_with::<environments::Netstack2, _, _>(name, services)
-        .context("failed to create netstack environment")?;
+    let realm = sandbox
+        .create_netstack_realm_with::<environments::Netstack2, _, _>(name, children)
+        .context("failed to create netstack realm")?;
     // It is important that we create the fake endpoint before we join the
     // network so no frames transmitted by Netstack are lost.
     let fake_ep = network.create_fake_endpoint()?;
 
-    let iface = environment
+    let iface = realm
         .join_network::<E, _>(
             &network,
             name.ethertap_compatible_name(),
@@ -327,9 +322,9 @@ where
         .await
         .context("failed to configure networking")?;
 
-    let netstack = environment
+    let netstack = realm
         .connect_to_service::<netstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
 
-    Ok((network, environment, netstack, iface, fake_ep))
+    Ok((network, realm, netstack, iface, fake_ep))
 }

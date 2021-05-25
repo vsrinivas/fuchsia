@@ -16,12 +16,10 @@ use fidl_fuchsia_net_dhcp as net_dhcp;
 use fidl_fuchsia_net_interfaces as net_interfaces;
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
-use fidl_fuchsia_netemul_environment as netemul_environment;
-use fidl_fuchsia_netemul_network as netemul_network;
-use fidl_fuchsia_netemul_sandbox as netemul_sandbox;
+use fidl_fuchsia_netemul as fnetemul;
+use fidl_fuchsia_netemul_network as fnetemul_network;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_posix_socket as posix_socket;
-use fidl_fuchsia_sys as sys;
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
@@ -36,8 +34,8 @@ pub const DEFAULT_MTU: u16 = 1500;
 pub trait Endpoint: Copy + Clone {
     /// The backing [`EndpointBacking`] for this `Endpoint`.
     ///
-    /// [`EndpointBacking`]: netemul_network::EndpointBacking
-    const NETEMUL_BACKING: netemul_network::EndpointBacking;
+    /// [`EndpointBacking`]: fnetemul_network::EndpointBacking
+    const NETEMUL_BACKING: fnetemul_network::EndpointBacking;
 
     /// The relative path from the root device directory where devices of this `Endpoint`
     /// can be discovered.
@@ -52,9 +50,9 @@ pub trait Endpoint: Copy + Clone {
     /// Returns an [`EndpointConfig`] with the provided parameters for this
     /// endpoint type.
     ///
-    /// [`EndpointConfig`]: netemul_network::EndpointConfig
-    fn make_config(mtu: u16, mac: Option<net::MacAddress>) -> netemul_network::EndpointConfig {
-        netemul_network::EndpointConfig {
+    /// [`EndpointConfig`]: fnetemul_network::EndpointConfig
+    fn make_config(mtu: u16, mac: Option<net::MacAddress>) -> fnetemul_network::EndpointConfig {
+        fnetemul_network::EndpointConfig {
             mtu,
             mac: mac.map(Box::new),
             backing: Self::NETEMUL_BACKING,
@@ -67,8 +65,8 @@ pub trait Endpoint: Copy + Clone {
 pub enum Ethernet {}
 
 impl Endpoint for Ethernet {
-    const NETEMUL_BACKING: netemul_network::EndpointBacking =
-        netemul_network::EndpointBacking::Ethertap;
+    const NETEMUL_BACKING: fnetemul_network::EndpointBacking =
+        fnetemul_network::EndpointBacking::Ethertap;
     const DEV_PATH: &'static str = "class/ethernet";
 }
 
@@ -77,95 +75,77 @@ impl Endpoint for Ethernet {
 pub enum NetworkDevice {}
 
 impl Endpoint for NetworkDevice {
-    const NETEMUL_BACKING: netemul_network::EndpointBacking =
-        netemul_network::EndpointBacking::NetworkDevice;
+    const NETEMUL_BACKING: fnetemul_network::EndpointBacking =
+        fnetemul_network::EndpointBacking::NetworkDevice;
     const DEV_PATH: &'static str = "class/network";
 }
 
-/// Helper definition to help type system identify `None` as `IntoIterator`
-/// where `Item: Into<netemul_environment::LaunchService`.
-pub const NO_SERVICES: Option<netemul_environment::LaunchService> = None;
-
-/// A test sandbox backed by a [`netemul_sandbox::SandboxProxy`].
+/// A test sandbox backed by a [`fnetemul::SandboxProxy`].
 ///
-/// `TestSandbox` provides various utility methods to set up network
-/// environments for use in testing. The lifetime of the `TestSandbox` is tied
-/// to the netemul sandbox itself, dropping it will cause all the created
-/// environments, networks, and endpoints to be destroyed.
+/// `TestSandbox` provides various utility methods to set up network realms for
+/// use in testing. The lifetime of the `TestSandbox` is tied to the netemul
+/// sandbox itself, dropping it will cause all the created realms, networks, and
+/// endpoints to be destroyed.
 #[must_use]
 pub struct TestSandbox {
-    sandbox: netemul_sandbox::SandboxProxy,
+    sandbox: fnetemul::SandboxProxy,
 }
 
 impl TestSandbox {
     /// Creates a new empty sandbox.
     pub fn new() -> Result<TestSandbox> {
-        let sandbox =
-            fuchsia_component::client::connect_to_protocol::<netemul_sandbox::SandboxMarker>()
-                .context("failed to connect to sandbox service")?;
-        Ok(TestSandbox { sandbox })
+        fuchsia_component::client::connect_to_protocol::<fnetemul::SandboxMarker>()
+            .context("failed to connect to sandbox service")
+            .map(|sandbox| TestSandbox { sandbox })
     }
 
-    /// Creates an environment with `name` and `services`.
-    pub fn create_environment<I>(
-        &self,
-        name: impl Into<String>,
-        services: I,
-    ) -> Result<TestEnvironment<'_>>
+    /// Creates a realm with `name` and `children`.
+    pub fn create_realm<S, I>(&self, name: S, children: I) -> Result<TestRealm<'_>>
     where
+        S: Into<String>,
         I: IntoIterator,
-        I::Item: Into<netemul_environment::LaunchService>,
+        I::Item: Into<fnetemul::ChildDef>,
     {
-        let (environment, server) =
-            fidl::endpoints::create_proxy::<netemul_environment::ManagedEnvironmentMarker>()?;
+        let (realm, server) = fidl::endpoints::create_proxy::<fnetemul::ManagedRealmMarker>()?;
         let name = name.into();
-        let () = self.sandbox.create_environment(
+        let () = self.sandbox.create_realm(
             server,
-            netemul_environment::EnvironmentOptions {
+            fnetemul::RealmOptions {
                 name: Some(name.clone()),
-                services: Some(services.into_iter().map(Into::into).collect()),
-                devices: None,
-                inherit_parent_launch_services: None,
-                logger_options: Some(netemul_environment::LoggerOptions {
-                    enabled: Some(true),
-                    klogs_enabled: None,
-                    filter_options: None,
-                    syslog_output: Some(true),
-                    ..netemul_environment::LoggerOptions::EMPTY
-                }),
-                ..netemul_environment::EnvironmentOptions::EMPTY
+                children: Some(children.into_iter().map(Into::into).collect()),
+                ..fnetemul::RealmOptions::EMPTY
             },
         )?;
-        Ok(TestEnvironment { environment, name, _sandbox: self })
+        Ok(TestRealm { realm, name, _sandbox: self })
     }
 
-    /// Creates an environment with no services.
-    pub fn create_empty_environment(&self, name: impl Into<String>) -> Result<TestEnvironment<'_>> {
-        self.create_environment(name, NO_SERVICES)
+    /// Creates a realm with no services.
+    pub fn create_empty_realm(&self, name: impl Into<String>) -> Result<TestRealm<'_>> {
+        self.create_realm(name, std::iter::empty::<fnetemul::ChildDef>())
     }
 
     /// Connects to the sandbox's `NetworkContext`.
-    fn get_network_context(&self) -> Result<netemul_network::NetworkContextProxy> {
+    fn get_network_context(&self) -> Result<fnetemul_network::NetworkContextProxy> {
         let (ctx, server) =
-            fidl::endpoints::create_proxy::<netemul_network::NetworkContextMarker>()?;
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()?;
         let () = self.sandbox.get_network_context(server)?;
         Ok(ctx)
     }
 
     /// Connects to the sandbox's `NetworkManager`.
-    fn get_network_manager(&self) -> Result<netemul_network::NetworkManagerProxy> {
+    fn get_network_manager(&self) -> Result<fnetemul_network::NetworkManagerProxy> {
         let ctx = self.get_network_context()?;
         let (network_manager, server) =
-            fidl::endpoints::create_proxy::<netemul_network::NetworkManagerMarker>()?;
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkManagerMarker>()?;
         let () = ctx.get_network_manager(server)?;
         Ok(network_manager)
     }
 
     /// Connects to the sandbox's `EndpointManager`.
-    fn get_endpoint_manager(&self) -> Result<netemul_network::EndpointManagerProxy> {
+    fn get_endpoint_manager(&self) -> Result<fnetemul_network::EndpointManagerProxy> {
         let ctx = self.get_network_context()?;
         let (ep_manager, server) =
-            fidl::endpoints::create_proxy::<netemul_network::EndpointManagerMarker>()?;
+            fidl::endpoints::create_proxy::<fnetemul_network::EndpointManagerMarker>()?;
         let () = ctx.get_endpoint_manager(server)?;
         Ok(ep_manager)
     }
@@ -177,11 +157,11 @@ impl TestSandbox {
         let (status, network) = netm
             .create_network(
                 &name,
-                netemul_network::NetworkConfig {
+                fnetemul_network::NetworkConfig {
                     latency: None,
                     packet_loss: None,
                     reorder: None,
-                    ..netemul_network::NetworkConfig::EMPTY
+                    ..fnetemul_network::NetworkConfig::EMPTY
                 },
             )
             .await
@@ -206,7 +186,7 @@ impl TestSandbox {
     pub async fn create_endpoint_with(
         &self,
         name: impl Into<String>,
-        mut config: netemul_network::EndpointConfig,
+        mut config: fnetemul_network::EndpointConfig,
     ) -> Result<TestEndpoint<'_>> {
         let name = name.into();
         let epm = self.get_endpoint_manager()?;
@@ -220,7 +200,7 @@ impl TestSandbox {
     }
 }
 
-/// Interface configuration used by [`TestEnvironment::join_network`].
+/// Interface configuration used by [`TestRealm::join_network`].
 pub enum InterfaceConfig {
     /// Interface is configured with a static address.
     StaticIp(net::Subnet),
@@ -230,35 +210,29 @@ pub enum InterfaceConfig {
     None,
 }
 
-/// An environment within a netemul sandbox.
+/// A realm within a netemul sandbox.
 #[must_use]
-pub struct TestEnvironment<'a> {
-    environment: netemul_environment::ManagedEnvironmentProxy,
+pub struct TestRealm<'a> {
+    realm: fnetemul::ManagedRealmProxy,
     name: String,
     _sandbox: &'a TestSandbox,
 }
 
-impl<'a> TestEnvironment<'a> {
-    /// Connects to a service within the environment.
+impl<'a> TestRealm<'a> {
+    /// Connects to a service within the realm.
     pub fn connect_to_service<S>(&self) -> Result<S::Proxy>
     where
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
     {
         let (proxy, server) = zx::Channel::create()?;
-        let () = self.environment.connect_to_service(S::SERVICE_NAME, server)?;
+        let () = self.realm.connect_to_service(S::SERVICE_NAME, None, server)?;
         let proxy = fuchsia_async::Channel::from_channel(proxy)?;
         Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
     }
 
-    /// Gets this environment's launcher.
-    ///
-    /// All applications launched within a netemul environment will have their
-    /// output (stdout, stderr, syslog) decorated with the environment name.
-    pub fn get_launcher(&self) -> Result<sys::LauncherProxy> {
-        let (launcher, server) = fidl::endpoints::create_proxy::<sys::LauncherMarker>()
-            .context("failed to create launcher proxy")?;
-        let () = self.environment.get_launcher(server)?;
-        Ok(launcher)
+    /// Gets the relative moniker of the root of the managed realm.
+    pub async fn get_moniker(&self) -> Result<String> {
+        self.realm.get_moniker().await.context("failed to call get moniker")
     }
 
     /// Like [`join_network_with`], but uses default endpoint configurations.
@@ -278,20 +252,19 @@ impl<'a> TestEnvironment<'a> {
     }
 
     /// Joins `network` with by creating an endpoint with `ep_config` and
-    /// installing it into the environment with `if_config`.
+    /// installing it into the realm with `if_config`.
     ///
     /// `join_network_with` is a helper to create a new endpoint `ep_name`
     /// attached to `network` and configure it with `if_config`. Returns a
-    /// [`TestInterface`] which is already added to this environment's netstack,
-    /// link online, enabled, and configured according to `config`.
+    /// [`TestInterface`] which is already added to this realm's netstack, link
+    /// online, enabled, and configured according to `config`.
     ///
-    /// Note that this environment needs a Netstack for this operation to
-    /// succeed.
+    /// Note that this realm needs a Netstack for this operation to succeed.
     pub async fn join_network_with(
         &self,
         network: &TestNetwork<'a>,
         ep_name: impl Into<String>,
-        ep_config: netemul_network::EndpointConfig,
+        ep_config: fnetemul_network::EndpointConfig,
         if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>> {
         let endpoint = network
@@ -301,14 +274,14 @@ impl<'a> TestEnvironment<'a> {
         self.install_endpoint(endpoint, if_config).await
     }
 
-    /// Installs and configures `endpoint` in this environment with `config`.
+    /// Installs and configures `endpoint` in this realm with `config`.
     pub async fn install_endpoint(
         &self,
         endpoint: TestEndpoint<'a>,
         config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>> {
         let interface =
-            endpoint.into_interface_in_environment(self).await.context("failed to add endpoint")?;
+            endpoint.into_interface_in_realm(self).await.context("failed to add endpoint")?;
         let () = interface.set_link_up(true).await.context("failed to start endpoint")?;
         let () = match config {
             InterfaceConfig::StaticIp(addr) => {
@@ -340,30 +313,38 @@ impl<'a> TestEnvironment<'a> {
         Ok(interface)
     }
 
-    /// Adds a device to the environment's virtual device filesystem.
-    pub fn add_virtual_device(&self, e: &TestEndpoint<'_>, path: &Path) -> Result {
+    /// Adds a device to the realm's virtual device filesystem.
+    pub async fn add_virtual_device(&self, e: &TestEndpoint<'_>, path: &Path) -> Result {
         let path = path
             .to_str()
             .with_context(|| format!("convert {} to str", path.display()))?
             .to_string();
         let (device, device_server_end) =
-            fidl::endpoints::create_endpoints::<netemul_network::DeviceProxy_Marker>()
+            fidl::endpoints::create_endpoints::<fnetemul_network::DeviceProxy_Marker>()
                 .context("create endpoints")?;
         e.get_proxy_(device_server_end).context("get proxy")?;
 
-        self.environment
-            .add_device(&mut netemul_environment::VirtualDevice { path, device })
-            .context("add device")
+        self.realm
+            .add_device(&path, device)
+            .await
+            .context("add device")?
+            .map_err(zx::Status::from_raw)
+            .context("add device error")
     }
 
-    /// Removes a device from the environment's virtual device filesystem.
-    pub fn remove_virtual_device(&self, path: &Path) -> Result {
+    /// Removes a device from the realm's virtual device filesystem.
+    pub async fn remove_virtual_device(&self, path: &Path) -> Result {
         let path = path.to_str().with_context(|| format!("convert {} to str", path.display()))?;
-        self.environment.remove_device(path).context("remove device")
+        self.realm
+            .remove_device(path)
+            .await
+            .context("remove device")?
+            .map_err(zx::Status::from_raw)
+            .context("remove device error")
     }
 
     /// Creates a Datagram [`socket2::Socket`] backed by the implementation of
-    /// `fuchsia.posix.socket/Provider` in this environment.
+    /// `fuchsia.posix.socket/Provider` in this realm.
     pub async fn datagram_socket(
         &self,
         domain: fidl_fuchsia_posix_socket::Domain,
@@ -383,7 +364,7 @@ impl<'a> TestEnvironment<'a> {
     }
 
     /// Creates a Stream [`socket2::Socket`] backed by the implementation of
-    /// `fuchsia.posix.socket/Provider` in this environment.
+    /// `fuchsia.posix.socket/Provider` in this realm.
     pub async fn stream_socket(
         &self,
         domain: fidl_fuchsia_posix_socket::Domain,
@@ -409,7 +390,7 @@ impl<'a> TestEnvironment<'a> {
 /// Created through [`TestSandbox::create_network`].
 #[must_use]
 pub struct TestNetwork<'a> {
-    network: netemul_network::NetworkProxy,
+    network: fnetemul_network::NetworkProxy,
     name: String,
     sandbox: &'a TestSandbox,
 }
@@ -445,7 +426,7 @@ impl<'a> TestNetwork<'a> {
     pub async fn create_endpoint_with(
         &self,
         name: impl Into<String>,
-        config: netemul_network::EndpointConfig,
+        config: fnetemul_network::EndpointConfig,
     ) -> Result<TestEndpoint<'a>> {
         let ep = self
             .sandbox
@@ -461,7 +442,7 @@ impl<'a> TestNetwork<'a> {
     /// Returns a fake endpoint.
     pub fn create_fake_endpoint(&self) -> Result<TestFakeEndpoint<'a>> {
         let (endpoint, server) =
-            fidl::endpoints::create_proxy::<netemul_network::FakeEndpointMarker>()
+            fidl::endpoints::create_proxy::<fnetemul_network::FakeEndpointMarker>()
                 .context("failed to create launcher proxy")?;
         let () = self.network.create_fake_endpoint(server)?;
         return Ok(TestFakeEndpoint { endpoint, _sandbox: self.sandbox });
@@ -471,13 +452,13 @@ impl<'a> TestNetwork<'a> {
 /// A virtual network endpoint backed by Netemul.
 #[must_use]
 pub struct TestEndpoint<'a> {
-    endpoint: netemul_network::EndpointProxy,
+    endpoint: fnetemul_network::EndpointProxy,
     name: String,
     _sandbox: &'a TestSandbox,
 }
 
 impl<'a> std::ops::Deref for TestEndpoint<'a> {
-    type Target = netemul_network::EndpointProxy;
+    type Target = fnetemul_network::EndpointProxy;
 
     fn deref(&self) -> &Self::Target {
         &self.endpoint
@@ -487,12 +468,12 @@ impl<'a> std::ops::Deref for TestEndpoint<'a> {
 /// A virtual fake network endpoint backed by Netemul.
 #[must_use]
 pub struct TestFakeEndpoint<'a> {
-    endpoint: netemul_network::FakeEndpointProxy,
+    endpoint: fnetemul_network::FakeEndpointProxy,
     _sandbox: &'a TestSandbox,
 }
 
 impl<'a> std::ops::Deref for TestFakeEndpoint<'a> {
-    type Target = netemul_network::FakeEndpointProxy;
+    type Target = fnetemul_network::FakeEndpointProxy;
 
     fn deref(&self) -> &Self::Target {
         &self.endpoint
@@ -514,15 +495,15 @@ impl<'a> TestEndpoint<'a> {
     /// Gets access to this device's virtual Ethernet device.
     ///
     /// Note that an error is returned if the Endpoint is not a
-    /// [`netemul_network::DeviceConnection::Ethernet`].
+    /// [`fnetemul_network::DeviceConnection::Ethernet`].
     pub async fn get_ethernet(&self) -> Result<fidl::endpoints::ClientEnd<hw_eth::DeviceMarker>> {
         match self
             .get_device()
             .await
             .with_context(|| format!("failed to get device connection for {}", self.name))?
         {
-            netemul_network::DeviceConnection::Ethernet(e) => Ok(e),
-            netemul_network::DeviceConnection::NetworkDevice(_) => {
+            fnetemul_network::DeviceConnection::Ethernet(e) => Ok(e),
+            fnetemul_network::DeviceConnection::NetworkDevice(_) => {
                 Err(anyhow::anyhow!("Endpoint {} is not an Ethernet device", self.name))
             }
         }
@@ -531,7 +512,7 @@ impl<'a> TestEndpoint<'a> {
     /// Gets access to this device's virtual Network device.
     ///
     /// Note that an error is returned if the Endpoint is not a
-    /// [`netemul_network::DeviceConnection::NetworkDevice`].
+    /// [`fnetemul_network::DeviceConnection::NetworkDevice`].
     pub async fn get_netdevice(
         &self,
     ) -> Result<(
@@ -543,10 +524,10 @@ impl<'a> TestEndpoint<'a> {
             .await
             .with_context(|| format!("failed to get device connection for {}", self.name))?
         {
-            netemul_network::DeviceConnection::NetworkDevice(n) => {
+            fnetemul_network::DeviceConnection::NetworkDevice(n) => {
                 Self::connect_netdevice_protocols(n)
             }
-            netemul_network::DeviceConnection::Ethernet(_) => {
+            fnetemul_network::DeviceConnection::Ethernet(_) => {
                 Err(anyhow::anyhow!("Endpoint {} is not a Network Device", self.name))
             }
         }
@@ -572,10 +553,10 @@ impl<'a> TestEndpoint<'a> {
     /// Adds this endpoint to `stack`, returning the interface identifier.
     pub async fn add_to_stack(&self, stack: &net_stack::StackProxy) -> Result<u64> {
         Ok(match self.get_device().await.context("get_device failed")? {
-            netemul_network::DeviceConnection::Ethernet(eth) => {
+            fnetemul_network::DeviceConnection::Ethernet(eth) => {
                 stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
             }
-            netemul_network::DeviceConnection::NetworkDevice(netdevice) => {
+            fnetemul_network::DeviceConnection::NetworkDevice(netdevice) => {
                 let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
                 stack
                     .add_interface(
@@ -599,21 +580,19 @@ impl<'a> TestEndpoint<'a> {
     }
 
     /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
-    /// `environment`, returning a [`TestInterface`] on success.
-    pub async fn into_interface_in_environment(
-        self,
-        environment: &TestEnvironment<'a>,
-    ) -> Result<TestInterface<'a>> {
-        let stack = environment.connect_to_service::<net_stack::StackMarker>()?;
-        let netstack = environment.connect_to_service::<netstack::NetstackMarker>()?;
-        let id = self.add_to_stack(&stack).await.with_context(|| {
-            format!("failed to add {} to environment {}", self.name, environment.name)
-        })?;
+    /// `realm`, returning a [`TestInterface`] on success.
+    pub async fn into_interface_in_realm(self, realm: &TestRealm<'a>) -> Result<TestInterface<'a>> {
+        let stack = realm.connect_to_service::<net_stack::StackMarker>()?;
+        let netstack = realm.connect_to_service::<netstack::NetstackMarker>()?;
+        let id = self
+            .add_to_stack(&stack)
+            .await
+            .with_context(|| format!("failed to add {} to realm {}", self.name, realm.name))?;
         Ok(TestInterface { endpoint: self, id, stack, netstack })
     }
 }
 
-/// A [`TestEndpoint`] that is installed in an environment's Netstack.
+/// A [`TestEndpoint`] that is installed in a realm's Netstack.
 #[must_use]
 pub struct TestInterface<'a> {
     endpoint: TestEndpoint<'a>,
@@ -623,7 +602,7 @@ pub struct TestInterface<'a> {
 }
 
 impl<'a> std::ops::Deref for TestInterface<'a> {
-    type Target = netemul_network::EndpointProxy;
+    type Target = fnetemul_network::EndpointProxy;
 
     fn deref(&self) -> &Self::Target {
         &self.endpoint
@@ -749,22 +728,22 @@ fn get_socket2_domain(addr: &std::net::SocketAddr) -> fidl_fuchsia_posix_socket:
     domain
 }
 
-/// Trait describing UDP sockets that can be bound in a testing environment.
-pub trait EnvironmentUdpSocket: Sized {
-    /// Creates a UDP socket in `env` bound to `addr`.
-    fn bind_in_env<'a>(
-        env: &'a TestEnvironment<'a>,
+/// Trait describing UDP sockets that can be bound in a testing realm.
+pub trait RealmUdpSocket: Sized {
+    /// Creates a UDP socket in `realm` bound to `addr`.
+    fn bind_in_realm<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
 }
 
-impl EnvironmentUdpSocket for std::net::UdpSocket {
-    fn bind_in_env<'a>(
-        env: &'a TestEnvironment<'a>,
+impl RealmUdpSocket for std::net::UdpSocket {
+    fn bind_in_realm<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
-            let sock = env
+            let sock = realm
                 .datagram_socket(
                     get_socket2_domain(&addr),
                     fidl_fuchsia_posix_socket::DatagramSocketProtocol::Udp,
@@ -780,12 +759,12 @@ impl EnvironmentUdpSocket for std::net::UdpSocket {
     }
 }
 
-impl EnvironmentUdpSocket for fuchsia_async::net::UdpSocket {
-    fn bind_in_env<'a>(
-        env: &'a TestEnvironment<'a>,
+impl RealmUdpSocket for fuchsia_async::net::UdpSocket {
+    fn bind_in_realm<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
-        std::net::UdpSocket::bind_in_env(env, addr)
+        std::net::UdpSocket::bind_in_realm(realm, addr)
             .and_then(|udp| {
                 futures::future::ready(
                     fuchsia_async::net::UdpSocket::from_socket(udp)
@@ -796,33 +775,33 @@ impl EnvironmentUdpSocket for fuchsia_async::net::UdpSocket {
     }
 }
 
-/// Trait describing TCP listeners bound in a testing environment.
-pub trait EnvironmentTcpListener: Sized {
-    /// Creates a TCP listener in `env` bound to `addr`.
-    fn listen_in_env<'a>(
-        env: &'a TestEnvironment<'a>,
+/// Trait describing TCP listeners bound in a testing realm.
+pub trait RealmTcpListener: Sized {
+    /// Creates a TCP listener in `realm` bound to `addr`.
+    fn listen_in_realm<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
-        Self::listen_in_env_with(env, addr, |_: &socket2::Socket| Ok(()))
+        Self::listen_in_realm_with(realm, addr, |_: &socket2::Socket| Ok(()))
     }
 
-    /// Creates a TCP listener by creating a Socket2 socket in `env`. Closure `setup` is called with
-    /// the reference of the socket before the socket is bound to `addr`.
-    fn listen_in_env_with<'a>(
-        env: &'a TestEnvironment<'a>,
+    /// Creates a TCP listener by creating a Socket2 socket in `realm`. Closure `setup` is called
+    /// with the reference of the socket before the socket is bound to `addr`.
+    fn listen_in_realm_with<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
         setup: impl FnOnce(&socket2::Socket) -> Result<()> + 'a,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
 }
 
-impl EnvironmentTcpListener for std::net::TcpListener {
-    fn listen_in_env_with<'a>(
-        env: &'a TestEnvironment<'a>,
+impl RealmTcpListener for std::net::TcpListener {
+    fn listen_in_realm_with<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
         setup: impl FnOnce(&socket2::Socket) -> Result<()> + 'a,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
-            let sock = env
+            let sock = realm
                 .stream_socket(
                     get_socket2_domain(&addr),
                     fidl_fuchsia_posix_socket::StreamSocketProtocol::Tcp,
@@ -841,13 +820,13 @@ impl EnvironmentTcpListener for std::net::TcpListener {
     }
 }
 
-impl EnvironmentTcpListener for fuchsia_async::net::TcpListener {
-    fn listen_in_env_with<'a>(
-        env: &'a TestEnvironment<'a>,
+impl RealmTcpListener for fuchsia_async::net::TcpListener {
+    fn listen_in_realm_with<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
         setup: impl FnOnce(&socket2::Socket) -> Result<()> + 'a,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
-        std::net::TcpListener::listen_in_env_with(env, addr, setup)
+        std::net::TcpListener::listen_in_realm_with(realm, addr, setup)
             .and_then(|listener| {
                 futures::future::ready(
                     fuchsia_async::net::TcpListener::from_std(listener)
@@ -858,24 +837,24 @@ impl EnvironmentTcpListener for fuchsia_async::net::TcpListener {
     }
 }
 
-/// Trait describing TCP streams in a testing environment.
-pub trait EnvironmentTcpStream: Sized {
-    /// Creates a TCP stream in `env` connected to `addr`.
-    fn connect_in_env<'a>(
-        env: &'a TestEnvironment<'a>,
+/// Trait describing TCP streams in a testing realm.
+pub trait RealmTcpStream: Sized {
+    /// Creates a TCP stream in `realm` connected to `addr`.
+    fn connect_in_realm<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>>;
 
     // TODO: Implement this trait for std::net::TcpStream.
 }
 
-impl EnvironmentTcpStream for fuchsia_async::net::TcpStream {
-    fn connect_in_env<'a>(
-        env: &'a TestEnvironment<'a>,
+impl RealmTcpStream for fuchsia_async::net::TcpStream {
+    fn connect_in_realm<'a>(
+        realm: &'a TestRealm<'a>,
         addr: std::net::SocketAddr,
     ) -> futures::future::LocalBoxFuture<'a, Result<Self>> {
         async move {
-            let sock = env
+            let sock = realm
                 .stream_socket(
                     get_socket2_domain(&addr),
                     fidl_fuchsia_posix_socket::StreamSocketProtocol::Tcp,

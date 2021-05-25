@@ -2,23 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Provides utilities for test environments.
+//! Provides utilities for test realms.
 
-use fidl_fuchsia_net_filter;
-use fidl_fuchsia_net_stack as net_stack;
-use fidl_fuchsia_netemul_environment as netemul_environment;
-
-use anyhow::Context as _;
-use async_trait::async_trait;
+use {
+    anyhow::Context as _, async_trait::async_trait, fidl::endpoints::DiscoverableService as _,
+    fidl_fuchsia_cobalt as fcobalt, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_net_filter as fnet_filter, fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_name as fnet_name, fidl_fuchsia_net_neighbor as fnet_neighbor,
+    fidl_fuchsia_net_routes as fnet_routes, fidl_fuchsia_net_stack as fnet_stack,
+    fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netstack as fnetstack,
+    fidl_fuchsia_posix_socket as fposix_socket, fidl_fuchsia_stash as fstash,
+};
 
 use crate::Result;
 
-/// Helper definition to help type system identify `None` as `IntoIterator`
-/// where `Item: Into<netemul_environment::LaunchService`.
-const NO_SERVICES: Option<netemul_environment::LaunchService> = None;
-
 /// The Netstack version. Used to specify which Netstack version to use in a
-/// Netstack-served [`KnownServices`].
+/// [`KnownServiceProvider::Netstack`].
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 #[allow(missing_docs)]
 pub enum NetstackVersion {
@@ -31,36 +30,41 @@ impl NetstackVersion {
     pub fn get_url(&self) -> &'static str {
         match self {
             NetstackVersion::Netstack2 => {
-                "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack-debug.cmx"
+                todo!("specify a CFv2 component manifest for a debug netstack2")
             }
             NetstackVersion::Netstack3 => {
-                "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack3.cmx"
+                todo!("specify a CFv2 component manifest for a debug netstack3")
             }
         }
     }
 
-    /// Gets the Netstack name.
-    pub fn get_name(&self) -> &'static str {
+    /// Gets the services exposed by this Netstack component.
+    pub fn get_services(&self) -> &[&'static str] {
         match self {
-            NetstackVersion::Netstack2 => "ns2",
-            NetstackVersion::Netstack3 => "ns3",
+            NetstackVersion::Netstack2 => &[
+                fnet_filter::FilterMarker::SERVICE_NAME,
+                fnet_interfaces::StateMarker::SERVICE_NAME,
+                fnet_neighbor::ControllerMarker::SERVICE_NAME,
+                fnet_neighbor::ViewMarker::SERVICE_NAME,
+                fnet_routes::StateMarker::SERVICE_NAME,
+                fnet_stack::LogMarker::SERVICE_NAME,
+                fnet_stack::StackMarker::SERVICE_NAME,
+                fnetstack::NetstackMarker::SERVICE_NAME,
+                fposix_socket::ProviderMarker::SERVICE_NAME,
+            ],
+            NetstackVersion::Netstack3 => &[
+                fnet_stack::StackMarker::SERVICE_NAME,
+                fposix_socket::ProviderMarker::SERVICE_NAME,
+            ],
         }
     }
 }
 
-/// Known services used in tests.
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+/// Components that provide known services used in tests.
+#[derive(Clone, Eq, PartialEq, Debug)]
 #[allow(missing_docs)]
-pub enum KnownServices {
-    Stack(NetstackVersion),
+pub enum KnownServiceProvider {
     Netstack(NetstackVersion),
-    SocketProvider(NetstackVersion),
-    Filter(NetstackVersion),
-    RoutesState(NetstackVersion),
-    InterfaceState(NetstackVersion),
-    Log(NetstackVersion),
-    NeighborView(NetstackVersion),
-    NeighborController(NetstackVersion),
     MockCobalt,
     SecureStash,
     DhcpServer,
@@ -68,66 +72,135 @@ pub enum KnownServices {
     LookupAdmin,
 }
 
-impl KnownServices {
-    /// Gets the service name and its Fuchsia package URL.
-    pub fn get_name_url(&self) -> (&'static str, &'static str) {
-        match self {
-            KnownServices::Stack(v) => (<net_stack::StackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                        v.get_url()),
-            KnownServices::MockCobalt => (<fidl_fuchsia_cobalt::LoggerFactoryMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/mock_cobalt.cmx"),
-            KnownServices::Netstack(v) => (<fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                           v.get_url()),
-            KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                                 v.get_url()),
-            KnownServices::Filter(v) => (<fidl_fuchsia_net_filter::FilterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                         v.get_url()),
-            KnownServices::RoutesState(v) => (<fidl_fuchsia_net_routes::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                              v.get_url()),
-            KnownServices::InterfaceState(v) => (<fidl_fuchsia_net_interfaces::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                                 v.get_url()),
-            KnownServices::Log(v) => (<fidl_fuchsia_net_stack::LogMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                      v.get_url()),
-            KnownServices::NeighborView(v) => (<fidl_fuchsia_net_neighbor::ViewMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                               v.get_url()),
-            KnownServices::NeighborController(v) => (<fidl_fuchsia_net_neighbor::ControllerMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                                     v.get_url()),
-            KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/stash_secure.cmx"),
-            KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpd.cmx"),
-            KnownServices::Dhcpv6Client => (<fidl_fuchsia_net_dhcpv6::ClientProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpv6-client.cmx"),
-            KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx")
-        }
+// TODO(https://fxbug.dev/77202): when migrating netstack integration tests to
+// netemul-v2, include these components in the test package as necessary, and
+// update their URLs here to their v2 versions.
+mod constants {
+    pub mod netstack {
+        pub const COMPONENT_NAME: &str = "netstack";
     }
-
-    /// Gets the service name.
-    pub fn get_name(&self) -> &'static str {
-        self.get_name_url().0
+    pub mod mock_cobalt {
+        pub const COMPONENT_NAME: &str = "mock-cobalt";
+        pub const COMPONENT_URL: &str =
+            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for mock cobalt";
     }
-
-    /// Gets the service URL.
-    pub fn get_url(&self) -> &'static str {
-        self.get_name_url().1
+    pub mod secure_stash {
+        pub const COMPONENT_NAME: &str = "stash-secure";
+        pub const COMPONENT_URL: &str =
+            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for secure stash";
     }
-
-    /// Transforms into a [`netemul_environment::LaunchService`] with no
-    /// arguments.
-    pub fn into_launch_service(self) -> netemul_environment::LaunchService {
-        let (name, url) = self.get_name_url();
-        netemul_environment::LaunchService {
-            name: name.to_string(),
-            url: url.to_string(),
-            arguments: vec![],
-        }
+    pub mod dhcp_server {
+        pub const COMPONENT_NAME: &str = "dhcpd";
+        pub const COMPONENT_URL: &str =
+            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dhcp server";
+    }
+    pub mod dhcpv6_client {
+        pub const COMPONENT_NAME: &str = "dhcpv6-client";
+        pub const COMPONENT_URL: &str =
+            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dhcpv6 client";
+    }
+    pub mod dns_resolver {
+        pub const COMPONENT_NAME: &str = "dns-resolver";
+        pub const COMPONENT_URL: &str =
+            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for dns resolver";
     }
 }
 
-impl<'a> From<&'a KnownServices> for netemul_environment::LaunchService {
-    fn from(s: &'a KnownServices) -> Self {
-        s.into_launch_service()
+fn use_log_sink() -> Option<fnetemul::ChildUses> {
+    Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(fnetemul::Empty {})]))
+}
+
+fn service_dep<S>(component_name: &'static str) -> fnetemul::ChildDep
+where
+    S: fidl::endpoints::DiscoverableService,
+{
+    fnetemul::ChildDep {
+        name: Some(component_name.into()),
+        capability: Some(fnetemul::ExposedCapability::Service(S::SERVICE_NAME.to_string())),
+        ..fnetemul::ChildDep::EMPTY
+    }
+}
+
+impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
+    fn from(s: &'a KnownServiceProvider) -> Self {
+        match s {
+            KnownServiceProvider::Netstack(version) => fnetemul::ChildDef {
+                name: Some(constants::netstack::COMPONENT_NAME.to_string()),
+                url: Some(version.get_url().to_string()),
+                exposes: Some(
+                    version.get_services().iter().map(|service| service.to_string()).collect(),
+                ),
+                uses: use_log_sink(),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::MockCobalt => fnetemul::ChildDef {
+                name: Some(constants::mock_cobalt::COMPONENT_NAME.to_string()),
+                url: Some(constants::mock_cobalt::COMPONENT_URL.to_string()),
+                exposes: Some(vec![fcobalt::LoggerFactoryMarker::SERVICE_NAME.to_string()]),
+                uses: use_log_sink(),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::SecureStash => fnetemul::ChildDef {
+                name: Some(constants::secure_stash::COMPONENT_NAME.to_string()),
+                url: Some(constants::secure_stash::COMPONENT_URL.to_string()),
+                exposes: Some(vec![fstash::SecureStoreMarker::SERVICE_NAME.to_string()]),
+                uses: use_log_sink(),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::DhcpServer => fnetemul::ChildDef {
+                name: Some(constants::dhcp_server::COMPONENT_NAME.to_string()),
+                url: Some(constants::dhcp_server::COMPONENT_URL.to_string()),
+                exposes: Some(vec![fidl_fuchsia_net_dhcp::Server_Marker::SERVICE_NAME.to_string()]),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::ChildDep(service_dep::<fnet::NameLookupMarker>(
+                        constants::dns_resolver::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(service_dep::<fnet_neighbor::ControllerMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(service_dep::<fposix_socket::ProviderMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(service_dep::<fstash::SecureStoreMarker>(
+                        constants::secure_stash::COMPONENT_NAME,
+                    )),
+                ])),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::Dhcpv6Client => fnetemul::ChildDef {
+                name: Some(constants::dhcpv6_client::COMPONENT_NAME.to_string()),
+                url: Some(constants::dhcpv6_client::COMPONENT_URL.to_string()),
+                exposes: Some(vec![
+                    fidl_fuchsia_net_dhcpv6::ClientProviderMarker::SERVICE_NAME.to_string()
+                ]),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::ChildDep(service_dep::<fposix_socket::ProviderMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                ])),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::LookupAdmin => fnetemul::ChildDef {
+                name: Some(constants::dns_resolver::COMPONENT_NAME.to_string()),
+                url: Some(constants::dns_resolver::COMPONENT_URL.to_string()),
+                exposes: Some(vec![
+                    fnet_name::LookupAdminMarker::SERVICE_NAME.to_string(),
+                    fnet::NameLookupMarker::SERVICE_NAME.to_string(),
+                ]),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::ChildDep(service_dep::<fnet_routes::StateMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(service_dep::<fposix_socket::ProviderMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                ])),
+                ..fnetemul::ChildDef::EMPTY
+            },
+        }
     }
 }
 
@@ -214,39 +287,39 @@ impl Reachability for ReachabilityMonitor {
 /// Extensions to `netemul::TestSandbox`.
 #[async_trait]
 pub trait TestSandboxExt {
-    /// Creates an environment with Netstack services.
-    fn create_netstack_environment<N, S>(&self, name: S) -> Result<netemul::TestEnvironment<'_>>
+    /// Creates a realm with Netstack services.
+    fn create_netstack_realm<N, S>(&self, name: S) -> Result<netemul::TestRealm<'_>>
     where
         N: Netstack,
         S: Into<String>;
 
-    /// Creates an environment with the base Netstack services plus additional
-    /// ones in `services`.
-    fn create_netstack_environment_with<N, S, I>(
+    /// Creates a realm with the base Netstack services plus additional ones in
+    /// `children`.
+    fn create_netstack_realm_with<N, S, I>(
         &self,
         name: S,
-        services: I,
-    ) -> Result<netemul::TestEnvironment<'_>>
+        children: I,
+    ) -> Result<netemul::TestRealm<'_>>
     where
         S: Into<String>,
         N: Netstack,
         I: IntoIterator,
-        I::Item: Into<netemul_environment::LaunchService>;
+        I::Item: Into<fnetemul::ChildDef>;
 
-    /// Helper function to create a new Netstack environment and connect to a
+    /// Helper function to create a new Netstack realm and connect to a
     /// netstack service on it.
-    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestEnvironment<'_>, S::Proxy)>
+    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestRealm<'_>, S::Proxy)>
     where
         N: Netstack,
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
         T: Into<String>;
 
-    /// Helper function to create a new Netstack environment and a new
-    /// unattached endpoint.
+    /// Helper function to create a new Netstack realm and a new unattached
+    /// endpoint.
     async fn new_netstack_and_device<N, E, S, T>(
         &self,
         name: T,
-    ) -> Result<(netemul::TestEnvironment<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
+    ) -> Result<(netemul::TestRealm<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
     where
         N: Netstack,
         E: netemul::Endpoint,
@@ -256,79 +329,67 @@ pub trait TestSandboxExt {
 
 #[async_trait]
 impl TestSandboxExt for netemul::TestSandbox {
-    /// Creates an environment with Netstack services.
-    fn create_netstack_environment<N, S>(&self, name: S) -> Result<netemul::TestEnvironment<'_>>
+    /// Creates a realm with Netstack services.
+    fn create_netstack_realm<N, S>(&self, name: S) -> Result<netemul::TestRealm<'_>>
     where
         N: Netstack,
         S: Into<String>,
     {
-        self.create_netstack_environment_with::<N, _, _>(name, NO_SERVICES)
+        self.create_netstack_realm_with::<N, _, _>(name, std::iter::empty::<fnetemul::ChildDef>())
     }
 
-    /// Creates an environment with the base Netstack services plus additional
-    /// ones in `services`.
-    fn create_netstack_environment_with<N, S, I>(
+    /// Creates a realm with the base Netstack services plus additional ones in
+    /// `children`.
+    fn create_netstack_realm_with<N, S, I>(
         &self,
         name: S,
-        services: I,
-    ) -> Result<netemul::TestEnvironment<'_>>
+        children: I,
+    ) -> Result<netemul::TestRealm<'_>>
     where
         S: Into<String>,
         N: Netstack,
         I: IntoIterator,
-        I::Item: Into<netemul_environment::LaunchService>,
+        I::Item: Into<fnetemul::ChildDef>,
     {
-        self.create_environment(
+        self.create_realm(
             name,
-            [
-                KnownServices::RoutesState(N::VERSION),
-                KnownServices::Filter(N::VERSION),
-                KnownServices::Stack(N::VERSION),
-                KnownServices::Netstack(N::VERSION),
-                KnownServices::SocketProvider(N::VERSION),
-                KnownServices::InterfaceState(N::VERSION),
-                KnownServices::Log(N::VERSION),
-                KnownServices::NeighborView(N::VERSION),
-                KnownServices::NeighborController(N::VERSION),
-                KnownServices::MockCobalt,
-            ]
-            .iter()
-            .map(netemul_environment::LaunchService::from)
-            .chain(services.into_iter().map(Into::into)),
+            [KnownServiceProvider::Netstack(N::VERSION), KnownServiceProvider::MockCobalt]
+                .iter()
+                .map(fnetemul::ChildDef::from)
+                .chain(children.into_iter().map(Into::into)),
         )
     }
 
-    /// Helper function to create a new Netstack environment and connect to a
-    /// netstack service on it.
-    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestEnvironment<'_>, S::Proxy)>
+    /// Helper function to create a new Netstack realm and connect to a netstack
+    /// service on it.
+    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestRealm<'_>, S::Proxy)>
     where
         N: Netstack,
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
         T: Into<String>,
     {
-        let env = self
-            .create_netstack_environment::<N, _>(name)
-            .context("failed to create test environment")?;
+        let realm =
+            self.create_netstack_realm::<N, _>(name).context("failed to create test realm")?;
         let netstack_proxy =
-            env.connect_to_service::<S>().context("failed to connect to netstack")?;
-        Ok((env, netstack_proxy))
+            realm.connect_to_service::<S>().context("failed to connect to netstack")?;
+        Ok((realm, netstack_proxy))
     }
 
-    /// Helper function to create a new Netstack environment and a new
-    /// unattached endpoint.
+    /// Helper function to create a new Netstack realm and a new unattached
+    /// endpoint.
     async fn new_netstack_and_device<N, E, S, T>(
         &self,
         name: T,
-    ) -> Result<(netemul::TestEnvironment<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
+    ) -> Result<(netemul::TestRealm<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
     where
         N: Netstack,
         E: netemul::Endpoint,
         S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
         T: Into<String> + Copy + Send,
     {
-        let (env, stack) = self.new_netstack::<N, S, _>(name)?;
+        let (realm, stack) = self.new_netstack::<N, S, _>(name)?;
         let endpoint =
             self.create_endpoint::<E, _>(name).await.context("failed to create endpoint")?;
-        Ok((env, stack, endpoint))
+        Ok((realm, stack, endpoint))
     }
 }

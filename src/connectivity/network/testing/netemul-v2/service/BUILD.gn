@@ -60,7 +60,12 @@ fuchsia_component("netemul-sandbox-component") {
   testonly = true
   component_name = "netemul-sandbox-v2"
   manifest = "meta/netemul-sandbox-v2.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":netemul-devmgr",
+    "//src/connectivity/network/testing/netemul-v2/network-context",
+    "//src/connectivity/network/tun/network-tun:component-v2",
+  ]
 }
 
 group("tests") {
