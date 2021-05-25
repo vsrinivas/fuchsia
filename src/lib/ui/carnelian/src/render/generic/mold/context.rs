@@ -201,6 +201,10 @@ fn render_composition(
     }
 
     for (order, layer) in composition.layers.iter().rev().enumerate() {
+        if layer.raster.prints.is_empty() {
+            continue;
+        }
+
         let mut option = layer.raster.layer_details.borrow_mut();
         let layer_details = option
             .filter(|&(layer_id, layer_translation)| {
