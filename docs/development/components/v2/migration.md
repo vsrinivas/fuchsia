@@ -102,7 +102,7 @@ Note: The [runner][glossary-runner] declaration is necessary even if your
 component is launched using the ELF runner. This is the default in CMX but must
 be explicitly specified in CML.
 
-```json5
+```json
 // fonts.cmx
 {
     "include": [
@@ -134,7 +134,7 @@ be explicitly specified in CML.
 Add [`use`][manifests-use] declarations to your CML file. These are the
 approximate equivalent of the [`services`][cmx-services] list in CMX.
 
-```json5
+```json
 // fonts.cmx
 {
     "include": [
@@ -190,7 +190,7 @@ that apply to every product configuration.
     You can use [CodeSearch][code-search] to find service mappings. Here is a
     [sample search][sysmgr-config-search].
 
-    ```json5
+    ```json
     // services.config
     {
         "services": {
@@ -292,7 +292,7 @@ that you used to package your component.
 
 Consider the following example test component:
 
-```json5
+```json
 // fonts_test.cmx
 {
     "include": [
@@ -370,7 +370,7 @@ realm with the following services:
 Consider the following example test component that uses a single system service,
 `fuchsia.sysmem.Allocator`:
 
-```json5
+```json
 // my_test.cmx
 {
     "facets": {
@@ -424,7 +424,7 @@ must be split into different components to enable proper capability routing.
 In this example, suppose there's a single injected service,
 `fuchsia.pkg.FontResolver`:
 
-```json5
+```json
 // font_provider_test.cmx
 {
     "facets": {
@@ -598,7 +598,7 @@ mappings to your component, which you identified while
 The steps below refer to the collection of all these services as your
 component’s "exposed services".
 
-```json5
+```json
 // services.config
 {
     "services": {
@@ -821,7 +821,7 @@ Without this step, sysmgr will report errors attempting to load services from
 your v1 component instead of using the new capabilities routed to it through
 `core.cml`.
 
-```json5
+```json
 // services.config
 {
     "services": {
@@ -929,7 +929,7 @@ Consider the following approaches you may be currently using from Components v1 
   `injected-service`, reading isolated inspect data from an embedded Archivist limited
   to test components:
 
-  ```json5
+  ```json
   {
       "fuchsia.test": {
           "injected-services": {
@@ -939,6 +939,7 @@ Consider the following approaches you may be currently using from Components v1 
           }
       },
       ...
+  }
   ```
 
   It means the test is reading isolated inspect data from an embedded Archivist
@@ -1331,9 +1332,9 @@ Find any instances of your current v1 component in component index files:
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component.cmx",
                 realm_path: [ ... ]
-            }
-        }
-    ]
+            },
+        },
+    ],
 }
 ```
 
@@ -1347,9 +1348,9 @@ the migrated v2 realm, keeping the same `instance_id`:
         ...
         {
             instance_id: "...",
-            moniker: "/core/my_component"
-        }
-    ]
+            moniker: "/core/my_component",
+        },
+    ],
 }
 ```
 
@@ -1602,7 +1603,7 @@ this section to migrate device access:
 
 Consider the following example using Components v1 to access `/dev/class/input-report`:
 
-```json5
+```json
 // my_component.cmx
 {
     "program": { ... },
