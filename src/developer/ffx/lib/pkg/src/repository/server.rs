@@ -110,7 +110,7 @@ impl RepositoryServerBuilder {
         // owns the listener, and run the server in it.
         let server_fut = async move {
             let server = Server::builder(from_stream(listener.incoming().map_ok(HyperStream)))
-                .executor(fuchsia_hyper::Executor)
+                .executor(fuchsia_hyper::LocalExecutor)
                 .serve(make_svc)
                 .with_graceful_shutdown(
                     rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),

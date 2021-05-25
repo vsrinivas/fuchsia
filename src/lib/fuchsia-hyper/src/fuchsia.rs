@@ -120,6 +120,15 @@ impl<F: Future + Send + 'static> hyper::rt::Executor<F> for Executor {
     }
 }
 
+#[derive(Clone)]
+pub struct LocalExecutor;
+
+impl<F: Future + 'static> hyper::rt::Executor<F> for LocalExecutor {
+    fn execute(&self, fut: F) {
+        fuchsia_async::Task::local(fut.map(drop)).detach()
+    }
+}
+
 trait ProviderConnector {
     fn connect(&self) -> Result<ProviderProxy, io::Error>;
 }

@@ -146,6 +146,15 @@ impl<F: Future + Send + 'static> hyper::rt::Executor<F> for Executor {
     }
 }
 
+#[derive(Clone)]
+pub struct LocalExecutor;
+
+impl<F: Future + 'static> hyper::rt::Executor<F> for LocalExecutor {
+    fn execute(&self, fut: F) {
+        fuchsia_async::Task::local(fut.map(drop)).detach()
+    }
+}
+
 /// Returns a new Fuchsia-compatible hyper client for making HTTP requests.
 pub fn new_client() -> HttpClient {
     Client::builder().executor(Executor).build(HyperConnector::new())
