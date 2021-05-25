@@ -566,22 +566,26 @@ impl Text {
                     let glyph = glyphs
                         .entry(glyph_index)
                         .or_insert_with(|| Glyph::new(context, face, size, Some(glyph_index)));
-                    // Clone and translate raster.
-                    let raster =
-                        glyph.raster.clone().translate(position.cast_unit::<euclid::UnknownUnit>());
-                    raster_union = if let Some(raster_union) = raster_union {
-                        Some(raster_union + raster)
-                    } else {
-                        Some(raster)
-                    };
+                    if !glyph.bounding_box.is_empty() {
+                        // Clone and translate raster.
+                        let raster = glyph
+                            .raster
+                            .clone()
+                            .translate(position.cast_unit::<euclid::UnknownUnit>());
+                        raster_union = if let Some(raster_union) = raster_union {
+                            Some(raster_union + raster)
+                        } else {
+                            Some(raster)
+                        };
 
-                    // Expand bounding box.
-                    let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
+                        // Expand bounding box.
+                        let glyph_bounding_box = &glyph.bounding_box.translate(position.to_f32());
 
-                    if bounding_box.is_empty() {
-                        bounding_box = *glyph_bounding_box;
-                    } else {
-                        bounding_box = bounding_box.union(&glyph_bounding_box);
+                        if bounding_box.is_empty() {
+                            bounding_box = *glyph_bounding_box;
+                        } else {
+                            bounding_box = bounding_box.union(&glyph_bounding_box);
+                        }
                     }
 
                     x += w;
@@ -646,13 +650,17 @@ impl TextGridCell {
             let glyph = glyphs
                 .entry(glyph_index)
                 .or_insert_with(|| Glyph::new(context, face, font_size, Some(glyph_index)));
-            let cell_position = Point::new(
-                grid.cell_size.width * column as f32,
-                grid.cell_size.height * row as f32,
-            );
-            let char_position = cell_position + grid.baseline;
+            if glyph.bounding_box.is_empty() {
+                None
+            } else {
+                let cell_position = Point::new(
+                    grid.cell_size.width * column as f32,
+                    grid.cell_size.height * row as f32,
+                );
+                let char_position = cell_position + grid.baseline;
 
-            Some(glyph.raster.clone().translate(char_position.to_vector().to_i32()))
+                Some(glyph.raster.clone().translate(char_position.to_vector().to_i32()))
+            }
         } else {
             None
         };
