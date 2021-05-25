@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::{from_reader, BoardConfig, ProductConfig};
+use crate::config::{from_reader, BoardConfig, ProductConfig, VBMetaConfig};
 use crate::vfs::RealFilesystemProvider;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
@@ -48,12 +48,16 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     info!("Creating the ZBI");
     let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_merkle)?;
 
-    info!("Creating the VBMeta image");
-    let vbmeta_path = construct_vbmeta(&outdir, &board, &zbi_path)?;
+    let vbmeta_path = if let Some(vbmeta_config) = &board.vbmeta {
+        info!("Creating the VBMeta image");
+        Some(construct_vbmeta(&outdir, vbmeta_config, &zbi_path)?)
+    } else {
+        None
+    };
 
     info!("Creating the update package");
     let _update_pkg_path =
-        construct_update(&outdir, &gendir, &product, &board, &zbi_path, &vbmeta_path, base_merkle)?;
+        construct_update(&outdir, &gendir, &product, &board, &zbi_path, vbmeta_path, base_merkle)?;
 
     Ok(())
 }
@@ -186,11 +190,11 @@ fn construct_zbi(
 
 fn construct_vbmeta(
     outdir: impl AsRef<Path>,
-    board: &BoardConfig,
+    vbmeta: &VBMetaConfig,
     zbi: impl AsRef<Path>,
 ) -> Result<PathBuf> {
     // Generate the salt, or use one provided by the board.
-    let salt = match &board.vbmeta.salt {
+    let salt = match &vbmeta.salt {
         Some(salt_path) => {
             let salt_str = std::fs::read_to_string(salt_path)?;
             Salt::decode_hex(&salt_str)?
@@ -200,11 +204,11 @@ fn construct_vbmeta(
 
     // Sign the image and construct a VBMeta.
     let (vbmeta, _salt) = crate::vbmeta::sign(
-        &board.vbmeta.kernel_partition,
+        &vbmeta.kernel_partition,
         zbi,
-        &board.vbmeta.key,
-        &board.vbmeta.key_metadata,
-        board.vbmeta.additional_descriptor.clone(),
+        &vbmeta.key,
+        &vbmeta.key_metadata,
+        vbmeta.additional_descriptor_files.clone(),
         salt,
         &RealFilesystemProvider {},
     )?;
@@ -221,7 +225,7 @@ fn construct_update(
     product: &ProductConfig,
     board: &BoardConfig,
     zbi: impl AsRef<Path>,
-    vbmeta: impl AsRef<Path>,
+    vbmeta: Option<impl AsRef<Path>>,
     base_merkle: Option<Hash>,
 ) -> Result<PathBuf> {
     // Create the board name file.
@@ -239,7 +243,10 @@ fn construct_update(
     }
     update_pkg_builder.add_file(&board_name, "board")?;
     update_pkg_builder.add_file(zbi, "zbi")?;
-    update_pkg_builder.add_file(vbmeta, "fuchsia.vbmeta")?;
+
+    if let Some(vbmeta) = vbmeta {
+        update_pkg_builder.add_file(vbmeta, "fuchsia.vbmeta")?;
+    }
 
     if let Some(recovery_config) = &board.recovery {
         update_pkg_builder.add_file(&recovery_config.zbi, "zedboot")?;
