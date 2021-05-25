@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:meta/meta.dart';
-
 // Base class for actions handled by the application's BLOC
 class WebPageAction {
   final WebPageActionType op;
@@ -31,5 +29,5 @@ class RefreshAction extends WebPageAction {
 // Instructs to navigate to some url.
 class NavigateToAction extends WebPageAction {
   final String url;
-  NavigateToAction({@required this.url}) : super(WebPageActionType.navigateTo);
+  NavigateToAction({required this.url}) : super(WebPageActionType.navigateTo);
 }

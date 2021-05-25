@@ -13,7 +13,7 @@ const _kDisabledOpacity = 0.54;
 const _kPadding = EdgeInsets.symmetric(horizontal: 4.0);
 
 class HistoryButtons extends StatelessWidget {
-  const HistoryButtons({@required this.bloc});
+  const HistoryButtons({required this.bloc});
 
   final WebPageBloc bloc;
 
@@ -52,10 +52,10 @@ class HistoryButtons extends StatelessWidget {
 
 class _HistoryButton extends StatelessWidget {
   const _HistoryButton({
-    @required this.title,
-    @required this.valueKey,
-    @required this.onTap,
-    @required this.isEnabled,
+    required this.title,
+    required this.valueKey,
+    required this.onTap,
+    required this.isEnabled,
   });
 
   final String title;

@@ -8,14 +8,14 @@ import 'tlds_provider.dart';
 import 'valid_tlds.dart';
 
 class TldChecker {
-  List<String> _validTlds;
+  late List<String> _validTlds;
 
   /// A flag that indicates if the valid TLD list is loaded or not.
   ///
   /// Its default value on the initilization is 'false'. and is set to 'true'
   /// once the [prefetchTlds()] is called, and never changes unless the browser
   /// is relaunched and this [TldChecker] is newly initiated.
-  bool _isIanaTldsLoaded;
+  late bool _isIanaTldsLoaded;
 
   static final TldChecker _tldCheckerInstance = TldChecker._create();
   factory TldChecker() {
@@ -33,7 +33,7 @@ class TldChecker {
   /// If a List<String> type parameter is given, it does not fetch the TLD list
   /// from the web and instead, just uses the parameter list as the valid TLD
   /// list. Therefore, this parameter should be given only for testing purposes.
-  void prefetchTlds({List<String> testTlds}) async {
+  void prefetchTlds({List<String>? testTlds}) async {
     if (testTlds != null) {
       _validTlds = testTlds;
     } else {

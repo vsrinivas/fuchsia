@@ -23,9 +23,9 @@ const screenWidth = 800.0;
 void main() {
   setupLogger(name: 'tabs_widget_test');
 
-  TabsBloc tabsBloc;
-  SimpleBrowserWebService mockWebService;
-  SimpleBrowserNavigationEventListener mockListener;
+  late TabsBloc tabsBloc;
+  late SimpleBrowserWebService mockWebService;
+  late SimpleBrowserNavigationEventListener mockListener;
   ValueNotifier titleNotifier = ValueNotifier<String>('');
 
   setUp(() {
@@ -145,7 +145,7 @@ void main() {
 
     // Mouse is out from the first tab and moves to the currently focused tab.
     final Offset focusedTabCenter =
-        tester.getCenter(tabs.at(tabsBloc.currentTabIdx));
+        tester.getCenter(tabs.at(tabsBloc.currentTabIdx!));
     await gesture.moveTo(focusedTabCenter);
     await tester.pumpAndSettle();
 
@@ -556,7 +556,7 @@ Future<void> _addNTabsToTabsBloc(
 
 Finder _findMinTabWidgets() => find.byWidgetPredicate((Widget widget) {
       if (widget is Container && widget.key == Key('tab')) {
-        BoxConstraints width = widget.constraints.widthConstraints();
+        BoxConstraints width = widget.constraints!.widthConstraints();
         return (width.minWidth == width.maxWidth) &&
             (width.minWidth == kMinTabWidth);
       }

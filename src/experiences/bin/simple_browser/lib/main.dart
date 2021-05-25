@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 
 import 'app.dart';
 import 'create_web_context.dart';
@@ -30,7 +29,7 @@ void main() {
 
   // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
   // constructor arguments.
-  TabsBloc tabsBloc;
+  late TabsBloc tabsBloc;
 
   tabsBloc = TabsBloc(
     tabFactory: () {
@@ -58,7 +57,7 @@ void main() {
 
   tabsBloc.request.add(NewTabAction());
 
-  KeyboardShortcuts kShortcuts = BrowserShortcuts(tabsBloc: tabsBloc)
+  final kShortcuts = BrowserShortcuts(tabsBloc: tabsBloc)
       .activateShortcuts(ScenicContext.hostViewRef());
 
   final appModel = AppModel.fromStartupContext(
@@ -71,9 +70,9 @@ void main() {
   // This call is used only when flutter driver is enabled.
   // TODO(fxr/66663): Remove it once simple browser has a tappable UI element
   // that triggers URL navigation.
-  _handler?.setMockMethodCallHandler((call) async {
+  _handler.setMockMethodCallHandler((call) async {
     final url = call.method;
-    tabsBloc.currentTab.request.add(NavigateToAction(url: url));
+    tabsBloc.currentTab!.request.add(NavigateToAction(url: url));
     log.info('Navigate to $url...');
   });
 }

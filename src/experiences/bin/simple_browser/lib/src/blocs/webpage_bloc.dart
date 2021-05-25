@@ -46,7 +46,7 @@ class WebPageBloc {
   bool get forwardState => webService.navigationEventListener.forwardState;
   bool get backState => webService.navigationEventListener.backState;
   bool get isLoadedState => webService.navigationEventListener.isLoadedState;
-  String get pageTitle => webService.navigationEventListener.pageTitle;
+  String? get pageTitle => webService.navigationEventListener.pageTitle;
   PageType get pageType => webService.navigationEventListener.pageType;
   // Sinks
   final _webPageActionController = StreamController<WebPageAction>();
@@ -60,9 +60,9 @@ class WebPageBloc {
   /// Can also be used for testing purposes and in this case,
   /// context parameter does not need to be set.
   WebPageBloc({
-    @required this.webService,
-    String homePage,
-  }) : assert(webService != null) {
+    required this.webService,
+    String? homePage,
+  }) {
     if (homePage != null) {
       _onWebPageActionChanged(NavigateToAction(url: homePage));
     }
@@ -79,7 +79,7 @@ class WebPageBloc {
   Future<void> _onWebPageActionChanged(WebPageAction action) async {
     switch (action.op) {
       case WebPageActionType.navigateTo:
-        final NavigateToAction navigate = action;
+        final navigate = action as NavigateToAction;
         await webService.loadUrl(
           sanitizeUrl(navigate.url),
         );

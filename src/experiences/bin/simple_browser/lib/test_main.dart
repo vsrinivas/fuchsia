@@ -11,8 +11,8 @@ Future<void> main() async {
   final handler = OptionalMethodChannel('flutter_driver/handler');
   enableFlutterDriverExtension(
       enableTextEntryEmulation: false,
-      handler: (String data) async {
-        return handler.invokeMethod(data);
+      handler: (String? data) {
+        return handler.invokeMethod(data!) as Future<String>;
       });
   entrypoint.main();
 }

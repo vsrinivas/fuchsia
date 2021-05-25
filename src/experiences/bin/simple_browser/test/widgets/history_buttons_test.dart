@@ -21,9 +21,9 @@ enum ButtonType {
 void main() {
   setupLogger(name: 'history_buttons_test');
 
-  WebPageBloc webPageBloc;
-  MockSimpleBrowserWebService mockWebService;
-  MockSimpleBrowserNavigationEventListener mockEventListener;
+  late WebPageBloc webPageBloc;
+  late MockSimpleBrowserWebService mockWebService;
+  late MockSimpleBrowserNavigationEventListener mockEventListener;
 
   ValueNotifier backStateNotifier = ValueNotifier<bool>(false);
   ValueNotifier forwardStateNotifier = ValueNotifier<bool>(false);

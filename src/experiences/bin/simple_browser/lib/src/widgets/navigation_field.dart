@@ -9,7 +9,7 @@ import '../blocs/webpage_bloc.dart';
 import '../models/webpage_action.dart';
 
 class NavigationField extends StatefulWidget {
-  const NavigationField({@required this.bloc});
+  const NavigationField({required this.bloc});
   final WebPageBloc bloc;
 
   @override
@@ -44,11 +44,13 @@ class _NavigationFieldState extends State<NavigationField> {
     _updateFocus();
   }
 
-  void _setupBloc(NavigationField oldWidget, NavigationField newWidget) {
+  void _setupBloc(NavigationField? oldWidget, NavigationField? newWidget) {
     if (oldWidget?.bloc != newWidget?.bloc) {
-      oldWidget?.bloc?.urlNotifier?.removeListener(_onUrlChanged);
-      widget?.bloc?.urlNotifier?.addListener(_onUrlChanged);
-      _controller.text = newWidget?.bloc?.url;
+      oldWidget?.bloc.urlNotifier.removeListener(_onUrlChanged);
+      widget.bloc.urlNotifier.addListener(_onUrlChanged);
+      if (newWidget != null) {
+        _controller.text = newWidget.bloc.url;
+      }
     }
   }
 

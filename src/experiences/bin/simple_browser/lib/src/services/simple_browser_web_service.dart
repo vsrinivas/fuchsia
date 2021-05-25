@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:fidl/fidl.dart' show InterfaceHandle;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' as views;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
-import 'package:flutter/foundation.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart'
     show FuchsiaViewConnection;
 import 'package:zircon/zircon.dart';
@@ -25,19 +24,17 @@ class SimpleBrowserWebService {
 
   /// Used to present webpage in Flutter FuchsiaView
   FuchsiaViewConnection get fuchsiaViewConnection => _fuchsiaViewConnection;
-  FuchsiaViewConnection _fuchsiaViewConnection;
+  late FuchsiaViewConnection _fuchsiaViewConnection;
 
-  views.ViewHolderToken _viewHolderToken;
+  late views.ViewHolderToken _viewHolderToken;
 
   SimpleBrowserNavigationEventListener get navigationEventListener =>
       _simpleBrowserNavigationEventListener;
 
   factory SimpleBrowserWebService({
-    @required web.ContextProxy context,
-    @required void Function(WebPageBloc webPageBloc) popupHandler,
+    required web.ContextProxy context,
+    required void Function(WebPageBloc webPageBloc) popupHandler,
   }) {
-    assert(context != null);
-    assert(popupHandler != null);
     final frame = web.FrameProxy();
     context.createFrame(frame.ctrl.request());
     return SimpleBrowserWebService.withFrame(
@@ -47,11 +44,9 @@ class SimpleBrowserWebService {
   }
 
   SimpleBrowserWebService.withFrame({
-    @required web.FrameProxy frame,
-    @required void Function(WebPageBloc webPageBloc) popupHandler,
-  })  : assert(frame != null),
-        assert(popupHandler != null),
-        _frame = frame {
+    required web.FrameProxy frame,
+    required void Function(WebPageBloc webPageBloc) popupHandler,
+  }) : _frame = frame {
     _frame
 
       /// Sets up listeners and attaches navigation controller.
@@ -67,9 +62,9 @@ class SimpleBrowserWebService {
     /// Creates a token pair for the newly-created View.
     final tokenPair = EventPairPair();
     assert(tokenPair.status == ZX.OK);
-    _viewHolderToken = views.ViewHolderToken(value: tokenPair.first);
+    _viewHolderToken = views.ViewHolderToken(value: tokenPair.first!);
 
-    final viewToken = views.ViewToken(value: tokenPair.second);
+    final viewToken = views.ViewToken(value: tokenPair.second!);
 
     _frame.createView(viewToken);
     _fuchsiaViewConnection = FuchsiaViewConnection(_viewHolderToken);
@@ -83,8 +78,10 @@ class SimpleBrowserWebService {
     _frame.ctrl.close();
   }
 
-  Future<void> loadUrl(String url) => _navigationController.loadUrl(
-        url,
+  // TODO(fxr/77454): Make [url] required once the 'any' keyword in mockito is
+  // available in unit tests for null-safe packages.
+  Future<void> loadUrl(String? url) => _navigationController.loadUrl(
+        url!,
         web.LoadUrlParams(type: web.LoadUrlReason.typed),
       );
   Future<void> goBack() => _navigationController.goBack();

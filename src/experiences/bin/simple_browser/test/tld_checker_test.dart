@@ -24,7 +24,7 @@ void main() {
     BBB
     ''';
     TldsProvider provider = TldsProvider()..data = testData;
-    List<String> testTlds = await provider.fetchTldsList();
+    List<String>? testTlds = await provider.fetchTldsList();
     TldChecker().prefetchTlds(testTlds: testTlds);
 
     expect(TldChecker().validTlds.length, 2,
@@ -45,7 +45,7 @@ void main() {
     ''';
 
     TldsProvider provider = TldsProvider()..data = testData;
-    List<String> testTlds = await provider.fetchTldsList();
+    List<String>? testTlds = await provider.fetchTldsList();
     TldChecker().prefetchTlds(testTlds: testTlds);
 
     expect(TldChecker().validTlds.length, 1,

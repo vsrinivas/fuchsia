@@ -61,7 +61,7 @@ void main() {
       final tb = await _creatNTabs(3);
 
       // Makes sure that the last tab is currently focused.
-      int actual = tb.currentTabIdx;
+      int actual = tb.currentTabIdx!;
       int expected = 2;
       expect(
         actual,
@@ -76,7 +76,7 @@ void main() {
       await _focusTab(tb, tb.tabs[0]);
 
       // Sees if the index of the newly focused tab is 0.
-      actual = tb.currentTabIdx;
+      actual = tb.currentTabIdx!;
       expected = 0;
       expect(
         actual,
@@ -91,7 +91,7 @@ void main() {
       await _focusTab(tb, tb.tabs[1]);
 
       // Sees if the index of the newly focused tab is 1.
-      actual = tb.currentTabIdx;
+      actual = tb.currentTabIdx!;
       expected = 1;
       expect(
         actual,
@@ -123,7 +123,7 @@ void main() {
       );
 
       // Closes the tab.
-      await _closeTab(tb, tb.currentTab);
+      await _closeTab(tb, tb.currentTab!);
 
       // Sees if there is no tabs anyumore.
       actual = tb.tabs.length;
@@ -156,7 +156,7 @@ void main() {
       final tb = await _creatNTabs(3);
 
       // Makes sure that the last tab is currently focused.
-      int actualFocusedTabIdx = tb.currentTabIdx;
+      int actualFocusedTabIdx = tb.currentTabIdx!;
       int expectedFocusedTabIdx = 2;
       expect(
         actualFocusedTabIdx,
@@ -171,7 +171,7 @@ void main() {
       final expectedTab = tb.tabs[1];
 
       // Closes the currently focused tab. (the last tab)
-      await _closeTab(tb, tb.currentTab);
+      await _closeTab(tb, tb.currentTab!);
 
       // Sees if the number of the remaining tabs is 2.
       int actualNumTabs = tb.tabs.length;
@@ -192,7 +192,7 @@ void main() {
               but is actually not.''');
 
       // Sees if the index of the newly focused tab is still 1.
-      actualFocusedTabIdx = tb.currentTabIdx;
+      actualFocusedTabIdx = tb.currentTabIdx!;
       expectedFocusedTabIdx = 1;
       expect(
         actualFocusedTabIdx,
@@ -211,7 +211,7 @@ void main() {
       await _focusTab(tb, tb.tabs[0]);
 
       // Makes sure that the first tab is currently focused.
-      int actualFocusedTabIdx = tb.currentTabIdx;
+      int actualFocusedTabIdx = tb.currentTabIdx!;
       int expectedFocusedTabIdx = 0;
       expect(
         actualFocusedTabIdx,
@@ -226,7 +226,7 @@ void main() {
       final expectedTab = tb.tabs[1];
 
       // Closes the currently focused tab. (the first tab)
-      await _closeTab(tb, tb.currentTab);
+      await _closeTab(tb, tb.currentTab!);
 
       // Sees if the number of the remaining tabs is 2.
       int actualNumTabs = tb.tabs.length;
@@ -247,7 +247,7 @@ void main() {
               but is actually not.''');
 
       // Sees if the index of the newly focused tab has been shifted to 0.
-      actualFocusedTabIdx = tb.currentTabIdx;
+      actualFocusedTabIdx = tb.currentTabIdx!;
       expectedFocusedTabIdx = 0;
       expect(
         actualFocusedTabIdx,
@@ -265,7 +265,7 @@ void main() {
       final tb = await _creatNTabs(3);
 
       // Makes sure that the last tab is currently focused.
-      int actualFocusedTabIdx = tb.currentTabIdx;
+      int actualFocusedTabIdx = tb.currentTabIdx!;
       int expectedFocusedTabIdx = 2;
       expect(
         actualFocusedTabIdx,
@@ -301,7 +301,7 @@ void main() {
               but is actually different.''');
 
       // Sees if the index of the currently focused tab has been shifted to 1.
-      actualFocusedTabIdx = tb.currentTabIdx;
+      actualFocusedTabIdx = tb.currentTabIdx!;
       expectedFocusedTabIdx = 1;
       expect(
         actualFocusedTabIdx,
@@ -319,7 +319,7 @@ void main() {
       final tb = await _creatNTabs(5);
 
       // Makes sure that the last tab is currently focused.
-      int actualFocusedTabIdx = tb.currentTabIdx;
+      int actualFocusedTabIdx = tb.currentTabIdx!;
       int expectedFocusedTabIdx = 4;
       expect(
         actualFocusedTabIdx,
@@ -343,7 +343,7 @@ void main() {
       await _rearrangeTabs(tb, indexToMove, indexToBe);
 
       // Sees if the index of the currently focused tab is now 2.
-      actualFocusedTabIdx = tb.currentTabIdx;
+      actualFocusedTabIdx = tb.currentTabIdx!;
       expectedFocusedTabIdx = indexToBe;
       expect(
         actualFocusedTabIdx,
@@ -380,7 +380,7 @@ void main() {
 
       // Sees if the currently focused tab has been shifted to the right and now has
       // 3 as its index.
-      actualFocusedTabIdx = tb.currentTabIdx;
+      actualFocusedTabIdx = tb.currentTabIdx!;
       expectedFocusedTabIdx = 1;
       expect(
         actualFocusedTabIdx,
@@ -481,7 +481,7 @@ String _expectFocusedTabReason(String actual, String expected) =>
 /// awaits for a single callback from a [Listenable]
 Future _awaitListenable(Listenable listenable) {
   final c = Completer();
-  Function l;
+  late VoidCallback l;
   l = () {
     c.complete();
     listenable.removeListener(l);

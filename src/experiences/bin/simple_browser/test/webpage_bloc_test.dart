@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:test/test.dart';
@@ -15,10 +16,11 @@ import 'package:simple_browser/src/services/simple_browser_navigation_event_list
 void main() {
   setupLogger(name: 'webpage_bloc_test');
 
-  MockSimpleBrowserWebService mockSimpleBrowserWebService;
-  MockNavigationState mockNavigationState;
-  WebPageBloc webPageBloc;
-  SimpleBrowserNavigationEventListener simpleBrowserNavigationEventListener;
+  late MockSimpleBrowserWebService mockSimpleBrowserWebService;
+  late MockNavigationState mockNavigationState;
+  late WebPageBloc webPageBloc;
+  late SimpleBrowserNavigationEventListener
+      simpleBrowserNavigationEventListener;
 
   setUp(() {
     mockSimpleBrowserWebService = MockSimpleBrowserWebService();
@@ -156,6 +158,7 @@ void main() {
 
       webPageBloc.request.add(NavigateToAction(url: testUrl));
 
+      // Needs mocktail package to use 'any' keyword with null-safe enabled.
       await untilCalled(webPageBloc.webService.loadUrl(any));
       verify(webPageBloc.webService.loadUrl(testUrl)).called(1);
       verifyNever(webPageBloc.webService.goBack());
@@ -222,4 +225,11 @@ void main() {
 class MockSimpleBrowserWebService extends Mock
     implements SimpleBrowserWebService {}
 
-class MockNavigationState extends Mock implements web.NavigationState {}
+class MockNavigationState extends Mock implements web.NavigationState {
+  @override
+  bool operator ==(dynamic other) =>
+      super.noSuchMethod(Invocation.setter(#==, other));
+
+  @override
+  int get hashCode => super.noSuchMethod(Invocation.getter(#hashcode));
+}

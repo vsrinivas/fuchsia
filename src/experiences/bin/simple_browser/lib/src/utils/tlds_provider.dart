@@ -7,10 +7,10 @@ import 'package:fuchsia_logger/logger.dart';
 import 'package:http/http.dart' as http;
 
 class TldsProvider {
-  String _data;
+  String? _data;
 
   // Creates the TldsModel Once when the simple browser is initiated.
-  Future<String> loadIanaTldsList() async {
+  Future<String?> loadIanaTldsList() async {
     final response = await http
         .get(Uri.parse('http://data.iana.org/TLD/tlds-alpha-by-domain.txt'));
 
@@ -23,8 +23,8 @@ class TldsProvider {
     }
   }
 
-  Future<List<String>> fetchTldsList() async {
-    String data;
+  Future<List<String>?> fetchTldsList() async {
+    String? data;
 
     data = _data ?? await loadIanaTldsList();
 

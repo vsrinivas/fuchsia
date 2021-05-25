@@ -19,18 +19,18 @@ import '../models/tabs_action.dart';
 class AppModel {
   final TabsBloc tabsBloc;
   Stream<Locale> _localeStream;
-  final KeyboardShortcuts _keyboardShortcuts;
+  final KeyboardShortcuts? _keyboardShortcuts;
 
   AppModel({
-    @required this.tabsBloc,
-    @required Stream<Locale> localeStream,
-    KeyboardShortcuts keyboardShortcuts,
+    required this.tabsBloc,
+    required Stream<Locale> localeStream,
+    KeyboardShortcuts? keyboardShortcuts,
   })  : _localeStream = localeStream,
         _keyboardShortcuts = keyboardShortcuts;
 
   factory AppModel.fromStartupContext({
-    @required TabsBloc tabsBloc,
-    KeyboardShortcuts keyboardShortcuts,
+    required TabsBloc tabsBloc,
+    KeyboardShortcuts? keyboardShortcuts,
   }) {
     final _intl = PropertyProviderProxy();
     Incoming.fromSvcPath()
@@ -47,7 +47,7 @@ class AppModel {
 
   Stream<Locale> get localeStream => _localeStream;
 
-  KeyboardShortcuts get keyboardShortcuts => _keyboardShortcuts;
+  KeyboardShortcuts? get keyboardShortcuts => _keyboardShortcuts;
 
   void newTab() => tabsBloc.request.add(NewTabAction());
 

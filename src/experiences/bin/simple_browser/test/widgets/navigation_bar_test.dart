@@ -21,7 +21,7 @@ import 'package:simple_browser/src/widgets/navigation_field.dart';
 void main() {
   setupLogger(name: 'navigation_bar_test');
 
-  WebPageBloc webPageBloc;
+  WebPageBloc? webPageBloc;
   MockSimpleBrowserWebService mockWebService;
   MockSimpleBrowserNavigationEventListener mockEventListener;
 
@@ -144,7 +144,7 @@ void main() {
 }
 
 Future<void> _setUpNavigationBar(
-    WidgetTester tester, WebPageBloc bloc, Function callback) async {
+    WidgetTester tester, WebPageBloc? bloc, VoidCallback callback) async {
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(

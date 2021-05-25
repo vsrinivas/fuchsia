@@ -17,8 +17,8 @@ import 'package:simple_browser/src/blocs/tabs_bloc.dart';
 import 'package:simple_browser/src/utils/browser_shortcuts.dart';
 
 void main() {
-  MockRegistryProxy mockRegistryProxy;
-  MockTabsBloc mockTabsBloc;
+  late MockRegistryProxy mockRegistryProxy;
+  late MockTabsBloc mockTabsBloc;
   const List<String> defaultKeys = [
     'newTab',
     'closeTab',

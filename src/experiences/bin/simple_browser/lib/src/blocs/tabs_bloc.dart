@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:collection';
-import 'package:meta/meta.dart';
 import 'package:flutter/foundation.dart';
 import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
@@ -24,25 +23,34 @@ class TabsBloc {
   final ValueNotifier<UnmodifiableListView<WebPageBloc>> _tabs =
       ValueNotifier<UnmodifiableListView<WebPageBloc>>(
           UnmodifiableListView(<WebPageBloc>[]));
-  final ValueNotifier<WebPageBloc> _currentTab =
-      ValueNotifier<WebPageBloc>(null);
+  final ValueNotifier<WebPageBloc?> _currentTab =
+      ValueNotifier<WebPageBloc?>(null);
 
   ChangeNotifier get tabsNotifier => _tabs;
   ChangeNotifier get currentTabNotifier => _currentTab;
 
   UnmodifiableListView<WebPageBloc> get tabs => _tabs.value;
-  WebPageBloc get currentTab => _currentTab.value;
-  int get currentTabIdx => _tabsList.indexOf(currentTab);
+  WebPageBloc? get currentTab => _currentTab.value;
+  int? get currentTabIdx =>
+      (currentTab != null) ? _tabsList.indexOf(currentTab!) : null;
   bool get isOnlyTab => _tabsList.length == 1;
 
-  WebPageBloc get previousTab {
-    int prevIdx = currentTabIdx - 1;
+  WebPageBloc? get previousTab {
+    final idx = currentTabIdx;
+    if (idx == null) {
+      return null;
+    }
+    int prevIdx = idx - 1;
     prevIdx = (prevIdx < 0) ? (_tabsList.length - 1) : prevIdx;
     return _tabsList[prevIdx];
   }
 
-  WebPageBloc get nextTab {
-    int nextIdx = currentTabIdx + 1;
+  WebPageBloc? get nextTab {
+    final idx = currentTabIdx;
+    if (idx == null) {
+      return null;
+    }
+    int nextIdx = idx + 1;
     nextIdx = (nextIdx > _tabsList.length - 1) ? 0 : nextIdx;
     return _tabsList[nextIdx];
   }
@@ -51,7 +59,7 @@ class TabsBloc {
   final _tabsActionController = StreamController<TabsAction>();
   Sink<TabsAction> get request => _tabsActionController.sink;
 
-  TabsBloc({@required this.tabFactory, @required this.disposeTab}) {
+  TabsBloc({required this.tabFactory, required this.disposeTab}) {
     _tabsActionController.stream.listen(_onTabsActionChanged);
   }
 
@@ -69,7 +77,7 @@ class TabsBloc {
         _currentTab.value = tab;
         break;
       case TabsActionType.focusTab:
-        final FocusTabAction focusTab = action;
+        final focusTab = action as FocusTabAction;
         _currentTab.value = focusTab.tab;
         break;
       case TabsActionType.removeTab:
@@ -77,7 +85,7 @@ class TabsBloc {
           break;
         }
 
-        final RemoveTabAction removeTab = action;
+        final removeTab = action as RemoveTabAction;
         final tab = removeTab.tab;
 
         if (tabs.length == 1) {
@@ -94,13 +102,13 @@ class TabsBloc {
         disposeTab(tab);
         break;
       case TabsActionType.addTab:
-        final AddTabAction addTabAction = action;
+        final addTabAction = action as AddTabAction;
         _tabsList.add(addTabAction.tab);
         _tabs.value = UnmodifiableListView<WebPageBloc>(_tabsList);
         _currentTab.value = addTabAction.tab;
         break;
       case TabsActionType.rearrangeTabs:
-        final RearrangeTabsAction rearrangeTabs = action;
+        final rearrangeTabs = action as RearrangeTabsAction;
         final originalIndex = rearrangeTabs.originalIndex;
         final newIndex = rearrangeTabs.newIndex;
 

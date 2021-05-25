@@ -14,10 +14,10 @@ const _kIconSize = 14.0;
 enum _LayoutId { historyButtons, url, addTabButton }
 
 class NavigationBar extends StatelessWidget {
-  final WebPageBloc bloc;
-  final Function newTab;
+  final WebPageBloc? bloc;
+  final VoidCallback newTab;
 
-  const NavigationBar({@required this.bloc, @required this.newTab});
+  const NavigationBar({required this.bloc, required this.newTab});
 
   @override
   Widget build(BuildContext context) => Material(
@@ -38,8 +38,8 @@ class NavigationBar extends StatelessWidget {
 
   Widget _buildLoadingIndicator() {
     return AnimatedBuilder(
-      animation: bloc.isLoadedStateNotifier,
-      builder: (context, snapshot) => bloc.isLoadedState
+      animation: bloc!.isLoadedStateNotifier,
+      builder: (context, snapshot) => bloc!.isLoadedState
           ? Offstage()
           : SizedBox(
               width: double.infinity,
@@ -57,11 +57,11 @@ class NavigationBar extends StatelessWidget {
       children: [
         LayoutId(
           id: _LayoutId.historyButtons,
-          child: bloc != null ? HistoryButtons(bloc: bloc) : Container(),
+          child: bloc != null ? HistoryButtons(bloc: bloc!) : Container(),
         ),
         LayoutId(
           id: _LayoutId.url,
-          child: bloc != null ? NavigationField(bloc: bloc) : Container(),
+          child: bloc != null ? NavigationField(bloc: bloc!) : Container(),
         ),
         LayoutId(
           id: _LayoutId.addTabButton,

@@ -17,46 +17,46 @@ const path = '/pkg/data/keyboard_shortcuts.json';
 
 class BrowserShortcuts {
   final TabsBloc tabsBloc;
-  ui_shortcut.RegistryProxy registryProxy;
-  Map<String, VoidCallback> actions;
+  late ui_shortcut.RegistryProxy registryProxy;
+  late Map<String, VoidCallback> actions;
 
   factory BrowserShortcuts({
-    @required TabsBloc tabsBloc,
-    ui_shortcut.RegistryProxy shortcutRegistry,
-    Map<String, VoidCallback> actions,
+    required TabsBloc tabsBloc,
+    ui_shortcut.RegistryProxy? shortcutRegistry,
+    Map<String, VoidCallback>? actions,
   }) {
     if (shortcutRegistry == null) {
       return BrowserShortcuts._fromStartupContext(
         tabsBloc: tabsBloc,
-        actions: actions,
+        actionMap: actions,
       );
     }
     return BrowserShortcuts._afterStartupContext(
       tabsBloc: tabsBloc,
-      actions: actions,
+      actionMap: actions,
     );
   }
 
   BrowserShortcuts._fromStartupContext({
-    @required this.tabsBloc,
-    this.actions,
+    required this.tabsBloc,
+    Map<String, VoidCallback>? actionMap,
   }) {
     registryProxy = ui_shortcut.RegistryProxy();
     Incoming.fromSvcPath()
       ..connectToService(registryProxy)
       ..close();
 
-    actions ??= defaultActions();
+    actions = actionMap ?? defaultActions();
   }
 
   BrowserShortcuts._afterStartupContext({
-    @required this.tabsBloc,
-    this.actions,
+    required this.tabsBloc,
+    Map<String, VoidCallback>? actionMap,
   }) {
-    actions ??= defaultActions();
+    actions = actionMap ?? defaultActions();
   }
 
-  KeyboardShortcuts activateShortcuts(ViewRef viewRef) {
+  KeyboardShortcuts? activateShortcuts(ViewRef viewRef) {
     File file = File(path);
     file.readAsString().then((bindings) {
       return KeyboardShortcuts(
@@ -89,38 +89,38 @@ class BrowserShortcuts {
     if (tabsBloc.isOnlyTab) {
       return;
     }
-    tabsBloc.request.add(RemoveTabAction(tab: tabsBloc.currentTab));
+    tabsBloc.request.add(RemoveTabAction(tab: tabsBloc.currentTab!));
   }
 
   void _goBack() {
-    if (tabsBloc.currentTab.backState) {
-      tabsBloc.currentTab.request.add(GoBackAction());
+    if (tabsBloc.currentTab!.backState) {
+      tabsBloc.currentTab!.request.add(GoBackAction());
       return;
     }
     return;
   }
 
   void _goForward() {
-    if (tabsBloc.currentTab.forwardState) {
-      tabsBloc.currentTab.request.add(GoForwardAction());
+    if (tabsBloc.currentTab!.forwardState) {
+      tabsBloc.currentTab!.request.add(GoForwardAction());
       return;
     }
     return;
   }
 
-  void _refresh() => tabsBloc.currentTab.request.add(RefreshAction());
+  void _refresh() => tabsBloc.currentTab!.request.add(RefreshAction());
 
   void _previousTab() {
-    if (tabsBloc.isOnlyTab) {
+    if (tabsBloc.isOnlyTab || tabsBloc.previousTab == null) {
       return;
     }
-    tabsBloc.request.add(FocusTabAction(tab: tabsBloc.previousTab));
+    tabsBloc.request.add(FocusTabAction(tab: tabsBloc.previousTab!));
   }
 
   void _nextTab() {
-    if (tabsBloc.isOnlyTab) {
+    if (tabsBloc.isOnlyTab || tabsBloc.nextTab == null) {
       return;
     }
-    tabsBloc.request.add(FocusTabAction(tab: tabsBloc.nextTab));
+    tabsBloc.request.add(FocusTabAction(tab: tabsBloc.nextTab!));
   }
 }

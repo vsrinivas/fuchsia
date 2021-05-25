@@ -16,7 +16,7 @@ class SimpleBrowserNavigationEventListener extends web.NavigationEventListener {
   final _forwardState = ValueNotifier<bool>(false);
   final _backState = ValueNotifier<bool>(false);
   final _isLoadedState = ValueNotifier<bool>(true);
-  final _pageTitle = ValueNotifier<String>(null);
+  final _pageTitle = ValueNotifier<String?>(null);
   final _pageType = ValueNotifier<PageType>(PageType.empty);
 
   ChangeNotifier get urlNotifier => _url;
@@ -30,31 +30,37 @@ class SimpleBrowserNavigationEventListener extends web.NavigationEventListener {
   bool get forwardState => _forwardState.value;
   bool get backState => _backState.value;
   bool get isLoadedState => _isLoadedState.value;
-  String get pageTitle => _pageTitle.value;
-  PageType get pageType => _pageType.value ?? PageType.empty;
+  String? get pageTitle => _pageTitle.value;
+  PageType get pageType => _pageType.value;
 
   SimpleBrowserNavigationEventListener();
 
   @override
   Future<Null> onNavigationStateChanged(web.NavigationState event) async {
-    if (event.url != null) {
-      log.info('url loaded: ${event.url}');
-      _url.value = event.url;
+    final url = event.url;
+    if (url != null) {
+      log.info('url loaded: $url');
+      _url.value = url;
     }
-    if (event.canGoForward != null) {
-      _forwardState.value = event.canGoForward;
+    final canGoForward = event.canGoForward;
+    if (canGoForward != null) {
+      _forwardState.value = canGoForward;
     }
-    if (event.canGoBack != null) {
-      _backState.value = event.canGoBack;
+    final canGoBack = event.canGoBack;
+    if (canGoBack != null) {
+      _backState.value = canGoBack;
     }
-    if (event.isMainDocumentLoaded != null) {
-      _isLoadedState.value = event.isMainDocumentLoaded;
+    final isLoaded = event.isMainDocumentLoaded;
+    if (isLoaded != null) {
+      _isLoadedState.value = isLoaded;
     }
-    if (event.title != null) {
-      _pageTitle.value = event.title;
+    final title = event.title;
+    if (title != null) {
+      _pageTitle.value = title;
     }
-    if (event.pageType != null) {
-      _pageType.value = pageTypeForWebPageType(event.pageType);
+    final type = event.pageType;
+    if (type != null) {
+      _pageType.value = pageTypeForWebPageType(type);
     }
   }
 

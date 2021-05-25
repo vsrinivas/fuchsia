@@ -14,6 +14,7 @@ import("//build/testing/flutter_driver.gni")
 
 dart_library("lib") {
   package_name = "simple_browser"
+  null_safe = true
 
   sources = [
     "app.dart",
@@ -89,6 +90,7 @@ fuchsia_package("simple-browser") {
 
 # fx run-host-tests simple_browser_unittests
 flutter_test("simple_browser_unittests") {
+  null_safe = true
   sources = [
     "browser_shortcuts_test.dart",
     "sanitize_url_test.dart",

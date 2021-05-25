@@ -38,7 +38,7 @@ class App extends StatelessWidget {
       builder: (context, snapshot) => snapshot.hasData
           ? StreamBuilder<Locale>(
               stream: model.localeStream,
-              initialData: snapshot.data,
+              initialData: snapshot.data as Locale,
               builder: (context, snapshot) {
                 final locale = snapshot.data;
                 Intl.defaultLocale = locale.toString();
@@ -94,9 +94,9 @@ class App extends StatelessWidget {
             // hide if no tab selected
             ? _buildEmptyPage()
             : AnimatedBuilder(
-                animation: model.tabsBloc.currentTab.pageTypeNotifier,
+                animation: model.tabsBloc.currentTab!.pageTypeNotifier,
                 builder: (_, __) =>
-                    _buildPage(model.tabsBloc.currentTab.pageType),
+                    _buildPage(model.tabsBloc.currentTab!.pageType),
               ),
       );
 
@@ -114,7 +114,7 @@ class App extends StatelessWidget {
   }
 
   Widget _buildNormalPage() =>
-      FuchsiaView(controller: model.tabsBloc.currentTab.fuchsiaViewConnection);
+      FuchsiaView(controller: model.tabsBloc.currentTab!.fuchsiaViewConnection);
   Widget _buildErrorPage() => ErrorPage();
   Widget _buildEmptyPage() => Container();
 }

@@ -33,13 +33,13 @@ class ErrorPage extends StatefulWidget {
 
 class _ErrorPageState extends State<ErrorPage> {
   final _focusNode = FocusNode();
-  final _direction = ValueNotifier<Coord>(null);
+  final _direction = ValueNotifier<Coord?>(null);
   final _coords = <Coord>[];
   final _crumbCoords = <Coord>[];
   int _length = _kStartLength;
-  Timer _timer;
-  Size _screenSize;
-  Offset _screenCenter;
+  Timer? _timer;
+  Size? _screenSize;
+  Offset? _screenCenter;
   bool _lost = false;
   final _random = Random();
   double rnd() => _random.nextDouble();
@@ -47,8 +47,10 @@ class _ErrorPageState extends State<ErrorPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => FocusScope.of(context).requestFocus(_focusNode));
+    if (WidgetsBinding.instance != null) {
+      WidgetsBinding.instance!.addPostFrameCallback(
+          (_) => FocusScope.of(context).requestFocus(_focusNode));
+    }
     _reset();
   }
 
@@ -82,7 +84,7 @@ class _ErrorPageState extends State<ErrorPage> {
             color: Colors.transparent,
             child: LayoutBuilder(builder: (context, constraints) {
               _screenSize = constraints.biggest;
-              _screenCenter = _screenSize.center(Offset.zero);
+              _screenCenter = _screenSize!.center(Offset.zero);
               return Stack(
                 children: [
                   ..._coords.asMap().map(_buildBody).values.toList(),
@@ -108,7 +110,7 @@ class _ErrorPageState extends State<ErrorPage> {
         _reset();
       }
 
-      Coord newDirection = _kKeyLabelToDirection[value.logicalKey.keyLabel];
+      Coord? newDirection = _kKeyLabelToDirection[value.logicalKey.keyLabel];
       if (newDirection != null) {
         if (_coords[_coords.length - 2] - _coords.last != newDirection) {
           _direction.value = newDirection;
@@ -151,15 +153,15 @@ class _ErrorPageState extends State<ErrorPage> {
       );
 
   Coord screenToSquares(Offset screen) => Coord(
-      ((screen.dx - _screenCenter.dx) / 16).floor(),
-      ((screen.dy - _screenCenter.dy) / 16).floor());
+      ((screen.dx - _screenCenter!.dx) / 16).floor(),
+      ((screen.dy - _screenCenter!.dy) / 16).floor());
   Offset squaresToScreen(Coord squares) =>
-      Offset((squares.x - 0.5), (squares.y - 0.5)) * 16 + _screenCenter;
+      Offset((squares.x - 0.5), (squares.y - 0.5)) * 16 + _screenCenter!;
 
   void _addCrumb() {
     Coord newCrumb = screenToSquares(Offset(
-      lerpDouble(0, _screenSize.width, rnd()),
-      lerpDouble(0, _screenSize.height, rnd()),
+      lerpDouble(0, _screenSize!.width, rnd())!,
+      lerpDouble(0, _screenSize!.height, rnd())!,
     ));
 
     // add if coordinate is currently free
@@ -168,24 +170,24 @@ class _ErrorPageState extends State<ErrorPage> {
     }
   }
 
-  void _onTimer(Timer timer) {
+  void _onTimer(Timer? timer) {
     if (_direction.value == null) {
       return;
     }
 
-    Coord newCoord = _coords.last + _direction.value;
+    Coord newCoord = _coords.last + _direction.value!;
 
     // lost: eating own tail
     if (_coords.contains(newCoord)) {
       _lost = true;
-      _timer.cancel();
+      _timer?.cancel();
       return;
     }
 
     // lost: leaving the screen
-    if (!(Offset.zero & _screenSize).contains(squaresToScreen(newCoord))) {
+    if (!(Offset.zero & _screenSize!).contains(squaresToScreen(newCoord))) {
       _lost = true;
-      _timer.cancel();
+      _timer?.cancel();
       return;
     }
 

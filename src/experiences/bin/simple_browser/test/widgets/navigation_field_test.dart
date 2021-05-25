@@ -15,9 +15,9 @@ import 'package:simple_browser/src/widgets/navigation_field.dart';
 void main() {
   setupLogger(name: 'navigation_field_test');
 
-  SimpleBrowserWebService mockWebService;
-  SimpleBrowserNavigationEventListener mockEventListener;
-  WebPageBloc webPageBloc;
+  late SimpleBrowserWebService mockWebService;
+  late SimpleBrowserNavigationEventListener mockEventListener;
+  late WebPageBloc webPageBloc;
 
   setUpAll(() {
     mockWebService = MockSimpleBrowserWebService();

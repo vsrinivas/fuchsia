@@ -40,7 +40,7 @@ double get kScrollToMargin => _kScrollToMargin;
 /// tab borders as they are affected by the tab rearrangement action.
 class TabsWidget extends StatefulWidget {
   final TabsBloc bloc;
-  const TabsWidget({@required this.bloc});
+  const TabsWidget({required this.bloc});
 
   @override
   _TabsWidgetState createState() => _TabsWidgetState();
@@ -55,19 +55,19 @@ class _TabsWidgetState extends State<TabsWidget>
 
   int _ghostIndex = 0;
   int _dragStartIndex = 0;
-  bool _isDragging;
-  bool _isAnimating;
+  late bool _isDragging;
+  late bool _isAnimating;
 
   static const Duration _reorderAnimationDuration = Duration(milliseconds: 200);
-  AnimationController _ghostController;
-  AnimationController _leftNewGhostController;
-  AnimationController _rightNewGhostController;
+  late AnimationController _ghostController;
+  late AnimationController _leftNewGhostController;
+  late AnimationController _rightNewGhostController;
 
   final _scrollController = ScrollController();
   final _leftScrollButton = _ScrollButton(_ScrollDirection.left);
   final _rightScrollButton = _ScrollButton(_ScrollDirection.right);
 
-  ThemeData _browserTheme;
+  late ThemeData _browserTheme;
 
   @override
   void initState() {
@@ -113,12 +113,12 @@ class _TabsWidgetState extends State<TabsWidget>
     _setupBloc(oldWidget, widget);
   }
 
-  void _setupBloc(TabsWidget oldWidget, TabsWidget newWidget) {
+  void _setupBloc(TabsWidget? oldWidget, TabsWidget? newWidget) {
     if (oldWidget?.bloc != newWidget?.bloc) {
-      oldWidget?.bloc?.currentTabNotifier?.removeListener(_onCurrentTabChanged);
-      widget?.bloc?.currentTabNotifier?.addListener(_onCurrentTabChanged);
-      oldWidget?.bloc?.tabsNotifier?.removeListener(_onTabsChanged);
-      widget?.bloc?.tabsNotifier?.addListener(_onTabsChanged);
+      oldWidget?.bloc.currentTabNotifier.removeListener(_onCurrentTabChanged);
+      widget.bloc.currentTabNotifier.addListener(_onCurrentTabChanged);
+      oldWidget?.bloc.tabsNotifier.removeListener(_onTabsChanged);
+      widget.bloc.tabsNotifier.addListener(_onTabsChanged);
     }
   }
 
@@ -163,7 +163,7 @@ class _TabsWidgetState extends State<TabsWidget>
     _tabWidth = (_tabListWidth / widget.bloc.tabs.length)
         .clamp(_kMinTabWidth, _tabListWidth / 2);
     if (!_isDragging) {
-      _currentTabX.value = _tabWidth * widget.bloc.currentTabIdx;
+      _currentTabX.value = _tabWidth * widget.bloc.currentTabIdx!;
     }
   }
 
@@ -227,8 +227,8 @@ class _TabsWidgetState extends State<TabsWidget>
             builder: (_, __) => Positioned(
               left: _currentTabX.value,
               child: _wrapWithGestureDetector(
-                widget.bloc.currentTabIdx,
-                _buildTabWithBorder(widget.bloc.currentTabIdx),
+                widget.bloc.currentTabIdx!,
+                _buildTabWithBorder(widget.bloc.currentTabIdx!),
               ),
             ),
           ),
@@ -261,16 +261,16 @@ class _TabsWidgetState extends State<TabsWidget>
 
     // Shifts the tabs located between the moving tab's original and current positions
     //  to the right if the it is moving to the left.
-    if (_ghostIndex < widget.bloc.currentTabIdx) {
+    if (_ghostIndex < widget.bloc.currentTabIdx!) {
       //
-      if (index > _ghostIndex && index <= widget.bloc.currentTabIdx) {
+      if (index > _ghostIndex && index <= widget.bloc.currentTabIdx!) {
         actualIndex = index - 1;
       }
     }
     // Shifts the tabs located between the moving tab's original and current positions
     // to the left if it is moving to the right.
-    else if (_ghostIndex > widget.bloc.currentTabIdx) {
-      if (index < _ghostIndex && index >= widget.bloc.currentTabIdx) {
+    else if (_ghostIndex > widget.bloc.currentTabIdx!) {
+      if (index < _ghostIndex && index >= widget.bloc.currentTabIdx!) {
         actualIndex = index + 1;
       }
     }
@@ -301,7 +301,7 @@ class _TabsWidgetState extends State<TabsWidget>
     return child;
   }
 
-  Widget _buildTabWithBorder(int index, {int renderingIndex}) {
+  Widget _buildTabWithBorder(int index, {int? renderingIndex}) {
     renderingIndex ??= index;
 
     return Container(
@@ -361,7 +361,7 @@ class _TabsWidgetState extends State<TabsWidget>
       final offsetForRightEdge =
           _currentTabX.value - viewportWidth + _kMinTabWidth + _kScrollToMargin;
 
-      double newOffset;
+      double? newOffset;
 
       if (_scrollController.offset > offsetForLeftEdge) {
         newOffset = offsetForLeftEdge;
@@ -380,7 +380,11 @@ class _TabsWidgetState extends State<TabsWidget>
   }
 
   void _syncGhost() {
-    _ghostIndex = widget.bloc.currentTabIdx;
+    final currentIdx = widget.bloc.currentTabIdx;
+    if (currentIdx == null) {
+      return;
+    }
+    _ghostIndex = currentIdx;
     _currentTabX.value = _tabWidth * _ghostIndex;
   }
 
@@ -616,7 +620,11 @@ class _TabsWidgetState extends State<TabsWidget>
 /// a mouse cursor hovers over it. Also, handles the closing tab event when the close
 /// button is tapped on.
 class _TabWidget extends StatefulWidget {
-  const _TabWidget({this.bloc, this.selected, this.onSelect, this.onClose});
+  const _TabWidget(
+      {required this.bloc,
+      required this.selected,
+      required this.onSelect,
+      required this.onClose});
   final WebPageBloc bloc;
   final bool selected;
   final VoidCallback onSelect;
@@ -636,12 +644,12 @@ class _TabWidgetState extends State<_TabWidget> {
         _hovering.value = true;
       },
       onExit: (_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance?.addPostFrameCallback((_) {
           _hovering.value = false;
         });
       },
       child: DefaultTextStyle(
-        style: baseTheme.textTheme.bodyText2.copyWith(
+        style: baseTheme.textTheme.bodyText2!.copyWith(
           color: widget.selected
               ? baseTheme.primaryColor
               : baseTheme.highlightColor,
@@ -698,7 +706,7 @@ class _TabWidgetState extends State<_TabWidget> {
 
 class _ScrollButton {
   final _ScrollDirection type;
-  IconData icon;
+  late IconData icon;
   final ValueNotifier<bool> isEnabled = ValueNotifier<bool>(true);
   double directionFactor = 0.0;
 
@@ -710,7 +718,7 @@ class _ScrollButton {
         icon = Icons.keyboard_arrow_left;
         directionFactor = -1.0;
         break;
-      case _ScrollDirection.right:
+      default:
         icon = Icons.keyboard_arrow_right;
         directionFactor = 1.0;
         break;

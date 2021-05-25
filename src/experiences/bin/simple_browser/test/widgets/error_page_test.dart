@@ -12,8 +12,8 @@ import 'package:simple_browser/src/widgets/error_page.dart';
 void main() {
   setupLogger(name: 'error_page_test');
 
-  double bodyWidth;
-  double bodyHeight;
+  late double bodyWidth;
+  late double bodyHeight;
 
   setUpAll(() {
     bodyWidth = 800.0;
