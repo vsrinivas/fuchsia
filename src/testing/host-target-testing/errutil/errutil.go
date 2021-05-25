@@ -51,6 +51,10 @@ func HandleError(ctx context.Context, serialSocketPath string, err error) error 
 		return err
 	}
 
+	if err := printNetstackInspect(ctx, serial); err != nil {
+		return err
+	}
+
 	if err := printDeviceProcessBacktraces(ctx, serial); err != nil {
 		return err
 	}
@@ -122,7 +126,7 @@ func printNetstackGoroutines(ctx context.Context, serial net.Conn) error {
 	logger.Infof(ctx, "printing netstack goroutine stack traces to serial")
 
 	// Print out the netstack goroutines while only using shell-builtin commands to avoid hitting the package resolver.
-	const shellFmtStr = `(export PATH=; +
+	const shellFmtStr = `(export PATH=;
 		echo '%s --- netstack goroutine traces ---';
 		export P="$(echo /hub/r/sys/*/c/netstack.cmx/*/out/debug/goroutines)" &&
 		test -e "$P" && while IFS='' read line; do echo "$line"; done < "$P";
@@ -138,6 +142,28 @@ func printNetstackGoroutines(ctx context.Context, serial net.Conn) error {
 	time.Sleep(60 * time.Second)
 
 	logger.Infof(ctx, "done waiting for netstack goroutine to be printed")
+
+	return nil
+}
+
+func printNetstackInspect(ctx context.Context, serial net.Conn) error {
+	logger.Infof(ctx, "printing netstack inspect to serial")
+
+	// Print iquery. This will also emit a newline before
+	// the command to get a fresh line, and print markers before and after
+	// the backtrace to make it easier to distinguish in the logs.
+	cmd := fmt.Sprintf("\n(echo '%s --- iquery netstack logs ---' && /boot/bin/iquery show netstack.cmx && echo '------------------------------------') &\n", time.Now().Format(time.RFC3339Nano))
+
+	err := run(ctx, serial, cmd)
+	if err != nil {
+		return err
+	}
+
+	// We don't know how long it'll take to dump all threads, so sleep for
+	// a minute to give `inspect` a chance to complete.
+	time.Sleep(60 * time.Second)
+
+	logger.Infof(ctx, "done waiting for inspect to be printed")
 
 	return nil
 }
