@@ -41,7 +41,10 @@ impl DiagnosticsProvider for ArchiveAccessorProvider {
     {
         let archive = connect_to_archive_accessor(accessor_path).await?;
         let selectors = selectors.iter().map(|s| s.as_ref());
-        let reader = ArchiveReader::new().with_archive(archive).add_selectors(selectors);
+        let reader = ArchiveReader::new()
+            .with_archive(archive)
+            .retry_if_empty(false)
+            .add_selectors(selectors);
         reader.snapshot::<D>().await.map_err(|e| Error::Fetch(e))
     }
 

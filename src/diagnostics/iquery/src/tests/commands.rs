@@ -307,6 +307,12 @@ async fn empty_result_on_null_payload() {
 }
 
 #[fuchsia::test]
+async fn show_component_doesnt_exist() {
+    let result = utils::execute_command(&["show", "doesnt_exist.cmx"]).await;
+    assert_matches!(result, Ok(res) if res == "");
+}
+
+#[fuchsia::test]
 async fn show_filter_manifest() {
     let (_env, app) = utils::start_basic_component("show-filter").await.expect("create comp 1");
     let (_env, app2) = utils::start_test_component("show-filter2").await.expect("create comp 2");
