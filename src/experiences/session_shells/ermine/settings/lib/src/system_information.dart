@@ -26,6 +26,10 @@ class SystemInformation extends UiSpec {
   static String get _please => Strings.please;
   static String get _visit => Strings.visit;
 
+  // Icon for system information title.
+  static IconValue get _icon =>
+      IconValue(codePoint: Icons.info_outlined.codePoint);
+
   // Action to change channel.
   static int changeAction = QuickAction.details.$value;
 
@@ -77,7 +81,7 @@ class SystemInformation extends UiSpec {
   Future<Spec> _specForSystemInformation([int action = 0]) async {
     if (action == 0 || action & QuickAction.cancel.$value > 0) {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
+        Group(title: _title, icon: _icon, values: [
           Value.withText(TextValue(
             text: _view,
             action: changeAction,

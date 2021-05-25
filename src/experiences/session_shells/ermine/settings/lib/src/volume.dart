@@ -25,6 +25,10 @@ class Volume extends UiSpec {
   static String get _min => Strings.min;
   static String get _max => Strings.max;
 
+  // Icon for volume title.
+  static IconValue get _icon =>
+      IconValue(codePoint: Icons.volume_up_outlined.codePoint);
+
   late _VolumeModel model;
 
   Volume(vol.AudioCoreProxy control) {
@@ -62,7 +66,7 @@ class Volume extends UiSpec {
   static Spec _specForVolume(double value) {
     String roundedVolume = (value * 100).round().toString();
     return Spec(title: _title, groups: [
-      Group(title: _title, values: [
+      Group(title: _title, icon: _icon, values: [
         Value.withText(TextValue(text: roundedVolume)),
         Value.withProgress(
             ProgressValue(value: value, action: changeVolumeAction)),

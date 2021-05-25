@@ -52,9 +52,7 @@ void main() {
     expect(mockBtNames?[5], _disconnect);
 
     // Confirm bluetooth icon present
-    bool? hasIcon =
-        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isTrue);
+    expect(spec.groups?.first.icon, isNotNull);
 
     bluetooth.dispose();
   });
@@ -90,9 +88,7 @@ void main() {
     expect(mockBtNames?[1], _disconnect);
 
     // Confirm bluetooth icon present
-    bool? hasIcon =
-        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isTrue);
+    expect(spec.groups?.first.icon, isNotNull);
 
     // Add devices to mock bluetooth devices
     mockBluetoothDevices
@@ -159,9 +155,7 @@ void main() {
     expect(mockBtNames?[5], _disconnect);
 
     // Confirm bluetooth icon present
-    bool? hasIcon =
-        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isTrue);
+    expect(spec.groups?.first.icon, isNotNull);
 
     // Remove device from mock bluetooth devices
     mockBluetoothDevices.removeWhere((device) => device.identifier == '1111');

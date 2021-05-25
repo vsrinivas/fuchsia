@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
@@ -15,6 +16,10 @@ import 'package:quickui/quickui.dart';
 class Datetime extends UiSpec {
   // Localized strings.
   static String get _title => Strings.dateTime;
+
+  // Icon for datetime title.
+  static IconValue get _icon =>
+      IconValue(codePoint: Icons.access_time.codePoint);
   static const Duration refreshDuration = Duration(seconds: 1);
 
   // Action to change timezone.
@@ -42,7 +47,10 @@ class Datetime extends UiSpec {
   static Spec _specForDateTime() {
     String dateTime = DateFormat.E().add_yMd().add_jm().format(DateTime.now());
     return Spec(title: _title, groups: [
-      Group(title: _title, values: [Value.withText(TextValue(text: dateTime))]),
+      Group(
+          title: _title,
+          icon: _icon,
+          values: [Value.withText(TextValue(text: dateTime))]),
     ]);
   }
 }

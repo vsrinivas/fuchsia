@@ -15,6 +15,10 @@ class Channel extends UiSpec {
   // Localized strings.
   static String get _title => Strings.channel;
 
+  // Icon for channel title.
+  static IconValue get _icon =>
+      IconValue(codePoint: Icons.cloud_outlined.codePoint);
+
   // Action to change channel.
   static int changeAction = QuickAction.details.$value;
 
@@ -58,9 +62,13 @@ class Channel extends UiSpec {
   Future<Spec> _specForChannel(_ChannelModel model, [int action = 0]) async {
     if (action == 0 || action & QuickAction.cancel.$value > 0) {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
+        Group(title: _title, icon: _icon, values: [
           Value.withText(TextValue(
             text: model.channel,
+            action: changeAction,
+          )),
+          Value.withIcon(IconValue(
+            codePoint: Icons.arrow_right.codePoint,
             action: changeAction,
           )),
         ]),

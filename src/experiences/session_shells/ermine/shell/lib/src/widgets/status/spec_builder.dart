@@ -21,7 +21,7 @@ Widget buildFromSpec(Spec spec, void Function(Value) update) {
   for (final group in spec.groups) {
     // Handle group with no values, but has a title.
     if (group.values.isEmpty && group.title.isNotEmpty) {
-      result.add(_buildTitleRow(group.title, []));
+      result.add(_buildTitleRow(group.title, [], group.icon));
       continue;
     }
 
@@ -46,10 +46,10 @@ Widget buildFromSpec(Spec spec, void Function(Value) update) {
         // For grid, show title and grid in separate rows.
         if (groupedValues.first.$tag == ValueTag.grid) {
           result
-            ..add(_buildTitleRow(group.title, []))
+            ..add(_buildTitleRow(group.title, [], group.icon))
             ..add(_buildValueRow(widgets));
         } else {
-          result.add(_buildTitleRow(group.title, widgets));
+          result.add(_buildTitleRow(group.title, widgets, group.icon));
         }
       } else {
         result.add(_buildValueRow(widgets));
@@ -153,13 +153,26 @@ Widget _buildValueRow(List<Widget> children) {
   );
 }
 
-Widget _buildTitleRow(String title, List<Widget> children) {
+Widget _buildTitleRow(String title, List<Widget> children, IconValue icon) {
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     textBaseline: TextBaseline.alphabetic,
     children: <Widget>[
+      if (icon != null)
+        Container(
+          padding: EdgeInsets.only(right: 8),
+          alignment: Alignment.centerLeft,
+          child: Icon(
+            IconData(
+              icon.codePoint,
+              fontFamily: icon.fontFamily ?? 'MaterialIcons',
+            ),
+            size: kIconHeight,
+          ),
+        ),
       Container(
         padding: EdgeInsets.only(right: 32),
+        alignment: Alignment.centerLeft,
         child: Text(title.toUpperCase()),
       ),
       Expanded(

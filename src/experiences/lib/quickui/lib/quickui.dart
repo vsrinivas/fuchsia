@@ -26,7 +26,7 @@ abstract class UiSpec extends QuickUi {
 
   /// Defines a 'null' spec, used to signal the QuickUI client to hide this
   /// service's UI.
-  static final Spec nullSpec = Spec(title: null, groups: null);
+  static final Spec nullSpec = Spec();
 
   /// Completes any outstanding Get for [Spec].
   set spec(Spec value) {

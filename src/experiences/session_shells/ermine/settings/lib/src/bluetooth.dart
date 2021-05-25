@@ -20,6 +20,9 @@ class Bluetooth extends UiSpec {
   static String get _title => Strings.bluetooth;
   static String get _disconnect => Strings.disconnect.toUpperCase();
 
+  // Icon for bluetooth title.
+  static IconValue get _icon => IconValue(codePoint: Icons.bluetooth.codePoint);
+
   late BluetoothModel model;
 
   Bluetooth({required bt.ControlProxy monitor}) {
@@ -68,10 +71,11 @@ class Bluetooth extends UiSpec {
       );
     });
     return Spec(title: _title, groups: [
-      Group(title: _title, values: [
-        Value.withIcon(IconValue(codePoint: Icons.bluetooth.codePoint)),
-        Value.withGrid(GridValue(columns: 2, values: values))
-      ]),
+      Group(
+        title: _title,
+        icon: _icon,
+        values: [Value.withGrid(GridValue(columns: 2, values: values))],
+      ),
     ]);
   }
 }

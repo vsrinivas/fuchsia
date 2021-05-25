@@ -58,31 +58,35 @@ class Battery extends UiSpec {
     final batteryText = '${value.toStringAsFixed(0)}%';
     if (value == 100) {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
-          Value.withIcon(IconValue(codePoint: Icons.battery_full.codePoint)),
-          Value.withText(TextValue(text: batteryText)),
-        ]),
+        Group(
+          title: _title,
+          icon: IconValue(codePoint: Icons.battery_full.codePoint),
+          values: [Value.withText(TextValue(text: batteryText))],
+        ),
       ]);
     } else if (charging) {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
-          Value.withIcon(
-              IconValue(codePoint: Icons.battery_charging_full.codePoint)),
-          Value.withText(TextValue(text: batteryText)),
-        ]),
+        Group(
+          title: _title,
+          icon: IconValue(codePoint: Icons.battery_charging_full.codePoint),
+          values: [Value.withText(TextValue(text: batteryText))],
+        ),
       ]);
     } else if (value <= 10) {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
-          Value.withIcon(IconValue(codePoint: Icons.battery_alert.codePoint)),
-          Value.withText(TextValue(text: batteryText)),
-        ]),
+        Group(
+          title: _title,
+          icon: IconValue(codePoint: Icons.battery_alert.codePoint),
+          values: [Value.withText(TextValue(text: batteryText))],
+        ),
       ]);
     } else {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
-          Value.withText(TextValue(text: batteryText)),
-        ]),
+        Group(
+          title: _title,
+          icon: IconValue(codePoint: Icons.battery_std.codePoint),
+          values: [Value.withText(TextValue(text: batteryText))],
+        ),
       ]);
     }
   }

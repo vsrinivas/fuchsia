@@ -30,6 +30,9 @@ void main() {
     expect(spec.groups?.first.title, isNotNull);
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '5%');
+
+    // Confirm battery icon present in title
+    expect(spec.groups?.first.icon, isNotNull);
   });
 
   test('Change Battery Level', () async {
@@ -66,6 +69,9 @@ void main() {
     expect(spec.groups?.first.title, isNotNull);
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '6%');
+
+    // Confirm battery icon present in title
+    expect(spec.groups?.first.icon, isNotNull);
   });
 
   test('Change Charging Status', () async {
@@ -89,10 +95,6 @@ void main() {
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '50%');
 
-    bool? hasIcon =
-        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isFalse);
-
     // Change charging status
     await watcher.onChangeBatteryInfo(
         _buildStats(51, BatteryStatus.ok, ChargeStatus.charging));
@@ -106,8 +108,8 @@ void main() {
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '51%');
 
-    hasIcon = spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isTrue);
+    // Confirm battery icon present in title
+    expect(spec.groups?.first.icon, isNotNull);
   });
 
   test('Low Battery Warning', () async {
@@ -131,10 +133,6 @@ void main() {
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '50%');
 
-    bool? hasIcon =
-        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isFalse);
-
     // Change charge to <10% (low status)
     await watcher.onChangeBatteryInfo(
         _buildStats(9, BatteryStatus.ok, ChargeStatus.notCharging));
@@ -148,8 +146,8 @@ void main() {
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '9%');
 
-    hasIcon = spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isTrue);
+    // Confirm battery icon present in title
+    expect(spec.groups?.first.icon, isNotNull);
   });
 
   test('Battery Full', () async {
@@ -173,10 +171,6 @@ void main() {
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '50%');
 
-    bool? hasIcon =
-        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isFalse);
-
     // Change charge to 100% (full)
     await watcher.onChangeBatteryInfo(
         _buildStats(100, BatteryStatus.ok, ChargeStatus.notCharging));
@@ -190,8 +184,8 @@ void main() {
     expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '100%');
 
-    hasIcon = spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
-    expect(hasIcon, isTrue);
+    // Confirm battery icon present in title
+    expect(spec.groups?.first.icon, isNotNull);
   });
 }
 

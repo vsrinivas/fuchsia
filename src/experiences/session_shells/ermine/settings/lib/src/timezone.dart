@@ -18,6 +18,10 @@ class TimeZone extends UiSpec {
   // Localized strings.
   static String get _title => Strings.timezone;
 
+  // Icon for timezone title.
+  static IconValue get _icon =>
+      IconValue(codePoint: Icons.access_time.codePoint);
+
   // Action to change timezone.
   static int changeAction = QuickAction.details.$value;
 
@@ -74,9 +78,13 @@ class TimeZone extends UiSpec {
   Future<Spec> _specForTimeZone(_TimeZoneModel model, [int action = 0]) async {
     if (action == 0 || action & QuickAction.cancel.$value > 0) {
       return Spec(title: _title, groups: [
-        Group(title: _title, values: [
+        Group(title: _title, icon: _icon, values: [
           Value.withText(TextValue(
             text: model.timeZoneId!,
+            action: changeAction,
+          )),
+          Value.withIcon(IconValue(
+            codePoint: Icons.arrow_right.codePoint,
             action: changeAction,
           )),
         ]),

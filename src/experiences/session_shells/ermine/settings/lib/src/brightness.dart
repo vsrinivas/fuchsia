@@ -71,22 +71,32 @@ class Brightness extends UiSpec {
 
   static Spec _specForAutoBrightness(double value) {
     return Spec(title: _title, groups: [
-      Group(title: _title, values: [
-        Value.withIcon(IconValue(codePoint: Icons.brightness_auto.codePoint)),
-        Value.withProgress(ProgressValue(value: value, action: progressAction)),
-        Value.withText(TextValue(text: _auto)),
-      ]),
+      Group(
+        title: _title,
+        icon: IconValue(codePoint: Icons.brightness_auto.codePoint),
+        values: [
+          Value.withProgress(
+              ProgressValue(value: value, action: progressAction)),
+          Value.withText(TextValue(text: _auto)),
+        ],
+      ),
     ]);
   }
 
   static Spec _specForManualBrightness(double value) {
     return Spec(title: _title, groups: [
-      Group(title: _title, values: [
-        Value.withIcon(IconValue(codePoint: Icons.brightness_low.codePoint)),
-        Value.withProgress(ProgressValue(value: value, action: progressAction)),
-        Value.withIcon(IconValue(codePoint: Icons.brightness_high.codePoint)),
-        Value.withButton(ButtonValue(label: _auto, action: autoAction)),
-      ]),
+      Group(
+          title: _title,
+          icon: IconValue(codePoint: Icons.brightness_5.codePoint),
+          values: [
+            Value.withIcon(
+                IconValue(codePoint: Icons.brightness_low.codePoint)),
+            Value.withProgress(
+                ProgressValue(value: value, action: progressAction)),
+            Value.withIcon(
+                IconValue(codePoint: Icons.brightness_high.codePoint)),
+            Value.withButton(ButtonValue(label: _auto, action: autoAction)),
+          ]),
     ]);
   }
 }

@@ -19,6 +19,10 @@ import 'package:quickui/quickui.dart';
 class Memory extends UiSpec {
   static String get _memory => Strings.memory;
 
+  // Icon for memory title.
+  static IconValue get _icon =>
+      IconValue(codePoint: Icons.memory_outlined.codePoint);
+
   late MemoryModel model;
 
   Memory({required Monitor monitor, WatcherBinding? binding}) {
@@ -51,7 +55,7 @@ class Memory extends UiSpec {
     String usedString = (used).toStringAsPrecision(3);
     String totalString = (total).toStringAsPrecision(3);
     return Spec(title: _memory, groups: [
-      Group(title: _memory, values: [
+      Group(title: _memory, icon: _icon, values: [
         Value.withText(TextValue(text: '${usedString}GB / ${totalString}GB')),
       ]),
     ]);
