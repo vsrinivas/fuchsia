@@ -724,24 +724,25 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   //
   cpu_mask_t cpus_to_reschedule_mask = 0;
   for (; needs_migration(next_thread); next_thread = DequeueThread(now)) {
+    SchedulerState* const next_state = &next_thread->scheduler_state();
+
     // If the thread is not scheduled to migrate to a specific CPU, find a
     // suitable target CPU. If the thread has a migration function, the search
     // will schedule the thread to migrate to a specific CPU and return the
     // current CPU.
     cpu_num_t target_cpu = INVALID_CPU;
-    if (next_thread->scheduler_state().next_cpu_ == INVALID_CPU) {
+    if (next_state->next_cpu_ == INVALID_CPU) {
       target_cpu = FindTargetCpu(next_thread);
-      DEBUG_ASSERT(target_cpu != this_cpu() ||
-                   next_thread->scheduler_state().next_cpu_ != INVALID_CPU);
+      DEBUG_ASSERT(target_cpu != this_cpu() || next_state->next_cpu_ != INVALID_CPU);
     }
 
     // If the thread is scheduled to migrate to a specific CPU, set the target
     // to that CPU and call the migration function.
-    if (next_thread->scheduler_state().next_cpu_ != INVALID_CPU) {
-      DEBUG_ASSERT(next_thread->scheduler_state().last_cpu_ == this_cpu());
-      target_cpu = next_thread->scheduler_state().next_cpu_;
+    if (next_state->next_cpu_ != INVALID_CPU) {
+      DEBUG_ASSERT(next_state->last_cpu_ == this_cpu());
+      target_cpu = next_state->next_cpu_;
       next_thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
-      next_thread->scheduler_state().next_cpu_ = INVALID_CPU;
+      next_state->next_cpu_ = INVALID_CPU;
     }
 
     // The target CPU must always be different than the current CPU.
@@ -1008,7 +1009,6 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
   // Update the state of the current and next thread.
   next_thread->set_running();
-  const cpu_num_t last_cpu = next_state->last_cpu_;
   next_state->last_cpu_ = current_cpu;
   next_state->curr_cpu_ = current_cpu;
   active_thread_ = next_thread;
@@ -1018,10 +1018,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     TraceThreadQueueEvent("tqe_activate"_stringref, next_thread);
   }
 
-  // Call the migrate function if the thread has moved between CPUs.
-  if (last_cpu != INVALID_CPU && last_cpu != current_cpu) {
-    next_thread->CallMigrateFnLocked(Thread::MigrateStage::After);
-  }
+  // Handle any pending migration work.
+  next_thread->CallMigrateFnLocked(Thread::MigrateStage::After);
 
   // Update the expected runtime of the current thread and the per-CPU total.
   // Only update the thread and aggregate values if the current thread is still
@@ -1656,32 +1654,43 @@ void Scheduler::RescheduleInternal() {
 void Scheduler::Migrate(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_migrate"_stringref};
 
-  SchedulerState* const state = &thread->scheduler_state();
-
   DEBUG_ASSERT(thread_lock.IsHeld());
+
+  SchedulerState* const state = &thread->scheduler_state();
+  const cpu_mask_t effective_cpu_mask = state->GetEffectiveCpuMask(mp_get_active_mask());
+  const cpu_mask_t curr_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
+  const cpu_mask_t next_cpu_mask = cpu_num_to_mask(state->next_cpu_);
+
+  const bool stale_curr_cpu = (curr_cpu_mask & effective_cpu_mask) == 0;
+  const bool stale_next_cpu =
+      state->next_cpu_ != INVALID_CPU && (next_cpu_mask & effective_cpu_mask) == 0;
+
+  // Clear the next CPU if it is no longer in the effective CPU mask. A new value will be
+  // determined, if necessary.
+  if (stale_next_cpu) {
+    state->next_cpu_ = INVALID_CPU;
+  }
+
   cpu_mask_t cpus_to_reschedule_mask = 0;
+  if (thread->state() == THREAD_RUNNING && stale_curr_cpu) {
+    // The CPU the thread is running on will take care of the actual migration.
+    cpus_to_reschedule_mask |= curr_cpu_mask;
+  } else if (thread->state() == THREAD_READY && (stale_curr_cpu || stale_next_cpu)) {
+    Scheduler* current = Get(state->curr_cpu_);
+    const cpu_num_t target_cpu = FindTargetCpu(thread);
 
-  if (thread->state() == THREAD_RUNNING) {
-    const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
-    if (!(thread->scheduler_state().GetEffectiveCpuMask(mp_get_active_mask()) & thread_cpu_mask)) {
-      // Mark the CPU the thread is running on for reschedule. The
-      // scheduler on that CPU will take care of the actual migration.
-      cpus_to_reschedule_mask |= thread_cpu_mask;
-    }
-  } else if (thread->state() == THREAD_READY) {
-    const cpu_mask_t thread_cpu_mask = cpu_num_to_mask(state->curr_cpu_);
-    if (!(thread->scheduler_state().GetEffectiveCpuMask(mp_get_active_mask()) & thread_cpu_mask)) {
-      Scheduler* current = Get(state->curr_cpu_);
-
+    // If the thread has a migration function it will stay on the same CPU until the migration
+    // function is called there. Otherwise, the migration is handled here.
+    if (target_cpu != state->curr_cpu()) {
       DEBUG_ASSERT(state->InQueue());
       current->GetRunQueue(thread).erase(*thread);
       current->Remove(thread);
 
-      const cpu_num_t target_cpu = FindTargetCpu(thread);
       Scheduler* const target = Get(target_cpu);
       target->Insert(CurrentTime(), thread);
 
-      cpus_to_reschedule_mask |= cpu_num_to_mask(target_cpu);
+      // Reschedule both CPUs to handle the run queue changes.
+      cpus_to_reschedule_mask |= cpu_num_to_mask(target_cpu) | curr_cpu_mask;
     }
   }
 
@@ -1716,6 +1725,7 @@ void Scheduler::MigrateUnpinnedThreads() {
       current->TraceThreadQueueEvent("tqe_deque_migrate_unpinned_fair"_stringref, thread);
       current->Remove(thread);
       thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
+      thread->scheduler_state().next_cpu_ = INVALID_CPU;
 
       const cpu_num_t target_cpu = FindTargetCpu(thread);
       Scheduler* const target = Get(target_cpu);
@@ -1740,6 +1750,7 @@ void Scheduler::MigrateUnpinnedThreads() {
       current->TraceThreadQueueEvent("tqe_deque_migrate_unpinned_deadline"_stringref, thread);
       current->Remove(thread);
       thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
+      thread->scheduler_state().next_cpu_ = INVALID_CPU;
 
       const cpu_num_t target_cpu = FindTargetCpu(thread);
       Scheduler* const target = Get(target_cpu);

@@ -689,12 +689,7 @@ struct Thread {
 
   void SetMigrateFn(MigrateFn migrate_fn) TA_EXCL(thread_lock);
   void SetMigrateFnLocked(MigrateFn migrate_fn) TA_REQ(thread_lock);
-
-  void CallMigrateFnLocked(MigrateStage stage) TA_REQ(thread_lock) {
-    if (unlikely(migrate_fn_)) {
-      migrate_fn_(this, stage);
-    }
-  }
+  void CallMigrateFnLocked(MigrateStage stage) TA_REQ(thread_lock);
 
   // Call |migrate_fn| for each thread that was last run on the current CPU.
   static void CallMigrateFnForCpuLocked(cpu_num_t cpu) TA_REQ(thread_lock);
@@ -1089,6 +1084,10 @@ struct Thread {
 
   // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
   MigrateFn migrate_fn_;
+
+  // For threads with migration functions, indicates whether a migration is in progress. When true,
+  // the migrate function has been called with Before but not yet with After.
+  bool migrate_pending_;
 
   // Used to track threads that have set |migrate_fn_|. This is used to migrate threads before a CPU
   // is taken offline.

@@ -707,6 +707,7 @@ void Thread::SetMigrateFn(MigrateFn migrate_fn) {
 
 void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
   canary_.Assert();
+  DEBUG_ASSERT(!migrate_pending_);
   // If |migrate_fn_| was previously set, remove |this| from |migrate_list_|.
   if (migrate_fn_) {
     migrate_list_.erase(*this);
@@ -718,12 +719,34 @@ void Thread::SetMigrateFnLocked(MigrateFn migrate_fn) {
   }
 }
 
-void Thread::CallMigrateFnForCpuLocked(cpu_num_t cpu) {
-  while (!migrate_list_.is_empty()) {
-    Thread* const thread = migrate_list_.pop_front();
+void Thread::CallMigrateFnLocked(MigrateStage stage) {
+  if (unlikely(migrate_fn_)) {
+    switch (stage) {
+      case MigrateStage::Before:
+        if (!migrate_pending_) {
+          migrate_pending_ = true;
+          migrate_fn_(this, stage);
+        }
+        break;
 
-    if (thread->state() != THREAD_READY && thread->scheduler_state().last_cpu_ == cpu) {
-      thread->CallMigrateFnLocked(Thread::MigrateStage::Before);
+      case MigrateStage::After:
+        if (migrate_pending_) {
+          migrate_pending_ = false;
+          migrate_fn_(this, stage);
+        }
+        break;
+
+      case MigrateStage::Exiting:
+        migrate_fn_(this, stage);
+        break;
+    }
+  }
+}
+
+void Thread::CallMigrateFnForCpuLocked(cpu_num_t cpu) {
+  for (auto& thread : migrate_list_) {
+    if (thread.state() != THREAD_READY && thread.scheduler_state().last_cpu_ == cpu) {
+      thread.CallMigrateFnLocked(Thread::MigrateStage::Before);
     }
   }
 }
