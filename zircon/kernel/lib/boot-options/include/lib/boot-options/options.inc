@@ -476,6 +476,17 @@ inactive pages first is expected to free up memory that remains free for longer,
 and can be more effective at relieving memory pressure.
 )""")
 
+DEFINE_OPTION("kernel.page-scanner.start-at-boot", bool, page_scanner_start_at_boot, {true},
+              R"""(
+This option causes the kernels active memory scanner to be initially
+enabled on startup. You can also enable and disable it using the kernel
+console. If you disable the scanner, you can have additional system
+predictability since it removes time based and background memory eviction.
+
+Every action the scanner performs can be individually configured and disabled.
+If all actions are disabled then enabling the scanner has no effect.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

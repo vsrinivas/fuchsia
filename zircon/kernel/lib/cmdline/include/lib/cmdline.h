@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kPageScannerStartAtBoot[] = "kernel.page-scanner.start-at-boot";
 static constexpr const char kPageScannerZeroPageScansPerSecond[] =
     "kernel.page-scanner.zero-page-scans-per-second";
 static constexpr const char kPmmCheckerAction[] = "kernel.pmm-checker.action";

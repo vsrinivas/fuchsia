@@ -277,7 +277,7 @@ static void scanner_init_func(uint level) {
   DEBUG_ASSERT(thread);
   zero_page_scans_per_second = gCmdline.GetUInt64(kernel_option::kPageScannerZeroPageScansPerSecond,
                                                   kDefaultZeroPageScansPerSecond);
-  if (!gCmdline.GetBool(kernel_option::kPageScannerStartAtBoot, true)) {
+  if (!gBootOptions->page_scanner_start_at_boot) {
     Guard<Mutex> guard{scanner_disabled_lock::Get()};
     scanner_disable_count++;
     scanner_operation.fetch_or(kScannerOpDisable);

@@ -315,16 +315,6 @@ following values:
 The option allows a notice to be printed when the root job is either:
 terminated, or has no jobs and no processes.
 
-## kernel.page-scanner.start-at-boot=\<bool>
-
-This option (true by default) causes the kernels active memory scanner to be
-initially enabled on startup. You can also enable and disable it using the
-kernel console. If you disable the scanner, you can have additional system
-predictability since it removes time based and background memory eviction.
-
-Every action the scanner performs can be individually configured and disabled.
-If all actions are disabled then enabling the scanner has no effect.
-
 ## kernel.page-scanner.zero-page-scans-per-second=\<num>
 
 This option, 20000 by default, configures the maximal number of candidate pages
