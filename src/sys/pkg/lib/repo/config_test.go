@@ -14,22 +14,29 @@ import (
 )
 
 func TestMarshaling(t *testing.T) {
-	goldenCfg := Config{
-		URL: "fuchsia-pkg://example.com",
-		RootKeys: []KeyConfig{
-			{
-				ED25519Key: "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4",
+	tc := []struct {
+		name string
+		want Config
+		cfg  string
+	}{
+		{
+			name: "Mandatory fields config",
+			want: Config{
+				URL: "fuchsia-pkg://example.com",
+				RootKeys: []KeyConfig{
+					{
+						ED25519Key: "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4",
+					},
+				},
+				Mirrors: []MirrorConfig{{
+					URL:       "https://example.com/repo",
+					Subscribe: true,
+				}},
+				RootVersion:    1,
+				RootThreshold:  1,
+				UseLocalMirror: false,
 			},
-		},
-		Mirrors: []MirrorConfig{{
-			URL:       "https://example.com/repo",
-			Subscribe: true,
-		}},
-		RootVersion:   1,
-		RootThreshold: 1,
-	}
-
-	cfgStr := `
+			cfg: `
     {
       "repo_url": "fuchsia-pkg://example.com",
       "root_keys": [
@@ -44,15 +51,91 @@ func TestMarshaling(t *testing.T) {
           "subscribe": true
         }
       ]
-  }`
-
-	var cfg Config
-	if err := json.Unmarshal([]byte(cfgStr), &cfg); err != nil {
-		t.Fatalf("could not unmarshal golden config string: %v", err)
+  }`,
+		},
+		{
+			name: "Ephemeral config",
+			want: Config{
+				URL: "fuchsia-pkg://example.com",
+				RootKeys: []KeyConfig{
+					{
+						ED25519Key: "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4",
+					},
+				},
+				Mirrors: []MirrorConfig{{
+					URL:       "https://example.com/repo",
+					Subscribe: true,
+				}},
+				RootVersion:    1,
+				RootThreshold:  1,
+				UseLocalMirror: false,
+				StorageType:    Ephemeral,
+			},
+			cfg: `
+    {
+      "repo_url": "fuchsia-pkg://example.com",
+      "root_keys": [
+        {
+          "type": "ed25519",
+          "value": "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4"
+        }
+      ],
+      "mirrors": [
+        {
+          "mirror_url": "https://example.com/repo",
+          "subscribe": true
+        }
+      ],
+      "storage_type": "ephemeral"
+  }`,
+		},
+		{
+			name: "Persistent config",
+			want: Config{
+				URL: "fuchsia-pkg://example.com",
+				RootKeys: []KeyConfig{
+					{
+						ED25519Key: "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4",
+					},
+				},
+				Mirrors: []MirrorConfig{{
+					URL:       "https://example.com/repo",
+					Subscribe: true,
+				}},
+				RootVersion:    1,
+				RootThreshold:  1,
+				UseLocalMirror: false,
+				StorageType:    Persistent,
+			},
+			cfg: `
+    {
+      "repo_url": "fuchsia-pkg://example.com",
+      "root_keys": [
+        {
+          "type": "ed25519",
+          "value": "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4"
+        }
+      ],
+      "mirrors": [
+        {
+          "mirror_url": "https://example.com/repo",
+          "subscribe": true
+        }
+      ],
+      "storage_type": "persistent"
+  }`,
+		},
 	}
 
-	if !reflect.DeepEqual(cfg, goldenCfg) {
-		t.Fatalf("expected\n%#v\nand\n%#v\nto be equal", cfg, goldenCfg)
+	for _, c := range tc {
+		var cfg Config
+		if err := json.Unmarshal([]byte(c.cfg), &cfg); err != nil {
+			t.Fatalf("%v: could not unmarshal config string: %v", c.name, err)
+		}
+
+		if !reflect.DeepEqual(cfg, c.want) {
+			t.Fatalf("%v: expected\n%#v\nand\n%#v\nto be equal", c.name, cfg, c.want)
+		}
 	}
 }
 

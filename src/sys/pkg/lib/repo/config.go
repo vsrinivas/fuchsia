@@ -7,6 +7,7 @@ package repo
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	tuf_data "github.com/theupdateframework/go-tuf/data"
 )
@@ -18,12 +19,14 @@ import (
 // Keep these in sync with their repo.fidl counterparts as well as the custom
 //
 type Config struct {
-	URL              string         `json:"repo_url"`
-	RootKeys         []KeyConfig    `json:"root_keys"`
-	Mirrors          []MirrorConfig `json:"mirrors"`
-	RootVersion      uint32         `json:"root_version"`
-	RootThreshold    uint32         `json:"root_threshold"`
-	UpdatePackageURL string         `json:"update_package_url,omitempty"`
+	URL              string                `json:"repo_url"`
+	RootKeys         []KeyConfig           `json:"root_keys"`
+	Mirrors          []MirrorConfig        `json:"mirrors"`
+	RootVersion      uint32                `json:"root_version"`
+	RootThreshold    uint32                `json:"root_threshold"`
+	UpdatePackageURL string                `json:"update_package_url,omitempty"`
+	UseLocalMirror   bool                  `json:"use_local_mirror,omitempty"`
+	StorageType      RepositoryStorageType `json:"storage_type,omitempty"`
 }
 
 type MirrorConfig struct {
@@ -35,6 +38,48 @@ type MirrorConfig struct {
 type KeyConfig struct {
 	// ED25519Key is a 32-byte, lowercase, hex-encoded key.
 	ED25519Key string
+}
+
+// The underlying type of the FIDL RepositoryStorageType is uint32,
+// see //sdk/fidl/fuchsia.pkg/repo.fidl and
+// https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#enums
+type RepositoryStorageType uint32
+
+const (
+	Unset RepositoryStorageType = iota
+	Ephemeral
+	Persistent
+)
+
+func (t RepositoryStorageType) MarshalJSON() ([]byte, error) {
+	var s string
+	switch t {
+	case Unset:
+		// s is empty and dropped during marshaling due to "omitempty"
+	case Persistent:
+		s = "persistent"
+	case Ephemeral:
+		s = "ephemeral"
+	default:
+		return []byte{}, fmt.Errorf("unknown repository storage type: %q", t)
+	}
+	return json.Marshal(s)
+}
+
+func (t *RepositoryStorageType) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	switch strings.ToLower(s) {
+	case "persistent":
+		*t = Persistent
+	case "ephemeral":
+		*t = Ephemeral
+	default:
+		return fmt.Errorf("unknown repository storage type: %q", s)
+	}
+	return nil
 }
 
 // We replicate the serialization/deserialization logic given in
