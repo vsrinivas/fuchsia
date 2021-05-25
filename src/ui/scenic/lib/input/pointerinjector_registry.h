@@ -23,7 +23,8 @@ using InjectFunc = fit::function<void(const InternalPointerEvent& event, StreamI
 class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
  public:
   PointerinjectorRegistry(sys::ComponentContext* context, InjectFunc inject_touch_exclusive,
-                          InjectFunc inject_touch_hit_tested,
+                          InjectFunc inject_touch_hit_tested, InjectFunc inject_mouse_exclusive,
+                          InjectFunc inject_mouse_hit_tested,
                           inspect::Node inspect_node = inspect::Node());
 
   // |fuchsia.ui.pointerinjector.Registry|
@@ -36,14 +37,21 @@ class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
   }
 
  private:
+  using InjectorType = std::pair<fuchsia::ui::pointerinjector::DeviceType,
+                                 fuchsia::ui::pointerinjector::DispatchPolicy>;
+  struct InjectorTypeHash {
+    std::size_t operator()(const InjectorType& pair) const {
+      return (static_cast<uint64_t>(pair.first) << 32) | static_cast<uint64_t>(pair.second);
+    }
+  };
+
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
   std::unordered_map<InjectorId, Injector> injectors_;
 
   fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> injector_registry_;
 
-  const InjectFunc inject_touch_exclusive_;
-  const InjectFunc inject_touch_hit_tested_;
+  std::unordered_map<InjectorType, InjectFunc, InjectorTypeHash> inject_funcs_;
 
   std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_ =
       std::make_shared<const view_tree::Snapshot>();

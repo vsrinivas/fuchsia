@@ -153,7 +153,12 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       /*inject_touch_hit_tested*/
       [this](const InternalPointerEvent& event, StreamId stream_id) {
         InjectTouchEventHitTested(event, stream_id);
-      });
+      },
+      // TODO(fxbug.dev/64379): Add fuchsia.ui.pointer mouse support.
+      /*inject_mouse_exclusive*/
+      [](const InternalPointerEvent& event, StreamId stream_id) {},
+      /*inject_mouse_hit_tested*/
+      [](const InternalPointerEvent& event, StreamId stream_id) {});
 
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));

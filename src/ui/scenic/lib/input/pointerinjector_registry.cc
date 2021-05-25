@@ -11,6 +11,9 @@
 
 namespace scenic_impl::input {
 
+using fuchsia::ui::pointerinjector::DeviceType;
+using fuchsia::ui::pointerinjector::DispatchPolicy;
+
 namespace {
 
 bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config) {
@@ -20,17 +23,29 @@ bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config) {
     return false;
   }
 
-  if (config.dispatch_policy() != fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET &&
-      config.dispatch_policy() !=
-          fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE_TARGET and "
-                      "TOP_HIT_AND_ANCESTORS_IN_TARGET DispatchPolicy is supported.";
+  const auto device_type = config.device_type();
+  if (device_type != DeviceType::TOUCH && device_type != DeviceType::MOUSE) {
+    FX_LOGS(ERROR) << "InjectorRegistry::Register : Unknown DeviceType.";
     return false;
   }
 
-  if (config.device_type() != fuchsia::ui::pointerinjector::DeviceType::TOUCH) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only DeviceType TOUCH is supported.";
-    return false;
+  const auto dispatch_policy = config.dispatch_policy();
+  if (device_type == DeviceType::MOUSE) {
+    if (dispatch_policy != DispatchPolicy::EXCLUSIVE_TARGET &&
+        dispatch_policy != DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET) {
+      FX_LOGS(ERROR)
+          << "InjectorRegistry::Register : DeviceType::MOUSE with mismatched dispatch policy.";
+      return false;
+    }
+  } else if (device_type == DeviceType::TOUCH) {
+    if (dispatch_policy != DispatchPolicy::EXCLUSIVE_TARGET &&
+        dispatch_policy != DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET) {
+      FX_LOGS(ERROR)
+          << "InjectorRegistry::Register : DeviceType::TOUCH with mismatched dispatch policy.";
+      return false;
+    }
+  } else {
+    FX_NOTREACHED();
   }
 
   if (!config.context().is_view() || !config.target().is_view()) {
@@ -52,10 +67,21 @@ bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config) {
 PointerinjectorRegistry::PointerinjectorRegistry(sys::ComponentContext* context,
                                                  InjectFunc inject_touch_exclusive,
                                                  InjectFunc inject_touch_hit_tested,
+                                                 InjectFunc inject_mouse_exclusive,
+                                                 InjectFunc inject_mouse_hit_tested,
                                                  inspect::Node inspect_node)
-    : inject_touch_exclusive_(std::move(inject_touch_exclusive)),
-      inject_touch_hit_tested_(std::move(inject_touch_hit_tested)),
-      inspect_node_(std::move(inspect_node)) {
+    : inspect_node_(std::move(inspect_node)) {
+  // Can't use an initializer list for this, since InjectFunc is move-only. Otherwise
+  // |inject_funcs_| could be made const.
+  inject_funcs_.try_emplace({DeviceType::TOUCH, DispatchPolicy::EXCLUSIVE_TARGET},
+                            std::move(inject_touch_exclusive));
+  inject_funcs_.try_emplace({DeviceType::TOUCH, DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET},
+                            std::move(inject_touch_hit_tested));
+  inject_funcs_.try_emplace({DeviceType::MOUSE, DispatchPolicy::EXCLUSIVE_TARGET},
+                            std::move(inject_mouse_exclusive));
+  inject_funcs_.try_emplace({DeviceType::MOUSE, DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET},
+                            std::move(inject_mouse_hit_tested));
+
   if (context) {
     // Adding the service here is safe since the PointerinjectorRegistry instance in InputSystem is
     // created at construction time..
@@ -100,23 +126,6 @@ void PointerinjectorRegistry::Register(
           utils::ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
   };
 
-  fit::function<void(const InternalPointerEvent&, StreamId)> inject_func;
-  switch (settings.dispatch_policy) {
-    case fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET:
-      inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
-        inject_touch_exclusive_(event, stream_id);
-      };
-      break;
-    case fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET:
-      inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
-        inject_touch_hit_tested_(event, stream_id);
-      };
-      break;
-    default:
-      FX_CHECK(false) << "Should never be reached.";
-      break;
-  }
-
   const auto [it, success] = injectors_.try_emplace(
       id, inspect_node_.CreateChild(inspect_node_.UniqueName("injector-")), std::move(settings),
       std::move(viewport), std::move(injector),
@@ -124,7 +133,9 @@ void PointerinjectorRegistry::Register(
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return view_tree_snapshot_->IsDescendant(descendant, ancestor);
       },
-      std::move(inject_func),
+      /*inject*/
+      [&inject_func = inject_funcs_.at({settings.device_type, settings.dispatch_policy})](
+          const InternalPointerEvent& event, StreamId stream_id) { inject_func(event, stream_id); },
       /*on_channel_closed*/
       [this, id] { injectors_.erase(id); });
   FX_CHECK(success) << "Injector already exists.";
