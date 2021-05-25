@@ -588,7 +588,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
 #endif  // ifdef __Fuchsia__
 
 void Vfs::RegisterVnode(Vnode* vnode) {
-  std::lock_guard lock(vfs_lock_);
+  std::lock_guard lock(live_nodes_lock_);
 
   // Should not be registered twice.
   ZX_DEBUG_ASSERT(live_nodes_.find(vnode) == live_nodes_.end());
@@ -596,7 +596,7 @@ void Vfs::RegisterVnode(Vnode* vnode) {
 }
 
 void Vfs::UnregisterVnode(Vnode* vnode) {
-  std::lock_guard lock(vfs_lock_);
+  std::lock_guard lock(live_nodes_lock_);
   UnregisterVnodeLocked(vnode);
 }
 

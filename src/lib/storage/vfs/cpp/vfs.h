@@ -202,10 +202,16 @@ class Vfs {
 
   // Derived classes may want to unregister vnodes differently than this one. This function removes
   // the vnode from the live node map.
-  void UnregisterVnodeLocked(Vnode* vnode) __TA_REQUIRES(vfs_lock_);
+  void UnregisterVnodeLocked(Vnode* vnode) __TA_REQUIRES(live_nodes_lock_);
 
   // A lock which should be used to protect lookup and walk operations
   mutable std::mutex vfs_lock_;
+
+  // A separate lock to protected vnode registration. The vnodes will call into this class according
+  // to their lifetimes, and many of these lifetimes are managed from within the VFS lock which can
+  // result in reentrant locking. This lock should only be held for very short times when mutating
+  // the registered node tracking information.
+  mutable std::mutex live_nodes_lock_;
 
  private:
   // Starting at vnode |vn|, walk the tree described by the path string, until either there is only
@@ -239,7 +245,7 @@ class Vfs {
 
   // The live Vnodes associated with this Vfs. Nodes (un)register using [Un]RegisterVnode(). This
   // /list is cleared by ShutdownLiveNodes().
-  std::set<Vnode*> live_nodes_ __TA_GUARDED(vfs_lock_);
+  std::set<Vnode*> live_nodes_ __TA_GUARDED(live_nodes_lock_);
 
 #ifdef __Fuchsia__
   zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);

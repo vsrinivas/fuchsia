@@ -93,13 +93,10 @@ class PagedVfs : public ManagedVfs {
   // created in the future, it needs to stay continuously registered in case of race conditions.
   // See PagedVno::OnNoPagedVmoClones() for more.
   //
-  // This is protected by a separate lock than the main VFS state. The vnodes will call into
-  // this class according to their lifetimes, and many of these lifetimes are managed from within
-  // the VFS lock which can result in reentrant locking. This lock should only be held for very
-  // short times when mutating the paged_nodes_ tracking information.
-  mutable std::mutex paged_nodes_lock_;
-  uint64_t next_node_id_ __TA_GUARDED(paged_nodes_lock_) = 1;
-  std::map<uint64_t, PagedVnode*> paged_nodes_ __TA_GUARDED(paged_nodes_lock_);
+  // Protected by the registred vnode lock so creating nodes in the main lock doesn't attempt to
+  // reenter the lock by registering.
+  uint64_t next_node_id_ __TA_GUARDED(live_nodes_lock_) = 1;
+  std::map<uint64_t, PagedVnode*> paged_nodes_ __TA_GUARDED(live_nodes_lock_);
 };
 
 }  // namespace fs

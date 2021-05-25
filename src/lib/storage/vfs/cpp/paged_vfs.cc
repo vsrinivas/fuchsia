@@ -28,7 +28,7 @@ PagedVfs::~PagedVfs() {
   // safe).
   std::map<uint64_t, fbl::RefPtr<PagedVnode>> local_nodes;
   {
-    std::lock_guard lock(paged_nodes_lock_);
+    std::lock_guard lock(live_nodes_lock_);
 
     for (auto& [id, node] : paged_nodes_) {
       local_nodes[id] = fbl::RefPtr<PagedVnode>(node);
@@ -71,7 +71,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* nod
   // Register this node with a unique ID to associated it with pager requests.
   VmoCreateInfo create_info;
   {
-    std::lock_guard lock(paged_nodes_lock_);
+    std::lock_guard lock(live_nodes_lock_);
 
     create_info.id = next_node_id_;
     ++next_node_id_;
@@ -84,7 +84,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* nod
           pager_.create_vmo(0, pager_pool_->port(), create_info.id, size, &create_info.vmo);
       status != ZX_OK) {
     // Undo the previous insert.
-    std::lock_guard lock(paged_nodes_lock_);
+    std::lock_guard lock(live_nodes_lock_);
     paged_nodes_.erase(create_info.id);
     return zx::error(status);
   }
@@ -93,7 +93,7 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* nod
 }
 
 void PagedVfs::UnregisterPagedVmo(uint64_t paged_vmo_id) {
-  std::lock_guard lock(paged_nodes_lock_);
+  std::lock_guard lock(live_nodes_lock_);
 
   auto found = paged_nodes_.find(paged_vmo_id);
   if (found == paged_nodes_.end()) {
@@ -109,7 +109,7 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
   fbl::RefPtr<PagedVnode> node;
 
   {
-    std::lock_guard lock(paged_nodes_lock_);
+    std::lock_guard lock(live_nodes_lock_);
 
     auto found = paged_nodes_.find(node_id);
     if (found == paged_nodes_.end())
@@ -123,7 +123,7 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
 }
 
 size_t PagedVfs::GetRegisteredPagedVmoCount() const {
-  std::lock_guard lock(paged_nodes_lock_);
+  std::lock_guard lock(live_nodes_lock_);
   return paged_nodes_.size();
 }
 
