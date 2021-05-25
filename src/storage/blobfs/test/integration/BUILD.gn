@@ -12,6 +12,10 @@ group("tests") {
     ":blobfs-integration-package",
     ":blobfs-large-integration-package",
   ]
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/75686): Re-enable this test when we can avoid OOM.
+    deps += [ ":blobfs-integration-package" ]
+  }
 }
 
 static_library("blobfs_integration_fixtures") {
