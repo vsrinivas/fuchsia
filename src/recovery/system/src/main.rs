@@ -193,7 +193,7 @@ impl RenderResources {
         };
 
         if is_counting_down {
-            let circle = raster_for_circle(logo_position, logo_edge / 2.0, render_context);
+            let circle = raster_for_circle(Point::zero(), logo_edge / 2.0, render_context);
             let circle_facet = RasterFacet::new(
                 circle,
                 Style {
