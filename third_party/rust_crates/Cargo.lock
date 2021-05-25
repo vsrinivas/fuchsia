@@ -1135,6 +1135,7 @@ dependencies = [
  "parking",
  "parking_lot 0.9.0",
  "paste",
+ "pathdiff",
  "pem",
  "percent-encoding 2.1.0",
  "pest",
@@ -2155,6 +2156,12 @@ name = "paste"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6ddc8e145de01d9180ac7b78b9676f95a9c2447f6a88b2c2a04702211bc5d71"
+
+[[package]]
+name = "pathdiff"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "877630b3de15c0b64cc52f659345724fbf6bdad9bd9566699fc53688f3c34a34"
 
 [[package]]
 name = "pem"

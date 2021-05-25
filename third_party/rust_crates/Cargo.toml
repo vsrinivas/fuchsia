@@ -223,6 +223,7 @@ indoc = "0.3.3"
 # TODO(https://github.com/rust-lang/rust/issues/58590): nix is not generally
 # visible in fuchsia so we don't depend on #[cfg(unix)] things on target
 nix = "0.20"
+pathdiff = "0.2.0"
 parking = "2"
 pem = "0.8.3"
 petgraph = "0.5.1"

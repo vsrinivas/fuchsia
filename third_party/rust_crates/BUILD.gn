@@ -433,6 +433,12 @@ group("paste") {
 }
 
 if (!(current_os == "fuchsia")) {
+  group("pathdiff") {
+    deps = [ ":pathdiff-v0_2_0" ]
+  }
+}
+
+if (!(current_os == "fuchsia")) {
   group("pem") {
     deps = [ ":pem-v0_8_3" ]
   }
@@ -5845,6 +5851,27 @@ rust_proc_macro("paste-v1_0_0") {
     "--edition=2018",
     "-Cmetadata=467ce9508308aa2b",
     "-Cextra-filename=-467ce9508308aa2b",
+  ]
+}
+
+rust_library("pathdiff-v0_2_0") {
+  crate_name = "pathdiff"
+  crate_root = "//third_party/rust_crates/vendor/pathdiff/src/lib.rs"
+  output_name = "pathdiff-57152bbe2df0a861"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=57152bbe2df0a861",
+    "-Cextra-filename=-57152bbe2df0a861",
   ]
 }
 
