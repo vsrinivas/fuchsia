@@ -21,8 +21,7 @@ namespace {
 
 namespace device = fuchsia_device;
 
-// TODO(b/179400686): Enable this test when the underlying issues are addressed.
-TEST(CorruptTest, DISABLED_CorruptTest) {
+TEST(CorruptTest, CorruptTest) {
   // 768 blocks containing 64 pages of 4 KiB with 8 bytes OOB
   constexpr int kSize = 768 * 64 * (4096 + 8);
 
