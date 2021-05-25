@@ -42,6 +42,8 @@ constexpr int kDefaultNumUserBytes = 8;                // 4 ECC pages * 2 user b
 constexpr uint32_t kDefaultWriteCommand = 0x00210004;  // Match what the bootloader uses.
 constexpr uint32_t kDefaultReadCommand = 0x00230004;   // Match what the bootloader uses.
 constexpr uint32_t kRandomSeedOffset = 0xC2;           // Match what the bootloader uses.
+static_assert(kTestNandWriteSize % kDefaultNumEccPages == 0);
+constexpr int kDefaultEccPageSize = kTestNandWriteSize / kDefaultNumEccPages;
 
 constexpr uint16_t kPage0OobValue = 0xAA55;
 constexpr int kPage0NumEccPages = 8;                 // 8 ECC shortpages.
@@ -77,10 +79,13 @@ struct NandPage {
   NandPage() : NandPage(kDefaultNumEccPages) {}
 };
 
-// Returns a NandPage that looks like a 0-page.
-NandPage NandPage0() {
+// Returns a NandPage that looks like a 0-page. Optionally enable rand_mode.
+NandPage NandPage0(bool rand_mode) {
   NandPage page0(kPage0NumEccPages);
   memcpy(&page0.data[0], kPage0Data, sizeof(kPage0Data));
+  if (rand_mode) {
+    page0.data[2] |= 0x08;
+  }
   for (AmlInfoFormat& info_block : page0.info) {
     info_block.info_bytes = kPage0OobValue;
   }
@@ -117,7 +122,8 @@ class StubOnfi : public Onfi {
 class FakeAmlRawNand : public AmlRawNand {
  public:
   // Factory method so we can indicate failure by returning nullptr.
-  static std::unique_ptr<FakeAmlRawNand> Create(const uint32_t page0_valid_copy = 0) {
+  static std::unique_ptr<FakeAmlRawNand> Create(const uint32_t page0_valid_copy = 0,
+                                                bool rand_mode = false) {
     // Zircon objects required by AmlRawNand.
     zx::bti bti;
     EXPECT_OK(fake_bti_create(bti.reset_and_get_address()));
@@ -147,7 +153,7 @@ class FakeAmlRawNand : public AmlRawNand {
     auto nand = std::unique_ptr<FakeAmlRawNand>(
         new FakeAmlRawNand(std::move(bti), std::move(interrupt), std::move(mock_nand_regs),
                            std::move(mock_nand_reg_region), std::move(mock_clock_regs),
-                           std::move(mock_clock_reg_region), std::move(stub_onfi)));
+                           std::move(mock_clock_reg_region), std::move(stub_onfi), rand_mode));
     nand->stub_onfi_ = stub_onfi_raw;
 
     // Initialize the AmlRawNand with some parameters taken from a real device.
@@ -267,10 +273,11 @@ class FakeAmlRawNand : public AmlRawNand {
                  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_nand_reg_region,
                  std::unique_ptr<ddk_mock::MockMmioReg[]> mock_clock_regs,
                  std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_clock_reg_region,
-                 std::unique_ptr<Onfi> onfi)
+                 std::unique_ptr<Onfi> onfi, bool rand_mode)
       : AmlRawNand(fake_ddk::kFakeParent, ddk::MmioBuffer(mock_nand_reg_region->GetMmioBuffer()),
                    ddk::MmioBuffer(mock_clock_reg_region->GetMmioBuffer()), std::move(bti),
                    std::move(interrupt), std::move(onfi)),
+        rand_mode_(rand_mode),
         mock_nand_regs_(std::move(mock_nand_regs)),
         mock_nand_reg_region_(std::move(mock_nand_reg_region)),
         mock_clock_regs_(std::move(mock_clock_regs)),
@@ -298,7 +305,7 @@ class FakeAmlRawNand : public AmlRawNand {
     // This is to make sure that test does not panic when AmlRawNand is iterating through
     // the 8 copies.
     for (uint32_t i = 0; i < 8; i++) {
-      SetFakePage(i * 128, i == page0_valid_copy ? NandPage0() : NandPage());
+      SetFakePage(i * 128, i == page0_valid_copy ? NandPage0(rand_mode_) : NandPage());
     }
   }
 
@@ -334,7 +341,7 @@ class FakeAmlRawNand : public AmlRawNand {
     // We could calculate whether |page_index| is a page0 metadata page or not,
     // but it doesn't matter since we're just allocating buffers, so we always
     // make it a page0 which has the larger OOB buffer.
-    NandPage& page = fake_page_map_[page_index] = NandPage0();
+    NandPage& page = fake_page_map_[page_index] = NandPage0(rand_mode_);
 
     const size_t data_bytes = page.data.size() * sizeof(page.data[0]);
     const size_t info_bytes = page.info.size() * sizeof(page.info[0]);
@@ -371,6 +378,8 @@ class FakeAmlRawNand : public AmlRawNand {
 
     return ZX_OK;
   }
+
+  bool rand_mode_;
 
   std::unique_ptr<ddk_mock::MockMmioReg[]> mock_nand_regs_;
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_nand_reg_region_;
@@ -464,6 +473,107 @@ TEST(AmlRawnand, ReadPageOobOnly) {
   EXPECT_EQ(0, ecc_correct);
   EXPECT_EQ(0x1234, oob.front());
   EXPECT_EQ(0xABCD, oob.back());
+}
+
+TEST(AmlRawnand, ReadErasedPage) {
+  auto nand = FakeAmlRawNand::Create(0, true);
+  ASSERT_NOT_NULL(nand);
+
+  NandPage page;
+  memset(&page.data[0], 0xff, kTestNandWriteSize);
+  for (auto& info : page.info) {
+    info.info_bytes = 0xffff;
+    info.ecc.eccerr_cnt = AML_ECC_UNCORRECTABLE_CNT;
+    info.zero_bits = 0;
+  }
+  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+
+  std::vector<uint8_t> data(kTestNandWriteSize);
+  std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
+  size_t data_bytes_read = 0;
+  size_t oob_bytes_read = 0;
+  uint32_t ecc_correct = -1;
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       &oob_bytes_read, &ecc_correct));
+
+  EXPECT_EQ(kTestNandWriteSize, data_bytes_read);
+  EXPECT_EQ(kDefaultNumUserBytes, oob_bytes_read);
+  EXPECT_EQ(0xff, data.front());
+  EXPECT_EQ(0xff, data.back());
+  EXPECT_EQ(0xffff, oob.front());
+  EXPECT_EQ(0xffff, oob.back());
+}
+
+TEST(AmlRawnand, PartialErasedPage) {
+  auto nand = FakeAmlRawNand::Create(0, true);
+  ASSERT_NOT_NULL(nand);
+
+  NandPage page;
+  memset(&page.data[0], 0xff, kTestNandWriteSize);
+  for (auto& info : page.info) {
+    info.info_bytes = 0xffff;
+    info.ecc.eccerr_cnt = AML_ECC_UNCORRECTABLE_CNT;
+    info.zero_bits = 0;
+  }
+  // Make the first page be not an erased page.
+  memset(&page.data[0], 0xA5, kDefaultEccPageSize);
+  page.info.front().info_bytes = 0x5A5A;
+  page.info.front().ecc.eccerr_cnt = 0;
+  page.info.front().zero_bits = AML_ECC_UNCORRECTABLE_CNT;
+
+  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+
+  std::vector<uint8_t> data(kTestNandWriteSize);
+  std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
+  size_t data_bytes_read = 0;
+  size_t oob_bytes_read = 0;
+  uint32_t ecc_correct = -1;
+  ASSERT_EQ(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       &oob_bytes_read, &ecc_correct),
+            ZX_ERR_IO_DATA_INTEGRITY);
+
+  EXPECT_EQ(kTestNandWriteSize, data_bytes_read);
+  EXPECT_EQ(kDefaultNumUserBytes, oob_bytes_read);
+  EXPECT_EQ(0xA5, data.front());
+  EXPECT_EQ(0xff, data.back());
+  EXPECT_EQ(0x5A5A, oob.front());
+  EXPECT_EQ(0xffff, oob.back());
+}
+
+TEST(AmlRawnand, ErasedPageAllOnes) {
+  auto nand = FakeAmlRawNand::Create(0, true);
+  ASSERT_NOT_NULL(nand);
+
+  NandPage page;
+  memset(&page.data[0], 0xff, kTestNandWriteSize);
+  for (auto& info : page.info) {
+    info.info_bytes = 0xffff;
+    info.ecc.eccerr_cnt = AML_ECC_UNCORRECTABLE_CNT;
+    info.zero_bits = 0;
+  }
+  // Make the first byte have a random bitflip.
+  page.data[0] = 0xFE;
+  page.info[0].zero_bits = 1;
+
+  ASSERT_NO_FATAL_FAILURES(nand->SetFakePage(5, page));
+
+  std::vector<uint8_t> data(kTestNandWriteSize);
+  std::vector<uint16_t> oob(kDefaultNumUserBytes / 2);  // /2 for 16-bit values.
+  size_t data_bytes_read = 0;
+  size_t oob_bytes_read = 0;
+  uint32_t ecc_correct = -1;
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       &oob_bytes_read, &ecc_correct));
+
+  EXPECT_EQ(kTestNandWriteSize, data_bytes_read);
+  EXPECT_EQ(kDefaultNumUserBytes, oob_bytes_read);
+  EXPECT_EQ(0xff, data.front());
+  EXPECT_EQ(0xff, data.back());
+  EXPECT_EQ(0xffff, oob.front());
+  EXPECT_EQ(0xffff, oob.back());
 }
 
 TEST(AmlRawnand, WritePage) {
@@ -629,7 +739,7 @@ TEST(AmlRawnand, ReadPage0Command) {
 
   // We expect randomization to always be on for page0 metadata pages.
   nand->ExpectReadWriteCommand(kPage0ReadCommand, 0);
-  nand->SetFakePage(0, NandPage0());
+  nand->SetFakePage(0, NandPage0(false));
 
   std::vector<uint8_t> data(kTestNandWriteSize);
   size_t data_bytes_read = 0;

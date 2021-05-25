@@ -318,9 +318,10 @@ zx_status_t AmlRawNand::AmlSetOOBByte(const uint8_t* oob_buf, size_t oob_size, u
 }
 
 zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
-                                             uint32_t* ecc_corrected) {
+                                             uint32_t* ecc_corrected, bool* erased) {
   struct AmlInfoFormat* info;
   int bitflips = 0;
+  int erased_ecc_pages = 0;
   uint8_t zero_bits;
 
   for (int i = 0; i < ecc_pages; i++) {
@@ -352,12 +353,21 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
       zxlogf(INFO, "%s: Blank Page@%u", __func__, nand_page);
+      bitflips = std::max(static_cast<uint8_t>(bitflips), static_cast<uint8_t>(zero_bits));
+      ++erased_ecc_pages;
       continue;
     }
     stats.ecc_corrected += info->ecc.eccerr_cnt;
     bitflips = std::max(static_cast<uint8_t>(bitflips), static_cast<uint8_t>(info->ecc.eccerr_cnt));
   }
   *ecc_corrected = bitflips;
+  *erased = false;
+  if (erased_ecc_pages == ecc_pages) {
+    *erased = true;
+  } else if (erased_ecc_pages != 0) {
+    zxlogf(WARNING, "%s: Partially erased nand page @%u", __func__, nand_page);
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
   return ZX_OK;
 }
 
@@ -513,14 +523,16 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
                                              size_t* data_actual, uint8_t* oob, size_t oob_size,
                                              size_t* oob_actual, uint32_t* ecc_correct) {
   zx_status_t status;
-  uint32_t ecc_pagesize = 0;  // Initialize to silence compiler.
+  uint32_t ecc_pagesize;
   uint32_t ecc_pages;
+  bool erased;
   bool page0 = IsPage0NandPage(nand_page);
 
   if (!page0) {
     ecc_pagesize = AmlGetEccPageSize(controller_params_.bch_mode);
     ecc_pages = writesize_ / ecc_pagesize;
   } else {
+    ecc_pagesize = kPage0EccPageSize;
     ecc_pages = kPage0NumEccPages;
   }
   // Send the page address into the controller.
@@ -563,23 +575,33 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
     return status;
   }
 
+  if (oob != nullptr && AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), oob_actual) != ZX_OK &&
+      oob_actual != nullptr) {
+    *oob_actual = 0;
+  }
+
+  status = AmlGetECCCorrections(ecc_pages, nand_page, ecc_correct, &erased);
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "%s: Uncorrectable ECC error on read", __func__);
+    *ecc_correct = controller_params_.ecc_strength + 1;
+  }
+
   // Finally copy out the data and oob as needed.
   if (data != nullptr) {
     // Page0 is always 384 bytes.
     size_t num_bytes = (page0 ? 384 : writesize_);
-    memcpy(data, buffers_->data_buf, num_bytes);
+    // Clean up any possible bit flips on supposed erased pages.
+    if (erased) {
+      memset(data, 0xff, num_bytes);
+      memset(oob, 0xff, *oob_actual);
+    } else {
+      memcpy(data, buffers_->data_buf, num_bytes);
+    }
     if (data_actual) {
       *data_actual = num_bytes;
     }
   }
 
-  if (oob != nullptr)
-    status = AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), oob_actual);
-  status = AmlGetECCCorrections(ecc_pages, nand_page, ecc_correct);
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "%s: Uncorrectable ECC error on read", __func__);
-    *ecc_correct = controller_params_.ecc_strength + 1;
-  }
   return status;
 }
 
