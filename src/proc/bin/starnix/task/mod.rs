@@ -17,6 +17,7 @@ use std::sync::{Arc, Weak};
 pub mod syscalls;
 
 use crate::auth::Credentials;
+use crate::devices::DeviceRegistry;
 use crate::fs::{FdTable, FileSystem};
 use crate::loader::*;
 use crate::logging::*;
@@ -35,6 +36,9 @@ pub struct Kernel {
     /// The scheduler associated with this kernel. The scheduler stores state like suspended tasks,
     /// pending signals, etc.
     pub scheduler: RwLock<Scheduler>,
+
+    /// The devices that exist in this kernel.
+    pub devices: DeviceRegistry,
 }
 
 impl Kernel {
@@ -45,6 +49,7 @@ impl Kernel {
             job,
             pids: RwLock::new(PidTable::new()),
             scheduler: RwLock::new(Scheduler::new()),
+            devices: DeviceRegistry::new(),
         };
         Ok(Arc::new(kernel))
     }

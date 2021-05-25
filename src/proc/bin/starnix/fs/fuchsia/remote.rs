@@ -92,9 +92,13 @@ impl FsNodeOps for RemoteFileNode {
     }
 }
 
+#[cfg(test)]
+use crate::devices::*;
+
 #[cfg(test)] // Will be used outside of tests later
 fn new_remote_filesystem(dir: fio::DirectorySynchronousProxy, rights: u32) -> FsNodeHandle {
-    FsNode::new_root(RemoteDirectoryNode { dir, rights })
+    let remotefs = AnonymousNodeDevice::new(0); // TODO: Get from device registry.
+    FsNode::new_root(RemoteDirectoryNode { dir, rights }, remotefs)
 }
 
 pub struct RemoteFile {

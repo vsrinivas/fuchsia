@@ -8,6 +8,7 @@ use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::*;
 use crate::not_implemented;
@@ -17,8 +18,10 @@ use crate::types::*;
 
 pub use starnix_macros::FileObject;
 
-#[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Hash, PartialEq, Eq, Debug, Copy, Clone, AsBytes, FromBytes)]
+#[repr(transparent)]
 pub struct FdNumber(i32);
+
 impl FdNumber {
     pub const AT_FDCWD: FdNumber = FdNumber(AT_FDCWD);
 
@@ -147,8 +150,7 @@ pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
 /// Corresponds to struct file in Linux.
 pub struct FileObject {
     ops: Box<dyn FileOps>,
-    #[allow(dead_code)]
-    node: Option<FsNodeHandle>,
+    pub node: Option<FsNodeHandle>,
     pub offset: Mutex<usize>,
     pub async_owner: Mutex<pid_t>,
 }

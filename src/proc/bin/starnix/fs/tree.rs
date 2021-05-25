@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
 use super::{FileHandle, FileObject, FileOps};
+use crate::devices::DeviceHandle;
 use crate::types::*;
 
 pub type FsString = Vec<u8>;
@@ -14,10 +15,13 @@ pub type FsStr = [u8];
 
 pub struct FsNode {
     ops: OnceCell<Box<dyn FsNodeOps>>,
+    device: DeviceHandle,
     parent: Option<FsNodeHandle>,
     name: FsString,
+    inode_number: ino_t,
     state: RwLock<FsNodeState>,
 }
+
 pub type FsNodeHandle = Arc<FsNode>;
 
 #[derive(Default)]
@@ -38,12 +42,15 @@ pub trait FsNodeOps: Send + Sync {
 }
 
 impl FsNode {
-    pub fn new_root<T: FsNodeOps + 'static>(ops: T) -> FsNodeHandle {
+    pub fn new_root<T: FsNodeOps + 'static>(ops: T, device: DeviceHandle) -> FsNodeHandle {
         let ops: Box<dyn FsNodeOps> = Box::new(ops);
+        let inode_number = device.allocate_inode_number();
         Arc::new(FsNode {
             ops: OnceCell::from(ops),
+            device,
             parent: None,
             name: FsString::new(),
+            inode_number,
             state: Default::default(),
         })
     }
@@ -79,6 +86,14 @@ impl FsNode {
         Ok(node)
     }
 
+    pub fn fstat(&self) -> stat_t {
+        stat_t {
+            st_dev: self.device.get_device_id(),
+            st_ino: self.inode_number,
+            ..stat_t::default()
+        }
+    }
+
     fn get_or_create_empty_child(self: &FsNodeHandle, name: FsString) -> FsNodeHandle {
         let state = self.state.upgradable_read();
         let child = state.children.get(&name).and_then(|child| child.upgrade());
@@ -88,8 +103,10 @@ impl FsNode {
         let mut state = RwLockUpgradableReadGuard::upgrade(state);
         let child = Arc::new(Self {
             ops: OnceCell::new(),
+            device: Arc::clone(&self.device),
             parent: Some(Arc::clone(self)),
             name: name.clone(),
+            inode_number: self.device.allocate_inode_number(),
             state: Default::default(),
         });
         state.children.insert(name, Arc::downgrade(&child));
@@ -165,9 +182,12 @@ impl FsNodeOps for TmpfsDirectory {
 mod test {
     use super::*;
 
+    use crate::devices::*;
+
     #[test]
     fn test_tmpfs() {
-        let root = FsNode::new_root(TmpfsDirectory {});
+        let tmpfs = AnonymousNodeDevice::new(0);
+        let root = FsNode::new_root(TmpfsDirectory {}, tmpfs);
         let usr = root.mkdir(b"usr".to_vec()).unwrap();
         let _etc = root.mkdir(b"etc".to_vec()).unwrap();
         let _usr_bin = usr.mkdir(b"bin".to_vec()).unwrap();

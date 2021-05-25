@@ -9,6 +9,7 @@ use std::convert::TryInto;
 use std::ffi::CString;
 use zerocopy::AsBytes;
 
+use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::not_implemented;
 use crate::strace;
@@ -328,6 +329,26 @@ pub fn sys_getcwd(
 
 pub fn sys_umask(ctx: &SyscallContext<'_>, umask: mode_t) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.fs.set_umask(umask).into())
+}
+
+pub fn sys_pipe2(
+    ctx: &SyscallContext<'_>,
+    user_pipe: UserRef<FdNumber>,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if flags != 0 {
+        return Err(EINVAL);
+    }
+    let (read, write) = PipeNode::new(&ctx.task)?;
+
+    let fd_read = ctx.task.files.install_fd(read)?;
+    let fd_write = ctx.task.files.install_fd(write)?;
+
+    ctx.task.mm.write_object(user_pipe, &fd_read)?;
+    let user_pipe = user_pipe.next();
+    ctx.task.mm.write_object(user_pipe, &fd_write)?;
+
+    Ok(SUCCESS)
 }
 
 pub fn sys_ioctl(

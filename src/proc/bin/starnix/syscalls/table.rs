@@ -142,6 +142,7 @@ pub fn dispatch_syscall(
         munmap[2],
         newfstatat[4],
         openat[4],
+        pipe2[2],
         prctl[5],
         pread64[4],
         read[3],

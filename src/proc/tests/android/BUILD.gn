@@ -124,6 +124,9 @@ template("gvisor_test_component") {
 gvisor_test_component("brk_test") {
 }
 
+gvisor_test_component("pipe_test") {
+}
+
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
@@ -134,6 +137,7 @@ fuchsia_test_package("test_android_distro") {
 
   test_components = [
     ":brk_test",
+    ":pipe_test",
     ":sh_test",
     ":syscalls_test",
   ]
