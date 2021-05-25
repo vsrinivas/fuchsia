@@ -70,7 +70,13 @@ fuchsia_test_package("touch-input-test") {
     "//src/ui/bin/root_presenter:component_v1_for_test",
   ]
   test_specs = {
-    environments = [ nuc_env ]
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+      },
+    ]
   }
 }
 
@@ -80,7 +86,6 @@ group("tests") {
     ":touch-input-test",
 
     # The deps below are necessary on minimal product configs.
-    "//garnet/bin/trace_manager",
     "//garnet/examples/intl/manager:intl_property_manager",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
@@ -88,7 +93,6 @@ group("tests") {
     "//src/graphics/bin/vulkan_loader",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/ime:ime_service",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic",
     "//src/ui/tests/integration_input_tests/touch/cpp-gfx-client",
     "//src/ui/tests/integration_input_tests/touch/one-chromium",
