@@ -35,6 +35,8 @@ go_library("gopkg") {
     "rules/no_extra_space_on_right_test.go",
     "rules/respect_col_length.go",
     "rules/respect_col_length_test.go",
+    "rules/respectful_code.go",
+    "rules/respectful_code_test.go",
     "rules/simple_utf8_chars.go",
     "rules/simple_utf8_chars_test.go",
     "rules/testutils_test.go",
