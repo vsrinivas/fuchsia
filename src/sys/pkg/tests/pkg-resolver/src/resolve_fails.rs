@@ -223,32 +223,50 @@ async fn download_blob_body_timeout() {
 
 // Verify that the pkg-resolver stops downloading content blobs when a package fails to resolve.
 // Steps:
-//  1.  Resolve a package that has a lot more than double MAX_CONCURRENT_BLOB_FETCHES content blobs.
+//  1.  Resolve a package that has at least 3*MAX_CONCURRENT_BLOB_FETCHES + 1 unique content blobs.
 //  2.  Have the blob server return the meta.far successfully, so that the pkg-resolver
 //      can enqueue all the content blobs.
-//  3.  Have the blob server fail to return any of the content blobs.
-//  4.  The first resolve should fail, since none of the content blobs are obtainable.
-//  5.  After the first resolve fails, only about MAX_CONCURRENT_BLOB_FETCHES blobs should have been
-//      removed from the fetch queue (unfortunately we cannot upper bound the number of blobs
-//      removed from the fetch queue, because the blob fetch queue fetches blobs concurrently with
-//      the resolve, so there is a window of time in between MAX_CONCURRENT_BLOB_FETCHES fetches
-//      failing and the pkg-resolver cancelling the PackageCache.Get in which the BlobFetchQueue
-//      could start another fetch. In practice, this does not happen.)
+//  3.  Have the blob server return an error for the first requested content blob path and then hang
+//      requests for any subsequent content blob paths.
+//  4.  The first resolve should fail, since failure to download a content blob fails the entire
+//      resolve.
 //  6.  Reset the blob server's served blobs counter.
-//  7.  Assuming the original package had enough content blobs, there should still be more than
-//      MAX_CONCURRENT_BLOB_FETCHES blobs in the BlobFetchQueue.
+//  7.  Have the blob server stop hanging the remaining content blob requests.
 //  8.  Resolve a new package with a different meta.far. This forces the package resolver
-//      to add the meta.far to the BlobFetchQueue and wait for it to be processed.
-//  9.  Wait for the second resolve to finish. Because the BlobFetchQueue is FIFO and had more than
-//      MAX_CONCURRENT_BLOB_FETCHES elements, at least one more content blob from the original
-//      package has to have been processed.
-//  10. The blob server's served blob counter should be one (the meta.far for the second package),
-//      because processing the remaining content blobs should fail at the pkg-cache layer.
+//      to add the meta.far to the FIFO BlobFetchQueue and wait for it to be processed.
+//  9.  Wait for the second resolve to finish.
+//
+//  If the pkg-resolver does not stop downloading content blobs when a resolve fails, then when
+//  the blob server is unblocked in step 7, there will be at least 3*MAX_CONCURRENT_BLOB_FETCHES
+//  in the blob queue. Worst case, all the active fetches in the queue have already made their
+//  http requests, so, ignoring retries, by the time the second resolve completes, the blob server
+//  would have seen at least MAX_CONCURRENT_BLOB_FETCHES + 2 http requests:
+//    a. one for the second meta.far
+//    b. MAX_CONCURRENT_BLOB_FETCHES + 1 to get the number of fetches in the queue down from
+//       3*MAX to MAX-1 (assuming MAX had already made an http request and were hanging) so that
+//       the second meta.far could be processed.
+//
+//  If the pkg-resolver does stop downloading content blobs when a resolve fails, then when the
+//  blob server is unblocked in step 7, there will be at least 3*MAX_CONCURRENT_BLOB_FETCHES in the
+//  queue. Worst case, all of the active fetches have already called NeededBlobs.OpenBlob (the call
+//  that starts to fail after the resolve fails) before the first resolve failed, but have not made
+//  their http requests. By the time the second resolve completes, the blob server could have seen
+//  at most MAX_CONCURRENT_BLOB_FETCHES + 1 http requests:
+//    a. one for the second meta.far
+//    b. MAX_CONCURRENT_BLOB_FETCHES for each of the active fetches in the queue when the first
+//       resolve failed. Retries for these blobs or fetches for the remaining content blobs from
+//       the first package will not cause additional http requests because all these attempts would
+//       occur after the first resolve completed, at which time NeededBlobs.Abort has been called
+//       and awaited, so all calls to NeededBlobs.OpenBlob will fail, which occurs before the http
+//       request is made.
+//
+//  Therefore the test passes if the blob server's served blobs counter
+//  <= MAX_CONCURRENT_BLOB_FETCHES + 1 after the second resolve completes.
 #[fasync::run_singlethreaded(test)]
 async fn failed_resolve_stops_fetching_blobs() {
     let pkg_many_failing_content_blobs = {
         let mut pkg = PackageBuilder::new("many-blobs");
-        // Must be much larger than double MAX_CONCURRENT_BLOB_FETCHES.
+        // Must be at least 3*MAX_CONCURRENT_BLOB_FETCHES + 1.
         for i in 0..40 {
             pkg = pkg.add_resource_at(&format!("blob_{}", i), format!("contents_{}", i).as_bytes());
         }
@@ -277,14 +295,18 @@ async fn failed_resolve_stops_fetching_blobs() {
 
     let (record, history) = responder::Record::new();
 
-    let meta_far_http_path =
+    let (fail_content_blobs, unblock) = responder::FailOneThenTemporarilyBlock::new();
+    let first_meta_far_http_path =
         format!("/blobs/{}", pkg_many_failing_content_blobs.meta_far_merkle_root());
+    let second_meta_far_http_path =
+        format!("/blobs/{}", pkg_only_meta_far_different_hash.meta_far_merkle_root());
     let fail_content_blobs = responder::Filter::new(
-        move |req: &hyper::Request<hyper::Body>| req.uri().path() != meta_far_http_path,
-        responder::StaticResponseCode::not_found(),
+        move |req: &hyper::Request<hyper::Body>| {
+            req.uri().path() != first_meta_far_http_path
+                && req.uri().path() != second_meta_far_http_path
+        },
+        fail_content_blobs,
     );
-    let should_fail = responder::AtomicToggle::new(true);
-    let fail_content_blobs = responder::Toggleable::new(&should_fail, fail_content_blobs);
 
     let server = repo
         .server()
@@ -298,10 +320,14 @@ async fn failed_resolve_stops_fetching_blobs() {
     let result = env.resolve_package("fuchsia-pkg://test/many-blobs").await;
     history.take();
     assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableBlob);
-
-    should_fail.unset();
+    unblock.send(()).unwrap();
 
     let _ = env.resolve_package("fuchsia-pkg://test/different-hash").await.unwrap();
 
-    assert_eq!(history.take().len(), 1);
+    let fetch_count = history.take().len();
+    assert!(
+        fetch_count <= 3,
+        "fetch_count should be <= MAX_CONCURRENT_BLOB_FETCHES+1, was {}",
+        fetch_count
+    );
 }

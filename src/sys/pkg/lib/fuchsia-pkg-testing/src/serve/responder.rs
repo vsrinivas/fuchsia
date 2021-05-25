@@ -8,7 +8,7 @@ use {
     crate::serve::HttpResponder,
     futures::{
         channel::{mpsc, oneshot},
-        future::{pending, ready, BoxFuture},
+        future::{pending, ready, BoxFuture, Shared},
         prelude::*,
     },
     hyper::{Body, Request, Response, StatusCode},
@@ -850,5 +850,44 @@ impl HttpResponder for Chain {
             response
         }
         .boxed()
+    }
+}
+
+/// Fails all requests with NOT_FOUND.
+/// All requests made to the first requested path are failed immmediately.
+/// All requests to subsequent paths are blocked until the `unblocker` returned by
+///   new() is used, at which point all requests (pending and future) fail immediately.
+pub struct FailOneThenTemporarilyBlock {
+    path_to_fail: Arc<Mutex<Option<PathBuf>>>,
+    block_until: Shared<oneshot::Receiver<()>>,
+}
+
+impl FailOneThenTemporarilyBlock {
+    /// Create a FailOneThenTemporarilyBlock and its paired unblocker.
+    pub fn new() -> (Self, oneshot::Sender<()>) {
+        let (send, recv) = oneshot::channel();
+        (Self { path_to_fail: Arc::new(Mutex::new(None)), block_until: recv.shared() }, send)
+    }
+}
+
+impl HttpResponder for FailOneThenTemporarilyBlock {
+    fn respond(&self, request: &Request<Body>, _: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        let response =
+            Response::builder().status(StatusCode::NOT_FOUND).body(Body::empty()).unwrap();
+        match &mut *self.path_to_fail.lock() {
+            o @ None => {
+                *o = Some(request.path().to_owned());
+                ready(response).boxed()
+            }
+            Some(path_to_fail) if path_to_fail == request.path() => ready(response).boxed(),
+            _ => {
+                let block_until = self.block_until.clone();
+                async move {
+                    block_until.await.unwrap();
+                    response
+                }
+            }
+            .boxed(),
+        }
     }
 }
