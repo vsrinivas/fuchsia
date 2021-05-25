@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
@@ -28,6 +30,8 @@ class StatusModel implements Inspectable {
   final AdministratorProxy deviceManager;
   final VoidCallback logout;
   final ValueNotifier<UiStream> detailNotifier = ValueNotifier<UiStream>(null);
+  final ValueNotifier<DateTime> currentTime =
+      ValueNotifier<DateTime>(DateTime.now());
 
   StatusModel({
     this.datetime,
@@ -41,7 +45,10 @@ class StatusModel implements Inspectable {
     this.logout,
     this.channel,
     this.systemInformation,
-  });
+  }) {
+    Timer.periodic(
+        Duration(seconds: 1), (_) => currentTime.value = DateTime.now());
+  }
 
   factory StatusModel.withSvcPath(VoidCallback logout) {
     final deviceManager = AdministratorProxy();

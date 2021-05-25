@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
+import 'package:intl/intl.dart';
 import 'package:quickui/uistream.dart';
 
 import '../../models/status_model.dart';
@@ -79,7 +80,6 @@ class Status extends StatelessWidget {
             children: <Widget>[
               _ManualStatusEntry(model),
               for (final uiStream in [
-                model.datetime,
                 model.timezone,
                 model.volume,
                 model.brightness,
@@ -119,8 +119,16 @@ class _ManualStatusEntry extends StatelessWidget {
       child: Row(
         children: <Widget>[
           StatusButton(Strings.restart, model.restartDevice),
-          Spacer(),
+          Padding(padding: EdgeInsets.only(left: 4)),
           StatusButton(Strings.shutdown, model.shutdownDevice),
+          Spacer(),
+          AnimatedBuilder(
+            animation: model.currentTime,
+            builder: (_, __) => Text(DateFormat.E()
+                .add_yMd()
+                .add_jm()
+                .format(model.currentTime.value)),
+          ),
         ],
       ),
     );
