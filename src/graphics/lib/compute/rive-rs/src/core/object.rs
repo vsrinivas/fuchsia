@@ -78,11 +78,9 @@ impl<T: Any> Object<T> {
             format!("Object<{}>", any_type_name::<T>())
         }
 
-        self.try_cast().expect(&format!(
-            "failed cast from {} to {}",
-            type_name::<T>(),
-            type_name::<C>(),
-        ))
+        self.try_cast().unwrap_or_else(|| {
+            panic!("failed cast from {} to {}", type_name::<T>(), type_name::<C>(),)
+        })
     }
 }
 
@@ -284,11 +282,9 @@ impl<'a, T: Core> ObjectRef<'a, T> {
             format!("ObjectRef<'_, {}>", any_type_name::<T>())
         }
 
-        self.try_cast().expect(&format!(
-            "failed cast from {} to {}",
-            type_name::<T>(),
-            type_name::<C>(),
-        ))
+        self.try_cast().unwrap_or_else(|| {
+            panic!("failed cast from {} to {}", type_name::<T>(), type_name::<C>(),)
+        })
     }
 
     pub fn type_name(&self) -> &'static str {
@@ -307,8 +303,9 @@ impl<'a> ObjectRef<'a> {
     }
 
     pub fn cast<'b, C: Core>(&'b self) -> ObjectRef<'a, C> {
-        self.try_cast()
-            .expect(&format!("failed cast from ObjectRef<'_> to {}", any_type_name::<C>(),))
+        self.try_cast().unwrap_or_else(|| {
+            panic!("failed cast from ObjectRef<'_> to {}", any_type_name::<C>(),)
+        })
     }
 
     pub fn on_added_dirty(&self, context: &dyn CoreContext) -> StatusCode {

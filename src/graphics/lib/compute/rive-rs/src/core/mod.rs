@@ -225,7 +225,7 @@ trait Cast: Core {
     where
         T: Core,
     {
-        self.try_cast().expect(&format!("failed cast to {}", any::type_name::<T>()))
+        self.try_cast().unwrap_or_else(|| panic!("failed cast to {}", any::type_name::<T>()))
     }
 }
 
