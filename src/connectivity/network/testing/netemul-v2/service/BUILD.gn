@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
@@ -88,7 +89,25 @@ group("network-drivers") {
 
 isolated_devmgr_v2_component("netemul-devmgr") {
   package_name = "netemul-v2-tests"
-  deps = [ ":network-drivers" ]
+  deps = [
+    ":network-drivers",
+    ":renamed_sys_binary",
+  ]
+}
+
+# TODO(https://fxbug.dev/77388): enable tests to select only 1 of the 3
+# root device drivers (test, misc, and sys).
+#
+# This is a workaround to include the sysdev test driver as the sys root
+# device driver. It would be better to do this by specifying the
+# `--sys-device-driver` flag to `driver-manager-test`, but this is
+# currently not possible to do at build time with the v2 isolated_devmgr
+# template. With this flag unspecified, `driver-manager-test` falls back to
+# looking for driver/platform-bus.so, so we rename this sys driver to that.
+renamed_binary("renamed_sys_binary") {
+  source = "$root_out_dir/sysdev.so"
+  source_deps = [ "//src/devices/tests/sysdev" ]
+  dest = "driver/platform-bus.so"
 }
 
 fuchsia_test_package("netemul-v2-tests") {

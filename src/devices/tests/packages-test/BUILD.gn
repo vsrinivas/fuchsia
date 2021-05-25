@@ -56,6 +56,7 @@ fuchsia_test_package("ddk-packages-test-package") {
   test_components = [ ":packages-test-component" ]
   deps = [
     ":driver-manager-realm",
+    "//src/devices/bus/drivers/platform",
     "//src/devices/tests/ddk-firmware-test:ddk-firmware-test",
     "//src/devices/tests/ddk-firmware-test:test-firmware-file",
     "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
