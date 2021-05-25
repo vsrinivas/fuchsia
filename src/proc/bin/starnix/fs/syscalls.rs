@@ -69,6 +69,20 @@ pub fn sys_fcntl(
             ctx.task.files.set_flags(fd, FdFlags::from_bits_truncate(arg as u32))?;
             Ok(SUCCESS)
         }
+        F_GETFL => {
+            let file = ctx.task.files.get(fd)?;
+            let flags = file.flags.lock();
+            Ok((*flags).into())
+        }
+        F_SETFL => {
+            // TODO: Add O_ASYNC once we have a decl for it.
+            const SETTABLE_FLAGS: u32 = O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK;
+            let requested_flags = (arg as u32) & SETTABLE_FLAGS;
+            let file = ctx.task.files.get(fd)?;
+            let mut file_flags = file.flags.lock();
+            *file_flags = (*file_flags & !SETTABLE_FLAGS) | requested_flags;
+            Ok(SUCCESS)
+        }
         _ => {
             not_implemented!("fcntl command {} not implemented", cmd);
             Err(ENOSYS)
@@ -210,7 +224,7 @@ pub fn sys_openat(
 ) -> Result<SyscallResult, Errno> {
     let fio_flags = get_fio_flags_from_open_flags(flags)?;
     let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, mode)?;
-    Ok(ctx.task.files.install_fd(file)?.into())
+    Ok(ctx.task.files.add(file)?.into())
 }
 
 pub fn sys_faccessat(
@@ -331,18 +345,31 @@ pub fn sys_umask(ctx: &SyscallContext<'_>, umask: mode_t) -> Result<SyscallResul
     Ok(ctx.task.fs.set_umask(umask).into())
 }
 
+fn get_fd_flags(flags: u32) -> FdFlags {
+    if flags & O_CLOEXEC != 0 {
+        FdFlags::CLOEXEC
+    } else {
+        FdFlags::empty()
+    }
+}
+
 pub fn sys_pipe2(
     ctx: &SyscallContext<'_>,
     user_pipe: UserRef<FdNumber>,
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
-    if flags != 0 {
+    if flags & !(O_CLOEXEC | O_NONBLOCK | O_DIRECT) != 0 {
         return Err(EINVAL);
     }
     let (read, write) = PipeNode::new(&ctx.task)?;
 
-    let fd_read = ctx.task.files.install_fd(read)?;
-    let fd_write = ctx.task.files.install_fd(write)?;
+    let file_flags = flags & (O_NONBLOCK | O_DIRECT);
+    read.set_flags(O_RDONLY | file_flags);
+    write.set_flags(O_WRONLY | file_flags);
+
+    let fd_flags = get_fd_flags(flags);
+    let fd_read = ctx.task.files.add_with_flags(read, fd_flags)?;
+    let fd_write = ctx.task.files.add_with_flags(write, fd_flags)?;
 
     ctx.task.mm.write_object(user_pipe, &fd_read)?;
     let user_pipe = user_pipe.next();

@@ -152,6 +152,7 @@ pub struct FileObject {
     ops: Box<dyn FileOps>,
     pub node: Option<FsNodeHandle>,
     pub offset: Mutex<usize>,
+    pub flags: Mutex<u32>,
     pub async_owner: Mutex<pid_t>,
 }
 
@@ -160,11 +161,22 @@ impl FileObject {
         Self::new_with_node(Box::new(ops), None)
     }
     pub fn new_with_node(ops: Box<dyn FileOps>, node: Option<FsNodeHandle>) -> FileHandle {
-        Arc::new(Self { node, ops, offset: Mutex::new(0), async_owner: Mutex::new(0) })
+        Arc::new(Self {
+            node,
+            ops,
+            offset: Mutex::new(0),
+            flags: Mutex::new(0),
+            async_owner: Mutex::new(0),
+        })
     }
 
     pub fn ops(&self) -> &dyn FileOps {
         &*self.ops
+    }
+
+    pub fn set_flags(&self, value: u32) {
+        let mut flags = self.flags.lock();
+        *flags = value;
     }
 
     /// Get the async owner of this file.
@@ -201,8 +213,8 @@ struct FdTableEntry {
 }
 
 impl FdTableEntry {
-    fn new(file: FileHandle) -> FdTableEntry {
-        FdTableEntry { file, flags: FdFlags::empty() }
+    fn new(file: FileHandle, flags: FdFlags) -> FdTableEntry {
+        FdTableEntry { file, flags }
     }
 }
 
@@ -226,16 +238,20 @@ impl FdTable {
 
     pub fn insert(&self, fd: FdNumber, file: FileHandle) {
         let mut table = self.table.write();
-        table.insert(fd, FdTableEntry::new(file));
+        table.insert(fd, FdTableEntry::new(file, FdFlags::empty()));
     }
 
-    pub fn install_fd(&self, file: FileHandle) -> Result<FdNumber, Errno> {
+    pub fn add(&self, file: FileHandle) -> Result<FdNumber, Errno> {
+        self.add_with_flags(file, FdFlags::empty())
+    }
+
+    pub fn add_with_flags(&self, file: FileHandle, flags: FdFlags) -> Result<FdNumber, Errno> {
         let mut table = self.table.write();
         let mut fd = FdNumber::from_raw(0);
         while table.contains_key(&fd) {
             fd = FdNumber::from_raw(fd.raw() + 1);
         }
-        table.insert(fd, FdTableEntry::new(file));
+        table.insert(fd, FdTableEntry::new(file, flags));
         Ok(fd)
     }
 
@@ -275,9 +291,9 @@ mod test {
         let files = FdTable::new();
         let file = SyslogFile::new();
 
-        let fd0 = files.install_fd(file.clone()).unwrap();
+        let fd0 = files.add(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
-        let fd1 = files.install_fd(file.clone()).unwrap();
+        let fd1 = files.add(file.clone()).unwrap();
         assert_eq!(fd1.raw(), 1);
 
         assert!(Arc::ptr_eq(&files.get(fd0).unwrap(), &file));
@@ -290,8 +306,8 @@ mod test {
         let files = FdTable::new();
         let file = SyslogFile::new();
 
-        let fd0 = files.install_fd(file.clone()).unwrap();
-        let fd1 = files.install_fd(file.clone()).unwrap();
+        let fd0 = files.add(file.clone()).unwrap();
+        let fd1 = files.add(file.clone()).unwrap();
         let fd2 = FdNumber::from_raw(2);
 
         let forked = files.fork();
@@ -311,8 +327,8 @@ mod test {
         let files = FdTable::new();
         let file = SyslogFile::new();
 
-        let fd0 = files.install_fd(file.clone()).unwrap();
-        let fd1 = files.install_fd(file.clone()).unwrap();
+        let fd0 = files.add(file.clone()).unwrap();
+        let fd1 = files.add(file.clone()).unwrap();
 
         files.set_flags(fd0, FdFlags::CLOEXEC).unwrap();
 
@@ -331,8 +347,8 @@ mod test {
         let file = SyslogFile::new();
 
         // Add two FDs.
-        let fd0 = files.install_fd(file.clone()).unwrap();
-        let fd1 = files.install_fd(file.clone()).unwrap();
+        let fd0 = files.add(file.clone()).unwrap();
+        let fd1 = files.add(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
         assert_eq!(fd1.raw(), 1);
 
@@ -343,7 +359,7 @@ mod test {
         assert!(files.get(fd0).is_err());
 
         // The next FD we insert fills in the hole we created.
-        let another_fd = files.install_fd(file.clone()).unwrap();
+        let another_fd = files.add(file.clone()).unwrap();
         assert_eq!(another_fd.raw(), 0);
     }
 }
