@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/debug/ipc/automation_instruction.h"
 #include "src/developer/debug/ipc/register_desc.h"
 #include "src/developer/debug/shared/address_range.h"
 

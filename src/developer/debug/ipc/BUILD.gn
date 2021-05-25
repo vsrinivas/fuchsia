@@ -17,6 +17,7 @@ group("ipc") {
 static_library("shared") {
   visibility = [ ":*" ]
   sources = [
+    "automation_instruction.h",
     "decode_exception.cc",
     "decode_exception.h",
     "message_reader.cc",
