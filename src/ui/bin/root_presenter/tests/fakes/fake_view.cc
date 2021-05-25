@@ -30,6 +30,33 @@ FakeView::FakeView(sys::ComponentContext* component_context, fuchsia::ui::scenic
                    /* presentation_callback = */ [](fuchsia::images::PresentationInfo info) {});
 }
 
+bool FakeView::IsAttachedToScene() {
+  for (const auto& event : events_) {
+    // We're looking for the view attached event, so skip any events that are
+    // not gfx events.
+    if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx) {
+      continue;
+    }
+
+    const auto& gfx_event = event.gfx();
+
+    // Skip events that aren't "view attached".
+    if (gfx_event.Which() != fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+      continue;
+    }
+
+    const auto& view_attached_event = gfx_event.view_attached_to_scene();
+
+    // The view id in the event should match the id of the view resource the
+    // fake view owns.
+    if (view_attached_event.view_id == view_id()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 fuchsia::ui::views::ViewHolderToken FakeView::view_holder_token() const {
   fuchsia::ui::views::ViewHolderToken copy;
   fidl::Clone(view_holder_token_.value(), &copy);

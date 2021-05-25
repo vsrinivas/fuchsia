@@ -86,8 +86,9 @@ class AccessibilityViewTest : public gtest::TestLoopFixture {
 TEST_F(AccessibilityViewTest, TestConstruction) {
   fuchsia::ui::scenic::ScenicPtr scenic =
       context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-
-  a11y::AccessibilityView a11y_view(context_provider_.context(), std::move(scenic));
+  fuchsia::ui::accessibility::view::RegistryPtr registry =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
+  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
 
   RunLoopUntilIdle();
 
@@ -102,7 +103,7 @@ TEST_F(AccessibilityViewTest, TestConstruction) {
   EXPECT_EQ(a11y::GetKoid(views.begin()->second.view_ref),
             a11y::GetKoid(fake_accessibility_view_registry_->a11y_view_ref()));
 
-  // Verify that client view holder was created as a child of the a11y view.
+  // Verify that proxy view holder was created as a child of the a11y view.
   const auto& view_holders = mock_session_->view_holders();
   EXPECT_EQ(view_holders.size(), 1u);
   EXPECT_EQ(view_holders.begin()->second.parent_id, a11y_view_id);
@@ -111,8 +112,9 @@ TEST_F(AccessibilityViewTest, TestConstruction) {
 TEST_F(AccessibilityViewTest, TestViewProperties) {
   fuchsia::ui::scenic::ScenicPtr scenic =
       context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-
-  a11y::AccessibilityView a11y_view(context_provider_.context(), std::move(scenic));
+  fuchsia::ui::accessibility::view::RegistryPtr registry =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
+  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
 
   RunLoopUntilIdle();
 

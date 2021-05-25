@@ -38,7 +38,8 @@ int run_a11y_manager(int argc, const char** argv) {
       std::make_unique<a11y::AnnotationViewFactory>(),
       std::make_unique<a11y::A11ySemanticsEventManager>(),
       std::make_unique<a11y::AccessibilityView>(
-          context.get(), context->svc()->Connect<fuchsia::ui::scenic::Scenic>()),
+          context->svc()->Connect<fuchsia::ui::accessibility::view::Registry>(),
+          context->svc()->Connect<fuchsia::ui::scenic::Scenic>()),
       context.get(), context->outgoing()->debug_dir());
   a11y::TtsManager tts_manager(context.get());
   a11y::ColorTransformManager color_transform_manager(context.get());

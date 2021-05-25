@@ -127,6 +127,16 @@ void MockSession::ApplyDetachCommand(const fuchsia::ui::gfx::DetachCmd& command)
   entity_node.parent_id = 0u;
 }
 
+void MockSession::ApplySetViewPropertiesCommand(
+    const fuchsia::ui::gfx::SetViewPropertiesCmd& command) {
+  const uint32_t id = command.view_holder_id;
+
+  if (view_holders_.find(id) != view_holders_.end()) {
+    view_holders_[id].id = id;
+    view_holders_[id].properties = command.properties;
+  }
+}
+
 void MockSession::Present(uint64_t presentation_time, ::std::vector<::zx::event> acquire_fences,
                           ::std::vector<::zx::event> release_fences, PresentCallback callback) {
   for (const auto& command : cmd_queue_) {
@@ -163,6 +173,10 @@ void MockSession::Present(uint64_t presentation_time, ::std::vector<::zx::event>
 
       case fuchsia::ui::gfx::Command::Tag::kDetach:
         ApplyDetachCommand(gfx_command.detach());
+        break;
+
+      case fuchsia::ui::gfx::Command::Tag::kSetViewProperties:
+        ApplySetViewPropertiesCommand(gfx_command.set_view_properties());
         break;
 
       default:

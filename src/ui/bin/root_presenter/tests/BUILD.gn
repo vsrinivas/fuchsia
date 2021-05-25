@@ -81,6 +81,7 @@ executable("root_presenter_unittests_bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/ui/a11y/lib/view",
     "//src/ui/bin/root_presenter:color_transform",
     "//src/ui/bin/root_presenter:displays",
     "//src/ui/bin/root_presenter:factory_reset_manager",

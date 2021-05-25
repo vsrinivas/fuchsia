@@ -23,7 +23,10 @@ class FakeView {
   FakeView(sys::ComponentContext* component_context, fuchsia::ui::scenic::ScenicPtr scenic);
   ~FakeView() = default;
 
+  bool IsAttachedToScene();
+
   const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
+  void clear_events() { events_.clear(); }
 
   fuchsia::ui::views::ViewHolderToken view_holder_token() const;
 

@@ -69,7 +69,6 @@ Presentation::Presentation(
       display_startup_rotation_adjustment_(display_startup_rotation_adjustment),
       presentation_binding_(this),
       a11y_binding_(this),
-      a11y_view_registry_binding_(this),
       safe_presenter_(safe_presenter),
       safe_presenter_injector_(&injector_session_),
       safe_presenter_proxy_(&proxy_session_),
@@ -186,6 +185,11 @@ Presentation::Presentation(
             }
           });
         }
+      });
+
+  component_context->outgoing()->AddPublicService<fuchsia::ui::accessibility::view::Registry>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::accessibility::view::Registry> request) {
+        a11y_view_registry_bindings_.AddBinding(this, std::move(request));
       });
 
   FX_DCHECK(root_view_holder_);
@@ -313,6 +317,7 @@ void Presentation::SetViewHolderProperties() {
   {  // Scale a11y view to full device size.
     float metrics_scale_x = display_metrics_.x_scale_in_px_per_pp();
     float metrics_scale_y = display_metrics_.y_scale_in_px_per_pp();
+
     // Swap metrics on left/right tilt.
     if (is_90_degree_rotation) {
       std::swap(metrics_scale_x, metrics_scale_y);
@@ -357,7 +362,6 @@ void Presentation::SetViewHolderProperties() {
         FX_LOGS(ERROR) << "Unsupported rotation";
         break;
     }
-
     injector_view_holder_->SetTranslation(left_offset, top_offset, 0.f);
     FX_VLOGS(2) << "DisplayModel translation: " << left_offset << ", " << top_offset;
   }
@@ -557,6 +561,7 @@ void Presentation::CreateAccessibilityViewHolder(
     fuchsia::ui::views::ViewRef a11y_view_ref,
     fuchsia::ui::views::ViewHolderToken a11y_view_holder_token,
     CreateAccessibilityViewHolderCallback callback) {
+  FX_CHECK(injector_view_);
   // Detach proxy view holder from injector view.
   injector_view_->DetachChild(proxy_view_holder_.value());
 
@@ -575,14 +580,15 @@ void Presentation::CreateAccessibilityViewHolder(
   // manager must own the new proxy view holder.
   auto [proxy_view_token, proxy_view_holder_token] = scenic::ViewTokenPair::New();
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-  proxy_view_.emplace(session_, std::move(proxy_view_token), std::move(control_ref),
+  proxy_view_.emplace(&proxy_session_, std::move(proxy_view_token), std::move(control_ref),
                       std::move(view_ref), "Proxy View");
 
   // Add the client view holder as a child of the new proxy view.
   proxy_view_->AddChild(client_view_holder_.value());
 
   // Construct the a11y view holder.
-  a11y_view_holder_.emplace(session_, std::move(a11y_view_holder_token), "A11y View Holder");
+  a11y_view_holder_.emplace(&injector_session_, std::move(a11y_view_holder_token),
+                            "A11y View Holder");
 
   // Add the a11y view holder as a child of the injector view.
   injector_view_->AddChild(a11y_view_holder_.value());

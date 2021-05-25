@@ -12,6 +12,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/ui/scenic/cpp/id.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -172,7 +173,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
   scenic::Camera camera_;
   std::optional<scenic::View> root_view_;
   std::optional<scenic::ViewHolder> root_view_holder_;
-  fuchsia::ui::views::ViewRef root_view_ref_;
 
   // The injector view is used as a constant target when injecting events through
   // fuchsia::ui::pointerinjector. When a11y starts, it can insert its view between
@@ -236,7 +236,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
 
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
-  fidl::Binding<fuchsia::ui::accessibility::view::Registry> a11y_view_registry_binding_;
+  fidl::BindingSet<fuchsia::ui::accessibility::view::Registry> a11y_view_registry_bindings_;
 
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;

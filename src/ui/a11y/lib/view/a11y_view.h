@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_LIB_VIEW_A11Y_VIEW_H_
 
 #include <fuchsia/ui/accessibility/view/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -38,7 +39,7 @@ class AccessibilityViewInterface {
 // coordinate transforms to its subtree.
 class AccessibilityView : public AccessibilityViewInterface {
  public:
-  AccessibilityView(sys::ComponentContext* component_context,
+  AccessibilityView(fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry,
                     fuchsia::ui::scenic::ScenicPtr scenic);
   ~AccessibilityView() override = default;
 
@@ -50,6 +51,10 @@ class AccessibilityView : public AccessibilityViewInterface {
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
+
+  // Interface between the accessibility view and the scenic service
+  // that inserts it into the scene graph.
+  fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry_;
 
   // Connection to scenic.
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -64,13 +69,12 @@ class AccessibilityView : public AccessibilityViewInterface {
   // If not present, this view does not exist in the view tree.
   std::optional<scenic::View> a11y_view_;
 
-  // Holds the client view holder.
+  // Holds the "proxy" view holder. The proxy view sits between the a11y view
+  // and client view(s) below. The purpose of this view is to enable the a11y
+  // view to insert itself into the scene graph after the client view has
+  // already been attached.
   // If not present, this view does not exist in the view tree.
-  std::optional<scenic::ViewHolder> client_view_holder_;
-
-  // Interface between the accessibility view and the scenic service
-  // that inserts it into the scene graph.
-  fuchsia::ui::accessibility::view::RegistryPtr accessibility_view_registry_;
+  std::optional<scenic::ViewHolder> proxy_view_holder_;
 
   // Holds the a11y view properties.
   // If not present, the a11y view has not yet been connected to the scene.

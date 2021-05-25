@@ -19,6 +19,7 @@
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
+#include "src/ui/a11y/lib/view/a11y_view.h"
 #include "src/ui/bin/root_presenter/app.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_injector_registry.h"
@@ -190,33 +191,31 @@ TEST_F(RootPresenterTest, TestSceneSetup) {
   root_presenter()->PresentView(fake_view.view_holder_token(), nullptr);
 
   // Run until the view is attached to the scene.
-  RunLoopUntil([&fake_view]() {
-    const auto& view_events = fake_view.events();
-    for (const auto& event : view_events) {
-      // We're looking for the view attached event, so skip any events that are
-      // not gfx events.
-      if (event.Which() != fuchsia::ui::scenic::Event::Tag::kGfx) {
-        continue;
-      }
+  RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
+}
 
-      const auto& gfx_event = event.gfx();
+TEST_F(RootPresenterTest, TestAttachA11yView) {
+  // Present a fake view.
+  fuchsia::ui::scenic::ScenicPtr scenic =
+      context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
+  root_presenter()->PresentView(fake_view.view_holder_token(), nullptr);
 
-      // Skip events that aren't "view attached".
-      if (gfx_event.Which() != fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
-        continue;
-      }
+  // Run until the view is attached to the scene.
+  RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
 
-      const auto& view_attached_event = gfx_event.view_attached_to_scene();
+  fuchsia::ui::accessibility::view::RegistryPtr registry;
+  context_provider_.ConnectToPublicService(registry.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(registry.is_bound());
 
-      // The view id in the event should match the id of the view resource the
-      // fake view owns.
-      if (view_attached_event.view_id == fake_view.view_id()) {
-        return true;
-      }
-    }
+  // Add an a11y view.
+  scenic = context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
 
-    return false;
-  });
+  a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
+
+  // Verify that nothing crashes during a11y view setup.
+  RunLoopUntilIdle();
 }
 
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {

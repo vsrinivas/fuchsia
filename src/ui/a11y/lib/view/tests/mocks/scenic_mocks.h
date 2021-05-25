@@ -16,14 +16,14 @@
 
 namespace accessibility_test {
 
-static constexpr fuchsia::ui::gfx::ViewProperties kViewProperties = {
-    .bounding_box = {.min = {.x = 10, .y = 5, .z = -100}, .max = {.x = 100, .y = 50, .z = 0}}};
+// TODO(76754): Consolidate with other scenic mocks.
 
 struct ViewHolderAttributes {
   // Session-specific id of the view holder resource.
   uint32_t id;
   fuchsia::ui::views::ViewHolderToken view_holder_token;
   uint32_t parent_id;
+  fuchsia::ui::gfx::ViewProperties properties;
   bool operator==(const ViewHolderAttributes& rhs) const {
     return this->id == rhs.id && this->parent_id == rhs.parent_id;
   }
@@ -109,6 +109,8 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   void ApplySetScaleCommand(const fuchsia::ui::gfx::SetScaleCmd& command);
 
   void ApplyDetachCommand(const fuchsia::ui::gfx::DetachCmd& command);
+
+  void ApplySetViewPropertiesCommand(const fuchsia::ui::gfx::SetViewPropertiesCmd& command);
 
   void Present(uint64_t presentation_time, ::std::vector<::zx::event> acquire_fences,
                ::std::vector<::zx::event> release_fences, PresentCallback callback) override;
