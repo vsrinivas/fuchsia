@@ -158,7 +158,12 @@ pub mod complex_time_impls {
 
         #[test]
         fn test_complex_time_impl_sub() {
-            let time = ComplexTime { wall: SystemTime::now(), mono: Instant::now() };
+            // If this test was executed early after boot, it's possible `Instant::now()` could be
+            // less than 1*60*60 seconds. To make the tests more deterministic, we'll create a
+            // synthetic now we'll use in tests that's at least 24 hours from the real `now()`
+            // value.
+            let mono = Instant::now() + Duration::from_secs(24 * 60 * 60);
+            let time = ComplexTime { wall: SystemTime::now(), mono };
             let dur = Duration::from_secs(1 * 60 * 60);
             let earlier = time - dur;
 
@@ -171,7 +176,12 @@ pub mod complex_time_impls {
 
         #[test]
         fn test_complex_time_impl_sub_assign() {
-            let mut time = ComplexTime { wall: SystemTime::now(), mono: Instant::now() };
+            // If this test was executed early after boot, it's possible `Instant::now()` could be
+            // less than 1*60*60 seconds. To make the tests more deterministic, we'll create a
+            // synthetic now we'll use in tests that's at least 24 hours from the real `now()`
+            // value.
+            let mono = Instant::now() + Duration::from_secs(24 * 60 * 60);
+            let mut time = ComplexTime { wall: SystemTime::now(), mono };
             let before_sub = time;
             let dur = Duration::from_secs(1 * 60 * 60);
 
@@ -425,7 +435,11 @@ pub mod partial_complex_time_impls {
         #[test]
         fn test_partial_complex_time_impl_sub() {
             let wall = SystemTime::now();
-            let mono = Instant::now();
+            // If this test was executed early after boot, it's possible `Instant::now()` could be
+            // less than 1*60*60 seconds. To make the tests more deterministic, we'll create a
+            // synthetic now we'll use in tests that's at least 24 hours from the real `now()`
+            // value.
+            let mono = Instant::now() + Duration::from_secs(24 * 60 * 60);
             let comp = ComplexTime { wall, mono };
 
             let partial_wall = PartialComplexTime::Wall(wall);
@@ -458,7 +472,11 @@ pub mod partial_complex_time_impls {
         #[test]
         fn test_partial_complex_time_impl_sub_assign() {
             let wall = SystemTime::now();
-            let mono = Instant::now();
+            // If this test was executed early after boot, it's possible `Instant::now()` could be
+            // less than 1*60*60 seconds. To make the tests more deterministic, we'll create a
+            // synthetic now we'll use in tests that's at least 24 hours from the real `now()`
+            // value.
+            let mono = Instant::now() + Duration::from_secs(24 * 60 * 60);
             let comp = ComplexTime { wall, mono };
 
             let mut partial_wall = PartialComplexTime::Wall(wall);
