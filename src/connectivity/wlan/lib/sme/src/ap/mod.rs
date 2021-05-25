@@ -14,6 +14,7 @@ use remote_client::*;
 
 use {
     crate::{
+        mlme_event_name,
         phy_selection::{derive_phy_cbw_for_ap, get_device_band_info},
         responder::Responder,
         sink::MlmeSink,
@@ -328,10 +329,10 @@ impl super::Station for ApSme {
     type Event = Event;
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
-        debug!("received MLME event: {:?}", event);
+        debug!("received MLME event: {:?}", &event);
         self.state = self.state.take().map(|state| match state {
             State::Idle { .. } => {
-                warn!("received MlmeEvent while ApSme is idle {:?}", event);
+                warn!("received MlmeEvent while ApSme is idle {:?}", mlme_event_name(&event));
                 state
             }
             State::Starting {
@@ -357,7 +358,10 @@ impl super::Station for ApSme {
                     stop_responders,
                 ),
                 _ => {
-                    warn!("received MlmeEvent while ApSme is starting {:?}", event);
+                    warn!(
+                        "received MlmeEvent while ApSme is starting {:?}",
+                        mlme_event_name(&event)
+                    );
                     State::Starting {
                         ctx,
                         ssid,
@@ -389,7 +393,10 @@ impl super::Station for ApSme {
                     }
                 },
                 _ => {
-                    warn!("received MlmeEvent while ApSme is stopping {:?}", event);
+                    warn!(
+                        "received MlmeEvent while ApSme is stopping {:?}",
+                        mlme_event_name(&event)
+                    );
                     State::Stopping { ctx, stop_req, responders, stop_timeout }
                 }
             },
@@ -417,7 +424,9 @@ impl super::Station for ApSme {
                             info!("Received unsuccessful EapolConf");
                         }
                     }
-                    _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
+                    _ => {
+                        warn!("unsupported MlmeEvent type {:?}; ignoring", mlme_event_name(&event))
+                    }
                 }
                 State::Started { bss }
             }

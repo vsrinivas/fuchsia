@@ -13,7 +13,7 @@ mod sink;
 pub mod test_utils;
 pub mod timer;
 
-use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 
 use crate::client::InfoEvent;
@@ -87,5 +87,35 @@ mod responder {
         pub fn respond(self, result: T) {
             self.0.send(result).unwrap_or_else(|_| ());
         }
+    }
+}
+
+/// Safely log MlmeEvents without printing private information.
+fn mlme_event_name(event: &MlmeEvent) -> &str {
+    match event {
+        MlmeEvent::OnScanResult { .. } => "OnScanResult",
+        MlmeEvent::OnScanEnd { .. } => "OnScanEnd",
+        MlmeEvent::JoinConf { .. } => "JoinConf",
+        MlmeEvent::AuthenticateConf { .. } => "AuthenticateConf",
+        MlmeEvent::AuthenticateInd { .. } => "AuthenticateInd",
+        MlmeEvent::DeauthenticateConf { .. } => "DeauthenticateConf",
+        MlmeEvent::DeauthenticateInd { .. } => "DeauthenticateInd",
+        MlmeEvent::AssociateConf { .. } => "AssociateConf",
+        MlmeEvent::AssociateInd { .. } => "AssociateInd",
+        MlmeEvent::DisassociateConf { .. } => "DisassociateConf",
+        MlmeEvent::DisassociateInd { .. } => "DisassociateInd",
+        MlmeEvent::StartConf { .. } => "StartConf",
+        MlmeEvent::StopConf { .. } => "StopConf",
+        MlmeEvent::EapolConf { .. } => "EapolConf",
+        MlmeEvent::IncomingMpOpenAction { .. } => "IncomingMpOpenAction",
+        MlmeEvent::IncomingMpConfirmAction { .. } => "IncomingMpConfirmAction",
+        MlmeEvent::SignalReport { .. } => "SignalReport",
+        MlmeEvent::EapolInd { .. } => "EapolInd",
+        MlmeEvent::StatsQueryResp { .. } => "StatsQueryResp",
+        MlmeEvent::RelayCapturedFrame { .. } => "RelayCapturedFrame",
+        MlmeEvent::OnChannelSwitched { .. } => "OnChannelSwitched",
+        MlmeEvent::OnPmkAvailable { .. } => "OnPmkAvailable",
+        MlmeEvent::OnSaeHandshakeInd { .. } => "OnSaeHandshakeInd",
+        MlmeEvent::OnSaeFrameRx { .. } => "OnSaeFrameRx",
     }
 }

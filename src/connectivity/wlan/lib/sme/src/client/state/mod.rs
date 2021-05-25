@@ -17,6 +17,7 @@ use {
             report_connect_finished, AssociationFailure, ConnectFailure, ConnectResult,
             EstablishRsnaFailure, EstablishRsnaFailureReason, Status,
         },
+        mlme_event_name,
         phy_selection::derive_phy_cbw,
         responder::Responder,
         sink::MlmeSink,
@@ -759,7 +760,7 @@ impl ClientState {
 
         let new_state = match self {
             Self::Idle(_) => {
-                warn!("Unexpected MLME message while Idle: {:?}", event);
+                warn!("Unexpected MLME message while Idle: {:?}", mlme_event_name(&event));
                 self
             }
             Self::Joining(state) => match event {
