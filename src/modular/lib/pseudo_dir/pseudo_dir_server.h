@@ -31,7 +31,7 @@ class PseudoDirServer final {
  public:
   // Serves |pseudo_dir| on an async loop on a new thread. All requests to |pseudo_dir|
   // are processed on the new thread.
-  PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir);
+  explicit PseudoDirServer(std::unique_ptr<vfs::PseudoDir> pseudo_dir);
 
   // Stops |loop_| and blocks the current thread until the |loop_| thread is finished.
   ~PseudoDirServer();
@@ -44,6 +44,9 @@ class PseudoDirServer final {
 
   // Binds |request| to |pseudo_dir_|.
   void Serve(zx::channel request);
+
+  // Returns the |pseudo_dir_| to be served.
+  vfs::PseudoDir* pseudo_dir() const { return pseudo_dir_.get(); };
 
  private:
   // This loop is configured to attach to its own thread.
