@@ -14,6 +14,7 @@
 
 #include <cstdint>
 
+#include <ktl/optional.h>
 #include <ktl/span.h>
 #include <phys/allocation.h>
 
@@ -38,6 +39,13 @@ class BootZbi {
     size_t size, alignment;
   };
 
+  // The boot_alloc code uses arbitrary pages after the official bss space.
+  // So make sure to allocate some extra slop for the kernel.
+  //
+  // TODO(mcgrathr): Remove this when ZBI kernels in use actually conform to
+  // the protocol and don't clobber extra memory.
+  static constexpr uint64_t kKernelBootAllocReserve = 1024 * 1024 * 4;
+
   // Default-constructible and move-only.
   BootZbi() = default;
   BootZbi(BootZbi&&) = default;
@@ -59,7 +67,8 @@ class BootZbi {
   // at least extra_data_capacity bytes of space available to Append() items to
   // it.  The input ZBI's memory may be reused for the kernel or data images,
   // so it should not be referenced afterwards.
-  fitx::result<Error> Load(uint32_t extra_data_capacity = 0);
+  fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
+                           ktl::optional<uintptr_t> kernel_load_address = {});
 
   // Boot into the kernel loaded by Load(), which must have been called first.
   // This cannot fail and never returns.
@@ -79,7 +88,7 @@ class BootZbi {
   }
 
   uint64_t KernelMemorySize() const {
-    return KernelLoadSize() + KernelHeader()->reserve_memory_size;
+    return KernelLoadSize() + KernelHeader()->reserve_memory_size + kKernelBootAllocReserve;
   }
 
   uint64_t KernelEntryAddress() const { return KernelLoadAddress() + KernelHeader()->entry; }
@@ -87,9 +96,7 @@ class BootZbi {
   // If this returns true, then instead of using Load() it works to just assign
   // to DataZbi().storage() with a different data location and use the kernel
   // image already in place after construction by Init().
-  bool KernelCanLoadInPlace() const {
-    return KernelLoadAddress() % arch::kZbiBootKernelAlignment == 0;
-  }
+  bool KernelCanLoadInPlace() const;
 
   // The Data* methods can be used after a successful Load() or if a valid data
   // ZBI has been installed directly into DataZbi().  The data ZBI can be

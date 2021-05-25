@@ -8,6 +8,7 @@
 
 #include <lib/arch/x86/standard-segments.h>
 #include <lib/arch/zbi-boot.h>
+#include <lib/memalloc/allocator.h>
 
 #include <cstddef>
 #include <cstring>
@@ -131,6 +132,11 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
     return BootZbi::Load(extra_data_capacity);
   }
 
+  // Now we know how much space the kernel image needs.
+  // Reserve it at the fixed load address.
+  auto& alloc = Allocation::GetAllocator();
+  ZX_ASSERT(alloc.RemoveRange(kFixedLoadAddress, KernelMemorySize()).is_ok());
+
   // The trampoline needs someplace safely neither in the kernel image, nor in
   // the data ZBI image, nor in this shim's own image since that might overlap
   // the fixed-address target region.  It's tiny, so just extend the extra data
@@ -138,7 +144,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
   // space is safely allocated in our present reckoning so it's disjoint from
   // the data and kernel image memory and from this shim's own image, but as
   // soon as we boot into the new kernel it will be reclaimable memory.
-  auto result = BootZbi::Load(extra_data_capacity + Trampoline::size());
+  auto result = BootZbi::Load(extra_data_capacity + Trampoline::size(), kFixedLoadAddress);
   if (result.is_error()) {
     return result.take_error();
   }
@@ -151,11 +157,6 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
 }
 
 [[noreturn]] void TrampolineBoot::Boot() {
-  if (!trampoline_) {
-    // This is a new-style position-independent kernel.  Boot it where it is.
-    BootZbi::Boot();
-  }
-
   uintptr_t entry = static_cast<uintptr_t>(KernelEntryAddress());
   ZX_ASSERT(entry == KernelEntryAddress());
 
@@ -174,6 +175,11 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
   uintptr_t fixed_last = static_cast<uintptr_t>(kFixedLoadAddress + KernelLoadSize() - 1);
   ZX_ASSERT(fixed_first == kFixedLoadAddress);
   ZX_ASSERT(fixed_last == kFixedLoadAddress + KernelLoadSize() - 1);
+
+  if (!trampoline_) {
+    // This is a new-style position-independent kernel.  Boot it where it is.
+    BootZbi::Boot();
+  }
 
   trampoline_->Boot(KernelImage(), KernelLoadSize(), DataZbi().storage().data());
 }

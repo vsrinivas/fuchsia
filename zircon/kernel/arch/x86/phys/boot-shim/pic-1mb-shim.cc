@@ -31,11 +31,6 @@ void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
     abort();
   }
 
-  // Now we know how much space the kernel image needs.
-  // Reserve it at the fixed load address.
-  auto& alloc = Allocation::GetAllocator();
-  ZX_ASSERT(alloc.RemoveRange(TrampolineBoot::kFixedLoadAddress, boot.KernelLoadSize()).is_ok());
-
   if (auto result = boot.Load(); result.is_error()) {
     printf("pic-1mb-boot-shim: Failed to load ZBI: ");
     zbitl::PrintViewCopyError(result.error_value());

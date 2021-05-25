@@ -26,10 +26,6 @@ const char Symbolize::kProgramName_[] = "physboot";
 
 namespace {
 
-// The boot_alloc code uses arbitrary pages after the official bss space.
-// So make sure to allocate some extra slop for the kernel.
-constexpr uint64_t kKernelBootAllocReserve = 1024 * 1024 * 4;
-
 // A guess about the upper bound on reserve_memory_size so we can do a single
 // allocation before decoding the header and probably not need to relocate.
 constexpr uint64_t kKernelBssEstimate = 1024 * 1024 * 2;
@@ -48,7 +44,7 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
 
   // That covers the uncompressed size of the image alone.  Preallocate enough
   // space after it that the bss and boot_alloc reserve are likely to fit.
-  buffer_sizes.size += reserve_memory_estimate + kKernelBootAllocReserve;
+  buffer_sizes.size += reserve_memory_estimate + BootZbi::kKernelBootAllocReserve;
 
   auto buffer = Allocation::New(ac, buffer_sizes.size, buffer_sizes.alignment);
   if (!ac.check()) {
@@ -89,7 +85,7 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
                              arch::EarlyTicks entry_ts) {
   auto zircon = LoadZircon(zbi, kernel_item, kKernelBssEstimate);
   if (!zircon.boot.KernelCanLoadInPlace() ||
-      zircon.buffer.size_bytes() < zircon.boot.KernelMemorySize() + kKernelBootAllocReserve) {
+      zircon.buffer.size_bytes() < zircon.boot.KernelMemorySize()) {
     printf("physboot: Kernel ZBI at %#" PRIx64 " cannot be loaded in place!\n",
            zircon.boot.KernelLoadAddress());
     uint64_t bss_size = zircon.boot.KernelHeader()->reserve_memory_size;
@@ -103,11 +99,11 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   auto& [buffer, boot, decompress_ts] = zircon;
 
   ZX_ASSERT(boot.KernelCanLoadInPlace());
-  ZX_ASSERT_MSG(buffer.size_bytes() >= boot.KernelMemorySize() + kKernelBootAllocReserve,
+  ZX_ASSERT_MSG(buffer.size_bytes() >= boot.KernelMemorySize(),
                 "Kernel allocation %#zx too small for load size %#x +"
                 " bss %#" PRIx64 " + boot_alloc reserve %#" PRIx64 "\n",
                 buffer.size_bytes(), boot.KernelLoadSize(),
-                boot.KernelHeader()->reserve_memory_size, kKernelBootAllocReserve);
+                boot.KernelHeader()->reserve_memory_size, BootZbi::kKernelBootAllocReserve);
 
   // TODO(mcgrathr): propagate timestamps
 

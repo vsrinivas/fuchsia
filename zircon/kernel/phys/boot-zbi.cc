@@ -114,7 +114,20 @@ fitx::result<BootZbi::Error> BootZbi::Init(InputZbi arg_zbi) {
   }};
 }
 
-fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
+bool BootZbi::KernelCanLoadInPlace() const {
+  // The kernel (container header) must be aligned as per the ZBI protocol.
+  if (KernelLoadAddress() % arch::kZbiBootKernelAlignment != 0) {
+    return false;
+  }
+
+  // The incoming ZBI must supply enough reusable headroom for the kernel.
+  uint32_t in_place_start = kernel_item_.item_offset() - sizeof(zbi_header_t);
+  size_t in_place_space = zbi_.storage().size() - in_place_start;
+  return in_place_space >= KernelMemorySize();
+}
+
+fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
+                                           ktl::optional<uintptr_t> kernel_load_address) {
   auto input_address = reinterpret_cast<uintptr_t>(zbi_.storage().data());
   auto input_capacity = zbi_.storage().size();
 
@@ -256,6 +269,19 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
         reinterpret_cast<std::byte*>(aligned_address),
         input_capacity - (aligned_address - input_address),
     };
+  }
+
+  if (kernel_load_address) {
+    // There's a fixed kernel load address, so the data ZBI cannot be allowed
+    // to reuse the memory where it will go.  This memory will already have
+    // been reserved from the allocator, but the incoming data might be there.
+    uintptr_t start1 = *kernel_load_address;
+    size_t len1 = static_cast<size_t>(KernelMemorySize());
+    uintptr_t start2 = reinterpret_cast<uintptr_t>(data_.storage().data());
+    size_t len2 = data_.storage().size();
+    if (start1 <= start2 ? start1 + len1 > start2 : start1 < start2 + len2) {
+      data_.storage() = {};
+    }
   }
 
   // If we can reuse either the kernel image or the data ZBI items in place,

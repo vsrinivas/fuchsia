@@ -68,7 +68,10 @@ if (toolchain.environment == "kernel.phys" ||
     sources = [ "trampoline-boot.cc" ]
     public = [ "trampoline-boot.h" ]
     public_deps = [ "//zircon/kernel/phys:boot-zbi" ]
-    deps = [ "//zircon/kernel/lib/arch" ]
+    deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys/lib/memalloc",
+    ]
   }
 }
 
