@@ -249,6 +249,8 @@ func makeSquiggle(line string, tok Token) string {
 	if index := strings.Index(tok.Content, "\n"); index != -1 {
 		squiggleLen = index - 1
 	}
-	squiggle.WriteString(strings.Repeat("~", squiggleLen))
+	if squiggleLen > 0 {
+		squiggle.WriteString(strings.Repeat("~", squiggleLen))
+	}
 	return squiggle.String()
 }
