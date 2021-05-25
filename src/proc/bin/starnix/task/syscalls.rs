@@ -277,6 +277,29 @@ pub fn sys_set_tid_address(
     Ok(ctx.task.get_tid().into())
 }
 
+pub fn sys_getrusage(
+    ctx: &SyscallContext<'_>,
+    who: i32,
+    user_usage: UserRef<rusage>,
+) -> Result<SyscallResult, Errno> {
+    const RUSAGE_SELF: i32 = crate::types::uapi::RUSAGE_SELF as i32;
+    const RUSAGE_THREAD: i32 = crate::types::uapi::RUSAGE_THREAD as i32;
+    // TODO(fxb/76811): Implement proper rusage.
+    match who {
+        RUSAGE_CHILDREN => (),
+        RUSAGE_SELF => (),
+        RUSAGE_THREAD => (),
+        _ => return Err(EINVAL),
+    };
+
+    if !user_usage.is_null() {
+        let usage = rusage::default();
+        ctx.task.mm.write_object(user_usage, &usage)?;
+    }
+
+    Ok(SUCCESS)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1340,6 +1340,35 @@ pub const STATX_ATTR_AUTOMOUNT: u32 = 4096;
 pub const STATX_ATTR_MOUNT_ROOT: u32 = 8192;
 pub const STATX_ATTR_VERITY: u32 = 1048576;
 pub const STATX_ATTR_DAX: u32 = 2097152;
+pub const RUSAGE_SELF: u32 = 0;
+pub const RUSAGE_CHILDREN: i32 = -1;
+pub const RUSAGE_BOTH: i32 = -2;
+pub const RUSAGE_THREAD: u32 = 1;
+pub const RLIM64_INFINITY: i32 = -1;
+pub const PRIO_MIN: i32 = -20;
+pub const PRIO_MAX: u32 = 20;
+pub const PRIO_PROCESS: u32 = 0;
+pub const PRIO_PGRP: u32 = 1;
+pub const PRIO_USER: u32 = 2;
+pub const _STK_LIM: u32 = 8388608;
+pub const RLIMIT_CPU: u32 = 0;
+pub const RLIMIT_FSIZE: u32 = 1;
+pub const RLIMIT_DATA: u32 = 2;
+pub const RLIMIT_STACK: u32 = 3;
+pub const RLIMIT_CORE: u32 = 4;
+pub const RLIMIT_RSS: u32 = 5;
+pub const RLIMIT_NPROC: u32 = 6;
+pub const RLIMIT_NOFILE: u32 = 7;
+pub const RLIMIT_MEMLOCK: u32 = 8;
+pub const RLIMIT_AS: u32 = 9;
+pub const RLIMIT_LOCKS: u32 = 10;
+pub const RLIMIT_SIGPENDING: u32 = 11;
+pub const RLIMIT_MSGQUEUE: u32 = 12;
+pub const RLIMIT_NICE: u32 = 13;
+pub const RLIMIT_RTPRIO: u32 = 14;
+pub const RLIMIT_RTTIME: u32 = 15;
+pub const RLIM_NLIMITS: u32 = 16;
+pub const RLIM_INFINITY: i32 = -1;
 pub const UIO_FASTIOV: u32 = 8;
 pub const UIO_MAXIOV: u32 = 1024;
 pub type wchar_t = crate::x86_64_types::c_int;
@@ -1658,6 +1687,38 @@ pub struct statx {
     pub stx_mnt_id: __u64,
     pub __spare2: __u64,
     pub __spare3: [__u64; 12usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct rusage {
+    pub ru_utime: timeval,
+    pub ru_stime: timeval,
+    pub ru_maxrss: __kernel_long_t,
+    pub ru_ixrss: __kernel_long_t,
+    pub ru_idrss: __kernel_long_t,
+    pub ru_isrss: __kernel_long_t,
+    pub ru_minflt: __kernel_long_t,
+    pub ru_majflt: __kernel_long_t,
+    pub ru_nswap: __kernel_long_t,
+    pub ru_inblock: __kernel_long_t,
+    pub ru_oublock: __kernel_long_t,
+    pub ru_msgsnd: __kernel_long_t,
+    pub ru_msgrcv: __kernel_long_t,
+    pub ru_nsignals: __kernel_long_t,
+    pub ru_nvcsw: __kernel_long_t,
+    pub ru_nivcsw: __kernel_long_t,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct rlimit {
+    pub rlim_cur: __kernel_ulong_t,
+    pub rlim_max: __kernel_ulong_t,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct rlimit64 {
+    pub rlim_cur: __u64,
+    pub rlim_max: __u64,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
