@@ -443,7 +443,7 @@ group("percent-encoding") {
 }
 
 group("pest") {
-  deps = [ ":pest-v2_1_0" ]
+  deps = [ ":pest-v2_1_3" ]
 }
 
 group("pest_derive") {
@@ -4048,7 +4048,7 @@ rust_library("handlebars-v3_5_4") {
 
   deps = []
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":pest-v2_1_0" ]
+  deps += [ ":pest-v2_1_3" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
   deps += [ ":quick-error-v2_0_0" ]
   deps += [ ":serde-v1_0_116" ]
@@ -5914,10 +5914,10 @@ rust_library("percent-encoding-v2_1_0") {
   ]
 }
 
-rust_library("pest-v2_1_0") {
+rust_library("pest-v2_1_3") {
   crate_name = "pest"
   crate_root = "//third_party/rust_crates/vendor/pest/src/lib.rs"
-  output_name = "pest-c441aed71f967ff5"
+  output_name = "pest-adcf4833e37ee85e"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5931,8 +5931,8 @@ rust_library("pest-v2_1_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=c441aed71f967ff5",
-    "-Cextra-filename=-c441aed71f967ff5",
+    "-Cmetadata=adcf4833e37ee85e",
+    "-Cextra-filename=-adcf4833e37ee85e",
   ]
 }
 
@@ -5946,7 +5946,7 @@ rust_proc_macro("pest_derive-v2_1_0") {
   ]
 
   deps = []
-  deps += [ ":pest-v2_1_0" ]
+  deps += [ ":pest-v2_1_3" ]
   deps += [ ":pest_generator-v2_1_3" ]
 
   rustenv = []
@@ -5969,7 +5969,7 @@ rust_library("pest_generator-v2_1_3") {
   ]
 
   deps = []
-  deps += [ ":pest-v2_1_0" ]
+  deps += [ ":pest-v2_1_3" ]
   deps += [ ":pest_meta-v2_1_0" ]
   deps += [ ":proc-macro2-v1_0_24" ]
   deps += [ ":quote-v1_0_7" ]
@@ -5996,7 +5996,7 @@ rust_library("pest_meta-v2_1_0") {
 
   deps = []
   deps += [ ":maplit-v1_0_1" ]
-  deps += [ ":pest-v2_1_0" ]
+  deps += [ ":pest-v2_1_3" ]
 
   rustenv = []
 
@@ -8502,7 +8502,7 @@ rust_library("serde_json5-v0_1_0") {
   ]
 
   deps = []
-  deps += [ ":pest-v2_1_0" ]
+  deps += [ ":pest-v2_1_3" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
   deps += [ ":serde-v1_0_116" ]
 

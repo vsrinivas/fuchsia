@@ -10,6 +10,7 @@
 
 [![Build Status](https://travis-ci.org/pest-parser/pest.svg?branch=master)](https://travis-ci.org/pest-parser/pest)
 [![codecov](https://codecov.io/gh/pest-parser/pest/branch/master/graph/badge.svg)](https://codecov.io/gh/pest-parser/pest)
+[![Fuzzit Status](https://app.fuzzit.dev/badge?org_id=pest-parser)](https://app.fuzzit.dev/orgs/pest-parser/dashboard)
 [![Crates.io](https://img.shields.io/crates/d/pest.svg)](https://crates.io/crates/pest)
 [![Crates.io](https://img.shields.io/crates/v/pest.svg)](https://crates.io/crates/pest)
 
@@ -99,19 +100,16 @@ fn main() {
 
     // Because ident_list is silent, the iterator will contain idents
     for pair in pairs {
-
-        let span = pair.clone().into_span();
         // A pair is a combination of the rule which matched and a span of input
         println!("Rule:    {:?}", pair.as_rule());
-        println!("Span:    {:?}", span);
-        println!("Text:    {}", span.as_str());
+        println!("Span:    {:?}", pair.as_span());
+        println!("Text:    {}", pair.as_str());
 
         // A pair can be converted to an iterator of the tokens which make it up:
         for inner_pair in pair.into_inner() {
-            let inner_span = inner_pair.clone().into_span();
             match inner_pair.as_rule() {
-                Rule::alpha => println!("Letter:  {}", inner_span.as_str()),
-                Rule::digit => println!("Digit:   {}", inner_span.as_str()),
+                Rule::alpha => println!("Letter:  {}", inner_pair.as_str()),
+                Rule::digit => println!("Digit:   {}", inner_pair.as_str()),
                 _ => unreachable!()
             };
         }
@@ -143,13 +141,16 @@ Digit:   2
 ## Projects using pest
 
 * [pest_meta](https://github.com/pest-parser/pest/blob/master/meta/src/grammar.pest) (bootstrapped)
+* [AshPaper](https://github.com/shnewto/ashpaper)
 * [brain](https://github.com/brain-lang/brain)
 * [Chelone](https://github.com/Aaronepower/chelone)
 * [comrak](https://github.com/kivikakk/comrak)
+* [elastic-rs](https://github.com/cch123/elastic-rs)
 * [graphql-parser](https://github.com/Keats/graphql-parser)
 * [handlebars-rust](https://github.com/sunng87/handlebars-rust)
 * [hexdino](https://github.com/Luz/hexdino)
 * [Huia](https://gitlab.com/jimsy/huia/)
+* [jql](https://github.com/yamafaktory/jql)
 * [json5-rs](https://github.com/callum-oakley/json5-rs)
 * [mt940](https://github.com/svenstaro/mt940-rs)
 * [py_literal](https://github.com/jturner314/py_literal)
@@ -160,6 +161,7 @@ Digit:   2
 * [tera](https://github.com/Keats/tera)
 * [ui_gen](https://github.com/emoon/ui_gen)
 * [ukhasnet-parser](https://github.com/adamgreig/ukhasnet-parser)
+* [ZoKrates](https://github.com/ZoKrates/ZoKrates)
 
 ## Special thanks
 

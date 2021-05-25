@@ -13,6 +13,9 @@ use std::ptr;
 use std::rc::Rc;
 use std::str;
 
+#[cfg(feature = "pretty-print")]
+use serde::ser::SerializeStruct;
+
 use super::flat_pairs::{self, FlatPairs};
 use super::pair::{self, Pair};
 use super::queueable_token::QueueableToken;
@@ -74,11 +77,14 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn as_str(&self) -> &'i str {
-        let start = self.pos(self.start);
-        let end = self.pos(self.end - 1);
-
-        // Generated positions always come from Positions and are UTF-8 borders.
-        &self.input[start..end]
+        if self.start < self.end {
+            let start = self.pos(self.start);
+            let end = self.pos(self.end - 1);
+            // Generated positions always come from Positions and are UTF-8 borders.
+            &self.input[start..end]
+        } else {
+            ""
+        }
     }
 
     /// Captures inner token `Pair`s and concatenates resulting `&str`s. This does not capture
@@ -138,7 +144,7 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     /// ```
     #[inline]
     pub fn flatten(self) -> FlatPairs<'i, R> {
-        flat_pairs::new(self.queue, self.input, self.start, self.end)
+        unsafe { flat_pairs::new(self.queue, self.input, self.start, self.end) }
     }
 
     /// Returns the `Tokens` for the `Pairs`.
@@ -172,10 +178,17 @@ impl<'i, R: RuleType> Pairs<'i, R> {
     #[inline]
     pub fn peek(&self) -> Option<Pair<'i, R>> {
         if self.start < self.end {
-            Some(pair::new(Rc::clone(&self.queue), self.input, self.start))
+            Some(unsafe { pair::new(Rc::clone(&self.queue), self.input, self.start) })
         } else {
             None
         }
+    }
+
+    /// Generates a string that stores the lexical information of `self` in
+    /// a pretty-printed JSON format.
+    #[cfg(feature = "pretty-print")]
+    pub fn to_json(&self) -> String {
+        ::serde_json::to_string_pretty(self).expect("Failed to pretty-print Pairs to json.")
     }
 
     fn pair(&self) -> usize {
@@ -223,7 +236,7 @@ impl<'i, R: RuleType> DoubleEndedIterator for Pairs<'i, R> {
 
         self.end = self.pair_from_end();
 
-        let pair = pair::new(Rc::clone(&self.queue), self.input, self.end);
+        let pair = unsafe { pair::new(Rc::clone(&self.queue), self.input, self.end) };
 
         Some(pair)
     }
@@ -268,16 +281,88 @@ impl<'i, R: Hash> Hash for Pairs<'i, R> {
     }
 }
 
+#[cfg(feature = "pretty-print")]
+impl<'i, R: RuleType> ::serde::Serialize for Pairs<'i, R> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ::serde::Serializer,
+    {
+        let start = self.pos(self.start);
+        let end = self.pos(self.end - 1);
+        let pairs = self.clone().collect::<Vec<_>>();
+
+        let mut ser = serializer.serialize_struct("Pairs", 2)?;
+        ser.serialize_field("pos", &(start, end))?;
+        ser.serialize_field("pairs", &pairs)?;
+        ser.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::super::macros::tests::*;
     use super::super::super::Parser;
 
     #[test]
+    #[cfg(feature = "pretty-print")]
+    fn test_pretty_print() {
+        let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+
+        let expected = r#"{
+  "pos": [
+    0,
+    5
+  ],
+  "pairs": [
+    {
+      "pos": [
+        0,
+        3
+      ],
+      "rule": "a",
+      "inner": {
+        "pos": [
+          1,
+          2
+        ],
+        "pairs": [
+          {
+            "pos": [
+              1,
+              2
+            ],
+            "rule": "b",
+            "inner": "b"
+          }
+        ]
+      }
+    },
+    {
+      "pos": [
+        4,
+        5
+      ],
+      "rule": "c",
+      "inner": "e"
+    }
+  ]
+}"#;
+
+        assert_eq!(expected, pairs.to_json());
+    }
+
+    #[test]
     fn as_str() {
         let pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
 
         assert_eq!(pairs.as_str(), "abcde");
+    }
+
+    #[test]
+    fn as_str_empty() {
+        let mut pairs = AbcParser::parse(Rule::a, "abcde").unwrap();
+
+        assert_eq!(pairs.nth(1).unwrap().into_inner().as_str(), "");
     }
 
     #[test]

@@ -13,6 +13,9 @@ use std::ptr;
 use std::rc::Rc;
 use std::str;
 
+#[cfg(feature = "pretty-print")]
+use serde::ser::SerializeStruct;
+
 use super::pairs::{self, Pairs};
 use super::queueable_token::QueueableToken;
 use super::tokens::{self, Tokens};
@@ -38,21 +41,14 @@ pub struct Pair<'i, R> {
     start: usize,
 }
 
-// TODO(safety): QueueableTokens must be valid indices into input.
-pub fn new<R: RuleType>(queue: Rc<Vec<QueueableToken<R>>>, input: &str, start: usize) -> Pair<R> {
-    if cfg!(debug_assertions) {
-        for tok in queue.iter() {
-            match *tok {
-                QueueableToken::Start { input_pos, .. } | QueueableToken::End { input_pos, .. } => {
-                    assert!(
-                        input.get(input_pos..).is_some(),
-                        "💥 UNSAFE `Pair` CREATED 💥"
-                    )
-                }
-            }
-        }
-    }
-
+/// # Safety
+///
+/// All `QueueableToken`s' `input_pos` must be valid character boundary indices into `input`.
+pub unsafe fn new<R: RuleType>(
+    queue: Rc<Vec<QueueableToken<R>>>,
+    input: &str,
+    start: usize,
+) -> Pair<R> {
     Pair {
         queue,
         input,
@@ -234,6 +230,13 @@ impl<'i, R: RuleType> Pair<'i, R> {
         tokens::new(self.queue, self.input, self.start, end + 1)
     }
 
+    /// Generates a string that stores the lexical information of `self` in
+    /// a pretty-printed JSON format.
+    #[cfg(feature = "pretty-print")]
+    pub fn to_json(&self) -> String {
+        ::serde_json::to_string_pretty(self).expect("Failed to pretty-print Pair to json.")
+    }
+
     fn pair(&self) -> usize {
         match self.queue[self.start] {
             QueueableToken::Start {
@@ -249,6 +252,14 @@ impl<'i, R: RuleType> Pair<'i, R> {
                 input_pos
             }
         }
+    }
+}
+
+impl<'i, R: RuleType> Pairs<'i, R> {
+    /// Create a new `Pairs` iterator containing just the single `Pair`.
+    pub fn single(pair: Pair<'i, R>) -> Self {
+        let end = pair.pair();
+        pairs::new(pair.queue, pair.input, pair.start, end)
     }
 }
 
@@ -305,10 +316,67 @@ impl<'i, R: Hash> Hash for Pair<'i, R> {
     }
 }
 
+#[cfg(feature = "pretty-print")]
+impl<'i, R: RuleType> ::serde::Serialize for Pair<'i, R> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ::serde::Serializer,
+    {
+        let start = self.pos(self.start);
+        let end = self.pos(self.pair());
+        let rule = format!("{:?}", self.as_rule());
+        let inner = self.clone().into_inner();
+
+        let mut ser = serializer.serialize_struct("Pairs", 3)?;
+        ser.serialize_field("pos", &(start, end))?;
+        ser.serialize_field("rule", &rule)?;
+
+        if inner.peek().is_none() {
+            ser.serialize_field("inner", &self.as_str())?;
+        } else {
+            ser.serialize_field("inner", &inner)?;
+        }
+
+        ser.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use macros::tests::*;
     use parser::Parser;
+
+    #[test]
+    #[cfg(feature = "pretty-print")]
+    fn test_pretty_print() {
+        let pair = AbcParser::parse(Rule::a, "abcde").unwrap().next().unwrap();
+
+        let expected = r#"{
+  "pos": [
+    0,
+    3
+  ],
+  "rule": "a",
+  "inner": {
+    "pos": [
+      1,
+      2
+    ],
+    "pairs": [
+      {
+        "pos": [
+          1,
+          2
+        ],
+        "rule": "b",
+        "inner": "b"
+      }
+    ]
+  }
+}"#;
+
+        assert_eq!(expected, pair.to_json());
+    }
 
     #[test]
     fn pair_into_inner() {
