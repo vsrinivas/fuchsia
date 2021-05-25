@@ -14,7 +14,6 @@ executable("unittests") {
   sources = [
     "a11y_legacy_contender_test.cc",
     "accessibility_pointer_events_test.cc",
-    "coordinate_transform_test2.cc",
     "delivery_interruption_test.cc",
     "dispatch_policy_test.cc",
     "focus_avoidance_test.cc",

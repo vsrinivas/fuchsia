@@ -38,7 +38,6 @@ executable("gfx_focus_integration_test_bin") {
 }
 
 fuchsia_test_component("gfx_focus_integration_test") {
-  testonly = true
   component_name = "gfx_focus_integration_test"
   manifest = "meta/gfx_focus_integration_test.cmx"
   deps = [ ":gfx_focus_integration_test_bin" ]
@@ -54,10 +53,25 @@ executable("gfx_legacy_coordinate_transform_test_bin") {
 }
 
 fuchsia_test_component("gfx_legacy_coordinate_transform_test") {
-  testonly = true
   component_name = "gfx_legacy_coordinate_transform_test"
   manifest = "meta/gfx_legacy_coordinate_transform_test.cmx"
   deps = [ ":gfx_legacy_coordinate_transform_test_bin" ]
+}
+
+executable("gfx_legacy_coordinate_transform_test2_bin") {
+  testonly = true
+  sources = [ "gfx_legacy_coordinate_transform_test2.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//src/ui/lib/glm_workaround",
+  ]
+}
+
+fuchsia_test_component("gfx_legacy_coordinate_transform_test2") {
+  component_name = "gfx_legacy_coordinate_transform_test2"
+  manifest = "meta/gfx_legacy_coordinate_transform_test2.cmx"
+  deps = [ ":gfx_legacy_coordinate_transform_test2_bin" ]
 }
 
 executable("gfx_startup_input_test_bin") {
@@ -70,7 +84,6 @@ executable("gfx_startup_input_test_bin") {
 }
 
 fuchsia_test_component("gfx_startup_input_test") {
-  testonly = true
   component_name = "gfx_startup_input_test"
   manifest = "meta/gfx_startup_input_test.cmx"
   deps = [ ":gfx_startup_input_test_bin" ]
@@ -86,7 +99,6 @@ executable("gfx_view_ref_installed_integration_test_bin") {
 }
 
 fuchsia_test_component("gfx_view_ref_installed_integration_test") {
-  testonly = true
   component_name = "gfx_view_ref_installed_integration_test"
   manifest = "meta/gfx_view_ref_installed_integration_test.cmx"
   deps = [ ":gfx_view_ref_installed_integration_test_bin" ]
@@ -96,6 +108,7 @@ fuchsia_test_package("gfx_integration_tests") {
   test_components = [
     ":gfx_focus_integration_test",
     ":gfx_legacy_coordinate_transform_test",
+    ":gfx_legacy_coordinate_transform_test2",
     ":gfx_startup_input_test",
     ":gfx_view_ref_installed_integration_test",
   ]

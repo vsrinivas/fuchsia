@@ -104,8 +104,8 @@ class GfxLegacyCoordinateTransformTest : public sys::testing::TestWithEnvironmen
 
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    environment_ = CreateNewEnclosingEnvironment(
-        "gfx_view_ref_installed_integration_test_environment", CreateServices());
+    environment_ = CreateNewEnclosingEnvironment("gfx_legacy_coordinate_transform_test_environment",
+                                                 CreateServices());
     environment_->ConnectToService(scenic_.NewRequest());
     scenic_.set_error_handler([](zx_status_t status) {
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
