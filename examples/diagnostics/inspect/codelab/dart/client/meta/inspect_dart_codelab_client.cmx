@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/inspect_dart_codelab_client"
+        "data": "data/inspect-dart-codelab-client"
     },
     "sandbox": {
         "services": [

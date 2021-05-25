@@ -99,7 +99,7 @@ command line arguments as strings to Reverse:
    * {Dart}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx
+      fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx
       ```
 
 2. Run part 1 code, and reverse the string "Hello"
@@ -121,7 +121,7 @@ command line arguments as strings to Reverse:
    * {Dart}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 1 Hello
       ```
 
    These commands hang.
@@ -144,7 +144,7 @@ command line arguments as strings to Reverse:
    * {Dart}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 Hello World
+      fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 1 Hello World
       ```
 
       This command also prints no outputs.
@@ -473,7 +473,7 @@ Now that you have added Inspect to your component, you can read what it says:
    * {Dart}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 1 Hello
       ```
 
    Note that these should still hang.
@@ -844,7 +844,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```
-      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 hello
+      fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 1 hello
       Input: hello
       Output: olleh
       Done. Press Ctrl+C to exit
@@ -931,7 +931,7 @@ You will need to diagnose and solve this problem.
    * {Dart}
 
       ```
-      $ fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 2 hello
+      $ fx run fuchsia-pkg://fuchsia.com/inspect-dart-codelab-client#meta/inspect-dart-codelab-client.cmx 2 hello
       ```
 
    Fortunately the FizzBuzz team instrumented their component using Inspect.

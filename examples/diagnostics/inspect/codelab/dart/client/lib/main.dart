@@ -12,7 +12,7 @@ Future<void> main(List<String> args) async {
     fuchsia.exit(1);
   }
 
-  final serverName = 'inspect_dart_codelab_part_${int.parse(args[0])}';
+  final serverName = 'inspect-dart-codelab-part-${int.parse(args[0])}';
   final reverserUrl =
       'fuchsia-pkg://fuchsia.com/$serverName#meta/$serverName.cmx';
 
