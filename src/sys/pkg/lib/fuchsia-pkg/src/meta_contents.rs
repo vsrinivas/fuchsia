@@ -12,7 +12,7 @@ use std::str::FromStr;
 /// file of a Fuchsia package.
 /// It validates that all resource paths are valid and that none of them start
 /// with "meta/".
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MetaContents {
     contents: BTreeMap<String, Hash>,
 }

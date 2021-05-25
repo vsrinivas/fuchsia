@@ -10,6 +10,7 @@ mod creation_manifest;
 mod errors;
 mod meta_contents;
 mod meta_package;
+mod package;
 mod package_directory;
 mod package_manifest;
 mod path;
@@ -18,11 +19,13 @@ pub use crate::{
     build::build,
     creation_manifest::CreationManifest,
     errors::{
-        BuildError, CreationManifestError, MetaContentsError, MetaPackageError, PackageNameError,
-        PackagePathError, PackageVariantError, ParsePackagePathError,
+        BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
+        PackageManifestError, PackageNameError, PackagePathError, PackageVariantError,
+        ParsePackagePathError,
     },
     meta_contents::MetaContents,
     meta_package::MetaPackage,
+    package::Package,
     package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
     package_manifest::PackageManifest,
     path::{check_package_name, check_package_variant, check_resource_path, PackagePath},

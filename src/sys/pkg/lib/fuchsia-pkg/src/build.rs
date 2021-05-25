@@ -17,7 +17,7 @@ pub fn build(
 }
 
 // Used to mock out native filesystem for testing
-trait FileSystem<'a> {
+pub(crate) trait FileSystem<'a> {
     type File: io::Read;
     fn open(&'a self, path: &str) -> Result<Self::File, io::Error>;
     fn len(&self, path: &str) -> Result<u64, io::Error>;
@@ -39,7 +39,7 @@ impl FileSystem<'_> for ActualFileSystem {
     }
 }
 
-fn build_with_file_system<'a>(
+pub(crate) fn build_with_file_system<'a>(
     creation_manifest: &CreationManifest,
     meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,

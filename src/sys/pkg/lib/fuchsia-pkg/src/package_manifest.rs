@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{PackagePath, PackagePathError};
+use crate::{Package, PackageManifestError, PackagePath, PackagePathError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
@@ -30,6 +30,35 @@ impl PackageManifest {
                 manifest.package.version.as_str(),
             ),
         }
+    }
+
+    pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
+        let blobs_map = package.blobs();
+        let mut blobs = Vec::new();
+        for (path, merkle) in package.meta_contents().into_contents().iter() {
+            match blobs_map.get(merkle) {
+                Some(blob_entry) => {
+                    blobs.push(BlobInfo {
+                        source_path: blob_entry.path().into_os_string().into_string().unwrap(),
+                        path: path.to_string(),
+                        merkle: *merkle,
+                        size: blob_entry.size(),
+                    });
+                }
+                None => {
+                    return Err(PackageManifestError::InvalidBlobPath {
+                        path: path.to_string(),
+                        merkle: *merkle,
+                    });
+                }
+            }
+        }
+        let package_metadata = PackageMetadata {
+            name: package.meta_package().name().to_string(),
+            version: package.meta_package().variant().to_string(),
+        };
+        let manifest_v1 = PackageManifestV1 { package: package_metadata, blobs };
+        Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
     }
 }
 
@@ -63,7 +92,10 @@ pub struct BlobInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_merkle::Hash;
     use serde_json::json;
+    use std::path::PathBuf;
+    use std::str::FromStr;
 
     #[test]
     fn test_version1_blobs() {
@@ -95,5 +127,20 @@ mod tests {
                 size: 1
             }]
         )
+    }
+
+    #[test]
+    fn test_create_package_manifest_from_package() {
+        let mut package_builder = Package::builder("package-name", "package-variant").unwrap();
+        package_builder.add_entry(
+            String::from("bin/my_prog"),
+            Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                .unwrap(),
+            PathBuf::from("src/bin/my_prog"),
+            1,
+        );
+        let package = package_builder.build().unwrap();
+        let package_manifest = PackageManifest::from_package(package).unwrap();
+        assert_eq!(String::from("package-name"), package_manifest.name());
     }
 }

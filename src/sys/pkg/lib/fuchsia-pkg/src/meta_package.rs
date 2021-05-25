@@ -15,7 +15,7 @@ use proptest_derive::Arbitrary;
 /// A `MetaPackage` represents the "meta/package" file of a meta.far (which is
 /// a Fuchsia archive file of a Fuchsia package).
 /// It validates that the name and variant (called "version" in json) are valid.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct MetaPackage {
     #[cfg_attr(test, proptest(regex = r"[-0-9a-z\.]{1,100}"))]

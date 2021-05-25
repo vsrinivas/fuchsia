@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_merkle::Hash;
 use std::io;
 use thiserror::Error;
 
@@ -83,6 +84,12 @@ pub enum CreationManifestError {
 
     #[error("package far content must be in 'meta/' directory: {}", path)]
     FarContentNotInMetaDirectory { path: String },
+}
+
+#[derive(Debug, Error, Eq, PartialEq)]
+pub enum PackageManifestError {
+    #[error("package contains an invalid blob path '{}'. {}", path, merkle.to_string())]
+    InvalidBlobPath { merkle: Hash, path: String },
 }
 
 #[derive(Debug, Error)]
