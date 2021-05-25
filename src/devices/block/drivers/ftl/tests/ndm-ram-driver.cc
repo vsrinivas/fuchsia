@@ -248,10 +248,6 @@ int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_
   return ftl::kNdmOk;
 }
 
-uint32_t NdmRamDriver::PageSize() { return options_.page_size; }
-
-uint8_t NdmRamDriver::SpareSize() { return options_.eb_size; }
-
 bool NdmRamDriver::SimulateBadBlock(uint32_t page_num) {
   if (num_bad_blocks_ < options_.max_bad_blocks) {
     bad_block_interval_++;

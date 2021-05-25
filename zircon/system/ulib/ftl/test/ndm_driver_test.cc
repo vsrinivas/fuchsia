@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "ftl_private.h"
 #include "lib/ftl/ndm-driver.h"
@@ -14,7 +14,6 @@ class MockDriver final : public ftl::NdmBaseDriver {
   MockDriver() : NdmBaseDriver(ftl::DefaultLogger()) {}
   ~MockDriver() final {}
 
-  void set_incomplete(bool value) { incomplete_ = value; }
   void set_result(int result) { result_ = result; }
   void set_empty(bool value) { empty_ = value; }
 
@@ -30,14 +29,10 @@ class MockDriver final : public ftl::NdmBaseDriver {
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final { return ftl::kFalse; }
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
-  bool IncompletePageWrite(uint8_t* spare, uint8_t* data) final { return incomplete_; }
-  uint32_t PageSize() final { return 4096; }
-  uint8_t SpareSize() final { return 16; }
 
  private:
   int result_ = ftl::kNdmOk;
   bool empty_ = true;
-  bool incomplete_ = false;
 };
 
 int MockDriver::NandRead(uint32_t start_page, uint32_t page_count, void* page_buffer,
@@ -61,7 +56,7 @@ TEST(NdmDriverTest, CheckPageEccError) {
 
   NDMDrvr ndm;
   driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
+  ASSERT_NOT_NULL(ndm.data_and_spare_check);
 
   driver.set_result(ftl::kNdmUncorrectableEcc);
 
@@ -75,7 +70,7 @@ TEST(NdmDriverTest, CheckPageFatalError) {
 
   NDMDrvr ndm;
   driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
+  ASSERT_NOT_NULL(ndm.data_and_spare_check);
 
   driver.set_result(ftl::kNdmFatalError);
 
@@ -89,7 +84,7 @@ TEST(NdmDriverTest, CheckPageEmpty) {
 
   NDMDrvr ndm;
   driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
+  ASSERT_NOT_NULL(ndm.data_and_spare_check);
 
   int status;
   EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
@@ -101,7 +96,7 @@ TEST(NdmDriverTest, CheckPageValid) {
 
   NDMDrvr ndm;
   driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
+  ASSERT_NOT_NULL(ndm.data_and_spare_check);
 
   driver.set_result(ftl::kNdmUnsafeEcc);
   driver.set_empty(false);
@@ -109,21 +104,6 @@ TEST(NdmDriverTest, CheckPageValid) {
   int status;
   EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
   EXPECT_EQ(NDM_PAGE_VALID, status);
-}
-
-TEST(NdmDriverTest, CheckPageValidIncompleteWrite) {
-  MockDriver driver;
-
-  NDMDrvr ndm;
-  driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
-
-  driver.set_result(ftl::kNdmUnsafeEcc);
-  driver.set_incomplete(true);
-
-  int status;
-  EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
-  EXPECT_EQ(NDM_PAGE_INVALID, status);
 }
 
 }  // namespace
