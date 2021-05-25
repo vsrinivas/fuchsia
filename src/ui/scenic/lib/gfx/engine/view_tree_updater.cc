@@ -65,24 +65,17 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
     }
 
     // <prev>   <now>   <action>
-    // none     true    record connect, report connect (case 1)
-    // none     false   record disconnect (case 2)
-    // true     true    (nop)
-    // true     false   record disconnect, report disconnect (case 3)
-    // false    true    record connect, report connect (case 1)
+    // true     true    record connect (case 1. Report redundantly, for reparenting case.)
+    // true     false   record disconnect (case 2)
+    // false    true    record connect (case 1)
     // false    false   (nop)
-    const std::optional<bool> prev_connected = status.connected_to_session_root;
-    if ((!prev_connected.has_value() && now_connected) ||
-        (prev_connected.has_value() && !prev_connected.value() && now_connected)) {
+    const bool prev_connected = status.connected_to_session_root;
+    status.connected_to_session_root = now_connected;
+    if (now_connected) {
       // Case 1
-      status.connected_to_session_root = std::make_optional<bool>(true);
       view_tree_updates_.push_back(ViewTreeConnectToParent{.child = koid, .parent = root});
-    } else if (!prev_connected.has_value() && !now_connected) {
+    } else if (prev_connected) {
       // Case 2
-      status.connected_to_session_root = std::make_optional<bool>(false);
-    } else if (prev_connected.has_value() && prev_connected.value() && !now_connected) {
-      // Case 3
-      status.connected_to_session_root = std::make_optional<bool>(false);
       view_tree_updates_.push_back(ViewTreeDisconnectFromParent{.koid = koid});
     }
   }

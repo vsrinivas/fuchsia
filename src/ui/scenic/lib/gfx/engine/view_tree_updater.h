@@ -33,11 +33,8 @@ class ViewTreeUpdater {
   struct ViewHolderStatus {
     const SessionId session_id;
     const fxl::WeakPtr<ViewHolder> view_holder;
-    // Three cases:
-    // - std::nullopt: connectivity unknown
-    // - true: connected to session's root (either a View or a Scene).
-    // - false: not connected to session's root.
-    std::optional<bool> connected_to_session_root;
+    // Whether connected to session's root (either a View or a Scene).
+    bool connected_to_session_root = false;
   };
 
   // Map of "live" ViewHolder objects that tracks "session root" connectivity.
