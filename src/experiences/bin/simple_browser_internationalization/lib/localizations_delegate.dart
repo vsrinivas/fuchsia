@@ -19,7 +19,7 @@ LocalizationsDelegate<void> delegate() => _LocalizationsDelegate();
 class _LocalizationsDelegate extends LocalizationsDelegate<void> {
   static Future<void> loadLocale(Locale locale) async {
     final String name =
-        (locale.countryCode == null || locale.countryCode.isEmpty)
+        (locale.countryCode == null || locale.countryCode?.isEmpty == true)
             ? locale.languageCode
             : locale.toString();
     final String localeName = Intl.canonicalizedLocale(name);

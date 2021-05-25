@@ -7,6 +7,7 @@ import("//build/dart/fidl_move.gni")
 
 dart_library("internationalization") {
   package_name = "internationalization"
+  null_safe = true
 
   # Disabling analysis for the time being, this is mostly generated code to begin
   # with, and there are issues like this one that make things harder than necessary:

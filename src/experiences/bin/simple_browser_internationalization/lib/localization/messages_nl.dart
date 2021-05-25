@@ -21,9 +21,10 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'nl';
 
-  String evaluateMessage(translation, List<dynamic> args) {
+  String? evaluateMessage(translation, List<dynamic> args) {
     return evaluateJsonTemplate(translation, args);
   }
+
   var _messages;
   get messages => _messages ??=
       const JsonDecoder().convert(messageText) as Map<String, dynamic>;

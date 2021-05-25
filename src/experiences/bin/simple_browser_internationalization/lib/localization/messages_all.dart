@@ -32,7 +32,7 @@ Map<String, LibraryLoader> _deferredLibraries = {
   'sr': messages_sr.loadLibrary,
 };
 
-MessageLookupByLibrary _findExact(String localeName) {
+MessageLookupByLibrary? _findExact(String localeName) {
   switch (localeName) {
     case 'ar_XB':
       return messages_ar_xb.messages;
@@ -54,9 +54,8 @@ MessageLookupByLibrary _findExact(String localeName) {
 /// User programs should call this before using [localeName] for messages.
 Future<bool> initializeMessages(String localeName) async {
   var availableLocale = Intl.verifiedLocale(
-    localeName,
-    (locale) => _deferredLibraries[locale] != null,
-    onFailure: (_) => null);
+      localeName, (locale) => _deferredLibraries[locale] != null,
+      onFailure: (_) => null);
   if (availableLocale == null) {
     return new Future.value(false);
   }
@@ -75,12 +74,13 @@ bool _messagesExistFor(String locale) {
   }
 }
 
-MessageLookupByLibrary _findGeneratedMessagesFor(String locale) {
-  var actualLocale = Intl.verifiedLocale(locale, _messagesExistFor,
-      onFailure: (_) => null);
+MessageLookupByLibrary? _findGeneratedMessagesFor(String locale) {
+  var actualLocale =
+      Intl.verifiedLocale(locale, _messagesExistFor, onFailure: (_) => null);
   if (actualLocale == null) return null;
   return _findExact(actualLocale);
 }
+
 /// Turn the JSON template into a string.
 ///
 /// We expect one of the following forms for the template.
@@ -92,7 +92,7 @@ MessageLookupByLibrary _findGeneratedMessagesFor(String locale) {
 ///   * ['Intl.gender', String gender, (templates for female, male, other)]
 ///   * ['Intl.select', String choice, { 'case' : template, ...} ]
 ///   * ['text alternating with ', 0 , ' indexes in the argument list']
-String evaluateJsonTemplate(dynamic input, List<dynamic> args) {
+String? evaluateJsonTemplate(dynamic input, List<dynamic> args) {
   if (input == null) return null;
   if (input is String) return input;
   if (input is int) {
@@ -102,45 +102,39 @@ String evaluateJsonTemplate(dynamic input, List<dynamic> args) {
   List<dynamic> template = input;
   var messageName = template.first;
   if (messageName == "Intl.plural") {
-     var howMany = args[template[1]];
-     return evaluateJsonTemplate(
-         Intl.pluralLogic(
-             howMany,
-             zero: template[2],
-             one: template[3],
-             two: template[4],
-             few: template[5],
-             many: template[6],
-             other: template[7]),
-         args);
-   }
-   if (messageName == "Intl.gender") {
-     var gender = args[template[1]];
-     return evaluateJsonTemplate(
-         Intl.genderLogic(
-             gender,
-             female: template[2],
-             male: template[3],
-             other: template[4]),
-         args);
-   }
-   if (messageName == "Intl.select") {
-     var select = args[template[1]];
-     var choices = template[2];
-     return evaluateJsonTemplate(Intl.selectLogic(select, choices), args);
-   }
-
-   // If we get this far, then we are a basic interpolation, just strings and
-   // ints.
-   var output = new StringBuffer();
-   for (var entry in template) {
-     if (entry is int) {
-       output.write("${args[entry]}");
-     } else {
-       output.write("$entry");
-     }
-   }
-   return output.toString();
+    var howMany = args[template[1]];
+    return evaluateJsonTemplate(
+        Intl.pluralLogic(howMany,
+            zero: template[2],
+            one: template[3],
+            two: template[4],
+            few: template[5],
+            many: template[6],
+            other: template[7]),
+        args);
+  }
+  if (messageName == "Intl.gender") {
+    var gender = args[template[1]];
+    return evaluateJsonTemplate(
+        Intl.genderLogic(gender,
+            female: template[2], male: template[3], other: template[4]),
+        args);
+  }
+  if (messageName == "Intl.select") {
+    var select = args[template[1]];
+    var choices = template[2];
+    return evaluateJsonTemplate(Intl.selectLogic(select, choices), args);
   }
 
- 
+  // If we get this far, then we are a basic interpolation, just strings and
+  // ints.
+  var output = StringBuffer();
+  for (var entry in template) {
+    if (entry is int) {
+      output.write("${args[entry]}");
+    } else {
+      output.write("$entry");
+    }
+  }
+  return output.toString();
+}
