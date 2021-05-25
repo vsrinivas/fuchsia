@@ -18,6 +18,12 @@ pub struct ZbiBuilder {
     bootfs_files: BTreeMap<String, PathBuf>,
     bootargs: Vec<String>,
     cmdline: Vec<String>,
+
+    /// optional compression to use.
+    compression: Option<String>,
+
+    /// optional output manifest file
+    output_manifest: Option<PathBuf>,
 }
 
 impl ZbiBuilder {
@@ -45,6 +51,16 @@ impl ZbiBuilder {
         self.cmdline.push(arg.to_string());
     }
 
+    /// Set the compression to use with the ZBI.
+    pub fn set_compression(&mut self, compress: impl ToString) {
+        self.compression = Some(compress.to_string());
+    }
+
+    /// Set the path to an optional JSON output manifest to produce.
+    pub fn set_output_manifest(&mut self, manifest: impl AsRef<Path>) {
+        self.output_manifest = Some(manifest.as_ref().to_path_buf());
+    }
+
     /// Build the ZBI.
     pub fn build(&self, gendir: impl AsRef<Path>, output: impl AsRef<Path>) -> Result<()> {
         // Create the BootFS manifest file that lists all the files to insert
@@ -54,14 +70,18 @@ impl ZbiBuilder {
             .map_err(|e| Error::new(e).context("failed to create the bootfs manifest"))?;
         self.write_bootfs_manifest(&mut bootfs_manifest)?;
 
-        // Create the boot args file.
-        let boot_args_path = gendir.as_ref().join("boot_args.txt");
-        let mut boot_args = File::create(&boot_args_path)
-            .map_err(|e| Error::new(e).context("failed to create the boot args"))?;
-        self.write_boot_args(&mut boot_args)?;
+        // Currently disabled to match the existing //build/images zbi creation.
+        //  TODO(fxbug.dev/77387) - Re-enable bootarg generation
+        //
+        // // Create the boot args file.
+        // let boot_args_path = gendir.as_ref().join("boot_args.txt");
+        // let mut boot_args = File::create(&boot_args_path)
+        //     .map_err(|e| Error::new(e).context("failed to create the boot args"))?;
+        // self.write_boot_args(&mut boot_args)?;
 
         // Run the zbi tool to construct the ZBI.
         let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
+
         let status = Command::new("host_x64/zbi")
             .args(&zbi_args)
             .status()
@@ -88,6 +108,8 @@ impl ZbiBuilder {
         Ok(())
     }
 
+    //  TODO(fxbug.dev/77387) - Re-enable bootarg generation
+    #[allow(dead_code)]
     fn write_boot_args(&self, out: &mut impl Write) -> Result<()> {
         for arg in &self.bootargs {
             writeln!(out, "{}", arg)?;
@@ -114,12 +136,22 @@ impl ZbiBuilder {
             output_path.as_ref().to_str().ok_or(anyhow!("Output path is not valid UTF-8"))?;
 
         let mut args: Vec<String> = Vec::new();
+
+        // Add the kernel itself, first, to make a bootable ZBI.
         args.push("--type=container".to_string());
         args.push(kernel.to_string());
+
+        // Then, add the kernel cmdline args.
+        args.push("--type=cmdline".to_string());
+        for cmd in &self.cmdline {
+            args.push(format!("--entry={}", cmd));
+        }
+
+        // Then, add the bootfs files.
         args.push("--files".to_string());
         args.push(bootfs_manifest_path.to_string());
 
-        // Instead of supplying the devmgr_config.txt file, we could use boot args. This is disable
+        // Instead of supplying the devmgr_config.txt file, we could use boot args. This is disabled
         // by default, in order to allow for binary diffing the ZBI to the in-tree built ZBI.
         if let Some(boot_args_path) = boot_args_path {
             let boot_args_path = boot_args_path
@@ -130,11 +162,23 @@ impl ZbiBuilder {
             args.push(format!("--entry={}", boot_args_path));
         }
 
-        args.push("--type=cmdline".to_string());
-        for cmd in &self.cmdline {
-            args.push(format!("--entry={}", cmd));
+        // Set the compression level for bootfs files.
+        if let Some(compression) = &self.compression {
+            args.push(format!("--compressed={}", compression));
         }
+
+        // Set the output file to write.
         args.push(format!("--output={}", output_path));
+
+        // Create an output manifest that describes the contents of the built ZBI.
+        if let Some(output_manifest) = &self.output_manifest {
+            args.push(format!(
+                "--json-output={}",
+                output_manifest
+                    .to_str()
+                    .ok_or(anyhow!("Output manifest path is not valid UTF-8"))?
+            ));
+        }
         Ok(args)
     }
 }
@@ -213,11 +257,11 @@ mod tests {
             [
                 "--type=container",
                 "path/to/kernel",
+                "--type=cmdline",
                 "--files",
                 "bootfs",
                 "--type=image_args",
                 "--entry=bootargs",
-                "--type=cmdline",
                 "--output=output",
             ]
         );
@@ -235,13 +279,13 @@ mod tests {
             [
                 "--type=container",
                 "path/to/kernel",
+                "--type=cmdline",
+                "--entry=cmd-arg1",
+                "--entry=cmd-arg2",
                 "--files",
                 "bootfs",
                 "--type=image_args",
                 "--entry=bootargs",
-                "--type=cmdline",
-                "--entry=cmd-arg1",
-                "--entry=cmd-arg2",
                 "--output=output",
             ]
         );
@@ -259,12 +303,60 @@ mod tests {
             [
                 "--type=container",
                 "path/to/kernel",
-                "--files",
-                "bootfs",
                 "--type=cmdline",
                 "--entry=cmd-arg1",
                 "--entry=cmd-arg2",
+                "--files",
+                "bootfs",
                 "--output=output",
+            ]
+        );
+    }
+
+    #[test]
+    fn zbi_args_with_compression() {
+        let mut builder = ZbiBuilder::default();
+        builder.set_kernel("path/to/kernel");
+        builder.add_cmdline_arg("cmd-arg1");
+        builder.add_cmdline_arg("cmd-arg2");
+        builder.set_compression("zstd.max");
+        let args = builder.build_zbi_args("bootfs", None::<String>, "output").unwrap();
+        assert_eq!(
+            args,
+            [
+                "--type=container",
+                "path/to/kernel",
+                "--type=cmdline",
+                "--entry=cmd-arg1",
+                "--entry=cmd-arg2",
+                "--files",
+                "bootfs",
+                "--compressed=zstd.max",
+                "--output=output",
+            ]
+        );
+    }
+
+    #[test]
+    fn zbi_args_with_manifest() {
+        let mut builder = ZbiBuilder::default();
+        builder.set_kernel("path/to/kernel");
+        builder.add_cmdline_arg("cmd-arg1");
+        builder.add_cmdline_arg("cmd-arg2");
+        builder.set_output_manifest("path/to/manifest");
+        let args = builder.build_zbi_args("bootfs", None::<String>, "output").unwrap();
+        assert_eq!(
+            args,
+            [
+                "--type=container",
+                "path/to/kernel",
+                "--type=cmdline",
+                "--entry=cmd-arg1",
+                "--entry=cmd-arg2",
+                "--files",
+                "bootfs",
+                "--output=output",
+                "--json-output=path/to/manifest",
             ]
         );
     }

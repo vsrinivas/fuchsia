@@ -11,6 +11,7 @@ use ffx_assembly_args::ImageArgs;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::{PackageManifest, PackagePath};
+use log::info;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -20,17 +21,23 @@ use zbi::ZbiBuilder;
 pub fn assemble(args: ImageArgs) -> Result<()> {
     let ImageArgs { product, board, outdir, gendir, full } = args;
 
+    info!("Loading configuration files.");
+    info!("  product:  {}", product.display());
+    info!("    board:  {}", board.display());
+
     let (product, board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
 
     let base_merkle = if has_base_package(&product) {
+        info!("Creating base package");
         let base_package = construct_base_package(&outdir, &gendir, &product)?;
         let base_merkle = MerkleTree::from_reader(&base_package)
             .context("Failed to calculate the base merkle")?
             .root();
-        println!("Base merkle: {}", &base_merkle);
+        info!("Base merkle: {}", &base_merkle);
         Some(base_merkle)
     } else {
+        info!("Skipping base package creation");
         None
     };
 
@@ -38,8 +45,13 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         return Ok(());
     }
 
-    let zbi_path = construct_zbi(&outdir, &gendir, &product, base_merkle)?;
+    info!("Creating the ZBI");
+    let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_merkle)?;
+
+    info!("Creating the VBMeta image");
     let vbmeta_path = construct_vbmeta(&outdir, &board, &zbi_path)?;
+
+    info!("Creating the update package");
     let _update_pkg_path =
         construct_update(&outdir, &gendir, &product, &board, &zbi_path, &vbmeta_path, base_merkle)?;
 
@@ -113,6 +125,7 @@ fn construct_zbi(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
+    board: &BoardConfig,
     base_merkle: Option<Hash>,
 ) -> Result<PathBuf> {
     let mut zbi_builder = ZbiBuilder::default();
@@ -158,6 +171,12 @@ fn construct_zbi(
     for bootfs_entry in &product.bootfs_files {
         zbi_builder.add_bootfs_file(&bootfs_entry.source, &bootfs_entry.destination);
     }
+
+    // Set the zbi compression to use.
+    zbi_builder.set_compression(&board.zbi.compression);
+
+    // Create an output manifest that describes the contents of the built ZBI.
+    zbi_builder.set_output_manifest(&gendir.as_ref().join("zbi.json"));
 
     // Build and return the ZBI.
     let zbi_path = outdir.as_ref().join("fuchsia.zbi");
