@@ -1485,7 +1485,13 @@ inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
   }
   if (preemption_state.PreemptIsEnabled() &&
       cpus_to_reschedule_mask & cpu_num_to_mask(arch_curr_cpu_num())) {
-    Preempt();
+    // TODO(fxbug.dev/64884): Once spinlocks imply preempt disable, this if-else can be replaced
+    // with a call to Preempt().
+    if (arch_num_spinlocks_held() < 2 && !arch_blocking_disallowed()) {
+      Preempt();
+    } else {
+      preemption_state.preempts_pending_ |= cpu_num_to_mask(arch_curr_cpu_num());
+    }
   }
 }
 
@@ -1630,8 +1636,8 @@ void Scheduler::Reschedule() {
   // Pend the preemption rather than rescheduling if preemption is disabled or
   // if there is more than one spinlock held.
   // TODO(fxbug.dev/64884): Remove check when spinlocks imply preempt disable.
-  if (!current_thread->preemption_state()
-           .PreemptIsEnabled() /*|| arch_num_spinlocks_held() > 1 || arch_blocking_disallowed()*/) {
+  if (!current_thread->preemption_state().PreemptIsEnabled() || arch_num_spinlocks_held() > 1 ||
+      arch_blocking_disallowed()) {
     current_thread->preemption_state().preempts_pending_ |= cpu_num_to_mask(current_cpu);
     return;
   }
