@@ -105,11 +105,15 @@ protocol ContentLink {
 };
 
 /// A typed wrapper for an eventpair, representing the child endpoint of a Link.
+/// The eventpair object must not be cloned; object uniqueness is used as part
+/// of lifecycle management.
 resource struct GraphLinkToken {
     zx.handle:EVENTPAIR value;
 };
 
 /// A typed wrapper for an eventpair, representing the parent endpoint of a Link.
+/// The eventpair object must not be cloned; object uniqueness is used as part
+/// of lifecycle management.
 resource struct ContentLinkToken {
     zx.handle:EVENTPAIR value;
 };
@@ -263,8 +267,9 @@ protocol Flatland {
     /// the Graph of another process. The parent process has control over how the linked content is
     /// integrated into their Graph.
     ///
-    /// A link is formed by creating an event pair, passing one end to the parent (which calls
-    /// CreateLink()) and the other end to the child (which calls LinkToParent()).
+    /// A link starts with a pair of eventpair objects: a ContentLinkToken and GraphLinkToken.
+    /// Out-of-band protocols pass the ContentLinkToken to the parent, which calls CreateLink(), and
+    /// the GraphLinkToken to the child, which calls LinkToParent().
     ///
     /// Only nodes connected to the Root Transform in this Flatland instance will be rendered as
     /// part of the parent's Graph.
@@ -274,12 +279,15 @@ protocol Flatland {
     ///
     /// This function is feed-forward, meaning that the Root Transform will not be attached to the
     /// parent Graph until Present() is called. However, Clients will receive information through
-    /// their GraphLinkListener (e.g., LayoutInfo) immediately after calling this function, even if
-    /// they have not called Present() or SetRoot(). This allows clients to wait for layout
-    /// information from their parent before calling Present(), if they wish.
+    /// their GraphLink (e.g., LayoutInfo) immediately after calling this function, even if they
+    /// have not called Present() or SetRoot(). This allows clients to wait for layout information
+    /// from their parent before calling Present().
     ///
     /// Any illegal operations on GraphLink will cause both GraphLink channel and this Flatland
     /// channel to be torn down.
+    ///
+    /// Lifecycle note. The lifetime of the GraphLink channel is bound by the peer ContentLinkToken.
+    /// When the ContentLinkToken dies, this GraphLink channel is destroyed.
     LinkToParent(GraphLinkToken token, request<GraphLink> graph_link);
 
     /// Disconnects this Graph from its parent Graph and returns the GraphLinkToken used to
@@ -408,6 +416,9 @@ protocol Flatland {
     ///
     /// Zero is not a valid Link id. All other values are valid, assuming they are not already
     /// in use for another piece of Content (see ReleaseLink() for more details).
+    ///
+    /// Lifecycle note. The lifetime of the ContentLink channel is bound by the peer GraphLinkToken.
+    /// When the GraphLinkToken dies, this ContentLink channel is destroyed.
     CreateLink(ContentId link_id, ContentLinkToken token, LinkProperties properties,
                request<ContentLink> content_link);
 
