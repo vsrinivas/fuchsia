@@ -1,0 +1,590 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is a re-implementation of //build/images/BUILD.gn, but using the ffx
+# assembly plugin as the main implementation.  Most of the work in this file
+# is creating the translation between the Fuchsia Build and the inputs that the
+# ffx assembly plugin expects.
+
+import("//build/compiled_action.gni")
+import("//build/components/fuchsia_system_package.gni")
+import("//build/info/info.gni")
+import("//build/packages/package_metadata.gni")
+import("//build/security.gni")
+import("//build/testing/verify_files_match.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
+
+####
+#
+# Deal with "bringup" and other zbi-only builds.
+#
+# These builds set `bootfs_only` to true, and do not include a base/system_image
+# package, pkgfs, blobfs, fvm, etc.
+#
+# This declares an inverted variable that has easier reading and is less likely
+# to miss the `!` operator:
+#
+uses_base_package = !bootfs_only
+
+####
+#
+# All the stuff in this file that we want to build by default:
+#
+group("assembly") {
+  testonly = true
+  deps = [
+    ":input_validation_checks",
+    ":output_validation_checks",
+  ]
+  if (uses_base_package) {
+    deps += [ ":images" ]
+  }
+}
+
+#####
+#
+# Labels used internally in this file
+labels = {
+  kernel_image_metadata = "kernel_image.gn_meta.json"
+  kernel_cmdline_args_metadata = "kernel_cmdline_args.gn_meta.json"
+  bootfs_entries_metadata = "bootfs_entries.gn_meta.json"
+  board_config = "board_config.json"
+}
+
+#####
+#
+# Labels whose outputs are used by Image Assembly, and are deps in this file
+dep_labels = {
+  ####
+  # External labels that are deps.
+  #
+  version_file = "//build/info:latest-commit-date"
+
+  ####
+  # External labels whose outputs are compared against for validity (temporary)
+  #
+  system_image_pkg = "//build/images:system_image.meta"
+
+  ####
+  # Internal labels, in "dep" format:
+  #
+  board_config = ":" + labels.board_config
+}
+
+#####
+#
+# File Paths used by Image Assembly
+#
+#  These are all the files that are inputs, outputs, or intermediates that are
+#  used by the actions in this file.
+#
+#  files.foo = The "inputs" or "outputs" usage of the file "foo"
+#  files_args.foo = The same path, but rebased on $root_build_dir, for passing
+#                   as a tool argument.
+#
+files = {
+  assembly_config = "${target_out_dir}/config.json"
+  board_config = "${target_out_dir}/board_config.json"
+
+  # Package lists for the base package
+  base_package_list = "${target_out_dir}/package_lists/base"
+  cache_package_list = "${target_out_dir}/package_lists/cache"
+  extra_base_package_list = "${target_out_dir}/package_lists/extra_base"
+  extra_base_deps_package_list =
+      "${target_out_dir}/package_lists/extra_base_deps"
+
+  # The file that contains the version
+  version_file = build_info_files.version
+
+  # The working directories for the ffx assembly image task.
+  gendir = "${target_out_dir}/gen"
+  outdir = target_out_dir
+
+  # Intermediates used by base package creation.
+  gen_base_static_packages = "${gendir}/data/static_packages"
+  gen_base_cache_packages = "${gendir}/data/cache_packages"
+
+  # The base package output.
+  base_pkg = "${target_out_dir}/base.far"
+
+  #####
+  # Files used for validation against external label outputs (temporary)
+  #
+
+  # The base package re-extraction (temporary) output dir
+  extracted_base_pkg = "${target_out_dir}/extracted_base_pkg"
+
+  # The extracted base package contents
+  extracted_base_meta_contents = "${extracted_base_pkg}/meta/contents"
+  extracted_base_meta_package = "${extracted_base_pkg}/meta/package"
+
+  # The system-image package itself (from //build/images:system-image.meta)
+  system_image_pkg =
+      get_label_info(dep_labels.system_image_pkg, "target_out_dir") +
+      "/system_image.meta/meta.far"
+
+  # The system-image package re-extraction (temporary) output dir
+  extracted_sysimg_pkg = "${target_out_dir}/extracted_sysimg_pkg"
+
+  # The extracted base package contents
+  extracted_sysimg_meta_contents = "${extracted_sysimg_pkg}/meta/contents"
+  extracted_sysimg_meta_package = "${extracted_sysimg_pkg}/meta/package"
+}
+
+#####
+# File path arguments used by Image Assembly (rebased for tool usage)
+#
+# This are most of the above files, rebased on root_build_dir, for use when
+# calling tools with the paths.
+#
+# This is the hard way of doing `file_args = rebase_path(files, root_build_dir)`
+file_args = {
+  assembly_config = rebase_path(files.assembly_config, root_build_dir)
+  board_config = rebase_path(files.board_config, root_build_dir)
+
+  base_package_list = rebase_path(files.base_package_list, root_build_dir)
+  cache_package_list = rebase_path(files.cache_package_list, root_build_dir)
+  extra_base_package_list =
+      rebase_path(files.extra_base_package_list, root_build_dir)
+  extra_base_deps_package_list =
+      rebase_path(files.extra_base_deps_package_list, root_build_dir)
+
+  version_file = rebase_path(files.version_file, root_build_dir)
+
+  gendir = rebase_path(files.gendir, root_build_dir)
+  outdir = rebase_path(files.outdir, root_build_dir)
+
+  gen_base_static_packages =
+      rebase_path(files.gen_base_static_packages, root_build_dir)
+  gen_base_cache_packages =
+      rebase_path(files.gen_base_cache_packages, root_build_dir)
+
+  base_pkg = rebase_path(files.base_pkg, root_build_dir)
+
+  #####
+  # Files used for validation against external label outputs (temporary)
+  #
+
+  extracted_base_pkg = rebase_path(files.extracted_base_pkg, root_build_dir)
+  extracted_base_meta_contents =
+      rebase_path(files.extracted_base_meta_contents, root_build_dir)
+  extracted_base_meta_package =
+      rebase_path(files.extracted_base_meta_package, root_build_dir)
+
+  system_image_pkg = rebase_path(files.system_image_pkg, root_build_dir)
+  extracted_sysimg_pkg = rebase_path(files.extracted_sysimg_pkg, root_build_dir)
+  extracted_sysimg_meta_contents =
+      rebase_path(files.extracted_sysimg_meta_contents, root_build_dir)
+  extracted_sysimg_meta_package =
+      rebase_path(files.extracted_sysimg_meta_package, root_build_dir)
+}
+
+#####
+# These are the package groups that are used to build the system:
+#
+# - `base_packages` - This is the "base package set", the set of packages that
+#                     are considered for all OTA updates and part of the flash
+#                     files' blobfs.
+#
+# - `cache_packages` - These are the (usually) ephemeral packages which are pre-
+#                      installed on the system, present in flash files, but not
+#                      in the update package (except that they currently are
+#                      placed into the `base package set` for all intents and
+#                      purposes.
+#
+# - `universe_packages` - The "known universe of packages at build time".  These
+#                         are all the packages that are defined in the build as
+#                         potentially placed on the device, and therefore they
+#                         need to have their shell command and config-data
+#                         entries placed in base.
+#
+# - `meta_packages` - These are packages that exist because they are assembly-
+#                     time constructed containers of data about other packages:
+#                       - shell command entries
+#                       - config data
+#                       - indexes
+#
+
+group("base_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [ ":*" ]
+  public_deps = [
+    "//:additional_base_driver_packages",
+    "//:additional_base_packages",
+  ]
+}
+
+group("cache_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [ ":*" ]
+  public_deps = [ "//:additional_cache_packages" ]
+}
+
+group("universe_packages") {
+  testonly = fuchsia_zbi_testonly
+  visibility = [ ":*" ]
+  public_deps = [
+    ":base_packages",
+    ":cache_packages",
+    "//:additional_universe_packages",
+  ]
+}
+
+group("meta_packages") {
+  visibility = [ ":*" ]
+  testonly = fuchsia_zbi_testonly
+  public_deps = [ "//build/images:driver-manager-base-config" ]
+  public_deps += meta_package_labels
+}
+
+if (uses_base_package) {
+  #####
+  #  Set up the Inputs for `base` package creation.
+  #
+  # The above groups of packages need to be walked for metadata to find all of the
+  # package manifests for the targets in those dependency trees.  These groups
+  # don't include the special packages that are synthesized by the build itself
+  # (those are in 'meta_packages')
+  #
+  # These lists of packages manifests then need to be incorporated into the JSON
+  # configuration that is expected by the `ffx assembly` tooling.
+  #
+  #  - `base` package set
+  #  - `cache` package set
+  #  - `meta` package set (packages created by the build)
+  #  - `extra_base_packages` package set (the packages whose contents are
+  #     incorporated into the `base` package contents, not as packages that are
+  #     individually listed in the base package set)
+  #
+  #  The following target names are used:
+  #
+  #  `package_manifest_list.[base, cache, extra_base]` -> These are the raw lists
+  #       of package manifests that are gathered via metadata walks
+  #
+  #  `assembly_config_input.[base, cache, extra_base]` -> These are the converted
+  #       versions of the lists into the format as expected by the tooling.
+  #
+
+  #####
+  # Helper template to create the package list inputs.
+  #
+  template("list_package_manifests") {
+    generated_file(target_name) {
+      data_keys = [ "package_output_manifests" ]
+      walk_keys = [ "package_barrier" ]
+      outputs = [ invoker.filename ]
+      output_conversion = "json"
+      rebase = root_build_dir
+
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+    }
+  }
+
+  list_package_manifests("package_manifest_list.base") {
+    testonly = true
+    filename = files.base_package_list
+    deps = [
+      ":base_packages",
+      ":meta_packages",
+    ]
+  }
+
+  list_package_manifests("package_manifest_list.cache") {
+    testonly = true
+    filename = files.cache_package_list
+    deps = [ ":cache_packages" ]
+  }
+
+  list_package_manifests("package_manifest_list.extra_base") {
+    testonly = true
+    filename = files.extra_base_package_list
+    deps = [ "//build/input:system_image" ]
+  }
+
+  generated_file("package_manifest_list.extra_base_deps") {
+    testonly = true
+    data_keys = [ "system_image_extra_package_manifest" ]
+    walk_keys = [ "system_image_extra_package_manifest_barrier" ]
+    outputs = [ files.extra_base_deps_package_list ]
+    output_conversion = "json"
+    deps = [
+      ":base_packages",
+      ":meta_packages",
+    ]
+  }
+}
+
+#####
+# Create the configuration file for the assembly tool
+#
+#
+action("create_config") {
+  testonly = true
+  script = "make_assembly_config.py"
+  inputs = []
+  deps = []
+  args = []
+
+  # If we have a base package (the usual case), then add those inputs, deps, and
+  # args to the config creation.
+  if (uses_base_package) {
+    inputs += [
+      files.base_package_list,
+      files.cache_package_list,
+      files.extra_base_package_list,
+      files.extra_base_deps_package_list,
+      files.version_file,
+    ]
+
+    deps += [
+      ":package_manifest_list.base",
+      ":package_manifest_list.cache",
+      ":package_manifest_list.extra_base",
+      ":package_manifest_list.extra_base_deps",
+      dep_labels.version_file,
+    ]
+
+    args += [
+      "--base-packages-list",
+      file_args.base_package_list,
+      "--cache-packages-list",
+      file_args.cache_package_list,
+      "--extra-files-packages-list",
+      file_args.extra_base_package_list,
+      "--extra-deps-files-packages-list",
+      file_args.extra_base_deps_package_list,
+      "--version-file",
+      file_args.version_file,
+    ]
+  }
+
+  # All builds must use a ZBI, and those relevant inputs, deps, and args:
+  inputs += []
+  deps += []
+  args += [
+    "--output",
+    file_args.assembly_config,
+  ]
+
+  outputs = [ files.assembly_config ]
+}
+
+#####
+# Generate the board config
+#
+# This is all generated from GN args.  Some values are stubs.
+#
+generated_file(labels.board_config) {
+  outputs = [ files.board_config ]
+  output_conversion = "json"
+  contents = {
+    board_name = board_name
+    arch = target_cpu
+    zbi = {
+      partition = "zircon_a"
+      name = "fuchsia"
+      max_size = 0
+      compression = "stub"
+    }
+    vbmeta = {
+      partition = "vbmeta_a"
+      kernel_partition = "zircon"
+      key = "not/yet"
+      key_metadata = "not/yet"
+    }
+    fvm = {
+      partition = "stub"
+      slice_size = 0
+      reserved_slices = 0
+    }
+  }
+}
+
+#####
+# Create the images themselves using `ffx assembly`
+#
+#
+# TODO(aaronwood) - re-enable when making zbi
+if (uses_base_package) {
+  ffx_action("images") {
+    # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
+    hermetic_deps = false
+
+    testonly = true
+    deps = [
+      ":create_config",
+      dep_labels.board_config,
+    ]
+
+    args = [
+      "--config",
+      "assembly_enabled=true",
+      "assembly",
+      "image",
+      "--product",
+      file_args.assembly_config,
+      "--board",
+      file_args.board_config,
+      "--gendir",
+      file_args.gendir,
+      "--outdir",
+      file_args.outdir,
+    ]
+
+    inputs = [
+      files.assembly_config,
+      files.board_config,
+    ]
+
+    outputs = []
+
+    # Base package outputs, if this configuration uses them
+    if (uses_base_package) {
+      outputs = [
+        files.base_pkg,
+
+        # intermediate outputs that are in gendir:
+        files.gen_base_static_packages,
+        files.gen_base_cache_packages,
+      ]
+    }
+
+    # zbi outputs will go here.
+  }
+}
+
+#####
+#
+# Validation that the inputs generated for the ffx assembly match those of the
+# current implementation in //build/images/BUILD.gn
+#
+
+group("input_validation_checks") {
+  testonly = true
+  deps = []
+  if (uses_base_package) {
+    deps += [
+      ":cache_index.matches",
+      ":pkgsvr_index.matches",
+    ]
+  }
+}
+
+if (uses_base_package) {
+  verify_files_match("pkgsvr_index.matches") {
+    testonly = true
+    deps = [
+      ":images",
+      "//build/images:pkgsvr_index",
+    ]
+
+    first = "$root_build_dir/obj/build/images/pkgsvr_index"
+    second = files.gen_base_static_packages
+
+    display_text_diff_on_failure = true
+  }
+
+  verify_files_match("cache_index.matches") {
+    testonly = true
+    deps = [
+      ":images",
+      "//build/images:cache_index",
+    ]
+
+    first = "$root_build_dir/obj/build/images/cache_index"
+    second = files.gen_base_cache_packages
+
+    display_text_diff_on_failure = true
+  }
+}
+
+#####
+#
+# Validation checks that the base package contents matches the system-image
+# package contents
+
+group("output_validation_checks") {
+  testonly = true
+  deps = []
+  if (uses_base_package) {
+    deps += [
+      ":base_pkg_meta_contents_matches",
+      ":base_pkg_meta_far_matches",
+    ]
+  }
+}
+
+if (uses_base_package) {
+  # Extract system-image's package's contents for inspection
+  compiled_action("extract_system_image_pkg") {
+    testonly = true
+    tool = "//src/sys/pkg/bin/far:bin"
+    tool_output_name = "far"
+
+    args = [
+      "extract",
+      "--archive=${file_args.system_image_pkg}",
+      "--output=${file_args.extracted_sysimg_pkg}",
+    ]
+
+    inputs = [ files.system_image_pkg ]
+
+    outputs = [
+      files.extracted_sysimg_meta_contents,
+      files.extracted_sysimg_meta_package,
+    ]
+
+    deps = [ "//build/images:system_image.meta" ]
+  }
+
+  # Extract base package's contents for inspection
+  compiled_action("extract_base_pkg") {
+    testonly = true
+    tool = "//src/sys/pkg/bin/far:bin"
+    tool_output_name = "far"
+
+    args = [
+      "extract",
+      "--archive=${file_args.base_pkg}",
+      "--output=${file_args.extracted_base_pkg}",
+    ]
+
+    inputs = [ files.base_pkg ]
+
+    outputs = [
+      files.extracted_base_meta_contents,
+      files.extracted_base_meta_package,
+    ]
+
+    deps = [ ":images" ]
+  }
+
+  verify_files_match("base_pkg_meta_contents_matches") {
+    testonly = true
+    deps = [
+      ":extract_base_pkg",
+      ":extract_system_image_pkg",
+    ]
+
+    first = files.extracted_sysimg_meta_contents
+    second = files.extracted_base_meta_contents
+
+    display_text_diff_on_failure = true
+  }
+
+  verify_files_match("base_pkg_meta_far_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      "//build/images:system_image.meta",
+    ]
+
+    first = files.base_pkg
+    second = files.system_image_pkg
+  }
+}

@@ -49,6 +49,9 @@ default_image_deps = []
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
 
+#####
+# These are the package groups that are used to build the system:
+
 group("meta_packages") {
   visibility = [ ":*" ]
   testonly = fuchsia_zbi_testonly
@@ -73,7 +76,7 @@ fuchsia_package("driver-manager-base-config") {
 
 group("base_packages") {
   testonly = base_cache_packages_testonly
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   public_deps = [
     ":driver-manager-base-config",
     "//:additional_base_driver_packages",
@@ -83,7 +86,7 @@ group("base_packages") {
 
 group("cache_packages") {
   testonly = base_cache_packages_testonly
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   public_deps = [ "//:additional_cache_packages" ]
 }
 
@@ -104,6 +107,9 @@ group("packages") {
     ":universe_packages",
   ]
 }
+
+#####
+# These are lists of the packages in the above groups
 
 template("package_list") {
   generate_package_metadata(target_name) {
@@ -150,18 +156,24 @@ group("package_lists") {
   ]
 }
 
+#####
+# Create the config-data package from the universe package set
+
 config_package("config-data") {
   testonly = fuchsia_zbi_testonly
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   deps = [
     ":component_id_index_config-config-data",
     ":universe_packages",
   ]
 }
 
+#####
+# Create the shell command entries for all the packages in the universe package set
+
 shell_commands("shell-commands") {
   testonly = fuchsia_zbi_testonly
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   deps = [ ":universe_packages" ]
 }
 
@@ -187,7 +199,7 @@ generate_package_metadata("monolith_meta_far_merkle_index") {
 pkgsvr_index = "$target_out_dir/pkgsvr_index"
 
 action("pkgsvr_index") {
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   testonly = fuchsia_zbi_testonly
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":monolith_meta_far_merkle_index" ]
@@ -217,7 +229,7 @@ generate_package_metadata("preinstall_meta_far_merkle_index") {
 cache_index = "$target_out_dir/cache_index"
 
 action("cache_index") {
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   testonly = fuchsia_zbi_testonly
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":preinstall_meta_far_merkle_index" ]
@@ -266,7 +278,7 @@ system_image_fuchsia_system_packages("system_image_extra_driver_packages") {
 
 # The system_image "package" manifest is everything that appears in /system.
 generate_manifest("system_image.manifest") {
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   testonly = fuchsia_zbi_testonly
 
   # Now each package() target in the build contributes manifest entries.
@@ -289,7 +301,7 @@ generate_manifest("system_image.manifest") {
             get_label_info(":$target_name", "label_no_toolchain") ]
 
   # Add the meta/package JSON file that makes this the "system_image" package.
-  json = "system_meta_package.json"
+  json = "system_meta_package_json"
   sources += [ json ]
   args += [ "--entry=meta/package=" + rebase_path(json, root_build_dir) ]
 
@@ -339,7 +351,7 @@ action("system_image_prime.manifest") {
 # Generate, sign, and seal the system_image package file.
 pm_build("system_image.meta") {
   package_name = "system_image"
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   testonly = fuchsia_zbi_testonly
   manifest = ":system_image.manifest"
 }
@@ -352,7 +364,7 @@ blob_manifest = "$target_out_dir/blob.manifest"
 
 collect_blob_manifest("blob.manifest") {
   testonly = true
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   outputs = [ blob_manifest ]
   deps = [
     ":base_packages",
@@ -461,6 +473,7 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta",
     ":fuchsia.vbmeta__vb_desc",
     ":fuchsia.vbmeta__zbi_props",
+    "assembly/*",
   ]
   testonly = fuchsia_zbi_testonly
   script = "manifest.py"
@@ -2747,6 +2760,9 @@ group("default-images") {
     ":flash_script",
     ":qemu-kernel",
     recovery_label,
+
+    # The outputs from ffx assembly
+    "assembly",
   ]
 
   if (recovery_is_zedboot) {

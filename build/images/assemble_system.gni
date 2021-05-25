@@ -278,7 +278,7 @@ template("assemble_system") {
       ":${image_name}_fuchsia_packages",
       ":${image_name}_pkgsvr_index",
     ]
-    json = "//build/images/system_meta_package.json"
+    json = "//build/images/system_meta_package_json"
     pkgsvr_index = get_target_outputs(":${image_name}_pkgsvr_index")
 
     system_image_fuchsia_packages_list = get_target_outputs(deps[0])

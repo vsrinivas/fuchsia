@@ -180,6 +180,24 @@ template("fuchsia_package") {
           },
         ]
         system_image_package_barrier = []
+
+        # Used by image assembly to locate the package_manifest json file for
+        # this package, if it's allowed in the extra deps.
+        if (_is_system_package) {
+          if (_is_system_package_allowed_in_extra_deps) {
+            # This is the path that the pm_build() template will create in the
+            # `package_output_manifest` metadata key.
+            system_image_extra_package_manifest = [
+              {
+                package_manifest = rebase_path(
+                        "${target_out_dir}/${target_name}/package_manifest.json",
+                        root_build_dir)
+                label = get_label_info(":$target_name", "label_with_toolchain")
+              },
+            ]
+          }
+        }
+        system_image_extra_package_manifest_barrier = []
       }
       if (!defined(deps)) {
         deps = []
