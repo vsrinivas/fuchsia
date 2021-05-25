@@ -1009,4 +1009,44 @@ mod tests {
 
         Ok(())
     }
+
+    /// Validates that a service search gets notified again when a client disconnects,
+    /// reconnects, and re-advertises an identical service.
+    #[test]
+    fn service_search_gets_notified_when_service_re_registers() -> Result<(), Error> {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let id = PeerId(9999);
+        let (mut mock_peer, _observer_stream, _test_env) = create_mock_peer(id)?;
+
+        // Peer searches for A2DP Sink in the piconet.
+        let (mut stream, _search) = build_and_register_search(
+            &mut mock_peer,
+            bredr::ServiceClassProfileIdentifier::AudioSink,
+        );
+
+        // Build a fake A2DP Sink service for some remote.
+        let remote_peer = PeerId(2324);
+        let random_handle = 889;
+        let (_, mut record) = build_a2dp_service_definition(Psm::new(19));
+        let mut record_clone = record.clone();
+
+        // Register the record and notify the mock peer who's searching for it.
+        record.register_service_record(RegisteredServiceId::new(remote_peer, random_handle));
+        mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, vec![record]);
+
+        // Should be notified on the peer's search stream.
+        expect_search_service_found(&mut exec, &mut stream);
+
+        // The remote peer associated with the A2DP Sink service reconnects with an identical service.
+        record_clone.register_service_record(RegisteredServiceId::new(remote_peer, random_handle));
+        mock_peer
+            .notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, vec![record_clone]);
+
+        // Even though it's an identical service, it should still be relayed to the `mock_peer`
+        // because the `remote_peer` re-advertised it (e.g re-registered it).
+        expect_search_service_found(&mut exec, &mut stream);
+
+        Ok(())
+    }
 }

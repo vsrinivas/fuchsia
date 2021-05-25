@@ -52,18 +52,34 @@ impl TryFrom<bredr::LaunchInfo> for LaunchInfo {
 }
 
 /// The unique identifier associated with a registered service.
-/// This ID is unique in the _entire_ piconet because there is at most
-/// one peer with a unique PeerId, and each service registered by the peer
-/// is uniquely identified by a ServiceHandle. Therefore, the combination
-/// of PeerId and ServiceHandle can uniquely identify a service.
-/// This is used to prevent duplication of messages when reporting services
-/// to a search.
+///
+/// At any point in time, this ID will be unique in the _entire_ piconet because there is at
+/// most one peer with a unique PeerId, and each service registered by the peer
+/// is uniquely identified by a ServiceHandle.
+/// Therefore, the combination of PeerId and ServiceHandle can uniquely identify a service.
+/// However, because a service can be unregistered and potentially re-registered (e.g
+/// peer disconnecting, reconnecting, and advertising an identical service), an extra salt
+/// parameter is added to introduce randomness. This is because the Slab<T> implementation
+/// backing the `ServiceSet` (see the `service` mod) recycles `ServiceHandles` when inserting
+/// and removing items.
+///
+/// The uniqueness prevents duplication of messages when reporting services to a search.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct RegisteredServiceId(PeerId, ServiceHandle);
+pub struct RegisteredServiceId {
+    id: PeerId,
+    handle: ServiceHandle,
+    salt: [u8; 4],
+}
 
 impl RegisteredServiceId {
     pub fn new(id: PeerId, handle: ServiceHandle) -> Self {
-        Self(id, handle)
+        let mut salt = [0; 4];
+        fuchsia_zircon::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
+        Self { id, handle, salt }
+    }
+
+    fn peer_id(&self) -> PeerId {
+        self.id
     }
 }
 
@@ -111,11 +127,6 @@ impl ServiceRecord {
             additional_attributes,
             reg_id: None,
         }
-    }
-
-    /// Returns the ServiceHandle associated with this ServiceRecord, if set.
-    pub fn handle(&self) -> Option<ServiceHandle> {
-        self.reg_id.map(|id| id.1)
     }
 
     pub fn service_ids(&self) -> &HashSet<bredr::ServiceClassProfileIdentifier> {
@@ -166,11 +177,8 @@ impl ServiceRecord {
         self.reg_id.is_some()
     }
 
-    /// Every registered ServiceRecord has a unique identification. This is simply
-    /// the PeerId and ServiceHandle associated with the ServiceRecord.
-    ///
-    /// This is guaranteed to be unique because there will only ever be one mock peer registered per
-    /// `peer_id` and any services for the mock peer will have a unique ServiceHandle.
+    /// Every registered ServiceRecord has a unique identifier. This is data associated
+    /// with the piconet member that registered it.
     ///
     /// Returns an error if the service has not been registered.
     pub fn unique_service_id(&self) -> Result<RegisteredServiceId, Error> {
@@ -197,7 +205,8 @@ impl ServiceRecord {
     // TODO(fxbug.dev/51454): Build the full ServiceFoundResponse. Right now, we just
     // build the primary L2CAP Protocol, ServiceClassIdentifiers, and Profile Descriptors.
     pub fn to_service_found_response(&self) -> Result<ServiceFoundResponse, Error> {
-        let peer_id = self.reg_id.ok_or(format_err!("The service has not been registered."))?.0;
+        let peer_id =
+            self.reg_id.ok_or(format_err!("The service has not been registered."))?.peer_id();
         let mut attributes = vec![];
 
         // 1. Build the (optional) primary Protocol Descriptor List. This is both returned and
@@ -344,7 +353,7 @@ mod tests {
 
         // Register the record, as ServiceManager would, by updating the unique handles.
         let peer_id = PeerId(123);
-        let handle: RegisteredServiceId = RegisteredServiceId(peer_id, 99);
+        let handle: RegisteredServiceId = RegisteredServiceId::new(peer_id, 99);
         service_record.register_service_record(handle);
         assert_eq!(true, service_record.is_registered());
 
@@ -394,5 +403,15 @@ mod tests {
         let handle = RegisteredServiceId::new(PeerId(6313), /* handle= */ 9);
         rfcomm_record.register_service_record(handle);
         assert!(rfcomm_record.is_registered());
+    }
+
+    #[test]
+    fn reusing_same_handle_has_unique_registered_service_id() {
+        let id = PeerId(234);
+        let handle = 900;
+        let reg_id = RegisteredServiceId::new(id, handle);
+        let duplicate_reg_id = RegisteredServiceId::new(id, handle);
+
+        assert_ne!(reg_id, duplicate_reg_id);
     }
 }
