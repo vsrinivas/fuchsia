@@ -14,13 +14,19 @@ ffx_plugin("ffx_test") {
     "//src/lib/fuchsia-async",
     "//src/sys/run_test_suite:lib",
     "//src/sys/run_test_suite/directory",
+    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:serde_json",
   ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   args_deps = [ "//src/lib/diagnostics/data/rust" ]
 
   sources = [
     "src/args.rs",
     "src/lib.rs",
+    "src/output_directory.rs",
   ]
+
+  config_data = [ "data/config.json" ]
 }

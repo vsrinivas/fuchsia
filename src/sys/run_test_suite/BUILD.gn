@@ -114,5 +114,7 @@ group("tests") {
     ":run-test-suite-unit-tests",
     "directory:tests",
     "tests",
+
+    #"ffx/test:ffx_test_lib_test"
   ]
 }

@@ -75,6 +75,10 @@ pub struct RunCommand {
     /// when set, output test results to the specified directory.
     #[argh(option)]
     pub output_directory: Option<String>,
+
+    /// when set, disables structured output to a directory.
+    #[argh(switch)]
+    pub disable_output_directory: bool,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]

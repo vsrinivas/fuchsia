@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod output_directory;
+
 use {
-    anyhow::{anyhow, format_err, Context, Error},
-    ffx_core::ffx_plugin,
+    anyhow::{anyhow, format_err, Context, Result},
+    ffx_core::{ffx_bail, ffx_plugin},
     ffx_test_args::{ListCommand, ResultCommand, RunCommand, TestCommand, TestSubcommand},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_test::CaseIteratorMarker,
     fidl_fuchsia_test_manager as ftest_manager,
+    output_directory::DirectoryManager,
     run_test_suite_lib::diagnostics,
     std::fs::File,
     std::io::{stdout, Write},
@@ -19,11 +22,9 @@ use {
     "cmd-test.experimental",
     ftest_manager::HarnessProxy = "core/appmgr:out:fuchsia.test.manager.Harness"
 )]
-pub async fn test(
-    harness_proxy: ftest_manager::HarnessProxy,
-    cmd: TestCommand,
-) -> Result<(), Error> {
+pub async fn test(harness_proxy: ftest_manager::HarnessProxy, cmd: TestCommand) -> Result<()> {
     let writer = Box::new(stdout());
+
     match cmd.subcommand {
         TestSubcommand::Run(run) => run_test(harness_proxy, run).await,
         TestSubcommand::List(list) => get_tests(harness_proxy, writer, list).await,
@@ -31,13 +32,33 @@ pub async fn test(
     }
 }
 
-async fn run_test(
-    harness_proxy: ftest_manager::HarnessProxy,
-    cmd: RunCommand,
-) -> Result<(), Error> {
+async fn get_directory_manager() -> Result<DirectoryManager> {
+    let output_path_config: PathBuf = match ffx_config::get("test.output_path").await? {
+        Some(output_path) => output_path,
+        None => ffx_bail!(
+            "Could not find the test output path configuration. Please run \
+            `ffx config set test.output_path \"<PATH>\" to configure the location."
+        ),
+    };
+    let save_count_config: usize = ffx_config::get("test.save_count").await?;
+    DirectoryManager::new(output_path_config, save_count_config)
+}
+
+async fn run_test(harness_proxy: ftest_manager::HarnessProxy, cmd: RunCommand) -> Result<()> {
     let count = cmd.count.unwrap_or(1);
     let count = std::num::NonZeroU16::new(count)
         .ok_or_else(|| anyhow!("--count should be greater than zero."))?;
+
+    let output_directory = match (cmd.disable_output_directory, cmd.output_directory) {
+        (true, _) => None, // output to directory is disabled.
+        (false, Some(directory)) => Some(directory.into()), // an override directory is specified.
+        (false, None) => {
+            // default to using a managed directory.
+            let mut directory_manager = get_directory_manager().await?;
+            Some(directory_manager.new_directory()?)
+        }
+    };
+
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {
             test_url: cmd.test_url,
@@ -54,7 +75,7 @@ async fn run_test(
         },
         count,
         cmd.filter_ansi,
-        cmd.output_directory.map(Into::into),
+        output_directory,
     )
     .await
     {
@@ -70,7 +91,7 @@ async fn get_tests<W: Write>(
     harness_proxy: ftest_manager::HarnessProxy,
     mut write: W,
     cmd: ListCommand,
-) -> Result<(), Error> {
+) -> Result<()> {
     let writer = &mut write;
     let (suite_proxy, suite_server_end) = create_proxy().unwrap();
     let (_controller_proxy, controller_server_end) = create_proxy().unwrap();
@@ -111,14 +132,20 @@ async fn get_tests<W: Write>(
 async fn result_command<W: Write>(
     ResultCommand { directory }: ResultCommand,
     mut writer: W,
-) -> Result<(), Error> {
+) -> Result<()> {
     match directory {
         Some(specified_directory) => display_output_directory(specified_directory.into(), writer),
-        None => writeln!(writer, "Not yet implemented").map_err(Into::into),
+        None => {
+            let directory_manager = get_directory_manager().await?;
+            match directory_manager.latest_directory()? {
+                Some(latest) => display_output_directory(latest, writer),
+                None => writeln!(writer, "Found no test results to display").map_err(Into::into),
+            }
+        }
     }
 }
 
-fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<(), Error> {
+fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()> {
     let summary_path = path.join(test_output_directory::RUN_SUMMARY_NAME);
     let summary_file = File::open(summary_path)?;
 

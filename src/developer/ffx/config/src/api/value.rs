@@ -188,6 +188,16 @@ impl TryFrom<ConfigValue> for PathBuf {
     }
 }
 
+impl ValueStrategy for Option<PathBuf> {}
+
+impl TryFrom<ConfigValue> for Option<PathBuf> {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        Ok(value.0.and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string()))))
+    }
+}
+
 impl<T: TryFrom<ConfigValue>> ValueStrategy for Vec<T> {
     fn handle_arrays<'a, F: Fn(Value) -> Option<Value> + Sync>(
         next: &'a F,

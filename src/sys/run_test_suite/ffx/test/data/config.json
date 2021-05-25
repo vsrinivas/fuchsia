@@ -1,0 +1,8 @@
+{
+    "test": {
+        "output_path": [
+            "$FUCHSIA_BUILD_DIR/saved_test_runs"
+        ],
+        "save_count": 5
+    }
+}
