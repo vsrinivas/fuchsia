@@ -211,9 +211,6 @@ zx_status_t Sherlock::AudioInit() {
   const device_fragment_t ernie_tweeter_fragments[] = {
       {"i2c", countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
   };
-#ifdef ENABLE_BT
-  static const device_fragment_t tdm_pcm_fragments[] = {};
-#endif
 
   const device_fragment_t sherlock_tdm_i2s_fragments[] = {
       {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
@@ -542,11 +539,11 @@ zx_status_t Sherlock::AudioInit() {
 
     pbus_dev_t tdm_dev = {};
     char tdm_name[device_name_max_length];
-    snprintf(tdm_name, sizeof(tdm_name), "%s-pcm-audio-out", product_name);
+    snprintf(tdm_name, sizeof(tdm_name), "%s-pcm-dai-out", product_name);
     tdm_dev.name = tdm_name;
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
@@ -554,8 +551,7 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_count = countof(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      countof(tdm_pcm_fragments), UINT32_MAX);
+    status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
@@ -652,11 +648,11 @@ zx_status_t Sherlock::AudioInit() {
     };
     pbus_dev_t tdm_dev = {};
     char name[device_name_max_length];
-    snprintf(name, sizeof(name), "%s-pcm-audio-in", product_name);
+    snprintf(name, sizeof(name), "%s-pcm-dai-in", product_name);
     tdm_dev.name = name;
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_T931;
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
@@ -664,8 +660,7 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.bti_count = countof(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
-    status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      countof(tdm_pcm_fragments), UINT32_MAX);
+    status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
