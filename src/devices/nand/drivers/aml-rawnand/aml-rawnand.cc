@@ -575,11 +575,6 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
     return status;
   }
 
-  if (oob != nullptr && AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), oob_actual) != ZX_OK &&
-      oob_actual != nullptr) {
-    *oob_actual = 0;
-  }
-
   status = AmlGetECCCorrections(ecc_pages, nand_page, ecc_correct, &erased);
   if (status != ZX_OK) {
     zxlogf(WARNING, "%s: Uncorrectable ECC error on read", __func__);
@@ -587,13 +582,25 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
   }
 
   // Finally copy out the data and oob as needed.
+  if (oob != nullptr) {
+    size_t num_bytes;
+    // Need to try to fetch it first, just to get the oob_actual size
+    if (AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), &num_bytes) != ZX_OK) {
+      num_bytes = 0;
+    }
+    if (erased) {
+      memset(oob, 0xff, num_bytes);
+    }
+    if (oob_actual != nullptr) {
+      *oob_actual = num_bytes;
+    }
+  }
   if (data != nullptr) {
     // Page0 is always 384 bytes.
     size_t num_bytes = (page0 ? 384 : writesize_);
     // Clean up any possible bit flips on supposed erased pages.
     if (erased) {
       memset(data, 0xff, num_bytes);
-      memset(oob, 0xff, *oob_actual);
     } else {
       memcpy(data, buffers_->data_buf, num_bytes);
     }
