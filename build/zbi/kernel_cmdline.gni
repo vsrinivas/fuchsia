@@ -31,5 +31,8 @@ template("kernel_cmdline") {
     foreach(arg, invoker.args) {
       args += [ "--entry=$arg" ]
     }
+
+    # Add the raw args for use with assembly.
+    kernel_config_args = invoker.args
   }
 }

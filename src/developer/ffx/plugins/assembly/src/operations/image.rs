@@ -41,12 +41,12 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
+    info!("Creating the ZBI");
+    let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_merkle)?;
+
     if !full {
         return Ok(());
     }
-
-    info!("Creating the ZBI");
-    let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_merkle)?;
 
     let vbmeta_path = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
