@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
+import("//src/sys/component_index/component_index.gni")
 
 executable("bin") {
   output_name = "mem"
@@ -24,5 +24,15 @@ executable("bin") {
 }
 
 fuchsia_shell_package("mem") {
-  deps = [ ":bin" ]
+  manifest = "meta/mem.cmx"
+  deps = [
+    ":bin",
+    ":index",
+  ]
+}
+
+# Make `fx run mem ...` work
+add_to_component_index("index") {
+  package_name = "mem"
+  manifest = "meta/mem.cmx"
 }

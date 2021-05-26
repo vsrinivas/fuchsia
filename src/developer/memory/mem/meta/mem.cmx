@@ -1,0 +1,19 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/mem"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "hub"
+        ],
+        "services": [
+            "fuchsia.kernel.RootJobForInspect",
+            "fuchsia.kernel.Stats",
+            "fuchsia.tracing.provider.Provider"
+        ]
+    }
+}
