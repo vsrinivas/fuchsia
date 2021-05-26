@@ -21,6 +21,9 @@ extern "C" {
 
 namespace {
 
+constexpr uint64_t kMapFlags =
+    MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | MAGMA_GPU_MAP_FLAG_EXECUTE;
+
 // Provided by etnaviv_cl_test_gc7000.c
 extern "C" uint32_t hello_code[];
 extern "C" void gen_cmd_stream(struct etna_cmd_stream* stream, struct etna_bo* code,
@@ -86,9 +89,7 @@ class MagmaExecuteMsdVsi : public testing::Test {
     magma_status_t status =
         magma_map_buffer_gpu(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_,
                              0,  // page offset
-                             page_count, etna_buffer->gpu_address_,
-                             0  // flags
-        );
+                             page_count, etna_buffer->gpu_address_, kMapFlags);
     if (status != MAGMA_STATUS_OK)
       return nullptr;
 

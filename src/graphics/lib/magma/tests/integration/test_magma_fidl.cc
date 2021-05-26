@@ -388,9 +388,8 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
   }
 
   {
-    auto wire_result =
-        primary_->MapBufferGpu(buffer_id, 0x1000 /*gpu_address*/, 0 /*page_offset*/, kPageCount,
-                               static_cast<fuchsia_gpu_magma::wire::MapFlags>(0));
+    auto wire_result = primary_->MapBufferGpu(buffer_id, 0x1000 /*gpu_address*/, 0 /*page_offset*/,
+                                              kPageCount, fuchsia_gpu_magma::wire::MapFlags::kRead);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -449,9 +448,8 @@ TEST_F(TestMagmaFidl, Commit) {
   }
 
   {
-    auto wire_result =
-        primary_->MapBufferGpu(buffer_id, 0x1000 /*gpu_address*/, 0 /*page_offset*/, kPageCount,
-                               static_cast<fuchsia_gpu_magma::wire::MapFlags>(0));
+    auto wire_result = primary_->MapBufferGpu(buffer_id, 0x1000 /*gpu_address*/, 0 /*page_offset*/,
+                                              kPageCount, fuchsia_gpu_magma::wire::MapFlags::kRead);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }

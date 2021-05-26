@@ -181,6 +181,9 @@ magma::Status MagmaSystemConnection::MapBufferGpu(uint64_t id, uint64_t gpu_va,
   if (page_count + page_offset > iter->second.buffer->size() / magma::page_size())
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Page offset + length too large for buffer");
 
+  if (!flags)
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Flags must be nonzero");
+
   magma::Status status = msd_connection_map_buffer_gpu(
       msd_connection(), iter->second.buffer->msd_buf(), gpu_va, page_offset, page_count, flags);
   if (!status.ok())
