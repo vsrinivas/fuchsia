@@ -10,7 +10,7 @@
 # Parameters
 #
 #   * sources
-#     - Required: Sources to serve as host test data.
+#     - Required: List of source data files to serve as host test data.
 #     - Type: list(path)
 #
 #   * outputs
