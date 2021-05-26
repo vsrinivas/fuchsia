@@ -53,7 +53,7 @@ table Address {
     /// from the monotonic clock.
     ///
     /// As a `zx.time`, the value has [monotonic clock
-    /// semantics](https://fuchsia.dev/fuchsia-src/concepts/time/monotonic?hl=en),
+    /// semantics](https://fuchsia.dev/fuchsia-src/concepts/time/monotonic),
     /// which implies that it has no meaning outside of the host on which it was
     /// generated and no meaning across host restarts.
     2: zx.time valid_until;
