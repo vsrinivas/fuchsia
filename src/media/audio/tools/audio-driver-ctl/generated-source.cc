@@ -58,8 +58,7 @@ zx_status_t GeneratedSource::GetFormat(Format* out_format) {
   out_format->frame_rate = frame_rate_;
   out_format->channels = static_cast<uint16_t>(channels_);
   out_format->sample_format = sample_format_;
-  // Bitmask filtering is done in GetFramesInternal() below, no need to ask the HW.
-  out_format->channels_to_use_bitmask = AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED;
+  out_format->channels_to_use_bitmask = active_;
 
   return ZX_OK;
 }
@@ -78,7 +77,6 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_8BIT> {
   using SampleType = uint8_t;
   using ComputedType = int8_t;
-  static constexpr SampleType SilenceValue = 0;
   static SampleType encode(ComputedType v) {
     return static_cast<ComputedType>(static_cast<SampleType>(v) + 0x80);
   }
@@ -88,7 +86,6 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_16BIT> {
   using SampleType = int16_t;
   using ComputedType = int16_t;
-  static constexpr SampleType SilenceValue = 0;
   static SampleType encode(ComputedType v) { return v; }
 };
 
@@ -96,7 +93,6 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_20BIT_IN32> {
   using SampleType = int32_t;
   using ComputedType = int32_t;
-  static constexpr SampleType SilenceValue = 0;
   static SampleType encode(ComputedType v) {
     return static_cast<SampleType>(static_cast<uint32_t>(v) & 0xFFFFF000);
   }
@@ -106,7 +102,6 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_24BIT_IN32> {
   using SampleType = int32_t;
   using ComputedType = int32_t;
-  static constexpr SampleType SilenceValue = 0;
   static SampleType encode(ComputedType v) {
     return static_cast<SampleType>(static_cast<uint32_t>(v) & 0xFFFFFF00);
   }
@@ -116,7 +111,6 @@ template <>
 struct SampleTraits<AUDIO_SAMPLE_FORMAT_32BIT> {
   using SampleType = int32_t;
   using ComputedType = int32_t;
-  static constexpr SampleType SilenceValue = 0;
   static SampleType encode(ComputedType v) { return v; }
 };
 
@@ -159,11 +153,7 @@ zx_status_t GeneratedSource::GetFramesInternal(void* buffer, uint32_t buf_space,
     for (uint32_t j = 0; j < channels_; ++j) {
       auto val = static_cast<ComputedType>(amp_ * GenerateValue(pos));
 
-      if (active_ == kAllChannelsActive || (active_ & (1 << j))) {
-        *(buf++) = Traits::encode(val);
-      } else {
-        *(buf++) = Traits::SilenceValue;
-      }
+      *(buf++) = Traits::encode(val);
     }
 
     pos += pos_scalar_;
