@@ -345,7 +345,7 @@ func (it *neighborEntryIterator) GetNext(fidl.Context) ([]neighbor.EntryIterator
 func toNeighborEntry(nicID tcpip.NICID, n stack.NeighborEntry) (neighbor.Entry, bool) {
 	e := neighbor.Entry{}
 	e.SetInterface(uint64(nicID))
-	e.SetUpdatedAt(n.UpdatedAtNanos)
+	e.SetUpdatedAt(n.UpdatedAt.UnixNano())
 
 	if len(n.Addr) != 0 {
 		e.SetNeighbor(fidlconv.ToNetIpAddress(n.Addr))

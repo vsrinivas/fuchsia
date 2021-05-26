@@ -15,6 +15,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
+	"time"
 
 	ethernetext "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlext/fuchsia/hardware/ethernet"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
@@ -767,16 +768,16 @@ func TestNeighborTableInspectImpl(t *testing.T) {
 		name: neighborsLabel,
 		value: map[string]stack.NeighborEntry{
 			ipv4Addr.String(): {
-				Addr:           ipv4Addr,
-				LinkAddr:       "\x0a\x00\x00\x00\x00\x01",
-				State:          stack.Reachable,
-				UpdatedAtNanos: 1,
+				Addr:      ipv4Addr,
+				LinkAddr:  "\x0a\x00\x00\x00\x00\x01",
+				State:     stack.Reachable,
+				UpdatedAt: time.Unix(0, 1),
 			},
 			ipv6Addr.String(): {
-				Addr:           ipv6Addr,
-				LinkAddr:       "\x0a\x00\x00\x00\x00\x02",
-				State:          stack.Stale,
-				UpdatedAtNanos: 2,
+				Addr:      ipv6Addr,
+				LinkAddr:  "\x0a\x00\x00\x00\x00\x02",
+				State:     stack.Stale,
+				UpdatedAt: time.Unix(0, 2),
 			},
 		},
 	}
@@ -817,19 +818,19 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 		{
 			name: "IPv4",
 			neighbor: stack.NeighborEntry{
-				Addr:           ipv4Addr,
-				LinkAddr:       "\x0a\x00\x00\x00\x00\x01",
-				State:          stack.Reachable,
-				UpdatedAtNanos: 1,
+				Addr:      ipv4Addr,
+				LinkAddr:  "\x0a\x00\x00\x00\x00\x01",
+				State:     stack.Reachable,
+				UpdatedAt: time.Unix(0, 1),
 			},
 		},
 		{
 			name: "IPv6",
 			neighbor: stack.NeighborEntry{
-				Addr:           ipv6Addr,
-				LinkAddr:       "\x0a\x00\x00\x00\x00\x02",
-				State:          stack.Stale,
-				UpdatedAtNanos: 2,
+				Addr:      ipv6Addr,
+				LinkAddr:  "\x0a\x00\x00\x00\x00\x02",
+				State:     stack.Stale,
+				UpdatedAt: time.Unix(0, 2),
 			},
 		},
 	}
@@ -854,7 +855,7 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 						{Key: "State", Value: inspect.PropertyValueWithStr(test.neighbor.State.String())},
 					},
 					Metrics: []inspect.Metric{
-						{Key: "Last updated", Value: inspect.MetricValueWithIntValue(test.neighbor.UpdatedAtNanos)},
+						{Key: "Last updated", Value: inspect.MetricValueWithIntValue(test.neighbor.UpdatedAt.UnixNano())},
 					},
 				},
 				impl.ReadData(),

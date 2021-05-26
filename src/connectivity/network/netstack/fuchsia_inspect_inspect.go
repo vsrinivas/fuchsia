@@ -959,7 +959,7 @@ func (impl *neighborInfoInspectImpl) ReadData() inspect.Object {
 			{Key: "State", Value: inspect.PropertyValueWithStr(impl.value.State.String())},
 		},
 		Metrics: []inspect.Metric{
-			{Key: "Last updated", Value: inspect.MetricValueWithIntValue(impl.value.UpdatedAtNanos)},
+			{Key: "Last updated", Value: inspect.MetricValueWithIntValue(impl.value.UpdatedAt.UnixNano())},
 		},
 	}
 }
