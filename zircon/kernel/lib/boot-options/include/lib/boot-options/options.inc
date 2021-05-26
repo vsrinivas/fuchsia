@@ -82,7 +82,7 @@ jitterentropy chooses the number of loops is a random-ish way.
 )""")
 
 DEFINE_OPTION("kernel.jitterentropy.ll", uint32_t, jitterentropy_ll, {1}, R"""(
-Sets the "LFSR loops" parameter for jitterentropy (the default is 1). When
+Sets the "LFSR loops" parameter for jitterentropy. When
 jitterentropy is performing CPU-intensive LFSR operations (to increase variation
 in CPU timing), this controls how many times the LFSR routine is repeated.  This
 parameter is only used when `kernel.jitterentropy.raw` is true. If the value of
@@ -91,7 +91,7 @@ jitterentropy chooses the number of loops is a random-ish way.
 )""")
 
 DEFINE_OPTION("kernel.jitterentropy.raw", bool, jitterentropy_raw, {true}, R"""(
-When true (the default), the jitterentropy entropy collector will return raw,
+When true, the jitterentropy entropy collector will return raw,
 unprocessed samples. When false, the raw samples will be processed by
 jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
