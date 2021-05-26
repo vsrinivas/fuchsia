@@ -10,7 +10,7 @@ In the `Echo` implementation from the [server tutorial][server-tut], the server 
 to `EchoString` requests using the completer.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" highlight="14,15,16" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" highlight="12,13,14,15,16,17,18,19,20" %}
 ```
 
 Notice that the type for the completer has `::Sync`. This indicates the default mode of operation:
@@ -69,8 +69,13 @@ request value back to the client.
 
 A key point is that the completer being moved into the lambda capture is the async completer. A
 `::Sync` completer can be converted to the `::Async` counterpart by using the `ToAsync()` method.
-
 For further information on the completer API, refer to the [LLCPP bindings reference][bindings-ref].
+
+Another noteworthy aspect is that the request views provided to method handlers
+do not own the request message. In order to use the request parameters after the
+`EchoString` method returns, we need to copy relevant fields to an owned type,
+here `value_owned` in the lambda captures. For further information on the memory
+ownership, refer to the [LLCPP Memory Management][memory-management].
 
 ## Run the example
 
@@ -107,3 +112,4 @@ By using the async completer, the client receives all 3 responses after 5 second
 [client-tut]: /docs/development/languages/fidl/tutorials/llcpp/basics/client.md
 [overview]: /docs/development/languages/fidl/tutorials/llcpp/README.md
 [bindings-ref]: /docs/reference/fidl/bindings/llcpp-bindings.md#server-completers
+[memory-management]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md

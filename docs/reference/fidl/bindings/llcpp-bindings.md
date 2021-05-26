@@ -517,10 +517,10 @@ Dereferencing a `fidl::Client` provides access to the following methods:
 * `fidl::Result StartGame(::fidl::BufferSpan _request_buffer, bool
   start_first)`: Caller-allocated variant of a fire and forget method.
 * `fidl::Result MakeMove(uint8_t row, uint8_t col,
-  fit::callback<void(TicTacToeResponse* response)>
+  fit::callback<void(fidl::WireResponse<TicTacToe::MakeMove>* response)>
   _cb)`: Managed variant of an asynchronous two way method. It takes a
   callback to handle responses as the last argument. The callback is executed
-  on response in a dispatcher thread. The returned `fidl::StatusAndError` refers
+  on response in a dispatcher thread. The returned `fidl::Result` refers
   just to the status of the outgoing call.
 * `fidl::Result MakeMove(fidl::BufferSpan _request_buffer, uint8_t row,
   uint8_t col, MakeMoveResponseContext* _context)`: Asynchronous,
@@ -528,7 +528,7 @@ Dereferencing a `fidl::Client` provides access to the following methods:
   context, which is explained below.
 * `ResultOf::MakeMove MakeMove_Sync(uint8_t row, uint8_t col)`: Synchronous,
   managed variant of a two way method. The same method exists on `SyncClient`.
-* `UnownedResultOf::MakeMove_sync(fidl::BufferSpan _request_bufffer, uint8_t row,
+* `UnownedResultOf::MakeMove_sync(fidl::BufferSpan _request_buffer, uint8_t row,
   uint8_t col, fidl::BufferSpan _response_buffer)`: Synchronous, caller-allocated
   variant of a two way method. The same method exists on `SyncClient`.
 
@@ -750,6 +750,8 @@ accessed using the arrow operator and the argument name.
 For example:
 * `request->start_first`
 * `request->row`
+
+See [LLCPP memory guide][llcpp-allocation] for notes on request lifetime.
 
 #### Completers {#server-completers}
 

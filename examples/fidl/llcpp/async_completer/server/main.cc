@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 
 #include <iostream>
+#include <string>
 
 // [START impl]
 class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
@@ -28,10 +29,14 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
     // rather than in sequence.
     async::PostDelayedTask(
         dispatcher_,
-        // The lambda capturing `completer` must be marked mutable, because making a
-        // reply using the completer mutates it such that duplicate repies will panic.
-        [value = request->value, completer = completer.ToAsync()]() mutable {
-          completer.Reply(value);
+        [
+            // The buffer referenced by the request view only lives until the end
+            // of the |EchoString| call. Convert it to an owned value to use asynchronously.
+            value_owned = std::string(request->value.get()),
+            // The lambda capturing `completer` must be marked mutable, because making a
+            // reply using the completer mutates it such that duplicate replies will panic.
+            completer = completer.ToAsync()]() mutable {
+          completer.Reply(fidl::StringView::FromExternal(value_owned));
         },
         zx::duration(ZX_SEC(5)));
   }
