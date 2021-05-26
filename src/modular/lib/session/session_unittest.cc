@@ -39,12 +39,8 @@ class SessionTest : public gtest::RealLoopFixture {
   }
 
   // Serves a protocol at the given |path|.
-  //
-  // Can only be called once per test.
   template <typename Interface>
   void ServeProtocolAt(std::string_view path, fidl::InterfaceRequestHandler<Interface> handler) {
-    FX_CHECK(!protocol_server_);
-
     // Split the path into two parts: a path to a directory, and the last segment,
     // an entry in that directory.
     auto path_split = fxl::SplitStringCopy(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
@@ -55,17 +51,25 @@ class SessionTest : public gtest::RealLoopFixture {
     path_split.pop_back();
     auto namespace_path = files::JoinPath("/", fxl::JoinStrings(path_split, "/"));
 
-    auto vfs = std::make_unique<vfs::PseudoDir>();
-    ASSERT_EQ(ZX_OK, vfs->AddEntry(entry_name, std::make_unique<vfs::Service>(std::move(handler))));
+    auto new_protocol_server =
+        std::make_unique<modular::PseudoDirServer>(std::make_unique<vfs::PseudoDir>());
 
-    protocol_server_ = std::make_unique<modular::PseudoDirServer>(std::move(vfs));
-    BindNamespacePath(namespace_path, protocol_server_->Serve().Unbind().TakeChannel());
+    const auto& [it, inserted] =
+        protocol_servers_.try_emplace(namespace_path, std::move(new_protocol_server));
+
+    auto& protocol_server = it->second;
+    auto dir = protocol_server->pseudo_dir();
+    ASSERT_EQ(ZX_OK, dir->AddEntry(entry_name, std::make_unique<vfs::Service>(std::move(handler))));
+
+    if (inserted) {
+      BindNamespacePath(namespace_path, protocol_server->Serve().Unbind().TakeChannel());
+    }
   }
 
  private:
   fdio_ns_t* ns_ = nullptr;
   std::vector<std::string> bound_ns_paths_;
-  std::unique_ptr<modular::PseudoDirServer> protocol_server_;
+  std::map<std::string, std::unique_ptr<modular::PseudoDirServer>> protocol_servers_;
 };
 
 class TestComponentController : fuchsia::sys::ComponentController {
@@ -196,8 +200,8 @@ TEST_F(SessionTest, ConnectToBasemgrDebugV1) {
 }
 
 // Tests that |ConnectToBasemgrDebug| can connect to |BasemgrDebug| served under
-// the hub-v2 path that exists when basemgr is running as a session.
-TEST_F(SessionTest, ConnectToBasemgrDebugSession) {
+// the hub-v2 path that exists when basemgr is running as a v2 session.
+TEST_F(SessionTest, ConnectToBasemgrDebugV2Session) {
   static constexpr auto kTestBasemgrDebugPath =
       "/hub-v2/children/core/children/session-manager/children/session:session/"
       "exec/expose/fuchsia.modular.internal.BasemgrDebug";
@@ -224,12 +228,13 @@ TEST_F(SessionTest, ConnectToBasemgrDebugSession) {
   EXPECT_TRUE(got_request);
 }
 
-// Tests that Launch starts basemgr as a v1 component with the fuchsia::sys::Launcher protocol.
-TEST_F(SessionTest, Launch) {
-  sys::testing::FakeLauncher launcher;
+// Tests that Launch starts basemgr as a v1 component when basemgr is not already
+// running either as a v2 session or v1 component.
+TEST_F(SessionTest, LaunchAsV1) {
+  sys::testing::FakeLauncher sys_launcher;
 
   bool launched{false};
-  launcher.RegisterComponent(
+  sys_launcher.RegisterComponent(
       kBasemgrV1Url,
       [&](fuchsia::sys::LaunchInfo launch_info,
           fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request) {
@@ -241,33 +246,101 @@ TEST_F(SessionTest, Launch) {
         controller.SendOnDirectoryReady();
       });
 
-  auto result = RunPromise(modular::session::Launch(&launcher, modular::DefaultConfig()));
+  // basemgr should not be running as either a session or v1 component.
+  ASSERT_FALSE(modular::session::IsBasemgrRunning());
+
+  auto result = RunPromise(modular::session::Launch(&sys_launcher, modular::DefaultConfig()));
   EXPECT_TRUE(result.is_ok());
 
   EXPECT_TRUE(launched);
 }
 
-// Tests that Launch provides basemgr with confiuration in /config_override in its namespace.
-TEST_F(SessionTest, LaunchProvidesConfig) {
+// Tests that Launch uses the |fuchsia.modular.session.Launcher| protocol to launch
+// sessionmgr when basemgr is running as a v2 session.
+TEST_F(SessionTest, LaunchAsV2Session) {
+  static constexpr auto kTestBasemgrDebugPath =
+      "/hub-v2/children/core/children/session-manager/children/session:session/"
+      "exec/expose/fuchsia.modular.internal.BasemgrDebug";
+  static constexpr auto kTestLauncherPath =
+      "/hub-v2/children/core/children/session-manager/children/session:session/"
+      "exec/expose/fuchsia.modular.session.Launcher";
+
+  // Serve the |BasemgrDebug| service in the process namespace at the path |kTestBasemgrDebugPath|.
+  TestBasemgrDebug basemgr_debug;
+  ServeProtocolAt<fuchsia::modular::internal::BasemgrDebug>(kTestBasemgrDebugPath,
+                                                            basemgr_debug.GetHandler());
+
+  // basemgr is running as a v2 session if the session exposes BasemgrDebug.
+  ASSERT_EQ(modular::session::BasemgrRuntimeState::kV2Session,
+            modular::session::GetBasemgrRuntimeState());
+
+  // Serve the |Launcher| protocol in the process namespace at the path |kTestLauncherPath|.
+  TestLauncher launcher;
+  ServeProtocolAt<fuchsia::modular::session::Launcher>(kTestLauncherPath, launcher.GetHandler());
+
+  sys::testing::FakeLauncher sys_launcher;
+  sys_launcher.RegisterComponent(
+      kBasemgrV1Url,
+      [&](fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request) {
+        FX_NOTREACHED() << "basemgr should not be started as a v1 component";
+      });
+
+  auto result = RunPromise(modular::session::Launch(&sys_launcher, modular::DefaultConfig()));
+  EXPECT_TRUE(result.is_ok());
+
+  // The v2 session should not have been shut down.
+  ASSERT_TRUE(basemgr_debug.is_running());
+
+  // The |fuchsia.modular.session.Launcher| protocol should have been called.
+  RunLoopUntil([&]() { return launcher.is_launched(); });
+  ASSERT_NE(nullptr, launcher.config());
+}
+
+// Tests that LaunchBasemgrV1 starts basemgr as a v1 component with the fuchsia::sys::Launcher
+// protocol.
+TEST_F(SessionTest, LaunchBasemgrV1) {
+  sys::testing::FakeLauncher sys_launcher;
+
+  bool launched{false};
+  sys_launcher.RegisterComponent(
+      kBasemgrV1Url,
+      [&](fuchsia::sys::LaunchInfo launch_info,
+          fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request) {
+        launched = true;
+
+        // Launch must receive the OnDirectoryReady event to return.
+        TestComponentController controller;
+        controller.Connect(std::move(controller_request));
+        controller.SendOnDirectoryReady();
+      });
+
+  auto result =
+      RunPromise(modular::session::LaunchBasemgrV1(&sys_launcher, modular::DefaultConfig()));
+  EXPECT_TRUE(result.is_ok());
+
+  EXPECT_TRUE(launched);
+}
+
+// Tests that LaunchBasemgrV1 provides basemgr with confiuration in /config_override in its
+// namespace.
+TEST_F(SessionTest, LaunchBasemgrV1ProvidesConfig) {
   // Number of bytes to read from the config file.
   static constexpr auto kReadCount = 1024;
 
-  static constexpr auto kTestSessionLauncherUrl = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
-  sys::testing::FakeLauncher launcher;
-
   // Create a ModularConfig to pass to basemgr with some non-default contents.
   auto modular_config = modular::DefaultConfig();
-  modular_config.mutable_basemgr_config()->mutable_session_launcher()->set_url(
-      kTestSessionLauncherUrl);
-
+  modular_config.mutable_basemgr_config()->set_use_session_shell_for_story_shell_factory(true);
   auto expected_config_str = modular::ConfigToJsonString(modular_config);
 
   // Create an async loop to serve basemgr's namespace directory.
   async::Loop serve_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   serve_loop.StartThread();
 
+  sys::testing::FakeLauncher sys_launcher;
+
   bool launched{false};
-  launcher.RegisterComponent(
+  sys_launcher.RegisterComponent(
       kBasemgrV1Url,
       [&, expected_config_str = std::move(expected_config_str)](
           fuchsia::sys::LaunchInfo launch_info,
@@ -308,30 +381,28 @@ TEST_F(SessionTest, LaunchProvidesConfig) {
         controller.SendOnDirectoryReady();
       });
 
-  auto result = RunPromise(
-      modular::session::Launch(&launcher, std::move(modular_config), serve_loop.dispatcher()));
+  auto result = RunPromise(modular::session::LaunchBasemgrV1(
+      &sys_launcher, std::move(modular_config), serve_loop.dispatcher()));
   EXPECT_TRUE(result.is_ok());
 
   EXPECT_TRUE(launched);
 }
 
-// Tests that LaunchSessionmgr can call the Launcher protocol exposed by a session under
-// a hub-v2 path with a given config.
+// Tests that LaunchSessionmgr calls the |fuchsia.modular.session.Launcher| protocol
+// exposed by a session under a hub-v2 path with a given config.
 TEST_F(SessionTest, LaunchSessionmgr) {
   static constexpr auto kTestLauncherPath =
       "/hub-v2/children/core/children/session-manager/children/session:session/"
       "exec/expose/fuchsia.modular.session.Launcher";
 
-  static constexpr auto kTestSessionLauncherUrl = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
-
-  // Serve the |Launcher| protocol in the process namespace at the path |kTestLauncherPath|.
+  // Serve the |fuchsia.modular.sessionLauncher| protocol in the process namespace
+  // at the path |kTestLauncherPath|.
   TestLauncher launcher;
   ServeProtocolAt<fuchsia::modular::session::Launcher>(kTestLauncherPath, launcher.GetHandler());
 
   // Create a ModularConfig to pass to Launcher with some non-default contents.
   auto modular_config = modular::DefaultConfig();
-  modular_config.mutable_basemgr_config()->mutable_session_launcher()->set_url(
-      kTestSessionLauncherUrl);
+  modular_config.mutable_basemgr_config()->set_use_session_shell_for_story_shell_factory(true);
 
   auto result = modular::session::LaunchSessionmgr(std::move(modular_config));
   EXPECT_TRUE(result.is_ok());
@@ -339,12 +410,12 @@ TEST_F(SessionTest, LaunchSessionmgr) {
   RunLoopUntil([&]() { return launcher.is_launched(); });
 
   ASSERT_NE(nullptr, launcher.config());
-  EXPECT_EQ(kTestSessionLauncherUrl, launcher.config()->basemgr_config().session_launcher().url());
+  EXPECT_EQ(true, launcher.config()->basemgr_config().use_session_shell_for_story_shell_factory());
 }
 
-// Tests that Shutdown can shut down basemgr when the |BasemgrDebug| protocol is served
+// Tests that MaybeShutdownBasemgr can shut down basemgr when the |BasemgrDebug| protocol is served
 // under the hub path that exists when basemgr is running as a v1 component.
-TEST_F(SessionTest, ShutdownV1) {
+TEST_F(SessionTest, MaybeShutdownBasemgrV1) {
   static constexpr auto kTestBasemgrDebugPath = "/hub/c/basemgr.cmx/12345/out/debug/basemgr";
 
   // Serve the |BasemgrDebug| service in the process namespace at the path |kTestBasemgrDebugPath|.
@@ -354,7 +425,7 @@ TEST_F(SessionTest, ShutdownV1) {
 
   ASSERT_TRUE(basemgr_debug.is_running());
 
-  auto result = RunPromise(modular::session::Shutdown());
+  auto result = RunPromise(modular::session::MaybeShutdownBasemgr());
   EXPECT_TRUE(result.is_ok());
 
   // Ensure that the proxy returned is connected to the instance served above.
@@ -362,10 +433,9 @@ TEST_F(SessionTest, ShutdownV1) {
   EXPECT_FALSE(basemgr_debug.is_running());
 }
 
-// Tests that Shutdown can shut down basemgr when the |BasemgrDebug| protocol is
-// served under the hub-v2 path that exists when basemgr is running as a
-// session.
-TEST_F(SessionTest, ShutdownSession) {
+// Tests that MaybeShutdownBasemgr can shut down basemgr when the |BasemgrDebug| protocol is
+// served under the hub-v2 path that exists when basemgr is running as a v2 session.
+TEST_F(SessionTest, MaybeShutdownBasemgrV2Session) {
   static constexpr auto kTestBasemgrDebugPath =
       "/hub-v2/children/core/children/session-manager/children/session:session/"
       "exec/expose/fuchsia.modular.internal.BasemgrDebug";
@@ -378,7 +448,7 @@ TEST_F(SessionTest, ShutdownSession) {
 
   ASSERT_TRUE(basemgr_debug.is_running());
 
-  auto result = RunPromise(modular::session::Shutdown());
+  auto result = RunPromise(modular::session::MaybeShutdownBasemgr());
   EXPECT_TRUE(result.is_ok());
 
   // Ensure that the proxy returned is connected to the instance served above.
@@ -389,10 +459,10 @@ TEST_F(SessionTest, ShutdownSession) {
 // Tests that DeletePersistentConfig invokes basemgr as a v1 component with the
 // "delete_persistent_config" argument.
 TEST_F(SessionTest, DeletePersistentConfig) {
-  sys::testing::FakeLauncher launcher;
+  sys::testing::FakeLauncher sys_launcher;
 
   bool launched{false};
-  launcher.RegisterComponent(
+  sys_launcher.RegisterComponent(
       kBasemgrV1Url,
       [&](fuchsia::sys::LaunchInfo launch_info,
           fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request) {
@@ -407,7 +477,7 @@ TEST_F(SessionTest, DeletePersistentConfig) {
         controller.SendOnTerminated(EXIT_SUCCESS, fuchsia::sys::TerminationReason::EXITED);
       });
 
-  auto result = RunPromise(modular::session::DeletePersistentConfig(&launcher));
+  auto result = RunPromise(modular::session::DeletePersistentConfig(&sys_launcher));
   EXPECT_TRUE(result.is_ok());
 
   EXPECT_TRUE(launched);

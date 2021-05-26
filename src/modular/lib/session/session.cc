@@ -58,55 +58,81 @@ std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
 
 }  // namespace
 
-bool IsRunning() {
+std::optional<BasemgrRuntimeState> GetBasemgrRuntimeState() {
   // If there exists a path that exposes the BasemgrDebug protocol, then basemgr is running.
-  return files::Glob({kBasemgrDebugSessionGlob, kBasemgrDebugV1Glob}).size() != 0;
+  if (files::Glob(kBasemgrDebugSessionGlob).size() != 0) {
+    return std::make_optional(BasemgrRuntimeState::kV2Session);
+  }
+  if (files::Glob(kBasemgrDebugV1Glob).size() != 0) {
+    return std::make_optional(BasemgrRuntimeState::kV1Component);
+  }
+  return std::nullopt;
 }
+
+bool IsBasemgrRunning() { return GetBasemgrRuntimeState().has_value(); }
 
 fit::promise<void, zx_status_t> Launch(fuchsia::sys::Launcher* launcher,
                                        fuchsia::modular::session::ModularConfig config,
                                        async_dispatcher_t* dispatcher) {
-  auto shutdown_if_running = fit::make_promise([]() -> fit::promise<void, zx_status_t> {
-    if (IsRunning()) {
-      return Shutdown();
-    }
-    return fit::make_result_promise<void, zx_status_t>(fit::ok());
-  });
+  auto basemgr_runtime_state = GetBasemgrRuntimeState();
 
-  return shutdown_if_running
+  auto shutdown_basemgr_v1 =
+      fit::make_promise([basemgr_runtime_state]() -> fit::promise<void, zx_status_t> {
+        // Only shut down basemgr if it's running as a v1 component. If it's running as a v2
+        // session, it needs to stay running for |LaunchSessionmgr| to connect to Launcher.
+        if (basemgr_runtime_state == BasemgrRuntimeState::kV1Component) {
+          return MaybeShutdownBasemgr();
+        }
+        return fit::make_result_promise<void, zx_status_t>(fit::ok());
+      });
+
+  return shutdown_basemgr_v1
       .or_else([](const zx_status_t& status) {
-        FX_PLOGS(ERROR, status) << "Could not shut down running instance of basemgr";
+        FX_PLOGS(ERROR, status) << "Could not shut down basemgr v1 component";
         return fit::error(status);
       })
-      .and_then([launcher, config = std::move(config), dispatcher]() {
-        fit::bridge<void, zx_status_t> bridge;
+      .and_then([launcher, config = std::move(config), dispatcher,
+                 basemgr_runtime_state]() mutable -> fit::promise<void, zx_status_t> {
+        // If basemgr is running as a session, instruct it to launch sessionmgr.
+        if (basemgr_runtime_state == BasemgrRuntimeState::kV2Session) {
+          return fit::make_result_promise(LaunchSessionmgr(std::move(config)));
+        }
 
-        // Create the pseudo directory with our config "file" mapped to kConfigFilename.
-        auto config_dir = CreateConfigPseudoDir(modular::ConfigToJsonString(config));
-        fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-        config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel(),
-                          dispatcher);
+        // Otherwise, launch basemgr as a v1 component.
+        return LaunchBasemgrV1(launcher, std::move(config), dispatcher);
+      });
+}
 
-        // Build a LaunchInfo with the config directory above mapped to /config_override/data.
-        fuchsia::sys::LaunchInfo launch_info;
-        launch_info.url = kBasemgrV1Url;
-        launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
-        launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-        launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
+fit::promise<void, zx_status_t> LaunchBasemgrV1(fuchsia::sys::Launcher* launcher,
+                                                fuchsia::modular::session::ModularConfig config,
+                                                async_dispatcher_t* dispatcher) {
+  fit::bridge<void, zx_status_t> bridge;
 
-        // Complete when basemgr's out directory has been mounted.
-        fuchsia::sys::ComponentControllerPtr controller;
-        controller.events().OnDirectoryReady = [completer = std::move(bridge.completer)]() mutable {
-          completer.complete_ok();
-        };
+  // Create the pseudo directory with our config "file" mapped to kConfigFilename.
+  auto config_dir = CreateConfigPseudoDir(modular::ConfigToJsonString(config));
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
+  config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel(),
+                    dispatcher);
 
-        // Launch a basemgr instance with the custom namespace we created above.
-        launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+  // Build a LaunchInfo with the config directory above mapped to /config_override/data.
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kBasemgrV1Url;
+  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
+  launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 
-        return bridge.consumer.promise().and_then(
-            [controller = std::move(controller), config_dir = std::move(config_dir)]() {
-              controller->Detach();
-            });
+  // Complete when basemgr's out directory has been mounted.
+  fuchsia::sys::ComponentControllerPtr controller;
+  controller.events().OnDirectoryReady = [completer = std::move(bridge.completer)]() mutable {
+    completer.complete_ok();
+  };
+
+  // Launch a basemgr instance with the custom namespace we created above.
+  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+
+  return bridge.consumer.promise().and_then(
+      [controller = std::move(controller), config_dir = std::move(config_dir)]() {
+        controller->Detach();
       });
 }
 
@@ -132,8 +158,8 @@ fit::result<void, zx_status_t> LaunchSessionmgr(fuchsia::modular::session::Modul
   return fit::ok();
 }
 
-fit::promise<void, zx_status_t> Shutdown() {
-  if (!IsRunning()) {
+fit::promise<void, zx_status_t> MaybeShutdownBasemgr() {
+  if (!IsBasemgrRunning()) {
     return fit::make_result_promise<void, zx_status_t>(fit::ok());
   }
 

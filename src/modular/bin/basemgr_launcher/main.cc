@@ -126,7 +126,7 @@ int main(int argc, const char** argv) {
   context->svc()->Connect(launcher.NewRequest());
 
   if (cmd == kShutdownBasemgrCommandString) {
-    return ToStatus(RunPromise(&loop, modular::session::Shutdown()));
+    return ToStatus(RunPromise(&loop, modular::session::MaybeShutdownBasemgr()));
   }
   if (cmd == kDeleteConfigCommandString) {
     return ToStatus(RunPromise(&loop, modular::session::DeletePersistentConfig(launcher.get())));
