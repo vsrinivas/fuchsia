@@ -22,7 +22,17 @@
             "fuchsia.sys.Loader",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.ui.activity.Provider",
-            "fuchsia.vulkan.loader.Loader"
+            "fuchsia.ui.annotation.Registry",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.PointerCaptureListenerRegistry",
+            "fuchsia.ui.pointerinjector.Registry",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.vulkan.loader.Loader",
+            "fuchsia.recovery.ui.FactoryResetCountdown",
+            "fuchsia.ui.views.accessibility.FocuserRegistry",
+            "fuchsia.ui.policy.DeviceListenerRegistry",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.input.accessibility.PointerEventRegistry"
         ]
     }
 }
