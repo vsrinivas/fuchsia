@@ -52,12 +52,14 @@ Commands
         -f: file path or url to a source config file
         -h: SHA256 hash of source config file (optional, with URL)
         -x: [Obsolete] do not disable other active sources (if the provided source is enabled)
+        -p: Persist TUF metadata for repositories provided to the RepoManager.
         -verbose: [Temporary] show extra logs
 
     add_repo_cfg  - add a repository config to the set of known repositories, using a source config
         -n: name of the update source (optional, with URL)
         -f: file path or url to a source config file
         -h: SHA256 hash of source config file (optional, with URL)
+        -p: Persist TUF metadata for repositories provided to the RepoManager.
         -verbose: [Temporary] show extra logs
 
     rm_src        - remove a source, if it exists, disabling all remaining sources
@@ -86,6 +88,7 @@ var (
 	version      = fs.String("v", "", "Version of a package")
 	merkle       = fs.String("m", "", "Merkle root of the desired update.")
 	nonExclusive = fs.Bool("x", false, "[Obsolete] When adding or enabling a source, do not disable other sources.")
+	persistRepos = fs.Bool("p", false, "Persist TUF metadata for repositories provided to the RepoManager.")
 	verbose      = fs.Bool("verbose", false, "[Temporary] Show more logs for addSource.")
 )
 
@@ -222,6 +225,11 @@ func upgradeSourceConfig(cfg SourceConfig) pkg.RepositoryConfig {
 
 		repoCfg.RootKeys = append(repoCfg.RootKeys, rootKey)
 		repoCfg.RootKeysPresent = true
+	}
+
+	if *persistRepos {
+		repoCfg.StorageType = pkg.RepositoryStorageTypePersistent
+		repoCfg.StorageTypePresent = true
 	}
 
 	return repoCfg

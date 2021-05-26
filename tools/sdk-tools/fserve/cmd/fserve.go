@@ -66,6 +66,8 @@ type sdkProvider interface {
 	RunSSHCommand(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) (string, error)
 }
 
+var persistFlag = flag.Bool("persist", false, "Persist repository metadata to allow serving resolved packages across reboot.")
+
 func main() {
 	var (
 		err error
@@ -494,6 +496,10 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 
 	sshArgs := []string{"amber_ctl", "add_src", "-n", name, "-f",
 		fmt.Sprintf("http://%v:%v/config.json", hostIP, repoPort)}
+
+	if *persistFlag {
+		sshArgs = append(sshArgs, "-persist")
+	}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel
 	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, verbose, sshArgs); err != nil {

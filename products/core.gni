@@ -89,6 +89,7 @@ base_package_labels += [
   "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/pkg-resolver:enable_dynamic_configuration",
+  "//src/sys/pkg/bin/pkg-resolver:persisted_repos_dir",
   "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
   "//src/sys/stash:pkg",
   "//src/sys/time/httpsdate_time_source:httpsdate-time-source",

@@ -13,6 +13,7 @@
 ##   --name NAME      Name the generated update source config NAME.
 ##   --addr ADDR      Specify the package server address explicitly.
 ##   --port PORT      The port at ADDR on which the package server is running (default: 8083).
+##   --[no-]persist   Enable or disable persistence of repo metadata. Disabled by default.
 ##
 ## ADDR:
 ## Any IPv4 / IPv6 address or publicly reachable DNS name.
@@ -41,6 +42,7 @@ function main {
   addr=""
   port="8083"
   source_name="devhost"
+  persist=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
       --addr)
@@ -57,6 +59,11 @@ function main {
       --name)
         source_name="$2"
         shift
+        ;;
+      --no-persist)
+        ;;
+      --persist)
+        persist="-persist"
         ;;
       *)
         fx-error "Unrecognized option: $1"
@@ -86,7 +93,8 @@ function main {
 
   fx-command-run shell amberctl add_src \
     -n "${source_name}" \
-    -f "${config_url}"
+    -f "${config_url}" \
+    "${persist}"
   err=$?
 
   if [[ $err -ne 0 ]]; then

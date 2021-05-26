@@ -8,6 +8,7 @@
 ## usage: fx serve [-v] [-l host[:port]] [-a target]
 ##   -l host:port for "pm serve" to listen on
 ##   --no-auto-config do not configure this host as a package server on the device
+##   --[no-]persist enable or disable persistent repo metadata. Disabled by default.
 ##   -v enable more verbose output (must be first argument)
 ##   -a target ipv6 address for "fx pave --no-bind"
 ##
@@ -38,7 +39,7 @@ kill_child_processes() {
 }
 trap kill_child_processes EXIT
 
-serve_args=()
+serve_args=("--no-persist")
 pave_args=(--reuseport)
 
 fx-standard-switches "$@"
@@ -51,6 +52,11 @@ while (($#)); do
       ;;
     --no-auto-config)
       serve_args+=("$1")
+      ;;
+    --no-persist)
+      ;;
+    --persist)
+      serve_args+=("--persist")
       ;;
     -l)
       serve_args+=("$1" "$2")

@@ -14,6 +14,8 @@
 ##  --no-serve                    only tunnel, do not start a package server
 ##  --no-check-ssh-keys  do not verify that the default SSH
 ##                                credentials are the same before serving.
+##  --[no-]persist                enable or disable persistence of repository metadata.
+##                                Disabled by default.
 ##  --tunnel-ports=NNN1,NNN2,NNN3 comma-separated list of additional ports to
 ##                                tunnel. This is used for e2e tests running on
 ##                                remote host that needs to reach the local device.
@@ -34,6 +36,7 @@ check_ssh_keys=true
 verbose=false
 host=""
 dir=""
+serve_persist_arg="--no-persist"
 has_tunnel_ports=false
 
 while [[ $# -ne 0 ]]; do
@@ -47,6 +50,11 @@ while [[ $# -ne 0 ]]; do
     ;;
   --no-check-ssh-keys)
     check_ssh_keys=false
+    ;;
+  --no-persist)
+    ;;
+  --persist)
+    serve_persist_arg="--persist"
     ;;
   -v)
     verbose=true
@@ -226,7 +234,7 @@ if "${serve}"; then
   fi
   ssh_serve_args=(
     "-tt" # explicitly force a pty, for HUP'ing on the remote
-    "cd ${dir} && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx set-device '${_FX_REMOTE_WORKFLOW_DEVICE_ADDR}' && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx serve-updates${serve_verbose_arg}"
+    "cd ${dir} && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx set-device '${_FX_REMOTE_WORKFLOW_DEVICE_ADDR}' && FX_REMOTE_INVOCATION=1 ./.jiri_root/bin/fx serve-updates${serve_verbose_arg} ${serve_persist_arg}"
   )
   ssh "${host}" "${ssh_base_args[@]}" "${ssh_serve_args[@]}"
 else

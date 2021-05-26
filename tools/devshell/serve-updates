@@ -8,6 +8,8 @@
 ## usage: fx serve-updates [-v] [-l host[:port]] [--no-auto-config]
 ##   -l host:port       host and port that "pm serve" will listen on
 ##   --no-auto-config   do not configure this host as a package server on the device
+##   --[no-]persist     enable or disable persistence of repository metadata. Disabled
+##                      by default.
 ##   -v                 verbose mode, shows info and debug messages from "pm"
 ##   -C|--clean         clean the package repository first. This flag is only
 ##                      valid if the incremental package publishing is enabled.
@@ -33,12 +35,18 @@ serve_flags=()
 verbose=false
 auto_config=true
 clean_first=false
+persist="--no-persist"
 while (($#)); do
   case "$1" in
     -l)
       shift
       port="${1##*:}"
       serve_flags+=(-l "$1")
+      ;;
+    --no-persist)
+      ;;
+    --persist)
+      persist="--persist"
       ;;
     --no-auto-config)
       auto_config=false
@@ -203,7 +211,7 @@ while true; do
 
   if [[ "$state" == "config" ]]; then
     log "Registering devhost as update source"
-    if with-pinned-target fx-command-run add-update-source --port "${port}"; then
+    if with-pinned-target fx-command-run add-update-source ${persist} --port "${port}"; then
       log "Ready to push packages!"
       # Log the uptime so that it is clear(er) from fx serve if the device rebooted.
       # The tr is present as the output sometimes contains spurious control characters.

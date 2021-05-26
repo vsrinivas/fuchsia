@@ -51,6 +51,7 @@ fuchsia_shell_package("amberctl") {
   deps = [
     ":bin_underscore",
     ":component",
+    "//build/validate:non_production_tag",
   ]
 }
 
