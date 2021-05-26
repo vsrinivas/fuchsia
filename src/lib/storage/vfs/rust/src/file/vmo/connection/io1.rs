@@ -27,16 +27,10 @@ use {
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
-    //    fuchsia_runtime::vmar_root_self,
     fuchsia_zircon::{
-        //       self as zx,
+        self as zx,
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
-        AsHandleRef,
-        HandleBased,
-        Rights,
-        Status,
-        Vmo,
-        VmoChildOptions,
+        AsHandleRef, HandleBased,
     },
     futures::{lock::MutexGuard, stream::StreamExt},
     static_assertions::assert_eq_size,
@@ -186,7 +180,7 @@ impl FileConnection {
             match &mut *state {
                 AsyncFileState::Uninitialized => {
                     debug_assert!(false, "`ensure_vmo` did not initialize the state.");
-                    send_on_open_with_error(flags, server_end, Status::INTERNAL);
+                    send_on_open_with_error(flags, server_end, zx::Status::INTERNAL);
                     return;
                 }
                 AsyncFileState::Initialized { connection_count, .. } => {
@@ -220,13 +214,13 @@ impl FileConnection {
             match connection.get_node_info().await {
                 Ok(mut info) => {
                     let send_result =
-                        control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info));
+                        control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info));
                     if send_result.is_err() {
                         return;
                     }
                 }
                 Err(status) => {
-                    debug_assert!(status != Status::OK);
+                    debug_assert!(status != zx::Status::OK);
                     control_handle.shutdown_with_epitaph(status);
                     return;
                 }
@@ -242,7 +236,7 @@ impl FileConnection {
         server_end: ServerEnd<NodeMarker>,
     ) -> Result<
         (MutexGuard<'state_guard, AsyncFileState>, ServerEnd<NodeMarker>),
-        (Status, ServerEnd<NodeMarker>),
+        (zx::Status, ServerEnd<NodeMarker>),
     > {
         if let AsyncFileState::Initialized { .. } = *state {
             return Ok((state, server_end));
@@ -278,7 +272,7 @@ impl FileConnection {
                         Err(status) => return Err((status, server_end)),
                     };
                 }
-                Err(Status::UNAVAILABLE) => {
+                Err(zx::Status::UNAVAILABLE) => {
                     // VMO is not resizable.  Try to use what we got.
                     size = vmo_size;
                 }
@@ -303,15 +297,15 @@ impl FileConnection {
         state: &mut AsyncFileState,
         new_size: u64,
         seek: &mut u64,
-    ) -> Result<(), Status> {
+    ) -> Result<(), zx::Status> {
         update_initialized_state! {
             match state;
-            error: "truncate_vmo" => Err(Status::INTERNAL);
+            error: "truncate_vmo" => Err(zx::Status::INTERNAL);
             { vmo, vmo_size, size, capacity, .. } => {
                 let effective_capacity = core::cmp::max(*size, *capacity);
 
                 if new_size > effective_capacity {
-                    break Err(Status::OUT_OF_RANGE);
+                    break Err(zx::Status::OUT_OF_RANGE);
                 }
 
                 assert_eq_size!(usize, u64);
@@ -387,15 +381,15 @@ impl FileConnection {
     }
 
     /// Returns `NodeInfo` for the VMO file.
-    async fn get_node_info(&mut self) -> Result<NodeInfo, Status> {
+    async fn get_node_info(&mut self) -> Result<NodeInfo, zx::Status> {
         if self.flags & &OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
             Ok(NodeInfo::File(FileObject { event: None, stream: None }))
         } else {
             let vmofile = update_initialized_state! {
                 match &*self.file.state().await;
-                error: "get_node_info" => Err(Status::INTERNAL);
+                error: "get_node_info" => Err(zx::Status::INTERNAL);
                 { vmo, size, .. } => {
-                    let vmo = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap();
+                    let vmo = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
                     Ok(Vmofile {vmo, offset: 0, length: *size})
                 }
             }?;
@@ -421,7 +415,7 @@ impl FileConnection {
             FileRequest::Describe { responder } => match self.get_node_info().await {
                 Ok(mut info) => responder.send(&mut info)?,
                 Err(status) => {
-                    debug_assert!(status != Status::OK);
+                    debug_assert!(status != zx::Status::OK);
                     responder.control_handle().shutdown_with_epitaph(status);
                 }
             },
@@ -527,27 +521,27 @@ impl FileConnection {
     /// necessary.
     async fn handle_close<R>(&mut self, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
     {
         let (status, async_consume_task) = {
             let state = &mut *self.file.state().await;
             match state {
                 AsyncFileState::Uninitialized => {
                     debug_assert!(false, "`handle_close` called for a file with no connections");
-                    (Status::INTERNAL, None)
+                    (zx::Status::INTERNAL, None)
                 }
                 AsyncFileState::Initialized { connection_count: 1, .. } => {
                     match mem::replace(state, AsyncFileState::Uninitialized) {
                         AsyncFileState::Uninitialized => unreachable!(),
                         AsyncFileState::Initialized { vmo, .. } => {
-                            (Status::OK, Some(self.file.clone().consume_vmo(vmo)))
+                            (zx::Status::OK, Some(self.file.clone().consume_vmo(vmo)))
                         }
                     }
                 }
                 AsyncFileState::Initialized { connection_count, .. } => {
                     *connection_count -= 1;
 
-                    (Status::OK, None)
+                    (zx::Status::OK, None)
                 }
             }
         };
@@ -574,12 +568,12 @@ impl FileConnection {
 
     async fn handle_get_attr<R>(&mut self, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, NodeAttributes) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, NodeAttributes) -> Result<(), fidl::Error>,
     {
         let (status, size, capacity) = update_initialized_state! {
             match *self.file.state().await;
-            error: "handle_get_attr" => (Status::INTERNAL, 0, 0);
-            { size, capacity, .. } => (Status::OK, size, capacity)
+            error: "handle_get_attr" => (zx::Status::INTERNAL, 0, 0);
+            { size, capacity, .. } => (zx::Status::OK, size, capacity)
         };
 
         responder(
@@ -604,7 +598,7 @@ impl FileConnection {
     /// directly.
     async fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, &[u8]) -> Result<(), fidl::Error>,
     {
         let actual = self.handle_read_at(self.seek, count, responder).await?;
         self.seek += actual;
@@ -622,10 +616,10 @@ impl FileConnection {
         responder: R,
     ) -> Result<u64, fidl::Error>
     where
-        R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, &[u8]) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            responder(Status::BAD_HANDLE, &[])?;
+            responder(zx::Status::BAD_HANDLE, &[])?;
             return Ok(0);
         }
 
@@ -633,11 +627,12 @@ impl FileConnection {
 
         let (status, count, content) = update_initialized_state! {
             match &*self.file.state().await;
-            error: "handle_read_at" => (Status::INTERNAL, 0, vec![]);
+            error: "handle_read_at" => (zx::Status::INTERNAL, 0, vec![]);
             { vmo, size, .. } => {
                 if offset >= *size {
-                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK. See fxbug.dev/33425.
-                    break (Status::OK, 0, vec![]);
+                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK.
+                    // See fxbug.dev/33425.
+                    break (zx::Status::OK, 0, vec![]);
                 }
 
                 let count = core::cmp::min(count, *size - offset);
@@ -646,7 +641,7 @@ impl FileConnection {
                 buffer.resize(count as usize, 0);
 
                 match vmo.read(&mut buffer, offset) {
-                    Ok(()) => (Status::OK, count, buffer),
+                    Ok(()) => (zx::Status::OK, count, buffer),
                     Err(status) => (status, 0, vec![]),
                 }
             }
@@ -667,7 +662,7 @@ impl FileConnection {
     // handle_read() case above, so, for consistency, handle_write() has the same interface.
     async fn handle_write<R>(&mut self, content: &[u8], responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
         let actual = self.handle_write_at(self.seek, content, responder).await?;
         self.seek += actual;
@@ -690,10 +685,10 @@ impl FileConnection {
         responder: R,
     ) -> Result<u64, fidl::Error>
     where
-        R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            responder(Status::BAD_HANDLE, 0)?;
+            responder(zx::Status::BAD_HANDLE, 0)?;
             return Ok(0);
         }
 
@@ -701,12 +696,12 @@ impl FileConnection {
 
         let (status, actual) = update_initialized_state! {
             match &mut *self.file.state().await;
-            error: "handle_write_at" => (Status::INTERNAL, 0);
+            error: "handle_write_at" => (zx::Status::INTERNAL, 0);
             { vmo, vmo_size, size, capacity, .. } => {
                 let effective_capacity = core::cmp::max(*size, *capacity);
 
                 if offset >= effective_capacity {
-                    break (Status::OUT_OF_RANGE, 0);
+                    break (zx::Status::OUT_OF_RANGE, 0);
                 }
 
                 let mut actual = content.len() as u64;
@@ -740,7 +735,7 @@ impl FileConnection {
                 }
 
                 match vmo.write(&content, offset) {
-                    Ok(()) => (Status::OK, actual),
+                    Ok(()) => (zx::Status::OK, actual),
                     Err(status) => (status, 0),
                 }
             }
@@ -759,16 +754,16 @@ impl FileConnection {
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, u64) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-            responder(Status::BAD_HANDLE, 0)?;
+            responder(zx::Status::BAD_HANDLE, 0)?;
             return Ok(());
         }
 
         let (status, seek) = update_initialized_state! {
             match *self.file.state().await;
-            error: "handle_seek" => (Status::INTERNAL, 0);
+            error: "handle_seek" => (zx::Status::INTERNAL, 0);
             { size, capacity, .. } => {
                 let new_seek = match start {
                     SeekOrigin::Start => offset as i128,
@@ -786,12 +781,12 @@ impl FileConnection {
 
                 let effective_capacity = core::cmp::max(size as i128, capacity as i128);
                 if new_seek < 0 || new_seek >= effective_capacity {
-                    break (Status::OUT_OF_RANGE, self.seek);
+                    break (zx::Status::OUT_OF_RANGE, self.seek);
                 }
                 let new_seek = new_seek as u64;
 
                 self.seek = new_seek;
-                (Status::OK, new_seek)
+                (zx::Status::OK, new_seek)
             }
         };
 
@@ -802,26 +797,26 @@ impl FileConnection {
     /// Truncate to `length` the buffer associated with the connection. The corresponding pseudo
     /// file should have a size `capacity`. If after the truncation the seek position would be
     /// beyond the new end of the buffer, it is set to the end of the buffer. On a successful
-    /// truncate, [`Status::OK`] is sent to `responder`. On an error, the error code is sent to
+    /// truncate, [`zx::Status::OK`] is sent to `responder`. On an error, the error code is sent to
     /// `responder`, and this function returns `Ok(())`. If the responder returns an error, this
     /// function forwards that error back to the caller.
     async fn handle_truncate<R>(&mut self, length: u64, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return responder(Status::BAD_HANDLE);
+            return responder(zx::Status::BAD_HANDLE);
         }
 
         match Self::truncate_vmo(&mut *self.file.state().await, length, &mut self.seek) {
-            Ok(()) => responder(Status::OK),
+            Ok(()) => responder(zx::Status::OK),
             Err(status) => responder(status),
         }
     }
 
     async fn handle_get_buffer<R>(&mut self, flags: u32, responder: R) -> Result<(), fidl::Error>
     where
-        R: FnOnce(Status, Option<Buffer>) -> Result<(), fidl::Error>,
+        R: FnOnce(zx::Status, Option<Buffer>) -> Result<(), fidl::Error>,
     {
         let mode = match Self::get_buffer_validate_flags(flags, self.flags) {
             Err(status) => return responder(status, None),
@@ -830,7 +825,7 @@ impl FileConnection {
 
         let (status, buffer) = update_initialized_state! {
             match &*self.file.state().await;
-            error: "handle_write_at" => (Status::INTERNAL, None);
+            error: "handle_write_at" => (zx::Status::INTERNAL, None);
             { vmo, size, .. } => match mode {
                 // Logic here matches the io.fidl requirements and matches what works for memfs.
                 // Shared requests are satisfied by duplicating an handle, and private shares are
@@ -842,11 +837,11 @@ impl FileConnection {
                 // model currently implemented, it is very likely that adding another customization
                 // callback here will make the implementation of those files systems easier.
                 SharingMode::Shared => match Self::get_as_shared(&vmo, flags) {
-                    Ok(vmo) => (Status::OK, Some(Buffer { vmo, size: *size })),
+                    Ok(vmo) => (zx::Status::OK, Some(Buffer { vmo, size: *size })),
                     Err(status) => (status, None),
                 },
                 SharingMode::Private => match Self::get_as_private(&vmo, flags, *size) {
-                    Ok(vmo) => (Status::OK, Some(Buffer { vmo, size: *size })),
+                    Ok(vmo) => (zx::Status::OK, Some(Buffer { vmo, size: *size })),
                     Err(status) => (status, None),
                 },
             }
@@ -855,32 +850,35 @@ impl FileConnection {
         responder(status, buffer)
     }
 
-    fn get_vmo_rights(vmo: &Vmo, flags: u32) -> Result<Rights, Status> {
+    fn get_vmo_rights(vmo: &zx::Vmo, flags: u32) -> Result<zx::Rights, zx::Status> {
         let mut rights = vmo.basic_info()?.rights;
 
         if flags & VMO_FLAG_READ == 0 {
-            rights -= Rights::READ;
+            rights -= zx::Rights::READ;
         }
 
         if flags & VMO_FLAG_WRITE == 0 {
-            rights -= Rights::WRITE;
+            rights -= zx::Rights::WRITE;
         }
 
         if flags & VMO_FLAG_EXEC == 0 {
-            rights -= Rights::EXECUTE;
+            rights -= zx::Rights::EXECUTE;
         }
 
         Ok(rights)
     }
 
-    fn get_as_shared(vmo: &Vmo, flags: u32) -> Result<Vmo, Status> {
+    fn get_as_shared(vmo: &zx::Vmo, flags: u32) -> Result<zx::Vmo, zx::Status> {
         let rights = Self::get_vmo_rights(vmo, flags)?;
         vmo.as_handle_ref().duplicate(rights).map(Into::into)
     }
 
-    fn get_as_private(vmo: &Vmo, flags: u32, size: u64) -> Result<Vmo, Status> {
-        let new_vmo =
-            vmo.create_child(VmoChildOptions::COPY_ON_WRITE | VmoChildOptions::RESIZABLE, 0, size)?;
+    fn get_as_private(vmo: &zx::Vmo, flags: u32, size: u64) -> Result<zx::Vmo, zx::Status> {
+        let new_vmo = vmo.create_child(
+            zx::VmoChildOptions::COPY_ON_WRITE | zx::VmoChildOptions::RESIZABLE,
+            0,
+            size,
+        )?;
         let rights = Self::get_vmo_rights(vmo, flags)?;
         new_vmo.into_handle().replace_handle(rights).map(Into::into)
     }
@@ -888,25 +886,25 @@ impl FileConnection {
     fn get_buffer_validate_flags(
         new_vmo_flags: u32,
         connection_flags: u32,
-    ) -> Result<SharingMode, Status> {
+    ) -> Result<SharingMode, zx::Status> {
         if connection_flags & OPEN_RIGHT_READABLE == 0
             && (new_vmo_flags & VMO_FLAG_READ != 0 || new_vmo_flags & VMO_FLAG_EXEC != 0)
         {
-            return Err(Status::ACCESS_DENIED);
+            return Err(zx::Status::ACCESS_DENIED);
         }
 
         if connection_flags & OPEN_RIGHT_WRITABLE == 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(Status::ACCESS_DENIED);
+            return Err(zx::Status::ACCESS_DENIED);
         }
 
         if new_vmo_flags & VMO_FLAG_PRIVATE != 0 && new_vmo_flags & VMO_FLAG_EXACT != 0 {
-            return Err(Status::INVALID_ARGS);
+            return Err(zx::Status::INVALID_ARGS);
         }
 
         // We do not share the VMO itself with a WRITE flag, as this would allow someone to change
         // the size "under our feel" and there seems to be now way to protect from it.
         if new_vmo_flags & VMO_FLAG_EXACT != 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(Status::NOT_SUPPORTED);
+            return Err(zx::Status::NOT_SUPPORTED);
         }
 
         // We use shared mode by default, if the caller did not specify.  It should be more

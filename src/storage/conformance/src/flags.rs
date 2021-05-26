@@ -12,8 +12,7 @@ pub fn build_flag_combinations(constant_flags: u32, variable_flags: u32) -> Vec<
     let mut vec = vec![constant_flags];
 
     for flag in split_flags(variable_flags) {
-        let length = vec.len();
-        for i in 0..length {
+        for i in 0..vec.len() {
             vec.push(vec[i] | flag);
         }
     }
@@ -23,8 +22,7 @@ pub fn build_flag_combinations(constant_flags: u32, variable_flags: u32) -> Vec<
 }
 
 /// Splits a bitset into a vector of its component bits. e.g. 1011 becomes [0001, 0010, 1000].
-fn split_flags(flags: u32) -> Vec<u32> {
-    let mut flags = flags;
+fn split_flags(mut flags: u32) -> Vec<u32> {
     let mut bits = vec![];
     while flags != 0 {
         // x & -x returns the lowest bit set in x. Add it to the vec and then unset that bit.

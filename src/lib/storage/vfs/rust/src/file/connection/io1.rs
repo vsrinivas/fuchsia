@@ -28,7 +28,10 @@ use {
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
-    fuchsia_zircon::{self as zx, sys::ZX_ERR_NOT_SUPPORTED, sys::ZX_OK, Status},
+    fuchsia_zircon::{
+        self as zx,
+        sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
+    },
     futures::stream::StreamExt,
     lazy_static::lazy_static,
     static_assertions::assert_eq_size,
@@ -179,7 +182,7 @@ impl<T: 'static + File> FileConnection<T> {
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::File(FileObject { event: None, stream: None });
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
+            match control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
             }
@@ -248,7 +251,7 @@ impl<T: 'static + File> FileConnection<T> {
             }
             FileRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "File::Close");
-                let status = self.file.close().await.err().unwrap_or(Status::OK);
+                let status = self.file.close().await.err().unwrap_or(zx::Status::OK);
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
                 let _ = responder.send(status.into_raw());
@@ -261,7 +264,7 @@ impl<T: 'static + File> FileConnection<T> {
             }
             FileRequest::Sync { responder } => {
                 fuchsia_trace::duration!("storage", "File::Sync");
-                let status = self.file.sync().await.err().unwrap_or(Status::OK);
+                let status = self.file.sync().await.err().unwrap_or(zx::Status::OK);
                 responder.send(status.into_raw())?;
             }
             FileRequest::GetAttr { responder } => {
@@ -278,7 +281,8 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, range)) => {
-                        responder.send(Status::OK.into_raw(), &buffer.as_slice()[range.clone()])?;
+                        responder
+                            .send(zx::Status::OK.into_raw(), &buffer.as_slice()[range.clone()])?;
                         (range.end - range.start) as u64
                     }
                     Err(status) => {
@@ -297,7 +301,7 @@ impl<T: 'static + File> FileConnection<T> {
                 );
                 match self.handle_read_at(offset, count).await {
                     Ok((buffer, range)) => {
-                        responder.send(Status::OK.into_raw(), &buffer.as_slice()[range])?
+                        responder.send(zx::Status::OK.into_raw(), &buffer.as_slice()[range])?
                     }
                     Err(status) => responder.send(status.into_raw(), &[0u8; 0])?,
                 }
@@ -371,7 +375,7 @@ impl<T: 'static + File> FileConnection<T> {
         file.open(self.scope.clone(), flags, 0, Path::empty(), server_end);
     }
 
-    async fn handle_get_attr(&mut self) -> (Status, NodeAttributes) {
+    async fn handle_get_attr(&mut self) -> (zx::Status, NodeAttributes) {
         let mut attributes = match self.file.get_attrs().await {
             Ok(attr) => attr,
             Err(status) => {
@@ -391,23 +395,23 @@ impl<T: 'static + File> FileConnection<T> {
         };
 
         attributes.mode = MODE_TYPE_FILE | self.posix_protection_attributes();
-        (Status::OK, attributes)
+        (zx::Status::OK, attributes)
     }
 
     async fn handle_read_at(
         &mut self,
         offset: u64,
         count: u64,
-    ) -> Result<(Buffer<'_>, Range<usize>), Status> {
+    ) -> Result<(Buffer<'_>, Range<usize>), zx::Status> {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            return Err(Status::BAD_HANDLE);
+            return Err(zx::Status::BAD_HANDLE);
         }
 
         let fs = self.file.get_filesystem();
         let bs = std::cmp::max(fs.block_size() as usize, *PAGE_SIZE as usize);
         let start = round_down(offset as usize, bs);
         let align = offset as usize - start;
-        let end = round_up((offset + count) as usize, bs).ok_or(Status::INVALID_ARGS)?;
+        let end = round_up((offset + count) as usize, bs).ok_or(zx::Status::INVALID_ARGS)?;
         let mut buffer = fs.allocate_buffer(end - start);
         self.file.read_at(start as u64, buffer.as_mut()).await.map(|size| {
             let count = std::cmp::min(count as usize, (size as usize).saturating_sub(align));
@@ -415,9 +419,9 @@ impl<T: 'static + File> FileConnection<T> {
         })
     }
 
-    async fn handle_write(&mut self, content: &[u8]) -> (Status, u64) {
+    async fn handle_write(&mut self, content: &[u8]) -> (zx::Status, u64) {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return (Status::BAD_HANDLE, 0);
+            return (zx::Status::BAD_HANDLE, 0);
         }
 
         if self.flags & OPEN_FLAG_APPEND != 0 {
@@ -429,7 +433,7 @@ impl<T: 'static + File> FileConnection<T> {
             match self.file.append(content).await {
                 Ok((bytes, offset)) => {
                     self.seek = offset;
-                    (Status::OK, bytes)
+                    (zx::Status::OK, bytes)
                 }
                 Err(e) => (e, 0),
             }
@@ -441,9 +445,9 @@ impl<T: 'static + File> FileConnection<T> {
         }
     }
 
-    async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (Status, u64) {
+    async fn handle_write_at(&mut self, offset: u64, content: &[u8]) -> (zx::Status, u64) {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return (Status::BAD_HANDLE, 0);
+            return (zx::Status::BAD_HANDLE, 0);
         }
 
         // When we have writeback caching, this should be called when the first write for the file
@@ -453,30 +457,30 @@ impl<T: 'static + File> FileConnection<T> {
         }
 
         match self.file.write_at(offset, content).await {
-            Ok(bytes) => (Status::OK, bytes),
+            Ok(bytes) => (zx::Status::OK, bytes),
             Err(e) => (e, 0),
         }
     }
 
     /// Move seek position to byte `offset` relative to the origin specified by `start`.
-    async fn handle_seek(&mut self, offset: i64, start: SeekOrigin) -> (Status, u64) {
+    async fn handle_seek(&mut self, offset: i64, start: SeekOrigin) -> (zx::Status, u64) {
         if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-            return (Status::BAD_HANDLE, 0);
+            return (zx::Status::BAD_HANDLE, 0);
         }
 
         let (status, new_seek) = match start {
-            SeekOrigin::Start => (Status::OK, offset as i128),
+            SeekOrigin::Start => (zx::Status::OK, offset as i128),
 
             SeekOrigin::Current => {
                 assert_eq_size!(usize, i64);
-                (Status::OK, self.seek as i128 + offset as i128)
+                (zx::Status::OK, self.seek as i128 + offset as i128)
             }
 
             SeekOrigin::End => {
                 let size = self.file.get_size().await;
                 assert_eq_size!(usize, i64, u64);
                 match size {
-                    Ok(size) => (Status::OK, size as i128 + offset as i128),
+                    Ok(size) => (zx::Status::OK, size as i128 + offset as i128),
                     Err(e) => (e, self.seek as i128),
                 }
             }
@@ -484,29 +488,29 @@ impl<T: 'static + File> FileConnection<T> {
 
         if new_seek < 0 {
             // Can't seek to before the end of a file.
-            return (Status::OUT_OF_RANGE, self.seek);
+            return (zx::Status::OUT_OF_RANGE, self.seek);
         } else {
             self.seek = new_seek as u64;
             return (status, self.seek);
         }
     }
 
-    async fn handle_set_attr(&mut self, flags: u32, attrs: NodeAttributes) -> Status {
+    async fn handle_set_attr(&mut self, flags: u32, attrs: NodeAttributes) -> zx::Status {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return Status::BAD_HANDLE;
+            return zx::Status::BAD_HANDLE;
         }
 
         // TODO(jfsulliv): Consider always permitting attributes to be deferrable. The risk with
         // this is that filesystems would require a background flush of dirty attributes to disk.
         match self.file.set_attrs(flags, attrs, false).await {
-            Ok(()) => Status::OK,
+            Ok(()) => zx::Status::OK,
             Err(status) => status,
         }
     }
 
-    async fn handle_truncate(&mut self, length: u64) -> Status {
+    async fn handle_truncate(&mut self, length: u64) -> zx::Status {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return Status::BAD_HANDLE;
+            return zx::Status::BAD_HANDLE;
         }
 
         if let Err(status) = self.mark_modified().await {
@@ -514,7 +518,7 @@ impl<T: 'static + File> FileConnection<T> {
         }
 
         match self.file.truncate(length).await {
-            Ok(()) => Status::OK,
+            Ok(()) => zx::Status::OK,
             Err(status) => status,
         }
     }
@@ -522,21 +526,21 @@ impl<T: 'static + File> FileConnection<T> {
     async fn handle_get_buffer(
         &mut self,
         flags: u32,
-    ) -> (Status, Option<fidl_fuchsia_mem::Buffer>) {
+    ) -> (zx::Status, Option<fidl_fuchsia_mem::Buffer>) {
         let mode = match Self::get_buffer_validate_flags(flags, self.flags) {
             Err(status) => return (status, None),
             Ok(mode) => mode,
         };
 
         match self.file.get_buffer(mode, flags).await {
-            Ok(buf) => (Status::OK, buf),
+            Ok(buf) => (zx::Status::OK, buf),
             Err(e) => (e, None),
         }
     }
 
     // Updates the file's modification_time timestamp.  This may be deferred and not persisted to
     // disk, but it will be immediately readable in a later call to get_attrs regardless.
-    async fn mark_modified(&self) -> Result<(), Status> {
+    async fn mark_modified(&self) -> Result<(), zx::Status> {
         let mut attrs = node_attributes();
         attrs.modification_time = current_time();
         self.file
@@ -547,25 +551,25 @@ impl<T: 'static + File> FileConnection<T> {
     fn get_buffer_validate_flags(
         new_vmo_flags: u32,
         connection_flags: u32,
-    ) -> Result<SharingMode, Status> {
+    ) -> Result<SharingMode, zx::Status> {
         if connection_flags & OPEN_RIGHT_READABLE == 0
             && (new_vmo_flags & VMO_FLAG_READ != 0 || new_vmo_flags & VMO_FLAG_EXEC != 0)
         {
-            return Err(Status::ACCESS_DENIED);
+            return Err(zx::Status::ACCESS_DENIED);
         }
 
         if connection_flags & OPEN_RIGHT_WRITABLE == 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(Status::ACCESS_DENIED);
+            return Err(zx::Status::ACCESS_DENIED);
         }
 
         if new_vmo_flags & VMO_FLAG_PRIVATE != 0 && new_vmo_flags & VMO_FLAG_EXACT != 0 {
-            return Err(Status::INVALID_ARGS);
+            return Err(zx::Status::INVALID_ARGS);
         }
 
         // We do not share the VMO itself with a WRITE flag, as this would allow someone to change
         // the size "under our feel" and there seems to be now way to protect from it.
         if new_vmo_flags & VMO_FLAG_EXACT != 0 && new_vmo_flags & VMO_FLAG_WRITE != 0 {
-            return Err(Status::NOT_SUPPORTED);
+            return Err(zx::Status::NOT_SUPPORTED);
         }
 
         // We use shared mode by default, if the caller did not specify.  It should be more
@@ -588,8 +592,7 @@ mod tests {
             FileEvent, FileProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS,
             NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
         },
-        fuchsia_async as fasync,
-        fuchsia_zircon::Status,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
         lazy_static::lazy_static,
         matches::assert_matches,
@@ -633,7 +636,7 @@ mod tests {
             _src_name: Path,
             _dst_dir: Arc<Any + Sync + Send + 'static>,
             _dst_name: Path,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             unreachable!();
         }
     }
@@ -646,7 +649,7 @@ mod tests {
         }
     }
 
-    type MockCallbackType = Box<Fn(&FileOperation) -> Status + Sync + Send>;
+    type MockCallbackType = Box<Fn(&FileOperation) -> zx::Status + Sync + Send>;
     /// A fake file that just tracks what calls `FileConnection` makes on it.
     struct MockFile {
         fs: Arc<MockFilesystem>,
@@ -678,11 +681,11 @@ mod tests {
             })
         }
 
-        fn handle_operation(&self, operation: FileOperation) -> Result<(), Status> {
+        fn handle_operation(&self, operation: FileOperation) -> Result<(), zx::Status> {
             let result = (self.callback)(&operation);
             self.operations.lock().unwrap().push(operation);
             match result {
-                Status::OK => Ok(()),
+                zx::Status::OK => Ok(()),
                 err => Err(err),
             }
         }
@@ -690,7 +693,7 @@ mod tests {
 
     #[async_trait]
     impl File for MockFile {
-        async fn open(&self, flags: u32) -> Result<(), Status> {
+        async fn open(&self, flags: u32) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::Init { flags })?;
             Ok(())
         }
@@ -699,7 +702,7 @@ mod tests {
             &self,
             offset: u64,
             mut buffer: MutableBufferRef<'_>,
-        ) -> Result<u64, Status> {
+        ) -> Result<u64, zx::Status> {
             assert_eq!(offset % *PAGE_SIZE, 0);
             let count = buffer.len() as u64;
             self.handle_operation(FileOperation::ReadAt { offset, count })?;
@@ -714,7 +717,7 @@ mod tests {
             Ok(count)
         }
 
-        async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
+        async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, zx::Status> {
             if let Some(op) = std::mem::take(&mut *self.pending_setattr.lock().unwrap()) {
                 self.handle_operation(op)?;
             }
@@ -723,7 +726,7 @@ mod tests {
             Ok(content.len() as u64)
         }
 
-        async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status> {
+        async fn append(&self, content: &[u8]) -> Result<(u64, u64), zx::Status> {
             if let Some(op) = std::mem::take(&mut *self.pending_setattr.lock().unwrap()) {
                 self.handle_operation(op)?;
             }
@@ -732,7 +735,7 @@ mod tests {
             Ok((content.len() as u64, self.file_size + content.len() as u64))
         }
 
-        async fn truncate(&self, length: u64) -> Result<(), Status> {
+        async fn truncate(&self, length: u64) -> Result<(), zx::Status> {
             if let Some(op) = std::mem::take(&mut *self.pending_setattr.lock().unwrap()) {
                 self.handle_operation(op)?;
             }
@@ -743,17 +746,17 @@ mod tests {
             &self,
             mode: SharingMode,
             flags: u32,
-        ) -> Result<Option<fidl_fuchsia_mem::Buffer>, Status> {
+        ) -> Result<Option<fidl_fuchsia_mem::Buffer>, zx::Status> {
             self.handle_operation(FileOperation::GetBuffer { mode, flags })?;
             Ok(None)
         }
 
-        async fn get_size(&self) -> Result<u64, Status> {
+        async fn get_size(&self) -> Result<u64, zx::Status> {
             self.handle_operation(FileOperation::GetSize)?;
             Ok(self.file_size)
         }
 
-        async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+        async fn get_attrs(&self) -> Result<NodeAttributes, zx::Status> {
             self.handle_operation(FileOperation::GetAttrs)?;
             Ok(NodeAttributes {
                 mode: 0,
@@ -771,7 +774,7 @@ mod tests {
             flags: u32,
             attrs: NodeAttributes,
             may_defer: bool,
-        ) -> Result<(), Status> {
+        ) -> Result<(), zx::Status> {
             let op = FileOperation::SetAttrs { flags, attrs };
             if may_defer {
                 *self.pending_setattr.lock().unwrap() = Some(op);
@@ -781,12 +784,12 @@ mod tests {
             Ok(())
         }
 
-        async fn close(&self) -> Result<(), Status> {
+        async fn close(&self) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::Close)?;
             Ok(())
         }
 
-        async fn sync(&self) -> Result<(), Status> {
+        async fn sync(&self) -> Result<(), zx::Status> {
             self.handle_operation(FileOperation::Sync)
         }
 
@@ -827,16 +830,16 @@ mod tests {
     }
 
     /// Only the init operation will succeed, all others fail.
-    fn only_allow_init(op: &FileOperation) -> Status {
+    fn only_allow_init(op: &FileOperation) -> zx::Status {
         match op {
-            FileOperation::Init { .. } => Status::OK,
-            _ => Status::IO,
+            FileOperation::Init { .. } => zx::Status::OK,
+            _ => zx::Status::IO,
         }
     }
 
     /// All operations succeed.
-    fn always_succeed_callback(_op: &FileOperation) -> Status {
-        Status::OK
+    fn always_succeed_callback(_op: &FileOperation) -> zx::Status {
+        zx::Status::OK
     }
 
     struct TestEnv {
@@ -891,18 +894,18 @@ mod tests {
         );
         // Read from original proxy.
         let (status, _) = env.proxy.read(6).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let (clone_proxy, remote) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
         env.proxy.clone(CLONE_FLAG_SAME_RIGHTS, remote.into_channel().into()).unwrap();
         // Seek and read from clone_proxy.
         let (status, _) = clone_proxy.seek(*PAGE_SIZE as i64, SeekOrigin::Start).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let (status, _) = clone_proxy.read(5).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         // Read from original proxy.
         let (status, _) = env.proxy.read(5).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let events = env.file.operations.lock().unwrap();
         // Each connection should have an independent seek.
@@ -922,7 +925,7 @@ mod tests {
     async fn test_close_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let status = env.proxy.close().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -935,7 +938,7 @@ mod tests {
     async fn test_close_fails() {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_READABLE);
         let status = env.proxy.close().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::IO);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::IO);
 
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -976,7 +979,7 @@ mod tests {
     async fn test_getattr() {
         let env = init_mock_file(Box::new(always_succeed_callback), 0);
         let (status, attributes) = env.proxy.get_attr().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(
             attributes,
             NodeAttributes {
@@ -997,7 +1000,7 @@ mod tests {
     async fn test_getbuffer() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, buffer) = env.proxy.get_buffer(VMO_FLAG_READ).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert!(buffer.is_none());
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -1013,7 +1016,7 @@ mod tests {
     async fn test_getbuffer_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), 0);
         let (status, buffer) = env.proxy.get_buffer(VMO_FLAG_READ).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
         assert!(buffer.is_none());
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: 0 },]);
@@ -1026,7 +1029,7 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE,
         );
         let (status, flags) = env.proxy.get_flags().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         // OPEN_FLAG_TRUNCATE should get stripped because it only applies at open time.
         assert_eq!(flags, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
         let events = env.file.operations.lock().unwrap();
@@ -1050,7 +1053,7 @@ mod tests {
         let event = env.proxy.take_event_stream().try_next().await.unwrap();
         match event {
             Some(FileEvent::OnOpen_ { s, info: Some(boxed) }) => {
-                assert_eq!(Status::from_raw(s), Status::OK);
+                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 assert_eq!(*boxed, NodeInfo::File(FileObject { event: None, stream: None }));
             }
             e => panic!("Expected OnOpen event with NodeInfo::File, got {:?}", e),
@@ -1068,7 +1071,7 @@ mod tests {
     async fn test_read_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, data) = env.proxy.read(10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(data, vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
         let events = env.file.operations.lock().unwrap();
@@ -1085,14 +1088,14 @@ mod tests {
     async fn test_read_not_readable() {
         let env = init_mock_file(Box::new(only_allow_init), OPEN_RIGHT_WRITABLE);
         let (status, _data) = env.proxy.read(10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at_succeeds() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, data) = env.proxy.read_at(5, 10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(data, vec![10, 11, 12, 13, 14]);
 
         let events = env.file.operations.lock().unwrap();
@@ -1109,11 +1112,11 @@ mod tests {
     async fn test_seek_start() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, offset) = env.proxy.seek(10, SeekOrigin::Start).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(offset, 10);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(data, vec![10]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -1129,15 +1132,15 @@ mod tests {
     async fn test_seek_cur() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, offset) = env.proxy.seek(10, SeekOrigin::Start).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(offset, 10);
 
         let (status, offset) = env.proxy.seek(-2, SeekOrigin::Current).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(offset, 8);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(data, vec![8]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -1153,7 +1156,7 @@ mod tests {
     async fn test_seek_before_start() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, offset) = env.proxy.seek(-4, SeekOrigin::Current).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OUT_OF_RANGE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OUT_OF_RANGE);
         assert_eq!(offset, 0);
     }
 
@@ -1161,11 +1164,11 @@ mod tests {
     async fn test_seek_end() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let (status, offset) = env.proxy.seek(-4, SeekOrigin::End).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(offset, *MOCK_FILE_SIZE - 4);
 
         let (status, data) = env.proxy.read(1).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(data, vec![(offset % 256) as u8]);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
@@ -1198,7 +1201,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
@@ -1217,9 +1220,9 @@ mod tests {
     async fn test_set_flags() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
         let status = env.proxy.set_flags(OPEN_FLAG_APPEND).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let (status, flags) = env.proxy.get_flags().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(flags, OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND);
     }
 
@@ -1227,7 +1230,7 @@ mod tests {
     async fn test_sync() {
         let env = init_mock_file(Box::new(always_succeed_callback), 0);
         let status = env.proxy.sync().await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: 0 }, FileOperation::Sync,]);
     }
@@ -1236,7 +1239,7 @@ mod tests {
     async fn test_truncate() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
         let status = env.proxy.truncate(10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         let events = env.file.operations.lock().unwrap();
         assert_matches!(
             &events[..],
@@ -1255,7 +1258,7 @@ mod tests {
     async fn test_truncate_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let status = env.proxy.truncate(10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }
@@ -1265,7 +1268,7 @@ mod tests {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
         let (status, count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(count, data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         assert_matches!(
@@ -1291,7 +1294,7 @@ mod tests {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
         let data = "Hello, world!".as_bytes();
         let (status, _count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }
@@ -1301,7 +1304,7 @@ mod tests {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
         let data = "Hello, world!".as_bytes();
         let (status, count) = env.proxy.write_at(data, 10).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(count, data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         assert_matches!(
@@ -1330,10 +1333,10 @@ mod tests {
         );
         let data = "Hello, world!".as_bytes();
         let (status, count) = env.proxy.write(data).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(count, data.len() as u64);
         let (status, offset) = env.proxy.seek(0, SeekOrigin::Current).await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(offset, *MOCK_FILE_SIZE + data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         const INIT_FLAGS: u32 = OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND;

@@ -5,7 +5,7 @@
 use crate::file::vmo::asynchronous::{AsyncFileState, ConsumeVmoResult, InitVmoResult};
 
 use {
-    fuchsia_zircon::Vmo,
+    fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::MutexLockFuture},
     std::sync::Arc,
 };
@@ -29,7 +29,7 @@ pub enum AsyncConsumeVmo {
 pub(in crate::file::vmo) trait FileConnectionApi: Send + Sync {
     fn init_vmo(self: Arc<Self>) -> AsyncInitVmo;
 
-    fn consume_vmo(self: Arc<Self>, vmo: Vmo) -> AsyncConsumeVmo;
+    fn consume_vmo(self: Arc<Self>, vmo: zx::Vmo) -> AsyncConsumeVmo;
 
     fn state(&self) -> MutexLockFuture<AsyncFileState>;
 }

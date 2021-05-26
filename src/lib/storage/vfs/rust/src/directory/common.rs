@@ -15,7 +15,7 @@ use {
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_zircon::Status,
+    fuchsia_zircon as zx,
     libc::{S_IRUSR, S_IWUSR},
     static_assertions::assert_eq_size,
     std::{io::Write, mem::size_of},
@@ -31,14 +31,14 @@ pub const POSIX_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR;
 /// OPEN_FLAG_NODE_REFERENCE is preserved.
 ///
 /// Changing this function can be dangerous!  Flags operations may have security implications.
-pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, Status> {
+pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, zx::Status> {
     // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
     // the target is a directory.
     if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_DIRECTORY != 0 {
         if mode & MODE_TYPE_MASK == MODE_TYPE_FILE {
-            return Err(Status::NOT_FILE);
+            return Err(zx::Status::NOT_FILE);
         } else {
-            return Err(Status::INVALID_ARGS);
+            return Err(zx::Status::INVALID_ARGS);
         };
     }
 
@@ -51,7 +51,7 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
     }
 
     if flags & OPEN_FLAG_NOT_DIRECTORY != 0 {
-        return Err(Status::NOT_FILE);
+        return Err(zx::Status::NOT_FILE);
     }
 
     // For directories OPEN_FLAG_POSIX means WRITABLE permission.  Parent connection must have
@@ -73,15 +73,15 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
 
     // Pseudo directories do not allow mounting at this point.
     if flags & OPEN_RIGHT_ADMIN != 0 {
-        return Err(Status::ACCESS_DENIED);
+        return Err(zx::Status::ACCESS_DENIED);
     }
 
     if flags & prohibited_flags != 0 {
-        return Err(Status::INVALID_ARGS);
+        return Err(zx::Status::INVALID_ARGS);
     }
 
     if flags & !allowed_flags != 0 {
-        return Err(Status::NOT_SUPPORTED);
+        return Err(zx::Status::NOT_SUPPORTED);
     }
 
     Ok(flags)
@@ -91,7 +91,7 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
 /// the conneciton to the directory itself.  Plus there is special handling of the OPEN_FLAG_POSIX
 /// flag.  This function should be called before calling [`new_connection_validate_flags`] if both
 /// are needed.
-pub fn check_child_connection_flags(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
+pub fn check_child_connection_flags(parent_flags: u32, mut flags: u32) -> Result<u32, zx::Status> {
     if parent_flags & OPEN_RIGHT_WRITABLE == 0 {
         // OPEN_FLAG_POSIX is effectively OPEN_RIGHT_WRITABLE, but with "soft fail", when the
         // target is a directory, so we need to remove it.
@@ -100,13 +100,13 @@ pub fn check_child_connection_flags(parent_flags: u32, mut flags: u32) -> Result
 
     if flags & OPEN_FLAG_CREATE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
         // Can only use CREATE flags if the parent connection is writable.
-        return Err(Status::ACCESS_DENIED);
+        return Err(zx::Status::ACCESS_DENIED);
     }
 
     if stricter_or_same_rights(parent_flags, flags) {
         Ok(flags)
     } else {
-        Err(Status::ACCESS_DENIED)
+        Err(zx::Status::ACCESS_DENIED)
     }
 }
 
@@ -151,6 +151,7 @@ pub fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name:
 #[cfg(test)]
 mod tests {
     use super::{check_child_connection_flags, new_connection_validate_flags};
+    use crate::test_utils::build_flag_combinations;
 
     use {
         fidl_fuchsia_io::{
@@ -159,131 +160,99 @@ mod tests {
             OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
             OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
-        fuchsia_zircon::Status,
+        fuchsia_zircon as zx,
     };
 
-    // TODO This should be converted into a function as soon as backtrace support is in place.
-    // The only reason this is a macro is to generate error messages that point to the test
-    // function source location in their top stack frame.
-    macro_rules! ncvf_ok {
-        ($flags:expr, $mode:expr, $expected_new_flags:expr $(,)*) => {{
-            let res = new_connection_validate_flags($flags, $mode);
-            match res {
-                Ok(new_flags) => assert_eq!(
-                    $expected_new_flags, new_flags,
-                    "new_connection_validate_flags returned unexpected set of flags.\n\
-                     Expected: {:X}\n\
-                     Actual: {:X}",
-                    $expected_new_flags, new_flags
-                ),
-                Err(status) => panic!("new_connection_validate_flags failed.  Status: {}", status),
-            }
-        }};
+    #[track_caller]
+    fn ncvf_ok(flags: u32, mode: u32, expected_new_flags: u32) {
+        let res = new_connection_validate_flags(flags, mode);
+        match res {
+            Ok(new_flags) => assert_eq!(
+                expected_new_flags, new_flags,
+                "new_connection_validate_flags returned unexpected set of flags.\n\
+                    Expected: {:X}\n\
+                    Actual: {:X}",
+                expected_new_flags, new_flags
+            ),
+            Err(status) => panic!("new_connection_validate_flags failed.  Status: {}", status),
+        }
     }
 
-    // TODO This should be converted into a function as soon as backtrace support is in place.
-    // The only reason this is a macro is to generate error messages that point to the test
-    // function source location in their top stack frame.
-    macro_rules! ncvf_err {
-        ($flags:expr, $mode:expr, $expected_status:expr $(,)*) => {{
-            let res = new_connection_validate_flags($flags, $mode);
-            match res {
-                Ok(new_flags) => panic!(
-                    "new_connection_validate_flags should have failed.  \
-                     Got new flags: {:X}",
-                    new_flags
-                ),
-                Err(status) => assert_eq!($expected_status, status),
-            }
-        }};
+    #[track_caller]
+    fn ncvf_err(flags: u32, mode: u32, expected_status: zx::Status) {
+        let res = new_connection_validate_flags(flags, mode);
+        match res {
+            Ok(new_flags) => panic!(
+                "new_connection_validate_flags should have failed.  \
+                    Got new flags: {:X}",
+                new_flags
+            ),
+            Err(status) => assert_eq!(expected_status, status),
+        }
     }
 
     #[test]
     fn new_connection_validate_flags_node_reference() {
-        // OPEN_FLAG_NODE_REFERENCE is preserved.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE, 0, OPEN_FLAG_NODE_REFERENCE);
+        // OPEN_FLAG_NODE_REFERENCE and OPEN_FLAG_DESCRIBE should be preserved.
+        const PRESERVED_FLAGS: u32 = OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
+        for open_flags in build_flag_combinations(
+            OPEN_FLAG_NODE_REFERENCE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_DIRECTORY,
+        ) {
+            ncvf_ok(open_flags, 0, open_flags & PRESERVED_FLAGS);
+        }
 
-        // Access flags are also dropped.
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, 0, OPEN_FLAG_NODE_REFERENCE);
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE, 0, OPEN_FLAG_NODE_REFERENCE);
-
-        // OPEN_FLAG_DESCRIBE is preserved though.
-        ncvf_ok!(
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
-            0,
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
-        );
-        ncvf_ok!(
-            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-            0,
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
-        );
-
-        ncvf_ok!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DIRECTORY, 0, OPEN_FLAG_NODE_REFERENCE);
-
-        ncvf_err!(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_NOT_DIRECTORY, 0, Status::NOT_FILE);
+        ncvf_err(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_NOT_DIRECTORY, 0, zx::Status::NOT_FILE);
     }
 
     #[test]
     fn new_connection_validate_flags_posix() {
-        ncvf_ok!(
-            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
-            0,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        );
-        ncvf_ok!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX, 0, OPEN_RIGHT_WRITABLE);
-        ncvf_ok!(
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX,
-            0,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        );
+        for open_flags in
+            build_flag_combinations(OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
+        {
+            ncvf_ok(open_flags, 0, OPEN_RIGHT_WRITABLE | (open_flags & !OPEN_FLAG_POSIX));
+        }
     }
 
     #[test]
     fn new_connection_validate_flags_admin() {
         // Currently not supported.
-        ncvf_err!(OPEN_RIGHT_ADMIN, 0, Status::ACCESS_DENIED);
+        ncvf_err(OPEN_RIGHT_ADMIN, 0, zx::Status::ACCESS_DENIED);
     }
 
     #[test]
     fn new_connection_validate_flags_create() {
-        ncvf_ok!(OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE, 0, OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE);
-        ncvf_ok!(
-            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
-            0,
-            OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
-        );
-        ncvf_ok!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE, 0, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE);
-        ncvf_ok!(
-            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
-            0,
-            OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT,
-        );
+        for open_flags in build_flag_combinations(
+            OPEN_FLAG_CREATE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE_IF_ABSENT,
+        ) {
+            ncvf_ok(open_flags, 0, open_flags);
+        }
     }
 
     #[test]
     fn new_connection_validate_flags_append() {
-        ncvf_err!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND, 0, Status::INVALID_ARGS);
+        ncvf_err(OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND, 0, zx::Status::INVALID_ARGS);
     }
 
     #[test]
     fn new_connection_validate_flags_truncate() {
-        ncvf_err!(OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE, 0, Status::INVALID_ARGS);
+        ncvf_err(OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE, 0, zx::Status::INVALID_ARGS);
     }
 
     #[test]
     fn new_connection_validate_flags_mode_directory() {
-        ncvf_ok!(OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE);
+        ncvf_ok(OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE);
     }
 
     #[test]
     fn new_connection_validate_flags_mode_file() {
-        ncvf_err!(OPEN_RIGHT_READABLE, MODE_TYPE_FILE, Status::NOT_FILE);
+        ncvf_err(OPEN_RIGHT_READABLE, MODE_TYPE_FILE, zx::Status::NOT_FILE);
     }
 
     #[test]
     fn new_connection_validate_flags_mode_socket() {
-        ncvf_err!(OPEN_RIGHT_READABLE, MODE_TYPE_SOCKET, Status::INVALID_ARGS);
+        ncvf_err(OPEN_RIGHT_READABLE, MODE_TYPE_SOCKET, zx::Status::INVALID_ARGS);
     }
 
     #[test]
@@ -295,10 +264,13 @@ mod tests {
         )
         .is_ok());
 
-        assert_eq!(check_child_connection_flags(0, OPEN_FLAG_CREATE), Err(Status::ACCESS_DENIED));
+        assert_eq!(
+            check_child_connection_flags(0, OPEN_FLAG_CREATE),
+            Err(zx::Status::ACCESS_DENIED)
+        );
         assert_eq!(
             check_child_connection_flags(0, OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT),
-            Err(Status::ACCESS_DENIED)
+            Err(zx::Status::ACCESS_DENIED)
         );
     }
 }

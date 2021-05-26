@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
-    fuchsia_zircon::{Event, Status},
     futures::StreamExt,
     io_conformance_util::io1_request_logger_factory::Io1RequestLoggerFactory,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
@@ -28,11 +27,11 @@ const EMPTY_NODE_ATTRS: io::NodeAttributes = io::NodeAttributes {
 };
 
 /// Listens for the `OnOpen` event and returns its [Status].
-async fn get_open_status(node_proxy: &io::NodeProxy) -> Status {
+async fn get_open_status(node_proxy: &io::NodeProxy) -> zx::Status {
     let mut events = node_proxy.take_event_stream();
     let io::NodeEvent::OnOpen_ { s, info: _ } =
         events.next().await.expect("OnOpen event not received").expect("FIDL error");
-    Status::from_raw(s)
+    zx::Status::from_raw(s)
 }
 
 async fn assert_on_open_not_received(node_proxy: &io::NodeProxy) {
@@ -60,7 +59,7 @@ async fn open_node<T: ServiceMarker>(
     let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
     dir.open(flags, mode, path, node_server).expect("Cannot open node");
 
-    assert_eq!(get_open_status(&node_proxy).await, Status::OK);
+    assert_eq!(get_open_status(&node_proxy).await, zx::Status::OK);
     convert_node_proxy::<T>(node_proxy)
 }
 
@@ -94,7 +93,7 @@ async fn open_rw_dir(parent_dir: &io::DirectoryProxy, path: &str) -> io::Directo
 /// other than the `get_token` call directly.
 async fn get_token(dir: &io::DirectoryProxy) -> fidl::Handle {
     let (status, token) = dir.get_token().await.expect("get_token failed");
-    assert_eq!(Status::from_raw(status), Status::OK);
+    assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     token.expect("handle missing")
 }
 
@@ -104,7 +103,7 @@ async fn read_file(dir: &io::DirectoryProxy, path: &str) -> Vec<u8> {
     let file =
         open_node::<io::FileMarker>(dir, io::OPEN_RIGHT_READABLE, io::MODE_TYPE_FILE, path).await;
     let (status, data) = file.read(100).await.expect("read failed");
-    assert_eq!(Status::from_raw(status), Status::OK);
+    assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     data
 }
 
@@ -118,7 +117,7 @@ async fn assert_file_not_found(dir: &io::DirectoryProxy, path: &str) {
         file_server,
     )
     .expect("Cannot open file");
-    assert_eq!(get_open_status(&file_proxy).await, Status::NOT_FOUND);
+    assert_eq!(get_open_status(&file_proxy).await, zx::Status::NOT_FOUND);
 }
 
 fn root_directory(entries: Vec<io_test::DirectoryEntry>) -> io_test::Directory {
@@ -219,7 +218,7 @@ async fn open_dir_with_sufficient_rights() {
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
             .expect("Cannot open directory");
 
-        assert_eq!(get_open_status(&client).await, Status::OK);
+        assert_eq!(get_open_status(&client).await, zx::Status::OK);
     }
 }
 
@@ -237,7 +236,7 @@ async fn open_dir_with_insufficient_rights() {
             .open(dir_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_DIRECTORY, ".", server)
             .expect("Cannot open directory");
 
-        assert_eq!(get_open_status(&client).await, Status::ACCESS_DENIED);
+        assert_eq!(get_open_status(&client).await, zx::Status::ACCESS_DENIED);
     }
 }
 
@@ -266,7 +265,7 @@ async fn open_child_dir_with_same_rights() {
             )
             .expect("Cannot open directory");
 
-        assert_eq!(get_open_status(&child_dir_client).await, Status::OK);
+        assert_eq!(get_open_status(&child_dir_client).await, zx::Status::OK);
     }
 }
 
@@ -299,7 +298,7 @@ async fn open_child_dir_with_extra_rights() {
         )
         .expect("Cannot open directory");
 
-    assert_eq!(get_open_status(&child_dir_client).await, Status::ACCESS_DENIED);
+    assert_eq!(get_open_status(&child_dir_client).await, zx::Status::ACCESS_DENIED);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -358,7 +357,7 @@ async fn create_file_with_sufficient_rights() {
         )
         .expect("Cannot open file");
 
-        assert_eq!(get_open_status(&client).await, Status::OK);
+        assert_eq!(get_open_status(&client).await, zx::Status::OK);
         assert_eq!(read_file(&test_dir, TEST_FILE).await, &[]);
     }
 }
@@ -385,7 +384,7 @@ async fn create_file_with_insufficient_rights() {
         )
         .expect("Cannot open file");
 
-        assert_eq!(get_open_status(&client).await, Status::ACCESS_DENIED);
+        assert_eq!(get_open_status(&client).await, zx::Status::ACCESS_DENIED);
         assert_file_not_found(&test_dir, TEST_FILE).await;
     }
 }
@@ -401,7 +400,7 @@ async fn file_read_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _data) = file.read(0).await.expect("read failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     }
 }
 
@@ -416,7 +415,7 @@ async fn file_read_with_insufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _data) = file.read(0).await.expect("read failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -431,7 +430,7 @@ async fn file_read_at_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _data) = file.read_at(0, 0).await.expect("read_at failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     }
 }
 
@@ -446,7 +445,7 @@ async fn file_read_at_with_insufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _data) = file.read_at(0, 0).await.expect("read_at failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -461,7 +460,7 @@ async fn file_write_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _actual) = file.write("".as_bytes()).await.expect("write failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     }
 }
 
@@ -476,7 +475,7 @@ async fn file_write_with_insufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _actual) = file.write("".as_bytes()).await.expect("write failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -491,7 +490,7 @@ async fn file_write_at_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _actual) = file.write_at("".as_bytes(), 0).await.expect("write_at failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     }
 }
 
@@ -505,7 +504,7 @@ async fn file_write_at_with_insufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _actual) = file.write_at("".as_bytes(), 0).await.expect("write_at failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -520,7 +519,7 @@ async fn file_truncate_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let status = file.truncate(0).await.expect("truncate failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     }
 }
 
@@ -534,7 +533,7 @@ async fn file_truncate_with_insufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let status = file.truncate(0).await.expect("truncate failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -554,7 +553,7 @@ async fn file_read_in_subdirectory() {
         )
         .await;
         let (status, _data) = file.read(0).await.expect("Read failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
     }
 }
 
@@ -574,7 +573,7 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, buffer) = file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         // Check contents of buffer.
         let buffer = *buffer.expect("buffer is missing");
@@ -599,7 +598,7 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _buffer) =
             file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
-        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
     }
 }
 
@@ -619,7 +618,7 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
         // Get writable buffer.
         let (status, buffer) =
             file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         // Try to write to buffer.
         let buffer = *buffer.expect("buffer is missing");
@@ -642,7 +641,7 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let (status, _buffer) =
             file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
-        assert_eq!(Status::from_raw(status), Status::ACCESS_DENIED);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
     }
 }
 
@@ -712,7 +711,7 @@ async fn get_token_with_sufficient_rights() {
         let test_dir = harness.get_directory(root, dir_flags);
 
         let (status, _handle) = test_dir.get_token().await.expect("get_token failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         // Handle is tested in other test cases.
     }
 }
@@ -726,7 +725,7 @@ async fn get_token_with_insufficient_rights() {
         let test_dir = harness.get_directory(root, dir_flags);
 
         let (status, _handle) = test_dir.get_token().await.expect("get_token failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -750,7 +749,7 @@ async fn rename_with_sufficient_rights() {
 
         // Rename src/old.txt -> dest/new.txt.
         let status = src_dir
-            .rename2("old.txt", Event::from(dest_token), "new.txt")
+            .rename2("old.txt", zx::Event::from(dest_token), "new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_ok());
@@ -783,11 +782,11 @@ async fn rename_with_insufficient_rights() {
 
         // Try renaming src/old.txt -> dest/new.txt.
         let status = src_dir
-            .rename2("old.txt", Event::from(dest_token), "new.txt")
+            .rename2("old.txt", zx::Event::from(dest_token), "new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_err());
-        assert_eq!(status.err().unwrap(), Status::BAD_HANDLE.into_raw());
+        assert_eq!(status.err().unwrap(), zx::Status::BAD_HANDLE.into_raw());
     }
 }
 
@@ -810,17 +809,17 @@ async fn rename_with_slash_in_path_fails() {
 
         // Including a slash in the src or dest path should fail.
         let status = test_dir
-            .rename2("src/old.txt", Event::from(get_token(&dest_dir).await), "new.txt")
+            .rename2("src/old.txt", zx::Event::from(get_token(&dest_dir).await), "new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_err());
-        assert_eq!(status.err().unwrap(), Status::INVALID_ARGS.into_raw());
+        assert_eq!(status.err().unwrap(), zx::Status::INVALID_ARGS.into_raw());
         let status = src_dir
-            .rename2("old.txt", Event::from(get_token(&dest_dir).await), "nested/new.txt")
+            .rename2("old.txt", zx::Event::from(get_token(&dest_dir).await), "nested/new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_err());
-        assert_eq!(status.err().unwrap(), Status::INVALID_ARGS.into_raw());
+        assert_eq!(status.err().unwrap(), zx::Status::INVALID_ARGS.into_raw());
     }
 }
 
@@ -844,7 +843,7 @@ async fn link_with_sufficient_rights() {
 
         // Link src/old.txt -> dest/new.txt.
         let status = src_dir.link("old.txt", dest_token, "new.txt").await.expect("link failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         // Check dest/new.txt was created and has correct contents.
         assert_eq!(read_file(&test_dir, "dest/new.txt").await, contents);
@@ -874,7 +873,7 @@ async fn link_with_insufficient_rights() {
 
         // Link src/old.txt -> dest/new.txt.
         let status = src_dir.link("old.txt", dest_token, "new.txt").await.expect("link failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
 
         // Check dest/new.txt was not created.
         assert_file_not_found(&test_dir, "dest/new.txt").await;
@@ -1022,14 +1021,14 @@ async fn clone_file_with_same_or_fewer_rights() {
             let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
             file.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
             let status = get_open_status(&proxy).await;
-            assert_eq!(status, Status::OK);
+            assert_eq!(status, zx::Status::OK);
 
             // Check flags of cloned connection are correct.
             let proxy = convert_node_proxy::<io::FileMarker>(proxy);
             // TODO(fxbug.dev/33880): Add support for NodeGetFlags to rustvfs and then switch to
             // using that here instead of GetFlags.
             let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
-            assert_eq!(Status::from_raw(status), Status::OK);
+            assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
             assert_eq!(flags, clone_flags);
         }
     }
@@ -1049,14 +1048,14 @@ async fn clone_file_with_same_rights_flag() {
         file.clone(io::CLONE_FLAG_SAME_RIGHTS | io::OPEN_FLAG_DESCRIBE, server)
             .expect("clone failed");
         let status = get_open_status(&proxy).await;
-        assert_eq!(status, Status::OK);
+        assert_eq!(status, zx::Status::OK);
 
         // Check flags of cloned connection are correct.
         let proxy = convert_node_proxy::<io::FileMarker>(proxy);
         // TODO(fxbug.dev/33880): Add support for NodeGetFlags to rustvfs and then switch to using
         // that here instead of GetFlags.
         let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(flags, file_flags);
     }
 }
@@ -1078,7 +1077,7 @@ async fn clone_file_with_additional_rights() {
             let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
             file.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
             let status = get_open_status(&proxy).await;
-            assert_eq!(status, Status::ACCESS_DENIED);
+            assert_eq!(status, zx::Status::ACCESS_DENIED);
         }
     }
 }
@@ -1097,11 +1096,11 @@ async fn clone_directory_with_same_or_fewer_rights() {
             let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
             dir.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
             let status = get_open_status(&proxy).await;
-            assert_eq!(status, Status::OK);
+            assert_eq!(status, zx::Status::OK);
 
             // Check flags of cloned connection are correct.
             let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
-            assert_eq!(Status::from_raw(status), Status::OK);
+            assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
             assert_eq!(flags, clone_flags);
         }
     }
@@ -1121,12 +1120,12 @@ async fn clone_directory_with_same_rights_flag() {
         dir.clone(io::CLONE_FLAG_SAME_RIGHTS | io::OPEN_FLAG_DESCRIBE, server)
             .expect("clone failed");
         let status = get_open_status(&proxy).await;
-        assert_eq!(status, Status::OK);
+        assert_eq!(status, zx::Status::OK);
 
         // Check flags of cloned connection are correct.
         let proxy = convert_node_proxy::<io::FileMarker>(proxy);
         let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert_eq!(flags, dir_flags);
     }
 }
@@ -1148,7 +1147,7 @@ async fn clone_directory_with_additional_rights() {
             let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
             dir.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
             let status = get_open_status(&proxy).await;
-            assert_eq!(status, Status::ACCESS_DENIED);
+            assert_eq!(status, zx::Status::ACCESS_DENIED);
         }
     }
 }
@@ -1166,7 +1165,7 @@ async fn set_attr_file_with_sufficient_rights() {
         let file = open_file_with_flags(&test_dir, dir_flags, "file").await;
 
         let (status, old_attr) = file.get_attr().await.expect("get_attr failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         // Set CREATION_TIME flag, but not MODIFICATION_TIME.
         let status = file
@@ -1180,10 +1179,10 @@ async fn set_attr_file_with_sufficient_rights() {
             )
             .await
             .expect("set_attr failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let (status, new_attr) = file.get_attr().await.expect("get_attr failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         // Check that only creation_time was updated.
         let expected = io::NodeAttributes { creation_time: 111, ..old_attr };
         assert_eq!(new_attr, expected);
@@ -1213,7 +1212,7 @@ async fn set_attr_file_with_insufficient_rights() {
             )
             .await
             .expect("set_attr failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
 
@@ -1230,7 +1229,7 @@ async fn set_attr_directory_with_sufficient_rights() {
         let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
 
         let (status, old_attr) = dir.get_attr().await.expect("get_attr failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         // Set CREATION_TIME flag, but not MODIFICATION_TIME.
         let status = dir
@@ -1244,10 +1243,10 @@ async fn set_attr_directory_with_sufficient_rights() {
             )
             .await
             .expect("set_attr failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
 
         let (status, new_attr) = dir.get_attr().await.expect("get_attr failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         // Check that only creation_time was updated.
         let expected = io::NodeAttributes { creation_time: 111, ..old_attr };
         assert_eq!(new_attr, expected);
@@ -1277,6 +1276,6 @@ async fn set_attr_directory_with_insufficient_rights() {
             )
             .await
             .expect("set_attr failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
     }
 }
