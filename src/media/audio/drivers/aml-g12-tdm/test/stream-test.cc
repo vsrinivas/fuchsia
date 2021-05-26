@@ -692,6 +692,9 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
       fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
   ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
 
+  // HW Initialize the MCLK pads. EE_AUDIO_MST_PAD_CTRL0.
+  mock[0x01C].ExpectRead(0x00000000).ExpectWrite(0x00000002);  // MCLK C for PAD 0.
+
   // HW Initialize with 48kHz, set MCLK C CTRL.
   mock[0x00c].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
   mock[0x00c].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
@@ -791,6 +794,9 @@ TEST(AmlG12Tdm, PcmChangeRates) {
   fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
   fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
+
+  // HW Initialize the MCLK pads. EE_AUDIO_MST_PAD_CTRL0.
+  mock[0x01C].ExpectRead(0xffffffff).ExpectWrite(0xfffffffc);  // MCLK A for PAD 0.
 
   // HW Initialize with requested 48kHz, set MCLK A CTRL.
   mock[0x004].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.

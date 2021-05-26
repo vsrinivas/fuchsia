@@ -87,22 +87,22 @@ zx_status_t AmlTdmDevice::SetMClkPad(aml_tdm_mclk_pad_t mclk_pad) {
     case MCLK_PAD_0:
       switch (version_) {
         case metadata::AmlVersion::kS905D2G:
-          GetMmio().Write32(mclk_ch_, EE_AUDIO_MST_PAD_CTRL0);
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 0, 2, EE_AUDIO_MST_PAD_CTRL0);
           break;
         case metadata::AmlVersion::kS905D3G:
-          GetMmio().Write32((mclk_ch_ << 8) | (1 << 15),
-                            EE_AUDIO_MST_PAD_CTRL0);  // Bit 15 to enable.
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 8, 2, EE_AUDIO_MST_PAD_CTRL0);
+          GetMmio().ModifyBits<uint32_t>(1, 15, 1, EE_AUDIO_MST_PAD_CTRL0);  // Bit 15 to enable.
           break;
       }
       break;
     case MCLK_PAD_1:
       switch (version_) {
         case metadata::AmlVersion::kS905D2G:
-          GetMmio().Write32(mclk_ch_ << 4, EE_AUDIO_MST_PAD_CTRL0);
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 4, 2, EE_AUDIO_MST_PAD_CTRL0);
           break;
         case metadata::AmlVersion::kS905D3G:
-          GetMmio().Write32((mclk_ch_ << 24) | (1 << 31),
-                            EE_AUDIO_MST_PAD_CTRL0);  // Bit 31 to enable.
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 24, 2, EE_AUDIO_MST_PAD_CTRL0);
+          GetMmio().ModifyBits<uint32_t>(1, 31, 1, EE_AUDIO_MST_PAD_CTRL0);  // Bit 31 to enable.
           break;
       }
       break;
