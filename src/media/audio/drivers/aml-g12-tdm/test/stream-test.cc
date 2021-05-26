@@ -23,8 +23,6 @@ namespace audio::aml_g12 {
 
 namespace audio_fidl = fuchsia_hardware_audio;
 
-static constexpr uint32_t kTestFrameRate1 = 48000;
-static constexpr uint32_t kTestFrameRate2 = 96000;
 static constexpr float kTestGain = 2.f;
 static constexpr float kTestDeltaGain = 1.f;
 
@@ -33,7 +31,7 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   format.number_of_channels = 2;
   format.channels_to_use_bitmask = 0x03;
   format.sample_format = audio_fidl::wire::SampleFormat::kPcmSigned;
-  format.frame_rate = kTestFrameRate1;
+  format.frame_rate = 48'000;
   format.bytes_per_sample = 2;
   format.valid_bits_per_sample = 16;
   return format;
@@ -67,7 +65,7 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
     formats.number_of_channels.push_back(2);
     formats.sample_formats.push_back(SampleFormat::PCM_SIGNED);
     formats.frame_formats.push_back(FrameFormat::I2S);
-    formats.frame_rates.push_back(kTestFrameRate1);
+    formats.frame_rates.push_back(48'000);
     formats.bits_per_slot.push_back(16);
     formats.bits_per_sample.push_back(16);
     return formats;
@@ -141,8 +139,8 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     range.min_channels = 2;
     range.max_channels = 4;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = kTestFrameRate1;
-    range.max_frames_per_second = kTestFrameRate2;
+    range.min_frames_per_second = 8'000;
+    range.max_frames_per_second = 96'000;
     range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
     supported_formats_.push_back(range);
 
@@ -162,7 +160,7 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
       return status;
     }
 
-    return aml_audio_->InitHW(metadata_, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED, kTestFrameRate1);
+    return aml_audio_->InitHW(metadata_, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED, 48'000);
   }
 
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
@@ -218,6 +216,7 @@ struct AmlG12PcmOutTest : public AmlG12I2sOutTest {
   AmlG12PcmOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
                    ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
       : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
+    metadata_.bus = metadata::AmlBus::TDM_A;
     metadata_.ring_buffer.number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
     metadata_.dai.type = metadata::DaiType::Tdm1;
@@ -240,19 +239,20 @@ TEST(AmlG12Tdm, InitializePcmOut) {
       fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
   ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
 
-  // Configure TDM OUT for PCM.
-  mock[0x580].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM OUT CTRL0 disable.
-  // TDM OUT CTRL0 config, bitoffset 2, 1 slot, 16 bits per slot.
-  mock[0x580].ExpectWrite(0x0001000f);
-  // TDM OUT CTRL1 FRDDR C with 16 bits per sample.
-  mock[0x584].ExpectWrite(0x02000F20);
+  // Configure TDM OUT A for PCM. EE_AUDIO_TDMOUT_A_CTRL0.
+  mock[0x500].ExpectRead(0xffffffff).ExpectWrite(0x7fffffff);  // TDM OUT CTRL0 disable.
+  // TDM OUT A CTRL0 config, bitoffset 2, 1 slot, 16 bits per slot.
+  mock[0x500].ExpectWrite(0x0001000f);
+  // TDM OUT A CTRL1 FRDDR A with 16 bits per sample.
+  mock[0x504].ExpectWrite(0x00000F20);
 
-  mock[0x050].ExpectWrite(0xc180000f);  // SCLK CTRL, enabled, 24 sdiv, 0 lrduty, 15 lrdiv.
-  // SCLK CTRL1, clear delay, no sclk_invert_ph0.
-  mock[0x054].ExpectWrite(0x00000000).ExpectWrite(0x00000000);
+  // SCLK A CTRL, enabled, 24 sdiv, 0 lrduty, 15 lrdiv. EE_AUDIO_MST_A_SCLK_CTRL0.
+  mock[0x040].ExpectWrite(0xc180000f);
+  // SCLK A CTRL1, clear delay, no sclk_invert_ph0. EE_AUDIO_MST_A_SCLK_CTRL1.
+  mock[0x044].ExpectWrite(0x00000000).ExpectWrite(0x00000000);
 
-  // CLK TDMOUT CTL, enable, no sclk_inv, sclk_ws_inv, mclk_ch 2.
-  mock[0x098].ExpectWrite(0).ExpectWrite(0xd2200000);
+  // CLK TDMOUT A CTL, enable, no sclk_inv, sclk_ws_inv, mclk_ch 0. EE_AUDIO_CLK_TDMOUT_A_CTRL.
+  mock[0x090].ExpectWrite(0).ExpectWrite(0xd0000000);
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
@@ -692,20 +692,20 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
       fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
   ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
 
-  // HW Initialize with 48kHz, set MCLK CTRL.
+  // HW Initialize with 48kHz, set MCLK C CTRL.
   mock[0x00c].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
   mock[0x00c].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
-  mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000009);  // Enabled, HIFI PLL, set div to 9.
+  mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000009);  // Enabled, HIFI PLL, set div to 10.
 
-  // HW Initialize with requested 48kHz, set MCLK CTRL.
+  // HW Initialize with requested 48kHz, set MCLK C CTRL.
   mock[0x00c].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
   mock[0x00c].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
-  mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000009);  // Enabled, HIFI PLL, set div to 9.
+  mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000009);  // Enabled, HIFI PLL, set div to 10.
 
-  // HW Initialize with requested 96kHz, set MCLK CTRL.
+  // HW Initialize with requested 96kHz, set MCLK C CTRL.
   mock[0x00c].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
   mock[0x00c].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
-  mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000004);  // Enabled, HIFI PLL, set div to 4.
+  mock[0x00c].ExpectRead(0x00000000).ExpectWrite(0x84000004);  // Enabled, HIFI PLL, set div to 5.
 
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
@@ -744,7 +744,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
     fidl::FidlAllocator allocator;
     audio_fidl::wire::Format format(allocator);
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
-    pcm_format.frame_rate = kTestFrameRate2;  // Change it from the default at 48kHz.
+    pcm_format.frame_rate = 96'000;  // Change it from the default at 48kHz.
     format.set_pcm_format(allocator, std::move(pcm_format));
     client.CreateRingBuffer(std::move(format), std::move(remote));
 
@@ -759,8 +759,123 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   client.SetGain(audio_fidl::wire::GainState{});
 
   // Check that we set the codec to the new rate.
-  ASSERT_EQ(codec1->last_frame_rate_, kTestFrameRate2);
-  ASSERT_EQ(codec2->last_frame_rate_, kTestFrameRate2);
+  ASSERT_EQ(codec1->last_frame_rate_, 96'000);
+  ASSERT_EQ(codec2->last_frame_rate_, 96'000);
+
+  mock.VerifyAll();
+  controller->DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
+  enable_gpio.VerifyAndClear();
+  controller->DdkRelease();
+}
+
+TEST(AmlG12Tdm, PcmChangeRates) {
+  fake_ddk::Bind tester;
+
+  auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
+  auto codec_proto = codec->GetProto();
+
+  constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
+  fbl::Array<ddk_mock::MockMmioReg> regs =
+      fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
+  ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
+
+  ddk::PDev unused_pdev;
+  ddk::MockGpio enable_gpio;
+  enable_gpio.ExpectWrite(ZX_OK, 0);
+  auto controller = audio::SimpleAudioStream::Create<AmlG12PcmOutTest>(
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
+  ASSERT_NOT_NULL(controller);
+
+  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
+
+  // HW Initialize with requested 48kHz, set MCLK A CTRL.
+  mock[0x004].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
+  mock[0x004].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
+  mock[0x004].ExpectRead(0x00000000).ExpectWrite(0x84000027);  // Enabled, HIFI PLL, set div to 40.
+
+  // HW Initialize with requested 96kHz, set MCLK A CTRL.
+  mock[0x004].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
+  mock[0x004].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
+  mock[0x004].ExpectRead(0x00000000).ExpectWrite(0x84000013);  // Enabled, HIFI PLL, set div to 20.
+
+  // HW Initialize with requested 16kHz, set MCLK A CTRL.
+  mock[0x004].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
+  mock[0x004].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
+  mock[0x004].ExpectRead(0x00000000).ExpectWrite(0x84000077);  // Enabled, HIFI PLL, set div to 120
+
+  // HW Initialize with requested 8kHz, set MCLK A CTRL.
+  mock[0x004].ExpectWrite(0x0400ffff);                         // HIFI PLL, and max div.
+  mock[0x004].ExpectRead(0xffffffff).ExpectWrite(0x7fff0000);  // Disable, clear div.
+  mock[0x004].ExpectRead(0x00000000).ExpectWrite(0x840000EF);  // Enabled, HIFI PLL, set div to 240.
+
+  // Default sets 48'000 kHz.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
+
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+  }
+
+  // Sets 96'000 kHz.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
+
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.frame_rate = 96'000;  // Change it from the default at 48kHz.
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+  }
+
+  // Sets 16'000 kHz.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
+
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.frame_rate = 16'000;  // Change it from the default at 48kHz.
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
+
+  // Sets 8'000 kHz.
+  {
+    auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+    ASSERT_OK(endpoints.status_value());
+    auto [local, remote] = *std::move(endpoints);
+
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.frame_rate = 8'000;  // Change it from the default at 48kHz.
+    format.set_pcm_format(allocator, std::move(pcm_format));
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+
+    // To make sure call initialization in the controller, make a sync call
+    // (we know the controller is single threaded, init completed if received a reply).
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    ASSERT_OK(props.status());
+  }
 
   mock.VerifyAll();
   controller->DdkAsyncRemove();
@@ -793,23 +908,23 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
 
   // 1st case configure and keep everything enabled.
-  // Clear all muting.
-  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
-  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
-  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
-  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  // Clear all muting. EE_AUDIO_TDMOUT_A_MUTE.
+  mock[0x52c].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x530].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x534].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x538].ExpectWrite(0);  // TDMOUT MUTE3.
 
-  // Enable 1 channel.
-  mock[0x58c].ExpectWrite(1);  // TDMOUT MASK0.
-  mock[0x590].ExpectWrite(0);  // TDMOUT MASK1.
-  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
-  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+  // Enable 1 channel. EE_AUDIO_TDMOUT_A_MASK.
+  mock[0x50c].ExpectWrite(1);  // TDMOUT MASK0.
+  mock[0x510].ExpectWrite(0);  // TDMOUT MASK1.
+  mock[0x514].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x518].ExpectWrite(0);  // TDMOUT MASK3.
 
-  // Nothing muted.
-  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
-  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
-  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
-  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  // Nothing muted. EE_AUDIO_TDMOUT_A_MUTE.
+  mock[0x52c].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x530].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x534].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x538].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
@@ -830,23 +945,23 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   }
 
   // 2nd case, disable the channel.
-  // Clear all muting.
-  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
-  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
-  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
-  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  // Clear all muting. EE_AUDIO_TDMOUT_A_MUTE.
+  mock[0x52c].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x530].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x534].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x538].ExpectWrite(0);  // TDMOUT MUTE3.
 
-  // Enable 1 channel.
-  mock[0x58c].ExpectWrite(1);  // TDMOUT MASK0.
-  mock[0x590].ExpectWrite(0);  // TDMOUT MASK1.
-  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
-  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+  // Enable 1 channel. EE_AUDIO_TDMOUT_A_MASK.
+  mock[0x50c].ExpectWrite(1);  // TDMOUT MASK0.
+  mock[0x510].ExpectWrite(0);  // TDMOUT MASK1.
+  mock[0x514].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x518].ExpectWrite(0);  // TDMOUT MASK3.
 
-  // Mute the 1 channel.
-  mock[0x5ac].ExpectWrite(1);  // TDMOUT MUTE0.
-  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
-  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
-  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+  // Mute the 1 channel. EE_AUDIO_TDMOUT_A_MUTE.
+  mock[0x52c].ExpectWrite(1);  // TDMOUT MUTE0.
+  mock[0x530].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x534].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x538].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
@@ -1188,8 +1303,8 @@ struct AmlG12I2sInTest : public AmlG12TdmStream {
     range.min_channels = 2;
     range.max_channels = 2;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-    range.min_frames_per_second = kTestFrameRate1;
-    range.max_frames_per_second = kTestFrameRate2;
+    range.min_frames_per_second = 48'000;
+    range.max_frames_per_second = 96'000;
     range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
     supported_formats_.push_back(range);
 
@@ -1205,7 +1320,7 @@ struct AmlG12I2sInTest : public AmlG12TdmStream {
 
     unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
-    return aml_audio_->InitHW(metadata_, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED, kTestFrameRate1);
+    return aml_audio_->InitHW(metadata_, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED, 48'000);
   }
 };
 

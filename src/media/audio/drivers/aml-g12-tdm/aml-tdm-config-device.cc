@@ -125,7 +125,10 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
     ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[2] == 32'000);
     ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[3] == 48'000);
     ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[4] == 96'000);
-    status = device_->SetMclkDiv(metadata.mClockDivFactor * 48'000 / frame_rate - 1);
+    const uint32_t frame_bytes = metadata.dai.bits_per_slot / 8 * metadata.dai.number_of_channels;
+    // With frame_bytes = 8, we take mClockDivFactor and adjust the mclk_div up or down from 48kHz.
+    const uint32_t mclk_div = metadata.mClockDivFactor * 48'000 * 8 / frame_bytes / frame_rate;
+    status = device_->SetMclkDiv(mclk_div - 1);
     if (status != ZX_OK) {
       zxlogf(ERROR, "could not configure MCLK %d", status);
       return status;
