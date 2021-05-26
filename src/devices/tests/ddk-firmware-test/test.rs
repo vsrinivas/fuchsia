@@ -129,7 +129,7 @@ async fn create_realm(
         .add_component(
             "driver_manager",
             ComponentSource::url(
-                "fuchsia-pkg://fuchsia.com/ddk-packages-test#meta/driver-manager-realm.cm",
+                "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-realm.cm",
             ),
         )
         .await?;

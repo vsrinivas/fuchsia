@@ -21,6 +21,5 @@ group("tests") {
     "driver-runner-integration:tests",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
-    "packages-test:tests",
   ]
 }

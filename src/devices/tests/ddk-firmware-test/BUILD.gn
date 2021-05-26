@@ -1,12 +1,18 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
+import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
-import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":ddk-firmware-test-package" ]
+}
 
 fidl("fuchsia.device.firmware.test") {
   sources = [ "firmware.test.fidl" ]
@@ -46,40 +52,54 @@ resource("test-firmware-file") {
   outputs = [ "lib/firmware/test-firmware" ]
 }
 
-test("ddk-firmware") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "test.cc" ]
-  deps = [
-    ":fuchsia.device.firmware.test_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
-    "//zircon/system/ulib/driver-integration-test",
-  ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+fuchsia_test_component("ddk-firmware-test-component") {
+  component_name = "ddk-firmware-test-component"
+  manifest = "meta/ddk-firmware-test.cml"
+  deps = [ ":ddk_firmware_test" ]
 }
 
-isolated_devmgr_unittest_package("ddk-firmware-test-package") {
+rustc_test("ddk_firmware_test") {
+  edition = "2018"
+  source_root = "test.rs"
+
+  deps = [
+    ":fuchsia.device.firmware.test-rustc",
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/storage/fuchsia-vfs-watcher",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/directory_broker",
+    "//src/sys/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "test.rs" ]
+}
+
+fuchsia_test_component("driver-manager-realm") {
+  manifest = "meta/driver-manager-realm.cml"
+}
+
+fuchsia_test_package("ddk-firmware-test-package") {
   package_name = "ddk-firmware-test"
-  executable_path = "test/ddk-firmware"
+  test_components = [ ":ddk-firmware-test-component" ]
   deps = [
-    ":ddk-firmware",
     ":ddk-firmware-test",
+    ":driver-manager-realm",
     ":test-firmware-file",
-    "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
+    "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
+    "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
   ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":ddk-firmware-test-package" ]
 }

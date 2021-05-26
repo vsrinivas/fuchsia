@@ -8,7 +8,7 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/packages_test",
+        binary: "bin/ddk_firmware_test",
     },
     offer: [
         {

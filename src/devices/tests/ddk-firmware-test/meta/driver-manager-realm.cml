@@ -5,11 +5,11 @@
     children: [
         {
             name: "driver-manager",
-            url: "fuchsia-pkg://fuchsia.com/ddk-packages-test#meta/driver-manager-test.cm",
+            url: "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-test.cm",
         },
         {
             name: "driver-manager-support",
-            url: "fuchsia-pkg://fuchsia.com/ddk-packages-test#meta/driver-manager-support.cm",
+            url: "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-support.cm",
         },
     ],
     offer: [
