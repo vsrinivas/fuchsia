@@ -142,7 +142,6 @@ class LastPciBbnTracker {
         zxlogf(WARNING, "acpi: PCI/PCIe device \"%s\" missing _BBN entry, defaulting to 0",
                fourcc_to_string(obj_info.Name).str);
         bbn = 0;
-        return ZX_OK;
       } else if (status != ZX_OK) {
         zxlogf(ERROR, "acpi: failed to fetch BBN for PCI/PCIe device \"%s\"",
                fourcc_to_string(obj_info.Name).str);
