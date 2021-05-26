@@ -149,6 +149,8 @@ class TreeVisitor {
     element->Accept(this);
   }
 
+  virtual void OnLibraryDecl(std::unique_ptr<LibraryDecl> const& element) { element->Accept(this); }
+
   virtual void OnUsing(std::unique_ptr<Using> const& element) { element->Accept(this); }
 
   virtual void OnConstDeclaration(std::unique_ptr<ConstDeclaration> const& element) {

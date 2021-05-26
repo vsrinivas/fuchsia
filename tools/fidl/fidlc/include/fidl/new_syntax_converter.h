@@ -41,6 +41,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // void OnEnumMember(std::unique_ptr<raw::EnumMember> const&) override;
   // void OnIdentifier(std::unique_ptr<Identifier> const&) override;
   // void OnIdentifierConstant(std::unique_ptr<IdentifierConstant> const&) override;
+  // void OnLibraryDecl(std::unique_ptr<fidl::raw::LibraryDecl> const&) override;
   // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const&) override;
   // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const&) override;
   // void OnNullability(types::Nullability nullability) override;

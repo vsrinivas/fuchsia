@@ -169,7 +169,7 @@ void Linter::NewFile(const raw::File& element) {
   good_copyright_lines_found_ = 0;
   copyright_date_ = "";
 
-  auto& prefix_component = element.library_name->components.front();
+  auto& prefix_component = element.library_decl->path->components.front();
   library_prefix_ = to_string(prefix_component);
 
   library_is_platform_source_library_ =
@@ -201,7 +201,7 @@ void Linter::NewFile(const raw::File& element) {
     // comparing proposed library prefix to actual
     // source path.
     std::string replacement = "fuchsia, perhaps?";
-    AddFinding(element.library_name, kLibraryPrefixCheck,
+    AddFinding(element.library_decl->path, kLibraryPrefixCheck,
                {
                    {"ORIGINAL", library_prefix_},
                    {"REPLACEMENT", replacement},
@@ -210,20 +210,21 @@ void Linter::NewFile(const raw::File& element) {
   }
 
   // Library names should not have more than four components.
-  if (element.library_name->components.size() > 4) {
-    AddFinding(element.library_name, kLibraryNameDepthCheck);
+  if (element.library_decl->path->components.size() > 4) {
+    AddFinding(element.library_decl->path, kLibraryNameDepthCheck);
   }
 
   // Library name is not checked for CStyle because it must be simply "zx".
   if (lint_style_ == LintStyle::IpcStyle) {
-    for (const auto& component : element.library_name->components) {
+    for (const auto& component : element.library_decl->path->components) {
       if (std::regex_match(to_string(component), kDisallowedLibraryComponentRegex)) {
         AddFinding(component, kLibraryNameComponentCheck);
         break;
       }
     }
   }
-  EnterContext("library", NameLibrary(element.library_name->components), kRepeatsLibraryNameCheck);
+  EnterContext("library", NameLibrary(element.library_decl->path->components),
+               kRepeatsLibraryNameCheck);
 }
 
 const Finding* Linter::CheckCase(std::string type,

@@ -149,6 +149,14 @@ void TypeConstructorOld::Accept(TreeVisitor* visitor) const {
   visitor->OnNullability(nullability);
 }
 
+void LibraryDecl::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (IsAttributeListDefined(attributes)) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnCompoundIdentifier(path);
+}
+
 void Using::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (IsAttributeListDefined(attributes)) {
@@ -516,10 +524,7 @@ void TypeDecl::Accept(TreeVisitor* visitor) const {
 
 void File::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (IsAttributeListDefined(attributes)) {
-    visitor->OnAttributeList(attributes);
-  }
-  visitor->OnCompoundIdentifier(library_name);
+  visitor->OnLibraryDecl(library_decl);
   for (auto& i : using_list) {
     visitor->OnUsing(i);
   }

@@ -3627,9 +3627,9 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
-  if (raw::IsAttributeListDefined(file->attributes)) {
+  if (raw::IsAttributeListDefined(file->library_decl->attributes)) {
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(file->attributes), &attributes)) {
+    if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &attributes)) {
       return false;
     }
     ValidateAttributesPlacement(AttributePlacement::kLibrary, attributes.get());
@@ -3647,12 +3647,12 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
 
   // All fidl files in a library should agree on the library name.
   std::vector<std::string_view> new_name;
-  for (const auto& part : file->library_name->components) {
+  for (const auto& part : file->library_decl->path->components) {
     new_name.push_back(part->span().data());
   }
   if (!library_name_.empty()) {
     if (new_name != library_name_) {
-      return Fail(ErrFilesDisagreeOnLibraryName, file->library_name->components[0]->span());
+      return Fail(ErrFilesDisagreeOnLibraryName, file->library_decl->path->components[0]->span());
     }
   } else {
     library_name_ = new_name;

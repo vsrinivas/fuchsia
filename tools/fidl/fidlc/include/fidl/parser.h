@@ -265,7 +265,7 @@ class Parser {
 
   std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
   std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
-  std::unique_ptr<raw::CompoundIdentifier> ParseLibraryName();
+  std::unique_ptr<raw::LibraryDecl> ParseLibraryDecl();
 
   std::unique_ptr<raw::StringLiteral> ParseStringLiteral();
   std::unique_ptr<raw::NumericLiteral> ParseNumericLiteral();
@@ -373,9 +373,8 @@ class Parser {
   raw::TypeConstructor ParseTypeConstructor();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(std::unique_ptr<raw::AttributeListNew> attributes,
                                                ASTScope&);
-  std::unique_ptr<raw::File> ParseFileNewSyntax(
-      ASTScope&, raw::AttributeList library_attributes,
-      std::unique_ptr<raw::CompoundIdentifier> library_name);
+  std::unique_ptr<raw::File> ParseFileNewSyntax(ASTScope&,
+                                                std::unique_ptr<raw::LibraryDecl> library_decl);
   // --- end new syntax ---
 
   enum class RecoverResult {

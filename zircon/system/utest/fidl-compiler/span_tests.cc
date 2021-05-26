@@ -48,6 +48,7 @@ namespace {
   DO(Attribute)                 \
   DO(AttributeList)             \
   DO(TypeConstructor)           \
+  DO(Library)                   \
   DO(Using)                     \
   DO(ConstDeclaration)          \
   DO(BitsMember)                \
@@ -167,6 +168,10 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
       std::unique_ptr<fidl::raw::TypeConstructorOld> const& element) override {
     CheckSpanOfType(ElementType::TypeConstructor, *element);
     TreeVisitor::OnTypeConstructorOld(element);
+  }
+  void OnLibraryDecl(std::unique_ptr<fidl::raw::LibraryDecl> const& element) override {
+    CheckSpanOfType(ElementType::Library, *element);
+    TreeVisitor::OnLibraryDecl(element);
   }
   void OnUsing(std::unique_ptr<fidl::raw::Using> const& element) override {
     CheckSpanOfType(ElementType::Using, *element);
@@ -532,6 +537,11 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
      {
          R"FIDL([«a»] library x;)FIDL",
          R"FIDL([«a», «b="1"»] library x;)FIDL",
+     }},
+    {ElementType::Library,
+     {
+         R"FIDL(«library x»; using y;)FIDL",
+         R"FIDL(«library x.y.z»; using y;)FIDL",
      }},
     {ElementType::Using,
      {

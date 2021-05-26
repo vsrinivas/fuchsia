@@ -182,7 +182,16 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseCompoundIdentifier() {
   return std::make_unique<raw::CompoundIdentifier>(scope.GetSourceElement(), std::move(components));
 }
 
-std::unique_ptr<raw::CompoundIdentifier> Parser::ParseLibraryName() {
+std::unique_ptr<raw::LibraryDecl> Parser::ParseLibraryDecl() {
+  ASTScope scope(this);
+  auto attributes = MaybeParseAttributeList();
+  if (!Ok())
+    return Fail();
+
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kLibrary));
+  if (!Ok())
+    return Fail();
+
   auto library_name = ParseCompoundIdentifier();
   if (!Ok())
     return Fail();
@@ -194,7 +203,8 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseLibraryName() {
     }
   }
 
-  return library_name;
+  return std::make_unique<raw::LibraryDecl>(scope.GetSourceElement(), std::move(attributes),
+                                            std::move(library_name));
 }
 
 std::unique_ptr<raw::StringLiteral> Parser::ParseStringLiteral() {
@@ -1678,13 +1688,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     syntax_ = utils::Syntax::kNew;
   }
 
-  auto attributes = MaybeParseAttributeList();
-  if (!Ok())
-    return Fail();
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kLibrary));
-  if (!Ok())
-    return Fail();
-  auto library_name = ParseLibraryName();
+  auto library_decl = ParseLibraryDecl();
   if (!Ok())
     return Fail();
   ConsumeToken(OfKind(Token::Kind::kSemicolon));
@@ -1692,7 +1696,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     return Fail();
 
   if (syntax_ == utils::Syntax::kNew)
-    return ParseFileNewSyntax(scope, std::move(attributes), std::move(library_name));
+    return ParseFileNewSyntax(scope, std::move(library_decl));
 
   bool done_with_library_imports = false;
   std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
@@ -1850,13 +1854,13 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     return Fail();
 
   return std::make_unique<raw::File>(
-      scope.GetSourceElement(), end.value(), std::move(attributes), std::move(library_name),
-      std::move(alias_list), std::move(using_list), std::move(bits_declaration_list),
-      std::move(const_declaration_list), std::move(enum_declaration_list),
-      std::move(protocol_declaration_list), std::move(resource_declaration_list),
-      std::move(service_declaration_list), std::move(struct_declaration_list),
-      std::move(table_declaration_list), std::move(union_declaration_list), std::move(type_decls),
-      std::move(comment_tokens_), fidl::utils::Syntax::kOld);
+      scope.GetSourceElement(), end.value(), std::move(library_decl), std::move(alias_list),
+      std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
+      std::move(enum_declaration_list), std::move(protocol_declaration_list),
+      std::move(resource_declaration_list), std::move(service_declaration_list),
+      std::move(struct_declaration_list), std::move(table_declaration_list),
+      std::move(union_declaration_list), std::move(type_decls), std::move(comment_tokens_),
+      fidl::utils::Syntax::kOld);
 }
 
 std::unique_ptr<raw::LayoutParameter> Parser::ParseLayoutParameter() {
@@ -2278,8 +2282,7 @@ std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(
 }
 
 std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
-    ASTScope& scope, raw::AttributeList library_attributes,
-    std::unique_ptr<raw::CompoundIdentifier> library_name) {
+    ASTScope& scope, std::unique_ptr<raw::LibraryDecl> library_decl) {
   std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
   std::vector<std::unique_ptr<raw::Using>> using_list;
   std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
@@ -2388,13 +2391,13 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
     return Fail();
 
   return std::make_unique<raw::File>(
-      scope.GetSourceElement(), end.value(), std::move(library_attributes), std::move(library_name),
-      std::move(alias_list), std::move(using_list), std::move(bits_declaration_list),
-      std::move(const_declaration_list), std::move(enum_declaration_list),
-      std::move(protocol_declaration_list), std::move(resource_declaration_list),
-      std::move(service_declaration_list), std::move(struct_declaration_list),
-      std::move(table_declaration_list), std::move(union_declaration_list), std::move(type_decls),
-      std::move(comment_tokens_), fidl::utils::Syntax::kNew);
+      scope.GetSourceElement(), end.value(), std::move(library_decl), std::move(alias_list),
+      std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
+      std::move(enum_declaration_list), std::move(protocol_declaration_list),
+      std::move(resource_declaration_list), std::move(service_declaration_list),
+      std::move(struct_declaration_list), std::move(table_declaration_list),
+      std::move(union_declaration_list), std::move(type_decls), std::move(comment_tokens_),
+      fidl::utils::Syntax::kNew);
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {

@@ -449,6 +449,18 @@ class AliasDeclaration final : public SourceElement {
   TypeConstructor type_ctor;
 };
 
+class LibraryDecl final : public SourceElement {
+ public:
+  LibraryDecl(SourceElement const& element, AttributeList attributes,
+              std::unique_ptr<CompoundIdentifier> path)
+      : SourceElement(element), attributes(std::move(attributes)), path(std::move(path)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  AttributeList attributes;
+  std::unique_ptr<CompoundIdentifier> path;
+};
+
 class Using final : public SourceElement {
  public:
   Using(SourceElement const& element, AttributeList attributes,
@@ -1113,8 +1125,7 @@ class TypeDecl final : public SourceElement {
 
 class File final : public SourceElement {
  public:
-  File(SourceElement const& element, Token end, AttributeList attributes,
-       std::unique_ptr<CompoundIdentifier> library_name,
+  File(SourceElement const& element, Token end, std::unique_ptr<LibraryDecl> library_decl,
        std::vector<std::unique_ptr<AliasDeclaration>> alias_list,
        std::vector<std::unique_ptr<Using>> using_list,
        std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list,
@@ -1129,8 +1140,7 @@ class File final : public SourceElement {
        std::vector<std::unique_ptr<TypeDecl>> type_decls,
        std::vector<std::unique_ptr<Token>> comment_tokens_list, fidl::utils::Syntax syntax)
       : SourceElement(element),
-        attributes(std::move(attributes)),
-        library_name(std::move(library_name)),
+        library_decl(std::move(library_decl)),
         alias_list(std::move(alias_list)),
         using_list(std::move(using_list)),
         bits_declaration_list(std::move(bits_declaration_list)),
@@ -1149,8 +1159,7 @@ class File final : public SourceElement {
 
   void Accept(TreeVisitor* visitor) const;
 
-  AttributeList attributes;
-  std::unique_ptr<CompoundIdentifier> library_name;
+  std::unique_ptr<LibraryDecl> library_decl;
   std::vector<std::unique_ptr<AliasDeclaration>> alias_list;
   std::vector<std::unique_ptr<Using>> using_list;
   std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list;

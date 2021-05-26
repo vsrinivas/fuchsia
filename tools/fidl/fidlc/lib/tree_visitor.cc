@@ -13,11 +13,7 @@ namespace raw {
 
 void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
   OnSourceElementStart(*element);
-
-  if (IsAttributeListDefined(element->attributes)) {
-    OnAttributeList(element->attributes);
-  }
-  OnCompoundIdentifier(element->library_name);
+  OnLibraryDecl(element->library_decl);
 
   auto alias_decls_it = element->alias_list.begin();
   auto bits_decls_it = element->bits_declaration_list.begin();
