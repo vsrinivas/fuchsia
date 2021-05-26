@@ -33,7 +33,7 @@ class PrimaryWrapper {
                                           ::fidl::VectorView<uint8_t> command_data,
                                           ::fidl::VectorView<uint64_t> semaphores);
   magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
-                              uint64_t page_count, uint64_t flags);
+                              uint64_t page_count, fuchsia_gpu_magma::wire::MapFlags flags);
   magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va);
   magma_status_t CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count);
   magma_status_t BufferRangeOp(uint64_t buffer_id, fuchsia_gpu_magma::wire::BufferOp op,

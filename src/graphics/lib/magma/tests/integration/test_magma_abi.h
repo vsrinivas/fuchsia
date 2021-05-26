@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_LIB_MAGMA_TESTS_INTEGRATION_TEST_MAGMA_ABI_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 extern uint32_t gVendorId;
 

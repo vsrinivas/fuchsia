@@ -17,13 +17,16 @@ executable("magma_abi_conformance_tests") {
     "main.cc",
     "test_magma_abi.cc",
     "test_magma_abi_c.c",
+    "test_magma_fidl.cc",
   ]
 
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma",
     "$magma_build_root/tests/helper:magma_map_cpu",
+    "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 

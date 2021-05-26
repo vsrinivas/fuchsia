@@ -304,7 +304,7 @@ void ZirconPlatformConnection::MapBufferGpu(MapBufferGpuRequestView request,
 
   magma::Status status =
       delegate_->MapBufferGpu(request->buffer_id, request->gpu_va, request->page_offset,
-                              request->page_count, request->flags);
+                              request->page_count, static_cast<uint64_t>(request->flags));
   if (!status.ok())
     SetError(&completer, status.get());
 }

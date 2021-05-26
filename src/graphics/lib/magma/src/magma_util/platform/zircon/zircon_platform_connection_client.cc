@@ -18,6 +18,13 @@ static_assert(static_cast<uint32_t>(QueryId::kDeviceId) == MAGMA_QUERY_DEVICE_ID
 static_assert(static_cast<uint32_t>(QueryId::kIsTestRestartSupported) == MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::kIsTotalTimeSupported) == MAGMA_QUERY_IS_TOTAL_TIME_SUPPORTED, "mismatch");
 static_assert(static_cast<uint32_t>(QueryId::kMaximumInflightParams) == MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, "mismatch");
+using fuchsia_gpu_magma::wire::MapFlags;
+static_assert(static_cast<uint64_t>(MapFlags::kRead) == MAGMA_GPU_MAP_FLAG_READ, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kWrite) == MAGMA_GPU_MAP_FLAG_WRITE, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kExecute) == MAGMA_GPU_MAP_FLAG_EXECUTE, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kGrowable) == MAGMA_GPU_MAP_FLAG_GROWABLE, "mismatch");
+static_assert(static_cast<uint64_t>(MapFlags::kVendorFlag0) == MAGMA_GPU_MAP_FLAG_VENDOR_0, "mismatch");
+
 // clang-format on
 
 namespace {
@@ -263,7 +270,7 @@ magma_status_t PrimaryWrapper::ExecuteImmediateCommands(uint32_t context_id,
 
 magma_status_t PrimaryWrapper::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
                                             uint64_t page_offset, uint64_t page_count,
-                                            uint64_t flags) {
+                                            fuchsia_gpu_magma::wire::MapFlags flags) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
   zx_status_t status =
@@ -653,7 +660,9 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                               uint64_t page_count, uint64_t flags) override {
     DLOG("ZirconPlatformConnectionClient: MapBufferGpu");
-    magma_status_t result = client_.MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags);
+    magma_status_t result =
+        client_.MapBufferGpu(buffer_id, gpu_va, page_offset, page_count,
+                             static_cast<fuchsia_gpu_magma::wire::MapFlags>(flags));
 
     if (result != MAGMA_STATUS_OK)
       return DRET_MSG(result, "failed to write to channel");
