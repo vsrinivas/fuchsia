@@ -2,17 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
 
-test_package("transit_bench") {
-  tests = [
-    {
-      name = "transit_bench"
-    },
-  ]
-  public_deps = [ ":bin" ]
+fuchsia_unittest_package("transit_bench") {
+  deps = [ ":bin" ]
+  manifest = "meta/transit_bench.cmx"
 }
 
 rustc_binary("bin") {

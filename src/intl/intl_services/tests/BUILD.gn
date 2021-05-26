@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//build/components.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
 
 group("tests") {
@@ -13,8 +14,7 @@ group("tests") {
   ]
 }
 
-executable("intl_services_test") {
-  testonly = true
+test("intl_services_test") {
   sources = [ "intl_services_test.cc" ]
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
@@ -27,15 +27,11 @@ executable("intl_services_test") {
   ]
 }
 
-test_package("pkg") {
+fuchsia_unittest_package("pkg") {
   package_name = "intl_services_tests"
-  tests = [
-    {
-      name = "intl_services_test"
-      environment = basic_envs
-    },
-  ]
-  public_deps = [
+  component_name = "intl_services_test"
+  manifest = "meta/intl_services_test.cmx"
+  deps = [
     ":intl_services_test",
     "..:pkg",
     "//garnet/bin/setui",
