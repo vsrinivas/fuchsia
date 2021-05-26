@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("virtual_camera_agent") {
+  sources = [
+    "virtual_camera_agent.cc",
+    "virtual_camera_agent.h",
+  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/lib/sys/cpp",
+    "//src/camera/bin/device_watcher:fuchsia.camera.test",
+  ]
+}
+
+executable("virtual_camera_bin") {
+  output_name = "virtual_camera"
+  sources = [ "main.cc" ]
+  deps = [
+    ":virtual_camera_agent",
+    "//sdk/lib/modular/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("virtual_camera_component") {
+  deps = [ ":virtual_camera_bin" ]
+  component_name = "virtual_camera"
+  manifest = "meta/virtual_camera.cmx"
+}
+
+fuchsia_package("virtual_camera_pkg") {
+  deps = [ ":virtual_camera_component" ]
+  package_name = "virtual_camera"
+}
