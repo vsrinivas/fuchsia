@@ -29,7 +29,7 @@ DaiTest::DaiTest(zx_device_t* parent, bool is_input)
 }
 
 zx_status_t DaiTest::InitPDev() {
-  proto_client_ = ddk::DaiProtocolClient(parent(), is_input ? "dai-in" : "dai-out");
+  proto_client_ = ddk::DaiProtocolClient(parent(), is_input_ ? "dai-in" : "dai-out");
   if (!proto_client_.is_valid()) {
     zxlogf(ERROR, "could not get DAI fragment");
     return ZX_ERR_NO_RESOURCES;
@@ -71,17 +71,13 @@ void DaiTest::GetProperties(GetPropertiesCallback callback) {
 }
 
 void DaiTest::GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) {
-  zx::channel channel_remote, channel_local;
-  auto status = zx::channel::create(0, &channel_local, &channel_remote);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "could not create channel");
-    return;
-  }
+  ::fidl::InterfaceHandle<::fuchsia::hardware::audio::StreamConfig> client;
+  ::fidl::InterfaceRequest<::fuchsia::hardware::audio::StreamConfig> server = client.NewRequest();
 
-  ::fidl::InterfaceRequest<::fuchsia::hardware::audio::StreamConfig> stream_config;
-  stream_config.set_channel(std::move(channel_local));
-  stream_config_binding_.emplace(this, std::move(stream_config), loop_.dispatcher());
-  completer.Reply(std::move(channel_remote));
+  stream_config_binding_.emplace(this, std::move(server), loop_.dispatcher());
+  ::fidl::ClientEnd<::fuchsia_hardware_audio::StreamConfig> client2;
+  client2.channel() = client.TakeChannel();
+  completer.Reply(std::move(client2));
 }
 
 void DaiTest::GetSupportedFormats(GetSupportedFormatsCallback callback) {

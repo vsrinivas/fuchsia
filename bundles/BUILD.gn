@@ -190,6 +190,7 @@ group("drivers-build-only") {
     "//src/devices/bundles:drivers",
     "//src/graphics/bundles:drivers",
     "//src/lib/isolated_devmgr:crash-device",
+    "//src/media/audio/drivers/dai-test",
     "//src/media/bundles:drivers",
     "//src/ui/bundles:drivers",
     "//zircon/third_party/dev/ethernet/e1000:e1000",
