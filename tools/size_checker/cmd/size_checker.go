@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -663,13 +664,12 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	encoder.SetIndent("", "  ")
 	simpleSizes := make(map[string]interface{})
 	budgetSuffix := ".budget"
-	// Use the size_limits gni file as the source of truth/reference for budget
-	// info until we're able to provide better contextual links.
+	// Owner/context links to provide shortcut to component specific size stats.
 	ownerSuffix := ".owner"
 	for name, cs := range sizes {
 		simpleSizes[name] = cs.Size
 		simpleSizes[name+budgetSuffix] = cs.Budget
-		simpleSizes[name+ownerSuffix] = "http://goto.google.com/fuchsia-binary-size-limits"
+		simpleSizes[name+ownerSuffix] = "http://go/fuchsia-size-stats/single_component/?f=component:in" + url.QueryEscape(name)
 	}
 	if err := encoder.Encode(&simpleSizes); err != nil {
 		log.Fatal("failed to encode simpleSizes: ", err)
