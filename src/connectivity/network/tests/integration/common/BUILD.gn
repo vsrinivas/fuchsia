@@ -43,8 +43,8 @@ rustc_library("netstack_testing_common") {
   ]
   sources = [
     "src/constants.rs",
-    "src/environments.rs",
     "src/lib.rs",
+    "src/realms.rs",
   ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }

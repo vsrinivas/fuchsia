@@ -8,7 +8,13 @@
 
 pub mod constants;
 #[macro_use]
-pub mod environments;
+pub mod realms;
+// TODO(https://fxbug.dev/77202): remove this alias once integration tests are
+// fully migrated to netemul-v2.
+//
+// We alias this so that references to `environments` in integration testing
+// macros don't become invalid until all usages of them in tests are migrated.
+pub use realms as environments;
 
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
@@ -36,7 +42,7 @@ use packet_formats::ip::IpProto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
 use zerocopy::ByteSlice;
 
-use crate::environments::TestSandboxExt as _;
+use crate::realms::TestSandboxExt as _;
 
 /// An alias for `Result<T, anyhow::Error>`.
 pub type Result<T = ()> = std::result::Result<T, anyhow::Error>;
@@ -307,7 +313,7 @@ where
 {
     let network = sandbox.create_network(name).await.context("failed to create network")?;
     let realm = sandbox
-        .create_netstack_realm_with::<environments::Netstack2, _, _>(name, children)
+        .create_netstack_realm_with::<realms::Netstack2, _, _>(name, children)
         .context("failed to create netstack realm")?;
     // It is important that we create the fake endpoint before we join the
     // network so no frames transmitted by Netstack are lost.
