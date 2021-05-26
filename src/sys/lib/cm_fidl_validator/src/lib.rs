@@ -633,6 +633,9 @@ impl<'a> ValidationContext<'a> {
 
     fn validate_event(&mut self, event: &'a fsys::UseEventDecl) {
         self.validate_use_source(event.source.as_ref(), "UseEventDecl", "source");
+        if let Some(fsys::Ref::Self_(_)) = event.source {
+            self.errors.push(Error::invalid_field("UseEventDecl", "source"));
+        }
         check_name(event.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
         check_name(event.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
         check_events_mode(&event.mode, "UseEventDecl", "mode", &mut self.errors);
@@ -705,6 +708,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
             Some(fsys::Ref::Debug(_)) => {}
+            Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Capability(capability)) => {
                 if !self.all_capability_ids.contains(capability.name.as_str()) {
                     self.errors.push(Error::invalid_capability(decl, field, &capability.name));
@@ -2516,7 +2520,6 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("UseServiceDecl", "source"),
                 Error::invalid_field("UseServiceDecl", "source_name"),
                 Error::invalid_field("UseServiceDecl", "target_path"),
             ])),
@@ -2535,7 +2538,6 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
-                Error::invalid_field("UseProtocolDecl", "source"),
                 Error::invalid_field("UseProtocolDecl", "source_name"),
                 Error::invalid_field("UseProtocolDecl", "target_path"),
             ])),
@@ -2603,7 +2605,6 @@ mod tests {
                 Error::invalid_field("UseEventDecl", "source"),
                 Error::invalid_field("UseEventDecl", "source_name"),
                 Error::invalid_field("UseEventDecl", "target_name"),
-                Error::invalid_field("UseDirectoryDecl", "source"),
                 Error::invalid_field("UseDirectoryDecl", "source_name"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
                 Error::invalid_field("UseDirectoryDecl", "subdir"),
@@ -2848,7 +2849,24 @@ mod tests {
             },
             result = Ok(()),
         },
-
+        test_validate_uses_invalid_self_source => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Event(UseEventDecl {
+                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source_name: Some("started".to_string()),
+                        target_name: Some("foo_started".to_string()),
+                        mode: Some(EventMode::Async),
+                        ..UseEventDecl::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseEventDecl", "source"),
+            ])),
+        },
         // exposes
         test_validate_exposes_empty => {
             input = {

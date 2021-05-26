@@ -415,6 +415,9 @@ impl<'a> ValidationContext<'a> {
         if use_.storage.is_some() && use_.r#as.is_some() {
             return Err(Error::validate("\"as\" cannot be used with \"storage\""));
         }
+        if use_.from == Some(cml::UseFromRef::Self_) && use_.event.is_some() {
+            return Err(Error::validate("\"from: self\" cannot be used with \"event\""));
+        }
 
         match (use_.event_stream.as_ref(), use_.subscriptions.as_ref()) {
             (Some(_), Some(subscriptions)) => {
@@ -1300,8 +1303,8 @@ mod tests {
         let input = r##"{
     "use": [
         {
-            "protocol": "fuchsia.logger.Log",
-            "from": "self",
+            "event": "started",
+            "from": "bad",
         },
     ],
 }"##;
@@ -1309,7 +1312,7 @@ mod tests {
         assert_matches!(
             result,
             Err(Error::Parse { err, location: Some(l), filename: Some(f) })
-                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", \"#<child-name>\", or none" &&
+                if &err == "invalid value: string \"bad\", expected \"parent\", \"framework\", \"debug\", \"self\", \"#<capability-name>\", \"#<child-name>\", or none" &&
                 l == Location { line: 5, column: 21 } &&
                 f.ends_with("/test.cml")
         );
@@ -1448,6 +1451,17 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" should be present with \"event\""
         ),
+        test_cml_use_event_self_ref(
+            json!({
+                "use": [
+                    {
+                        "event": "started",
+                        "from": "self",
+                    },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from: self\" cannot be used with \"event\""
+        ),
         test_cml_use_missing_props(
             json!({
                 "use": [ { "path": "/svc/fuchsia.logger.Log" } ]
@@ -1487,10 +1501,10 @@ mod tests {
         test_cml_use_invalid_from(
             json!({
                 "use": [
-                  { "protocol": "CoolFonts", "from": "self" }
+                  { "protocol": "CoolFonts", "from": "bad" }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", \"#<child-name>\", or none"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"bad\", expected \"parent\", \"framework\", \"debug\", \"self\", \"#<capability-name>\", \"#<child-name>\", or none"
         ),
         test_cml_use_from_missing_capability(
             json!({

@@ -556,7 +556,7 @@ impl fmt::Display for AnyRef<'_> {
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
 #[reference(
-    expected = "\"parent\", \"framework\", \"debug\", \"#<capability-name>\", \"#<child-name>\", or none"
+    expected = "\"parent\", \"framework\", \"debug\", \"self\", \"#<capability-name>\", \"#<child-name>\", or none"
 )]
 pub enum UseFromRef {
     /// A reference to the parent.
@@ -573,6 +573,8 @@ pub enum UseFromRef {
     ///
     /// This cannot be used to directly access capabilities that a component itself declares.
     Named(Name),
+    /// A reference to this component.
+    Self_,
 }
 
 /// A reference in an `expose from`.

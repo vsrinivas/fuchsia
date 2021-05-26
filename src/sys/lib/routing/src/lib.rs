@@ -199,70 +199,81 @@ where
         .namespace()
         .component()
         .capability();
-    if let UseSource::Debug = use_decl.source {
-        // Find the component instance in which the debug capability was registered with the environment.
-        let (env_component_instance, env_name, registration_decl) = match target
-            .environment()
-            .get_debug_capability(&use_decl.source_name)?
-        {
-            Some((ExtendedInstanceInterface::Component(env_component_instance), env_name, reg)) => {
-                (env_component_instance, env_name, reg)
-            }
-            Some((ExtendedInstanceInterface::AboveRoot(_), _, _)) => {
-                // Root environment.
-                return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
-                    moniker: target.abs_moniker().clone(),
-                    capability_name: use_decl.source_name.clone(),
-                    capability_type: DebugRegistration::TYPE,
-                }
-                .into());
-            }
-            None => {
-                return Err(RoutingError::UseFromEnvironmentNotFound {
-                    moniker: target.abs_moniker().clone(),
-                    capability_name: use_decl.source_name.clone(),
-                    capability_type: DebugRegistration::TYPE,
-                }
-                .into());
-            }
-        };
-        let env_name = env_name.expect(&format!(
-            "Environment name in component `{}` not found when routing `{}`.",
-            target.abs_moniker().clone(),
-            use_decl.source_name
-        ));
+    match use_decl.source {
+        UseSource::Debug => {
+            // Find the component instance in which the debug capability was registered with the environment.
+            let (env_component_instance, env_name, registration_decl) =
+                match target.environment().get_debug_capability(&use_decl.source_name)? {
+                    Some((
+                        ExtendedInstanceInterface::Component(env_component_instance),
+                        env_name,
+                        reg,
+                    )) => (env_component_instance, env_name, reg),
+                    Some((ExtendedInstanceInterface::AboveRoot(_), _, _)) => {
+                        // Root environment.
+                        return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
+                            moniker: target.abs_moniker().clone(),
+                            capability_name: use_decl.source_name.clone(),
+                            capability_type: DebugRegistration::TYPE,
+                        }
+                        .into());
+                    }
+                    None => {
+                        return Err(RoutingError::UseFromEnvironmentNotFound {
+                            moniker: target.abs_moniker().clone(),
+                            capability_name: use_decl.source_name.clone(),
+                            capability_type: DebugRegistration::TYPE,
+                        }
+                        .into());
+                    }
+                };
+            let env_name = env_name.expect(&format!(
+                "Environment name in component `{}` not found when routing `{}`.",
+                target.abs_moniker().clone(),
+                use_decl.source_name
+            ));
 
-        let env_moniker = env_component_instance.abs_moniker().clone();
+            let env_moniker = env_component_instance.abs_moniker().clone();
 
-        let source = RoutingStrategy::new()
-            .registration::<DebugRegistration>()
-            .offer::<OfferProtocolDecl>()
-            .expose::<ExposeProtocolDecl>()
-            .route(
-                registration_decl,
-                env_component_instance.clone(),
-                allowed_sources,
-                &mut ProtocolVisitor,
-            )
-            .await?;
+            let source = RoutingStrategy::new()
+                .registration::<DebugRegistration>()
+                .offer::<OfferProtocolDecl>()
+                .expose::<ExposeProtocolDecl>()
+                .route(
+                    registration_decl,
+                    env_component_instance.clone(),
+                    allowed_sources,
+                    &mut ProtocolVisitor,
+                )
+                .await?;
 
-        target.try_get_policy_checker()?.can_route_debug_capability(
-            &source,
-            &env_moniker,
-            &env_name,
-            target.abs_moniker(),
-        )?;
-        return Ok(RouteSource::Protocol(source));
-    } else {
-        let source = RoutingStrategy::new()
-            .use_::<UseProtocolDecl>()
-            .offer::<OfferProtocolDecl>()
-            .expose::<ExposeProtocolDecl>()
-            .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
-            .await?;
+            target.try_get_policy_checker()?.can_route_debug_capability(
+                &source,
+                &env_moniker,
+                &env_name,
+                target.abs_moniker(),
+            )?;
+            return Ok(RouteSource::Protocol(source));
+        }
+        UseSource::Self_ => {
+            let allowed_sources = AllowedSourcesBuilder::new().component();
+            let source = RoutingStrategy::new()
+                .use_::<UseProtocolDecl>()
+                .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
+                .await?;
+            Ok(RouteSource::Protocol(source))
+        }
+        _ => {
+            let source = RoutingStrategy::new()
+                .use_::<UseProtocolDecl>()
+                .offer::<OfferProtocolDecl>()
+                .expose::<ExposeProtocolDecl>()
+                .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
+                .await?;
 
-        target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
-        Ok(RouteSource::Protocol(source))
+            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+            Ok(RouteSource::Protocol(source))
+        }
     }
 }
 
@@ -304,16 +315,28 @@ async fn route_service<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
-    let allowed_sources = AllowedSourcesBuilder::new().component().collection();
-    let source = RoutingStrategy::new()
-        .use_::<UseServiceDecl>()
-        .offer::<OfferServiceDecl>()
-        .expose::<ExposeServiceDecl>()
-        .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
-        .await?;
+    match use_decl.source {
+        UseSource::Self_ => {
+            let allowed_sources = AllowedSourcesBuilder::new().component();
+            let source = RoutingStrategy::new()
+                .use_::<UseServiceDecl>()
+                .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
+                .await?;
+            Ok(RouteSource::Service(source))
+        }
+        _ => {
+            let allowed_sources = AllowedSourcesBuilder::new().component().collection();
+            let source = RoutingStrategy::new()
+                .use_::<UseServiceDecl>()
+                .offer::<OfferServiceDecl>()
+                .expose::<ExposeServiceDecl>()
+                .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor)
+                .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
-    Ok(RouteSource::Service(source))
+            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+            Ok(RouteSource::Service(source))
+        }
+    }
 }
 
 async fn route_service_from_expose<C>(
@@ -419,24 +442,36 @@ async fn route_directory<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
-    let mut state = DirectoryState::new(use_decl.rights.clone(), use_decl.subdir.clone());
-    if let UseSource::Framework = &use_decl.source {
-        state.finalize(*READ_RIGHTS, None)?;
-    }
-    let allowed_sources = AllowedSourcesBuilder::new()
-        .framework(InternalCapability::Directory)
-        .builtin(InternalCapability::Directory)
-        .namespace()
-        .component();
-    let source = RoutingStrategy::new()
-        .use_::<UseDirectoryDecl>()
-        .offer::<OfferDirectoryDecl>()
-        .expose::<ExposeDirectoryDecl>()
-        .route(use_decl, target.clone(), allowed_sources, &mut state)
-        .await?;
+    match use_decl.source {
+        UseSource::Self_ => {
+            let allowed_sources = AllowedSourcesBuilder::new().component();
+            let source = RoutingStrategy::new()
+                .use_::<UseDirectoryDecl>()
+                .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor)
+                .await?;
+            Ok(RouteSource::Service(source))
+        }
+        _ => {
+            let mut state = DirectoryState::new(use_decl.rights.clone(), use_decl.subdir.clone());
+            if let UseSource::Framework = &use_decl.source {
+                state.finalize(*READ_RIGHTS, None)?;
+            }
+            let allowed_sources = AllowedSourcesBuilder::new()
+                .framework(InternalCapability::Directory)
+                .builtin(InternalCapability::Directory)
+                .namespace()
+                .component();
+            let source = RoutingStrategy::new()
+                .use_::<UseDirectoryDecl>()
+                .offer::<OfferDirectoryDecl>()
+                .expose::<ExposeDirectoryDecl>()
+                .route(use_decl, target.clone(), allowed_sources, &mut state)
+                .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
-    Ok(RouteSource::Directory(source, state))
+            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+            Ok(RouteSource::Directory(source, state))
+        }
+    }
 }
 
 /// Routes a Directory capability from `target` to its source, starting from `expose_decl`.

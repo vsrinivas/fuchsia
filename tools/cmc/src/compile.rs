@@ -738,6 +738,7 @@ fn extract_use_source(
         Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         Some(cml::UseFromRef::Debug) => Ok(fsys::Ref::Debug(fsys::DebugRef {})),
+        Some(cml::UseFromRef::Self_) => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
         Some(cml::UseFromRef::Named(name)) => {
             if all_capability_names.contains(&name) {
                 Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
@@ -776,7 +777,10 @@ fn extract_use_event_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
             Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
         }
         Some(cml::UseFromRef::Debug) => {
-            Err(Error::internal(format!("Debug source not supported for \"use event\"")))
+            Err(Error::internal(format!("Debug source provided for \"use event\"")))
+        }
+        Some(cml::UseFromRef::Self_) => {
+            Err(Error::internal(format!("Self source not supported for \"use event\"")))
         }
         None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
     }
@@ -1720,6 +1724,7 @@ mod tests {
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
                     { "protocol": "fuchsia.sys2.DebugProto", "from": "debug" },
+                    { "protocol": "fuchsia.sys2.Echo", "from": "self"},
                     { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
                     {
                         "directory": "config",
@@ -1792,6 +1797,14 @@ mod tests {
                             source: Some(fsys::Ref::Debug(fsys::DebugRef {})),
                             source_name: Some("fuchsia.sys2.DebugProto".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.DebugProto".to_string()),
+                            ..fsys::UseProtocolDecl::EMPTY
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("fuchsia.sys2.Echo".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.Echo".to_string()),
                             ..fsys::UseProtocolDecl::EMPTY
                         }
                     ),

@@ -1209,6 +1209,7 @@ pub enum UseSource {
     Parent,
     Framework,
     Debug,
+    Self_,
     Capability(CapabilityName),
     Child(String),
 }
@@ -1219,6 +1220,7 @@ impl FidlIntoNative<UseSource> for fsys::Ref {
             fsys::Ref::Parent(_) => UseSource::Parent,
             fsys::Ref::Framework(_) => UseSource::Framework,
             fsys::Ref::Debug(_) => UseSource::Debug,
+            fsys::Ref::Self_(_) => UseSource::Self_,
             fsys::Ref::Capability(c) => UseSource::Capability(c.name.into()),
             fsys::Ref::Child(c) => UseSource::Child(c.name),
             _ => panic!("invalid UseSource variant"),
@@ -1232,6 +1234,7 @@ impl NativeIntoFidl<fsys::Ref> for UseSource {
             UseSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             UseSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
             UseSource::Debug => fsys::Ref::Debug(fsys::DebugRef {}),
+            UseSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             UseSource::Capability(name) => {
                 fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }

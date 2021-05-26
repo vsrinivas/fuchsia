@@ -331,6 +331,31 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .await;
     }
 
+    /// a: uses protocol /svc/hippo from self
+    pub async fn test_use_from_self(&self) {
+        let components = vec![(
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo").build())
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Self_,
+                    source_name: "hippo".into(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        )];
+        let model = T::new("a", components).build().await;
+        model
+            .check_use(
+                vec![].into(),
+                CheckUse::Protocol {
+                    path: default_service_capability(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+    }
+
     ///   a
     ///    \
     ///     b

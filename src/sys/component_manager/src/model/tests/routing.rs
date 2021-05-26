@@ -219,6 +219,11 @@ async fn use_from_child() {
 }
 
 #[fuchsia::test]
+async fn use_from_self() {
+    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_self().await;
+}
+
+#[fuchsia::test]
 async fn use_from_grandchild() {
     CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_grandchild().await
 }

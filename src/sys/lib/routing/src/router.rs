@@ -63,11 +63,47 @@ impl<S, O, E> Clone for RoutingStrategy<S, O, E> {
 
 impl<S, O, E> Copy for RoutingStrategy<S, O, E> {}
 
-impl<U> RoutingStrategy<Use<U>, (), ()> {
+// Implement the Use routing strategy. In this strategy, there is neither no
+// Expose nor Offer. This strategy allows components to route capabilities to
+// themselves.
+impl<U> RoutingStrategy<Use<U>, (), ()>
+where
+    U: UseDeclCommon + ErrorNotFoundFromParent + Into<UseDecl>,
+{
     /// Configure the `Router` to route from a `Use` declaration to a matching `Offer`
     /// declaration.
-    pub const fn offer<O>(self) -> RoutingStrategy<Use<U>, Offer<O>, ()> {
+    pub fn offer<O>(self) -> RoutingStrategy<Use<U>, Offer<O>, ()> {
         RoutingStrategy(PhantomData)
+    }
+
+    /// Routes a capability from its `Use` declaration to its source by
+    /// capabilities declarations.
+    /// `sources` defines what are the valid sources of the capability.
+    /// See [`AllowedSourcesBuilder`].
+    /// `visitor` is invoked for each `Capability` declaration if `sources`
+    /// permits.
+    pub async fn route<C, S, V>(
+        self,
+        use_decl: U,
+        target: Arc<C>,
+        sources: S,
+        visitor: &mut V,
+    ) -> Result<CapabilitySourceInterface<C>, RoutingError>
+    where
+        C: ComponentInstanceInterface + 'static,
+        S: Sources + 'static,
+        V: CapabilityVisitor<CapabilityDecl = S::CapabilityDecl>,
+        V: Clone + Send + Sync + 'static,
+    {
+        let decl = target.decl().await?;
+        Ok(CapabilitySourceInterface::<C>::Component {
+            capability: sources.find_component_source(
+                use_decl.source_name(),
+                &decl.capabilities,
+                visitor,
+            )?,
+            component: target.as_weak(),
+        })
     }
 }
 
@@ -791,6 +827,9 @@ where
                 // This is not supported today. It might be worthwhile to support this if
                 // more than just protocol has a debug capability.
                 return Err(RoutingError::unsupported_route_source("debug capability"));
+            }
+            UseSource::Self_ => {
+                return Err(RoutingError::unsupported_route_source("self"));
             }
         }
     }

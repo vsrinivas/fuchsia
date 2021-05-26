@@ -28,6 +28,7 @@ impl From<&UseSource> for CapabilitySourceType {
             UseSource::Debug => Self::Debug,
             UseSource::Capability(name) => Self::Capability(name.to_string()),
             UseSource::Child(name) => Self::Child(name.to_string()),
+            UseSource::Self_ => Self::Self_,
         }
     }
 }
