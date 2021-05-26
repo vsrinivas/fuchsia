@@ -503,6 +503,21 @@ TEST(AmlRawnand, ReadErasedPage) {
   EXPECT_EQ(0xff, data.back());
   EXPECT_EQ(0xffff, oob.front());
   EXPECT_EQ(0xffff, oob.back());
+
+  // Repeat read with various nullptr combinations to ensure no crash.
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, nullptr, kTestNandWriteSize, &data_bytes_read,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       &oob_bytes_read, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, data.data(), kTestNandWriteSize, &data_bytes_read,
+                                       nullptr, kDefaultNumUserBytes, &oob_bytes_read,
+                                       &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, nullptr, kTestNandWriteSize, &data_bytes_read, nullptr,
+                                       kDefaultNumUserBytes, &oob_bytes_read, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, nullptr, kTestNandWriteSize, nullptr,
+                                       reinterpret_cast<uint8_t*>(oob.data()), kDefaultNumUserBytes,
+                                       nullptr, &ecc_correct));
+  ASSERT_OK(nand->RawNandReadPageHwecc(5, nullptr, kTestNandWriteSize, nullptr, nullptr,
+                                       kDefaultNumUserBytes, nullptr, &ecc_correct));
 }
 
 TEST(AmlRawnand, PartialErasedPage) {
