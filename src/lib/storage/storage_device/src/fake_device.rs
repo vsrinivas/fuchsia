@@ -100,4 +100,8 @@ impl Device for FakeDevice {
     fn reopen(&self) {
         self.closed.store(false, Ordering::Relaxed);
     }
+
+    fn is_read_only(&self) -> bool {
+        false
+    }
 }

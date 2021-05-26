@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         object_store::{
             directory::{self, Directory, ObjectDescriptor},
-            transaction::LockKey,
+            transaction::{LockKey, Options},
             HandleOptions, ObjectStore,
         },
         server::{
@@ -129,10 +129,13 @@ impl FilesystemRename for FxVolume {
             Ok((transaction, id, descriptor)) => (transaction, Some((id, descriptor))),
             Err(e) if FxfsError::NotFound.matches(&e) => {
                 let transaction = fs
-                    .new_transaction(&[
-                        LockKey::object(self.store.store_object_id(), src_dir.object_id()),
-                        LockKey::object(self.store.store_object_id(), dst_dir.object_id()),
-                    ])
+                    .new_transaction(
+                        &[
+                            LockKey::object(self.store.store_object_id(), src_dir.object_id()),
+                            LockKey::object(self.store.store_object_id(), dst_dir.object_id()),
+                        ],
+                        Options::default(),
+                    )
                     .await
                     .map_err(map_to_status)?;
                 (transaction, None)

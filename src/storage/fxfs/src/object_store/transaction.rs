@@ -7,7 +7,7 @@ use {
         lsm_tree::types::Item,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
-            allocator::AllocatorItem,
+            allocator::{AllocatorItem, Reservation},
             record::{ObjectItem, ObjectKey, ObjectValue},
             StoreInfo,
         },
@@ -18,6 +18,7 @@ use {
     futures::future::poll_fn,
     serde::{Deserialize, Serialize},
     std::{
+        any::Any,
         cmp::Ordering,
         collections::{
             hash_map::{Entry, HashMap},
@@ -29,6 +30,13 @@ use {
     },
 };
 
+#[derive(Default)]
+pub struct Options {
+    /// If true, don't check for low journal space.  This should be true for any transactions that
+    /// might alleviate journal space (i.e. compaction).
+    pub skip_journal_checks: bool,
+}
+
 #[async_trait]
 pub trait TransactionHandler: Send + Sync {
     /// Initiates a new transaction.  Implementations should check to see that a transaction can be
@@ -37,6 +45,7 @@ pub trait TransactionHandler: Send + Sync {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         lock_keys: &[LockKey],
+        options: Options,
     ) -> Result<Transaction<'a>, Error>;
 
     /// Implementations should perform any required journaling and then apply the mutations via
@@ -67,6 +76,8 @@ pub enum Mutation {
     ObjectStore(ObjectStoreMutation),
     ObjectStoreInfo(StoreInfoMutation),
     Allocator(AllocatorMutation),
+    // Like an Allocator mutation, but without any change in allocated counts.
+    AllocatorRef(AllocatorMutation),
     // Seal the mutable layer and create a new one.
     TreeSeal,
     // Discards all non-mutable layers.
@@ -103,6 +114,10 @@ impl Mutation {
 
     pub fn allocation(item: AllocatorItem) -> Self {
         Mutation::Allocator(AllocatorMutation(item))
+    }
+
+    pub fn allocation_ref(item: AllocatorItem) -> Self {
+        Mutation::AllocatorRef(AllocatorMutation(item))
     }
 }
 
@@ -243,14 +258,66 @@ impl LockKey {
     }
 }
 
-// Mutations can be associated with an object so that when mutations are applied, updates can be
-// applied to in-memory strucutres.  For example, we cache object sizes, so when a size change is
-// applied, we can update the cached object size.
-pub trait AssociatedObject: Send + Sync {
-    fn will_apply_mutation(&self, mutation: &Mutation);
+pub trait AsAny: Any {
+    fn as_any(&self) -> &dyn Any;
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any>;
 }
 
-#[derive(Clone)]
+/// Mutations can be associated with an object so that when mutations are applied, updates can be
+/// applied to in-memory strucutres.  For example, we cache object sizes, so when a size change is
+/// applied, we can update the cached object size.
+pub trait AssociatedObject: AsAny + Send + Sync {
+    fn will_apply_mutation(&self, _mutation: &Mutation) {}
+}
+
+impl<T: AssociatedObject + 'static> AsAny for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_box(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
+
+pub enum AssocObj<'a> {
+    None,
+    Borrowed(&'a (dyn AssociatedObject)),
+    Owned(Box<dyn AssociatedObject>),
+}
+
+impl AssocObj<'_> {
+    pub fn downcast_ref<T: AssociatedObject + 'static>(&self) -> Option<&T> {
+        match self {
+            AssocObj::None => None,
+            AssocObj::Borrowed(b) => b.as_any().downcast_ref(),
+            AssocObj::Owned(o) => o.as_any().downcast_ref(),
+        }
+    }
+
+    pub fn will_apply_mutation(&self, mutation: &Mutation) {
+        match self {
+            AssocObj::None => {}
+            AssocObj::Borrowed(ref b) => b.will_apply_mutation(mutation),
+            AssocObj::Owned(ref o) => o.will_apply_mutation(mutation),
+        }
+    }
+
+    pub fn take<T: AssociatedObject + 'static>(&mut self) -> Option<Box<T>> {
+        if let AssocObj::Owned(o) = self {
+            if o.as_any().is::<T>() {
+                if let AssocObj::Owned(o) = std::mem::replace(self, AssocObj::None) {
+                    return Some(o.as_any_box().downcast().unwrap());
+                } else {
+                    unreachable!();
+                }
+            }
+        }
+        None
+    }
+}
+
 pub struct TxnMutation<'a> {
     // This, at time of writing, is either the object ID of an object store, or the object ID of the
     // allocator.  In the case of an object mutation, there's another object ID in the mutation
@@ -262,7 +329,7 @@ pub struct TxnMutation<'a> {
 
     // An optional associated object for the mutation.  During replay, there will always be no
     // associated object.
-    pub associated_object: Option<&'a dyn AssociatedObject>,
+    pub associated_object: AssocObj<'a>,
 }
 
 // We store TxnMutation in a set, and for that, we only use object_id and mutation and not the
@@ -308,6 +375,9 @@ pub struct Transaction<'a> {
 
     // The read locks that this transaction currently holds.
     read_locks: Vec<LockKey>,
+
+    /// If set, an allocator reservation that should be used for allocations.
+    pub allocator_reservation: Option<&'a Reservation>,
 }
 
 impl<'a> Transaction<'a> {
@@ -325,18 +395,32 @@ impl<'a> Transaction<'a> {
             let mut write_guard = lock_manager.txn_lock(txn_locks).await;
             (std::mem::take(&mut read_guard.lock_keys), std::mem::take(&mut write_guard.lock_keys))
         };
-        Transaction { handler, mutations: BTreeSet::new(), txn_locks, read_locks }
+        Transaction {
+            handler,
+            mutations: BTreeSet::new(),
+            txn_locks,
+            read_locks,
+            allocator_reservation: None,
+        }
     }
 
     /// Adds a mutation to this transaction.
     pub fn add(&mut self, object_id: u64, mutation: Mutation) {
         assert!(object_id != INVALID_OBJECT_ID);
-        self.mutations.replace(TxnMutation { object_id, mutation, associated_object: None });
+        self.mutations.replace(TxnMutation {
+            object_id,
+            mutation,
+            associated_object: AssocObj::None,
+        });
     }
 
     /// Removes a mutation that matches `mutation`.
     pub fn remove(&mut self, object_id: u64, mutation: Mutation) {
-        self.mutations.remove(&TxnMutation { object_id, mutation, associated_object: None });
+        self.mutations.remove(&TxnMutation {
+            object_id,
+            mutation,
+            associated_object: AssocObj::None,
+        });
     }
 
     /// Adds a mutation with an associated object.
@@ -344,14 +428,10 @@ impl<'a> Transaction<'a> {
         &mut self,
         object_id: u64,
         mutation: Mutation,
-        associated_object: &'a dyn AssociatedObject,
+        associated_object: AssocObj<'a>,
     ) {
         assert!(object_id != INVALID_OBJECT_ID);
-        self.mutations.replace(TxnMutation {
-            object_id,
-            mutation,
-            associated_object: Some(associated_object),
-        });
+        self.mutations.replace(TxnMutation { object_id, mutation, associated_object });
     }
 
     /// Returns true if this transaction has no mutations.
@@ -370,7 +450,7 @@ impl<'a> Transaction<'a> {
             self.mutations.get(&TxnMutation {
                 object_id,
                 mutation: Mutation::insert_object(key, ObjectValue::None),
-                associated_object: None,
+                associated_object: AssocObj::None,
             })
         {
             Some(mutation)
@@ -388,7 +468,7 @@ impl<'a> Transaction<'a> {
         }) = self.mutations.get(&TxnMutation {
             object_id,
             mutation: Mutation::store_info(StoreInfo::default()),
-            associated_object: None,
+            associated_object: AssocObj::None,
         }) {
             Some(store_info)
         } else {
@@ -404,7 +484,7 @@ impl<'a> Transaction<'a> {
         }) = self.mutations.get(&TxnMutation {
             object_id,
             mutation: Mutation::AllocatedBytes(AllocatedBytesMutation(0)),
-            associated_object: None,
+            associated_object: AssocObj::None,
         }) {
             Some(*delta)
         } else {
@@ -707,7 +787,7 @@ impl Drop for WriteGuard<'_> {
 #[cfg(test)]
 mod tests {
     use {
-        super::{LockKey, LockManager, LockState, Mutation, TransactionHandler},
+        super::{LockKey, LockManager, LockState, Mutation, Options, TransactionHandler},
         crate::object_store::testing::fake_filesystem::FakeFilesystem,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::FutureExt, join},
@@ -719,7 +799,11 @@ mod tests {
     async fn test_simple() {
         let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
         let fs = FakeFilesystem::new(device);
-        let mut t = fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut t = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         t.add(1, Mutation::TreeSeal);
         assert!(!t.is_empty());
     }
@@ -736,7 +820,7 @@ mod tests {
             async {
                 let _t = fs
                     .clone()
-                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)])
+                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)], Options::default())
                     .await
                     .expect("new_transaction failed");
                 send1.send(()).unwrap(); // Tell the next future to continue.
@@ -751,7 +835,7 @@ mod tests {
                 // This should not block since it is a different key.
                 let _t = fs
                     .clone()
-                    .new_transaction(&[LockKey::object_attribute(2, 2, 3)])
+                    .new_transaction(&[LockKey::object_attribute(2, 2, 3)], Options::default())
                     .await
                     .expect("new_transaction failed");
                 // Tell the first future to continue.
@@ -760,7 +844,10 @@ mod tests {
             async {
                 // This should block until the first future has completed.
                 recv3.await.unwrap();
-                let _t = fs.clone().new_transaction(&[LockKey::object_attribute(1, 2, 3)]).await;
+                let _t = fs
+                    .clone()
+                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)], Options::default())
+                    .await;
                 *done.lock().unwrap() = true;
             }
         );
@@ -777,7 +864,7 @@ mod tests {
             async {
                 let t = fs
                     .clone()
-                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)])
+                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)], Options::default())
                     .await
                     .expect("new_transaction failed");
                 send1.send(()).unwrap(); // Tell the next future to continue.
@@ -822,7 +909,7 @@ mod tests {
                 recv1.await.unwrap();
                 let t = fs
                     .clone()
-                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)])
+                    .new_transaction(&[LockKey::object_attribute(1, 2, 3)], Options::default())
                     .await
                     .expect("new_transaction failed");
                 send2.send(()).unwrap(); // Tell the first future to continue;
@@ -840,17 +927,26 @@ mod tests {
 
         // Dropping while there's a reader.
         {
-            let mut write_lock =
-                fs.clone().new_transaction(&[key.clone()]).await.expect("new_transaction failed");
+            let mut write_lock = fs
+                .clone()
+                .new_transaction(&[key.clone()], Options::default())
+                .await
+                .expect("new_transaction failed");
             let _read_lock = fs.read_lock(&[key.clone()]).await;
             fs.clone().drop_transaction(&mut write_lock);
         }
         // Dropping while there's no reader.
-        let mut write_lock =
-            fs.clone().new_transaction(&[key.clone()]).await.expect("new_transaction failed");
+        let mut write_lock = fs
+            .clone()
+            .new_transaction(&[key.clone()], Options::default())
+            .await
+            .expect("new_transaction failed");
         fs.clone().drop_transaction(&mut write_lock);
         // Make sure we can take the lock again (i.e. it was actually released).
-        fs.clone().new_transaction(&[key.clone()]).await.expect("new_transaction failed");
+        fs.clone()
+            .new_transaction(&[key.clone()], Options::default())
+            .await
+            .expect("new_transaction failed");
     }
 
     #[fasync::run_singlethreaded(test)]

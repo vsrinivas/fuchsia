@@ -155,7 +155,7 @@ mod tests {
 
     #[fasync::run(2, test)]
     async fn test_lifecycle() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let filesystem = FxFilesystem::new_empty(device).await?;
         let server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 

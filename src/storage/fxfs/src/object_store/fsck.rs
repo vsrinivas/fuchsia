@@ -238,7 +238,7 @@ mod tests {
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem},
                 record::ObjectDescriptor,
-                transaction::TransactionHandler,
+                transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },
         },
@@ -252,16 +252,19 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_extra_allocation() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            2048,
+            4096,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
         .expect("new_empty failed");
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         let offset = 2047 * TEST_DEVICE_BLOCK_SIZE as u64;
         fs.allocator()
-            .reserve(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
+            .mark_allocated(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
             .await;
         transaction.commit().await;
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
@@ -271,7 +274,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_allocation_mismatch() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            2048,
+            4096,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -286,9 +289,12 @@ mod tests {
             device_range.clone()
         };
         // This should just change the delta.
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        allocator.reserve(&mut transaction, range).await;
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        allocator.add_ref(&mut transaction, range);
         transaction.commit().await;
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("mismatch"), "{}", error);
@@ -297,7 +303,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_allocation() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            2048,
+            4096,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -326,7 +332,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_too_many_object_refs() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            2048,
+            4096,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -337,8 +343,11 @@ mod tests {
             .await
             .expect("open failed");
 
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         let child_file = root_directory
             .create_child_file(&mut transaction, "child_file")
             .await
@@ -362,7 +371,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_too_few_object_refs() {
         let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            2048,
+            4096,
             TEST_DEVICE_BLOCK_SIZE,
         )))
         .await
@@ -372,8 +381,11 @@ mod tests {
 
         // Create an object but no directory entry referencing that object, so it will end up with a
         // reference count of one, but zero references.
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");

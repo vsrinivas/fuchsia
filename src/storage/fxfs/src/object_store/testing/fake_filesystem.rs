@@ -8,7 +8,7 @@ use {
         filesystem::{Filesystem, ObjectManager, SyncOptions},
         journal::JournalCheckpoint,
         transaction::{
-            LockKey, LockManager, ReadGuard, Transaction, TransactionHandler, TxnMutation,
+            LockKey, LockManager, Options, ReadGuard, Transaction, TransactionHandler, TxnMutation,
         },
         ObjectStore,
     },
@@ -63,6 +63,7 @@ impl TransactionHandler for FakeFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
+        _options: Options,
     ) -> Result<Transaction<'a>, Error> {
         Ok(Transaction::new(self, &[], locks).await)
     }
@@ -76,7 +77,7 @@ impl TransactionHandler for FakeFilesystem {
                 .apply_mutation(
                     object_id,
                     mutation,
-                    false,
+                    Some(transaction),
                     &JournalCheckpoint::default(),
                     associated_object,
                 )

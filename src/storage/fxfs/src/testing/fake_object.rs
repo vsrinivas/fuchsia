@@ -6,7 +6,9 @@ use {
     crate::{
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
-            transaction::{LockKey, LockManager, ReadGuard, Transaction, TransactionHandler},
+            transaction::{
+                LockKey, LockManager, Options, ReadGuard, Transaction, TransactionHandler,
+            },
             Timestamp,
         },
     },
@@ -62,6 +64,7 @@ impl TransactionHandler for FakeObject {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
+        _options: Options,
     ) -> Result<Transaction<'a>, Error> {
         Ok(Transaction::new(self, &[], locks).await)
     }
@@ -167,6 +170,6 @@ impl ObjectHandle for FakeObjectHandle {
     }
 
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
-        self.object.clone().new_transaction(&[]).await
+        self.object.clone().new_transaction(&[], Options::default()).await
     }
 }

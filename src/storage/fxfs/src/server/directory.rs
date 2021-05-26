@@ -9,7 +9,7 @@ use {
         object_store::{
             self,
             directory::{self, ObjectDescriptor},
-            transaction::{LockKey, Transaction},
+            transaction::{LockKey, Options, Transaction},
             ObjectStore, Timestamp,
         },
         server::{
@@ -128,7 +128,7 @@ impl FxDirectory {
             };
             lock_keys.extend_from_slice(extra_keys);
             let fs = store.filesystem().clone();
-            let transaction = fs.new_transaction(&lock_keys).await?;
+            let transaction = fs.new_transaction(&lock_keys, Options::default()).await?;
 
             let (object_id, object_descriptor) =
                 self.directory.lookup(name).await?.ok_or(FxfsError::NotFound)?;
@@ -174,7 +174,7 @@ impl FxDirectory {
             let keys =
                 [LockKey::object(store.store_object_id(), current_dir.directory.object_id())];
             let transaction_or_guard = if last_segment && flags & OPEN_FLAG_CREATE != 0 {
-                Left(fs.clone().new_transaction(&keys).await?)
+                Left(fs.clone().new_transaction(&keys, Options::default()).await?)
             } else {
                 // When child objects are created, the object is created along with the directory
                 // entry in the same transaction, and so we need to hold a read lock over the lookup
@@ -338,7 +338,10 @@ impl MutableDirectory for FxDirectory {
         let store = self.store();
         let fs = store.filesystem().clone();
         let mut transaction = fs
-            .new_transaction(&[LockKey::object(store.store_object_id(), self.object_id())])
+            .new_transaction(
+                &[LockKey::object(store.store_object_id(), self.object_id())],
+                Options::default(),
+            )
             .await
             .map_err(map_to_status)?;
         if self.is_deleted() {
@@ -405,10 +408,10 @@ impl MutableDirectory for FxDirectory {
         let fs = self.store().filesystem();
         let mut transaction = fs
             .clone()
-            .new_transaction(&[LockKey::object(
-                self.store().store_object_id(),
-                self.directory.object_id(),
-            )])
+            .new_transaction(
+                &[LockKey::object(self.store().store_object_id(), self.directory.object_id())],
+                Options::default(),
+            )
             .await
             .map_err(map_to_status)?;
         self.directory
@@ -654,7 +657,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_dir_persists() {
-        let mut device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let mut device = DeviceHolder::new(FakeDevice::new(4096, 512));
         for i in 0..2 {
             let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
             let root = fixture.root();

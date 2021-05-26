@@ -256,12 +256,12 @@ mod tests {
     const TEST_BLOCK_SIZE: u64 = 512;
 
     async fn write_items<T: Serialize>(handle: FakeObjectHandle, items: &[T]) {
-        let mut writer = JournalWriter::new(Some(handle), TEST_BLOCK_SIZE as usize, 0);
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         for item in items {
             writer.write_record(item);
         }
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -339,16 +339,12 @@ mod tests {
         let mut buf = handle.allocate_buffer(len);
         buf.as_mut_slice().fill(0u8);
         handle.write(0, buf.as_ref()).await.expect("write failed");
-        let mut writer = JournalWriter::new(
-            Some(FakeObjectHandle::new(object.clone())),
-            TEST_BLOCK_SIZE as usize,
-            0,
-        );
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         writer.write_record(&4u32);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.write_record(&7u32);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
@@ -385,11 +381,7 @@ mod tests {
         let mut buf = handle.allocate_buffer(len);
         buf.as_mut_slice().fill(0u8);
         handle.write(0, buf.as_ref()).await.expect("write failed");
-        let mut writer = JournalWriter::new(
-            Some(FakeObjectHandle::new(object.clone())),
-            TEST_BLOCK_SIZE as usize,
-            0,
-        );
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         // Write one byte so that everything else is misaligned.
         writer.write_record(&4u8);
         let mut count: i32 = 0;
@@ -400,7 +392,7 @@ mod tests {
         // Check that writing didn't end up being aligned on a block.
         assert_ne!(writer.journal_file_checkpoint().file_offset, TEST_BLOCK_SIZE);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
 
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
@@ -440,8 +432,7 @@ mod tests {
             ReadResult::ChecksumMismatch
         );
 
-        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE as usize, 0);
-        writer.set_handle(FakeObjectHandle::new(object.clone()));
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         writer.seek_to_checkpoint(JournalCheckpoint::new(
             TEST_BLOCK_SIZE,
             reader.last_read_checksum() ^ RESET_XOR,
@@ -450,7 +441,7 @@ mod tests {
         let checkpoint = writer.journal_file_checkpoint();
         writer.write_record(&78u32);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
 
         let mut reader = JournalReader::new(
             reader.take_handle(),
@@ -490,14 +481,10 @@ mod tests {
         let mut buf = handle.allocate_buffer(len);
         buf.as_mut_slice().fill(0u8);
         handle.write(0, buf.as_ref()).await.expect("write failed");
-        let mut writer = JournalWriter::new(
-            Some(FakeObjectHandle::new(object.clone())),
-            TEST_BLOCK_SIZE as usize,
-            0,
-        );
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE as usize, 0);
         let len = 2 * (TEST_BLOCK_SIZE as usize - std::mem::size_of::<Checksum>());
         assert_eq!(writer.write(&vec![78u8; len]).expect("write failed"), len);
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
 
         let checkpoint = JournalCheckpoint {
             file_offset: TEST_BLOCK_SIZE - std::mem::size_of::<Checksum>() as u64 - 1,

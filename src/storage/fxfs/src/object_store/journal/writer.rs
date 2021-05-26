@@ -17,11 +17,7 @@ use {
 /// JournalWriter is responsible for writing log records to a journal file.  Each block contains a
 /// fletcher64 checksum at the end of the block.  This is used by both the main journal file and the
 /// super-block.
-pub struct JournalWriter<OH> {
-    // The handle to write to.  We allow lazy initialisation so that a writer can be instantiated
-    // before replay has completed.
-    handle: Option<OH>,
-
+pub struct JournalWriter {
     // The block size used for this journal file.
     block_size: usize,
 
@@ -35,10 +31,9 @@ pub struct JournalWriter<OH> {
     buf: Vec<u8>,
 }
 
-impl<OH> JournalWriter<OH> {
-    pub fn new(handle: Option<OH>, block_size: usize, last_checksum: u64) -> Self {
+impl JournalWriter {
+    pub fn new(block_size: usize, last_checksum: u64) -> Self {
         JournalWriter {
-            handle,
             block_size,
             checkpoint: JournalCheckpoint::default(),
             last_checksum,
@@ -71,42 +66,27 @@ impl<OH> JournalWriter<OH> {
     }
 
     /// Flushes any outstanding complete blocks to the journal object.  Part blocks can be flushed
-    /// by calling pad_to_block first.  Does nothing if no handle has been set yet.
-    pub async fn maybe_flush_buffer(&mut self) -> Result<(), Error>
-    where
-        OH: ObjectHandle,
-    {
-        if let Some(ref handle) = self.handle {
-            let to_do = self.buf.len() - self.buf.len() % self.block_size;
-            if to_do > 0 {
-                // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
-                // buffer. Doing so will require picking an appropriate size up front, and forcing
-                // flush as we fill it up.
-                let mut buf = handle.allocate_buffer(to_do);
-                buf.as_mut_slice()[..to_do].copy_from_slice(self.buf.drain(..to_do).as_slice());
-                buf.as_mut_slice()[to_do..].fill(0u8);
-                let mut txn = handle.new_transaction().await?;
-                handle.txn_write(&mut txn, self.checkpoint.file_offset, buf.as_ref()).await?;
-                // Any mutations would rely on the journal to be applied, so the transaction must be
-                // empty. Writes are done in overwrite mode and the journal file is pre-allocated,
-                // so they should not cause any mutations to be added to the transaction.
-                assert!(txn.is_empty());
-                txn.commit().await;
-                self.checkpoint.file_offset += to_do as u64;
-                self.checkpoint.checksum = self.last_checksum;
-            }
+    /// by calling pad_to_block first.
+    pub async fn flush_buffer(&mut self, handle: &impl ObjectHandle) -> Result<(), Error> {
+        let to_do = self.buf.len() - self.buf.len() % self.block_size;
+        if to_do > 0 {
+            // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
+            // buffer. Doing so will require picking an appropriate size up front, and forcing
+            // flush as we fill it up.
+            let mut buf = handle.allocate_buffer(to_do);
+            buf.as_mut_slice()[..to_do].copy_from_slice(self.buf.drain(..to_do).as_slice());
+            buf.as_mut_slice()[to_do..].fill(0u8);
+            let mut txn = handle.new_transaction().await?;
+            handle.txn_write(&mut txn, self.checkpoint.file_offset, buf.as_ref()).await?;
+            // Any mutations would rely on the journal to be applied, so the transaction must be
+            // empty. Writes are done in overwrite mode and the journal file is pre-allocated,
+            // so they should not cause any mutations to be added to the transaction.
+            assert!(txn.is_empty());
+            txn.commit().await;
+            self.checkpoint.file_offset += to_do as u64;
+            self.checkpoint.checksum = self.last_checksum;
         }
         Ok(())
-    }
-
-    pub fn handle(&self) -> Option<&OH> {
-        self.handle.as_ref()
-    }
-
-    /// Sets the handle, to be used once replay has finished.
-    pub fn set_handle(&mut self, handle: OH) {
-        assert!(self.handle.is_none());
-        self.handle = Some(handle);
     }
 
     /// Seeks to the given offset in the journal file, to be used once replay has finished.
@@ -117,7 +97,7 @@ impl<OH> JournalWriter<OH> {
     }
 }
 
-impl<OH> std::io::Write for JournalWriter<OH> {
+impl std::io::Write for JournalWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut offset = 0;
         while offset < buf.len() {
@@ -144,7 +124,7 @@ impl<OH> std::io::Write for JournalWriter<OH> {
     }
 }
 
-impl<OH> Drop for JournalWriter<OH> {
+impl Drop for JournalWriter {
     fn drop(&mut self) {
         // If this message is logged it means we forgot to call flush_buffer(), which in turn might
         // mean Journal::sync() was not called.
@@ -174,11 +154,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_write_single_record_and_pad() {
         let object = Arc::new(FakeObject::new());
-        let mut writer =
-            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE, 0);
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE, 0);
         writer.write_record(&4u32);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
 
         let handle = FakeObjectHandle::new(object.clone());
         let mut buf = handle.allocate_buffer(object.get_size() as usize);
@@ -199,14 +179,14 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_journal_file_checkpoint() {
         let object = Arc::new(FakeObject::new());
-        let mut writer =
-            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE, 0);
+        let mut writer = JournalWriter::new(TEST_BLOCK_SIZE, 0);
         writer.write_record(&4u32);
         let checkpoint = writer.journal_file_checkpoint();
         assert_eq!(checkpoint.checksum, 0);
         writer.write_record(&17u64);
         writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        writer.flush_buffer(&handle).await.expect("flush_buffer failed");
 
         let handle = FakeObjectHandle::new(object.clone());
         let mut buf = handle.allocate_buffer(object.get_size() as usize);
@@ -215,34 +195,5 @@ mod tests {
         let value: u64 = deserialize_from(&buf.as_slice()[checkpoint.file_offset as usize..])
             .expect("deserialize_from failed");
         assert_eq!(value, 17);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_handle() {
-        let object = Arc::new(FakeObject::new());
-        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
-        writer.set_handle(FakeObjectHandle::new(object.clone()));
-        writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345));
-        writer.write_record(&12);
-        writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
-
-        let handle = FakeObjectHandle::new(object.clone());
-        let mut buf = handle.allocate_buffer(object.get_size() as usize);
-        assert_eq!(buf.len(), TEST_BLOCK_SIZE * 6);
-        handle.read(0, buf.as_mut()).await.expect("read failed");
-        let (first_5_blocks, last_block) = buf.as_slice().split_at(TEST_BLOCK_SIZE * 5);
-        assert_eq!(first_5_blocks, &vec![0u8; TEST_BLOCK_SIZE * 5]);
-        let value: u64 =
-            deserialize_from(&last_block[..TEST_BLOCK_SIZE]).expect("deserialize_from failed");
-        assert_eq!(value, 12);
-        let (payload, checksum_slice) =
-            last_block.split_at(last_block.len() - std::mem::size_of::<Checksum>());
-        let checksum = LittleEndian::read_u64(checksum_slice);
-        assert_eq!(checksum, fletcher64(payload, 12345));
-        assert_eq!(
-            writer.journal_file_checkpoint(),
-            JournalCheckpoint { file_offset: TEST_BLOCK_SIZE as u64 * 6, checksum }
-        );
     }
 }

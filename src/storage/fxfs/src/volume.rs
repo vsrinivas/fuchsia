@@ -8,7 +8,7 @@ use {
         object_store::{
             directory::Directory,
             filesystem::FxFilesystem,
-            transaction::{LockKey, TransactionHandler},
+            transaction::{LockKey, Options, TransactionHandler},
             ObjectDescriptor, ObjectStore,
         },
     },
@@ -41,7 +41,8 @@ impl RootVolume {
     pub async fn new_volume(&self, volume_name: &str) -> Result<Arc<ObjectStore>, Error> {
         let root_store = self.filesystem.root_store();
         let store;
-        let mut transaction = self.filesystem.clone().new_transaction(&[]).await?;
+        let mut transaction =
+            self.filesystem.clone().new_transaction(&[], Options::default()).await?;
         store = root_store.create_child_store(&mut transaction).await?;
 
         let root_directory = Directory::create(&mut transaction, &store).await?;
@@ -108,10 +109,13 @@ pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
                 } else {
                     transaction = Some(
                         fs.clone()
-                            .new_transaction(&[LockKey::object(
-                                root_store.store_object_id(),
-                                root_directory.object_id(),
-                            )])
+                            .new_transaction(
+                                &[LockKey::object(
+                                    root_store.store_object_id(),
+                                    root_directory.object_id(),
+                                )],
+                                Options::default(),
+                            )
                             .await?,
                     );
                 }
@@ -138,7 +142,7 @@ mod tests {
         crate::object_store::{
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
-            transaction::TransactionHandler,
+            transaction::{Options, TransactionHandler},
         },
         anyhow::Error,
         fuchsia_async as fasync,
@@ -147,7 +151,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_nonexistent_volume() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
@@ -156,13 +160,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_volume() {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         {
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let store = root_volume.new_volume("vol").await.expect("new_volume failed");
-            let mut transaction =
-                filesystem.clone().new_transaction(&[]).await.expect("new transaction failed");
+            let mut transaction = filesystem
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new transaction failed");
             let root_directory = Directory::open(&store, store.root_directory_object_id())
                 .await
                 .expect("open failed");

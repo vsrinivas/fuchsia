@@ -32,8 +32,8 @@ pub trait Device: Send + Sync {
     // TODO(jfsulliv): Should this be async and go query the underlying device?
     fn block_count(&self) -> u64;
     /// Returns the size in bytes of the device.
-    fn size(&self) -> usize {
-        self.block_size() as usize * self.block_count() as usize
+    fn size(&self) -> u64 {
+        self.block_size() as u64 * self.block_count()
     }
     /// Fills |buffer| with blocks read from |offset|.
     async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error>;
@@ -48,6 +48,8 @@ pub trait Device: Send + Sync {
     fn reopen(&self) {
         unreachable!();
     }
+    /// Returns whether the device is read-only.
+    fn is_read_only(&self) -> bool;
 }
 
 // Arc<dyn Device> can easily be cloned and supports concurrent access, but sometimes exclusive

@@ -64,7 +64,7 @@ impl Device for FileBackedDevice {
         assert_eq!(offset % self.block_size() as u64, 0);
         assert_eq!(buffer.range().start % self.block_size() as usize, 0);
         assert_eq!(buffer.len() % self.block_size() as usize, 0);
-        ensure!(offset as usize + buffer.len() <= self.size(), "Reading past end of file");
+        ensure!(offset + buffer.len() as u64 <= self.size(), "Reading past end of file");
         // This isn't actually async, but that probably doesn't matter for host usage.
         self.file.read_exact_at(buffer.as_mut_slice(), offset)?;
         Ok(())
@@ -74,7 +74,7 @@ impl Device for FileBackedDevice {
         assert_eq!(offset % self.block_size() as u64, 0);
         assert_eq!(buffer.range().start % self.block_size() as usize, 0);
         assert_eq!(buffer.len() % self.block_size() as usize, 0);
-        ensure!(offset as usize + buffer.len() <= self.size(), "Writing past end of file");
+        ensure!(offset + buffer.len() as u64 <= self.size(), "Writing past end of file");
         // This isn't actually async, but that probably doesn't matter for host usage.
         self.file.write_all_at(buffer.as_slice(), offset)?;
         Ok(())
@@ -88,6 +88,10 @@ impl Device for FileBackedDevice {
 
     async fn flush(&self) -> Result<(), Error> {
         self.file.sync_data().map_err(Into::into)
+    }
+
+    fn is_read_only(&self) -> bool {
+        false
     }
 }
 
@@ -158,7 +162,7 @@ mod tests {
 
         {
             let mut buf = device.allocate_buffer(8192);
-            let offset = (device.size() - buf.len() + device.block_size() as usize) as u64;
+            let offset = (device.size() as usize - buf.len() + device.block_size() as usize) as u64;
             buf.as_mut_slice().fill(0xaa as u8);
             device.write(offset, buf.as_ref()).await.expect_err("Write should have failed");
             device.read(offset, buf.as_mut()).await.expect_err("Read should have failed");

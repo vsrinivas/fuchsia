@@ -4,9 +4,9 @@
 
 use {
     crate::object_store::{
-        allocator::Allocator,
+        allocator::{Allocator, Reservation},
         filesystem::Mutations,
-        transaction::{Mutation, Transaction},
+        transaction::{AssocObj, Mutation, Transaction},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -60,15 +60,24 @@ impl Allocator for FakeAllocator {
         Ok(result)
     }
 
-    async fn deallocate(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
+    fn add_ref(&self, _transaction: &mut Transaction<'_>, _device_range: Range<u64>) {
+        unreachable!();
+    }
+
+    async fn deallocate(
+        &self,
+        _transaction: &mut Transaction<'_>,
+        device_range: Range<u64>,
+    ) -> u64 {
         let mut inner = self.0.lock().unwrap();
         assert!(device_range.end <= inner.next_offset);
         let len = device_range.end - device_range.start;
         inner.dealloc_bytes += len as usize;
         assert!(inner.dealloc_bytes <= inner.alloc_bytes);
+        len
     }
 
-    async fn reserve(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
+    async fn mark_allocated(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
         let mut inner = self.0.lock().unwrap();
         inner.next_offset = std::cmp::max(device_range.end, inner.next_offset);
     }
@@ -82,13 +91,26 @@ impl Allocator for FakeAllocator {
     }
 
     async fn did_flush_device(&self, _flush_log_offset: u64) {}
+
+    fn reserve(self: Arc<Self>, _amount: u64) -> Option<Reservation> {
+        panic!("Not supported");
+    }
+
+    fn release_reservation(&self, _reservation: &mut Reservation) {}
 }
 
 #[async_trait]
 impl Mutations for FakeAllocator {
-    async fn apply_mutation(&self, _mutation: Mutation, _log_offset: u64, _replay: bool) {}
+    async fn apply_mutation(
+        &self,
+        _mutation: Mutation,
+        _transaction: Option<&Transaction<'_>>,
+        _log_offset: u64,
+        _associated_object: AssocObj<'_>,
+    ) {
+    }
 
-    fn drop_mutation(&self, _mutation: Mutation) {}
+    fn drop_mutation(&self, _mutation: Mutation, _transaction: &Transaction<'_>) {}
 
     async fn flush(&self) -> Result<(), Error> {
         Ok(())

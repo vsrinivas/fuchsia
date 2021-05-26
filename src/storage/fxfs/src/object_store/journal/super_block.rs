@@ -230,7 +230,7 @@ impl SuperBlock {
     ) -> Result<(), Error> {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
-        let mut writer = JournalWriter::new(Some(handle), SUPER_BLOCK_BLOCK_SIZE, 0);
+        let mut writer = JournalWriter::new(SUPER_BLOCK_BLOCK_SIZE, 0);
 
         serialize_into(&mut writer, &self)?;
 
@@ -245,7 +245,6 @@ impl SuperBlock {
             if writer.journal_file_checkpoint().file_offset
                 >= next_extent_offset - SUPER_BLOCK_CHUNK_SIZE
             {
-                let handle = writer.handle().unwrap();
                 let mut transaction = handle.new_transaction().await?;
                 let allocated = handle
                     .preallocate_range(
@@ -270,7 +269,7 @@ impl SuperBlock {
         }
         serialize_into(&mut writer, &SuperBlockRecord::End)?;
         writer.pad_to_block()?;
-        writer.maybe_flush_buffer().await?;
+        writer.flush_buffer(&handle).await?;
         Ok(())
     }
 }
@@ -306,7 +305,7 @@ mod tests {
                 filesystem::Filesystem,
                 journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
-                transaction::TransactionHandler,
+                transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },
         },
@@ -324,8 +323,11 @@ mod tests {
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
         let root_parent_store = ObjectStore::new_empty(None, 2, fs.clone());
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         let root_store = root_parent_store
             .create_child_store_with_id(&mut transaction, 3)
             .await
@@ -335,8 +337,11 @@ mod tests {
         // Create a large number of objects in the root parent store so that we test handling of
         // extents.
         for _ in 0..8000 {
-            let mut transaction =
-                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
             ObjectStore::create_object(
                 &root_parent_store,
                 &mut transaction,
@@ -357,8 +362,11 @@ mod tests {
         super_block.journal_file_offsets.insert(1, 2);
 
         let handle; // extend will borrow handle and needs to outlive transaction.
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         handle = ObjectStore::create_object_with_id(
             &root_store,
             &mut transaction,

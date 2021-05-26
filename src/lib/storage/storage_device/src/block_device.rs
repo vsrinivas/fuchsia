@@ -171,6 +171,10 @@ impl Device for BlockDevice {
     async fn flush(&self) -> Result<(), Error> {
         self.remote.flush().await
     }
+
+    fn is_read_only(&self) -> bool {
+        self.read_only
+    }
 }
 
 impl Drop for BlockDevice {

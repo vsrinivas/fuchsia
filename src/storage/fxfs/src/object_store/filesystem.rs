@@ -10,8 +10,8 @@ use {
             graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
             transaction::{
-                AssociatedObject, LockKey, LockManager, Mutation, ReadGuard, Transaction,
-                TransactionHandler, TxnMutation, WriteGuard,
+                AssocObj, AssociatedObject, LockKey, LockManager, Mutation, Options, ReadGuard,
+                Transaction, TransactionHandler, TxnMutation, WriteGuard,
             },
             ObjectStore,
         },
@@ -140,9 +140,9 @@ impl ObjectManager {
         &self,
         object_id: u64,
         mutation: Mutation,
-        replay: bool,
+        transaction: Option<&Transaction<'_>>,
         checkpoint: &JournalCheckpoint,
-        associated_object: Option<&dyn AssociatedObject>,
+        associated_object: AssocObj<'_>,
     ) {
         let object = {
             let mut objects = self.objects.write().unwrap();
@@ -154,13 +154,10 @@ impl ObjectManager {
             }
         }
         .unwrap_or_else(|| self.root_store().lazy_open_store(object_id));
-        // It is intentional that we call will_apply_mutation _after_ we updated the
-        // journal_file_checkpoints above, because ObjectFlush::will_apply_mutation might reset
-        // journal_file_checkpoints.
-        if let Some(associated_object) = associated_object {
-            associated_object.will_apply_mutation(&mutation);
-        }
-        object.apply_mutation(mutation, checkpoint.file_offset, replay).await;
+        associated_object.will_apply_mutation(&mutation);
+        object
+            .apply_mutation(mutation, transaction, checkpoint.file_offset, associated_object)
+            .await;
     }
 
     // Drops a transaction.  This is called automatically when a transaction is dropped.  If the
@@ -169,7 +166,7 @@ impl ObjectManager {
     // will unreserve allocations).
     pub fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         for TxnMutation { object_id, mutation, .. } in std::mem::take(&mut transaction.mutations) {
-            self.object(object_id).map(|o| o.drop_mutation(mutation));
+            self.object(object_id).map(|o| o.drop_mutation(mutation, transaction));
         }
     }
 
@@ -293,12 +290,18 @@ impl AssociatedObject for ObjectFlush {
 pub trait Mutations: Send + Sync {
     /// Objects that use the journaling system to track mutations should implement this trait.  This
     /// method will get called when the transaction commits, which can either be during live
-    /// operation or during journal replay, in which case |replay| will be true.  Also see
+    /// operation or during journal replay, in which case transaction will be None.  Also see
     /// ObjectManager's apply_mutation method.
-    async fn apply_mutation(&self, mutation: Mutation, log_offset: u64, replay: bool);
+    async fn apply_mutation(
+        &self,
+        mutation: Mutation,
+        transaction: Option<&Transaction<'_>>,
+        log_offset: u64,
+        assoc_obj: AssocObj<'_>,
+    );
 
     /// Called when a transaction fails to commit.
-    fn drop_mutation(&self, mutation: Mutation);
+    fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>);
 
     /// Flushes in-memory changes to the device (to allow journal space to be freed).
     async fn flush(&self) -> Result<(), Error>;
@@ -396,17 +399,27 @@ impl FxFilesystem {
     }
 
     async fn compact(self: Arc<Self>) {
-        log::info!("Compaction starting");
-        if let Err(e) = self.objects.flush().await {
-            log::error!("Compaction encountered error: {}", e);
-            return;
+        loop {
+            log::debug!("Compaction starting");
+            if let Err(e) = self.objects.flush().await {
+                log::error!("Compaction encountered error: {}", e);
+                return;
+            }
+            if let Err(e) = self.journal.write_super_block().await {
+                log::error!("Error writing journal super-block: {}", e);
+                return;
+            }
+            let mut compaction = self.compaction.lock().unwrap();
+            log::debug!("Compaction finished");
+            if let Compaction::Paused = *compaction {
+                break;
+            }
+            // Check to see if we need to do another compaction immediately.
+            if !self.journal.should_flush() {
+                *compaction = Compaction::Idle;
+                break;
+            }
         }
-        if let Err(e) = self.journal.write_super_block().await {
-            log::error!("Error writing journal super-block: {}", e);
-            return;
-        }
-        log::info!("Compaction finished");
-        *self.compaction.lock().unwrap() = Compaction::Idle;
     }
 
     /// Acquires a write lock for the given keys.
@@ -471,7 +484,14 @@ impl TransactionHandler for FxFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
+        options: Options,
     ) -> Result<Transaction<'a>, Error> {
+        if !options.skip_journal_checks {
+            // TODO(csuter): for now, we don't allow for transactions that might be inflight but
+            // not committed.  In theory, if there are a large number of them, it would be possible
+            // to run out of journal space.  We should probably have an in-flight limit.
+            self.journal.check_journal_space().await;
+        }
         Ok(Transaction::new(self, &[LockKey::Filesystem], locks).await)
     }
 
@@ -510,7 +530,11 @@ mod tests {
         super::{Filesystem, FxFilesystem, SyncOptions},
         crate::{
             object_handle::{ObjectHandle, ObjectHandleExt},
-            object_store::{directory::Directory, fsck::fsck, transaction::TransactionHandler},
+            object_store::{
+                directory::Directory,
+                fsck::fsck,
+                transaction::{Options, TransactionHandler},
+            },
         },
         fuchsia_async as fasync,
         futures::future::join_all,
@@ -532,8 +556,11 @@ mod tests {
 
         let mut tasks = Vec::new();
         for i in 0..2 {
-            let mut transaction =
-                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
             let handle = root_directory
                 .create_child_file(&mut transaction, &format!("{}", i))
                 .await
@@ -543,7 +570,7 @@ mod tests {
                 const TEST_DATA: &[u8] = b"hello";
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
-                for _ in 0..5000 {
+                for _ in 0..1500 {
                     handle.write(0, buf.as_ref()).await.expect("write failed");
                 }
             }));

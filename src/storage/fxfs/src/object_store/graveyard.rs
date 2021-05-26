@@ -177,7 +177,10 @@ impl GraveyardIterator<'_, '_> {
 mod tests {
     use {
         super::Graveyard,
-        crate::object_store::{filesystem::FxFilesystem, transaction::TransactionHandler},
+        crate::object_store::{
+            filesystem::FxFilesystem,
+            transaction::{Options, TransactionHandler},
+        },
         fuchsia_async as fasync,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
@@ -186,13 +189,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_graveyard() {
-        let device = DeviceHolder::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let root_store = fs.root_store();
 
         // Create and add two objects to the graveyard.
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         let graveyard =
             Graveyard::create(&mut transaction, &root_store).await.expect("create failed");
         graveyard.add(&mut transaction, 2, 3);
@@ -214,8 +220,11 @@ mod tests {
         }
 
         // Remove one of the objects.
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
         graveyard.remove(&mut transaction, 3, 4);
         transaction.commit().await;
 

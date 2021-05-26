@@ -372,7 +372,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_writes_persist() {
-        let mut device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let mut device = DeviceHolder::new(FakeDevice::new(4096, 512));
         for i in 0..2 {
             let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
             let root = fixture.root();
