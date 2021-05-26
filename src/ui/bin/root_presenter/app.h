@@ -17,7 +17,6 @@
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
-#include <lib/ui/scenic/cpp/resources.h>
 
 #include <limits>
 #include <memory>
@@ -26,34 +25,26 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
-#include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/focus_dispatcher.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
-#include "src/ui/bin/root_presenter/safe_presenter.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
 #include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace root_presenter {
 
-// The presenter provides a |fuchsia::ui::policy::Presenter| service which
-// displays UI by attaching the provided view to the root of a new view tree
-// associated with a new renderer.
-//
-// Any number of view trees can be created, although multi-display support
-// and input routing is not fully supported (TODO).
-class App : public fuchsia::ui::policy::Presenter,
-            public fuchsia::ui::policy::DeviceListenerRegistry,
+// Class for serving various input and graphics related APIs.
+class App : public fuchsia::ui::policy::DeviceListenerRegistry,
             public fuchsia::ui::input::InputDeviceRegistry,
             public fuchsia::ui::views::accessibility::FocuserRegistry,
             public fuchsia::ui::views::Focuser,
             public ui_input::InputDeviceImpl::Listener {
  public:
-  App(sys::ComponentContext* component_context, async_dispatcher_t* dispatcher);
+  App(sys::ComponentContext* component_context, fit::closure quit_callback);
   ~App() = default;
 
   // |InputDeviceImpl::Listener|
@@ -64,33 +55,15 @@ class App : public fuchsia::ui::policy::Presenter,
   // |fuchsia.ui.views.accessibility.FocuserRegistry|
   void RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
-  // |fuchsia.ui.policy.Presenter|
-  void PresentView(
-      fuchsia::ui::views::ViewHolderToken view_holder_token,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
-
-  // |fuchsia.ui.policy.Presenter|
-  void PresentOrReplaceView(
-      fuchsia::ui::views::ViewHolderToken view_holder_token,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
-
-  // |fuchsia.ui.policy.Presenter|
-  void PresentOrReplaceView2(
-      fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
-
   // For testing.
-  bool is_presentation_initialized() const {
-    return presentation_ && presentation_->is_initialized();
-  }
+  Presentation* presentation() { return presentation_.get(); }
 
   // For testing.
   const inspect::Inspector* inspector() { return inspector_.inspector(); }
 
  private:
-  void PresentViewInternal(
-      fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request);
+  // Exits the loop, terminating the RootPresenter process.
+  void Exit() { quit_callback_(); }
 
   // |DeviceListenerRegistry|
   void RegisterMediaButtonsListener(
@@ -101,36 +74,20 @@ class App : public fuchsia::ui::policy::Presenter,
       fuchsia::ui::input::DeviceDescriptor descriptor,
       fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
 
-  void InitializeServices();
-  void Reset();
-
-  void SetPresentation(std::unique_ptr<Presentation> presentation);
-  void ShutdownPresentation();
-
   // |fuchsia.ui.views.Focuser|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
 
-  // Note: the sub-objects of `component_context_` may hold unowned pointers to sub-objects of
-  // `this`. For example, `FactoryResetManager`'s ctor calls
-  //     context.outgoing()->AddPublicService([this] ...);
-  //
-  // This is okay, even though `fdr_manager_` is destroyed before `component_context_`.
-  // Reason being: `main.cc` won't destroy `App` until the event loop has exited.
-  // And after the event loop has exited, we won't process any further FIDL requests.
-  sys::ComponentContext* const component_context_;
-
+  const fit::closure quit_callback_;
   sys::ComponentInspector inspector_;
   InputReportInspector input_report_inspector_;
-  fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
   fidl::BindingSet<fuchsia::ui::views::accessibility::FocuserRegistry>
       a11y_focuser_registry_bindings_;
   ui_input::InputReader input_reader_;
-  std::unique_ptr<FactoryResetManager> fdr_manager_;
+  FactoryResetManager fdr_manager_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<scenic::Session> session_;
 
   // This is a privileged interface between Root Presenter and Scenic. It forwards the Focuser
   // requests incoming from accessibility services to Scenic. This Focuser is implicitly associated
@@ -140,29 +97,9 @@ class App : public fuchsia::ui::policy::Presenter,
   // Binding holding the connection between a11y and Root Presenter. The incoming Focuser calls are
   // simply forwarded using |view_focuser_|.
   fidl::Binding<fuchsia::ui::views::Focuser> focuser_binding_;
-  // If accessibility requests to register a Focuser and Scenic hasn't started yet, the binding of
-  // |focuser_binding_| is deferred until |view_focuser_| is initialized.
-  fit::function<void()> deferred_a11y_focuser_binding_;
 
-  // This is a privileged interface between Root Presenter and Accessibility. It allows Root
-  // Presenter to register presentations with Accessibility for magnification.
-  fuchsia::accessibility::MagnifierPtr magnifier_;
-
-  // Today, we have a global, singleton compositor, and it is managed solely by
-  // a root presenter. Hence, a single resource ID is sufficient to identify it.
-  // Additionally, it is a system invariant that any compositor is created and
-  // managed by a root presenter. We may relax these constraints in the
-  // following order:
-  // * Root presenter creates multiple compositors. Here, a resource ID for each
-  //   compositor would still be sufficient to uniquely identify it.
-  // * Root presenter delegates the creation of compositors. Here, we would
-  //   need to generalize the identifier to include the delegate's session ID.
-  std::unique_ptr<scenic::DisplayCompositor> compositor_;
-  std::unique_ptr<scenic::LayerStack> layer_stack_;
-
+  // Created at construction time.
   std::unique_ptr<Presentation> presentation_;
-
-  std::unique_ptr<SafePresenter> safe_presenter_;
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
@@ -175,12 +112,8 @@ class App : public fuchsia::ui::policy::Presenter,
   // support.
   MediaButtonsHandler media_buttons_handler_;
 
-  // Tracks if scenic initialization is complete.
-  bool is_scenic_initialized_ = false;
-  std::unique_ptr<ColorTransformHandler> color_transform_handler_;
-
   // Used to dispatch the focus change messages to interested downstream clients.
-  std::unique_ptr<FocusDispatcher> focus_dispatcher_;
+  FocusDispatcher focus_dispatcher_;
 
   FidlBoundVirtualKeyboardCoordinator virtual_keyboard_coordinator_;
 

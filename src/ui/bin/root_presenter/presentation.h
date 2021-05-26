@@ -21,6 +21,7 @@
 
 #include "src/lib/ui/input/device_state.h"
 #include "src/lib/ui/input/input_device_impl.h"
+#include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
 #include "src/ui/bin/root_presenter/displays/display_model.h"
@@ -31,53 +32,113 @@
 
 namespace root_presenter {
 
-// This class creates a root ViewHolder and sets up rendering of a new scene to
-// display the graphical content of the view passed to |Present()|.  It also wires up input
-// dispatch.
+// This class handles Scenic interactions, including:
+// - Sets up the Scenic scene
+// - Wires up input dispatch
+// - Displays client Views by implementing fuchsia::ui::Presenter.
+// - Allows accessibility to insert a View at the top of the scene by
+//   implementing fuchsia::ui::accessibility::view::Registry
+// - Handles magnification by implementing fuchsia::accessibility::MagnificationHandler
 //
-// The root ViewHolder has the presented (content) view as its child.
+/// Scene topology ///
+// [1] = owned by root presenter, [2] = owned by client, [3] owned by a11y manager
 //
-// The scene's node tree has the following structure:
-// + Scene
-//   + RootNode
-//     + ViewHolder
-//       + link: Content view's actual content
+// After construction
+// [1] scene_
+//       |
+// [1] root_view_holder_
+//       |
+// [1] root_view_
+//       |
+// [1] injector_view_holder_
+//       |
+// [1] injector_view_
+//       |
+// [1] proxy_view_holder_
+//       |
+// [1] proxy_view_
+//       |
+// [1] client_view_holder_
+//       |
+// [2] client view
 //
-class Presentation : fuchsia::ui::policy::Presentation,
+// After CreateAccessibilityViewHolder() is called:
+// [1] scene_
+//       |
+// [1] root_view_holder_
+//       |
+// [1] root_view_
+//       |
+// [1] injector_view_holder_
+//       |
+// [1] injector_view_
+//       |
+// [1] proxy_view_holder_
+//       |
+// [3] a11y view
+//       |
+// [3] a11y proxy view holder
+//       |
+// [1] proxy_view_
+//       |
+// [1] client_view_holder_
+//       |
+// [2] client view
+//
+class Presentation : fuchsia::ui::policy::Presenter,
+                     fuchsia::ui::policy::Presentation,
                      fuchsia::accessibility::MagnificationHandler,
                      fuchsia::ui::accessibility::view::Registry {
  public:
   Presentation(inspect::Node inspect_node, sys::ComponentContext* component_context,
-               fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
-               scenic::ResourceId compositor_id,
-               fuchsia::ui::views::ViewHolderToken view_holder_token,
-               fuchsia::ui::views::ViewRef client_view_ref,
-               fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
-               SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
-               fit::function<void()> on_client_death,
+               fuchsia::ui::scenic::Scenic* scenic, std::unique_ptr<scenic::Session> session,
+               int32_t display_startup_rotation_adjustment,
                fit::function<void(fuchsia::ui::views::ViewRef)> request_focus);
-  ~Presentation() override;
+  ~Presentation() override = default;
 
-  void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
+  // |fuchsia.ui.policy.Presenter|
+  void PresentView(
+      fuchsia::ui::views::ViewHolderToken view_holder_token,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+
+  // |fuchsia.ui.policy.Presenter|
+  void PresentOrReplaceView(
+      fuchsia::ui::views::ViewHolderToken view_holder_token,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+
+  // |fuchsia.ui.policy.Presenter|
+  void PresentOrReplaceView2(
+      fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
   void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
   void OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
-  const scenic::Layer& layer() const { return layer_; }
-
-  bool is_initialized() const { return display_model_initialized_ && scene_initialized_; }
+  // For tests. Returns true if the display has been initialized and if a client has been
+  // successfully attached.
+  bool is_initialized() const { return display_model_initialized_ && client_attached_; }
 
  private:
+  // Creates and attaches a new View using the passed in tokens.
+  // Any currently attached client is detached and its ViewHolder destroyed.
+  void AttachClient(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                    fuchsia::ui::views::ViewRef view_ref,
+                    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request);
+
   // |fuchsia::ui::policy::Presentation|
   void CapturePointerEventsHACK(
       fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override {
     FX_LOGS(ERROR) << "CapturePointerEventsHACK is obsolete.";
   }
 
+  // Initializes all views to match the display dimensions.
+  // Must call Present() for all Sessions afterwards to apply the updates.
+  void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
+
   // Updates the injection Viewport to match the currently visible display (i.e. accounting for
   // ClipSpaceTransform).
-  void UpdateViewport();
+  void UpdateViewport(const DisplayMetrics& display_metrics);
 
   // |fuchsia::accessibility::MagnificationHandler|
   // Sets the transform for screen magnification, applied after the camera projection.
@@ -87,45 +148,19 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // Nulls out the clip-space transform.
   void ResetClipSpaceTransform();
 
-  // Sets properties for the a11y, proxy, and client view holders.
-  void SetViewHolderProperties();
+  // Sets properties for all view holders.
+  // Must call Present() for all Sessions afterwards to apply the updates.
+  void SetViewHolderProperties(const DisplayMetrics& display_metrics);
 
   // |fuchsia::ui::accessibility::view::Registry|
-  // This method creates the following scene topology:
-  //
-  // [1] = owned by root presenter, [2] = owned by client, [3] owned by a11y manager
-  //
-  // [1] scene
-  //       |
-  // [1] root view holder
-  //       |
-  // [1] root view
-  //       |
-  // [1] injector view holder
-  //       |
-  // [1] injector view
-  //       |
-  // [1] a11y view holder
-  //       |
-  // [3] a11y view
-  //       |
-  // [3] new proxy view holder
-  //       |
-  // [1] new proxy view
-  //       |
-  // [1] client view holder
-  //       |
-  // [2] client view
+  // Called by the a11y manager.
+  // Inserts an a11y view into the view hierarchy by creating a new |proxy_view_holder_| using
+  // |a11y_view_holder_token|, making it a child of |injector_view_| and recreating the
+  // |proxy_view_| with a new ViewToken. The corresponding ViewHolderToken is
+  // sent back to a11y, expecting it to be made a child of the a11y view.
   void CreateAccessibilityViewHolder(fuchsia::ui::views::ViewRef a11y_view_ref,
                                      fuchsia::ui::views::ViewHolderToken a11y_view_holder_token,
                                      CreateAccessibilityViewHolderCallback callback) override;
-
-  // Sets |display_metrics_| and updates Scenic.  Returns false if the updates
-  // were skipped (if display initialization hasn't happened yet).
-  bool ApplyDisplayModelChanges(bool print_log, bool present_changes);
-  bool ApplyDisplayModelChangesHelper(bool print_log);
-
-  void InitializeDisplayModel(fuchsia::ui::gfx::DisplayInfo display_info);
 
   void OnEvent(fuchsia::ui::input::InputEvent event);
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
@@ -137,36 +172,12 @@ class Presentation : fuchsia::ui::policy::Presentation,
   InputReportInspector input_report_inspector_;
   InputEventInspector input_event_inspector_;
 
-  fuchsia::ui::scenic::Scenic* const scenic_;
-  scenic::Session* const session_;
-  scenic::ResourceId compositor_id_;
+  const std::unique_ptr<scenic::Session> root_session_;
 
+  scenic::DisplayCompositor compositor_;
+  scenic::LayerStack layer_stack_;
   scenic::Layer layer_;
   scenic::Renderer renderer_;
-
-  // Scene topology:
-  // [1] = owned by root presenter, [2] = owned by client
-  //
-  // [1] scene
-  //       |
-  // [1] root view holder
-  //       |
-  // [1] root view
-  //       |
-  // [1] injector view holder
-  //       |
-  // [1] injector view view
-  //       |
-  // [1] proxy view holder
-  //       |
-  // [1] proxy view
-  //       |
-  // [1] client view holder
-  //       |
-  // [2] client view
-  //
-  // NOTE: This topology changes once the a11y manager connects and calls
-  // CreateAccessibilityViewHolder().
 
   // TODO(fxbug.dev/23500): put camera before scene.
   scenic::Scene scene_;
@@ -175,50 +186,35 @@ class Presentation : fuchsia::ui::policy::Presentation,
   std::optional<scenic::ViewHolder> root_view_holder_;
 
   // The injector view is used as a constant target when injecting events through
-  // fuchsia::ui::pointerinjector. When a11y starts, it can insert its view between
-  // |injector_view_| and |proxy_view_holder_|.
+  // fuchsia::ui::pointerinjector. It is where scale, rotation and translation for all child views
+  // are set.
+  // When a11y starts, it will insert its own View between |proxy_view_holder_| and |proxy_view_|
+  // by calling CreateAccessibilityViewHolder().
   scenic::Session injector_session_;
   std::optional<scenic::View> injector_view_;
   std::optional<scenic::ViewHolder> injector_view_holder_;
 
-  // The a11y manager is responsible for hooking its own view up to the scene
-  // graph, and attaching the client view below it. The proxy view is necessary
-  // to ensure that (1) the a11y manager can insert itself without disrupting
-  // the client view, and (2) the client view is rendered and receives input if
-  // the a11y manager does not attach its view.
-  //
-  // |proxy_view_holder_| uses:
-  // - It's used to set scale, rotation and translation for all child views.
-  // - It's kept in sync with the client view for their ViewProperties.
-  // - It is used as the target for fuchsia::ui::pointerinjector to make transforms simpler.
+  // The proxy view is a level of indirection between the rest of the scene and the client.
+  // Its main purpose to be reparented to the a11y view when CreateAccessibilityViewHolder() is
+  // called.
   scenic::Session proxy_session_;
   std::optional<scenic::View> proxy_view_;
+  // |proxy_view_holder_| is initially connected directly to the |proxy_view_|, but after
+  // CreateAccessibilityViewHolder() it is instead connected to the a11y view.
   std::optional<scenic::ViewHolder> proxy_view_holder_;
 
+  // ViewHolder connected to the client View. Is std::nullopt until AttachClient() is called.
   std::optional<scenic::ViewHolder> client_view_holder_;
 
-  // A11y-specific resources.
-  std::optional<scenic::ViewHolder> a11y_view_holder_;
-
-  // True if the proxy view exists as a descendant of the scene root.
-  bool proxy_view_attached_to_scene_ = false;
-
-  // True if the client has connected its view.
-  bool client_view_connected_to_viewholder_ = false;
+  // Tracks whether or not the client view has been attached to the scene.
+  bool client_attached_ = false;
 
   std::optional<input::InjectorConfigSetup> injector_config_setup_;
   std::optional<input::Injector> injector_;
 
   bool display_model_initialized_ = false;
-  bool scene_initialized_ = false;
 
   DisplayModel display_model_;
-
-  // When |display_model_| or |display_rotation_desired_| changes:
-  //   * |display_metrics_| must be recalculated.
-  //   * |display_rotation_current_| must be updated.
-  //   * Transforms on the scene must be updated.
-  // This is done by calling ApplyDisplayModelChanges().
   DisplayMetrics display_metrics_;
 
   // At startup, apply a rotation defined in 90 degree increments, just once.
@@ -234,23 +230,26 @@ class Presentation : fuchsia::ui::policy::Presentation,
   float clip_offset_x_ = 0;
   float clip_offset_y_ = 0;
 
+  fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
-  fidl::BindingSet<fuchsia::ui::accessibility::view::Registry> a11y_view_registry_bindings_;
+  fidl::Binding<fuchsia::ui::accessibility::view::Registry> a11y_view_registry_binding_;
 
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;
 
-  // |safe_presenter_| is passed in at construction together with the root session.
-  SafePresenter* safe_presenter_ = nullptr;
-
-  // |safe_presenter_injector_| is internal and created for |injector_session_|.
+  // One SafePresenter for each Session.
+  SafePresenter safe_presenter_root_;
   SafePresenter safe_presenter_injector_;
-
-  // |safe_presenter_proxy_| is internal and created for |proxy_session_|.
   SafePresenter safe_presenter_proxy_;
 
-  fxl::WeakPtrFactory<Presentation> weak_factory_;
+  // This is a privileged interface between Root Presenter and Accessibility. It allows Root
+  // Presenter to register presentations with Accessibility for magnification.
+  fuchsia::accessibility::MagnifierPtr magnifier_;
+
+  ColorTransformHandler color_transform_handler_;
+
+  const fit::function<void(fuchsia::ui::views::ViewRef)> request_focus_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Presentation);
 };

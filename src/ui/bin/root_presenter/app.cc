@@ -6,7 +6,6 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/keyboard/focus/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -21,7 +20,6 @@
 #include <string>
 
 #include "src/lib/files/file.h"
-#include "src/ui/bin/root_presenter/safe_presenter.h"
 
 namespace root_presenter {
 
@@ -34,36 +32,43 @@ void ChattyLog(const fuchsia::ui::input::InputReport& report) {
 }
 }  // namespace
 
-App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatcher)
-    : component_context_(component_context),
-      inspector_(component_context_),
+App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
+    : quit_callback_(std::move(quit_callback)),
+      inspector_(component_context),
       input_report_inspector_(inspector_.root().CreateChild("input_reports")),
       input_reader_(this),
-      fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_,
-                                                         std::make_shared<MediaRetriever>())),
+      fdr_manager_(*component_context, std::make_shared<MediaRetriever>()),
       focuser_binding_(this),
       media_buttons_handler_(),
+      focus_dispatcher_(component_context->svc()),
       virtual_keyboard_coordinator_(component_context) {
-  FX_DCHECK(component_context_);
+  FX_DCHECK(component_context);
 
   input_reader_.Start();
 
-  component_context_->outgoing()->AddPublicService(presenter_bindings_.GetHandler(this));
-  component_context_->outgoing()->AddPublicService(device_listener_bindings_.GetHandler(this));
-  component_context_->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
-  component_context_->outgoing()->AddPublicService(
-      a11y_focuser_registry_bindings_.GetHandler(this));
-}
+  component_context->outgoing()->AddPublicService(device_listener_bindings_.GetHandler(this));
+  component_context->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
+  component_context->outgoing()->AddPublicService(a11y_focuser_registry_bindings_.GetHandler(this));
 
-void App::RegisterMediaButtonsListener(
-    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) {
-  media_buttons_handler_.RegisterListener(std::move(listener));
-}
+  component_context->svc()->Connect(scenic_.NewRequest());
+  scenic_.set_error_handler([this](zx_status_t error) {
+    FX_LOGS(WARNING) << "Scenic died with error " << zx_status_get_string(error)
+                     << ". Killing RootPresenter.";
+    Exit();
+  });
 
-void App::PresentViewInternal(
-    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  InitializeServices();
+  view_focuser_.set_error_handler([](zx_status_t error) {
+    FX_LOGS(WARNING) << "ViewFocuser died with error " << zx_status_get_string(error);
+  });
+  auto session = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
+  session->set_error_handler([this](zx_status_t error) {
+    FX_LOGS(WARNING) << "Session died with error " << zx_status_get_string(error)
+                     << ". Killing RootPresenter.";
+    Exit();
+  });
+
+  scenic_->GetDisplayOwnershipEvent(
+      [this](zx::event event) { input_reader_.SetOwnershipEvent(std::move(event)); });
 
   int32_t display_startup_rotation_adjustment = 0;
   {
@@ -75,73 +80,26 @@ void App::PresentViewInternal(
     }
   }
 
-  auto presentation = std::make_unique<Presentation>(
+  presentation_ = std::make_unique<Presentation>(
       inspector_.root().CreateChild(inspector_.root().UniqueName("presentation-")),
-      component_context_, scenic_.get(), session_.get(), compositor_->id(),
-      std::move(view_holder_token), std::move(view_ref), std::move(presentation_request),
-      safe_presenter_.get(), display_startup_rotation_adjustment,
-      /*on_client_death*/ [this] { ShutdownPresentation(); },
+      component_context, scenic_.get(), std::move(session), display_startup_rotation_adjustment,
       /*request_focus*/
       [this](fuchsia::ui::views::ViewRef view_ref) {
         RequestFocus(std::move(view_ref), [](auto) {});
       });
 
-  SetPresentation(std::move(presentation));
-}
-
-void App::PresentView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  if (presentation_) {
-    FX_LOGS(ERROR) << "Support for multiple simultaneous presentations has been removed. To "
-                      "replace a view, use PresentOrReplaceView";
-    // Reject the request.
-    presentation_request.Close(ZX_ERR_ALREADY_BOUND);
-    return;
-  }
-
-  PresentViewInternal(std::move(view_holder_token), {}, std::move(presentation_request));
-}
-
-void App::PresentOrReplaceView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  if (presentation_) {
-    ShutdownPresentation();
-  }
-  PresentViewInternal(std::move(view_holder_token), {}, std::move(presentation_request));
-}
-
-void App::PresentOrReplaceView2(
-    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
-  if (presentation_) {
-    ShutdownPresentation();
-  }
-  PresentViewInternal(std::move(view_holder_token), std::move(view_ref),
-                      std::move(presentation_request));
-}
-
-void App::SetPresentation(std::unique_ptr<Presentation> presentation) {
-  FX_DCHECK(presentation);
-  FX_DCHECK(!presentation_);
-  presentation_ = std::move(presentation);
-
   for (auto& it : devices_by_id_) {
     presentation_->OnDeviceAdded(it.second.get());
   }
 
-  layer_stack_->AddLayer(presentation_->layer());
-  if (magnifier_) {
-    presentation_->RegisterWithMagnifier(magnifier_.get());
-  }
-
-  safe_presenter_->QueuePresent([] {});
+  FX_DCHECK(scenic_);
+  FX_DCHECK(presentation_)
+      << "All service handlers must be set up and published prior to loop.Run() in main.cc";
 }
 
-void App::ShutdownPresentation() {
-  presentation_.reset();
-  layer_stack_->RemoveAllLayers();
+void App::RegisterMediaButtonsListener(
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) {
+  media_buttons_handler_.RegisterListener(std::move(listener));
 }
 
 void App::RegisterDevice(
@@ -158,8 +116,7 @@ void App::RegisterDevice(
   // Dependent components inside presentations register with the handler (passed
   // at construction) to receive such events.
   if (!media_buttons_handler_.OnDeviceAdded(input_device.get())) {
-    if (presentation_)
-      presentation_->OnDeviceAdded(input_device.get());
+    presentation_->OnDeviceAdded(input_device.get());
   }
 
   devices_by_id_.emplace(device_id, std::move(input_device));
@@ -172,8 +129,7 @@ void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
   FX_VLOGS(1) << "UnregisterDevice " << input_device->id();
 
   if (!media_buttons_handler_.OnDeviceRemoved(input_device->id())) {
-    if (presentation_)
-      presentation_->OnDeviceRemoved(input_device->id());
+    presentation_->OnDeviceRemoved(input_device->id());
   }
 
   devices_by_id_.erase(input_device->id());
@@ -197,12 +153,8 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   report.Clone(&cloned_report);
 
   if (cloned_report.media_buttons) {
-    fdr_manager_->OnMediaButtonReport(*(cloned_report.media_buttons.get()));
+    fdr_manager_.OnMediaButtonReport(*(cloned_report.media_buttons.get()));
     media_buttons_handler_.OnReport(input_device->id(), std::move(cloned_report));
-    return;
-  }
-
-  if (!presentation_) {
     return;
   }
 
@@ -211,75 +163,8 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   presentation_->OnReport(input_device->id(), std::move(report));
 }
 
-void App::InitializeServices() {
-  if (!scenic_) {
-    component_context_->svc()->Connect(scenic_.NewRequest());
-    scenic_.set_error_handler([this](zx_status_t error) {
-      FX_LOGS(ERROR) << "Scenic died, destroying presentation.";
-      Reset();
-    });
-
-    focus_dispatcher_ = std::make_unique<FocusDispatcher>(component_context_->svc());
-
-    view_focuser_.set_error_handler([](zx_status_t error) {
-      FX_LOGS(ERROR) << "ViewFocuser died with error " << zx_status_get_string(error);
-    });
-    session_ = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
-    session_->set_error_handler([this](zx_status_t error) {
-      FX_LOGS(ERROR) << "Session died, destroying presentation.";
-      Reset();
-    });
-
-    safe_presenter_ = std::make_unique<SafePresenter>(session_.get());
-
-    compositor_ = std::make_unique<scenic::DisplayCompositor>(session_.get());
-    layer_stack_ = std::make_unique<scenic::LayerStack>(session_.get());
-    compositor_->SetLayerStack(*layer_stack_.get());
-    safe_presenter_->QueuePresent([] {});
-
-    scenic_->GetDisplayOwnershipEvent([this](zx::event event) {
-      input_reader_.SetOwnershipEvent(std::move(event));
-      is_scenic_initialized_ = true;
-    });
-
-    component_context_->svc()->Connect(magnifier_.NewRequest());
-    // No need to set an error handler here unless we want to attempt a reconnect or something;
-    // instead, we add error handlers for cleanup on the a11y presentations when we register them.
-
-    // Add Color Transform Handler.
-    //
-    // TODO(fxbug.dev/73838): refactor so that `fuchsia.ui.brightness.ColorAdjustmentHandler`
-    // and `fuchsia.ui.policy.DisplayBacklight` are added to outgoing services before entering
-    // the event loop.
-    color_transform_handler_ = std::make_unique<ColorTransformHandler>(
-        component_context_, compositor_->id(), session_.get(), safe_presenter_.get());
-
-    // If a11y tried to register a Focuser while Scenic wasn't ready yet, bind the request now.
-    if (deferred_a11y_focuser_binding_) {
-      deferred_a11y_focuser_binding_();
-      deferred_a11y_focuser_binding_ = nullptr;
-    }
-  }
-}
-
-void App::Reset() {
-  presentation_.reset();             // must be first, holds pointers to services
-  color_transform_handler_.reset();  // session_ ptr may not be valid
-  layer_stack_ = nullptr;
-  compositor_ = nullptr;
-  session_ = nullptr;
-  scenic_.Unbind();
-}
-
 void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
-  if (!view_focuser_) {
-    // Scenic hasn't started yet, so defer the binding of the incoming focuser request.
-    // Similar to the case below, drop any old focuser binding request and defer the new one.
-    deferred_a11y_focuser_binding_ = [this, view_focuser = std::move(view_focuser)]() mutable {
-      RegisterFocuser(std::move(view_focuser));
-    };
-    return;
-  }
+  FX_DCHECK(view_focuser_);
   if (focuser_binding_.is_bound()) {
     FX_LOGS(INFO) << "Registering a new Focuser for a11y. Dropping the old one.";
   }
@@ -291,13 +176,7 @@ void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallbac
     callback(fit::error(fuchsia::ui::views::Error::DENIED));
     return;
   }
-  if (!view_focuser_) {
-    // Scenic disconnected, close the connection.
-    callback(fit::error(fuchsia::ui::views::Error::DENIED));
-    focuser_binding_.Close(ZX_ERR_BAD_STATE);
-    return;
-  }
-
+  FX_DCHECK(view_focuser_);
   view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
 }
 

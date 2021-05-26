@@ -69,12 +69,13 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     keyboard_focus_ctl_ = std::make_unique<testing::FakeKeyboardFocusController>(context_provider_);
 
     // Start RootPresenter with fake context.
-    root_presenter_ = std::make_unique<App>(context_provider_.context(), dispatcher());
+    root_presenter_ = std::make_unique<App>(context_provider_.context(), [this] { QuitLoop(); });
   }
 
   void TearDown() final { root_presenter_.reset(); }
 
   App* root_presenter() { return root_presenter_.get(); }
+  Presentation* presentation() { return root_presenter_->presentation(); }
 
   void SetUpInputTest() {
     context_provider_.ConnectToPublicService<fuchsia::ui::input::InputDeviceRegistry>(
@@ -82,10 +83,10 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     input_device_registry_ptr_.set_error_handler([](auto...) { FAIL(); });
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-    root_presenter()->PresentView(std::move(view_holder_token), nullptr);
+    presentation()->PresentView(std::move(view_holder_token), nullptr);
     view_token_ = std::move(view_token);
 
-    RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+    RunLoopUntil([this]() { return presentation()->is_initialized(); });
   }
 
   void SetUpFocusChainListener(
@@ -188,7 +189,7 @@ TEST_F(RootPresenterTest, TestSceneSetup) {
   fuchsia::ui::scenic::ScenicPtr scenic =
       context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
-  root_presenter()->PresentView(fake_view.view_holder_token(), nullptr);
+  presentation()->PresentView(fake_view.view_holder_token(), nullptr);
 
   // Run until the view is attached to the scene.
   RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
@@ -199,7 +200,7 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
   fuchsia::ui::scenic::ScenicPtr scenic =
       context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
-  root_presenter()->PresentView(fake_view.view_holder_token(), nullptr);
+  presentation()->PresentView(fake_view.view_holder_token(), nullptr);
 
   // Run until the view is attached to the scene.
   RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
@@ -221,10 +222,10 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-  fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation;
+  fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation_ptr;
   bool alive = true;
-  presentation.set_error_handler([&alive](auto) { alive = false; });
-  root_presenter()->PresentView(std::move(view_holder_token), presentation.NewRequest());
+  presentation_ptr.set_error_handler([&alive](auto) { alive = false; });
+  presentation()->PresentView(std::move(view_holder_token), presentation_ptr.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -238,7 +239,7 @@ TEST_F(RootPresenterTest, SecondPresentView_ShouldFail_AndOriginalShouldSurvive)
   fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation1;
   bool alive1 = true;
   presentation1.set_error_handler([&alive1](auto) { alive1 = false; });
-  root_presenter()->PresentView(std::move(view_holder_token1), presentation1.NewRequest());
+  presentation()->PresentView(std::move(view_holder_token1), presentation1.NewRequest());
 
   fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation2;
   bool alive2 = true;
@@ -247,7 +248,7 @@ TEST_F(RootPresenterTest, SecondPresentView_ShouldFail_AndOriginalShouldSurvive)
     alive2 = false;
     error = err;
   });
-  root_presenter()->PresentView(std::move(view_holder_token2), presentation2.NewRequest());
+  presentation()->PresentView(std::move(view_holder_token2), presentation2.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -261,10 +262,10 @@ TEST_F(RootPresenterTest, SecondPresentView_ShouldFail_AndOriginalShouldSurvive)
 TEST_F(RootPresenterTest, SinglePresentOrReplaceView_ShouldSucceeed) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-  fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation;
+  fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation_ptr;
   bool alive = true;
-  presentation.set_error_handler([&alive](auto) { alive = false; });
-  root_presenter()->PresentView(std::move(view_holder_token), presentation.NewRequest());
+  presentation_ptr.set_error_handler([&alive](auto) { alive = false; });
+  presentation()->PresentView(std::move(view_holder_token), presentation_ptr.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -282,12 +283,12 @@ TEST_F(RootPresenterTest, SecondPresentOrReplaceView_ShouldSucceeed_AndOriginalS
     alive1 = false;
     error = err;
   });
-  root_presenter()->PresentOrReplaceView(std::move(view_holder_token1), presentation1.NewRequest());
+  presentation()->PresentOrReplaceView(std::move(view_holder_token1), presentation1.NewRequest());
 
   fidl::InterfacePtr<fuchsia::ui::policy::Presentation> presentation2;
   bool alive2 = true;
   presentation2.set_error_handler([&alive2](auto) { alive2 = false; });
-  root_presenter()->PresentOrReplaceView(std::move(view_holder_token2), presentation2.NewRequest());
+  presentation()->PresentOrReplaceView(std::move(view_holder_token2), presentation2.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -307,7 +308,6 @@ TEST_F(RootPresenterTest, InputInjectionRegistration) {
   input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
   input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
                                              input_device_ptr.NewRequest());
-  ;
   input_device_ptr->DispatchReport(TouchscreenReportTemplate());
   RunLoopUntilIdle();
 
@@ -332,7 +332,6 @@ TEST_F(RootPresenterTest, InputInjection_MultipleRegistrationBySameDevice) {
   input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
   input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
                                              input_device_ptr.NewRequest());
-  ;
   input_device_ptr->DispatchReport(TouchscreenReportTemplate());
   RunLoopUntilIdle();
 
@@ -617,8 +616,8 @@ TEST_F(RootPresenterTest, FocusOnStartup) {
 
   fuchsia::ui::views::ViewRef clone;
   fidl::Clone(view_ref, &clone);
-  root_presenter()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
-  RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+  presentation()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
+  RunLoopUntil([this]() { return presentation()->is_initialized(); });
 
   zx_koid_t keyboard_focus_view_koid = ZX_KOID_INVALID;
   bool keyboard_received_focus = false;
@@ -666,8 +665,8 @@ TEST_F(RootPresenterTest, FocusCollision) {
   const zx_koid_t child_view_koid = ExtractKoid(view_ref);
   fuchsia::ui::views::ViewRef clone;
   fidl::Clone(view_ref, &clone);
-  root_presenter()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
-  RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+  presentation()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
+  RunLoopUntil([this]() { return presentation()->is_initialized(); });
 
   // Register a separate focuser.
   fuchsia::ui::views::FocuserPtr focuser;
