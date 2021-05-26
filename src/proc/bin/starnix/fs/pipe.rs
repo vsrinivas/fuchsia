@@ -39,31 +39,31 @@ impl FsNodeOps for PipeNode {
 impl FileOps for PipeReadEndpoint {
     fd_impl_nonseekable!();
 
-    fn write(&self, _fd: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
         Err(ENOSYS)
     }
 
-    fn read(&self, _fd: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
         Err(ENOSYS)
     }
 
-    fn fstat(&self, fd: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..fd.node.as_ref().unwrap().fstat() })
+    fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
+        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().unwrap().fstat() })
     }
 }
 
 impl FileOps for PipeWriteEndpoint {
     fd_impl_nonseekable!();
 
-    fn write(&self, _fd: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
         Err(ENOSYS)
     }
 
-    fn read(&self, _fd: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
         Err(ENOSYS)
     }
 
-    fn fstat(&self, fd: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
-        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..fd.node.as_ref().unwrap().fstat() })
+    fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
+        Ok(stat_t { st_blksize: ATOMIC_IO_BYTES as i64, ..file.node.as_ref().unwrap().fstat() })
     }
 }

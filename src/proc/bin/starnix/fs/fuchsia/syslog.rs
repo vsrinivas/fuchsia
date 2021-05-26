@@ -21,7 +21,7 @@ impl SyslogFile {
 impl FileOps for SyslogFile {
     fd_impl_nonseekable!();
 
-    fn write(&self, _fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
         let mut size = 0;
         for vec in data {
             let mut local = vec![0; vec.iov_len];
@@ -32,11 +32,11 @@ impl FileOps for SyslogFile {
         Ok(size)
     }
 
-    fn read(&self, _fd: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
         Ok(0)
     }
 
-    fn fstat(&self, _fd: &FileObject, task: &Task) -> Result<stat_t, Errno> {
+    fn fstat(&self, _file: &FileObject, task: &Task) -> Result<stat_t, Errno> {
         // TODO(tbodt): Replace these random numbers with an anonymous inode
         Ok(stat_t {
             st_dev: 0x16,
@@ -52,7 +52,7 @@ impl FileOps for SyslogFile {
 
     fn ioctl(
         &self,
-        _fd: &FileObject,
+        _file: &FileObject,
         _task: &Task,
         request: u32,
         _in_addr: UserAddress,

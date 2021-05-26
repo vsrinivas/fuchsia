@@ -64,9 +64,9 @@ pub fn sys_fcntl(
             file.set_async_owner(task.map_or(0, |task| task.id));
             Ok(SUCCESS)
         }
-        F_GETFD => Ok(ctx.task.files.get_flags(fd)?.bits().into()),
+        F_GETFD => Ok(ctx.task.files.get_fd_flags(fd)?.bits().into()),
         F_SETFD => {
-            ctx.task.files.set_flags(fd, FdFlags::from_bits_truncate(arg as u32))?;
+            ctx.task.files.set_fd_flags(fd, FdFlags::from_bits_truncate(arg as u32))?;
             Ok(SUCCESS)
         }
         F_GETFL => {
@@ -364,8 +364,8 @@ pub fn sys_pipe2(
     let (read, write) = PipeNode::new(&ctx.task)?;
 
     let file_flags = flags & (O_NONBLOCK | O_DIRECT);
-    read.set_flags(O_RDONLY | file_flags);
-    write.set_flags(O_WRONLY | file_flags);
+    read.set_file_flags(O_RDONLY | file_flags);
+    write.set_file_flags(O_WRONLY | file_flags);
 
     let fd_flags = get_fd_flags(flags);
     let fd_read = ctx.task.files.add_with_flags(read, fd_flags)?;

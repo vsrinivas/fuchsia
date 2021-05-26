@@ -23,7 +23,7 @@ impl FuchsiaPipe {
 impl FileOps for FuchsiaPipe {
     fd_impl_nonseekable!();
 
-    fn write(&self, _fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
         let mut size = 0;
         for vec in data {
             let mut local = vec![0; vec.iov_len];
@@ -37,7 +37,7 @@ impl FileOps for FuchsiaPipe {
         Ok(size)
     }
 
-    fn read(&self, _fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
         let mut size = 0;
         for vec in data {
             let mut local = vec![0; vec.iov_len];
@@ -51,7 +51,7 @@ impl FileOps for FuchsiaPipe {
         Ok(size)
     }
 
-    fn fstat(&self, _fd: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
+    fn fstat(&self, _file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
         Err(ENOSYS)
     }
 }

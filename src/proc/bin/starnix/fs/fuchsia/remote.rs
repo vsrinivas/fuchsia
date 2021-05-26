@@ -143,7 +143,7 @@ impl FileOps for RemoteFile {
 
     fn read_at(
         &self,
-        _fd: &FileObject,
+        _file: &FileObject,
         task: &Task,
         offset: usize,
         buf: &[iovec_t],
@@ -175,7 +175,7 @@ impl FileOps for RemoteFile {
 
     fn write_at(
         &self,
-        _fd: &FileObject,
+        _file: &FileObject,
         _task: &Task,
         _offset: usize,
         _data: &[iovec_t],
@@ -185,7 +185,7 @@ impl FileOps for RemoteFile {
 
     fn get_vmo(
         &self,
-        _fd: &FileObject,
+        _file: &FileObject,
         _task: &Task,
         mut prot: zx::VmarFlags,
         _flags: u32,
@@ -207,7 +207,7 @@ impl FileOps for RemoteFile {
         Ok(vmo)
     }
 
-    fn fstat(&self, _fd: &FileObject, task: &Task) -> Result<stat_t, Errno> {
+    fn fstat(&self, _file: &FileObject, task: &Task) -> Result<stat_t, Errno> {
         let (status, attrs) = self.node.get_attr().map_err(fidl_error)?;
         zx::Status::ok(status).map_err(fio_error)?;
         Ok(stat_t {

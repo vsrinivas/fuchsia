@@ -43,24 +43,24 @@ impl fmt::Display for FdNumber {
 pub trait FileOps: Send + Sync {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
-    fn read(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn read(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
     /// Read from the file at an offset. If your file is seekable, consider implementing this with
     /// fd_impl_nonseekable!.
     fn read_at(
         &self,
-        fd: &FileObject,
+        file: &FileObject,
         task: &Task,
         offset: usize,
         data: &[iovec_t],
     ) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable!.
-    fn write(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn write(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
     /// Write to the file at a offset. If your file is nonseekable, consider implementing this with
     /// fd_impl_nonseekable!.
     fn write_at(
         &self,
-        fd: &FileObject,
+        file: &FileObject,
         task: &Task,
         offset: usize,
         data: &[iovec_t],
@@ -71,7 +71,7 @@ pub trait FileOps: Send + Sync {
     /// possible given the requested protection, an error must be returned.
     fn get_vmo(
         &self,
-        _fd: &FileObject,
+        _file: &FileObject,
         _task: &Task,
         _prot: zx::VmarFlags,
         _flags: u32,
@@ -82,11 +82,11 @@ pub trait FileOps: Send + Sync {
     // TODO(tbodt): This is actually an operation of the filesystem and not the file descriptor: if
     // you open a device file, fstat will go to the filesystem, not to the device. It's only here
     // because we don't have such a thing yet. Will need to be moved.
-    fn fstat(&self, fd: &FileObject, task: &Task) -> Result<stat_t, Errno>;
+    fn fstat(&self, file: &FileObject, task: &Task) -> Result<stat_t, Errno>;
 
     fn ioctl(
         &self,
-        _fd: &FileObject,
+        _file: &FileObject,
         _task: &Task,
         request: u32,
         _in_addr: UserAddress,
@@ -103,7 +103,7 @@ macro_rules! fd_impl_nonseekable {
     () => {
         fn read_at(
             &self,
-            _fd: &FileObject,
+            _file: &FileObject,
             _task: &Task,
             _offset: usize,
             _data: &[iovec_t],
@@ -112,7 +112,7 @@ macro_rules! fd_impl_nonseekable {
         }
         fn write_at(
             &self,
-            _fd: &FileObject,
+            _file: &FileObject,
             _task: &Task,
             _offset: usize,
             _data: &[iovec_t],
@@ -127,15 +127,15 @@ macro_rules! fd_impl_nonseekable {
 #[macro_export]
 macro_rules! fd_impl_seekable {
     () => {
-        fn read(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
-            let mut offset = fd.offset.lock();
-            let size = self.read_at(fd, task, *offset, data)?;
+        fn read(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+            let mut offset = file.offset.lock();
+            let size = self.read_at(file, task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
-        fn write(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
-            let mut offset = fd.offset.lock();
-            let size = self.write_at(fd, task, *offset, data)?;
+        fn write(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+            let mut offset = file.offset.lock();
+            let size = self.write_at(file, task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
@@ -174,7 +174,7 @@ impl FileObject {
         &*self.ops
     }
 
-    pub fn set_flags(&self, value: u32) {
+    pub fn set_file_flags(&self, value: u32) {
         let mut flags = self.flags.lock();
         *flags = value;
     }
@@ -265,12 +265,12 @@ impl FdTable {
         table.remove(&fd).ok_or(EBADF).map(|_| {})
     }
 
-    pub fn get_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
+    pub fn get_fd_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
         let table = self.table.read();
         table.get(&fd).map(|entry| entry.flags).ok_or(EBADF)
     }
 
-    pub fn set_flags(&self, fd: FdNumber, flags: FdFlags) -> Result<(), Errno> {
+    pub fn set_fd_flags(&self, fd: FdNumber, flags: FdFlags) -> Result<(), Errno> {
         let mut table = self.table.write();
         table
             .get_mut(&fd)
@@ -317,9 +317,9 @@ mod test {
         assert!(files.get(fd2).is_err());
         assert!(forked.get(fd2).is_err());
 
-        files.set_flags(fd0, FdFlags::CLOEXEC).unwrap();
-        assert_eq!(FdFlags::CLOEXEC, files.get_flags(fd0).unwrap());
-        assert_ne!(FdFlags::CLOEXEC, forked.get_flags(fd0).unwrap());
+        files.set_fd_flags(fd0, FdFlags::CLOEXEC).unwrap();
+        assert_eq!(FdFlags::CLOEXEC, files.get_fd_flags(fd0).unwrap());
+        assert_ne!(FdFlags::CLOEXEC, forked.get_fd_flags(fd0).unwrap());
     }
 
     #[test]
@@ -330,7 +330,7 @@ mod test {
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
 
-        files.set_flags(fd0, FdFlags::CLOEXEC).unwrap();
+        files.set_fd_flags(fd0, FdFlags::CLOEXEC).unwrap();
 
         assert!(files.get(fd0).is_ok());
         assert!(files.get(fd1).is_ok());
