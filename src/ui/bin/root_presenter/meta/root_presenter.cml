@@ -12,6 +12,7 @@
             protocol: [
                 "fuchsia.recovery.FactoryResetStateNotifier",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
+                "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",
                 "fuchsia.ui.input.InputDeviceRegistry",
@@ -58,6 +59,7 @@
             protocol: [
                 "fuchsia.recovery.FactoryResetStateNotifier",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
+                "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",
                 "fuchsia.ui.input.InputDeviceRegistry",

@@ -13,6 +13,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.settings.Accessibility",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.accessibility.view.Registry",
             "fuchsia.ui.annotation.Registry",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.policy.DisplayBacklight",
