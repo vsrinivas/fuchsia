@@ -65,6 +65,30 @@
             "metric_id": 36,
             "metric_type": "Occurrence",
             "selector": "netstack.cmx:Networking Stat Counters/TCP:EstablishedTimedout"
+        },
+        {
+            "event_codes": [
+                0
+            ],
+            "metric_id": 26,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters/DHCPv6:NoConfiguration"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 26,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters/DHCPv6:ManagedAddress"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 26,
+            "metric_type": "Occurrence",
+            "selector": "netstack.cmx:Networking Stat Counters/DHCPv6:OtherConfiguration"
         }
     ],
     "poll_rate_sec": 60,

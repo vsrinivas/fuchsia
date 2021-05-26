@@ -77,6 +77,11 @@ type stats struct {
 	PacketsReceived  funcCounter
 	BytesSent        funcCounter
 	BytesReceived    funcCounter
+	DHCPv6           struct {
+		NoConfiguration    tcpip.StatCounter
+		ManagedAddress     tcpip.StatCounter
+		OtherConfiguration tcpip.StatCounter
+	}
 }
 
 func (s *stats) init(ns *Netstack) {

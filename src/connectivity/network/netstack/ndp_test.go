@@ -77,7 +77,6 @@ func newNDPDispatcherForTest() *ndpDispatcher {
 	// Must be called or tests may panic as the ndpDispatchere may attempt to call
 	// into n.dynamicAddressSourceObs
 	n.dynamicAddressSourceObs.initWithoutTimer(func() {})
-	n.dhcpv6Obs.init(func() {})
 	return n
 }
 
@@ -779,6 +778,122 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	}
 }
 
+func TestDHCPv6Stats(t *testing.T) {
+	type statsSnapshot struct {
+		NoConfiguration    uint64
+		ManagedAddress     uint64
+		OtherConfiguration uint64
+	}
+
+	type step struct {
+		run  func(*ndpDispatcher)
+		want statsSnapshot
+	}
+
+	getSnapshot := func(ns *Netstack) statsSnapshot {
+		d := ns.stats.DHCPv6
+		return statsSnapshot{
+			NoConfiguration:    d.NoConfiguration.Value(),
+			ManagedAddress:     d.ManagedAddress.Value(),
+			OtherConfiguration: d.OtherConfiguration.Value(),
+		}
+	}
+
+	tests := []struct {
+		name  string
+		steps []step
+	}{
+		{
+			name: "one configuration",
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+					},
+					want: statsSnapshot{
+						NoConfiguration:    1,
+						ManagedAddress:     0,
+						OtherConfiguration: 0,
+					},
+				},
+			},
+		},
+		{
+			name: "multiple configurations",
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6ManagedAddress)
+					},
+					want: statsSnapshot{
+						NoConfiguration:    1,
+						ManagedAddress:     1,
+						OtherConfiguration: 0,
+					},
+				},
+			},
+		},
+		{
+			name: "pull between configurations",
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+					},
+					want: statsSnapshot{
+						NoConfiguration:    1,
+						ManagedAddress:     0,
+						OtherConfiguration: 0,
+					},
+				},
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+					},
+					want: statsSnapshot{
+						NoConfiguration:    2,
+						ManagedAddress:     0,
+						OtherConfiguration: 0,
+					},
+				},
+			},
+		},
+		{
+			name: "duplicated configurations",
+			steps: []step{
+				{
+					run: func(ndpDisp *ndpDispatcher) {
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
+					},
+					want: statsSnapshot{
+						NoConfiguration:    2,
+						ManagedAddress:     0,
+						OtherConfiguration: 0,
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ns := &Netstack{}
+			ndpDisp := newNDPDispatcher()
+			ndpDisp.ns = ns
+			ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {})
+
+			for i, step := range test.steps {
+				step.run(ndpDisp)
+				if diff := cmp.Diff(step.want, getSnapshot(ns)); diff != "" {
+					t.Errorf("%d-th step: mismatch (-want +got):\n%s", i, diff)
+				}
+			}
+		})
+	}
+}
+
 func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 	const (
 		nicID1 = 1
@@ -794,25 +909,11 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 	// When the observations are pulled, we ensure that all novelty since the
 	// last pull is included and duplicate observations are coalesced.
 	type step struct {
-		run  func(ndpDisp *ndpDispatcher)
+		run  func(*ndpDispatcher)
 		want []cobalt.CobaltEvent
 	}
 
-	defaultInit := func(ndpDisp *ndpDispatcher, cobaltClient *cobaltClient) {
-		ndpDisp.dhcpv6Obs.init(func() {
-			cobaltClient.Register(&ndpDisp.dhcpv6Obs)
-		})
-
-		ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {
-			cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
-		})
-	}
-
 	availableDynamicAddressConfigsInit := func(ndpDisp *ndpDispatcher, cobaltClient *cobaltClient) {
-		// We pass a noop for dhcpv6Obs' event's registration callback since we
-		// only care about the available dynamic address configurations metric.
-		ndpDisp.dhcpv6Obs.init(func() {})
-
 		ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {
 			cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
 		})
@@ -823,103 +924,6 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 		init  func(*ndpDispatcher, *cobaltClient)
 		steps []step
 	}{
-		{
-			name: "one_configuration",
-			init: defaultInit,
-			steps: []step{
-				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
-					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "multiple_configurations",
-			init: defaultInit,
-			steps: []step{
-				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6ManagedAddress)
-					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.ManagedAddress)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "pull_between_configurations",
-			init: defaultInit,
-			steps: []step{
-				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
-					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-					},
-				},
-				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
-					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "duplicated_configurations",
-			init: defaultInit,
-			steps: []step{
-				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
-						ndpDisp.OnDHCPv6Configuration(0, ipv6.DHCPv6NoConfiguration)
-					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-						{
-							MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoConfiguration)},
-							Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-						},
-					},
-				},
-			},
-		},
-
 		{
 			name: "dynamic address config with no config",
 			init: availableDynamicAddressConfigsInit,
@@ -1146,6 +1150,7 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			cobaltClient := NewCobaltClient()
 			ndpDisp := newNDPDispatcher()
+			ndpDisp.ns = &Netstack{}
 			test.init(ndpDisp, cobaltClient)
 
 			for i, step := range test.steps {

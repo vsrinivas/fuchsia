@@ -148,9 +148,6 @@ type ndpDispatcher struct {
 	// testNotifyCh should only be set by tests.
 	testNotifyCh chan struct{}
 
-	// dhcpv6Obs tracks unique DHCPv6 configurations since the last Cobalt pull.
-	dhcpv6Obs dhcpV6Observation
-
 	// dynamicAddressSourceObs tracks the most recent dynamic address
 	// configuration options available for an interface.
 	dynamicAddressSourceObs availableDynamicIPv6AddressConfigObservation
@@ -395,66 +392,19 @@ func (o *availableDynamicIPv6AddressConfigObservation) events() []cobalt.CobaltE
 	return events
 }
 
-var _ cobaltEventProducer = (*dhcpV6Observation)(nil)
-
-type dhcpV6Observation struct {
-	mu struct {
-		sync.Mutex
-		seen      map[ipv6.DHCPv6ConfigurationFromNDPRA]int
-		hasEvents func()
-	}
-}
-
-func (o *dhcpV6Observation) init(hasEvents func()) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	o.mu.hasEvents = hasEvents
-}
-
-func (o *dhcpV6Observation) events() []cobalt.CobaltEvent {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-
-	var res []cobalt.CobaltEvent
-	for c, count := range o.mu.seen {
-		var code networking_metrics.NetworkingMetricDimensionConfigurationFromNdpra
-		switch c {
-		case ipv6.DHCPv6NoConfiguration:
-			code = networking_metrics.NoConfiguration
-		case ipv6.DHCPv6ManagedAddress:
-			code = networking_metrics.ManagedAddress
-		case ipv6.DHCPv6OtherConfigurations:
-			code = networking_metrics.OtherConfigurations
-		default:
-			_ = syslog.Warnf("ndp: unknown ipv6.DHCPv6ConfigurationFromNDPRA: %s", c)
-		}
-		for i := 0; i < count; i++ {
-			res = append(res, cobalt.CobaltEvent{
-				MetricId:   networking_metrics.DhcpV6ConfigurationMetricId,
-				EventCodes: []uint32{uint32(code)},
-				Payload:    cobalt.EventPayloadWithEvent(cobalt.Event{}),
-			})
-		}
-	}
-	o.mu.seen = nil
-	return res
-}
-
 // OnDHCPv6Configuration implements ipv6.NDPDispatcher.
 func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration ipv6.DHCPv6ConfigurationFromNDPRA) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDHCPv6Configuration(%d, %s)", nicID, configuration)
-
-	n.dhcpv6Obs.mu.Lock()
-	if n.dhcpv6Obs.mu.seen == nil {
-		n.dhcpv6Obs.mu.seen = make(map[ipv6.DHCPv6ConfigurationFromNDPRA]int)
+	switch configuration {
+	case ipv6.DHCPv6NoConfiguration:
+		n.ns.stats.DHCPv6.NoConfiguration.Increment()
+	case ipv6.DHCPv6ManagedAddress:
+		n.ns.stats.DHCPv6.ManagedAddress.Increment()
+	case ipv6.DHCPv6OtherConfigurations:
+		n.ns.stats.DHCPv6.OtherConfiguration.Increment()
+	default:
+		panic(fmt.Sprintf("unknown ipv6.DHCPv6ConfigurationFromNDPRA: %s", configuration))
 	}
-	n.dhcpv6Obs.mu.seen[configuration] += 1
-	hasEvents := n.dhcpv6Obs.mu.hasEvents
-	n.dhcpv6Obs.mu.Unlock()
-	if hasEvents == nil {
-		panic("ndp dispatcher: dhcpV6Observation: hasEvents callback unspecified (ensure init has been called)")
-	}
-	hasEvents()
 
 	n.dynamicAddressSourceObs.setLastDHCPv6(nicID, configuration)
 }
