@@ -3,11 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::TestEnv,
+    crate::{get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv},
     blobfs_ramdisk::BlobfsRamdisk,
+    fidl_fuchsia_io::{DirectoryMarker, FileMarker},
+    fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
+    fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
-    fuchsia_inspect::assert_data_tree,
+    fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
+    fuchsia_zircon::Status,
+    futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
 };
 
@@ -174,6 +179,214 @@ async fn dynamic_index_inital_state() {
         root: contains {
             "index": {
                 "dynamic" : {}
+            }
+        }
+    );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn dynamic_index_with_cache_packages() {
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let mut system_image_package = SystemImageBuilder::new();
+    let cache_package = PackageBuilder::new("a-cache-package")
+        .add_resource_at("some-cached-blob", &b"unique contents"[..])
+        .build()
+        .await
+        .unwrap();
+
+    system_image_package = system_image_package.cache_packages(&[&cache_package]);
+    cache_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let system_image_package = system_image_package.build().await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    env.block_until_started().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    cache_package.meta_far_merkle_root().to_string() => {
+                        "state" : "active",
+                        "time": AnyProperty,
+                        "required_blobs": 1u64,
+                        "path": "a-cache-package/0",
+                    },
+                }
+            }
+        }
+    );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn dynamic_index_needed_blobs() {
+    let env = TestEnv::builder().build().await;
+    let pkg = PackageBuilder::new("single-blob").build().await.unwrap();
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    let (meta_far, _) = pkg.contents();
+
+    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    pkg.meta_far_merkle_root().to_string() => {
+                        "state": "pending",
+                        "time": AnyProperty,
+                    }
+                }
+            }
+        }
+    );
+
+    write_blob(&meta_far.contents, meta_blob).await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    pkg.meta_far_merkle_root().to_string() => {
+                        "state": "with_meta_far",
+                        "required_blobs": 0u64,
+                        "missing_blobs": 0u64,
+                        "time": AnyProperty,
+                        "path": "single-blob/0",
+                    }
+
+                }
+            }
+        }
+    );
+
+    assert_eq!(get_missing_blobs(&needed_blobs).await, vec![]);
+    let () = get_fut.await.unwrap().unwrap();
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    pkg.meta_far_merkle_root().to_string() => {
+                        "state": "active",
+                        "required_blobs": 0u64,
+                        "time": AnyProperty,
+                        "path": "single-blob/0"
+                    }
+
+                }
+            }
+        }
+    );
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn dynamic_index_package_hash_update() {
+    let env = TestEnv::builder().build().await;
+    let pkg = PackageBuilder::new("single-blob").build().await.unwrap();
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(&mut meta_blob_info, &mut std::iter::empty(), needed_blobs_server_end, None)
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    let (meta_far, _) = pkg.contents();
+
+    let (meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+
+    write_blob(&meta_far.contents, meta_blob).await;
+
+    assert_eq!(get_missing_blobs(&needed_blobs).await, vec![]);
+    let () = get_fut.await.unwrap().unwrap();
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    pkg.meta_far_merkle_root().to_string() => {
+                        "state": "active",
+                        "required_blobs": 0u64,
+                        "time": AnyProperty,
+                        "path": "single-blob/0"
+                    }
+
+                }
+            }
+        }
+    );
+
+    let updated_pkg = PackageBuilder::new("single-blob")
+        .add_resource_at("some-cached-blob", &b"updated contents"[..])
+        .build()
+        .await
+        .unwrap();
+
+    let updated_hash = updated_pkg.meta_far_merkle_root().to_string();
+    assert_ne!(pkg.meta_far_merkle_root().to_string(), updated_hash);
+
+    let () = verify_fetches_succeed(&env.proxies.package_cache, &[updated_pkg]).await;
+    let hierarchy = env.inspect_hierarchy().await;
+
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    updated_hash => {
+                        "state": "active",
+                        "required_blobs": 1u64,
+                        "time": AnyProperty,
+                        "path": "single-blob/0"
+                    }
+
+                }
             }
         }
     );
