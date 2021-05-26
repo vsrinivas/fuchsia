@@ -136,6 +136,15 @@ if is_feature_enabled "incremental"; then
   fx-info "Incremental package auto-publishing is enabled."
   serve_flags+=( -p "all_package_manifests.list" )
 
+  # macOS in particular has a low default for number of open file descriptors
+  # per process, which is prohibitive for higher job counts. Here we raise
+  # the number of allowed file descriptors per process if it appears to be
+  # low in order to avoid failures due to the limit. See `getrlimit(2)` for
+  # more information.
+  if [[ $(ulimit -n) -lt 1000 ]]; then
+    ulimit -n 32768
+  fi
+
   if $clean_first; then
     $verbose && echo -n >&2 "Cleaning the package repository..."
     if [[ -d "${repo_dir}" ]]; then
