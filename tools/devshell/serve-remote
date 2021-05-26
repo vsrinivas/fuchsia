@@ -106,13 +106,12 @@ fi
 
 save_remote_info "$host" "$dir"
 
-target_addr=$(get-fuchsia-device-addr)
-if [[ $? -ne 0 || -z "${target_addr}" ]]; then
+fx-export-device-address
+if [[ $? -ne 0 || -z "${FX_DEVICE_ADDR}" ]]; then
   fx-error "unable to discover device. Is the target up?"
   exit 1
 fi
 
-fx-export-device-address
 if [[ -z "${FX_SSH_PORT}" ]]; then
   FX_SSH_PORT=22
 fi
@@ -149,7 +148,7 @@ trap trap_exit EXIT
 ssh_tunnel_args=(
   -6 # We want ipv6 binds for the port forwards
   -L "\*:8083:localhost:8083"                 # fx serve
-  -R "8022:[${FX_SSH_ADDR}]:${FX_SSH_PORT}"   # fx shell
+  -R "8022:${FX_SSH_ADDR}:${FX_SSH_PORT}"     # fx shell
   -o ExitOnForwardFailure=yes
   # Match google default server timeout so in spotty network situations the client doesn't timeout
   # before server (and leave the server process still holding on to tunneling port).
@@ -164,10 +163,10 @@ ssh_tunnel_args=(
 # host link level.
 if [[ "${FX_SSH_PORT}" == 22 ]]; then
   ssh_tunnel_args+=(
-    -R "2345:[${FX_SSH_ADDR}]:2345"             # fx debug
-    -R "8007:[${FX_SSH_ADDR}]:8007"             # Google-specific
-    -R "8443:[${FX_SSH_ADDR}]:8443"             # Google-specific
-    -R "9080:[${FX_SSH_ADDR}]:80"               # SL4F_HTTP_PORT
+    -R "2345:${FX_SSH_ADDR}:2345"             # fx debug
+    -R "8007:${FX_SSH_ADDR}:8007"             # Google-specific
+    -R "8443:${FX_SSH_ADDR}:8443"             # Google-specific
+    -R "9080:${FX_SSH_ADDR}:80"               # SL4F_HTTP_PORT
   )
 else
   echo >&2 "Note: tunnelled targets will not receive forwards for SL4F or debug"
@@ -176,7 +175,7 @@ fi
 # Add additional ports to tunnel if specified.
 if "${has_tunnel_ports}"; then
   for port in "${tunnel_ports[@]}"; do
-    ssh_tunnel_args+=(-R "${port}:[${target_addr}]:${port}")
+    ssh_tunnel_args+=(-R "${port}:${FX_SSH_ADDR}:${port}")
   done
 fi
 
