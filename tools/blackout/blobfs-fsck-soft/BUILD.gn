@@ -25,6 +25,15 @@ if (is_host) {
         tags = [ "power-failure" ]
         netboot = true
       },
+      {
+        dimensions = {
+          testbed = "pwr_sherlock"
+          pool = "fuchsia.tests.power-failure"
+          device_type = "Sherlock"
+        }
+        tags = [ "power-failure-sherlock" ]
+        netboot = true
+      },
     ]
 
     sources = [ "src/host.rs" ]

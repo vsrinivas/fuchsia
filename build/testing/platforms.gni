@@ -68,6 +68,12 @@ test_platforms = [
     cpu = "arm64"
   },
   {
+    testbed = "pwr_sherlock"
+    cpu = "arm64"
+    pool = "fuchsia.tests.power-failure"
+    device_type = "Sherlock"
+  },
+  {
     testbed = "bt_astro_astro"
     cpu = "arm64"
     pool = "fuchsia.tests.connectivity"
