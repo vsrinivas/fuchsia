@@ -197,6 +197,21 @@ class FakeComponentWithOnTerminate : public modular_testing::FakeComponent {
   fit::function<void()> on_terminate_ = []() {};
 };
 
+// A |FakeComponent| that counts the number of times it has been launched.
+class LaunchCountingComponent : public modular_testing::FakeComponent {
+ public:
+  LaunchCountingComponent()
+      : FakeComponent({.url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()}) {}
+
+  int launch_count() const { return launch_count_; }
+
+ protected:
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override { launch_count_++; }
+
+ private:
+  int launch_count_ = 0;
+};
+
 // Create a service in the test harness that is also not provided by the session environment. Verify
 // story mods get the test service from the harness.
 TEST_F(SessionmgrIntegrationTest, StoryModsGetServicesFromGlobalEnvironment) {
@@ -578,78 +593,47 @@ TEST_F(SessionmgrIntegrationTest, RestartSession) {
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSessionAgentOnCrash) {
-  std::string fake_agent_url =
-      modular_testing::TestHarnessBuilder::GenerateFakeUrl("test_agent_to_restart");
-
-  int launch_count = 0;
+  LaunchCountingComponent agent;
 
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_sessionmgr_config()->set_session_agents({fake_agent_url});
+  spec.mutable_sessionmgr_config()->set_session_agents({agent.url()});
   modular_testing::TestHarnessBuilder builder(std::move(spec));
-
-  builder.InterceptComponent({
-      .url = fake_agent_url,
-      .sandbox_services =
-          {
-              fuchsia::modular::ComponentContext::Name_,
-          },
-      .launch_handler =
-          [&](fuchsia::sys::StartupInfo startup_info,
-              fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-                  intercepted_component) mutable {
-            launch_count++;
-            fake_agent_ =
-                std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
-                    .url = fake_agent_url,
-                });
-            fake_agent_->BuildInterceptOptions().launch_handler(std::move(startup_info),
-                                                                std::move(intercepted_component));
-          },
-  });
+  builder.InterceptComponent(agent.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
-  RunLoopUntil([&] { return !!fake_agent_ && fake_agent_->is_running(); });
+  // Wait for the agent to start.
+  RunLoopUntil([&] { return agent.is_running(); });
+  ASSERT_EQ(1, agent.launch_count());
 
-  ASSERT_EQ(1, launch_count);
+  // Terminate the agent.
+  agent.Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
 
-  fake_agent_->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
-  auto old_agent = std::move(fake_agent_);
-  fake_agent_.reset();
-
-  RunLoopUntil([&] { return !!fake_agent_ && fake_agent_->is_running(); });
-
-  ASSERT_EQ(2, launch_count);
+  // The agent should have restarted at least once.
+  RunLoopUntil([&] { return agent.launch_count() >= 2; });
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSessionOnSessionAgentCrash) {
-  static const auto kFakeAgentUrl =
-      modular_testing::TestHarnessBuilder::GenerateFakeUrl("test_agent");
+  LaunchCountingComponent session_shell;
+  LaunchCountingComponent agent;
 
   // Configure sessiomgr to restart the session when the agent terminates.
   fuchsia::modular::testing::TestHarnessSpec spec;
-  spec.mutable_sessionmgr_config()->set_session_agents({kFakeAgentUrl});
-  spec.mutable_sessionmgr_config()->set_restart_session_on_agent_crash({kFakeAgentUrl});
+  spec.mutable_sessionmgr_config()->set_session_agents({agent.url()});
+  spec.mutable_sessionmgr_config()->set_restart_session_on_agent_crash({agent.url()});
 
   modular_testing::TestHarnessBuilder builder(std::move(spec));
-  auto session_shell = modular_testing::FakeSessionShell::CreateWithDefaultOptions();
-  builder.InterceptSessionShell(session_shell->BuildInterceptOptions());
-  fake_agent_ = std::make_unique<modular_testing::FakeAgent>(modular_testing::FakeComponent::Args{
-      .url = kFakeAgentUrl,
-      .sandbox_services = modular_testing::FakeAgent::GetDefaultSandboxServices()});
-  builder.InterceptComponent(fake_agent_->BuildInterceptOptions());
-
+  builder.InterceptSessionShell(session_shell.BuildInterceptOptions());
+  builder.InterceptComponent(agent.BuildInterceptOptions());
   builder.BuildAndRun(test_harness());
 
   // Wait for the session to start.
-  RunLoopUntil([&] { return session_shell->is_running() && fake_agent_->is_running(); });
+  RunLoopUntil([&] { return session_shell.is_running() && agent.is_running(); });
 
   // Terminate the agent.
-  fake_agent_->Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
-  RunLoopUntil([&] { return !fake_agent_->is_running(); });
+  agent.Exit(1, fuchsia::sys::TerminationReason::UNKNOWN);
 
-  // The session and agent should have restarted.
-  RunLoopUntil([&] { return !session_shell->is_running(); });
-  RunLoopUntil([&] { return session_shell->is_running() && fake_agent_->is_running(); });
+  // The session and agent should have restarted at least once.
+  RunLoopUntil([&] { return session_shell.launch_count() >= 2 && agent.launch_count() >= 2; });
 }
 
 // Tests that agents have access to PuppetMaster during teardown.
