@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":injector-tests" ]
+}
+
+executable("injector_tests") {
+  testonly = true
+  sources = [ "injector_config_setup_unittest.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/input/lib/injector",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_component("injector-component") {
+  deps = [ ":injector_tests" ]
+}
+
+fuchsia_test_package("injector-tests") {
+  # TODO(fxbug.dev/77467): Implement unit test for Injector.
+  test_components = [ ":injector-component" ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}

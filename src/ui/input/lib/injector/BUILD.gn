@@ -1,0 +1,52 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("injector") {
+  public_deps = [
+    ":injector_config_setup",
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "injector.cc",
+    "injector.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/ui/input",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
+
+  deps = [
+    ":injector_config_setup",
+    "//garnet/public/lib/fostr/fidl/fuchsia.input.report",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/ui/input",
+    "//zircon/system/ulib/trace",
+  ]
+}
+
+source_set("injector_config_setup") {
+  sources = [
+    "injector_config_setup.cc",
+    "injector_config_setup.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+  ]
+}

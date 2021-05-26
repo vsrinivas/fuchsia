@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ROOT_PRESENTER_INJECTOR_CONFIG_SETUP_H_
-#define SRC_UI_BIN_ROOT_PRESENTER_INJECTOR_CONFIG_SETUP_H_
+#ifndef SRC_UI_INPUT_LIB_INJECTOR_INJECTOR_CONFIG_SETUP_H_
+#define SRC_UI_INPUT_LIB_INJECTOR_INJECTOR_CONFIG_SETUP_H_
 
 #include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
-namespace root_presenter {
+namespace input {
 
 // Allows an input pipeline to access pointer injection configuration details.
 class InjectorConfigSetup : public fuchsia::ui::pointerinjector::configuration::Setup {
@@ -39,6 +39,6 @@ class InjectorConfigSetup : public fuchsia::ui::pointerinjector::configuration::
   fit::function<void(fuchsia::ui::pointerinjector::Viewport)> watch_viewport_callback_;
 };
 
-}  // namespace root_presenter
+}  // namespace input
 
-#endif  // SRC_UI_BIN_ROOT_PRESENTER_INJECTOR_CONFIG_SETUP_H_
+#endif  // SRC_UI_INPUT_LIB_INJECTOR_INJECTOR_CONFIG_SETUP_H_

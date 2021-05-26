@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ROOT_PRESENTER_INJECTOR_H_
-#define SRC_UI_BIN_ROOT_PRESENTER_INJECTOR_H_
+#ifndef SRC_UI_INPUT_LIB_INJECTOR_INJECTOR_H_
+#define SRC_UI_INPUT_LIB_INJECTOR_INJECTOR_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
@@ -13,7 +13,7 @@
 #include <deque>
 #include <unordered_map>
 
-namespace root_presenter {
+namespace input {
 
 // Class for handling input injection into Scenic.
 //
@@ -102,6 +102,6 @@ class Injector {
   uint64_t num_failed_injection_attempts_ = 0u;
 };
 
-}  // namespace root_presenter
+}  // namespace input
 
-#endif  // SRC_UI_BIN_ROOT_PRESENTER_INJECTOR_H_
+#endif  // SRC_UI_INPUT_LIB_INJECTOR_INJECTOR_H_

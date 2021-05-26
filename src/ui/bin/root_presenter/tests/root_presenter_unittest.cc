@@ -562,7 +562,7 @@ TEST_F(RootPresenterTest, InputInjection_FinishStreamOnServerAndClientDisconnect
 TEST_F(RootPresenterTest, InjectorStartupTest) {
   auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
-  Injector injector(context_provider_.context(), std::move(view_ref1), std::move(view_ref2));
+  input::Injector injector(context_provider_.context(), std::move(view_ref1), std::move(view_ref2));
 
   injector.OnDeviceAdded(/*device_id*/ 1);
   injector.OnDeviceAdded(/*device_id*/ 2);

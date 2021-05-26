@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/root_presenter/injector_config_setup.h"
+#include "src/ui/input/lib/injector/injector_config_setup.h"
 
 #include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -15,7 +15,7 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace root_presenter {
+namespace input {
 namespace {
 
 zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
@@ -245,4 +245,4 @@ TEST_F(InjectorConfigSetupTest, WatchViewport_ReconnectWithoutOutstandingCall) {
 }
 
 }  // namespace
-}  // namespace root_presenter
+}  // namespace input

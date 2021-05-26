@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/root_presenter/injector.h"
+#include "src/ui/input/lib/injector/injector.h"
 
 #include <lib/async/default.h>
 #include <lib/async/time.h>
@@ -12,7 +12,7 @@
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <zircon/status.h>
 
-namespace root_presenter {
+namespace input {
 namespace {
 
 // TODO(fxbug.dev/24476): Remove this.
@@ -261,4 +261,4 @@ void Injector::MarkSceneReady() {
   }
 }
 
-}  // namespace root_presenter
+}  // namespace input

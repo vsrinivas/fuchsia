@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/root_presenter/injector_config_setup.h"
+#include "src/ui/input/lib/injector/injector_config_setup.h"
 
 #include <lib/syslog/cpp/macros.h>
 
-namespace root_presenter {
+namespace input {
 
 InjectorConfigSetup::InjectorConfigSetup(sys::ComponentContext* component_context,
                                          fuchsia::ui::views::ViewRef context,
@@ -68,4 +68,4 @@ void InjectorConfigSetup::UpdateViewport(fuchsia::ui::pointerinjector::Viewport 
   }
 }
 
-}  // namespace root_presenter
+}  // namespace input
