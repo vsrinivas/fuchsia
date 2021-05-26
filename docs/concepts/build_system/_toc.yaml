@@ -17,6 +17,9 @@ toc:
     path: /docs/concepts/build_system/bringup.md
 - title: "Build system policies"
   path: /docs/concepts/build_system/policies.md
+- title: "Build System Internals"
+  section:
+  - include: /docs/concepts/build_system/internals/_toc.yaml
 - title: "GN"
   section:
   - title: "Introduction to GN"

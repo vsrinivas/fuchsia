@@ -13,7 +13,8 @@ import("distribution_manifest.gni")
 # ```
 #
 # The output of this template is a manifest file that lists all packageable
-# elements encountered within `deps`.
+# elements encountered within `deps`. For more details, see
+# //docs/concepts/build_system/internals/manifest_formats.md
 #
 # Parameters
 #

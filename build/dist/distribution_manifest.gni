@@ -11,7 +11,7 @@
 # included in the resulting manifest file.
 #
 # This template produces a file using the JSON format listing all distributable
-# objects:
+# objects, with entries that look like:
 # ```
 # [
 #   {
@@ -21,9 +21,9 @@
 #   }
 # ]
 # ```
-# See the [schema](distribution_schema.json) for more details.
 #
-# !!! IMPORTANTE NOTE: the "label" field is currently not being populated !!!
+# See //docs/concepts/build_system/internals/distribution_manifest.md for
+# more details.
 #
 # Parameters
 #
@@ -62,22 +62,11 @@ template("distribution_manifest") {
 
     visibility = [ ":$main_target" ]
 
+    # See //docs/concepts/build_system/internals/distribution_manifest.md
+    # for the schema of `distribution_entries` and `distribution_entries_files`,
+    # which correspond to "regular" and "file" entries, respectively.
     data_keys = [
-      # A list of scopes describing files that may be added to runtime
-      # containers.
-      # Each scope must contain three values:
-      #   - `source`: path to the original file relatively to the build root;
-      #   - `destination`: path of the file within a container;
-      #   - `label`: GN label of the target which produced the entry.
       "distribution_entries",
-
-      # A list of scopes representing data files listing distributable objects.
-      # Each scope must contain the following two values:
-      #   - `file`: path to the data file;
-      #   - `label`: GN label of the target which produced the data file.
-      # Each file must contain a JSON array of objects with exactly two
-      # attributes matching `source` and `destination` as defined in
-      # `distribution_entries` above.
       "distribution_entries_files",
     ]
     walk_keys = [ "distribution_entries_barrier" ]
