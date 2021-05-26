@@ -49,24 +49,13 @@ uint64_t _hpet_ticks_per_ms;
 static uint64_t tick_period_in_fs;
 static uint8_t num_timers;
 
-/* Minimum number of ticks ahead a oneshot timer needs to be.  Targetted
- * to be 100ns */
-static uint64_t min_ticks_ahead;
-
 #define MAX_PERIOD_IN_FS 0x05F5E100ULL
 
 /* Bit masks for the general_config register */
 #define GEN_CONF_EN 1
 
 /* Bit masks for the per-time conf_caps register */
-#define TIMER_CONF_LEVEL_TRIGGERED (1ULL << 1)
 #define TIMER_CONF_INT_EN (1ULL << 2)
-#define TIMER_CONF_PERIODIC (1ULL << 3)
-#define TIMER_CAP_PERIODIC(reg) BIT_SET(reg, 4)
-#define TIMER_CAP_64BIT(reg) BIT_SET(reg, 5)
-#define TIMER_CONF_PERIODIC_SET_COUNT (1ULL << 6)
-#define TIMER_CONF_IRQ(n) ((uint64_t)((n) & (0x1f)) << 9)
-#define TIMER_CAP_IRQS(reg) static_cast<uint32_t>(BITS_SHIFT(reg, 63, 32))
 
 static void hpet_init(uint level) {
   // Look up the HPET table.
@@ -146,7 +135,6 @@ static void hpet_init(uint level) {
   hpet_ticks_to_clock_monotonic = {static_cast<uint32_t>(N), static_cast<uint32_t>(D)};
 
   _hpet_ticks_per_ms = 1000000000000ULL / tick_period_in_fs;
-  min_ticks_ahead = 100000000ULL / tick_period_in_fs;
   hpet_present = true;
 
   dprintf(INFO, "HPET: detected at %#" PRIx64 " ticks per ms %" PRIu64 " num timers %hhu\n",
@@ -158,17 +146,6 @@ static void hpet_init(uint level) {
 
 /* Begin running after ACPI tables are up */
 LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2)
-
-zx_status_t hpet_timer_disable(uint n) {
-  if (unlikely(n >= num_timers)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
-  hpet_regs->timers[n].conf_caps &= ~TIMER_CONF_INT_EN;
-
-  return ZX_OK;
-}
 
 uint64_t hpet_get_value(void) {
   uint64_t v = hpet_regs->main_counter_value;
@@ -190,73 +167,6 @@ zx_status_t hpet_set_value(uint64_t v) {
   }
 
   hpet_regs->main_counter_value = v;
-  return ZX_OK;
-}
-
-zx_status_t hpet_timer_configure_irq(uint n, uint irq) {
-  if (unlikely(n >= num_timers)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
-
-  uint32_t irq_bitmap = TIMER_CAP_IRQS(hpet_regs->timers[n].conf_caps);
-  if (irq >= 32 || !BIT_SET(irq_bitmap, irq)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  uint64_t conf = hpet_regs->timers[n].conf_caps;
-  conf &= ~TIMER_CONF_IRQ(~0ULL);
-  conf |= TIMER_CONF_IRQ(irq);
-  hpet_regs->timers[n].conf_caps = conf;
-
-  return ZX_OK;
-}
-
-zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline) {
-  if (unlikely(n >= num_timers)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
-
-  uint64_t difference = deadline - hpet_get_value();
-  if (unlikely(difference > (1ULL >> 63))) {
-    /* Either this is a very long timer, or we wrapped around */
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(difference < min_ticks_ahead)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  hpet_regs->timers[n].conf_caps &= ~(TIMER_CONF_PERIODIC | TIMER_CONF_PERIODIC_SET_COUNT);
-  hpet_regs->timers[n].comparator_value = deadline;
-  hpet_regs->timers[n].conf_caps |= TIMER_CONF_INT_EN;
-
-  return ZX_OK;
-}
-
-zx_status_t hpet_timer_set_periodic(uint n, uint64_t period) {
-  if (unlikely(n >= num_timers)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  Guard<SpinLock, NoIrqSave> guard{hpet_lock::Get()};
-
-  if (!TIMER_CAP_PERIODIC(hpet_regs->timers[n].conf_caps)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  /* It's unsafe to set a periodic timer while the hpet is running or the
-   * main counter value is not 0. */
-  if ((hpet_regs->general_config & GEN_CONF_EN) || hpet_regs->main_counter_value != 0ULL) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  hpet_regs->timers[n].conf_caps |= TIMER_CONF_PERIODIC | TIMER_CONF_PERIODIC_SET_COUNT;
-  hpet_regs->timers[n].comparator_value = period;
-  hpet_regs->timers[n].conf_caps |= TIMER_CONF_INT_EN;
-
   return ZX_OK;
 }
 

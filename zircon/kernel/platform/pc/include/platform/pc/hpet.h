@@ -18,11 +18,6 @@ bool hpet_is_present(void);
 uint64_t hpet_get_value(void);
 zx_status_t hpet_set_value(uint64_t v);
 
-zx_status_t hpet_timer_configure_irq(uint n, uint irq);
-zx_status_t hpet_timer_set_oneshot(uint n, uint64_t deadline);
-zx_status_t hpet_timer_set_periodic(uint n, uint64_t period);
-zx_status_t hpet_timer_disable(uint n);
-
 void hpet_enable(void);
 void hpet_disable(void);
 
