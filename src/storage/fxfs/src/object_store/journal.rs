@@ -455,6 +455,11 @@ impl Journal {
                 .map(|TxnMutation { object_id, mutation, .. }| (*object_id, mutation.clone())),
         );
         if let Some((handle, _)) = self.handle_and_reservation.get() {
+            // TODO(jfsulliv): We should separate writing to the journal buffer from flushing the
+            // journal buffer (i.e. consider doing this in a background task). Flushing here is
+            // prone to deadlock, since |flush_buffer| itself creates a transaction which locks the
+            // journal handle.
+            // TODO(csuter): Add a test for the aforementioned deadlock condition.
             if let Err(e) = writer.flush_buffer(handle).await {
                 // TODO(csuter): if writes to the journal start failing then we should prevent the
                 // creation of new transactions.
@@ -630,14 +635,20 @@ impl Journal {
 
         // The previous super-block is now guaranteed to be persisted (because we flushed the device
         // above), so we can free all journal space that it doesn't need.
-        if old_checkpoint_offset >= BLOCK_SIZE {
-            let (handle, reservation) = self.handle_and_reservation.get().unwrap();
-            let mut transaction = handle.new_transaction().await?;
-            transaction.allocator_reservation = Some(reservation);
-            let mut offset = old_checkpoint_offset;
-            offset -= offset % BLOCK_SIZE;
-            handle.zero(&mut transaction, 0..offset).await?;
-            transaction.commit().await;
+        {
+            let mut writer = self.writer.lock().await;
+
+            if old_checkpoint_offset >= BLOCK_SIZE {
+                let (handle, _reservation) = self.handle_and_reservation.get().unwrap();
+                let mut transaction = handle.new_transaction().await?;
+                let mut offset = old_checkpoint_offset;
+                offset -= offset % BLOCK_SIZE;
+                handle.zero(&mut transaction, 0..offset).await?;
+                let cloned_mutations = clone_mutations(&transaction);
+                self.apply_mutations(&mut transaction, writer.journal_file_checkpoint()).await;
+                std::mem::drop(transaction);
+                writer.write_mutations(cloned_mutations);
+            }
         }
 
         Ok(())
