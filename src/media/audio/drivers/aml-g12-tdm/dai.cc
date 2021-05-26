@@ -331,7 +331,7 @@ void AmlG12TdmDai::GetProperties(
   ::fuchsia::hardware::audio::RingBufferProperties prop;
   prop.set_external_delay(0);
   prop.set_fifo_depth(aml_audio_->fifo_depth());
-  prop.set_needs_cache_flush_or_invalidate(false);
+  prop.set_needs_cache_flush_or_invalidate(true);
   callback(std::move(prop));
 }
 

@@ -353,7 +353,7 @@ TEST_F(AmlG12TdmDaiTest, GetPropertiesInputDai) {
   ASSERT_TRUE(properties_out.manufacturer() == std::string(""));
 }
 
-TEST_F(AmlG12TdmDaiTest, GetFormatsAndVmo) {
+TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
   metadata::AmlConfig metadata = {};
   metadata.is_input = false;
   metadata.mClockDivFactor = 10;
@@ -436,6 +436,25 @@ TEST_F(AmlG12TdmDaiTest, GetFormatsAndVmo) {
   ring_buffer_format.mutable_pcm_format()->bytes_per_sample = pcm_formats.bytes_per_sample[0];
   ring_buffer_format.mutable_pcm_format()->valid_bits_per_sample =
       pcm_formats.valid_bits_per_sample[0];
+
+  // Check ring buffer properties
+  {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    ::fidl::InterfaceRequest<::fuchsia::hardware::audio::RingBuffer> ring_buffer_intf;
+    ring_buffer_intf.set_channel(std::move(remote));
+
+    client.dai_->CreateRingBuffer(std::move(dai_format), std::move(ring_buffer_format),
+                                  std::move(ring_buffer_intf));
+
+    ::fuchsia::hardware::audio::RingBuffer_SyncProxy ring_buffer(std::move(local));
+    ::fuchsia::hardware::audio::RingBufferProperties properties;
+    ASSERT_OK(ring_buffer.GetProperties(&properties));
+
+    EXPECT_EQ(properties.fifo_depth(), 1024);
+    EXPECT_EQ(properties.external_delay(), 0);
+    EXPECT_TRUE(properties.needs_cache_flush_or_invalidate());
+  }
 
   // GetVmo then loose channel.
   {
