@@ -66,6 +66,16 @@ constexpr auto Enum<GfxConsoleFont> = [](auto&& Switch) {
       .Case("18x32", GfxConsoleFont::k18x32);
 };
 
+template <>
+constexpr auto Enum<RootJobBehavior> = [](auto&& Switch) {
+  return Switch  //
+      .Case("halt", RootJobBehavior::kHalt)
+      .Case("reboot", RootJobBehavior::kReboot)
+      .Case("bootloader", RootJobBehavior::kBootloader)
+      .Case("recovery", RootJobBehavior::kRecovery)
+      .Case("shutdown", RootJobBehavior::kShutdown);
+};
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 template <>

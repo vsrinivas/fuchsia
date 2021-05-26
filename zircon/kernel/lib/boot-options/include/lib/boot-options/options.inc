@@ -544,6 +544,22 @@ allocations. Higher values reduce contention on the PMM when the system is
 under load at the cost of using more memory when the system is idle.
 )""")
 
+DEFINE_OPTION("kernel.root-job.behavior", RootJobBehavior, root_job_behavior,
+              {RootJobBehavior::kReboot}, R"""(
+This option specifies what action the kernel should take when the root job is
+either terminated, or has no jobs and no processes.
+
+When `halt`, will halt the system.
+
+When `reboot`, will reboot the system.
+
+When `bootloader`, will reboot the system into the bootloader.
+
+When `recovery`, will reboot the system into the recovery partition.
+
+When `shutdown`, will shutdown the system.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

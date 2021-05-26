@@ -389,6 +389,14 @@ void BootOptions::PrintValue(const SerialDebugSyscalls& value, FILE* out) {
   Enum<SerialDebugSyscalls>(EnumPrinter{value, out});
 }
 
+bool BootOptions::Parse(std::string_view value, RootJobBehavior BootOptions::*member) {
+  return Enum<RootJobBehavior>(EnumParser{value, &(this->*member)}).Check();
+}
+
+void BootOptions::PrintValue(const RootJobBehavior& value, FILE* out) {
+  Enum<RootJobBehavior>(EnumPrinter{value, out});
+}
+
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 
 bool BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {

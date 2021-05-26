@@ -68,11 +68,25 @@ enum class SerialDebugSyscalls {
   kOutputOnly,
 };
 
+// See kernel.root-job.behavior.
+enum class RootJobBehavior {
+  kHalt,
+  kReboot,
+  kBootloader,
+  kRecovery,
+  kShutdown,
+};
+
 // List of command lines argument names that are explicitly referenced in code.
 // TODO(fxb/74740): remove all usages of this.
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";
 constexpr std::string_view kPageScannerEnableEvictionName = "kernel.page-scanner.enable-eviction";
 constexpr std::string_view kPmmCheckerActionName = "kernel.pmm-checker.action";
 constexpr std::string_view kPmmCheckerFillSizeName = "kernel.pmm-checker.fill-size";
+constexpr std::string_view kRootJobBehaviorHaltName = "halt";
+constexpr std::string_view kRootJobBehaviorRebootName = "reboot";
+constexpr std::string_view kRootJobBehaviorBootloaderName = "bootloader";
+constexpr std::string_view kRootJobBehaviorRecoveryName = "recovery";
+constexpr std::string_view kRootJobBehaviorShutdownName = "shutdown";
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_

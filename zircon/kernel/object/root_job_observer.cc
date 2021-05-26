@@ -4,8 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/types.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
+#include <platform.h>
 #include <zircon/boot/crash-reason.h>
 #include <zircon/compiler.h>
 
@@ -20,27 +23,37 @@ __NO_RETURN void Halt() {
     printf("root-job: notice: %s\n", notice);
   }
 
-  const char* behavior = gCmdline.GetString(kernel_option::kRootJobBehavior);
-  if (behavior == nullptr) {
-    behavior = "reboot";
+  ktl::string_view action_name;
+  platform_halt_action action;
+  switch (gBootOptions->root_job_behavior) {
+    case RootJobBehavior::kHalt:
+      action = HALT_ACTION_HALT;
+      action_name = kRootJobBehaviorHaltName;
+      break;
+    case RootJobBehavior::kBootloader:
+      action = HALT_ACTION_REBOOT_BOOTLOADER;
+      action_name = kRootJobBehaviorBootloaderName;
+      break;
+    case RootJobBehavior::kRecovery:
+      action = HALT_ACTION_REBOOT_RECOVERY;
+      action_name = kRootJobBehaviorRecoveryName;
+      break;
+    case RootJobBehavior::kShutdown:
+      action = HALT_ACTION_SHUTDOWN;
+      action_name = kRootJobBehaviorShutdownName;
+      break;
+    case RootJobBehavior::kReboot:
+    default:
+      action = HALT_ACTION_REBOOT;
+      action_name = kRootJobBehaviorRebootName;
+      break;
   }
 
-  printf("root-job: taking %s action\n", behavior);
+  printf("root-job: taking %s action\n", action_name.data());
   const zx_time_t dlog_deadline = current_time() + ZX_SEC(5);
   dlog_shutdown(dlog_deadline);
-
-  // About to call |platform_halt|, which never returns.
-  if (!strcmp(behavior, "halt")) {
-    platform_halt(HALT_ACTION_HALT, ZirconCrashReason::UserspaceRootJobTermination);
-  } else if (!strcmp(behavior, "bootloader")) {
-    platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::UserspaceRootJobTermination);
-  } else if (!strcmp(behavior, "recovery")) {
-    platform_halt(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::UserspaceRootJobTermination);
-  } else if (!strcmp(behavior, "shutdown")) {
-    platform_halt(HALT_ACTION_SHUTDOWN, ZirconCrashReason::UserspaceRootJobTermination);
-  } else {
-    platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::UserspaceRootJobTermination);
-  }
+  // Does not return.
+  platform_halt(action, ZirconCrashReason::UserspaceRootJobTermination);
 }
 
 }  // anonymous namespace

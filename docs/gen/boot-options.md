@@ -565,6 +565,22 @@ Specifies the number of pages per CPU to reserve for port packet (port_queue)
 allocations. Higher values reduce contention on the PMM when the system is
 under load at the cost of using more memory when the system is idle.
 
+### kernel.root-job.behavior=[halt | reboot | bootloader | recovery | shutdown]
+**Default:** `reboot`
+
+This option specifies what action the kernel should take when the root job is
+either terminated, or has no jobs and no processes.
+
+When `halt`, will halt the system.
+
+When `reboot`, will reboot the system.
+
+When `bootloader`, will reboot the system into the bootloader.
+
+When `recovery`, will reboot the system into the recovery partition.
+
+When `shutdown`, will shutdown the system.
+
 
 ## Options available only on arm64 machines
 

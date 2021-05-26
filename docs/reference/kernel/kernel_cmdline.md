@@ -286,18 +286,6 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
-## kernel.root-job.behavior=\<string>
-
-This option specifies what action the kernel should take when the root job is
-either terminated, or has no jobs and no processes. This can take one of the
-following values:
-
-* halt -- Halt the system
-* reboot -- Reboot the system (the default)
-* bootloader -- Reboot into the bootloader
-* recovery -- Reboot into the recovery partition
-* shutdown -- Shut down the system
-
 ## kernel.root-job.notice=\<string>
 
 The option allows a notice to be printed when the root job is either:
