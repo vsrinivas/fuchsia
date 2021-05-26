@@ -503,6 +503,19 @@ arm device. Individual configurations may wish to tune this higher (or lower)
 as needed.
 )""")
 
+DEFINE_OPTION("kernel.pmm-checker.action", SmallString, pmm_checker_action, {"oops"}, R"""(
+Supported actions:
+- `oops`
+- `panic`
+
+This option specifies which action is taken when the PMM checker detects
+corruption.
+
+When `oops`, a non-fatal kernel OOPS will be emitted when corruption is detected.
+
+When `panic` a fatal kernel panic will occur when corruption is detected.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

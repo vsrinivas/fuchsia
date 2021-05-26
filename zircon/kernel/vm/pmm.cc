@@ -9,6 +9,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
@@ -183,13 +184,13 @@ void pmm_checker_init_from_cmdline() {
     }
 
     PmmChecker::Action action = PmmChecker::DefaultAction;
-    const char* const action_string = gCmdline.GetString(kernel_option::kPmmCheckerAction);
+    const char* const action_string = gBootOptions->pmm_checker_action.data();
     if (action_string != nullptr) {
       if (auto opt_action = PmmChecker::ActionFromString(action_string)) {
         action = opt_action.value();
       } else {
         printf("PMM: value from %s is invalid (\"%s\"), using \"%s\" instead\n",
-               kernel_option::kPmmCheckerAction, action_string, PmmChecker::ActionToString(action));
+               kPmmCheckerActionName.data(), action_string, PmmChecker::ActionToString(action));
       }
     }
 

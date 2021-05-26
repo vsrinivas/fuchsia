@@ -523,6 +523,20 @@ This value was chosen to consume, in the worst case, 5% CPU on a lower-end
 arm device. Individual configurations may wish to tune this higher (or lower)
 as needed.
 
+### kernel.pmm-checker.action=\<string>
+**Default:** `oops`
+
+Supported actions:
+- `oops`
+- `panic`
+
+This option specifies which action is taken when the PMM checker detects
+corruption.
+
+When `oops`, a non-fatal kernel OOPS will be emitted when corruption is detected.
+
+When `panic` a fatal kernel panic will occur when corruption is detected.
+
 
 ## Options available only on arm64 machines
 

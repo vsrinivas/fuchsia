@@ -70,5 +70,6 @@ enum class SerialDebugSyscalls {
 // TODO(fxb/74740): remove all usages of this.
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";
 constexpr std::string_view kPageScannerEnableEvictionName = "kernel.page-scanner.enable-eviction";
+constexpr std::string_view kPmmCheckerActionName = "kernel.pmm-checker.action";
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_

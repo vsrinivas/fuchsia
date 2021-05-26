@@ -372,13 +372,6 @@ This option specifies how many bytes of each free page is filled or checked when
 the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
 between 8 and PAGE_SIZE, inclusive.  Defaults to PAGE_SIZE.
 
-## kernel.pmm-checker.action=\<oops|panic>
-
-This option specifies which action is taken when the PMM checker detects
-corruption.  A value of oops will cause a non-fatal kernel OOPS to be emitted
-when corruption is detected.  A value of panic will cause a fatal kernel panic
-to occur when corruption is detected.  Defaults to oops.
-
 ## ldso.trace
 
 This option (disabled by default) turns on dynamic linker trace output.

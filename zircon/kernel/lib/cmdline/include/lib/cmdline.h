@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kPmmCheckerAction[] = "kernel.pmm-checker.action";
 static constexpr const char kPmmCheckerEnable[] = "kernel.pmm-checker.enable";
 static constexpr const char kPmmCheckerFillSize[] = "kernel.pmm-checker.fill-size";
 static constexpr const char kPortobserverReservePages[] = "kernel.portobserver.reserve-pages";
