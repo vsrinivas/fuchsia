@@ -238,12 +238,11 @@ mod tests {
     proptest! {
         #[test]
         fn test_from_external_and_far_contents_does_not_modify_valid_maps(
-            ref external_resource_path in random_resource_path(1, 3),
+            ref external_resource_path in random_external_resource_path(),
             ref external_host_path in ".{0,30}",
-            ref far_resource_path in random_resource_path(1, 3),
+            ref far_resource_path in random_far_resource_path(),
             ref far_host_path in ".{0,30}"
         ) {
-            prop_assume!(!external_resource_path.starts_with("meta/"));
             let external_contents = btreemap! {
                 external_resource_path.to_string() => external_host_path.to_string()
             };
