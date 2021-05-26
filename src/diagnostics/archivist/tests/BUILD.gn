@@ -12,8 +12,6 @@ group("tests") {
     "logs-basic-integration",
     "logs-budget",
     "logs-connector",
-    "logs-stop",
-    "logs-unattributed-sinks",
     "logs/cpp:test-spec",
     "logs/cpp:test-spec-structured",
     "v2:tests",

@@ -25,7 +25,7 @@ impl Default for Options {
 pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
     let mut builder = RealmBuilder::new().await?;
     builder
-        .add_component("test/archivist", ComponentSource::url(opts.archivist_url))
+        .add_eager_component("test/archivist", ComponentSource::url(opts.archivist_url))
         .await?
         .add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.logger.LogSink"),
