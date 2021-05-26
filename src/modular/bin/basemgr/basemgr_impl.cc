@@ -110,7 +110,7 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       fuchsia::modular::session::Launcher::Name_,
       std::make_unique<vfs::Service>(GetLauncherHandler()));
 
-  Start();
+  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
 }
 
 BasemgrImpl::~BasemgrImpl() = default;
@@ -121,8 +121,6 @@ void BasemgrImpl::Connect(
 }
 
 void BasemgrImpl::Start() {
-  ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToBaseMgr);
-
   if (config_accessor_.basemgr_config().has_session_launcher()) {
     StartSessionLauncherComponent();
   } else {

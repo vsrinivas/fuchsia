@@ -27,6 +27,8 @@
 
 // Command-line command to delete the persistent configuration.
 constexpr std::string_view kDeletePersistentConfigCommand = "delete_persistent_config";
+// Command-line flag to enable arrested mode that disables starting a session on launch.
+constexpr std::string_view kArrestedFlag = "arrested";
 
 fit::deferred_action<fit::closure> SetupCobalt(bool enable_cobalt, async_dispatcher_t* dispatcher,
                                                sys::ComponentContext* component_context) {
@@ -69,6 +71,14 @@ std::string GetUsage() {
   <command>
     (none)                    Launches basemgr.
     delete_persistent_config  Deletes any existing persistent configuration, and exits.
+
+# Flags
+
+  --arrested
+
+    Prevents basemgr from starting the session launcher component or a Modular session on launch.
+    basemgr will continue to serve the fuchsia.modular.session.Launcher protocol that can be
+    used to launch a Modular session.
 
 basemgr cannot be launched from the shell. Please use `basemgr_launcher` or `run`.
 )";
@@ -113,6 +123,12 @@ int main(int argc, const char** argv) {
 
   auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_result.take_value()),
                                         component_context.get(), &loop);
+
+  if (!command_line.HasOption(kArrestedFlag)) {
+    basemgr_impl->Start();
+  } else {
+    FX_LOGS(INFO) << "Starting in arrested mode. Use basemgr_launcher to launch a session.";
+  }
 
   // NOTE: component_controller.events.OnDirectoryReady() is triggered when a
   // component's out directory has mounted. basemgr_launcher uses this signal

@@ -73,6 +73,10 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request);
 
+  // Starts either the session launcher component, if configured,
+  // or a session using the configuration read from |config_accessor_|.
+  void Start();
+
   // |fuchsia::modular::Lifecycle|
   void Terminate() override;
 
@@ -87,10 +91,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
  private:
   using StartSessionResult = fit::result<void, zx_status_t>;
-
-  // Starts the session launcher component, if configured, or starts a session using the
-  // configuration read from |config_accessor_|.
-  void Start();
 
   // Shuts down the session and session launcher component, if any are running.
   void Shutdown() override;
