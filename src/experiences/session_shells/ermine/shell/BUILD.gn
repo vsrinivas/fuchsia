@@ -169,6 +169,11 @@ flutter_app("ermine") {
       path = rebase_path(tz_ids_path)
       dest = "tz_ids.txt"
     },
+    {
+      path = rebase_path(
+              "//prebuilt/third_party/dart/linux-x64/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf")
+      dest = "MaterialIcons-Regular.otf"
+    },
   ]
 }
 

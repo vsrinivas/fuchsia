@@ -6,9 +6,6 @@ description: The library for visual languages and UI components commonly used ac
 
 flutter:
   fonts:
-    - family: MaterialIcons
-      fonts:
-        - asset: fonts/MaterialIcons-Regular.otf
     - family:  ErmineIcons
       fonts:
         - asset: fonts/ErmineIcons-Regular.ttf

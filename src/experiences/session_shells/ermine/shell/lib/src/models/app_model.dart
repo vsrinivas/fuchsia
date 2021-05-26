@@ -195,6 +195,17 @@ class AppModel {
 
   /// Called after runApp which initializes flutter's gesture system.
   Future<void> onStarted() async {
+    // We cannot load MaterialIcons font file from pubspec.yaml. So load it
+    // explicitly.
+    File file = File('/pkg/data/MaterialIcons-Regular.otf');
+    if (file.existsSync()) {
+      final loader = FontLoader('MaterialIcons')
+        ..addFont(() async {
+          return file.readAsBytesSync().buffer.asByteData();
+        }());
+      await loader.load();
+    }
+
     // Update the current time every second.
     Timer.periodic(
         Duration(seconds: 1), (timer) => currentTime.value = DateTime.now());

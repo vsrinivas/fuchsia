@@ -6,9 +6,6 @@ description: A development shell for Fuchsia.
 
 flutter:
   fonts:
-    - family: MaterialIcons
-      fonts:
-        - asset: fonts/MaterialIcons-Regular.otf
     - family:  ErmineIcons
       fonts:
         - asset: fonts/ErmineIcons-Regular.ttf
