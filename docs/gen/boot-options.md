@@ -558,6 +558,13 @@ Specifies the number of pages per CPU to reserve for port observer (async
 wait) allocations. Higher values reduce contention on the PMM when the system
 is under load at the cost of using more memory when the system is idle.
 
+### kernel.portpacket.reserve-pages=\<uint64_t>
+**Default:** `0x1`
+
+Specifies the number of pages per CPU to reserve for port packet (port_queue)
+allocations. Higher values reduce contention on the PMM when the system is
+under load at the cost of using more memory when the system is idle.
+
 
 ## Options available only on arm64 machines
 

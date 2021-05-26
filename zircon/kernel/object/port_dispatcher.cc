@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <lib/object_cache.h>
 #include <platform.h>
@@ -506,9 +505,7 @@ void PortDispatcher::InitializeCacheAllocators(uint32_t /*level*/) {
 
   // Reserve 1 page per CPU for servicing ephemeral PortPackets, unless
   // overridden on the command line.
-  const size_t default_packet_reserve_pages = 1;
-  const size_t packet_reserve_pages =
-      gCmdline.GetUInt64(kernel_option::kPortPacketReservePages, default_packet_reserve_pages);
+  const size_t packet_reserve_pages = gBootOptions->port_packet_reserve_pages;
 
   zx::status packet_result =
       object_cache::ObjectCache<PortPacket, object_cache::Option::PerCpu>::Create(

@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kPortPacketReservePages[] = "kernel.portpacket.reserve-pages";
 static constexpr const char kRootJobBehavior[] = "kernel.root-job.behavior";
 static constexpr const char kRootJobNotice[] = "kernel.root-job.notice";
 static constexpr const char kSerial[] = "kernel.serial";

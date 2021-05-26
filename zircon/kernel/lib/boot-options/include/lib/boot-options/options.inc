@@ -537,6 +537,13 @@ wait) allocations. Higher values reduce contention on the PMM when the system
 is under load at the cost of using more memory when the system is idle.
 )""")
 
+DEFINE_OPTION("kernel.portpacket.reserve-pages", uint64_t, port_packet_reserve_pages, {1},
+              R"""(
+Specifies the number of pages per CPU to reserve for port packet (port_queue)
+allocations. Higher values reduce contention on the PMM when the system is
+under load at the cost of using more memory when the system is idle.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
