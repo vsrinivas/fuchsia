@@ -109,7 +109,6 @@ TestHarnessImpl::TestHarnessImpl(const fuchsia::sys::EnvironmentPtr& parent_env,
 
 void TestHarnessImpl::Bind(fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request) {
   binding_.Bind(std::move(request));
-  binding_.set_error_handler([this](zx_status_t status) { CloseBindingIfError(status); });
 }
 
 TestHarnessImpl::~TestHarnessImpl() = default;

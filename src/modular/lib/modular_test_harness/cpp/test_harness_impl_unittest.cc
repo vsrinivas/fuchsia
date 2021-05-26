@@ -61,13 +61,6 @@ class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
 
 namespace {
 
-// Closing the TestHarness connection will cause TestHarnessImpl to notify that
-// it's not usable.
-TEST_F(TestHarnessImplTest, ExitCallback) {
-  test_harness().Unbind();
-  RunLoopUntil([&] { return did_exit(); });
-}
-
 // Check that the config that TestHarnessImpl generates is readable by
 // ModuleConfigReader.
 TEST_F(TestHarnessImplTest, MakeBasemgrConfigDir) {

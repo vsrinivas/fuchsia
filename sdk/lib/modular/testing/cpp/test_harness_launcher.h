@@ -35,6 +35,8 @@ class TestHarnessLauncher final {
   //
   // This operation is asynchronous. The component has finished terminating
   // once |is_test_harness_running| returns false.
+  //
+  // Unbinds |test_harness()|.
   void StopTestHarness();
 
   fuchsia::modular::testing::TestHarnessPtr& test_harness() { return test_harness_; }

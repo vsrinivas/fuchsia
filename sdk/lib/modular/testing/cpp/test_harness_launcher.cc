@@ -42,6 +42,12 @@ void TestHarnessLauncher::StopTestHarness() {
     return;
   }
 
+  // Ensure clients do not send calls or receive events during teardown.
+  //
+  // Otherwise, |test_harness_| may dispatch an OnNewComponent event to FakeComponents that
+  // are destroyed before StopTestHarness is called.
+  test_harness_.Unbind();
+
   if (lifecycle_) {
     lifecycle_->Terminate();
     // Upon Lifecycle/Terminate(), the modular test harness will ask basemgr to terminate, and
