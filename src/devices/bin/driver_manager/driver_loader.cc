@@ -27,6 +27,7 @@ void DriverLoader::StartLoadingThread(Coordinator* coordinator) {
     LOGF(ERROR, "DriverLoader: StartLoadingThread cannot be called twice!\n");
     return;
   }
+  coordinator_ = coordinator;
 
   thrd_t t;
   int ret = thrd_create_with_name(
@@ -43,7 +44,6 @@ void DriverLoader::StartLoadingThread(Coordinator* coordinator) {
   }
 
   loading_thread_ = t;
-  coordinator_ = coordinator;
 }
 
 void DriverLoader::LoadDrivers() {
