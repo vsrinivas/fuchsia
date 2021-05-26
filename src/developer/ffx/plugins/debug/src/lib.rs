@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    anyhow::Result,
+    anyhow::{anyhow, Error, Result},
     async_net::unix::UnixListener,
     futures_util::future::FutureExt,
     futures_util::io::{AsyncReadExt, AsyncWriteExt},
+    std::fs,
 };
 
 #[ffx_core::ffx_plugin(
@@ -17,6 +17,16 @@ use {
 pub async fn debug(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_plugin_args::DebugCommand,
+) -> Result<(), Error> {
+    let result = execute_debug(debugger_proxy, &cmd).await;
+    // Removes the Unix socket file to be able to connect again.
+    let _ = fs::remove_file(&cmd.socket_location);
+    result
+}
+
+pub async fn execute_debug(
+    debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
+    cmd: &ffx_debug_plugin_args::DebugCommand,
 ) -> Result<(), Error> {
     let sdk = ffx_config::get_sdk().await?;
     let zxdb_path = sdk.get_host_tool("zxdb")?;
@@ -33,64 +43,68 @@ pub async fn debug(
     // Create our Unix socket.
     let listener = UnixListener::bind(&cmd.socket_location)?;
 
-    // Start the local debugger.
-    std::process::Command::new(zxdb_path)
+    // Start the local debugger. It will connect to the Unix socket.
+    let child = std::process::Command::new(&zxdb_path)
         .args(&[
             "--unix-connect",
             &cmd.socket_location,
             "--symbol-server",
             "gs://fuchsia-artifacts-release/debug",
+            "--quit-agent-on-exit",
         ])
-        .spawn()
-        .expect("zxdb failed to start");
+        .spawn();
+    if let Err(error) = child {
+        return Err(anyhow!("Can't launch {:?}: {:?}", zxdb_path, error));
+    }
 
-    loop {
-        // Wait for a connection on the unix socket.
-        let (socket, _) = listener.accept().await?;
-        let (mut host_rx, mut host_tx) = socket.split();
-        let mut fuchsia_rx = rx.borrow_mut();
-        let mut fuchsia_tx = tx.borrow_mut();
+    // Wait for a connection on the unix socket (connection from zxdb).
+    let (socket, _) = listener.accept().await?;
 
-        // Reading from the ZXDB socket and writing to the Fuchsia channel.
-        let host_socket_read = async move {
-            let mut buffer = [0; 4096];
-            loop {
-                let n = host_rx.read(&mut buffer[..]).await?;
-                if n == 0 {
+    let (mut zxdb_rx, mut zxdb_tx) = socket.split();
+    let mut debug_agent_rx = rx.borrow_mut();
+    let mut debug_agent_tx = tx.borrow_mut();
+
+    // Reading from zxdb (using the Unix socket) and writing to the debug agent.
+    let zxdb_socket_read = async move {
+        let mut buffer = [0; 4096];
+        loop {
+            let n = zxdb_rx.read(&mut buffer[..]).await?;
+            if n == 0 {
+                return Ok(()) as Result<(), Error>;
+            }
+            let mut ofs = 0;
+            while ofs != n {
+                let wrote = debug_agent_tx.write(&buffer[ofs..n]).await?;
+                ofs += wrote;
+                if wrote == 0 {
                     return Ok(()) as Result<(), Error>;
                 }
-                let mut ofs = 0;
-                while ofs != n {
-                    let wrote = fuchsia_tx.write(&buffer[ofs..n]).await?;
-                    ofs += wrote;
-                    if wrote == 0 {
-                        return Ok(()) as Result<(), Error>;
-                    }
+            }
+        }
+    };
+    let mut zxdb_socket_read = Box::pin(zxdb_socket_read.fuse());
+
+    // Reading from the debug agent and writing to zxdb (using the Unix socket).
+    let zxdb_socket_write = async move {
+        let mut buffer = [0; 4096];
+        loop {
+            let n = debug_agent_rx.read(&mut buffer).await?;
+            let mut ofs = 0;
+            while ofs != n {
+                let wrote = zxdb_tx.write(&buffer[ofs..n]).await?;
+                ofs += wrote;
+                if wrote == 0 {
+                    return Ok(()) as Result<(), Error>;
                 }
             }
-        };
-        let mut host_socket_read = Box::pin(host_socket_read.fuse());
+        }
+    };
+    let mut zxdb_socket_write = Box::pin(zxdb_socket_write.fuse());
 
-        // Reading from the Fuchsia socket and writing to the ZXDB channel.
-        let host_socket_write = async move {
-            let mut buffer = [0; 4096];
-            loop {
-                let n = fuchsia_rx.read(&mut buffer).await?;
-                let mut ofs = 0;
-                while ofs != n {
-                    let wrote = host_tx.write(&buffer[ofs..n]).await?;
-                    ofs += wrote;
-                    if wrote == 0 {
-                        return Ok(()) as Result<(), Error>;
-                    }
-                }
-            }
-        };
-        let mut host_socket_write = Box::pin(host_socket_write.fuse());
-
-        futures::select! {
-            read_res = host_socket_read => read_res?,
-            write_res = host_socket_write => write_res?,
-        };
-    }
+    // ffx zxdb exits when we have an error on the unix socket (either read or write).
+    futures::select! {
+        read_res = zxdb_socket_read => read_res?,
+        write_res = zxdb_socket_write => write_res?,
+    };
+    return Ok(()) as Result<(), Error>;
 }
