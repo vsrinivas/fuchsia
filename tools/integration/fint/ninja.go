@@ -6,15 +6,19 @@ package fint
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 var (
@@ -48,6 +52,16 @@ var (
 		"/usr/bin/env",
 		"/bin/ln",
 		"/bin/bash",
+	}
+
+	// The following tests should never be considered affected. These tests use
+	// a system image as data, so they appear affected by a broad range of
+	// changes, but they're almost never actually sensitive to said changes.
+	// https://fxbug.dev/67305 tracks generating this list automatically.
+	neverAffectedTestLabels = []string{
+		"//src/connectivity/overnet/tests/serial:overnet_serial_tests",
+		"//src/recovery/simulator:recovery_simulator_boot_test",
+		"//src/recovery/simulator:recovery_simulator_serial_test",
 	}
 )
 
@@ -190,6 +204,18 @@ func runNinja(
 	return "", nil
 }
 
+// ninjaDryRun does a `ninja explain` dry run against a build directory and
+// returns the stdout and stderr.
+func ninjaDryRun(ctx context.Context, r ninjaRunner, targets []string) (string, string, error) {
+	// -n means dry-run.
+	args := []string{"-d", "explain", "--verbose", "-n"}
+	args = append(args, targets...)
+
+	var stdout, stderr strings.Builder
+	err := r.run(ctx, args, &stdout, &stderr)
+	return stdout.String(), stderr.String(), err
+}
+
 // checkNinjaNoop runs `ninja explain` against a build directory to determine
 // whether an incremental build would be a no-op (i.e. all requested targets
 // have already been built). It returns true if the build would be a no-op,
@@ -202,40 +228,175 @@ func checkNinjaNoop(
 	r ninjaRunner,
 	targets []string,
 	isMac bool,
-) (bool, map[string]*bytes.Buffer, error) {
-	// -n means dry-run.
-	args := []string{"-d", "explain", "--verbose", "-n"}
-	args = append(args, targets...)
-
-	var stdout, stderr bytes.Buffer
-	if err := r.run(ctx, args, &stdout, &stderr); err != nil {
+) (bool, map[string]string, error) {
+	stdout, stderr, err := ninjaDryRun(ctx, r, targets)
+	if err != nil {
 		return false, nil, err
 	}
 
-	outputContains := func(s string) bool {
-		b := []byte(s)
-		// Different versions of Ninja choose to emit "explain" logs to stderr
-		// instead of stdout, so check both streams.
-		return bytes.Contains(stdout.Bytes(), b) || bytes.Contains(stderr.Bytes(), b)
-	}
-
-	if !outputContains(noWorkString) {
+	// Different versions of Ninja choose to emit "explain" logs to stderr
+	// instead of stdout, so we want to analyze both streams.
+	// Concatenate the two streams for simplicity so that we don't need to do
+	// the same operation separately on each stream.
+	allStdio := strings.Join([]string{stdout, stderr}, "\n\n")
+	if !strings.Contains(allStdio, noWorkString) {
 		if isMac {
 			// TODO(https://fxbug.dev/61784): Dirty builds should be an error even on Mac.
 			for _, path := range brokenMacPaths {
-				if outputContains(path) {
+				if strings.Contains(allStdio, path) {
 					return true, nil, nil
 				}
 			}
 		}
-		logs := map[string]*bytes.Buffer{
-			"`ninja -d explain -v -n` stdout": &stdout,
-			"`ninja -d explain -v -n` stderr": &stderr,
+		logs := map[string]string{
+			"`ninja -d explain -v -n` stdout": stdout,
+			"`ninja -d explain -v -n` stderr": stderr,
 		}
 		return false, logs, nil
 	}
 
 	return true, nil, nil
+}
+
+// touchFiles updates the modified time on all the specified files to the
+// current timestamp.
+func touchFiles(paths []string) error {
+	for _, path := range paths {
+		if err := osmisc.Touch(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func affectedTestsNoWork(
+	ctx context.Context,
+	runner ninjaRunner,
+	allTests []build.Test,
+	affectedFiles []string,
+	targets []string,
+) ([]string, bool, error) {
+	testsByStamp := map[string][]string{}
+	testsByPath := map[string]string{}
+
+	for _, test := range allTests {
+		// Ignore any tests that shouldn't be considered affected.
+		labelNoToolchain := strings.Split(test.Label, "(")[0]
+		if contains(neverAffectedTestLabels, labelNoToolchain) {
+			continue
+		}
+
+		path := test.Path
+		// For host tests we use the executable path.
+		if path != "" {
+			testsByPath[path] = test.Name
+			continue
+		}
+		// For Fuchsia tests we derive the stamp path from the GN label.
+		stamp, err := stampFileForTest(test.Label)
+		if err != nil {
+			return nil, false, err
+		}
+		testsByStamp[stamp] = append(testsByStamp[stamp], test.Name)
+	}
+
+	var nonGNFiles []string
+	for _, path := range affectedFiles {
+		ext := filepath.Ext(path)
+		if ext != ".gn" && ext != ".gni" {
+			nonGNFiles = append(nonGNFiles, path)
+		}
+	}
+
+	// Our Ninja graph is set up in such a way that touching any GN files
+	// triggers an action to regenerate the entire graph. So if GN files were
+	// modified and we touched them then the following dry run results are not
+	// useful for determining affected tests.
+	if err := touchFiles(nonGNFiles); err != nil {
+		return nil, false, err
+	}
+	stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
+	if err != nil {
+		return nil, false, err
+	}
+	ninjaOutput := strings.Join([]string{stdout, stderr}, "\n\n")
+
+	var affectedTests []string
+	for _, line := range strings.Split(ninjaOutput, "\n") {
+		// Trim the bracketed progress number from the beginning of the line.
+		split := strings.Split(line, "] ")
+		if len(split) < 2 {
+			continue
+		}
+		action := split[1]
+		if strings.HasPrefix(action, "touch ") && strings.Contains(action, "obj/") {
+			// Matches actions like "touch baz/obj/foo/bar.stamp".
+			stampFile := action[strings.Index(action, "obj/"):]
+			affectedTests = append(affectedTests, testsByStamp[stampFile]...)
+		} else {
+			// Look for actions that reference host test path. Different types
+			// of host tests have different actions, but they all mention the
+			// final executable path.
+			for _, maybeTestPath := range strings.Split(action, " ") {
+				maybeTestPath = strings.Trim(maybeTestPath, `"`)
+				testName, ok := testsByPath[maybeTestPath]
+				if !ok {
+					continue
+				}
+				affectedTests = append(affectedTests, testName)
+			}
+		}
+	}
+
+	// For determination of "no work to do", we want to consider all files,
+	// *including* GN files. If no GN files are affected, then we already have
+	// the necessary output from the first ninja dry run, so we can skip doing
+	// the second dry run that includes GN files.
+	if len(nonGNFiles) < len(affectedFiles) {
+		if err := touchFiles(affectedFiles); err != nil {
+			return nil, false, err
+		}
+		stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
+		if err != nil {
+			return nil, false, err
+		}
+		ninjaOutput = strings.Join([]string{stdout, stderr}, "\n\n")
+	}
+	noWork := strings.Contains(ninjaOutput, noWorkString)
+
+	return removeDuplicates(affectedTests), noWork, nil
+}
+
+func stampFileForTest(label string) (string, error) {
+	// Remove the "//" prefix and parenthesized toolchain suffix from the label.
+	trimmedLabel := strings.TrimPrefix(strings.Split(label, "(")[0], "//")
+
+	var directory, targetName string
+	if strings.Contains(trimmedLabel, ":") {
+		// Label looks like "//foo/bar:baz"
+		parts := strings.Split(trimmedLabel, ":")
+		directory = parts[0]
+		targetName = parts[1]
+	} else {
+		// Label looks like "//foo/bar"
+		directory = trimmedLabel
+		targetName = path.Base(trimmedLabel)
+	}
+
+	if directory == "" || targetName == "" {
+		return "", fmt.Errorf("failed to parse test label %q", label)
+	}
+
+	var stampPath string
+	if targetName == path.Base(directory) {
+		stampPath = directory
+	} else {
+		stampPath = path.Join(directory, targetName)
+	}
+
+	// GN labels always use forward slashes, so make sure to convert to
+	// platform-specific file path format when returning the stamp file path.
+	return filepath.Join("obj", filepath.FromSlash(stampPath)+".stamp"), nil
 }
 
 // ninjaGraph runs the ninja graph tool and pipes its stdout to a temporary

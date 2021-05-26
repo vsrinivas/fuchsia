@@ -144,13 +144,13 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 			return nil, err
 		}
 		if contextSpec.ArtifactDir != "" {
-			for name, buf := range logs {
+			for name, contents := range logs {
 				f, err := ioutil.TempFile(contextSpec.ArtifactDir, url.QueryEscape(name))
 				if err != nil {
 					return nil, err
 				}
 				defer f.Close()
-				if _, err := buf.WriteTo(f); err != nil {
+				if _, err := f.WriteString(contents); err != nil {
 					return nil, fmt.Errorf("failed to write log file %q: %w", name, err)
 				}
 				artifacts.LogFiles[name] = f.Name()
@@ -173,6 +173,30 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 			)
 			return artifacts, fmt.Errorf("ninja build did not converge to no-op")
 		}
+	}
+
+	// TODO(olivernewman): Figure out a way to skip this analysis when the
+	// caller doesn't care about running tests, or just wants to run all tests
+	// in the same way regardless of any build graph analysis. In the meantime
+	// it's not the end of the world to do this analysis unnecessarily, since it
+	// only takes ~10 seconds and we do use the results most of the time,
+	// including on all the slowest infra builders.
+	if contextSpec.ArtifactDir != "" && len(contextSpec.ChangedFiles) > 0 && len(modules.TestSpecs()) > 0 {
+		var tests []build.Test
+		for _, t := range modules.TestSpecs() {
+			tests = append(tests, t.Test)
+		}
+		var affectedFiles []string
+		for _, f := range contextSpec.ChangedFiles {
+			absPath := filepath.Join(contextSpec.CheckoutDir, f.Path)
+			affectedFiles = append(affectedFiles, absPath)
+		}
+		affectedTests, noWork, err := affectedTestsNoWork(ctx, runner, tests, affectedFiles, targets)
+		if err != nil {
+			return nil, err
+		}
+		artifacts.AffectedTests = affectedTests
+		artifacts.BuildNotAffected = noWork
 	}
 
 	return artifacts, nil

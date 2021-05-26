@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestCopyFile(t *testing.T) {
@@ -91,5 +92,55 @@ func TestFileExists(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	} else if !existsB {
 		t.Fatalf("%s does not exist", fB)
+	}
+}
+
+func TestTouch(t *testing.T) {
+	testCases := []struct {
+		name        string
+		preexisting bool
+	}{
+		{
+			name:        "existing file",
+			preexisting: true,
+		},
+		{
+			name:        "new file",
+			preexisting: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "foo")
+			if tc.preexisting {
+				f, err := os.Create(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := f.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			startTime := time.Now()
+			if err := Touch(path); err != nil {
+				t.Fatal(err)
+			}
+			endTime := time.Now()
+
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mtime := info.ModTime()
+
+			if mtime.Before(startTime) {
+				t.Fatalf("mtime is %s too early after Touch()", startTime.Sub(mtime))
+			}
+			if mtime.After(endTime) {
+				t.Fatalf("mtime is %s too late after Touch()", mtime.Sub(endTime))
+			}
+		})
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // CopyFile copies a file to a given destination.
@@ -64,4 +65,29 @@ func FileExists(name string) (bool, error) {
 		return false, fmt.Errorf("%s is directory, not a file", name)
 	}
 	return true, nil
+}
+
+// Touch mimics the behavior of the Unix "touch" command, updating the file's
+// access and modified times to the current timestamp, and creating the file if
+// it does not exist.
+//
+// It doesn't attempt to be concurrency-safe, and may produce strange results if
+// multiple processes/goroutines are simultaneously creating/deleting/modifying
+// the same file.
+func Touch(name string) error {
+	exists, err := FileExists(name)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		f, err := os.Create(name)
+		if err != nil {
+			return err
+		}
+		if err := f.Close(); err != nil {
+			return err
+		}
+	}
+	now := time.Now()
+	return os.Chtimes(name, now, now)
 }
