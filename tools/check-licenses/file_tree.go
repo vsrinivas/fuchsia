@@ -24,6 +24,7 @@ type FileTree struct {
 	Files              []*File               `json:"files"`
 	Children           []*FileTree           `json:"children"`
 	Parent             *FileTree             `json:"-"`
+	GnTarget           string                `json:"target"`
 	StrictAnalysis     bool                  `json:"strict analysis"`
 
 	sync.RWMutex
@@ -89,8 +90,18 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		return nil, err
 	}
 
+	// Propagate forward the GN target of the parent. This will be overwritten if we find a BUILD.gn
+	// file below.
+	if parent != nil {
+		ft.GnTarget = parent.GnTarget
+	}
+
 	for _, entry := range entries {
 		path := filepath.Join(root, entry.Name())
+
+		if strings.HasSuffix(path, "BUILD.gn") {
+			ft.GnTarget = root
+		}
 
 		skippable, err := isSkippable(config, path, entry)
 		if err != nil {
