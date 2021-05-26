@@ -516,6 +516,13 @@ When `oops`, a non-fatal kernel OOPS will be emitted when corruption is detected
 When `panic` a fatal kernel panic will occur when corruption is detected.
 )""")
 
+DEFINE_OPTION("kernel.pmm-checker.enable", bool, pmm_checker_enabled, {false},
+              R"""(
+This controls whether the PMM's use-after-free checker is enabled.
+The PMM checker can be expensive and is intended for use in debug and
+development builds.  See also "k pmm checker".
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

@@ -360,12 +360,6 @@ CPUs.  Defaults to true.
 This option can be used to force the selection of a particular wall clock.  It
 only is used on pc builds.  Options are "tsc", "hpet", and "pit".
 
-## kernel.pmm-checker.enable=\<bool>
-
-This controls whether the PMM's use-after-free checker is enabled.
-The PMM checker can be expensive and is intended for use in debug and
-development builds.  See also "k pmm checker".  Defaults to false.
-
 ## kernel.pmm-checker.fill-size=\<num>
 
 This option specifies how many bytes of each free page is filled or checked when

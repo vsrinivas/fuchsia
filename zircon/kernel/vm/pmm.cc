@@ -174,7 +174,7 @@ static bool pmm_checker_is_enabled() { return pmm_node.Checker()->IsArmed(); }
 static void pmm_checker_print_status() { pmm_node.Checker()->PrintStatus(stdout); }
 
 void pmm_checker_init_from_cmdline() {
-  bool enabled = gCmdline.GetBool(kernel_option::kPmmCheckerEnable, false);
+  bool enabled = gBootOptions->pmm_checker_enabled;
   if (enabled) {
     size_t fill_size = gCmdline.GetUInt64(kernel_option::kPmmCheckerFillSize, PAGE_SIZE);
     if (!PmmChecker::IsValidFillSize(fill_size)) {
