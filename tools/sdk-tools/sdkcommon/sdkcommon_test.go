@@ -21,6 +21,13 @@ import (
 
 const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
 
+var allSSHOptions = []string{
+	"FSERVE_TEST_USE_CUSTOM_SSH_CONFIG",
+	"FSERVE_TEST_USE_PRIVATE_KEY",
+	"FSERVE_TEST_USE_CUSTOM_SSH_PORT",
+	"SFTP_TO_TARGET",
+}
+
 // See exec_test.go for details, but effectively this runs the function called TestHelperProcess passing
 // the args.
 func helperCommandForSDKCommon(command string, s ...string) (cmd *exec.Cmd) {
@@ -422,8 +429,9 @@ func TestRunSSHCommand(t *testing.T) {
 	GetUsername = mockedUserProperty("testuser")
 	GetHostname = mockedUserProperty("test-host")
 	defer func() {
-		os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
-		os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "")
+		for _, option := range allSSHOptions {
+			os.Setenv(option, "")
+		}
 		ExecCommand = exec.Command
 		GetUserHomeDir = DefaultGetUserHomeDir
 		GetUsername = DefaultGetUsername
@@ -434,30 +442,80 @@ func TestRunSSHCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tests := []struct {
+		customSSHConfig string
+		privateKey      string
+		sshPort         string
+		verbose         bool
+		args            []string
+		options         map[string]string
+		use_port        bool
+	}{
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "",
+			verbose:         false,
+			args:            []string{"echo", "$SSH_CONNECTION"},
+		},
+		{
+			customSSHConfig: "custom-sshconfig",
+			privateKey:      "",
+			sshPort:         "",
+			verbose:         false,
+			args:            []string{"echo", "$SSH_CONNECTION"},
+			options:         map[string]string{"FSERVE_TEST_USE_CUSTOM_SSH_CONFIG": "1"},
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "private-key",
+			sshPort:         "",
+			verbose:         false,
+			args:            []string{"echo", "$SSH_CONNECTION"},
+			options:         map[string]string{"FSERVE_TEST_USE_PRIVATE_KEY": "1"},
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "",
+			verbose:         false,
+			args:            []string{"echo", "$SSH_CONNECTION"},
+			use_port:        true,
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "1022",
+			verbose:         false,
+			args:            []string{"echo", "$SSH_CONNECTION"},
+			options:         map[string]string{"FSERVE_TEST_USE_CUSTOM_SSH_PORT": "1"},
+			use_port:        true,
+		},
+	}
+
 	targetAddress := resolvedAddr
-	customSSHConfig := ""
-	privateKey := ""
-	args := []string{"echo", "$SSH_CONNECTION"}
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
-		t.Fatal(err)
-	}
-
-	customSSHConfig = "custom-sshconfig"
-	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "1")
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
-		t.Fatal(err)
-	}
-
-	customSSHConfig = ""
-	privateKey = "private-key"
-	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
-	os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "1")
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
-		t.Fatal(err)
+	for i, test := range tests {
+		for _, option := range allSSHOptions {
+			os.Setenv(option, "")
+		}
+		for option, value := range test.options {
+			os.Setenv(option, value)
+		}
+		if test.use_port {
+			if _, err := testSDK.RunSSHCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
+				t.Errorf("RunSSHCommandWithPort %d error: %v", i, err)
+			}
+			if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
+				t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
+			}
+		} else {
+			if _, err := testSDK.RunSSHCommand(targetAddress, test.customSSHConfig, test.privateKey, test.verbose, test.args); err != nil {
+				t.Errorf("TestRunSSHCommand %d error: %v", i, err)
+			}
+			if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, "", test.verbose, test.args); err != nil {
+				t.Errorf("TestRunSSHShell %d error: %v", i, err)
+			}
+		}
 	}
 }
 
@@ -476,44 +534,88 @@ func TestRunRunSFTPCommand(t *testing.T) {
 		GetUserHomeDir = DefaultGetUserHomeDir
 		GetUsername = DefaultGetUsername
 		GetHostname = DefaultGetHostname
-		os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
-		os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "")
-		os.Setenv("SFTP_TO_TARGET", "")
+		for _, option := range allSSHOptions {
+			os.Setenv(option, "")
+		}
 	}()
 	testSDK := SDKProperties{
 		dataPath: t.TempDir(),
 	}
 
+	tests := []struct {
+		customSSHConfig string
+		privateKey      string
+		sshPort         string
+		to_target       bool
+		options         map[string]string
+		use_port        bool
+	}{
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "",
+			to_target:       false,
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "",
+			to_target:       true,
+			options:         map[string]string{"SFTP_TO_TARGET": "1"},
+		},
+		{
+			customSSHConfig: "custom-sshconfig",
+			privateKey:      "",
+			sshPort:         "",
+			to_target:       false,
+			options:         map[string]string{"FSERVE_TEST_USE_CUSTOM_SSH_CONFIG": "1"},
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "private-key",
+			sshPort:         "",
+			to_target:       true,
+			options: map[string]string{
+				"SFTP_TO_TARGET":              "1",
+				"FSERVE_TEST_USE_PRIVATE_KEY": "1",
+			},
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "",
+			to_target:       false,
+			use_port:        true,
+		},
+		{
+			customSSHConfig: "",
+			privateKey:      "",
+			sshPort:         "1022",
+			to_target:       false,
+			use_port:        true,
+			options:         map[string]string{"FSERVE_TEST_USE_CUSTOM_SSH_PORT": "1"},
+		},
+	}
 	targetAddress := resolvedAddr
-	customSSHConfig := ""
-	privateKey := ""
-
 	src := "/some/src/file"
 	dst := "/dst/file"
 
-	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, false, src, dst); err != nil {
-		t.Fatal(err)
-	}
-
-	os.Setenv("SFTP_TO_TARGET", "1")
-	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, true, src, dst); err != nil {
-		t.Fatal(err)
-	}
-
-	customSSHConfig = "custom-sshconfig"
-	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "1")
-	os.Setenv("SFTP_TO_TARGET", "")
-	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, false, src, dst); err != nil {
-		t.Fatal(err)
-	}
-
-	customSSHConfig = ""
-	privateKey = "private-key"
-	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
-	os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "1")
-	os.Setenv("SFTP_TO_TARGET", "1")
-	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, true, src, dst); err != nil {
-		t.Fatal(err)
+	for i, test := range tests {
+		for _, option := range allSSHOptions {
+			os.Setenv(option, "")
+		}
+		for option, value := range test.options {
+			os.Setenv(option, value)
+		}
+		if test.use_port {
+			if err := testSDK.RunSFTPCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.to_target, src, dst); err != nil {
+				t.Errorf("RunSFTPCommandWithPort %d error: %v", i, err)
+			}
+		} else {
+			if err := testSDK.RunSFTPCommand(targetAddress, test.customSSHConfig, test.privateKey, test.to_target, src, dst); err != nil {
+				t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
+			}
+		}
 	}
 }
 
@@ -1611,6 +1713,11 @@ func fakeSFTP(args []string, stdin *os.File) {
 
 	targetaddr := "[fe80::c0ff:eee:fe00:4444%en0]"
 
+	customSSHPortArgs := []string{"-p", "1022"}
+	if os.Getenv("FSERVE_TEST_USE_CUSTOM_SSH_PORT") != "" {
+		expected = append(expected, customSSHPortArgs...)
+	}
+
 	privateKeyArgs := []string{"-i", "private-key"}
 	if os.Getenv("FSERVE_TEST_USE_PRIVATE_KEY") != "" {
 		expected = append(expected, privateKeyArgs...)
@@ -1674,8 +1781,15 @@ func fakeSSH(args []string) {
 	expectedHostConnection = append(expectedHostConnection, sshConfigArgs...)
 	expectedSetSource = append(expectedSetSource, sshConfigArgs...)
 
+	customSSHPortArgs := []string{"-p", "1022"}
+	if os.Getenv("FSERVE_TEST_USE_CUSTOM_SSH_PORT") != "" {
+		expectedHostConnection = append(expectedHostConnection, customSSHPortArgs...)
+		expectedSetSource = append(expectedSetSource, customSSHPortArgs...)
+		targetIndex = targetIndex + 2
+	}
+
 	if os.Getenv("FSERVE_TEST_USE_PRIVATE_KEY") != "" {
-		targetIndex = 4
+		targetIndex = targetIndex + 2
 		expectedHostConnection = append(expectedHostConnection, privateKeyArgs...)
 		expectedSetSource = append(expectedSetSource, privateKeyArgs...)
 

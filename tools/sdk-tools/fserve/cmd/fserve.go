@@ -63,7 +63,8 @@ type sdkProvider interface {
 	GetToolsDir() (string, error)
 	GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error)
 	GetAddressByName(deviceName string) (string, error)
-	RunSSHCommand(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) (string, error)
+	RunSSHCommandWithPort(targetAddress string, sshConfig string, privateKey string, sshPort string,
+		verbose bool, sshArgs []string) (string, error)
 }
 
 var persistFlag = flag.Bool("persist", false, "Persist repository metadata to allow serving resolved packages across reboot.")
@@ -151,6 +152,21 @@ func main() {
 	}
 	log.Debugf("Using target address: %v", targetAddress)
 
+	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
+	// We can't look at the configuration if the ip address was passed in since we don't have the
+	// device name which is needed to look up the property.
+	sshPort := ""
+	if *deviceIPFlag == "" {
+		sshPort, err = sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.SSHPortKey)
+		if err != nil {
+			log.Fatalf("Error reading SSH port configuration: %v", err)
+		}
+		log.Debugf("Using sshport address: %v", sshPort)
+		if sshPort == "22" {
+			sshPort = ""
+		}
+	}
+
 	if *versionFlag == "" {
 		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
 	}
@@ -189,7 +205,7 @@ func main() {
 	}
 
 	// connect the device to the package server
-	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, targetAddress, *sshConfigFlag, *privateKeyFlag); err != nil {
+	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, targetAddress, *sshConfigFlag, *privateKeyFlag, sshPort); err != nil {
 		log.Fatalf("Could set package server source on device: %v\n", err)
 	}
 
@@ -470,7 +486,7 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 
 // setPackageSource sets the URL for the package server on the target device.
 func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, name string,
-	targetAddress string, sshConfig string, privateKey string) error {
+	targetAddress string, sshConfig string, privateKey string, sshPort string) error {
 
 	var (
 		err error
@@ -483,7 +499,7 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 
 	log.Debugf("Using target address %v", targetAddress)
 
-	hostIP, err := getHostIPAddressFromTarget(sdk, targetAddress, sshConfig, privateKey)
+	hostIP, err := getHostIPAddressFromTarget(sdk, targetAddress, sshConfig, privateKey, sshPort)
 	if err != nil {
 		return fmt.Errorf("Could not get host address from target %v: %v", targetAddress, err)
 	}
@@ -502,7 +518,7 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 	}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel
-	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, verbose, sshArgs); err != nil {
+	if _, err = sdk.RunSSHCommandWithPort(targetAddress, sshConfig, privateKey, sshPort, verbose, sshArgs); err != nil {
 		return fmt.Errorf("Could not set package server address on device: %v", err)
 	}
 
@@ -510,12 +526,14 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 }
 
 // getHostIPAddressFromTarget returns the host address reported from the SSH connection on the target device.
-func getHostIPAddressFromTarget(sdk sdkProvider, targetAddress string, sshConfig string, privateKey string) (string, error) {
+func getHostIPAddressFromTarget(sdk sdkProvider, targetAddress string, sshConfig string, privateKey string,
+	sshPort string) (string, error) {
 
 	var sshArgs = []string{"echo", "$SSH_CONNECTION"}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel
-	connectionString, err := sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, verbose, sshArgs)
+	connectionString, err := sdk.RunSSHCommandWithPort(targetAddress, sshConfig, privateKey,
+		sshPort, verbose, sshArgs)
 
 	if err != nil {
 		return "", err

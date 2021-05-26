@@ -16,7 +16,8 @@ type testSDKProperties struct {
 	expectedTargetAddress string
 }
 
-func (testSDK testSDKProperties) RunSSHShell(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) error {
+func (testSDK testSDKProperties) RunSSHShell(targetAddress string, sshConfig string,
+	privateKey string, sshPort string, verbose bool, sshArgs []string) error {
 	if targetAddress == "" {
 		return errors.New("target address must be specified")
 	}
@@ -77,7 +78,7 @@ func TestSSH(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := ssh(test.sdk, test.verbose, test.targetAddress, test.sshConfig, test.privateKey, test.args)
+		err := ssh(test.sdk, test.verbose, test.targetAddress, test.sshConfig, test.privateKey, "", test.args)
 		if err != nil {
 			message := fmt.Sprintf("%v", err)
 			if message != test.expectedError {

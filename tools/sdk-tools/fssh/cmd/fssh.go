@@ -27,7 +27,8 @@ var (
 const logFlags = log.Ltime
 
 type sdkProvider interface {
-	RunSSHShell(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) error
+	RunSSHShell(targetAddress string, sshConfig string, privateKey string, sshPort string,
+		verbose bool, sshArgs []string) error
 }
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 
 	flag.Parse()
 
-	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "fserve ")
+	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "fssh ")
 	log.SetFlags(logFlags)
 
 	if *helpFlag {
@@ -67,7 +68,24 @@ func main() {
 	}
 	log.Debugf("Using target address: %v", targetAddress)
 
-	if err := ssh(sdk, *verboseFlag, targetAddress, *sshConfigFlag, *privateKeyFlag, flag.Args()); err != nil {
+	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
+	// We can't look at the configuration if the ip address was passed in since we don't have the
+	// device name which is needed to look up the property.
+	sshPort := ""
+	if *deviceIPFlag == "" {
+		sshPort, err = sdk.GetFuchsiaProperty(*deviceNameFlag, sdkcommon.SSHPortKey)
+		if err != nil {
+			log.Fatalf("Error reading SSH port configuration: %v", err)
+		}
+		log.Debugf("Using sshport address: %v", sshPort)
+		if sshPort == "22" {
+			sshPort = ""
+		}
+	}
+
+	log.Debugf("Running SSH with %v %v %v %v %v %v ", targetAddress, *sshConfigFlag,
+		*privateKeyFlag, sshPort, *verboseFlag, flag.Args())
+	if err := ssh(sdk, *verboseFlag, targetAddress, *sshConfigFlag, *privateKeyFlag, sshPort, flag.Args()); err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
 			os.Exit(exitError.ExitCode())
@@ -84,6 +102,8 @@ func usage() {
 }
 
 // ssh wraps sdk.RunSSHShell to enable testing by injecting an sdkProvider
-func ssh(sdk sdkProvider, verbose bool, targetAddress string, sshConfig string, privateKey string, args []string) error {
-	return sdk.RunSSHShell(targetAddress, sshConfig, privateKey, verbose, args)
+func ssh(sdk sdkProvider, verbose bool, targetAddress string, sshConfig string,
+	privateKey string, sshPort string, args []string) error {
+
+	return sdk.RunSSHShell(targetAddress, sshConfig, privateKey, sshPort, verbose, args)
 }

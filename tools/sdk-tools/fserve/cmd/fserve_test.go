@@ -36,6 +36,7 @@ type testSDKProperties struct {
 	dataPath              string
 	expectCustomSSHConfig bool
 	expectPrivateKey      bool
+	expectSSHPort         bool
 	expectedSSHArgs       [][]string
 }
 
@@ -56,12 +57,18 @@ func (testSDK testSDKProperties) GetAddressByName(deviceName string) (string, er
 func (testSDK testSDKProperties) GetDefaultPackageRepoDir() (string, error) {
 	return filepath.Join(testSDK.dataPath, "default-target-name", "packages", "amber-files"), nil
 }
-func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) (string, error) {
+func (testSDK testSDKProperties) RunSSHCommandWithPort(targetAddress string, sshConfig string,
+	privateKey string, sshPort string, verbose bool, sshArgs []string) (string, error) {
+
 	if testSDK.expectCustomSSHConfig && sshConfig == "" {
 		return "", errors.New("Expected custom ssh config file")
 	}
 	if testSDK.expectPrivateKey && privateKey == "" {
 		return "", errors.New("Expected private key file")
+	}
+
+	if testSDK.expectSSHPort && sshPort == "" {
+		return "", errors.New("Expected custom ssh port")
 	}
 	expectedArgs := []string{}
 
@@ -382,6 +389,7 @@ func TestSetPackageSource(t *testing.T) {
 		sshConfig       string
 		name            string
 		privateKey      string
+		sshPort         string
 		expectedSSHArgs [][]string
 	}{
 		{
@@ -417,14 +425,27 @@ func TestSetPackageSource(t *testing.T) {
 				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
 			},
 		},
+		{
+			repoPort:      "8083",
+			targetAddress: resolvedAddr,
+			sshConfig:     "",
+			privateKey:    "",
+			name:          "devhost",
+			sshPort:       "1022",
+			expectedSSHArgs: [][]string{
+				{"echo", "$SSH_CONNECTION"},
+				{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+			},
+		},
 	}
 
 	for _, test := range tests {
 		testSDK := testSDKProperties{expectedSSHArgs: test.expectedSSHArgs,
 			expectCustomSSHConfig: test.sshConfig != "",
-			expectPrivateKey:      test.privateKey != ""}
+			expectPrivateKey:      test.privateKey != "",
+			expectSSHPort:         test.sshPort != ""}
 
-		if err := setPackageSource(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey); err != nil {
+		if err := setPackageSource(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey, test.sshPort); err != nil {
 			t.Fatal(err)
 		}
 	}
