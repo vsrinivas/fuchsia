@@ -6,28 +6,62 @@ library fuchsia.weave;
 
 using fuchsia.mem;
 
+/// The maximum size of a signature supported by Weave.
+///
+/// Currently, Weave only supports ECDSA signatures using the P224 curve,
+/// however, to allow this protocol to support future changes to supported
+/// Weave signatures the maximum size of the returned signature is set to
+/// 139 bytes which is the largest amount of space needed to return an
+/// encoded ECDSA P521 signature.
+const uint32 MAX_SIGNATURE_SIZE = 139;
+
+/// The maximum size for a public key produced when generating a key pair.
+const uint32 MAX_PUBLIC_KEY_SIZE = 65;
+
+/// Bytes representing a wrapped private key. Since the size of the wrapping is
+/// implementation-defined, the bytes are only bounded by MAX. The bytes should
+/// be considered opaque, both in structure and in content, as the value is only
+/// meaningful to operations such as [`Provisioner.GenerateKeyPair`].
+alias PrivateKey = bytes:MAX;
+
+/// This protocol is used for just-in-time provisioning operations.
+[Discoverable]
+protocol Provisioner {
+    /// Generate key for just-in-time provisioning operations, used when
+    /// working with Weave operational certificates. On success, a wrapped
+    /// private key and public key pair is returned in `result`. The
+    /// `wrapped_private_key` can be passed to [`Signer.SignHashWithPrivateKey`]
+    /// to sign Weave messages.
+    ///
+    /// Currently, Weave only supports ECDSA signatures. This protocol returns
+    /// a key-pair compatible with the Signer protocol (e.g. P256).
+    GenerateKeyPair() -> (PrivateKey wrapped_private_key, bytes:MAX_PUBLIC_KEY_SIZE public_key) error ErrorCode;
+};
+
 /// This protocol is used for signing operations with the factory-provisioned
-/// Weave key.
+/// Weave key or generated private keys.
 [Discoverable]
 protocol Signer {
-    /// Sign the provided |hash| with the factory provisioned key. On success
-    /// the result is returned in |signature|. The signature must be of a type
+    /// Sign the provided `hash` with the factory provisioned key. On success
+    /// the result is returned in `signature`. The signature must be of a type
     /// that is supported by Weave, and must take the standard form of an ASN.1
     /// DER SEQUENCE. This operation must support SHA1 and SHA256 hash values.
-    ///
-    /// Currently, Weave only supports ECDSA signatures using the P224 curve,
-    /// however, to allow this protocol to support future changes to supported
-    /// Weave signatures the maximum size of the returned signature is set to
-    /// 139 bytes which is the largest amount of space needed to return an
-    /// encoded ECDSA P521 signature.
-    SignHash(bytes:32 hash) -> (bytes:139 signature) error ErrorCode;
+    SignHash(bytes:32 hash) -> (bytes:MAX_SIGNATURE_SIZE signature) error ErrorCode;
+
+    /// Sign the provided `hash` with the provided `wrapped_private_key`. On
+    /// success, the result is returned in `signature`. The signature must be
+    /// of a type that is supported by Weave, and must take the standard form
+    /// of an ASN.1 DER SEQUENCE. This operation must support SHA1 and SHA256
+    /// hash values.
+    [Transitional]
+    SignHashWithPrivateKey(bytes:32 hash, PrivateKey wrapped_private_key) -> (bytes:MAX_SIGNATURE_SIZE signature) error ErrorCode;
 };
 
 /// This protocol is used to retrieve factory data that may be encrypted at
 /// rest.
 [Discoverable]
 protocol FactoryDataManager {
-    /// Return the device |pairing_code| on success.
+    /// Return the device `pairing_code` on success.
     GetPairingCode() -> (bytes:16 pairing_code) error ErrorCode;
 
     /// Returns the factory provisioned Weave certificate in PEM format.
