@@ -551,6 +551,13 @@ This option specifies how many bytes of each free page is filled or checked when
 the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
 between 8 and PAGE_SIZE, inclusive.
 
+### kernel.portobserver.reserve-pages=\<uint64_t>
+**Default:** `0x8`
+
+Specifies the number of pages per CPU to reserve for port observer (async
+wait) allocations. Higher values reduce contention on the PMM when the system
+is under load at the cost of using more memory when the system is idle.
+
 
 ## Options available only on arm64 machines
 

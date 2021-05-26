@@ -7,6 +7,7 @@
 #include "object/port_dispatcher.h"
 
 #include <assert.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <lib/object_cache.h>
@@ -494,11 +495,7 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
 }
 
 void PortDispatcher::InitializeCacheAllocators(uint32_t /*level*/) {
-  // Reserve up to 8 pages per CPU for servicing PortObservers, unless
-  // overridden on the command line.
-  const size_t default_observer_reserve_pages = 8;
-  const size_t observer_reserve_pages =
-      gCmdline.GetUInt64(kernel_option::kPortobserverReservePages, default_observer_reserve_pages);
+  const size_t observer_reserve_pages = gBootOptions->port_observer_reserve_pages;
 
   zx::status observer_result =
       object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>::Create(

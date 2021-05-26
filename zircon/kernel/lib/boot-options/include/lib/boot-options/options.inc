@@ -530,6 +530,13 @@ the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
 between 8 and PAGE_SIZE, inclusive.
 )""")
 
+DEFINE_OPTION("kernel.portobserver.reserve-pages", uint64_t, port_observer_reserve_pages, {8},
+              R"""(
+Specifies the number of pages per CPU to reserve for port observer (async
+wait) allocations. Higher values reduce contention on the PMM when the system
+is under load at the cost of using more memory when the system is idle.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
