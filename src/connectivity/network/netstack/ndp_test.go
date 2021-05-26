@@ -16,10 +16,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
-	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/net/interfaces"
-
-	networking_metrics "networking_metrics_golib"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -68,15 +65,9 @@ func newSubnet(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Subnet {
 
 // newNDPDispatcherForTest returns a new ndpDispatcher with a channel used to
 // notify tests when its event queue is emptied.
-//
-// The dispatcher's cobalt observers are initialized such that no cobalt client
-// will receive events.
 func newNDPDispatcherForTest() *ndpDispatcher {
 	n := newNDPDispatcher()
 	n.testNotifyCh = make(chan struct{}, 1)
-	// Must be called or tests may panic as the ndpDispatchere may attempt to call
-	// into n.dynamicAddressSourceObs
-	n.dynamicAddressSourceObs.initWithoutTimer(func() {})
 	return n
 }
 
@@ -879,10 +870,10 @@ func TestDHCPv6Stats(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ns := &Netstack{}
+			ns := &Netstack{stack: stack.New(stack.Options{Clock: &faketime.NullClock{}})}
 			ndpDisp := newNDPDispatcher()
 			ndpDisp.ns = ns
-			ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {})
+			ndpDisp.dynamicAddressSourceTracker.init(ns)
 
 			for i, step := range test.steps {
 				step.run(ndpDisp)
@@ -894,7 +885,7 @@ func TestDHCPv6Stats(t *testing.T) {
 	}
 }
 
-func TestObservationsFromDHCPv6Configuration(t *testing.T) {
+func TestIPv6AddressConfigTracker(t *testing.T) {
 	const (
 		nicID1 = 1
 		nicID2 = 2
@@ -905,242 +896,242 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 		PrefixLen: 64,
 	}
 
-	// ndpDispatcher registers novel observations by calling cobaltClient.Register.
-	// When the observations are pulled, we ensure that all novelty since the
-	// last pull is included and duplicate observations are coalesced.
-	type step struct {
-		run  func(*ndpDispatcher)
-		want []cobalt.CobaltEvent
+	type statsSnapshot struct {
+		NoGlobalSLAACOrDHCPv6ManagedAddress uint64
+		GlobalSLAACOnly                     uint64
+		DHCPv6ManagedAddressOnly            uint64
+		GlobalSLAACAndDHCPv6ManagedAddress  uint64
 	}
 
-	availableDynamicAddressConfigsInit := func(ndpDisp *ndpDispatcher, cobaltClient *cobaltClient) {
-		ndpDisp.dynamicAddressSourceObs.initWithoutTimer(func() {
-			cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
-		})
+	type step struct {
+		run  func(*ndpDispatcher, *faketime.ManualClock)
+		want statsSnapshot
+	}
+
+	getSnapshot := func(ns *Netstack) statsSnapshot {
+		c := ns.stats.IPv6AddressConfig
+		return statsSnapshot{
+			NoGlobalSLAACOrDHCPv6ManagedAddress: c.NoGlobalSLAACOrDHCPv6ManagedAddress.Value(),
+			GlobalSLAACOnly:                     c.GlobalSLAACOnly.Value(),
+			DHCPv6ManagedAddressOnly:            c.DHCPv6ManagedAddressOnly.Value(),
+			GlobalSLAACAndDHCPv6ManagedAddress:  c.GlobalSLAACAndDHCPv6ManagedAddress.Value(),
+		}
 	}
 
 	tests := []struct {
 		name  string
-		init  func(*ndpDispatcher, *cobaltClient)
 		steps []step
 	}{
 		{
 			name: "dynamic address config with no config",
-			init: availableDynamicAddressConfigsInit,
 			steps: []step{
 				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
+						clock.Advance(ipv6AddressConfigTrackerInitialDelay)
 					},
-					want: nil,
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
+					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						// Link local addresses should not increment global SLAAC address
 						// count.
 						ndpDisp.OnAutoGenAddress(nicID1, linkLocalAddr)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: nil,
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
+					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6NoConfiguration)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 1,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6OtherConfigurations)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 2,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr1.AddressWithPrefix)
 						ndpDisp.OnAutoGenAddressInvalidated(nicID1, testProtocolAddr1.AddressWithPrefix)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 3,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 			},
 		},
 		{
 			name: "dynamic address config with slaac only",
-			init: availableDynamicAddressConfigsInit,
 			steps: []step{
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr1.AddressWithPrefix)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInitialDelay)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     1,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						// Link local addresses should not decrement global SLAAC address
 						// count.
 						ndpDisp.OnAutoGenAddressInvalidated(nicID1, linkLocalAddr)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     2,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr2.AddressWithPrefix)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     3,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnAutoGenAddressInvalidated(nicID1, testProtocolAddr2.AddressWithPrefix)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     4,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 			},
 		},
 		{
 			name: "dynamic address config with dhcpv6 only",
-			init: availableDynamicAddressConfigsInit,
 			steps: []step{
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInitialDelay)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.Dhcpv6ManagedAddressOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            1,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				// Only the last configuration should be used.
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6NoConfiguration)
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.Dhcpv6ManagedAddressOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            2,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 			},
 		},
 		{
 			name: "dynamic address config with dhcpv6 and slaac",
-			init: availableDynamicAddressConfigsInit,
 			steps: []step{
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
 						ndpDisp.OnAutoGenAddress(nicID1, testProtocolAddr2.AddressWithPrefix)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInitialDelay)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacAndDhcpv6ManagedAddress), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     0,
+						DHCPv6ManagedAddressOnly:            0,
+						GlobalSLAACAndDHCPv6ManagedAddress:  1,
 					},
 				},
 			},
 		},
 		{
 			name: "dynamic address config with dhcpv6 and slaac on different NICs",
-			init: availableDynamicAddressConfigsInit,
 			steps: []step{
 				{
-					run: func(ndpDisp *ndpDispatcher) {
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
 						ndpDisp.OnDHCPv6Configuration(nicID1, ipv6.DHCPv6ManagedAddress)
 						ndpDisp.OnAutoGenAddress(nicID2, testProtocolAddr2.AddressWithPrefix)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+						clock.Advance(ipv6AddressConfigTrackerInitialDelay)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.Dhcpv6ManagedAddressOnly), nicID1},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID2},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     1,
+						DHCPv6ManagedAddressOnly:            1,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.dynamicAddressSourceObs.RemovedNIC(nicID1)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
+						ndpDisp.dynamicAddressSourceTracker.RemovedNIC(nicID1)
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: []cobalt.CobaltEvent{
-						{
-							MetricId:   networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-							EventCodes: []uint32{uint32(networking_metrics.GlobalSlaacOnly), nicID2},
-							Payload:    cobalt.EventPayloadWithEventCount(cobalt.CountEvent{Count: 1}),
-						},
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     2,
+						DHCPv6ManagedAddressOnly:            1,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
 					},
 				},
 				{
-					run: func(ndpDisp *ndpDispatcher) {
-						ndpDisp.dynamicAddressSourceObs.RemovedNIC(nicID2)
-						ndpDisp.dynamicAddressSourceObs.hasEvents()
+					run: func(ndpDisp *ndpDispatcher, clock *faketime.ManualClock) {
+						ndpDisp.dynamicAddressSourceTracker.RemovedNIC(nicID2)
+						clock.Advance(ipv6AddressConfigTrackerInterval)
 					},
-					want: nil,
+					want: statsSnapshot{
+						NoGlobalSLAACOrDHCPv6ManagedAddress: 0,
+						GlobalSLAACOnly:                     2,
+						DHCPv6ManagedAddressOnly:            1,
+						GlobalSLAACAndDHCPv6ManagedAddress:  0,
+					},
 				},
 			},
 		},
@@ -1148,68 +1139,18 @@ func TestObservationsFromDHCPv6Configuration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			cobaltClient := NewCobaltClient()
+			clock := faketime.NewManualClock()
+			ns := &Netstack{stack: stack.New(stack.Options{Clock: clock})}
 			ndpDisp := newNDPDispatcher()
-			ndpDisp.ns = &Netstack{}
-			test.init(ndpDisp, cobaltClient)
+			ndpDisp.ns = ns
+			ndpDisp.dynamicAddressSourceTracker.init(ns)
 
 			for i, step := range test.steps {
-				step.run(ndpDisp)
-				got := cobaltClient.Collect()
-				if diff := cmp.Diff(step.want, got,
-					// There's exactly one event code per event.
-					cmpopts.SortSlices(func(a, b cobalt.CobaltEvent) bool {
-						return a.EventCodes[0] > b.EventCodes[0]
-					}),
-					cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-					t.Errorf("%d-th step: observations mismatch (-want +got):\n%s", i, diff)
+				step.run(ndpDisp, clock)
+				if diff := cmp.Diff(step.want, getSnapshot(ns)); diff != "" {
+					t.Errorf("%d-th step: mismatch (-want +got):\n%s", i, diff)
 				}
 			}
 		})
-	}
-}
-
-func TestAvailableDynamicIPv6AddressConfigEventsRegistration(t *testing.T) {
-	const smallestDuration time.Duration = 1
-
-	clock := faketime.NewManualClock()
-
-	ch := make(chan struct{}, 1)
-
-	ndpDisp := newNDPDispatcher()
-	ndpDisp.dynamicAddressSourceObs.init(clock, func() {
-		ch <- struct{}{}
-	})
-
-	clock.Advance(availableDynamicIPv6AddressConfigDelayInitialEvents - smallestDuration)
-
-	select {
-	case <-ch:
-		t.Fatal("first event's registration arrived prematurely")
-	default:
-	}
-
-	clock.Advance(smallestDuration)
-
-	select {
-	case <-ch:
-	default:
-		t.Fatal("timed out waiting for first event's registration")
-	}
-
-	clock.Advance(availableDynamicIPv6AddressConfigDelayBetweenEvents - smallestDuration)
-
-	select {
-	case <-ch:
-		t.Fatal("next event's registration arrived prematurely")
-	default:
-	}
-
-	clock.Advance(smallestDuration)
-
-	select {
-	case <-ch:
-	default:
-		t.Fatal("timed out waiting for next event's registration")
 	}
 }

@@ -11,7 +11,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",
             "fuchsia.stash.SecureStore"
         ]

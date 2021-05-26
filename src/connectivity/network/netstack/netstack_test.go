@@ -1110,6 +1110,7 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) (*Netsta
 
 	ns, clock := newNetstackWithStackNDPDispatcher(t, ndpDisp)
 	ndpDisp.ns = ns
+	ndpDisp.dynamicAddressSourceTracker.init(ns)
 	return ns, clock
 }
 

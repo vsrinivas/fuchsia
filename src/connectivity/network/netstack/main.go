@@ -23,8 +23,6 @@ import (
 	"syscall/zx"
 	"time"
 
-	networking_metrics "networking_metrics_golib"
-
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
@@ -32,7 +30,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/neighbor"
@@ -187,8 +184,7 @@ func Main() {
 	flags.Var((*atomicBool)(&sniffer.LogPackets), "log-packets", "enable packet logging")
 	flags.Var(&logLevel, "verbosity", "set the logging verbosity")
 
-	var cobaltClientTimerPeriod, socketStatsTimerPeriod time.Duration
-	flags.DurationVar(&cobaltClientTimerPeriod, "cobalt-scheduling-interval", time.Minute, "set the interval at which metrics will be sent to Cobalt")
+	var socketStatsTimerPeriod time.Duration
 	flags.DurationVar(&socketStatsTimerPeriod, "socket-stats-sampling-interval", time.Minute, "set the interval at which socket stats will be sampled")
 
 	noOpaqueIID := false
@@ -328,18 +324,15 @@ func Main() {
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
 		nameProvider:       np,
 		stack:              stk,
-		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceObs, f},
+		nicRemovedHandlers: []NICRemovedHandler{&ndpDisp.dynamicAddressSourceTracker, f},
 	}
 
 	ns.interfaceWatchers.mu.watchers = make(map[*interfaceWatcherImpl]struct{})
 	ns.interfaceWatchers.mu.lastObserved = make(map[tcpip.NICID]interfaces.Properties)
 
-	cobaltClient := NewCobaltClient()
 	nudDisp.ns = ns
 	ndpDisp.ns = ns
-	ndpDisp.dynamicAddressSourceObs.init(stk.Clock(), func() {
-		cobaltClient.Register(&ndpDisp.dynamicAddressSourceObs)
-	})
+	ndpDisp.dynamicAddressSourceTracker.init(ns)
 	ndpDisp.start(ctx)
 
 	ns.filter = f
@@ -540,49 +533,6 @@ func Main() {
 			},
 		)
 	}
-
-	// Do not hold up initialization on cobalt.
-	//
-	// We've seen instances of cobalt hanging. At the time of writing, the cause is not known.
-	//
-	// See https://fxbug.dev/61755.
-	go func() {
-		factoryReq, factory, err := cobalt.NewLoggerFactoryWithCtxInterfaceRequest()
-		if err != nil {
-			_ = syslog.Errorf("could not create the request to connect to the %s service: %s", cobalt.LoggerFactoryName, err)
-			return
-		}
-		defer func() {
-			_ = factory.Close()
-		}()
-		appCtx.ConnectToEnvService(factoryReq)
-
-		loggerReq, logger, err := cobalt.NewLoggerWithCtxInterfaceRequest()
-		if err != nil {
-			_ = syslog.Errorf("could not create the cobalt logger request: %s", err)
-			return
-		}
-		defer func() {
-			_ = logger.Close()
-		}()
-		result, err := factory.CreateLoggerFromProjectId(context.Background(), networking_metrics.ProjectId, loggerReq)
-		if err != nil {
-			_ = syslog.Warnf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
-			return
-		}
-		if result != cobalt.StatusOk {
-			_ = syslog.Warnf("CreateLoggerFromProjectId(%d, ...) = %s, _", networking_metrics.ProjectId, result)
-			return
-		}
-		_ = factory.Close()
-
-		_ = syslog.Infof("starting cobalt client")
-		ticker := time.NewTicker(cobaltClientTimerPeriod)
-		defer ticker.Stop()
-		if err := cobaltClient.run(ctx, logger, ticker.C); err != nil {
-			_ = syslog.Errorf("cobalt client exited unexpectedly: %s", err)
-		}
-	}()
 
 	appCtx.BindStartupHandle(context.Background())
 }

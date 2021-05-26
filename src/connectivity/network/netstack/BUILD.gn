@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//src/go/grand_unified_binary/gub.gni")
-import("//third_party/cobalt/metrics_registry.gni")
 import("gentool/generated.gni")
 
 grand_unified_binary("bin") {
@@ -63,16 +62,6 @@ fuchsia_package("netstack-conformance-testing") {
 
 fuchsia_shell_package("tools") {
   deps = [ "ifconfig" ]
-}
-
-metrics_registry("networking_metrics") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 1
-  go_package_name = "networking_metrics"
-  generate_go = true
-  generate_rust = true
-  generate_binarypb = false
 }
 
 tests = []
@@ -133,10 +122,8 @@ go_library("netstack_lib") {
 
   deps = [
     ":gen/netstack",
-    ":networking_metrics_golib",
     "dns",
     "fidlext/fuchsia/hardware/ethernet",
-    "//sdk/fidl/fuchsia.cobalt($go_toolchain)",
     "//sdk/fidl/fuchsia.device($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",

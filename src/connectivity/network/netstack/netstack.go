@@ -13,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
-	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -26,7 +25,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
@@ -82,6 +80,12 @@ type stats struct {
 		ManagedAddress     tcpip.StatCounter
 		OtherConfiguration tcpip.StatCounter
 	}
+	IPv6AddressConfig struct {
+		NoGlobalSLAACOrDHCPv6ManagedAddress tcpip.StatCounter
+		GlobalSLAACOnly                     tcpip.StatCounter
+		DHCPv6ManagedAddressOnly            tcpip.StatCounter
+		GlobalSLAACAndDHCPv6ManagedAddress  tcpip.StatCounter
+	}
 }
 
 func (s *stats) init(ns *Netstack) {
@@ -118,69 +122,6 @@ func (s *stats) init(ns *Netstack) {
 			c += info.Stats.Rx.Bytes.Value()
 		}
 		return c
-	}
-}
-
-type cobaltClient struct {
-	mu struct {
-		sync.Mutex
-		observations map[cobaltEventProducer]struct{}
-	}
-}
-
-type cobaltEventProducer interface {
-	events() []cobalt.CobaltEvent
-}
-
-func NewCobaltClient() *cobaltClient {
-	var c cobaltClient
-	c.mu.observations = make(map[cobaltEventProducer]struct{})
-	return &c
-}
-
-func (c *cobaltClient) Register(o cobaltEventProducer) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.mu.observations[o] = struct{}{}
-}
-
-func (c *cobaltClient) Collect() []cobalt.CobaltEvent {
-	c.mu.Lock()
-	os := c.mu.observations
-	c.mu.observations = make(map[cobaltEventProducer]struct{})
-	c.mu.Unlock()
-
-	var events []cobalt.CobaltEvent
-	for o := range os {
-		events = append(events, o.events()...)
-	}
-	return events
-}
-
-func (c *cobaltClient) run(ctx context.Context, cobaltLogger *cobalt.LoggerWithCtxInterface, ticker <-chan time.Time) error {
-	ids := func(events []cobalt.CobaltEvent) []uint32 {
-		ids := make([]uint32, 0, len(events))
-		for _, event := range events {
-			ids = append(ids, event.MetricId)
-		}
-		return ids
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker:
-			events := c.Collect()
-			if len(events) == 0 {
-				continue
-			}
-			if status, err := cobaltLogger.LogCobaltEvents(context.Background(), events); err != nil {
-				_ = syslog.Warnf("cobaltLogger.LogCobaltEvents(_, MetricId: %d) failed: %s", ids(events), err)
-			} else if status != cobalt.StatusOk {
-				_ = syslog.Warnf("cobaltLogger.LogCobaltEvents(_, MetricId: %d) rejected: %s", ids(events), status)
-			}
-		}
 	}
 }
 

@@ -16,10 +16,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
-	networking_metrics "networking_metrics_golib"
-
-	"fidl/fuchsia/cobalt"
-
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -148,9 +144,9 @@ type ndpDispatcher struct {
 	// testNotifyCh should only be set by tests.
 	testNotifyCh chan struct{}
 
-	// dynamicAddressSourceObs tracks the most recent dynamic address
+	// dynamicAddressSourceTracker tracks the most recent dynamic address
 	// configuration options available for an interface.
-	dynamicAddressSourceObs availableDynamicIPv6AddressConfigObservation
+	dynamicAddressSourceTracker ipv6AddressConfigTracker
 
 	mu struct {
 		sync.Mutex
@@ -219,7 +215,7 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 	// Metrics only care about dynamic global address configuration options so
 	// only increase the counter if we generated a global SLAAC address.
 	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
-		n.dynamicAddressSourceObs.incGlobalSLAAC(nicID)
+		n.dynamicAddressSourceTracker.incGlobalSLAAC(nicID)
 	}
 
 	return true
@@ -240,7 +236,7 @@ func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithP
 	// Metrics only care about dynamic global address configuration options so
 	// only decrease the counter if we invalidated a global SLAAC address.
 	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
-		n.dynamicAddressSourceObs.decGlobalSLAAC(nicID)
+		n.dynamicAddressSourceTracker.decGlobalSLAAC(nicID)
 	}
 }
 
@@ -255,141 +251,103 @@ func (n *ndpDispatcher) OnDNSSearchListOption(nicID tcpip.NICID, domainNames []s
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnDNSSearchListOption(%d, %s, %s)", nicID, domainNames, lifetime)
 }
 
-var _ NICRemovedHandler = (*availableDynamicIPv6AddressConfigObservation)(nil)
-var _ cobaltEventProducer = (*availableDynamicIPv6AddressConfigObservation)(nil)
+var _ NICRemovedHandler = (*ipv6AddressConfigTracker)(nil)
 
 const (
-	// availableDynamicIPv6AddressConfigDelayInitialEvents is the initial delay
-	// before registering with the cobalt client that events are ready.
+	// ipv6AddressConfigTrackerInitialDelay is the initial delay
+	// before polling the first IPv6 address configs.
 	//
 	// The delay should be large enough to let the network configurations
 	// stabilize.
-	availableDynamicIPv6AddressConfigDelayInitialEvents = 10 * time.Minute
+	ipv6AddressConfigTrackerInitialDelay = 10 * time.Minute
 
-	// availableDynamicIPv6AddressConfigDelayBetweenEvents is the delay between
-	// registering with the cobalt client that events are ready after the initial
-	// registration.
-	availableDynamicIPv6AddressConfigDelayBetweenEvents = time.Hour
+	// ipv6AddressConfigTrackerInterval is the duration between polling the latest
+	// IPv6 address configs.
+	ipv6AddressConfigTrackerInterval = time.Hour
 )
 
-type byNICAvailableDynamicIPv6AddressConfig map[tcpip.NICID]struct {
+type ipv6AddressConfigByNIC map[tcpip.NICID]struct {
 	globalSLAAC uint32
 	lastDHCPv6  ipv6.DHCPv6ConfigurationFromNDPRA
 }
 
-type availableDynamicIPv6AddressConfigObservation struct {
-	hasEvents func()
+type ipv6AddressConfigTracker struct {
+	ns    *Netstack
+	timer tcpip.Timer
 
 	mu struct {
 		sync.Mutex
-		obs byNICAvailableDynamicIPv6AddressConfig
+		nics ipv6AddressConfigByNIC
 	}
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) initWithoutTimer(hasEvents func()) {
-	o.hasEvents = hasEvents
+func (i *ipv6AddressConfigTracker) init(ns *Netstack) {
+	i.ns = ns
 
-	o.mu.Lock()
-	o.mu.obs = make(byNICAvailableDynamicIPv6AddressConfig)
-	o.mu.Unlock()
-}
+	i.mu.Lock()
+	i.mu.nics = make(ipv6AddressConfigByNIC)
+	i.mu.Unlock()
 
-// init sets the events registration callback and starts the timer to register
-// events.
-func (o *availableDynamicIPv6AddressConfigObservation) init(clock tcpip.Clock, hasEvents func()) {
-	o.initWithoutTimer(hasEvents)
-
-	var mu sync.Mutex
-	var t tcpip.Timer
-	mu.Lock()
-	defer mu.Unlock()
-	t = clock.AfterFunc(availableDynamicIPv6AddressConfigDelayInitialEvents, func() {
-		o.hasEvents()
-
-		mu.Lock()
-		defer mu.Unlock()
-		t.Reset(availableDynamicIPv6AddressConfigDelayBetweenEvents)
+	i.timer = ns.stack.Clock().AfterFunc(ipv6AddressConfigTrackerInitialDelay, func() {
+		i.incrementCounter()
+		i.timer.Reset(ipv6AddressConfigTrackerInterval)
 	})
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) RemovedNIC(nicID tcpip.NICID) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	delete(o.mu.obs, nicID)
+func (i *ipv6AddressConfigTracker) RemovedNIC(nicID tcpip.NICID) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	delete(i.mu.nics, nicID)
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) incGlobalSLAAC(nicID tcpip.NICID) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	nic := o.mu.obs[nicID]
+func (i *ipv6AddressConfigTracker) incGlobalSLAAC(nicID tcpip.NICID) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	nic := i.mu.nics[nicID]
 	nic.globalSLAAC++
-	o.mu.obs[nicID] = nic
+	i.mu.nics[nicID] = nic
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) decGlobalSLAAC(nicID tcpip.NICID) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
+func (i *ipv6AddressConfigTracker) decGlobalSLAAC(nicID tcpip.NICID) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
-	nic := o.mu.obs[nicID]
+	nic := i.mu.nics[nicID]
 	if nic.globalSLAAC == 0 {
 		panic(fmt.Sprintf("cannot have a negative globalSLAAC count for nicID = %d", nicID))
 	}
-
 	nic.globalSLAAC--
-	o.mu.obs[nicID] = nic
+	i.mu.nics[nicID] = nic
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) setLastDHCPv6(nicID tcpip.NICID, v ipv6.DHCPv6ConfigurationFromNDPRA) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	nic := o.mu.obs[nicID]
+func (i *ipv6AddressConfigTracker) setLastDHCPv6(nicID tcpip.NICID, v ipv6.DHCPv6ConfigurationFromNDPRA) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	nic := i.mu.nics[nicID]
 	nic.lastDHCPv6 = v
-	o.mu.obs[nicID] = nic
+	i.mu.nics[nicID] = nic
 }
 
-func (o *availableDynamicIPv6AddressConfigObservation) events() []cobalt.CobaltEvent {
-	o.mu.Lock()
-	defer o.mu.Unlock()
+func (i *ipv6AddressConfigTracker) incrementCounter() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
-	events := make([]cobalt.CobaltEvent, 0, len(o.mu.obs))
-	for nicID, nic := range o.mu.obs {
-		var v uint8
-
-		if nic.globalSLAAC != 0 {
-			v |= 1
+	for _, nic := range i.mu.nics {
+		slaac := nic.globalSLAAC != 0
+		dhcpv6 := nic.lastDHCPv6 == ipv6.DHCPv6ManagedAddress
+		switch {
+		case !slaac && !dhcpv6:
+			i.ns.stats.IPv6AddressConfig.NoGlobalSLAACOrDHCPv6ManagedAddress.Increment()
+		case slaac && !dhcpv6:
+			i.ns.stats.IPv6AddressConfig.GlobalSLAACOnly.Increment()
+		case !slaac && dhcpv6:
+			i.ns.stats.IPv6AddressConfig.DHCPv6ManagedAddressOnly.Increment()
+		case slaac && dhcpv6:
+			i.ns.stats.IPv6AddressConfig.GlobalSLAACAndDHCPv6ManagedAddress.Increment()
 		}
-
-		if nic.lastDHCPv6 == ipv6.DHCPv6ManagedAddress {
-			v |= 2
-		}
-
-		var code networking_metrics.NetworkingMetricDimensionDynamicIpv6AddressSource
-		switch v {
-		case 0:
-			code = networking_metrics.NoGlobalSlaacOrDhcpv6ManagedAddress
-		case 1:
-			code = networking_metrics.GlobalSlaacOnly
-		case 2:
-			code = networking_metrics.Dhcpv6ManagedAddressOnly
-		case 3:
-			code = networking_metrics.GlobalSlaacAndDhcpv6ManagedAddress
-		default:
-			panic(fmt.Sprintf("unrecognized v = %d", v))
-		}
-
-		events = append(events, cobalt.CobaltEvent{
-			MetricId: networking_metrics.AvailableDynamicIpv6AddressConfigMetricId,
-			EventCodes: networking_metrics.AvailableDynamicIpv6AddressConfigEventCodes{
-				DynamicIpv6AddressSource: code,
-				InterfaceId:              networking_metrics.AvailableDynamicIpv6AddressConfigMetricDimensionInterfaceId(nicID),
-			}.ToArray(),
-			Payload: cobalt.EventPayloadWithEventCount(cobalt.CountEvent{
-				Count: 1,
-			}),
-		})
 	}
-
-	return events
 }
 
 // OnDHCPv6Configuration implements ipv6.NDPDispatcher.
@@ -406,7 +364,7 @@ func (n *ndpDispatcher) OnDHCPv6Configuration(nicID tcpip.NICID, configuration i
 		panic(fmt.Sprintf("unknown ipv6.DHCPv6ConfigurationFromNDPRA: %s", configuration))
 	}
 
-	n.dynamicAddressSourceObs.setLastDHCPv6(nicID, configuration)
+	n.dynamicAddressSourceTracker.setLastDHCPv6(nicID, configuration)
 }
 
 // addEvent adds an event to be handled by the ndpDispatcher goroutine.
