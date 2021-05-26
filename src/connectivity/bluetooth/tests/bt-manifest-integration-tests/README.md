@@ -25,3 +25,6 @@ To run the HFP Audio Gateway smoke test:
 
 To run the A2DP smoke test:
 `fx test bt-a2dp-smoke-test`
+
+To run the bt-init smoke test:
+`fx test bt-init-smoke-test`

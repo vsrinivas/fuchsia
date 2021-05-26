@@ -248,6 +248,59 @@ fuchsia_test_package("bt-a2dp-smoke-test") {
   ]
 }
 
+rustc_test("bt_init_smoke_test_bin") {
+  output_name = "bt_init_smoke_test"
+  edition = "2018"
+  source_root = "src/bt_init_smoke_test.rs"
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//src/connectivity/bluetooth/fidl:component-rustc",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/bt_init_smoke_test.rs" ]
+}
+
+fuchsia_component("test-bt-init") {
+  manifest = "meta/test-bt-init.cml"
+  deps = [
+    "//src/connectivity/bluetooth/core/bt-gap:component-v2",
+    "//src/connectivity/bluetooth/core/bt-init:bin_v2",
+    "//src/connectivity/bluetooth/core/bt-init:default-config",
+    "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
+  ]
+}
+
+fuchsia_test_component("bt-init-smoke-test-component") {
+  manifest = "meta/bt-init-smoke-test.cml"
+  deps = [ ":bt_init_smoke_test_bin" ]
+}
+
+fuchsia_test_package("bt-init-smoke-test") {
+  test_components = [ ":bt-init-smoke-test-component" ]
+  deps = [
+    ":test-bt-init",
+    "//src/sys/stash:stash_secure_v2",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
@@ -255,6 +308,7 @@ group("tests") {
     ":bt-avrcp-smoke-test",
     ":bt-avrcp-target-smoke-test",
     ":bt-hfp-audio-gateway-smoke-test",
+    ":bt-init-smoke-test",
     ":bt-rfcomm-smoke-test",
   ]
 }

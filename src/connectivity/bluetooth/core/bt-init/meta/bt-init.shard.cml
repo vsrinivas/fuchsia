@@ -1,0 +1,90 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // This manifest shard defines the capability routing for bt-init components. We use a CML shard
+    // to allow child components to come from different URLs in production and test.
+    //
+    // CML files that include it to define a usable bt-init component should declare:
+    //   1. A `bt-gap` child component, with the URL set to the appropriate package and manifest.
+    //   2. A `bt-rfcomm` child component, with the URL set to the appropriate bt-rfcomm package.
+    // e.g.:
+    //   children: [
+    //     {
+    //         name: "bt-gap",
+    //         url: "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cm",
+    //     },
+    //     {
+    //         name: "bt-rfcomm",
+    //         url: "fuchsia-pkg://fuchsia.com/bt-rfcomm#meta/bt-rfcomm.cm",
+    //     },
+    //   ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/bt_init_v2",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.Realm" ],
+            from: "framework",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
+            from: "parent",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev-bt-host",
+            from: "parent",
+            to: [ "#bt-gap" ],
+            rights: [ "rw*" ],
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.stash.SecureStore",
+            ],
+            from: "parent",
+            to: [ "#bt-gap" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#bt-gap",
+                "#bt-rfcomm",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#bt-gap",
+            to: [ "#bt-rfcomm" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Central",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.HostWatcher",
+            ],
+            from: "#bt-gap",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "self",
+        },
+    ],
+}

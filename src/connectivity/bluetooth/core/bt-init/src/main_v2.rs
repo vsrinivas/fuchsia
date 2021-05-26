@@ -97,7 +97,7 @@ fn main() -> Result<(), Error> {
 
         info!("initialization complete, begin serving {}", ProfileMarker::SERVICE_NAME);
         let outer_fs = fs.for_each(move |(name, chan)| {
-            if name == ProfileMarker::SERVICE_NAME {
+            if name != ProfileMarker::SERVICE_NAME {
                 error!(
                     "Received unexpected service {} when we only expect to serve {}",
                     name,
