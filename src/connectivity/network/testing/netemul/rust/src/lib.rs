@@ -9,17 +9,17 @@
 use std::convert::TryInto as _;
 use std::path::{Path, PathBuf};
 
-use fidl_fuchsia_hardware_ethernet as hw_eth;
-use fidl_fuchsia_hardware_network as hw_net;
-use fidl_fuchsia_net as net;
-use fidl_fuchsia_net_dhcp as net_dhcp;
-use fidl_fuchsia_net_interfaces as net_interfaces;
-use fidl_fuchsia_net_stack as net_stack;
+use fidl_fuchsia_hardware_ethernet as fethernet;
+use fidl_fuchsia_hardware_network as fnetwork;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_dhcp as fnet_dhcp;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netemul_network as fnetemul_network;
-use fidl_fuchsia_netstack as netstack;
-use fidl_fuchsia_posix_socket as posix_socket;
+use fidl_fuchsia_netstack as fnetstack;
+use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
@@ -51,7 +51,7 @@ pub trait Endpoint: Copy + Clone {
     /// endpoint type.
     ///
     /// [`EndpointConfig`]: fnetemul_network::EndpointConfig
-    fn make_config(mtu: u16, mac: Option<net::MacAddress>) -> fnetemul_network::EndpointConfig {
+    fn make_config(mtu: u16, mac: Option<fnet::MacAddress>) -> fnetemul_network::EndpointConfig {
         fnetemul_network::EndpointConfig {
             mtu,
             mac: mac.map(Box::new),
@@ -203,7 +203,7 @@ impl TestSandbox {
 /// Interface configuration used by [`TestRealm::join_network`].
 pub enum InterfaceConfig {
     /// Interface is configured with a static address.
-    StaticIp(net::Subnet),
+    StaticIp(fnet::Subnet),
     /// Interface is configured to use DHCP to obtain an address.
     Dhcp,
     /// No address configuration is performed.
@@ -297,7 +297,7 @@ impl<'a> TestRealm<'a> {
         // Wait for Netstack to observe interface up so callers can safely
         // assume the state of the world on return.
         let interface_state = self
-            .connect_to_service::<net_interfaces::StateMarker>()
+            .connect_to_service::<fnet_interfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
@@ -351,7 +351,7 @@ impl<'a> TestRealm<'a> {
         proto: fidl_fuchsia_posix_socket::DatagramSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
-            .connect_to_service::<posix_socket::ProviderMarker>()
+            .connect_to_service::<fposix_socket::ProviderMarker>()
             .context("failed to connect to socket provider")?;
         let sock = socket_provider
             .datagram_socket(domain, proto)
@@ -371,7 +371,7 @@ impl<'a> TestRealm<'a> {
         proto: fidl_fuchsia_posix_socket::StreamSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
-            .connect_to_service::<posix_socket::ProviderMarker>()
+            .connect_to_service::<fposix_socket::ProviderMarker>()
             .context("failed to connect to socket provider")?;
         let sock = socket_provider
             .stream_socket(domain, proto)
@@ -496,7 +496,9 @@ impl<'a> TestEndpoint<'a> {
     ///
     /// Note that an error is returned if the Endpoint is not a
     /// [`fnetemul_network::DeviceConnection::Ethernet`].
-    pub async fn get_ethernet(&self) -> Result<fidl::endpoints::ClientEnd<hw_eth::DeviceMarker>> {
+    pub async fn get_ethernet(
+        &self,
+    ) -> Result<fidl::endpoints::ClientEnd<fethernet::DeviceMarker>> {
         match self
             .get_device()
             .await
@@ -516,8 +518,8 @@ impl<'a> TestEndpoint<'a> {
     pub async fn get_netdevice(
         &self,
     ) -> Result<(
-        fidl::endpoints::ClientEnd<hw_net::DeviceMarker>,
-        fidl::endpoints::ClientEnd<hw_net::MacAddressingMarker>,
+        fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
+        fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
     )> {
         match self
             .get_device()
@@ -535,23 +537,23 @@ impl<'a> TestEndpoint<'a> {
 
     /// Helper function to retrieve the protocols from a netdevice client end.
     fn connect_netdevice_protocols(
-        netdevice: fidl::endpoints::ClientEnd<hw_net::DeviceInstanceMarker>,
+        netdevice: fidl::endpoints::ClientEnd<fnetwork::DeviceInstanceMarker>,
     ) -> Result<(
-        fidl::endpoints::ClientEnd<hw_net::DeviceMarker>,
-        fidl::endpoints::ClientEnd<hw_net::MacAddressingMarker>,
+        fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
+        fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
     )> {
-        let netdevice: hw_net::DeviceInstanceProxy = netdevice.into_proxy()?;
+        let netdevice: fnetwork::DeviceInstanceProxy = netdevice.into_proxy()?;
         let (device, device_server_end) =
-            fidl::endpoints::create_endpoints::<hw_net::DeviceMarker>()?;
+            fidl::endpoints::create_endpoints::<fnetwork::DeviceMarker>()?;
         let (mac, mac_server_end) =
-            fidl::endpoints::create_endpoints::<hw_net::MacAddressingMarker>()?;
+            fidl::endpoints::create_endpoints::<fnetwork::MacAddressingMarker>()?;
         let () = netdevice.get_device(device_server_end)?;
         let () = netdevice.get_mac_addressing(mac_server_end)?;
         Ok((device, mac))
     }
 
     /// Adds this endpoint to `stack`, returning the interface identifier.
-    pub async fn add_to_stack(&self, stack: &net_stack::StackProxy) -> Result<u64> {
+    pub async fn add_to_stack(&self, stack: &fnet_stack::StackProxy) -> Result<u64> {
         Ok(match self.get_device().await.context("get_device failed")? {
             fnetemul_network::DeviceConnection::Ethernet(eth) => {
                 stack.add_ethernet_interface(&self.name, eth).await.squash_result()?
@@ -560,14 +562,14 @@ impl<'a> TestEndpoint<'a> {
                 let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
                 stack
                     .add_interface(
-                        net_stack::InterfaceConfig {
+                        fnet_stack::InterfaceConfig {
                             name: None,
                             topopath: None,
                             metric: None,
-                            ..net_stack::InterfaceConfig::EMPTY
+                            ..fnet_stack::InterfaceConfig::EMPTY
                         },
-                        &mut net_stack::DeviceDefinition::Ethernet(
-                            net_stack::EthernetDeviceDefinition {
+                        &mut fnet_stack::DeviceDefinition::Ethernet(
+                            fnet_stack::EthernetDeviceDefinition {
                                 network_device: device,
                                 mac: mac,
                             },
@@ -597,8 +599,8 @@ impl<'a> TestEndpoint<'a> {
 pub struct TestInterface<'a> {
     endpoint: TestEndpoint<'a>,
     id: u64,
-    stack: net_stack::StackProxy,
-    netstack: netstack::NetstackProxy,
+    stack: fnet_stack::StackProxy,
+    netstack: fnetstack::NetstackProxy,
 }
 
 impl<'a> std::ops::Deref for TestInterface<'a> {
@@ -645,7 +647,7 @@ impl<'a> TestInterface<'a> {
     /// Add interface address.
     ///
     /// Equivalent to `stack.add_interface_address(test_interface.id(), &mut addr)`.
-    pub async fn add_ip_addr(&self, mut addr: net::Subnet) -> Result<()> {
+    pub async fn add_ip_addr(&self, mut addr: fnet::Subnet) -> Result<()> {
         self.stack.add_interface_address(self.id, &mut addr).await.squash_result().with_context(
             || {
                 format!(
@@ -657,7 +659,7 @@ impl<'a> TestInterface<'a> {
     }
 
     /// Gets the interface's info.
-    pub async fn get_info(&self) -> Result<net_stack::InterfaceInfo> {
+    pub async fn get_info(&self) -> Result<fnet_stack::InterfaceInfo> {
         self.stack.get_interface_info(self.id).await.squash_result().with_context(|| {
             format!(
                 "stack.get_interface_info({}) for endpoint {} failed",
@@ -667,14 +669,13 @@ impl<'a> TestInterface<'a> {
     }
 
     /// Gets the interface's addresses.
-    pub async fn get_addrs(&self) -> Result<Vec<net::Subnet>> {
+    pub async fn get_addrs(&self) -> Result<Vec<fnet::Subnet>> {
         Ok(self.get_info().await?.properties.addresses)
     }
 
-    async fn get_dhcp_client(&self) -> Result<net_dhcp::ClientProxy> {
-        let (dhcp_client, server_end) =
-            fidl::endpoints::create_proxy::<net_dhcp::ClientMarker>()
-                .context("failed to create endpoints for fuchsia.net.dhcp.Client")?;
+    async fn get_dhcp_client(&self) -> Result<fnet_dhcp::ClientProxy> {
+        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
+            .context("failed to create endpoints for fuchsia.net.dhcp.Client")?;
 
         let () = self
             .netstack

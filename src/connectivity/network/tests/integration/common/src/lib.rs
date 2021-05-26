@@ -17,19 +17,19 @@ pub mod realms;
 pub use realms as environments;
 
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
+use std::convert::TryFrom as _;
 use std::fmt::Debug;
 
-use fidl_fuchsia_hardware_ethertap as ethertap;
-use fidl_fuchsia_net_interfaces as net_interfaces;
+use fidl_fuchsia_hardware_ethertap as fethertap;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_netemul as fnetemul;
-use fidl_fuchsia_netstack as netstack;
+use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::future::{FusedFuture, Future, FutureExt as _};
-use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::stream::{Stream, StreamExt as _, TryStreamExt as _};
 use futures::TryFutureExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
@@ -40,7 +40,7 @@ use packet_formats::icmp::ndp::{self, options::NdpOption, RouterAdvertisement};
 use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use packet_formats::ip::IpProto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
-use zerocopy::ByteSlice;
+use zerocopy::ByteSlice as _;
 
 use crate::realms::TestSandboxExt as _;
 
@@ -92,7 +92,7 @@ pub trait EthertapName {
 impl<'a> EthertapName for &'a str {
     fn ethertap_compatible_name(&self) -> &'a str {
         let max_len =
-            usize::try_from(ethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize");
+            usize::try_from(fethertap::MAX_NAME_LENGTH).expect("u32 could not fit into usize");
         &self[self.len().checked_sub(max_len).unwrap_or(0)..self.len()]
     }
 }
@@ -139,7 +139,7 @@ pub async fn write_ndp_message<
 pub async fn wait_for_non_loopback_interface_up<
     F: Unpin + FusedFuture + Future<Output = Result<fuchsia_component::client::ExitStatus>>,
 >(
-    interface_state: &net_interfaces::StateProxy,
+    interface_state: &fnet_interfaces::StateProxy,
     mut wait_for_netmgr: &mut F,
     exclude_ids: Option<&HashSet<u64>>,
     timeout: zx::Duration,
@@ -157,7 +157,7 @@ pub async fn wait_for_non_loopback_interface_up<
                     },
                 )| {
                     (*device_class
-                        != net_interfaces::DeviceClass::Loopback(net_interfaces::Empty {})
+                        != fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})
                         && *online
                         && exclude_ids.map_or(true, |ids| !ids.contains(id)))
                     .then(|| (*id, name.clone()))
@@ -277,7 +277,7 @@ pub async fn setup_network<E, S>(
 ) -> Result<(
     netemul::TestNetwork<'_>,
     netemul::TestRealm<'_>,
-    netstack::NetstackProxy,
+    fnetstack::NetstackProxy,
     netemul::TestInterface<'_>,
     netemul::TestFakeEndpoint<'_>,
 )>
@@ -301,7 +301,7 @@ pub async fn setup_network_with<E, S, I>(
 ) -> Result<(
     netemul::TestNetwork<'_>,
     netemul::TestRealm<'_>,
-    netstack::NetstackProxy,
+    fnetstack::NetstackProxy,
     netemul::TestInterface<'_>,
     netemul::TestFakeEndpoint<'_>,
 )>
@@ -329,7 +329,7 @@ where
         .context("failed to configure networking")?;
 
     let netstack = realm
-        .connect_to_service::<netstack::NetstackMarker>()
+        .connect_to_service::<fnetstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
 
     Ok((network, realm, netstack, iface, fake_ep))
