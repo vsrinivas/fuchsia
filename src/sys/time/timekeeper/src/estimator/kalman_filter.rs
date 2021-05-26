@@ -65,7 +65,7 @@ pub struct KalmanFilter {
     monotonic: zx::Time,
     /// Element 0 of the state vector, i.e. estimated utc after reference_utc, in nanoseconds.
     estimate_0: f64,
-    /// Element 1 of the state vector, i.e. estimated oscillator frequency as a factor.
+    /// Element 1 of the state vector, i.e. utc nanoseconds per monotonic nanosecond.
     estimate_1: f64,
     /// Element 0,0 of the covariance matrix, i.e. utc estimate covariance in nanoseconds squared.
     /// Note 0,0 is the only non-zero element in the matrix.

@@ -96,8 +96,8 @@ impl EstimationWindow {
         Ok(())
     }
 
-    /// Returns the average frequency over the time window, or an error if the window is not
-    /// eligible for some reason.
+    /// Returns the average frequency over the time window (as utc nanoseconds per monotonic
+    /// nanosecond), or an error if the window is not eligible for some reason.
     fn frequency(&self) -> Result<f64, GetFrequencyError> {
         if self.sample_count < FREQUENCY_ESTIMATION_MIN_SAMPLES {
             return Err(GetFrequencyError::InsufficientSamples);
@@ -166,8 +166,9 @@ impl FrequencyEstimator {
     }
 
     /// Update the estimate to include the supplied sample. Very occasionally this will lead to a
-    /// change in the estimated frequency, in which case the new frequency and the total number of
-    /// windows used in producing this new frequency are returned.
+    /// change in the estimated frequency, in which case the new frequency (as utc nanoseconds per
+    /// monotonic nanosecond) and the total number of windows used in producing this new frequency
+    /// are returned.
     pub fn update(
         &mut self,
         sample: &Sample,

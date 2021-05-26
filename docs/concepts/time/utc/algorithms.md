@@ -103,7 +103,7 @@ Time samples are subjected to simple validity tests before being accepted:
    an indication of an error. Time samples where monotonic time is in the future
    or greater than MIN_SAMPLE_INTERVAL in the past will be rejected.
 4. When Timekeeper is configured with a gating source, any time sample from a
-   non-gating source where `|sample_utc - (gating_utc + 1/estimated_frequency *
+   non-gating source where `|sample_utc - (gating_utc + estimated_frequency *
    (sample_monotonic - gating_monotonic))| > GATING_THRESHOLD` is rejected. In
    this expression gating_utc and gating_monotonic refer to the UTC and
    monotonic times in the most recently accepted sample from the gating source.
@@ -169,10 +169,10 @@ following the most recent sample.
 This state estimation problem is commonly and efficiently solved using a [Kalman
 filter][1] in other domains. Timekeeper defines a simple two dimensional Kalman
 filter to maintain the UTC estimate where the two states are UTC time and
-oscillator frequency. Note that frequency is maintained external to the filter
-through the [frequency correction algorithm](#frequency_estimation); filter
-frequency is excluded from the Kalman filter’s measurement model and has a
-covariance of zero.
+frequency, expressed as utc nanoseconds per monotonic nanosecond. Note that
+frequency is maintained external to the filter through the [frequency correction
+algorithm](#frequency_estimation); filter frequency is excluded from the Kalman
+filter’s measurement model and has a covariance of zero.
 
 The parameters in the Kalman filter are presented in Figure 2.
 
@@ -226,6 +226,14 @@ manufacturing imperfections. Estimating the oscillator frequency to account for
 this error can increase the accuracy of the UTC clock or reduce the frequency at
 which clock corrections must be made.
 
+The algorithm works with frequency in the form it is applied by the Kalman
+filter, nanoseconds on the utc clock per nanosecond on the monotonic clock. Note
+this is the inverse of the oscillator's physical frequency (i.e. nanoseconds on
+the monotonic clock per nanosecond of real time). An oscillator that is running
+fast will produce more than one monotonic tick per nanosecond of real time and
+therefore the UTC clock should run at less than one utc nanosecond per monotonic
+nanosecond to compensate.
+
 Oscillator errors are bounded by specification to some small value (typically
 tens of parts per million) hence the UTC estimate algorithm above is stable and
 reliable even when a frequency estimate is unavailable; the frequency estimate
@@ -266,7 +274,7 @@ This is implemented using the following equation:
 
 ```
 period_frequency = {sum(utc * monotonic) - sum(utc)*sum(monotonic)/n}
-                   / {sum(utc^2) - sum(utc)^2/n}
+                   / {sum(monotonic^2) - sum(monotonic)^2/n}
 ```
 
 Where n is the number of accepted samples within the period. Note that
@@ -288,9 +296,6 @@ estimated_frequency = clamp(
 
 EWMA provides a simple way to blend data across multiple periods while retaining
 minimal state.
-
-*Note: As of Q4 2020 the frequency estimation algorithm has not yet been
-implemented.*
 
 ### How can clock error be bounded? {#error_bound}
 
