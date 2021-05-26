@@ -33,6 +33,7 @@
 #include "src/modular/bin/sessionctl/session_ctl_app.h"
 #include "src/modular/bin/sessionctl/session_ctl_constants.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/session/session.h"
 
 using ::fuchsia::modular::PuppetMaster;
 using ::fuchsia::modular::PuppetMasterPtr;
@@ -153,29 +154,6 @@ PuppetMasterPtr ConnectToPuppetMaster(const DebugService& session) {
   return puppet_master;
 }
 
-fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
-  const char kRegex[] = "/basemgr.cmx/(\\d+)";
-  std::vector<DebugService> services;
-  FindDebugServicesForPath(modular::kBasemgrDebugServiceGlobPath, kRegex, &services);
-
-  // Path to basemgr debug service from a virtual console
-  FindDebugServicesForPath("/hub/r/sys/*/c/basemgr.cmx/*/out/debug/basemgr", kRegex, &services);
-
-  if (services.empty()) {
-    return nullptr;
-  }
-  FX_CHECK(services.size() == 1);
-  std::string service_path = services[0].service_path;
-
-  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
-  auto request = basemgr.NewRequest().TakeChannel();
-  if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
-    FX_LOGS(FATAL) << "Could not connect to basemgr service in " << service_path;
-  }
-
-  return basemgr;
-}
-
 // Returns true if successful in starting a new session with a random ID.
 bool StartSessionWithRandomId(bool has_running_sessions,
                               fuchsia::modular::internal::BasemgrDebugPtr basemgr,
@@ -234,11 +212,12 @@ int main(int argc, const char** argv) {
 
   const modular::Logger logger(command_line.HasOption(modular::kJsonOutFlagString));
 
-  auto basemgr = ConnectToBasemgr();
-  if (!basemgr) {
+  auto basemgr_result = modular::session::ConnectToBasemgrDebug();
+  if (basemgr_result.is_error()) {
     logger.LogError(cmd, "Could not find a running basemgr. Is it running?");
     return 1;
   }
+  auto basemgr = basemgr_result.take_value();
 
   auto sessions = FindAllSessions();
 
