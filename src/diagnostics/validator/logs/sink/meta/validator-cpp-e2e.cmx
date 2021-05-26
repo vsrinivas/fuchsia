@@ -5,7 +5,7 @@
     "program": {
         "args": [
             "--url",
-            "fuchsia-pkg://fuchsia.com/log-sink-validator-cpp-e2e#meta/sink-validator-cpp-puppet-e2e.cmx"
+            "fuchsia-pkg://fuchsia.com/log-sink-validator-cpp-e2e#meta/sink-validator-cpp-puppet.cmx"
         ],
         "binary": "bin/sink_validator_e2e"
     },

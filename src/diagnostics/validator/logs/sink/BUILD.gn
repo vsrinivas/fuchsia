@@ -87,7 +87,7 @@ fuchsia_component("sink-validator-for-cpp-e2e") {
 }
 
 fuchsia_test_package("log-sink-validator-cpp-e2e") {
-  deps = [ "puppet/cpp:component-e2e" ]
+  deps = [ "puppet/cpp:component" ]
   test_components = [ ":sink-validator-for-cpp-e2e" ]
 }
 
