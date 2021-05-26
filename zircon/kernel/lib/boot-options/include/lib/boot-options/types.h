@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_
 #define ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_
 
+#include <zircon/limits.h>
+
 #include <array>
 #include <string_view>
 
@@ -71,5 +73,6 @@ enum class SerialDebugSyscalls {
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";
 constexpr std::string_view kPageScannerEnableEvictionName = "kernel.page-scanner.enable-eviction";
 constexpr std::string_view kPmmCheckerActionName = "kernel.pmm-checker.action";
+constexpr std::string_view kPmmCheckerFillSizeName = "kernel.pmm-checker.fill-size";
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_

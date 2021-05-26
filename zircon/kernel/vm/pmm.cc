@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
@@ -176,10 +175,10 @@ static void pmm_checker_print_status() { pmm_node.Checker()->PrintStatus(stdout)
 void pmm_checker_init_from_cmdline() {
   bool enabled = gBootOptions->pmm_checker_enabled;
   if (enabled) {
-    size_t fill_size = gCmdline.GetUInt64(kernel_option::kPmmCheckerFillSize, PAGE_SIZE);
+    size_t fill_size = gBootOptions->pmm_checker_fill_size;
     if (!PmmChecker::IsValidFillSize(fill_size)) {
       printf("PMM: value from %s is invalid (%lu), using PAGE_SIZE instead\n",
-             kernel_option::kPmmCheckerFillSize, fill_size);
+             kPmmCheckerFillSizeName.data(), fill_size);
       fill_size = PAGE_SIZE;
     }
 

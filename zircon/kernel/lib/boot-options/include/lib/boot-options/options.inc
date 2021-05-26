@@ -523,6 +523,13 @@ The PMM checker can be expensive and is intended for use in debug and
 development builds.  See also "k pmm checker".
 )""")
 
+DEFINE_OPTION("kernel.pmm-checker.fill-size", uint64_t, pmm_checker_fill_size, {ZX_PAGE_SIZE},
+              R"""(
+This option specifies how many bytes of each free page is filled or checked when
+the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
+between 8 and PAGE_SIZE, inclusive.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

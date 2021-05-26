@@ -360,12 +360,6 @@ CPUs.  Defaults to true.
 This option can be used to force the selection of a particular wall clock.  It
 only is used on pc builds.  Options are "tsc", "hpet", and "pit".
 
-## kernel.pmm-checker.fill-size=\<num>
-
-This option specifies how many bytes of each free page is filled or checked when
-the PMM's use-after-free checker is enabled.  Valid values are multiples of 8,
-between 8 and PAGE_SIZE, inclusive.  Defaults to PAGE_SIZE.
-
 ## ldso.trace
 
 This option (disabled by default) turns on dynamic linker trace output.
