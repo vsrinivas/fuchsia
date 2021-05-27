@@ -197,7 +197,7 @@ impl HostTools {
                     WalkDir::new(fuchsia_root.join("prebuilt/third_party/grpcwebproxy"))
                         .into_iter()
                         .filter_map(|e| e.ok())
-                        .find(|e| e.file_name() == "grpcwebproxy")
+                        .find(|e| e.file_name() == "grpcwebproxy" && e.file_type().is_file())
                         .ok_or(anyhow!(
                             "Cannot find grpcwebproxy executable from {:?}",
                             fuchsia_root.join("prebuilt/third_party/grpcwebproxy").display()
@@ -257,6 +257,18 @@ impl HostTools {
             zbi: sdk_tool_dir.join("zbi"),
             is_sdk: true,
         })
+    }
+
+    #[allow(dead_code)]
+    pub fn print(&self) {
+        println!("[fvdl] aemu {:?}", self.aemu);
+        println!("[fvdl] device_finder {:?}", self.device_finder);
+        println!("[fvdl] far {:?}", self.far);
+        println!("[fvdl] fvm {:?}", self.fvm);
+        println!("[fvdl] grpcwebproxy {:?}", self.grpcwebproxy);
+        println!("[fvdl] pm {:?}", self.pm);
+        println!("[fvdl] vdl {:?}", self.vdl);
+        println!("[fvdl] zbiS {:?}", self.zbi);
     }
 
     /// Reads the <prebuild>.version file stored in <sdk_root>/bin/<prebuild>.version

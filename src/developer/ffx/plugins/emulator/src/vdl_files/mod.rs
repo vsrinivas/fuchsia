@@ -84,6 +84,7 @@ impl VDLFiles {
             };
             if verbose {
                 vdl_files.ssh_files.print();
+                vdl_files.host_tools.print();
             }
             vdl_files.ssh_files.stage_files(&staging_dir_path)?;
 
@@ -103,6 +104,7 @@ impl VDLFiles {
             if verbose {
                 vdl_files.image_files.print();
                 vdl_files.ssh_files.print();
+                vdl_files.host_tools.print();
             }
             vdl_files.image_files.stage_files(&staging_dir_path)?;
             vdl_files.ssh_files.stage_files(&staging_dir_path)?;
