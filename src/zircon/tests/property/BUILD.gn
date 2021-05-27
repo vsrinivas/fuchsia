@@ -14,6 +14,13 @@ test("property") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/test-utils",
   ]
+
+  # TODO(fxbug.dev/76395): This test contains an infinite loop, which is
+  # undefined behavior in C++. It was only recently exposed in the latest
+  # clang roll. We can temporarily the disable the feature that uncovered this
+  # UB to unblock the clang roll, but we should go back and fix it and remove
+  # this flag.
+  cflags_cc = [ "-fno-finite-loops" ]
 }
 
 fuchsia_unittest_package("property-test-pkg") {
