@@ -478,8 +478,8 @@ func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey stri
 }
 
 // RunSFTPCommand runs sftp (one of SSH's file copy tools).
-func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig string, privateKey string, to_target bool, src string, dst string) error {
-	return sdk.RunSFTPCommandWithPort(targetAddress, customSSHConfig, privateKey, "", to_target, src, dst)
+func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig string, privateKey string, sshPort string, to_target bool, src string, dst string) error {
+	return sdk.RunSFTPCommandWithPort(targetAddress, customSSHConfig, privateKey, sshPort, to_target, src, dst)
 }
 
 // RunSFTPCommandWithPort is a transitional method to allow migration.
@@ -523,8 +523,8 @@ func (sdk SDKProperties) RunSFTPCommandWithPort(targetAddress string, customSSHC
 // verbose adds the -v flag to ssh.
 // The return value is the stdout.
 func (sdk SDKProperties) RunSSHCommand(targetAddress string, customSSHConfig string,
-	privateKey string, verbose bool, args []string) (string, error) {
-	return sdk.RunSSHCommandWithPort(targetAddress, customSSHConfig, privateKey, "", verbose, args)
+	privateKey string, sshPort string, verbose bool, args []string) (string, error) {
+	return sdk.RunSSHCommandWithPort(targetAddress, customSSHConfig, privateKey, sshPort, verbose, args)
 }
 
 // RunSSHCommandWithPort runs the command provided in args on the given target device.

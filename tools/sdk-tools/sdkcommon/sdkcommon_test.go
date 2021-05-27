@@ -449,7 +449,6 @@ func TestRunSSHCommand(t *testing.T) {
 		verbose         bool
 		args            []string
 		options         map[string]string
-		use_port        bool
 	}{
 		{
 			customSSHConfig: "",
@@ -480,7 +479,6 @@ func TestRunSSHCommand(t *testing.T) {
 			sshPort:         "",
 			verbose:         false,
 			args:            []string{"echo", "$SSH_CONNECTION"},
-			use_port:        true,
 		},
 		{
 			customSSHConfig: "",
@@ -489,7 +487,6 @@ func TestRunSSHCommand(t *testing.T) {
 			verbose:         false,
 			args:            []string{"echo", "$SSH_CONNECTION"},
 			options:         map[string]string{"FSERVE_TEST_USE_CUSTOM_SSH_PORT": "1"},
-			use_port:        true,
 		},
 	}
 
@@ -501,20 +498,17 @@ func TestRunSSHCommand(t *testing.T) {
 		for option, value := range test.options {
 			os.Setenv(option, value)
 		}
-		if test.use_port {
-			if _, err := testSDK.RunSSHCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
-				t.Errorf("RunSSHCommandWithPort %d error: %v", i, err)
-			}
-			if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
-				t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
-			}
-		} else {
-			if _, err := testSDK.RunSSHCommand(targetAddress, test.customSSHConfig, test.privateKey, test.verbose, test.args); err != nil {
-				t.Errorf("TestRunSSHCommand %d error: %v", i, err)
-			}
-			if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, "", test.verbose, test.args); err != nil {
-				t.Errorf("TestRunSSHShell %d error: %v", i, err)
-			}
+		if _, err := testSDK.RunSSHCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
+			t.Errorf("RunSSHCommandWithPort %d error: %v", i, err)
+		}
+		if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
+			t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
+		}
+		if _, err := testSDK.RunSSHCommand(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
+			t.Errorf("TestRunSSHCommand %d error: %v", i, err)
+		}
+		if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
+			t.Errorf("TestRunSSHShell %d error: %v", i, err)
 		}
 	}
 }
@@ -548,7 +542,6 @@ func TestRunRunSFTPCommand(t *testing.T) {
 		sshPort         string
 		to_target       bool
 		options         map[string]string
-		use_port        bool
 	}{
 		{
 			customSSHConfig: "",
@@ -585,14 +578,12 @@ func TestRunRunSFTPCommand(t *testing.T) {
 			privateKey:      "",
 			sshPort:         "",
 			to_target:       false,
-			use_port:        true,
 		},
 		{
 			customSSHConfig: "",
 			privateKey:      "",
 			sshPort:         "1022",
 			to_target:       false,
-			use_port:        true,
 			options:         map[string]string{"FSERVE_TEST_USE_CUSTOM_SSH_PORT": "1"},
 		},
 	}
@@ -607,14 +598,11 @@ func TestRunRunSFTPCommand(t *testing.T) {
 		for option, value := range test.options {
 			os.Setenv(option, value)
 		}
-		if test.use_port {
-			if err := testSDK.RunSFTPCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.to_target, src, dst); err != nil {
-				t.Errorf("RunSFTPCommandWithPort %d error: %v", i, err)
-			}
-		} else {
-			if err := testSDK.RunSFTPCommand(targetAddress, test.customSSHConfig, test.privateKey, test.to_target, src, dst); err != nil {
-				t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
-			}
+		if err := testSDK.RunSFTPCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.to_target, src, dst); err != nil {
+			t.Errorf("RunSFTPCommandWithPort %d error: %v", i, err)
+		}
+		if err := testSDK.RunSFTPCommand(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.to_target, src, dst); err != nil {
+			t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
 		}
 	}
 }
