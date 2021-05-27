@@ -62,12 +62,8 @@ struct EventDetails {
 };
 
 // The minimum value of |PmuCommonProperties.pm_version| we support.
-// The chosen value is conservative. Yes, we can support preceding PMU versions with effort,
-// but that effort has yet to be warranted.
 #if defined(__x86_64__)
-// Skylake supports version 4. KISS and begin with that.
-// Note: This should agree with the kernel driver's check.
-constexpr uint16_t kMinPmVersion = 4;
+constexpr uint16_t kMinPmVersion = 2;
 #elif defined(__aarch64__)
 // KISS and begin with pmu v3.
 // Note: This should agree with the kernel driver's check.

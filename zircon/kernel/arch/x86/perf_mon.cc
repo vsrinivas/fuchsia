@@ -96,9 +96,8 @@ typedef enum {
 // This is here for experimentation purposes.
 #define TRY_FREEZE_ON_PMI 0
 
-// At a minimum we require Performance Monitoring version 4.
-// KISS: Skylake supports version 4.
-#define MINIMUM_INTEL_PERFMON_VERSION 4
+// At a minimum we require Performance Monitoring version 2
+#define MINIMUM_INTEL_PERFMON_VERSION 2
 #define PERFMON_VERSION_OVERFLOW_INDICATOR_SUPPORTED (4)
 
 // MSRs
