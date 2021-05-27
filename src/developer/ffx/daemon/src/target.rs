@@ -131,14 +131,15 @@ impl RcsConnection {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ConnectionState {
-    /// Default state: no connection.
+    /// Default state: no connection, pending rediscovery.
     Disconnected,
     /// Contains the last known ping from mDNS.
     Mdns(Instant),
     /// Contains an actual connection to RCS.
     Rcs(RcsConnection),
-    /// Target was manually added. Same as `Disconnected` but indicates that the target's name is
-    /// wrong as well.
+    /// Target was manually added. Targets that are manual never enter
+    /// the "disconnected" state, as they are not discoverable, instead
+    /// they return to the "manual" state on disconnection.
     Manual,
     /// Contains the last known interface update with a Fastboot serial number.
     Fastboot(Instant),
@@ -329,10 +330,6 @@ pub struct Target {
 }
 
 impl Target {
-    pub fn is_connected(&self) -> bool {
-        self.state.borrow().is_connected()
-    }
-
     pub fn new() -> Rc<Self> {
         let target_event_synthesizer = Rc::new(TargetEventSynthesizer::default());
         let events = events::Queue::new(&target_event_synthesizer);
@@ -558,6 +555,10 @@ impl Target {
 
     #[cfg(test)]
     pub fn set_state(&self, state: ConnectionState) {
+        // Note: Do not mark this function non-test, as it does not
+        // enforce state transition control, such as ensuring that
+        // manual targets do not enter the disconnected state. It must
+        // only be used in tests.
         self.state.replace(state);
     }
 
@@ -585,6 +586,11 @@ impl Target {
     /// The client must always return the state, as this is swapped with the
     /// current target state in-place.
     ///
+    /// Some state edges are adjusted or controlled by this method, for
+    /// example, a state change of a Manually added target to
+    /// Disconnected will always result in entering the Manual state
+    /// instead.
+    ///
     /// If the state changes, this will push a `ConnectionStateChanged` event
     /// to the event queue.
     pub fn update_connection_state<F>(&self, func: F)
@@ -592,7 +598,13 @@ impl Target {
         F: FnOnce(ConnectionState) -> ConnectionState + Sized,
     {
         let former_state = self.get_connection_state();
-        let new_state = (func)(former_state.clone());
+        let mut new_state = (func)(former_state.clone());
+
+        if new_state == ConnectionState::Disconnected {
+            if self.is_manual() {
+                new_state = ConnectionState::Manual
+            }
+        }
 
         if former_state == new_state {
             return;
@@ -892,6 +904,14 @@ impl Target {
 
             new_state.unwrap_or(current_state)
         });
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.state.borrow().is_connected()
+    }
+
+    pub fn is_manual(&self) -> bool {
+        self.addrs.borrow().iter().any(|addr_entry| addr_entry.manual)
     }
 }
 
@@ -1439,6 +1459,7 @@ mod test {
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
         futures::prelude::*,
+        matches::assert_matches,
         std::net::{Ipv4Addr, Ipv6Addr},
     };
 
@@ -2671,5 +2692,42 @@ mod test {
         let target = Target::new_with_netsvc_addrs(Some("foo"), addr_set);
 
         assert!(target.ssh_address_info().is_none());
+    }
+
+    #[test]
+    fn test_target_is_manual() {
+        let target = Target::new();
+        target.addrs_insert_entry(
+            (("::1".parse().unwrap(), 0).into(), Utc::now().into(), true).into(),
+        );
+        assert!(target.is_manual());
+
+        let target = Target::new();
+        assert!(!target.is_manual());
+    }
+
+    #[test]
+    fn test_update_connection_state_manual_disconnect() {
+        let target = Target::new();
+        target.addrs_insert_entry(
+            (("::1".parse().unwrap(), 0).into(), Utc::now().into(), true).into(),
+        );
+        target.set_state(ConnectionState::Manual);
+
+        // Attempting to transition a manual target into the disconnected state remains in manual.
+        target.update_connection_state(|_| ConnectionState::Disconnected);
+        assert_eq!(target.get_connection_state(), ConnectionState::Manual);
+
+        let conn = RcsConnection::new_with_proxy(
+            setup_fake_remote_control_service(false, "abc".to_owned()),
+            &NodeId { id: 1234 },
+        );
+        // A manual target can enter the RCS state.
+        target.update_connection_state(|_| ConnectionState::Rcs(conn));
+        assert_matches!(target.get_connection_state(), ConnectionState::Rcs(_));
+
+        // A manual target exiting the RCS state to disconnected returns to manual instead.
+        target.update_connection_state(|_| ConnectionState::Disconnected);
+        assert_eq!(target.get_connection_state(), ConnectionState::Manual);
     }
 }
