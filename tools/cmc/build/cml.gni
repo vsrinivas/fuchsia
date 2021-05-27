@@ -78,6 +78,7 @@ template("cm") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "metadata",
                              "output_name",
                              "testonly",
                              "visibility",

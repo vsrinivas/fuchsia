@@ -13,6 +13,7 @@ template("cmc") {
                              "depfile",
                              "deps",
                              "inputs",
+                             "metadata",
                              "outputs",
                              "sources",
                              "public_deps",
@@ -48,6 +49,7 @@ template("cmc_merge") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "metadata",
                              "output_name",
                              "sources",
                              "from_file",
@@ -144,6 +146,7 @@ template("cmc_validate_references") {
                            [
                              "data_deps",
                              "deps",
+                             "metadata",
                              "public_deps",
                              "testonly",
                              "visibility",

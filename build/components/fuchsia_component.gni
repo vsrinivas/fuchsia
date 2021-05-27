@@ -151,6 +151,15 @@ template("fuchsia_component") {
     if (check_references) {
       deps += [ ":$validate_target" ]
     }
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # Don't collect expected includes via transitive deps of components
+      expect_includes_barrier = []
+    }
   }
 
   # Add the manifest

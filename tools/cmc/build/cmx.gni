@@ -25,6 +25,7 @@ template("cmx_validate") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "metadata",
                              "sources",
                              "testonly",
                              "visibility",
@@ -80,6 +81,7 @@ template("cmx_include") {
                            [
                              "deps",
                              "depfile",
+                             "metadata",
                              "output_name",
                              "testonly",
                              "visibility",
@@ -131,6 +133,7 @@ template("cmx_format") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "metadata",
                              "output_name",
                              "testonly",
                              "visibility",
@@ -257,6 +260,7 @@ template("cmx") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "metadata",
                              "output_name",
                              "testonly",
                              "visibility",
