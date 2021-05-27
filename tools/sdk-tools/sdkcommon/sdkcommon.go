@@ -478,15 +478,13 @@ func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey stri
 }
 
 // RunSFTPCommand runs sftp (one of SSH's file copy tools).
-func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig string, privateKey string, sshPort string, to_target bool, src string, dst string) error {
-	return sdk.RunSFTPCommandWithPort(targetAddress, customSSHConfig, privateKey, sshPort, to_target, src, dst)
-}
-
-// RunSFTPCommandWithPort is a transitional method to allow migration.
 // Setting to_target to true will copy file SRC from host to DST on the target.
 // Otherwise it will copy file from SRC from target to DST on the host.
+// sshPort if non-empty will use this port to connect to the device.
 // The return value is the error if any.
-func (sdk SDKProperties) RunSFTPCommandWithPort(targetAddress string, customSSHConfig string, privateKey string, sshPort string, to_target bool, src string, dst string) error {
+func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig string, privateKey string,
+	sshPort string, to_target bool, src string, dst string) error {
+
 	commonArgs := []string{"-q", "-b", "-"}
 	if customSSHConfig == "" || privateKey == "" {
 		if err := checkSSHConfig(sdk); err != nil {
@@ -521,20 +519,9 @@ func (sdk SDKProperties) RunSFTPCommandWithPort(targetAddress string, customSSHC
 // The customSSHconfig is optional and overrides the SSH configuration defined by the SDK.
 // privateKey is optional to specify a private key to use to access the device.
 // verbose adds the -v flag to ssh.
-// The return value is the stdout.
-func (sdk SDKProperties) RunSSHCommand(targetAddress string, customSSHConfig string,
-	privateKey string, sshPort string, verbose bool, args []string) (string, error) {
-	return sdk.RunSSHCommandWithPort(targetAddress, customSSHConfig, privateKey, sshPort, verbose, args)
-}
-
-// RunSSHCommandWithPort runs the command provided in args on the given target device.
-// NOTE: This is a transitional name to allow tools in other repositorities to migrate to the new API.
-// The customSSHconfig is optional and overrides the SSH configuration defined by the SDK.
-// privateKey is optional to specify a private key to use to access the device.
-// verbose adds the -v flag to ssh.
 // sshPort if non-empty is used as the custom ssh port on the commandline.
 // The return value is the stdout.
-func (sdk SDKProperties) RunSSHCommandWithPort(targetAddress string, customSSHConfig string,
+func (sdk SDKProperties) RunSSHCommand(targetAddress string, customSSHConfig string,
 	privateKey string, sshPort string, verbose bool, args []string) (string, error) {
 
 	cmdArgs, err := buildSSHArgs(sdk, targetAddress, customSSHConfig, privateKey, sshPort, verbose, args)

@@ -63,7 +63,7 @@ type sdkProvider interface {
 	GetToolsDir() (string, error)
 	GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error)
 	GetAddressByName(deviceName string) (string, error)
-	RunSSHCommandWithPort(targetAddress string, sshConfig string, privateKey string, sshPort string,
+	RunSSHCommand(targetAddress string, sshConfig string, privateKey string, sshPort string,
 		verbose bool, sshArgs []string) (string, error)
 }
 
@@ -518,7 +518,7 @@ func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, nam
 	}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel
-	if _, err = sdk.RunSSHCommandWithPort(targetAddress, sshConfig, privateKey, sshPort, verbose, sshArgs); err != nil {
+	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, sshPort, verbose, sshArgs); err != nil {
 		return fmt.Errorf("Could not set package server address on device: %v", err)
 	}
 
@@ -532,7 +532,7 @@ func getHostIPAddressFromTarget(sdk sdkProvider, targetAddress string, sshConfig
 	var sshArgs = []string{"echo", "$SSH_CONNECTION"}
 
 	verbose := level == logger.DebugLevel || level == logger.TraceLevel
-	connectionString, err := sdk.RunSSHCommandWithPort(targetAddress, sshConfig, privateKey,
+	connectionString, err := sdk.RunSSHCommand(targetAddress, sshConfig, privateKey,
 		sshPort, verbose, sshArgs)
 
 	if err != nil {

@@ -498,17 +498,11 @@ func TestRunSSHCommand(t *testing.T) {
 		for option, value := range test.options {
 			os.Setenv(option, value)
 		}
-		if _, err := testSDK.RunSSHCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
-			t.Errorf("RunSSHCommandWithPort %d error: %v", i, err)
-		}
 		if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
 			t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)
 		}
 		if _, err := testSDK.RunSSHCommand(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
 			t.Errorf("TestRunSSHCommand %d error: %v", i, err)
-		}
-		if err := testSDK.RunSSHShell(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.verbose, test.args); err != nil {
-			t.Errorf("TestRunSSHShell %d error: %v", i, err)
 		}
 	}
 }
@@ -597,9 +591,6 @@ func TestRunRunSFTPCommand(t *testing.T) {
 		}
 		for option, value := range test.options {
 			os.Setenv(option, value)
-		}
-		if err := testSDK.RunSFTPCommandWithPort(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.to_target, src, dst); err != nil {
-			t.Errorf("RunSFTPCommandWithPort %d error: %v", i, err)
 		}
 		if err := testSDK.RunSFTPCommand(targetAddress, test.customSSHConfig, test.privateKey, test.sshPort, test.to_target, src, dst); err != nil {
 			t.Errorf("TestRunSSHShell (using port) %d error: %v", i, err)

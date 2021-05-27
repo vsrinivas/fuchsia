@@ -57,7 +57,7 @@ func (testSDK testSDKProperties) GetAddressByName(deviceName string) (string, er
 func (testSDK testSDKProperties) GetDefaultPackageRepoDir() (string, error) {
 	return filepath.Join(testSDK.dataPath, "default-target-name", "packages", "amber-files"), nil
 }
-func (testSDK testSDKProperties) RunSSHCommandWithPort(targetAddress string, sshConfig string,
+func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig string,
 	privateKey string, sshPort string, verbose bool, sshArgs []string) (string, error) {
 
 	if testSDK.expectCustomSSHConfig && sshConfig == "" {
