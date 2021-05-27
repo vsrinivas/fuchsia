@@ -3,19 +3,18 @@
 // found in the LICENSE file.
 #include "amlogic-display.h"
 
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include "osd.h"
 #include "zxtest/zxtest.h"
 
 namespace sysmem = fuchsia_sysmem;
 
-class MockBufferCollection : public mock_sysmem::MockBufferCollection {
+class MockBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
  public:
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
@@ -45,6 +44,10 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgr24;
     EXPECT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0u, &collection.buffers[0].vmo));
     completer.Reply(ZX_OK, std::move(collection));
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    EXPECT_TRUE(false);
   }
 
   bool set_constraints_called() const { return set_constraints_called_; }

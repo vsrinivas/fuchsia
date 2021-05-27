@@ -5,12 +5,11 @@
 #include "gpu.h"
 
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/mock-sysmem/mock-buffer-collection.h>
 #include <lib/virtio/backends/fake.h>
 
 #include <zxtest/zxtest.h>
@@ -20,7 +19,7 @@ namespace sysmem = fuchsia_sysmem;
 namespace {
 // Use a stub buffer collection instead of the real sysmem since some tests may
 // require things that aren't available on the current system.
-class StubBufferCollection : public mock_sysmem::MockBufferCollection {
+class StubBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
  public:
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
@@ -43,6 +42,10 @@ class StubBufferCollection : public mock_sysmem::MockBufferCollection {
     constraints.max_bytes_per_row = 4000;
     constraints.bytes_per_row_divisor = 1;
     _completer.Reply(ZX_OK, std::move(info));
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    EXPECT_TRUE(false);
   }
 };
 

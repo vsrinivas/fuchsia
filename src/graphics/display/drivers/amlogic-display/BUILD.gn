@@ -85,7 +85,6 @@ test("amlogic-display-test") {
   sources = [ "amlogic-display-test.cc" ]
   deps = [
     ":common_srcs",
-    "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

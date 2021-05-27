@@ -4,14 +4,13 @@
 #include "mt8167s-display.h"
 
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
-#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <fuchsia/sysmem/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio/mmio.h>
-#include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <memory>
 
@@ -31,7 +30,7 @@ constexpr uint32_t kDsiHostRegNum = 132;
 constexpr uint32_t kSyscfgRegNum = 336;
 constexpr uint32_t kMutexRegNum = 48;
 
-class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
+class MockNoCpuBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
  public:
   MockNoCpuBufferCollection() { EXPECT_EQ(ZX_OK, fake_bti_create(bti_.reset_and_get_address())); }
   void SetConstraints(SetConstraintsRequestView request,
@@ -56,6 +55,10 @@ class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
     info.settings.image_format_constraints.max_coded_height = kHeight;
     info.settings.image_format_constraints.max_bytes_per_row = kWidth * 4;
     completer.Reply(ZX_OK, std::move(info));
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    EXPECT_TRUE(false);
   }
 
   bool set_constraints_called() const { return set_constraints_called_; }

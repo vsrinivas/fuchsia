@@ -85,7 +85,6 @@ test("vim-display-test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-    "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

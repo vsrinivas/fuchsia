@@ -93,7 +93,6 @@ test("dsi-host") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
-    "//src/devices/sysmem/testing/mock-sysmem",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",

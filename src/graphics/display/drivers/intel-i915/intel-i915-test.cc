@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 #include "intel-i915.h"
 
+#include <fuchsia/sysmem/llcpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio-ptr/fake.h>
-#include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <type_traits>
 #include <vector>
@@ -21,7 +21,7 @@ namespace sysmem = fuchsia_sysmem;
 static void empty_callback(void* ctx, uint32_t master_interrupt_control, uint64_t timestamp) {}
 
 namespace {
-class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
+class MockNoCpuBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
  public:
   bool set_constraints_called() const { return set_constraints_called_; }
   void SetConstraints(SetConstraintsRequestView request,
@@ -29,6 +29,10 @@ class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
     set_constraints_called_ = true;
     EXPECT_FALSE(request->constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(request->constraints.buffer_memory_constraints.cpu_domain_supported);
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    EXPECT_TRUE(false);
   }
 
  private:
