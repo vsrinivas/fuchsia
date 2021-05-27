@@ -46,8 +46,7 @@ int main(int argc, const char** argv) {
   };
 
   // Create a client to the Echo protocol.
-  fidl::Client<fuchsia_examples::Echo> client(std::move(*client_end), dispatcher,
-                                              std::make_shared<EventHandler>(loop));
+  fidl::Client client(std::move(*client_end), dispatcher, std::make_shared<EventHandler>(loop));
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
   auto result_async = client->EchoString(
