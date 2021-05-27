@@ -11,12 +11,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 func TestRunNinja(t *testing.T) {
@@ -269,158 +267,6 @@ func TestCheckNinjaNoop(t *testing.T) {
 				}
 			} else if len(logFiles) != 2 {
 				t.Errorf("Expected 2 log files in case of non-no-op, but got: %+v", logFiles)
-			}
-		})
-	}
-}
-
-func TestStampFileForTest(t *testing.T) {
-	testCases := []struct {
-		name      string
-		input     string
-		want      string
-		expectErr bool
-	}{
-		{
-			name:  "implicit basename",
-			input: "//foo/bar",
-			want:  "obj/foo/bar.stamp",
-		},
-		{
-			name:  "toolchain suffix",
-			input: "//foo/bar(//toolchain)",
-			want:  "obj/foo/bar.stamp",
-		},
-		{
-			name:  "explicit basename",
-			input: "//foo/bar:baz",
-			want:  "obj/foo/bar/baz.stamp",
-		},
-		{
-			name:  "explicit basename with toolchain",
-			input: "//foo/bar:baz(//toolchain)",
-			want:  "obj/foo/bar/baz.stamp",
-		},
-		{
-			name:  "explicit basename same as directory",
-			input: "//foo/bar:bar",
-			want:  "obj/foo/bar.stamp",
-		},
-		{
-			// This can happen if there's a bug in the tests.json generation
-			// template.
-			name:      "double colon in label",
-			input:     "//foo/bar::bar",
-			expectErr: true,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := stampFileForTest(tc.input)
-			if err != nil && !tc.expectErr {
-				t.Fatal(err)
-			} else if tc.expectErr {
-				if err == nil {
-					t.Fatal("Expected error but got none")
-				}
-				return
-			}
-			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("Wrong stamp file for test (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestAffectedTestsNoWork(t *testing.T) {
-	mockTestManifest := []build.Test{
-		{Name: "host_test", Path: "host/run.sh"},
-		{Name: "fuchsia_test", Label: "//src/path/to:fuchsia_test(//toolchain)"},
-		{Name: "unaffected_test", Label: "//src/path/to:unaffected_test(//toolchain)"},
-		{Name: "never_affected_test", Label: neverAffectedTestLabels[0] + "(//toolchain)"},
-	}
-
-	testCases := []struct {
-		name                  string
-		ninjaOutput           string
-		affectedFiles         []string
-		expectedAffectedTests []string
-		expectedNoWork        bool
-		expectedDryRuns       int
-	}{
-		{
-			name:                  "unaffected",
-			ninjaOutput:           "ninja: entering directory /foo" + noWorkString,
-			affectedFiles:         []string{"foo.go"},
-			expectedAffectedTests: nil,
-			expectedNoWork:        true,
-		},
-		{
-			name: "affected tests",
-			ninjaOutput: `
-                ninja: entering directory /foo
-                [1/3] touch tests/obj/src/path/to/fuchsia_test.stamp
-                [2/3] touch tests/obj/another_test.stamp
-                [3/3] python build.py host/run.sh
-            `,
-			expectedAffectedTests: []string{"host_test", "fuchsia_test"},
-			expectedNoWork:        false,
-		},
-		{
-			name: "affected GN files",
-			ninjaOutput: `
-                ninja: entering directory /foo
-                [1/3] touch tests/obj/src/path/to/fuchsia_test.stamp
-                [2/3] touch tests/obj/another_test.stamp
-                [3/3] python build.py host/run.sh
-			`,
-			affectedFiles:         []string{"foo.gn", "bar.gni", "foo.go"},
-			expectedAffectedTests: []string{"host_test", "fuchsia_test"},
-			expectedNoWork:        false,
-			// If GN files are affected, the first dry run should not touch them
-			// but the second one should.
-			expectedDryRuns: 2,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Apply default values and otherwise transform the test parameters
-			// to make tests easier to specify.
-			if tc.expectedDryRuns == 0 {
-				tc.expectedDryRuns = 1
-			}
-			sort.Strings(tc.expectedAffectedTests)
-			checkoutDir := t.TempDir()
-
-			subprocessRunner := fakeSubprocessRunner{
-				mockStdout: []byte(tc.ninjaOutput),
-			}
-			r := ninjaRunner{
-				runner:    &subprocessRunner,
-				ninjaPath: "ninja",
-				buildDir:  filepath.Join(checkoutDir, "build"),
-			}
-
-			var affectedFilesAbs []string
-			for _, path := range tc.affectedFiles {
-				affectedFilesAbs = append(affectedFilesAbs, filepath.Join(checkoutDir, path))
-			}
-
-			targets := []string{"foo", "bar"}
-			affectedTests, noWork, err := affectedTestsNoWork(
-				context.Background(), r, mockTestManifest, affectedFilesAbs, targets)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(subprocessRunner.commandsRun) != tc.expectedDryRuns {
-				t.Errorf("Expected %d dry run(s) but got %d", tc.expectedDryRuns, len(subprocessRunner.commandsRun))
-			}
-			if diff := cmp.Diff(tc.expectedAffectedTests, affectedTests); diff != "" {
-				t.Errorf("Unexpected affected tests diff (-want +got):\n%s", diff)
-			}
-			if tc.expectedNoWork != noWork {
-				t.Errorf("Wrong no work result, wanted %v, got %v", tc.expectedNoWork, noWork)
 			}
 		})
 	}

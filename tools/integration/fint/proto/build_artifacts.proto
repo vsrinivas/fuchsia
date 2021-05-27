@@ -53,13 +53,4 @@ message BuildArtifacts {
   // protobuf because the logs may be very long and inlining them would make it
   // very hard for humans to read the output proto.
   map<string, string> log_files = 11;
-
-  // Whether an analysis of the build graph determined that the changed files do
-  // not affect the build.
-  bool build_not_affected = 12;
-
-  // Names, as they appear in tests.json, of tests affected by the change under
-  // tests. This is determined by doing a build graph analysis of the files
-  // reported in the `changed_files` context spec field.
-  repeated string affected_tests = 13;
 }
