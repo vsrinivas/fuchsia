@@ -6,7 +6,7 @@ use {
     crate::{
         errors::FxfsError,
         object_store::{
-            directory::{self, Directory, ObjectDescriptor},
+            directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
             HandleOptions, ObjectStore,
         },
@@ -92,6 +92,31 @@ impl FxVolume {
                 dir.set_deleted(name);
             }
         }
+    }
+
+    /// Removes resources associated with |object_id| (which ought to be a file), if there are no
+    /// open connections to that file.
+    ///
+    /// This must be called *after committing* a transaction which deletes the last reference to
+    /// |object_id|, since before that point, new connections could be established.
+    pub(super) async fn maybe_purge_file(&self, object_id: u64) -> Result<(), Error> {
+        if let Some(node) = self.cache.get(object_id) {
+            if let Ok(file) = node.into_any().downcast::<FxFile>() {
+                if file.open_count() > 0 {
+                    return Ok(());
+                }
+            }
+        }
+        let fs = self.store.filesystem();
+        let mut transaction = fs
+            .new_transaction(
+                &[LockKey::object(self.store.store_object_id(), object_id)],
+                Options::default(),
+            )
+            .await?;
+        self.store.tombstone(&mut transaction, object_id).await?;
+        transaction.commit().await;
+        Ok(())
     }
 }
 
@@ -194,30 +219,31 @@ impl FilesystemRename for FxVolume {
             }
         }
 
-        let old_dir_oid = if dst_id_and_descriptor.is_some() {
-            dst_dir
-                .replace_child(&mut transaction, dst, Some((&src_dir, src)))
-                .await
-                .map_err(map_to_status)?
-        } else {
-            directory::replace_child(
-                &mut transaction,
-                Some((src_dir.directory(), src)),
-                (dst_dir.directory(), dst),
-            )
-            .await
-            .map_err(map_to_status)?;
-            None
-        };
+        let replace_result = directory::replace_child(
+            &mut transaction,
+            Some((src_dir.directory(), src)),
+            (dst_dir.directory(), dst),
+        )
+        .await
+        .map_err(map_to_status)?;
 
+        // This must be done immediately before committing the transaction, since we don't want to
+        // have to unwind it if something fails before then.
         moved_node.set_parent(dst_dir.clone());
 
-        if let Some(object_id) = old_dir_oid {
-            transaction.commit_with_callback(|| self.mark_directory_deleted(object_id, dst)).await;
-            dst_dir.did_remove(dst);
-        } else {
-            transaction.commit().await;
-        }
+        match replace_result {
+            ReplacedChild::None | ReplacedChild::FileWithRemainingLinks(..) => {
+                transaction.commit().await
+            }
+            ReplacedChild::File(id) => {
+                transaction.commit().await;
+                self.maybe_purge_file(id).await.map_err(map_to_status)?;
+            }
+            ReplacedChild::Directory(id) => {
+                transaction.commit_with_callback(|| self.mark_directory_deleted(id, dst)).await
+            }
+        };
+
         src_dir.did_remove(src);
         dst_dir.did_add(dst);
         Ok(())

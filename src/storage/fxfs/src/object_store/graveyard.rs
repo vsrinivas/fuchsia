@@ -130,8 +130,11 @@ impl Graveyard {
         // TODO(csuter): Remove this once we've developed a filtering iterator.
         loop {
             match iter.get() {
-                Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })
-                    if *object_id == self.object_id => {}
+                Some(ItemRef {
+                    key: ObjectKey { object_id, .. },
+                    value: ObjectValue::None,
+                    ..
+                }) if *object_id == self.object_id => {}
                 _ => break,
             }
             iter.advance().await?;

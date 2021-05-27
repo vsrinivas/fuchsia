@@ -8,7 +8,7 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             self,
-            directory::{self, ObjectDescriptor},
+            directory::{self, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options, Transaction},
             ObjectStore, Timestamp,
         },
@@ -251,34 +251,6 @@ impl FxDirectory {
         }
     }
 
-    /// Replaces |name| (which is object |object_id| of type |descriptor|) with |replacement|
-    /// (which can be a different directory).  If |replacement| is unset, simply removes the object.
-    ///
-    /// It is the caller's responsibility to make sure that |name|, |object_id|, and
-    /// |object_descriptor| all refer to the same object.
-    ///
-    /// If the child was a directory, returns the object ID which the caller can use to update
-    /// the in-memory cache to record the fact that it was deleted if the transaction succeeds.
-    #[must_use]
-    pub(super) async fn replace_child<'a>(
-        self: &'a Arc<Self>,
-        transaction: &mut Transaction<'a>,
-        name: &str,
-        replacement: Option<(&'a Arc<FxDirectory>, &str)>,
-    ) -> Result<Option<u64>, Error> {
-        // TODO(jfsulliv): We can immediately delete files if they have no open references, but
-        // we need appropriate locking in place to be able to check the file's open count.
-        // TODO(jfsulliv): This results in an unnecessary second lookup; we could pass in object_id
-        // and descriptor here, since we've already resolved them.
-        Ok(directory::replace_child(
-            transaction,
-            replacement.map(|(dir, name)| (dir.directory(), name)),
-            (self.directory(), name),
-        )
-        .await?
-        .map(|(existing_oid, _)| existing_oid))
-    }
-
     /// Called to indicate a file or directory was removed from this directory.
     pub(crate) fn did_remove(&self, name: &str) {
         self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::removed(name));
@@ -377,15 +349,22 @@ impl MutableDirectory for FxDirectory {
         } else if must_be_directory {
             return Err(Status::NOT_DIR);
         }
-        let existing_dir_oid =
-            this.replace_child(&mut transaction, name, None).await.map_err(map_to_status)?;
-        if let Some(object_id) = existing_dir_oid {
-            transaction
-                .commit_with_callback(|| self.volume().mark_directory_deleted(object_id, name))
-                .await;
-        } else {
-            transaction.commit().await;
-        }
+        match directory::replace_child(&mut transaction, None, (self.directory(), name))
+            .await
+            .map_err(map_to_status)?
+        {
+            ReplacedChild::None => return Err(Status::NOT_FOUND),
+            ReplacedChild::FileWithRemainingLinks(..) => transaction.commit().await,
+            ReplacedChild::File(id) => {
+                transaction.commit().await;
+                self.volume().maybe_purge_file(id).await.map_err(map_to_status)?;
+            }
+            ReplacedChild::Directory(id) => {
+                transaction
+                    .commit_with_callback(|| self.volume().mark_directory_deleted(id, name))
+                    .await
+            }
+        };
         self.did_remove(name);
         Ok(())
     }
@@ -767,7 +746,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore] // TODO(jfsulliv): Re-enable when we don't defer deleting files with 0 references.
     async fn test_unlink_file_with_no_refs_immediately_freed() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();

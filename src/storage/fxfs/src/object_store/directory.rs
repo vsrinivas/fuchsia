@@ -268,8 +268,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         // TODO(csuter): Remove this once we've developed a filtering iterator.
         loop {
             match iter.get() {
-                Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })
-                    if *object_id == self.object_id => {}
+                Some(ItemRef {
+                    key: ObjectKey { object_id, .. },
+                    value: ObjectValue::None,
+                    ..
+                }) if *object_id == self.object_id => {}
                 _ => break,
             }
             iter.advance().await?;
@@ -298,6 +301,7 @@ impl DirectoryIterator<'_, '_> {
             Some(ItemRef {
                 key: ObjectKey { object_id: oid, data: ObjectKeyData::Child { name } },
                 value: ObjectValue::Child { object_id, object_descriptor },
+                ..
             }) if *oid == self.object_id => Some((name, *object_id, object_descriptor)),
             _ => None,
         }
@@ -308,33 +312,49 @@ impl DirectoryIterator<'_, '_> {
             self.iter.advance().await?;
             // Skip deleted entries.
             match self.iter.get() {
-                Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })
-                    if *object_id == self.object_id => {}
+                Some(ItemRef {
+                    key: ObjectKey { object_id, .. },
+                    value: ObjectValue::None,
+                    ..
+                }) if *object_id == self.object_id => {}
                 _ => return Ok(()),
             }
         }
     }
 }
 
+/// Return type for |replace_child| describing the object which was replaced. The u64 fields are all
+/// object_ids.
+#[derive(Debug)]
+pub enum ReplacedChild {
+    None,
+    File(u64),
+    FileWithRemainingLinks(u64),
+    Directory(u64),
+}
+
 /// Moves src.0/src.1 to dst.0/dst.1.
 ///
-/// If |dst.0| already has a child |dst.1|, it is removed. If that child was a directory, it must
-/// be empty.
+/// If |dst.0| already has a child |dst.1|, it is removed from dst.0.  For files, if this was their
+/// last reference, the file is moved to the graveyard.  For directories, the removed directory will
+/// be deleted permanently (and must be empty).
 ///
 /// If |src| is None, this is effectively the same as unlink(dst.0/dst.1).
-///
-/// If there is an existing entry, it is returned and the caller is responsible for adjusting the
-/// reference count or moving into the graveyard as appropriate.
 #[must_use]
 pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
     transaction: &mut Transaction<'a>,
     src: Option<(&'a Directory<S>, &str)>,
     dst: (&'a Directory<S>, &str),
-) -> Result<Option<(u64, ObjectDescriptor)>, Error> {
+) -> Result<ReplacedChild, Error> {
     let deleted_id_and_descriptor = dst.0.lookup(dst.1).await?;
-    match deleted_id_and_descriptor {
+    let result = match deleted_id_and_descriptor {
         Some((old_id, ObjectDescriptor::File)) => {
-            dst.0.store().adjust_refs(transaction, old_id, -1).await?;
+            let was_last_ref = dst.0.store().adjust_refs(transaction, old_id, -1).await?;
+            if was_last_ref {
+                ReplacedChild::File(old_id)
+            } else {
+                ReplacedChild::FileWithRemainingLinks(old_id)
+            }
         }
         Some((old_id, ObjectDescriptor::Directory)) => {
             let dir = Directory::open(&dst.0.owner(), old_id).await?;
@@ -342,6 +362,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
                 bail!(FxfsError::NotEmpty);
             }
             remove(transaction, &dst.0.store(), old_id);
+            ReplacedChild::Directory(old_id)
         }
         Some((_, ObjectDescriptor::Volume)) => bail!(FxfsError::Inconsistent),
         None => {
@@ -349,6 +370,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
                 // Neither src nor dst exist
                 bail!(FxfsError::NotFound);
             }
+            ReplacedChild::None
         }
     };
     let now = current_time();
@@ -371,7 +393,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         Mutation::replace_or_insert_object(ObjectKey::child(dst.0.object_id, dst.1), new_value),
     );
     dst.0.update_timestamps(transaction, None, Some(now)).await?;
-    Ok(deleted_id_and_descriptor)
+    Ok(result)
 }
 
 pub fn remove(transaction: &mut Transaction<'_>, store: &ObjectStore, object_id: u64) {
@@ -387,13 +409,14 @@ mod tests {
         crate::{
             errors::FxfsError,
             object_store::{
-                directory::{replace_child, Directory},
+                directory::{replace_child, Directory, ReplacedChild},
                 filesystem::{Filesystem, FxFilesystem, SyncOptions},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt, ObjectStore,
             },
         },
         fuchsia_async as fasync,
+        matches::assert_matches,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -485,10 +508,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        assert!(replace_child(&mut transaction, None, (&dir, "foo"))
-            .await
-            .expect("replace_child failed")
-            .is_some());
+        assert_matches!(
+            replace_child(&mut transaction, None, (&dir, "foo"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::File(..)
+        );
         transaction.commit().await;
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
@@ -530,10 +555,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        assert!(replace_child(&mut transaction, None, (&child, "bar"))
-            .await
-            .expect("replace_child failed")
-            .is_some());
+        assert_matches!(
+            replace_child(&mut transaction, None, (&child, "bar"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::File(..)
+        );
         transaction.commit().await;
 
         let mut transaction = fs
@@ -541,10 +568,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        assert!(replace_child(&mut transaction, None, (&dir, "foo"))
-            .await
-            .expect("replace_child failed")
-            .is_some());
+        assert_matches!(
+            replace_child(&mut transaction, None, (&dir, "foo"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::Directory(..)
+        );
         transaction.commit().await;
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
@@ -570,10 +599,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        assert!(replace_child(&mut transaction, None, (&dir, "foo"))
-            .await
-            .expect("replace_child failed")
-            .is_some());
+        assert_matches!(
+            replace_child(&mut transaction, None, (&dir, "foo"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::File(..)
+        );
         transaction.commit().await;
 
         let mut transaction = fs
@@ -609,10 +640,12 @@ mod tests {
                 .new_transaction(&[], Options::default())
                 .await
                 .expect("new_transaction failed");
-            assert!(replace_child(&mut transaction, None, (&dir, "foo"))
-                .await
-                .expect("replace_child failed")
-                .is_some());
+            assert_matches!(
+                replace_child(&mut transaction, None, (&dir, "foo"))
+                    .await
+                    .expect("replace_child failed"),
+                ReplacedChild::File(..)
+            );
             transaction.commit().await;
 
             fs.sync(SyncOptions::default()).await.expect("sync failed");
@@ -651,9 +684,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
-            .await
-            .expect("replace_child failed");
+        assert_matches!(
+            replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::None
+        );
         transaction.commit().await;
 
         assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
@@ -701,9 +737,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
-            .await
-            .expect("replace_child failed");
+        assert_matches!(
+            replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::File(..)
+        );
         transaction.commit().await;
 
         assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
@@ -784,9 +823,12 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"))
-            .await
-            .expect("replace_child failed");
+        assert_matches!(
+            replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"))
+                .await
+                .expect("replace_child failed"),
+            ReplacedChild::None
+        );
         transaction.commit().await;
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);

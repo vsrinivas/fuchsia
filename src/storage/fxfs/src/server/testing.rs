@@ -86,12 +86,23 @@ impl TestFixture {
         Arc::try_unwrap(volume.into_volume())
             .map_err(|_| "References to volume still exist")
             .unwrap();
+
+        // We have to reopen the filesystem briefly to fsck it. (We could fsck before closing, but
+        // there might be pending operations that go through after fsck but before we close the
+        // filesystem, and we want to be sure that we catch all possible issues with fsck.)
         filesystem.close().await.expect("close filesystem failed");
-        fsck(filesystem.as_ref()).await.expect("fsck failed");
-        self.scope.shutdown();
         let device = filesystem.take_device().await;
         device.ensure_unique();
         device.reopen();
+        let filesystem = FxFilesystem::open(device).await.expect("open failed");
+        fsck(filesystem.as_ref()).await.expect("fsck failed");
+
+        filesystem.close().await.expect("close filesystem failed");
+        let device = filesystem.take_device().await;
+        device.ensure_unique();
+        device.reopen();
+
+        self.scope.shutdown();
         device
     }
 
