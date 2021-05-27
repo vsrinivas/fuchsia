@@ -82,12 +82,12 @@ constexpr uint32_t kAfbcColorReorderA = 4;
 uint64_t Osd::GetLastImageApplied() {
   ZX_DEBUG_ASSERT(initialized_);
   fbl::AutoLock lock(&rdma_lock_);
-  
-  auto stat_reg = RdmaStatusReg::Get();
+
+  auto stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   while (rdma_active_ &&
-         (stat_reg.ReadFrom(&(*vpu_mmio_)).req_latch() != 0 ||
-         stat_reg.ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(kRdmaChannel + 1))) {
+         (stat_reg.RequestLatched() || stat_reg.ChannelDone(kRdmaChannel))) {
     rdma_active_cnd_.Wait(&rdma_lock_);
+    stat_reg = RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_));
   }
   return latest_applied_config_;
 }
@@ -103,15 +103,11 @@ int Osd::RdmaThread() {
 
     // For AFBC, we simply clear the interrupt. We keep it enabled since it needs to get triggered
     // every vsync. It will get disabled if FlipOnVsync does not use AFBC.
-    if (RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_)).done() & RDMA_STATUS_DONE(kAfbcRdmaChannel)) {
-      RdmaCtrlReg::Get()
-          .ReadFrom(&(*vpu_mmio_))
-          .set_clear_done(RDMA_CTRL_INT_DONE(kAfbcRdmaChannel))
-          .WriteTo(&(*vpu_mmio_));
+    if (RdmaStatusReg::ChannelDone(kAfbcRdmaChannel - 1, &(*vpu_mmio_))) {
+      RdmaCtrlReg::ClearInterrupt(kAfbcRdmaChannel - 1, &(*vpu_mmio_));
     }
 
-    if (!(RdmaStatusReg::Get().ReadFrom(&(*vpu_mmio_)).done() &
-          RDMA_STATUS_DONE(kRdmaChannel + 1))) {
+    if (!RdmaStatusReg::ChannelDone(kRdmaChannel, &(*vpu_mmio_))) {
       continue;
     }
 
@@ -121,10 +117,7 @@ int Osd::RdmaThread() {
     regVal &= ~RDMA_ACCESS_AUTO_INT_EN(kRdmaChannel);  // Remove VSYNC interrupt source
     vpu_mmio_->Write32(regVal, VPU_RDMA_ACCESS_AUTO);
     // clear interrupts
-    RdmaCtrlReg::Get()
-        .ReadFrom(&(*vpu_mmio_))
-        .set_clear_done(RDMA_CTRL_INT_DONE(kRdmaChannel + 1))
-        .WriteTo(&(*vpu_mmio_));
+    RdmaCtrlReg::ClearInterrupt(kRdmaChannel, &(*vpu_mmio_));
 
     // Continue only if rdma is active. If not, it means we are switching clients and this is
     // a "left" over interrupt.

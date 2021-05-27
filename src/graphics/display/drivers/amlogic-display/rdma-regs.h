@@ -4,6 +4,8 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_RDMA_REGS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_RDMA_REGS_H_
+
+#include <lib/mmio/mmio.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 
@@ -46,9 +48,22 @@
 
 class RdmaStatusReg : public hwreg::RegisterBase<RdmaStatusReg, uint32_t> {
  public:
+  // Both of these fields use bit 0 for manual RDMA. Auto RDMA is 1-indexed.
   DEF_FIELD(31, 24, done);
   DEF_FIELD(7, 0, req_latch);
   static auto Get() { return hwreg::RegisterAddr<RdmaStatusReg>(VPU_RDMA_STATUS); }
+
+  bool RequestLatched() const {
+    return req_latch() != 0;
+  }
+
+  bool ChannelDone(uint8_t chan) const {
+    return done() & (1 << (chan+1));
+  }
+
+  static bool ChannelDone(uint8_t chan, ddk::MmioBuffer* mmio) {
+    return Get().ReadFrom(mmio).ChannelDone(chan);
+  }
 
   // compute a value for .done() to match given the current state of
   // VPU_RDMA_ACCESS_AUTO, AUTO2, and AUTO3.
@@ -63,10 +78,15 @@ class RdmaStatusReg : public hwreg::RegisterBase<RdmaStatusReg, uint32_t> {
 
 class RdmaCtrlReg : public hwreg::RegisterBase<RdmaCtrlReg, uint32_t> {
  public:
+  // As with RDMA_STATUS, this field uses bit 0 for manual RDMA.
   DEF_FIELD(31, 24, clear_done);
   DEF_BIT(7, write_urgent);
   DEF_BIT(6, read_urgent);
   static auto Get() { return hwreg::RegisterAddr<RdmaCtrlReg>(VPU_RDMA_CTRL); }
+
+  static void ClearInterrupt(uint8_t chan, ddk::MmioBuffer* mmio) {
+    Get().ReadFrom(mmio).set_clear_done(1 << (chan+1)).WriteTo(mmio);
+  }
 };
 
 class RdmaAccessAutoReg : public hwreg::RegisterBase<RdmaAccessAutoReg, uint32_t> {

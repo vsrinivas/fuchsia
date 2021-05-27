@@ -233,7 +233,7 @@ class Osd {
   fbl::Mutex rdma_lock_;
   fbl::ConditionVariable rdma_active_cnd_ TA_GUARDED(rdma_lock_);
 
-  uint64_t rdma_usage_table_[kNumberOfTables];
+  uint64_t rdma_usage_table_[kNumberOfTables] TA_GUARDED(rdma_lock_);
   size_t start_index_used_ TA_GUARDED(rdma_lock_) = 0;
   size_t end_index_used_ TA_GUARDED(rdma_lock_) = 0;
 
