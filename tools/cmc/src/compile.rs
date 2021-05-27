@@ -100,7 +100,7 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
             .offer
             .as_ref()
             .map(|offer| {
-                translate_offer(offer, &all_children, &all_collections, &all_capability_names)
+                translate_offer(offer, &all_capability_names, &all_children, &all_collections)
             })
             .transpose()?,
         capabilities: document
@@ -232,7 +232,7 @@ fn translate_use(
 ) -> Result<Vec<fsys::UseDecl>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        if let Some(n) = use_.service() {
+        if let Some(n) = &use_.service {
             let source = extract_use_source(use_, all_capability_names, all_children)?;
             let target_paths =
                 all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
@@ -246,7 +246,7 @@ fn translate_use(
                     ..fsys::UseServiceDecl::EMPTY
                 }));
             }
-        } else if let Some(n) = use_.protocol() {
+        } else if let Some(n) = &use_.protocol {
             let source = extract_use_source(use_, all_capability_names, all_children)?;
             let target_paths =
                 all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
@@ -260,7 +260,7 @@ fn translate_use(
                     ..fsys::UseProtocolDecl::EMPTY
                 }));
             }
-        } else if let Some(n) = use_.directory() {
+        } else if let Some(n) = &use_.directory {
             let source = extract_use_source(use_, all_capability_names, all_children)?;
             let target_path = one_target_use_path(use_, use_)?;
             let rights = translate::extract_required_rights(use_, "use")?;
@@ -273,14 +273,14 @@ fn translate_use(
                 subdir: subdir.map(|s| s.into()),
                 ..fsys::UseDirectoryDecl::EMPTY
             }));
-        } else if let Some(s) = use_.storage() {
+        } else if let Some(n) = &use_.storage {
             let target_path = one_target_use_path(use_, use_)?;
             out_uses.push(fsys::UseDecl::Storage(fsys::UseStorageDecl {
-                source_name: Some(s.to_string()),
+                source_name: Some(n.clone().into()),
                 target_path: Some(target_path.into()),
                 ..fsys::UseStorageDecl::EMPTY
             }));
-        } else if let Some(n) = use_.event() {
+        } else if let Some(n) = &use_.event {
             let source = extract_use_event_source(use_)?;
             let target_names = all_target_capability_names(use_, use_)
                 .ok_or_else(|| Error::internal("no capability"))?;
@@ -318,7 +318,7 @@ fn translate_use(
                     ..fsys::UseEventDecl::EMPTY
                 }));
             }
-        } else if let Some(name) = use_.event_stream() {
+        } else if let Some(name) = &use_.event_stream {
             let opt_subscriptions = use_.event_subscriptions();
             out_uses.push(fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
                 name: Some(name.to_string()),
@@ -375,7 +375,7 @@ fn translate_expose(
             }
         } else if let Some(n) = expose.protocol() {
             let source = extract_single_expose_source(expose, Some(all_capability_names))?;
-            let source_names: Vec<_> = n.to_vec();
+            let source_names = n.to_vec();
             let target_names = all_target_capability_names(expose, expose)
                 .ok_or_else(|| Error::internal("no capability"))?;
             for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
@@ -390,38 +390,53 @@ fn translate_expose(
             }
         } else if let Some(n) = expose.directory() {
             let source = extract_single_expose_source(expose, None)?;
-            let target_name = one_target_capability_name(expose, expose)?;
+            let source_names = n.to_vec();
+            let target_names = all_target_capability_names(expose, expose)
+                .ok_or_else(|| Error::internal("no capability"))?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose);
-            out_exposes.push(fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
-                source: Some(clone_fsys_ref(&source)?),
-                source_name: Some(n.clone().into()),
-                target_name: Some(target_name.into()),
-                target: Some(clone_fsys_ref(&target)?),
-                rights,
-                subdir: subdir.map(|s| s.into()),
-                ..fsys::ExposeDirectoryDecl::EMPTY
-            }))
+            for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
+            {
+                out_exposes.push(fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(source_name.clone().into()),
+                    target_name: Some(target_name.into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    rights,
+                    subdir: subdir.as_ref().map(|s| s.clone().into()),
+                    ..fsys::ExposeDirectoryDecl::EMPTY
+                }))
+            }
         } else if let Some(n) = expose.runner() {
             let source = extract_single_expose_source(expose, None)?;
-            let target_name = one_target_capability_name(expose, expose)?;
-            out_exposes.push(fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
-                source: Some(clone_fsys_ref(&source)?),
-                source_name: Some(n.clone().into()),
-                target: Some(clone_fsys_ref(&target)?),
-                target_name: Some(target_name.into()),
-                ..fsys::ExposeRunnerDecl::EMPTY
-            }))
+            let source_names = n.to_vec();
+            let target_names = all_target_capability_names(expose, expose)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
+            {
+                out_exposes.push(fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(source_name.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_name: Some(target_name.into()),
+                    ..fsys::ExposeRunnerDecl::EMPTY
+                }))
+            }
         } else if let Some(n) = expose.resolver() {
             let source = extract_single_expose_source(expose, None)?;
-            let target_name = one_target_capability_name(expose, expose)?;
-            out_exposes.push(fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
-                source: Some(clone_fsys_ref(&source)?),
-                source_name: Some(n.clone().into()),
-                target: Some(clone_fsys_ref(&target)?),
-                target_name: Some(target_name.into()),
-                ..fsys::ExposeResolverDecl::EMPTY
-            }))
+            let source_names = n.to_vec();
+            let target_names = all_target_capability_names(expose, expose)
+                .ok_or_else(|| Error::internal("no capability"))?;
+            for (source_name, target_name) in source_names.into_iter().zip(target_names.into_iter())
+            {
+                out_exposes.push(fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
+                    source: Some(clone_fsys_ref(&source)?),
+                    source_name: Some(source_name.clone().into()),
+                    target: Some(clone_fsys_ref(&target)?),
+                    target_name: Some(target_name.into()),
+                    ..fsys::ExposeResolverDecl::EMPTY
+                }))
+            }
         } else {
             return Err(Error::internal(format!("expose: must specify a known capability")));
         }
@@ -432,54 +447,42 @@ fn translate_expose(
 /// `offer` rules route multiple capabilities from multiple sources to multiple targets.
 fn translate_offer(
     offer_in: &Vec<cml::Offer>,
+    all_capability_names: &HashSet<cml::Name>,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-    all_capability_names: &HashSet<cml::Name>,
 ) -> Result<Vec<fsys::OfferDecl>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
         if let Some(n) = offer.service() {
-            let sources = extract_all_offer_sources(offer, Some(all_collections))?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            let source_names = n.to_vec();
-            for (target, target_name) in targets {
-                for source in &sources {
-                    // When multiple source names are provided, there is no way to alias each one,
-                    // so source_name == target_name.  When one source name is provided,
-                    // source_name may be aliased to a different target_name, so we use
-                    // source_names[0] to derive the source_name.
-                    //
-                    // TODO: This logic for protocols and protocols could be simplified to use
-                    // iter::zip() if extract_all_targets_for_each_child returned separate vectors
-                    // for targets and target_names instead of the cross product of them.
-                    let source_name = if source_names.len() == 1 {
-                        source_names[0].clone()
-                    } else {
-                        target_name.clone()
-                    };
-                    out_offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                        source: Some(clone_fsys_ref(source)?),
-                        source_name: Some(source_name.into()),
-                        target: Some(clone_fsys_ref(&target)?),
-                        target_name: Some(target_name.clone().into()),
-                        ..fsys::OfferServiceDecl::EMPTY
-                    }));
-                }
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
+                out_offers.push(fsys::OfferDecl::Service(fsys::OfferServiceDecl {
+                    source: Some(source),
+                    source_name: Some(source_name.into()),
+                    target: Some(target),
+                    target_name: Some(target_name.into()),
+                    ..fsys::OfferServiceDecl::EMPTY
+                }));
             }
         } else if let Some(n) = offer.protocol() {
-            let source = extract_single_offer_source(offer, Some(all_capability_names))?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            let source_names = n.to_vec();
-            for (target, target_name) in targets {
-                let source_name = if source_names.len() == 1 {
-                    source_names[0].clone()
-                } else {
-                    target_name.clone()
-                };
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
                 out_offers.push(fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
-                    source: Some(clone_fsys_ref(&source)?),
+                    source: Some(source),
                     source_name: Some(source_name.into()),
-                    target: Some(clone_fsys_ref(&target)?),
+                    target: Some(target),
                     target_name: Some(target_name.into()),
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
@@ -488,13 +491,18 @@ fn translate_offer(
                 }));
             }
         } else if let Some(n) = offer.directory() {
-            let source = extract_single_offer_source(offer, None)?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_name) in targets {
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
                 out_offers.push(fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                    source_name: Some(n.clone().into()),
-                    source: Some(clone_fsys_ref(&source)?),
-                    target: Some(clone_fsys_ref(&target)?),
+                    source: Some(source),
+                    source_name: Some(source_name.into()),
+                    target: Some(target),
                     target_name: Some(target_name.into()),
                     rights: extract_offer_rights(offer)?,
                     subdir: extract_offer_subdir(offer).map(|s| s.into()),
@@ -504,61 +512,71 @@ fn translate_offer(
                     ..fsys::OfferDirectoryDecl::EMPTY
                 }));
             }
-        } else if let Some(s) = offer.storage() {
-            let source = extract_single_offer_storage_source(offer)?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_name) in targets {
+        } else if let Some(n) = offer.storage() {
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
                 out_offers.push(fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
-                    source_name: Some(s.to_string()),
-                    source: Some(clone_fsys_ref(&source)?),
-                    target: Some(clone_fsys_ref(&target)?),
+                    source: Some(source),
+                    source_name: Some(source_name.into()),
+                    target: Some(target),
                     target_name: Some(target_name.into()),
                     ..fsys::OfferStorageDecl::EMPTY
                 }));
             }
         } else if let Some(n) = offer.runner() {
-            let source = extract_single_offer_source(offer, None)?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_name) in targets {
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
                 out_offers.push(fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                    source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(n.clone().into()),
-                    target: Some(clone_fsys_ref(&target)?),
+                    source: Some(source),
+                    source_name: Some(source_name.into()),
+                    target: Some(target),
                     target_name: Some(target_name.into()),
                     ..fsys::OfferRunnerDecl::EMPTY
                 }));
             }
         } else if let Some(n) = offer.resolver() {
-            let source = extract_single_offer_source(offer, None)?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_name) in targets {
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
                 out_offers.push(fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
-                    source: Some(clone_fsys_ref(&source)?),
-                    source_name: Some(n.clone().into()),
-                    target: Some(clone_fsys_ref(&target)?),
+                    source: Some(source),
+                    source_name: Some(source_name.into()),
+                    target: Some(target),
                     target_name: Some(target_name.into()),
                     ..fsys::OfferResolverDecl::EMPTY
                 }));
             }
-        } else if let Some(p) = offer.event() {
-            let source = extract_single_offer_source(offer, None)?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            let source_names = p.to_vec();
-            for (target, target_name) in targets {
-                // When multiple source names are provided, there is no way to alias each one, so
-                // source_name == target_name.
-                // When one source name is provided, source_name may be aliased to a different
-                // source_name, so we source_names[0] to derive the source_name.
-                let source_name = if source_names.len() == 1 {
-                    source_names[0].clone()
-                } else {
-                    target_name.clone()
-                };
+        } else if let Some(n) = offer.event() {
+            let entries = extract_offer_sources_and_targets(
+                offer,
+                n,
+                all_capability_names,
+                all_children,
+                all_collections,
+            )?;
+            for (source, source_name, target, target_name) in entries {
                 out_offers.push(fsys::OfferDecl::Event(fsys::OfferEventDecl {
-                    source: Some(clone_fsys_ref(&source)?),
+                    source: Some(source),
                     source_name: Some(source_name.into()),
-                    target: Some(clone_fsys_ref(&target)?),
-                    target_name: Some(target_name.clone().into()),
+                    target: Some(target),
+                    target_name: Some(target_name.into()),
                     // We have already validated that none will be present if we were using many
                     // events.
                     filter: match offer.filter.clone() {
@@ -927,31 +945,21 @@ where
 
 fn extract_all_offer_sources<T: cml::FromClause>(
     in_obj: &T,
-    all_collections: Option<&HashSet<&cml::Name>>,
+    all_capability_names: &HashSet<cml::Name>,
+    all_collections: &HashSet<&cml::Name>,
 ) -> Result<Vec<fsys::Ref>, Error> {
     in_obj
         .from_()
         .to_vec()
         .into_iter()
-        .map(|r| translate::offer_source_from_ref(r.clone(), None, all_collections))
+        .map(|r| {
+            translate::offer_source_from_ref(
+                r.clone(),
+                Some(all_capability_names),
+                Some(all_collections),
+            )
+        })
         .collect()
-}
-
-fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<fsys::Ref, Error> {
-    let reference = match &in_obj.from {
-        OneOrMany::One(r) => r,
-        OneOrMany::Many(_) => {
-            return Err(Error::internal(format!(
-                "multiple unexpected \"from\" clauses for \"offer\": {:?}",
-                in_obj.from
-            )));
-        }
-    };
-    match reference {
-        cml::OfferFromRef::Parent => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
-        cml::OfferFromRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
-        other => Err(Error::internal(format!("invalid \"from\" for \"offer\": {:?}", other))),
-    }
 }
 
 fn translate_child_or_collection_ref(
@@ -973,26 +981,41 @@ fn translate_child_or_collection_ref(
     }
 }
 
-// Return a list of (child, target capability id) expressed in the `offer`.
-fn extract_all_targets_for_each_child(
-    in_obj: &cml::Offer,
+// Return a list of (source, source capability id, target, target capability id) expressed in the
+// `offer`.
+fn extract_offer_sources_and_targets(
+    offer: &cml::Offer,
+    source_names: OneOrMany<cml::Name>,
+    all_capability_names: &HashSet<cml::Name>,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
-) -> Result<Vec<(fsys::Ref, cml::Name)>, Error> {
-    let mut out_targets = vec![];
+) -> Result<Vec<(fsys::Ref, cml::Name, fsys::Ref, cml::Name)>, Error> {
+    let mut out = vec![];
 
-    let target_names = all_target_capability_names(in_obj, in_obj)
+    let source_names = source_names.to_vec();
+    let sources = extract_all_offer_sources(offer, all_capability_names, all_collections)?;
+    let target_names = all_target_capability_names(offer, offer)
         .ok_or_else(|| Error::internal("no capability".to_string()))?;
 
-    // Validate the "to" references.
-    for to in &in_obj.to {
-        for target_name in &target_names {
-            let target =
-                translate_child_or_collection_ref(to.into(), all_children, all_collections)?;
-            out_targets.push((target, target_name.clone()))
+    for source in &sources {
+        for to in &offer.to {
+            for target_name in &target_names {
+                // When multiple source names are provided, there is no way to alias each one,
+                // so we can assume source_name == target_name.  When one source name is provided,
+                // source_name may be aliased to a different target_name, so we use
+                // source_names[0] to obtain the source_name.
+                let source_name = if source_names.len() == 1 {
+                    source_names[0].clone()
+                } else {
+                    target_name.clone()
+                };
+                let target =
+                    translate_child_or_collection_ref(to.into(), all_children, all_collections)?;
+                out.push((source.clone(), source_name, target, target_name.clone()))
+            }
         }
     }
-    Ok(out_targets)
+    Ok(out)
 }
 
 /// Return the target paths specified in the given use declaration.
@@ -1070,33 +1093,18 @@ where
         } else if let Some(n) = in_obj.protocol() {
             Some(n.clone())
         } else if let Some(n) = in_obj.directory() {
-            Some(OneOrMany::One(n.clone()))
+            Some(n.clone())
         } else if let Some(n) = in_obj.storage() {
-            Some(OneOrMany::One(n.clone()))
+            Some(n.clone())
         } else if let Some(n) = in_obj.runner() {
-            Some(OneOrMany::One(n.clone()))
+            Some(n.clone())
         } else if let Some(n) = in_obj.resolver() {
-            Some(OneOrMany::One(n.clone()))
+            Some(n.clone())
         } else if let Some(n) = in_obj.event() {
             Some(n.clone())
         } else {
             None
         }
-    }
-}
-
-/// Return the single target name specified in the given routing declaration.
-fn one_target_capability_name<T, U>(in_obj: &T, to_obj: &U) -> Result<cml::Name, Error>
-where
-    T: cml::CapabilityClause,
-    U: cml::AsClause + cml::PathClause,
-{
-    match all_target_capability_names(in_obj, to_obj) {
-        Some(OneOrMany::One(target_name)) => Ok(target_name),
-        Some(OneOrMany::Many(_)) => {
-            Err(Error::internal("expecting one capability, but multiple provided"))
-        }
-        _ => Err(Error::internal("expecting one capability, but none provided")),
     }
 }
 
@@ -1413,18 +1421,6 @@ mod tests {
                     ),
                     fsys::OfferDecl::Service (
                         fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_name: Some("my.service.Service".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("my.service.Service".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
                             source: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "logger".to_string(),
                                 collection: None,
@@ -1435,6 +1431,18 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service2".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
                             ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),
@@ -1950,10 +1958,16 @@ mod tests {
                         "to": "framework",
                         "rights": ["r*"],
                     },
+                    {
+                        "directory": [ "blob2", "blob3" ],
+                        "from": "#logger",
+                        "to": "parent",
+                    },
                     { "directory": "hub", "from": "framework" },
-                    { "runner": "web", "from": "self" },
                     { "runner": "web", "from": "#logger", "to": "parent", "as": "web-rename" },
-                    { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" }
+                    { "runner": [ "runner_a", "runner_b" ], "from": "#logger" },
+                    { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" },
+                    { "resolver": [ "resolver_a", "resolver_b" ], "from": "#logger" },
                 ],
                 "capabilities": [
                     { "protocol": "A" },
@@ -2041,6 +2055,34 @@ mod tests {
                     ),
                     fsys::ExposeDecl::Directory (
                         fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("blob2".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("blob2".to_string()),
+                            rights: None,
+                            subdir: None,
+                            ..fsys::ExposeDirectoryDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("blob3".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("blob3".to_string()),
+                            rights: None,
+                            subdir: None,
+                            ..fsys::ExposeDirectoryDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Directory (
+                        fsys::ExposeDirectoryDecl {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("hub".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -2048,15 +2090,6 @@ mod tests {
                             rights: None,
                             subdir: None,
                             ..fsys::ExposeDirectoryDecl::EMPTY
-                        }
-                    ),
-                    fsys::ExposeDecl::Runner (
-                        fsys::ExposeRunnerDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_name: Some("web".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            target_name: Some("web".to_string()),
-                            ..fsys::ExposeRunnerDecl::EMPTY
                         }
                     ),
                     fsys::ExposeDecl::Runner (
@@ -2071,6 +2104,30 @@ mod tests {
                             ..fsys::ExposeRunnerDecl::EMPTY
                         }
                     ),
+                    fsys::ExposeDecl::Runner (
+                        fsys::ExposeRunnerDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("runner_a".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("runner_a".to_string()),
+                            ..fsys::ExposeRunnerDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Runner (
+                        fsys::ExposeRunnerDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("runner_b".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("runner_b".to_string()),
+                            ..fsys::ExposeRunnerDecl::EMPTY
+                        }
+                    ),
                     fsys::ExposeDecl::Resolver (
                         fsys::ExposeResolverDecl {
                             source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -2080,6 +2137,30 @@ mod tests {
                             source_name: Some("my_resolver".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("pkg_resolver".to_string()),
+                            ..fsys::ExposeResolverDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Resolver (
+                        fsys::ExposeResolverDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("resolver_a".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("resolver_a".to_string()),
+                            ..fsys::ExposeResolverDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Resolver (
+                        fsys::ExposeResolverDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("resolver_b".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("resolver_b".to_string()),
                             ..fsys::ExposeResolverDecl::EMPTY
                         }
                     ),
@@ -2176,6 +2257,11 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
+                        "directory": [ "assets2", "assets3" ],
+                        "from": "parent",
+                        "to": [ "#modular", "#netstack" ],
+                    },
+                    {
                         "directory": "data",
                         "from": "parent",
                         "to": [ "#modular" ],
@@ -2198,15 +2284,20 @@ mod tests {
                         ],
                     },
                     {
-                        "runner": "web",
+                        "storage": [ "storage_a", "storage_b" ],
                         "from": "parent",
-                        "to": [ "#modular" ],
+                        "to": "#netstack",
                     },
                     {
                         "runner": "elf",
                         "from": "parent",
                         "to": [ "#modular" ],
                         "as": "elf-renamed",
+                    },
+                    {
+                        "runner": [ "runner_a", "runner_b" ],
+                        "from": "parent",
+                        "to": "#netstack",
                     },
                     {
                         "event": "destroyed",
@@ -2236,6 +2327,11 @@ mod tests {
                         "from": "parent",
                         "to": [ "#modular" ],
                         "as": "pkg_resolver",
+                    },
+                    {
+                        "resolver": [ "resolver_a", "resolver_b" ],
+                        "from": "parent",
+                        "to": "#netstack",
                     },
                 ],
                 "children": [
@@ -2352,6 +2448,64 @@ mod tests {
                     fsys::OfferDecl::Directory (
                         fsys::OfferDirectoryDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("assets2".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("assets2".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..fsys::OfferDirectoryDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("assets3".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("assets3".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..fsys::OfferDirectoryDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("assets2".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("assets2".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..fsys::OfferDirectoryDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("assets3".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("assets3".to_string()),
+                            rights: None,
+                            subdir: None,
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..fsys::OfferDirectoryDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Directory (
+                        fsys::OfferDirectoryDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             source_name: Some("data".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
@@ -2400,15 +2554,28 @@ mod tests {
                             ..fsys::OfferStorageDecl::EMPTY
                         }
                     ),
-                    fsys::OfferDecl::Runner (
-                        fsys::OfferRunnerDecl {
+                    fsys::OfferDecl::Storage (
+                        fsys::OfferStorageDecl {
+                            source_name: Some("storage_a".to_string()),
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_name: Some("web".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
                             })),
-                            target_name: Some("web".to_string()),
-                            ..fsys::OfferRunnerDecl::EMPTY
+                            target_name: Some("storage_a".to_string()),
+                            ..fsys::OfferStorageDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Storage (
+                        fsys::OfferStorageDecl {
+                            source_name: Some("storage_b".to_string()),
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("storage_b".to_string()),
+                            ..fsys::OfferStorageDecl::EMPTY
                         }
                     ),
                     fsys::OfferDecl::Runner (
@@ -2419,6 +2586,30 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("elf-renamed".to_string()),
+                            ..fsys::OfferRunnerDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Runner (
+                        fsys::OfferRunnerDecl {
+                            source_name: Some("runner_a".to_string()),
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("runner_a".to_string()),
+                            ..fsys::OfferRunnerDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Runner (
+                        fsys::OfferRunnerDecl {
+                            source_name: Some("runner_b".to_string()),
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("runner_b".to_string()),
                             ..fsys::OfferRunnerDecl::EMPTY
                         }
                     ),
@@ -2494,6 +2685,30 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("pkg_resolver".to_string()),
+                            ..fsys::OfferResolverDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Resolver (
+                        fsys::OfferResolverDecl {
+                            source_name: Some("resolver_a".to_string()),
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("resolver_a".to_string()),
+                            ..fsys::OfferResolverDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Resolver (
+                        fsys::OfferResolverDecl {
+                            source_name: Some("resolver_b".to_string()),
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("resolver_b".to_string()),
                             ..fsys::OfferResolverDecl::EMPTY
                         }
                     ),

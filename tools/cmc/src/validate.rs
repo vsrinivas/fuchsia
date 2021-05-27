@@ -579,13 +579,15 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure that directories exposed from self are defined in `capabilities`.
-        if let Some(directory) = &expose.directory {
-            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                if !self.all_directories.contains(directory) {
-                    return Err(Error::validate(format!(
+        if let Some(directory) = expose.directory.as_ref() {
+            for directory in directory {
+                if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                    if !self.all_directories.contains(directory) {
+                        return Err(Error::validate(format!(
                            "Directory \"{}\" is exposed from self, so it must be declared as a \"directory\" in \"capabilities\"",
                            directory
                        )));
+                    }
                 }
             }
         }
@@ -612,24 +614,28 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure that runners exposed from self are defined in `capabilities`.
-        if let Some(runner_name) = &expose.runner {
-            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                if !self.all_runners.contains(runner_name) {
-                    return Err(Error::validate(format!(
+        if let Some(runner) = expose.runner.as_ref() {
+            for runner in runner {
+                if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                    if !self.all_runners.contains(runner) {
+                        return Err(Error::validate(format!(
                         "Runner \"{}\" is exposed from self, so it must be declared as a \"runner\" in \"capabilities\"",
-                        runner_name
+                        runner
                     )));
+                    }
                 }
             }
         }
 
         // Ensure that resolvers exposed from self are defined in `capabilities`.
-        if let Some(resolver_name) = &expose.resolver {
-            if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
-                if !self.all_resolvers.contains(resolver_name) {
-                    return Err(Error::validate(format!(
-                       "Resolver \"{}\" is exposed from self, so it must be declared as a \"resolver\" in \"capabilities\"", resolver_name
+        if let Some(resolver) = expose.resolver.as_ref() {
+            for resolver in resolver {
+                if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
+                    if !self.all_resolvers.contains(resolver) {
+                        return Err(Error::validate(format!(
+                       "Resolver \"{}\" is exposed from self, so it must be declared as a \"resolver\" in \"capabilities\"", resolver
                    )));
+                    }
                 }
             }
         }
@@ -692,13 +698,15 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure that directories offered from self are defined in `capabilities`.
-        if let Some(directory) = &offer.directory {
-            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if !self.all_directories.contains(directory) {
-                    return Err(Error::validate(format!(
+        if let Some(directory) = offer.directory.as_ref() {
+            for directory in directory {
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if !self.all_directories.contains(directory) {
+                        return Err(Error::validate(format!(
                            "Directory \"{}\" is offered from self, so it must be declared as a \"directory\" in \"capabilities\"",
                            directory
                        )));
+                    }
                 }
             }
         }
@@ -713,43 +721,49 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure that storage offered from self are defined in `capabilities`.
-        if let Some(storage) = &offer.storage {
-            if offer.from.iter().any(|r| r.is_named()) {
-                return Err(Error::validate(format!(
-                    "Storage \"{}\" is offered from a child, but storage capabilities cannot be exposed", storage)));
-            }
-            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if !self.all_storage_and_sources.contains_key(storage) {
+        if let Some(storage) = offer.storage.as_ref() {
+            for storage in storage {
+                if offer.from.iter().any(|r| r.is_named()) {
                     return Err(Error::validate(format!(
+                    "Storage \"{}\" is offered from a child, but storage capabilities cannot be exposed", storage)));
+                }
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if !self.all_storage_and_sources.contains_key(storage) {
+                        return Err(Error::validate(format!(
                        "Storage \"{}\" is offered from self, so it must be declared as a \"storage\" in \"capabilities\"",
                        storage
                    )));
+                    }
                 }
             }
         }
 
         // Ensure that runners offered from self are defined in `runners`.
-        if let Some(runner_name) = &offer.runner {
-            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if !self.all_runners.contains(runner_name) {
-                    return Err(Error::validate(format!(
-                        "Runner \"{}\" is offered from self, so it must be declared as a \
+        if let Some(runner) = offer.runner.as_ref() {
+            for runner in runner {
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if !self.all_runners.contains(runner) {
+                        return Err(Error::validate(format!(
+                            "Runner \"{}\" is offered from self, so it must be declared as a \
                        \"runner\" in \"capabilities\"",
-                        runner_name
-                    )));
+                            runner
+                        )));
+                    }
                 }
             }
         }
 
         // Ensure that resolvers offered from self are defined in `resolvers`.
-        if let Some(resolver_name) = &offer.resolver {
-            if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                if !self.all_resolvers.contains(resolver_name) {
-                    return Err(Error::validate(format!(
-                        "Resolver \"{}\" is offered from self, so it must be declared as a \
+        if let Some(resolver) = offer.resolver.as_ref() {
+            for resolver in resolver {
+                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
+                    if !self.all_resolvers.contains(resolver) {
+                        return Err(Error::validate(format!(
+                            "Resolver \"{}\" is offered from self, so it must be declared as a \
                        \"resolver\" in \"capabilities\"",
-                        resolver_name
-                    )));
+                            resolver
+                        )));
+                    }
                 }
             }
         }
@@ -800,17 +814,19 @@ impl<'a> ValidationContext<'a> {
 
             // Ensure we are not offering a capability back to its source.
             if let Some(storage) = offer.storage.as_ref() {
-                // Storage can only have a single `from` clause and this has been
-                // verified.
-                if let OneOrMany::One(cml::OfferFromRef::Self_) = &offer.from {
-                    if let Some(cml::CapabilityFromRef::Named(source)) =
-                        self.all_storage_and_sources.get(storage)
-                    {
-                        if to_target == source {
-                            return Err(Error::validate(format!(
-                                "Storage offer target \"{}\" is same as source",
-                                to
-                            )));
+                for storage in storage {
+                    // Storage can only have a single `from` clause and this has been
+                    // verified.
+                    if let OneOrMany::One(cml::OfferFromRef::Self_) = &offer.from {
+                        if let Some(cml::CapabilityFromRef::Named(source)) =
+                            self.all_storage_and_sources.get(storage)
+                        {
+                            if to_target == source {
+                                return Err(Error::validate(format!(
+                                    "Storage offer target \"{}\" is same as source",
+                                    to
+                                )));
+                            }
                         }
                     }
                 }
@@ -1891,7 +1907,7 @@ mod tests {
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
         ),
-        // if "as" is specified, only 1 "protocol" array item is allowed.
+        // if "as" is specified, only 1 array item is allowed.
         test_cml_expose_bad_as(
             json!({
                 "expose": [
@@ -2677,7 +2693,7 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"cache\" is a duplicate \"offer\" target capability for \"#echo_server\""
         ),
-        // if "as" is specified, only 1 "protocol" array item is allowed.
+        // if "as" is specified, only 1 array item is allowed.
         test_cml_offer_bad_as(
             json!({
                 "offer": [

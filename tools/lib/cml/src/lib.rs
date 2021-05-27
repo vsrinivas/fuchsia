@@ -208,7 +208,7 @@ impl CapabilityId {
             )?));
         } else if let Some(n) = capability.directory() {
             return Ok(Self::directories_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 None,
                 capability.capability_type(),
             )?));
@@ -219,19 +219,19 @@ impl CapabilityId {
                 ));
             }
             return Ok(Self::storages_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 None,
                 capability.capability_type(),
             )?));
         } else if let Some(n) = capability.runner() {
             return Ok(Self::runners_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 None,
                 capability.capability_type(),
             )?));
         } else if let Some(n) = capability.resolver() {
             return Ok(Self::resolvers_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 None,
                 capability.capability_type(),
             )?));
@@ -279,25 +279,25 @@ impl CapabilityId {
             )?));
         } else if let Some(n) = clause.directory() {
             return Ok(Self::directories_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 alias,
                 clause.capability_type(),
             )?));
         } else if let Some(n) = clause.storage() {
             return Ok(Self::storages_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 alias,
                 clause.capability_type(),
             )?));
         } else if let Some(n) = clause.runner() {
             return Ok(Self::runners_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 alias,
                 clause.capability_type(),
             )?));
         } else if let Some(n) = clause.resolver() {
             return Ok(Self::resolvers_from(Self::get_one_or_many_names(
-                OneOrMany::One(n),
+                n,
                 alias,
                 clause.capability_type(),
             )?));
@@ -1188,9 +1188,9 @@ pub struct Use {
 pub struct Expose {
     pub service: Option<OneOrMany<Name>>,
     pub protocol: Option<OneOrMany<Name>>,
-    pub directory: Option<Name>,
-    pub runner: Option<Name>,
-    pub resolver: Option<Name>,
+    pub directory: Option<OneOrMany<Name>>,
+    pub runner: Option<OneOrMany<Name>>,
+    pub resolver: Option<OneOrMany<Name>>,
     pub from: OneOrMany<ExposeFromRef>,
     pub r#as: Option<Name>,
     pub to: Option<ExposeToRef>,
@@ -1204,10 +1204,10 @@ pub struct Expose {
 pub struct Offer {
     pub service: Option<OneOrMany<Name>>,
     pub protocol: Option<OneOrMany<Name>>,
-    pub directory: Option<Name>,
-    pub storage: Option<Name>,
-    pub runner: Option<Name>,
-    pub resolver: Option<Name>,
+    pub directory: Option<OneOrMany<Name>>,
+    pub storage: Option<OneOrMany<Name>>,
+    pub runner: Option<OneOrMany<Name>>,
+    pub resolver: Option<OneOrMany<Name>>,
     pub event: Option<OneOrMany<Name>>,
     pub from: OneOrMany<OfferFromRef>,
     pub to: OneOrMany<OfferToRef>,
@@ -1244,10 +1244,10 @@ pub trait FromClause {
 pub trait CapabilityClause {
     fn service(&self) -> Option<OneOrMany<Name>>;
     fn protocol(&self) -> Option<OneOrMany<Name>>;
-    fn directory(&self) -> Option<Name>;
-    fn storage(&self) -> Option<Name>;
-    fn runner(&self) -> Option<Name>;
-    fn resolver(&self) -> Option<Name>;
+    fn directory(&self) -> Option<OneOrMany<Name>>;
+    fn storage(&self) -> Option<OneOrMany<Name>>;
+    fn runner(&self) -> Option<OneOrMany<Name>>;
+    fn resolver(&self) -> Option<OneOrMany<Name>>;
     fn event(&self) -> Option<OneOrMany<Name>>;
     fn event_stream(&self) -> Option<Name>;
 
@@ -1266,10 +1266,10 @@ pub trait CapabilityClause {
         let res = vec![
             self.service(),
             self.protocol(),
-            self.directory().map(|n| OneOrMany::One(n)),
-            self.storage().map(|n| OneOrMany::One(n)),
-            self.runner().map(|n| OneOrMany::One(n)),
-            self.resolver().map(|n| OneOrMany::One(n)),
+            self.directory(),
+            self.storage(),
+            self.runner(),
+            self.resolver(),
             self.event(),
             self.event_stream().map(|n| OneOrMany::One(n)),
         ];
@@ -1311,17 +1311,17 @@ impl CapabilityClause for Capability {
     fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Name> {
-        self.directory.clone()
+    fn directory(&self) -> Option<OneOrMany<Name>> {
+        self.directory.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
-    fn storage(&self) -> Option<Name> {
-        self.storage.clone()
+    fn storage(&self) -> Option<OneOrMany<Name>> {
+        self.storage.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
-    fn runner(&self) -> Option<Name> {
-        self.runner.clone()
+    fn runner(&self) -> Option<OneOrMany<Name>> {
+        self.runner.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
-    fn resolver(&self) -> Option<Name> {
-        self.resolver.clone()
+    fn resolver(&self) -> Option<OneOrMany<Name>> {
+        self.resolver.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
         None
@@ -1385,16 +1385,16 @@ impl CapabilityClause for DebugRegistration {
     fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Name> {
+    fn directory(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn storage(&self) -> Option<Name> {
+    fn storage(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn runner(&self) -> Option<Name> {
+    fn runner(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn resolver(&self) -> Option<Name> {
+    fn resolver(&self) -> Option<OneOrMany<Name>> {
         None
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
@@ -1443,16 +1443,16 @@ impl CapabilityClause for Use {
     fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Name> {
-        self.directory.clone()
+    fn directory(&self) -> Option<OneOrMany<Name>> {
+        self.directory.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
-    fn storage(&self) -> Option<Name> {
-        self.storage.clone()
+    fn storage(&self) -> Option<OneOrMany<Name>> {
+        self.storage.as_ref().map(|n| OneOrMany::One(n.clone()))
     }
-    fn runner(&self) -> Option<Name> {
+    fn runner(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn resolver(&self) -> Option<Name> {
+    fn resolver(&self) -> Option<OneOrMany<Name>> {
         None
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
@@ -1535,16 +1535,16 @@ impl CapabilityClause for Expose {
     fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Name> {
+    fn directory(&self) -> Option<OneOrMany<Name>> {
         self.directory.clone()
     }
-    fn storage(&self) -> Option<Name> {
+    fn storage(&self) -> Option<OneOrMany<Name>> {
         None
     }
-    fn runner(&self) -> Option<Name> {
+    fn runner(&self) -> Option<OneOrMany<Name>> {
         self.runner.clone()
     }
-    fn resolver(&self) -> Option<Name> {
+    fn resolver(&self) -> Option<OneOrMany<Name>> {
         self.resolver.clone()
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
@@ -1619,16 +1619,16 @@ impl CapabilityClause for Offer {
     fn protocol(&self) -> Option<OneOrMany<Name>> {
         self.protocol.clone()
     }
-    fn directory(&self) -> Option<Name> {
+    fn directory(&self) -> Option<OneOrMany<Name>> {
         self.directory.clone()
     }
-    fn storage(&self) -> Option<Name> {
+    fn storage(&self) -> Option<OneOrMany<Name>> {
         self.storage.clone()
     }
-    fn runner(&self) -> Option<Name> {
+    fn runner(&self) -> Option<OneOrMany<Name>> {
         self.runner.clone()
     }
-    fn resolver(&self) -> Option<Name> {
+    fn resolver(&self) -> Option<OneOrMany<Name>> {
         self.resolver.clone()
     }
     fn event(&self) -> Option<OneOrMany<Name>> {
@@ -2042,10 +2042,20 @@ mod tests {
         // directory
         assert_eq!(
             CapabilityId::from_offer_expose(&Offer {
-                directory: Some("a".parse().unwrap()),
+                directory: Some(OneOrMany::One("a".parse().unwrap())),
                 ..empty_offer()
             },)?,
             vec![CapabilityId::Directory("a".parse().unwrap())]
+        );
+        assert_eq!(
+            CapabilityId::from_offer_expose(&Offer {
+                directory: Some(OneOrMany::Many(vec!["a".parse().unwrap(), "b".parse().unwrap()])),
+                ..empty_offer()
+            },)?,
+            vec![
+                CapabilityId::Directory("a".parse().unwrap()),
+                CapabilityId::Directory("b".parse().unwrap()),
+            ]
         );
         assert_eq!(
             CapabilityId::from_use(&Use {
@@ -2059,10 +2069,20 @@ mod tests {
         // storage
         assert_eq!(
             CapabilityId::from_offer_expose(&Offer {
-                storage: Some("cache".parse().unwrap()),
+                storage: Some(OneOrMany::One("cache".parse().unwrap())),
                 ..empty_offer()
             },)?,
             vec![CapabilityId::Storage("cache".parse().unwrap())],
+        );
+        assert_eq!(
+            CapabilityId::from_offer_expose(&Offer {
+                storage: Some(OneOrMany::Many(vec!["a".parse().unwrap(), "b".parse().unwrap()])),
+                ..empty_offer()
+            },)?,
+            vec![
+                CapabilityId::Storage("a".parse().unwrap()),
+                CapabilityId::Storage("b".parse().unwrap()),
+            ]
         );
         assert_eq!(
             CapabilityId::from_use(&Use {
