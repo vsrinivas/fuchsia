@@ -98,21 +98,24 @@ and all writes to stderr are logged as WARN messages. Messages are split
 by newlines and decoded as UTF-8 strings. Invalid byte sequences are converted
 to the U+FFFD replacement character, which usually looks like `�`.
 
+See also: [RFC-0069: Standard I/O in ELF Runner][rfc0069]
+
 Note: There are known issues where messages from `ZX_ASSERT_...` in C/C++
 components and `Error` objects returned in `main` in Rust components are lost.
 For more information, see [fxb-72178] and [fxb-72764] respectively.
 
-[use]: /docs/glossary.md#use
 [capability-routing]: component_manifests.md#capability-routing
 [cml-shards]: component_manifests.md#include
 [component-manifests]: /docs/concepts/components/v2/component_manifests.md
+[fxb-72178]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72178
+[fxb-72764]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72764
 [glossary-components]: /docs/glossary.md#component
+[job-set-critical]: /docs/reference/syscalls/job_set_critical.md
 [lc-example]: /examples/components/basic/src/lifecycle_full.rs
 [lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl
 [lifecycle]: lifecycle.md
-[program-loading]: /docs/concepts/booting/program_loading.md
-[job-set-critical]: /docs/reference/syscalls/job_set_critical.md
-[main-process-critical-allowlist]: /src/security/policy/component_manager_policy.json5
-[fxb-72178]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72178
-[fxb-72764]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72764
 [logsink]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
+[main-process-critical-allowlist]: /src/security/policy/component_manager_policy.json5
+[program-loading]: /docs/concepts/booting/program_loading.md
+[rfc0069]: /docs/contribute/governance/rfcs/0069_stdio_in_elf_runner.md
+[use]: /docs/glossary.md#use
