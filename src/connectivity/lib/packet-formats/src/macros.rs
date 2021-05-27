@@ -11,6 +11,124 @@ macro_rules! __create_protocol_enum_inner {
     // be mapped to the Other variant.
     ($(#[$attr:meta])* ($($vis:tt)*) enum $name:ident: $repr:ty {
         $($variant:ident, $value:expr, $fmt:expr;)*
+        + $delegate_name:ident($delegate_ty:ty);
+        _, $other_fmt:expr;
+    }) => {
+        $(#[$attr])*
+        $($vis)* enum $name {
+            $($variant,)*
+            $delegate_name($delegate_ty),
+            Other($repr),
+        }
+
+        impl From<$repr> for $name {
+            fn from(x: $repr) -> $name {
+                use core::convert::TryFrom;
+                match x {
+                    $($value => $name::$variant,)*
+                    x => <$delegate_ty>::try_from(x).map($name::$delegate_name).unwrap_or($name::Other(x)),
+                }
+            }
+        }
+
+        impl From<$delegate_ty> for $name {
+            fn from(x: $delegate_ty) -> $name {
+                $name::$delegate_name(x)
+            }
+        }
+
+        impl Into<$repr> for $name {
+            fn into(self) -> $repr {
+                match self {
+                    $($name::$variant => $value,)*
+                    $name::$delegate_name(x) => x.into(),
+                    $name::Other(x) => x,
+                }
+            }
+        }
+
+        impl core::fmt::Display for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+                write!(
+                    f,
+                    "{}",
+                    match self {
+                        $($name::$variant => $fmt,)*
+                        $name::$delegate_name(x) => return write!(f, "{}", x),
+                        $name::Other(x) => return write!(f, $other_fmt, x),
+                    }
+                )
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+                core::fmt::Display::fmt(self, f)
+            }
+        }
+    };
+
+    // Create protocol enum when the Other variant is not specified.
+    //
+    // In this case, a `TryFrom` implementation is provided from `$repr` instead of a `From`
+    // implementation.
+    ($(#[$attr:meta])* ($($vis:tt)*) enum $name:ident: $repr:ty {
+        $($variant:ident, $value:expr, $fmt:expr;)*
+        + $delegate_name:ident($delegate_ty:ty);
+    }) => {
+        $(#[$attr])*
+        $($vis)* enum $name {
+            $($variant,)*
+            $delegate_name($delegate_ty),
+        }
+
+        impl core::convert::TryFrom<$repr> for $name {
+            type Error = crate::error::UnrecognizedProtocolCode<$repr>;
+
+            fn try_from(x: $repr) -> Result<Self, Self::Error> {
+                use core::convert::TryFrom;
+                match x {
+                    $($value => Ok($name::$variant),)*
+                    x => $delegate_ty::try_from(x).map($name::$delegate_name),
+                }
+            }
+        }
+
+        impl Into<$repr> for $name {
+            fn into(self) -> $repr {
+                match self {
+                    $($name::$variant => $value,)*
+                    $name::$delegate_name(x) => x.into(),
+                }
+            }
+        }
+
+        impl core::fmt::Display for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+                write!(
+                    f,
+                    "{}",
+                    match self {
+                        $($name::$variant => $fmt,)*
+                        $name::$delegate_name(x) => return write!(f, "{}", x),
+                    }
+                )
+            }
+        }
+
+        impl core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+                core::fmt::Display::fmt(self, f)
+            }
+        }
+    };
+
+    // Create protocol enum when the Other variant is specified.
+    //
+    // A `From` implementation will be provided from `$repr`. The unspecified values will
+    // be mapped to the Other variant.
+    ($(#[$attr:meta])* ($($vis:tt)*) enum $name:ident: $repr:ty {
+        $($variant:ident, $value:expr, $fmt:expr;)*
         _, $other_fmt:expr;
     }) => {
         $(#[$attr])*
@@ -116,18 +234,19 @@ macro_rules! __create_protocol_enum_inner {
 ///
 /// ```rust,ignore
 /// create_protocol_enum!(
-///     /// An IP protocol or next header number.
+///     /// IPv4 protocol number.
 ///     ///
-///     /// For IPv4, this is the protocol number. For IPv6, this is the next header
-///     /// number.
+///     /// The protocol numbers are specified in
+///     /// https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
+///     #[allow(missing_docs)]
 ///     #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-///     pub(crate) enum IpProtocol: u8 {
+///     pub enum Ipv4Proto: u8 {
 ///         Icmp, 1, "ICMP";
 ///         Igmp, 2, "IGMP";
 ///         Tcp, 6, "TCP";
 ///         Udp, 17, "UDP";
-///         Icmpv6, 58, "ICMPv6";
-///         _, "IP protocol {}";
+///         + Proto(IpProto);
+///         _, "IPv4 protocol {}";
 ///     }
 /// );
 /// ```
@@ -142,14 +261,46 @@ macro_rules! __create_protocol_enum_inner {
 /// - A generic string representation used in the `Display` and `Debug` impls to
 ///   print unrecognized protocol numbers
 ///
-/// Note that, in addition to the variants specified in the macro invocation, an
-/// extra optional `Other` variant may be added to capture all values not given
-/// their own variants.
+/// Note that, in addition to the variants specified in the macro invocation, the
+/// following special variants may be added:
+/// - A variant which includes data may be added using the syntax `+
+///   Variant(Type);`
+/// - An `Other` variant which captures all values not given their own variants
+///   may be added using the syntax `_, "format string {}"`
 ///
 /// For a numerical type `U` (`u8`, `u16`, etc), impls of `Into<U>` are generated.
 /// `From<U>` impls are generated if the `Other` variant is specified. If the
 /// `Other` variant is not specified, `TryFrom<U>` will be generated instead.
 macro_rules! create_protocol_enum {
+    ($(#[$attr:meta])* enum $name:ident: $repr:ty {
+        $($variant:ident, $value:expr, $fmt:expr;)*
+        + $delegate_name:ident($delegate_ty:ty);
+        _, $other_fmt:expr;
+    }) => {
+        // use `()` to explicitly forward the information about private items
+        __create_protocol_enum_inner!($(#[$attr])* () enum $name: $repr { $($variant, $value, $fmt;)* + $delegate_name($delegate_ty); _, $other_fmt; });
+    };
+    ($(#[$attr:meta])* pub enum $name:ident: $repr:ty {
+        $($variant:ident, $value:expr, $fmt:expr;)*
+        + $delegate_name:ident($delegate_ty:ty);
+        _, $other_fmt:expr;
+    }) => {
+        __create_protocol_enum_inner!($(#[$attr])* (pub) enum $name: $repr { $($variant, $value, $fmt;)* + $delegate_name($delegate_ty); _, $other_fmt; });
+    };
+    ($(#[$attr:meta])* enum $name:ident: $repr:ty {
+        $($variant:ident, $value:expr, $fmt:expr;)*
+        + $delegate_name:ident($delegate_ty:ty);
+    }) => {
+        // use `()` to explicitly forward the information about private items
+        __create_protocol_enum_inner!($(#[$attr])* () enum $name: $repr { $($variant, $value, $fmt;)* + $delegate_name($delegate_ty); });
+    };
+    ($(#[$attr:meta])* pub enum $name:ident: $repr:ty {
+        $($variant:ident, $value:expr, $fmt:expr;)*
+        + $delegate_name:ident($delegate_ty:ty);
+    }) => {
+        __create_protocol_enum_inner!($(#[$attr])* (pub) enum $name: $repr { $($variant, $value, $fmt;)* + $delegate_name($delegate_ty); });
+    };
+
     ($(#[$attr:meta])* enum $name:ident: $repr:ty {
         $($variant:ident, $value:expr, $fmt:expr;)*
         _, $other_fmt:expr;
@@ -163,12 +314,6 @@ macro_rules! create_protocol_enum {
     }) => {
         __create_protocol_enum_inner!($(#[$attr])* (pub) enum $name: $repr { $($variant, $value, $fmt;)* _, $other_fmt; });
     };
-    ($(#[$attr:meta])* pub ($($vis:tt)+) enum $name:ident: $repr:ty {
-        $($variant:ident, $value:expr, $fmt:expr;)*
-        _, $other_fmt:expr;
-    }) => {
-        __create_protocol_enum_inner!($(#[$attr])* (pub ($($vis)+)) enum $name: $repr { $($variant, $value, $fmt;)* _, $other_fmt; });
-    };
     ($(#[$attr:meta])* enum $name:ident: $repr:ty {
         $($variant:ident, $value:expr, $fmt:expr;)*
     }) => {
@@ -180,12 +325,6 @@ macro_rules! create_protocol_enum {
     }) => {
         __create_protocol_enum_inner!($(#[$attr])* (pub) enum $name: $repr { $($variant, $value, $fmt;)* });
     };
-    ($(#[$attr:meta])* pub ($($vis:tt)+) enum $name:ident: $repr:ty {
-        $($variant:ident, $value:expr, $fmt:expr;)*
-    }) => {
-        __create_protocol_enum_inner!($(#[$attr])* (pub ($($vis)+)) enum $name: $repr { $($variant, $value, $fmt;)* });
-    };
-    () => ()
 }
 
 /// Declare a benchmark function.
