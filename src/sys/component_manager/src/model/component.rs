@@ -8,8 +8,8 @@ use {
         channel,
         model::{
             actions::{
-                ActionSet, DeleteChildAction, DiscoverAction, MarkDeletedAction, ResolveAction,
-                StopAction,
+                Action, ActionSet, DeleteChildAction, DiscoverAction, MarkDeletedAction,
+                ResolveAction, StopAction,
             },
             binding,
             component_controller::ComponentController,
@@ -406,33 +406,38 @@ impl ComponentInstance {
         collection_name: String,
         child_decl: &ChildDecl,
     ) -> Result<(), ModelError> {
-        match child_decl.startup {
-            fsys::StartupMode::Lazy => {}
-            fsys::StartupMode::Eager => {
-                return Err(ModelError::unsupported("Eager startup"));
+        let res = {
+            match child_decl.startup {
+                fsys::StartupMode::Lazy => {}
+                fsys::StartupMode::Eager => {
+                    return Err(ModelError::unsupported("Eager startup"));
+                }
+            }
+            let mut state = self.lock_resolved_state().await?;
+            let collection_decl = state
+                .decl()
+                .find_collection(&collection_name)
+                .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?
+                .clone();
+            match collection_decl.durability {
+                fsys::Durability::Transient => {}
+                fsys::Durability::Persistent => {
+                    return Err(ModelError::unsupported("Persistent durability"));
+                }
+            }
+            state.add_child(self, child_decl, Some(&collection_decl)).await
+        };
+        match res {
+            Some(discover_nf) => {
+                discover_nf.await?;
+                Ok(())
+            }
+            None => {
+                let partial_moniker =
+                    PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
+                Err(ModelError::instance_already_exists(self.abs_moniker.clone(), partial_moniker))
             }
         }
-        let mut state = self.lock_resolved_state().await?;
-        let collection_decl = state
-            .decl()
-            .find_collection(&collection_name)
-            .ok_or_else(|| ModelError::collection_not_found(collection_name.clone()))?
-            .clone();
-        match collection_decl.durability {
-            fsys::Durability::Transient => {}
-            fsys::Durability::Persistent => {
-                return Err(ModelError::unsupported("Persistent durability"));
-            }
-        }
-        if let None = state.add_child(self, child_decl, Some(&collection_decl)).await {
-            let partial_moniker =
-                PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
-            return Err(ModelError::instance_already_exists(
-                self.abs_moniker.clone(),
-                partial_moniker,
-            ));
-        }
-        Ok(())
     }
 
     /// Removes the dynamic child `partial_moniker`, returning a future that will execute the
@@ -1012,14 +1017,15 @@ impl ResolvedInstanceState {
         }
     }
 
-    /// Adds a new child of this instance for the given `ChildDecl`. Returns the child, or None if
-    /// it already existed.
+    /// Adds a new child of this instance for the given `ChildDecl`. Returns a future to wait on
+    /// the child's `Discover` action, or None if it already existed.
+    #[must_use]
     async fn add_child(
         &mut self,
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-    ) -> Option<Arc<ComponentInstance>> {
+    ) -> Option<impl Future<Output = <DiscoverAction as Action>::Output>> {
         let instance_id = match collection {
             Some(_) => {
                 let id = self.next_dynamic_instance_id;
@@ -1045,11 +1051,11 @@ impl ResolvedInstanceState {
             self.live_children.insert(partial_moniker, (instance_id, child.clone()));
             // We can dispatch a Discovered event for the component now that it's installed in the
             // tree, which means any Discovered hooks will capture it.
-            {
+            let nf = {
                 let mut actions = child.lock_actions().await;
-                let _ = actions.register_no_wait(&child, DiscoverAction::new());
-            }
-            Some(child)
+                actions.register_no_wait(&child, DiscoverAction::new())
+            };
+            Some(nf)
         } else {
             None
         }
@@ -1061,7 +1067,7 @@ impl ResolvedInstanceState {
         decl: &ComponentDecl,
     ) {
         for child in decl.children.iter() {
-            self.add_child(component, child, None).await;
+            let _ = self.add_child(component, child, None).await;
         }
     }
 }

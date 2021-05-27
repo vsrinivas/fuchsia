@@ -433,8 +433,9 @@ mod tests {
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
-        futures::lock::Mutex,
+        futures::{lock::Mutex, poll, task::Poll},
         io_util::OPEN_RIGHT_READABLE,
+        matches::assert_matches,
         moniker::AbsoluteMoniker,
         std::collections::HashSet,
         std::convert::TryFrom,
@@ -442,28 +443,17 @@ mod tests {
     };
 
     struct RealmCapabilityTest {
-        // This field is never read, but must be kept around for the below tests to function
-        // properly. Without it things like the `Realm` service cannot be mocked for the test.
-        _builtin_environment: Option<Arc<Mutex<BuiltinEnvironment>>>,
-
+        builtin_environment: Option<Arc<Mutex<BuiltinEnvironment>>>,
         mock_runner: Arc<MockRunner>,
         component: Option<Arc<ComponentInstance>>,
         realm_proxy: fsys::RealmProxy,
         hook: Arc<TestHook>,
-        events_data: Option<EventsData>,
-    }
-
-    struct EventsData {
-        _event_source: EventSource,
-        event_stream: EventStream,
     }
 
     impl RealmCapabilityTest {
         async fn new(
             components: Vec<(&'static str, ComponentDecl)>,
             component_moniker: AbsoluteMoniker,
-            events: Vec<CapabilityName>,
-            event_mode: EventMode,
         ) -> Self {
             // Init model.
             let config = RuntimeConfig { list_children_batch_size: 2, ..Default::default() };
@@ -477,29 +467,6 @@ mod tests {
             let hook = Arc::new(TestHook::new());
             let hooks = hook.hooks();
             model.root.hooks.install(hooks).await;
-
-            let events_data = if events.is_empty() {
-                None
-            } else {
-                let mut event_source = builtin_environment
-                    .lock()
-                    .await
-                    .event_source_factory
-                    .create_for_debug()
-                    .await
-                    .expect("created event source");
-                let event_stream = event_source
-                    .subscribe(
-                        events
-                            .into_iter()
-                            .map(|event| EventSubscription::new(event, event_mode.clone()))
-                            .collect(),
-                    )
-                    .await
-                    .expect("subscribe to event stream");
-                event_source.start_component_tree().await;
-                Some(EventsData { _event_source: event_source, event_stream })
-            };
 
             // Look up and bind to component.
             let component = model
@@ -523,12 +490,11 @@ mod tests {
                 .detach();
             }
             RealmCapabilityTest {
-                _builtin_environment: Some(builtin_environment),
+                builtin_environment: Some(builtin_environment),
                 mock_runner,
                 component: Some(component),
                 realm_proxy,
                 hook,
-                events_data,
             }
         }
 
@@ -538,11 +504,35 @@ mod tests {
 
         fn drop_component(&mut self) {
             self.component = None;
-            self._builtin_environment = None;
+            self.builtin_environment = None;
         }
 
-        fn event_stream(&mut self) -> Option<&mut EventStream> {
-            self.events_data.as_mut().map(|data| &mut data.event_stream)
+        async fn new_event_stream(
+            &self,
+            events: Vec<CapabilityName>,
+            mode: EventMode,
+        ) -> (EventSource, EventStream) {
+            let mut event_source = self
+                .builtin_environment
+                .as_ref()
+                .unwrap()
+                .lock()
+                .await
+                .event_source_factory
+                .create_for_debug()
+                .await
+                .expect("created event source");
+            let event_stream = event_source
+                .subscribe(
+                    events
+                        .into_iter()
+                        .map(|event| EventSubscription::new(event, mode.clone()))
+                        .collect(),
+                )
+                .await
+                .expect("subscribe to event stream");
+            event_source.start_component_tree().await;
+            (event_source, event_stream)
         }
     }
 
@@ -555,19 +545,41 @@ mod tests {
                 ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ],
             vec!["system:0"].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
 
-        // Create children "a" and "b" in collection.
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test.realm_proxy.create_child(&mut collection_ref, child_decl("a")).await;
-        let _ = res.expect("failed to create child a").expect("failed to create child a");
+        let (_event_source, mut event_stream) =
+            test.new_event_stream(vec![EventType::Discovered.into()], EventMode::Sync).await;
 
+        // Create children "a" and "b" in collection. Expect a Discovered event for each.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let res = test.realm_proxy.create_child(&mut collection_ref, child_decl("b")).await;
-        let _ = res.expect("failed to create child b").expect("failed to create child b");
+        let mut create_a = fasync::Task::spawn(
+            test.realm_proxy.create_child(&mut collection_ref, child_decl("a")),
+        );
+        let event_a = event_stream
+            .wait_until(EventType::Discovered, vec!["system:0", "coll:a:1"].into())
+            .await
+            .unwrap();
+        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+        let mut create_b = fasync::Task::spawn(
+            test.realm_proxy.create_child(&mut collection_ref, child_decl("b")),
+        );
+        let event_b = event_stream
+            .wait_until(EventType::Discovered, vec!["system:0", "coll:b:2"].into())
+            .await
+            .unwrap();
+
+        // Give create requests time to be processed. Ensure they don't return before
+        // Discover action completes.
+        fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(5))).await;
+        assert_matches!(poll!(&mut create_a), Poll::Pending);
+        assert_matches!(poll!(&mut create_b), Poll::Pending);
+
+        // Unblock Discovered and wait for requests to complete.
+        event_a.resume();
+        event_b.resume();
+        let _ = create_a.await.unwrap().unwrap();
+        let _ = create_b.await.unwrap().unwrap();
 
         // Verify that the component topology matches expectations.
         let actual_children = get_live_children(test.component()).await;
@@ -597,8 +609,6 @@ mod tests {
                 ),
             ],
             vec!["system:0"].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
 
@@ -718,12 +728,7 @@ mod tests {
     #[fuchsia::test]
     async fn destroy_dynamic_child() {
         // Set up model and realm service.
-        let events = vec![
-            EventType::Stopped.into(),
-            EventType::MarkedForDestruction.into(),
-            EventType::Destroyed.into(),
-        ];
-        let mut test = RealmCapabilityTest::new(
+        let test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
                 ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
@@ -731,10 +736,19 @@ mod tests {
                 ("b", component_decl_with_test_runner()),
             ],
             vec!["system:0"].into(),
-            events,
-            EventMode::Sync,
         )
         .await;
+
+        let (_event_source, mut event_stream) = test
+            .new_event_stream(
+                vec![
+                    EventType::Stopped.into(),
+                    EventType::MarkedForDestruction.into(),
+                    EventType::Destroyed.into(),
+                ],
+                EventMode::Sync,
+            )
+            .await;
 
         // Create children "a" and "b" in collection, and bind to them.
         for name in &["a", "b"] {
@@ -766,16 +780,12 @@ mod tests {
         fasync::Task::spawn(f).detach();
 
         // The component should be stopped (shut down) before it is marked deleted.
-        let event = test
-            .event_stream()
-            .unwrap()
+        let event = event_stream
             .wait_until(EventType::Stopped, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
         event.resume();
-        let event = test
-            .event_stream()
-            .unwrap()
+        let event = event_stream
             .wait_until(EventType::MarkedForDestruction, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
@@ -812,9 +822,7 @@ mod tests {
         }
 
         // Wait until 'PostDestroy' event for "a"
-        let event = test
-            .event_stream()
-            .unwrap()
+        let event = event_stream
             .wait_until(EventType::Destroyed, vec!["system:0", "coll:a:1"].into())
             .await
             .unwrap();
@@ -850,8 +858,6 @@ mod tests {
                 ("system", ComponentDeclBuilder::new().add_transient_collection("coll").build()),
             ],
             vec!["system:0"].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
 
@@ -923,8 +929,6 @@ mod tests {
                 ("eager", component_decl_with_test_runner()),
             ],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
         let mut out_dir = OutDir::new();
@@ -977,8 +981,6 @@ mod tests {
                 ),
             ],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
         test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
@@ -1027,8 +1029,6 @@ mod tests {
                 ("unrunnable", component_decl_with_test_runner()),
             ],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
         test.mock_runner.cause_failure("unrunnable");
@@ -1084,8 +1084,6 @@ mod tests {
                 ("unrunnable", component_decl_with_test_runner()),
             ],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
         test.mock_runner.cause_failure("unrunnable");
@@ -1126,8 +1124,6 @@ mod tests {
                 ("static", component_decl_with_test_runner()),
             ],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
 
@@ -1182,8 +1178,6 @@ mod tests {
         let mut test = RealmCapabilityTest::new(
             vec![("root", ComponentDeclBuilder::new().add_transient_collection("coll").build())],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
 
@@ -1217,8 +1211,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn open_exposed_dir() {
-        let events = vec![EventType::Resolved.into(), EventType::Started.into()];
-        let mut test = RealmCapabilityTest::new(
+        let test = RealmCapabilityTest::new(
             vec![
                 ("root", ComponentDeclBuilder::new().add_lazy_child("system").build()),
                 (
@@ -1235,10 +1228,14 @@ mod tests {
                 ),
             ],
             vec![].into(),
-            events,
-            EventMode::Async,
         )
         .await;
+        let (_event_source, mut event_stream) = test
+            .new_event_stream(
+                vec![EventType::Resolved.into(), EventType::Started.into()],
+                EventMode::Async,
+            )
+            .await;
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
@@ -1250,14 +1247,14 @@ mod tests {
         let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
 
         // Assert that child was resolved.
-        let stream = test.event_stream().expect("event_stream empty");
-        let event = stream.wait_until(EventType::Resolved, vec!["system:0"].into()).await;
+        let event = event_stream.wait_until(EventType::Resolved, vec!["system:0"].into()).await;
         assert!(event.is_some());
 
         // Assert that event stream doesn't have any outstanding messages.
         // This ensures that EventType::Started for "system:0" has not been
         // registered.
-        let event = stream.wait_until(EventType::Started, vec!["system:0"].into()).now_or_never();
+        let event =
+            event_stream.wait_until(EventType::Started, vec!["system:0"].into()).now_or_never();
         assert!(event.is_none());
 
         // Now that it was asserted that "system:0" has yet to start,
@@ -1269,7 +1266,7 @@ mod tests {
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
-        let event = stream.wait_until(EventType::Started, vec!["system:0"].into()).await;
+        let event = event_stream.wait_until(EventType::Started, vec!["system:0"].into()).await;
         assert!(event.is_some());
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         let res = echo_proxy.echo_string(Some("hippos")).await;
@@ -1297,8 +1294,6 @@ mod tests {
                 ("unrunnable", component_decl_with_test_runner()),
             ],
             vec![].into(),
-            vec![],
-            EventMode::Sync,
         )
         .await;
         test.mock_runner.cause_failure("unrunnable");
