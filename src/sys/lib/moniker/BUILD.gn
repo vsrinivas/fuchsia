@@ -20,6 +20,7 @@ rustc_library("moniker") {
   ]
 
   deps = [
+    "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",

@@ -3,12 +3,23 @@
 // found in the LICENSE file.
 
 use {
+    cm_types::Name,
     core::cmp::{self, Ord, Ordering},
     itertools,
     log::*,
-    std::{convert::TryFrom, fmt, iter},
+    std::{convert::TryFrom, fmt, iter, str::FromStr},
     thiserror::Error,
 };
+
+/// Validates that the given string is valid as the instance or collection name in a moniker.
+// TODO(fxbug.dev/77563): The moniker types should be updated to use Name directly instead of String
+// so that it is clear what is validated and what isn't.
+fn validate_moniker_part(name: Option<&str>) -> Result<(), MonikerError> {
+    // Reuse the validation in cm_types::Name for consistency.
+    name.map(|n| Name::from_str(n).map_err(|_| MonikerError::invalid_moniker_part(n)))
+        .transpose()?;
+    Ok(())
+}
 
 /// A child moniker locally identifies a child component instance using the name assigned by
 /// its parent and its collection (if present). It is a building block for more complex monikers.
@@ -25,6 +36,7 @@ pub struct ChildMoniker {
 pub type InstanceId = u32;
 
 impl ChildMoniker {
+    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
     pub fn new(name: String, collection: Option<String>, instance: InstanceId) -> Self {
         assert!(!name.is_empty());
         let rep = if let Some(c) = collection.as_ref() {
@@ -40,7 +52,8 @@ impl ChildMoniker {
     ///
     /// Input strings should be of the format `<name>(:<collection>)?:<instance_id>`, e.g. `foo:42`
     /// or `biz:foo:42`.
-    fn parse(rep: &str) -> Result<Self, MonikerError> {
+    fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
+        let rep = rep.as_ref();
         let parts: Vec<_> = rep.split(":").collect();
         let invalid = || MonikerError::invalid_moniker(rep);
         // An instanced moniker is either just a name (static instance), or
@@ -75,6 +88,9 @@ impl ChildMoniker {
                 (parts[0].to_string(), None, instance)
             }
         };
+
+        validate_moniker_part(Some(&name))?;
+        validate_moniker_part(coll.as_deref())?;
         Ok(Self::new(name, coll, instance))
     }
 
@@ -144,6 +160,7 @@ pub struct PartialMoniker {
 }
 
 impl PartialMoniker {
+    // TODO(fxbug.dev/77563): This does not currently validate the String inputs.
     pub fn new(name: String, collection: Option<String>) -> Self {
         assert!(!name.is_empty());
         let rep = if let Some(c) = collection.as_ref() {
@@ -158,7 +175,8 @@ impl PartialMoniker {
     /// Parses a `PartialMoniker` from a string.
     ///
     /// Input strings should be of the format `<name>(:<collection>)?`, e.g. `foo` or `biz:foo`.
-    fn parse(rep: &str) -> Result<Self, MonikerError> {
+    fn parse<T: AsRef<str>>(rep: T) -> Result<Self, MonikerError> {
+        let rep = rep.as_ref();
         let mut parts = rep.split(":").fuse();
         let invalid = || MonikerError::invalid_moniker(rep);
         let first = parts.next().ok_or_else(invalid)?;
@@ -170,6 +188,9 @@ impl PartialMoniker {
             Some(s) => (s, Some(first.to_string())),
             None => (first, None),
         };
+
+        validate_moniker_part(Some(&name))?;
+        validate_moniker_part(coll.as_deref())?;
         Ok(PartialMoniker::new(name.to_string(), coll))
     }
 
@@ -624,11 +645,17 @@ impl TryFrom<&str> for RelativeMoniker {
 pub enum MonikerError {
     #[error("invalid moniker: {}", rep)]
     InvalidMoniker { rep: String },
+    #[error("invalid moniker part: {0}")]
+    InvalidMonikerPart(String),
 }
 
 impl MonikerError {
     pub fn invalid_moniker(rep: impl Into<String>) -> MonikerError {
         MonikerError::InvalidMoniker { rep: rep.into() }
+    }
+
+    pub fn invalid_moniker_part(part: impl Into<String>) -> MonikerError {
+        MonikerError::InvalidMonikerPart(part.into())
     }
 }
 
@@ -658,6 +685,12 @@ mod tests {
         assert_eq!("coll:test", m.to_partial().as_str());
         assert_eq!(m, ChildMoniker::from_partial(&"coll:test".into(), 42));
 
+        let max_length_part = "f".repeat(100);
+        let m = ChildMoniker::parse(format!("{0}:{0}:42", max_length_part)).expect("valid moniker");
+        assert_eq!(&max_length_part, m.name());
+        assert_eq!(Some(max_length_part.as_str()), m.collection());
+        assert_eq!(42, m.instance());
+
         assert!(ChildMoniker::parse("").is_err(), "cannot be empty");
         assert!(ChildMoniker::parse(":").is_err(), "cannot be empty with colon");
         assert!(ChildMoniker::parse("::").is_err(), "cannot be empty with double colon");
@@ -669,6 +702,11 @@ mod tests {
         assert!(ChildMoniker::parse("f:f:1:1").is_err(), "more than three colons not allowed");
         assert!(ChildMoniker::parse("f:f").is_err(), "second part must be int");
         assert!(ChildMoniker::parse("f:f:f").is_err(), "third part must be int");
+        assert!(ChildMoniker::parse("@:1").is_err(), "invalid character in name");
+        assert!(ChildMoniker::parse("@:f:1").is_err(), "invalid character in collection");
+        assert!(ChildMoniker::parse("f:@:1").is_err(), "invalid character in name with collection");
+        assert!(ChildMoniker::parse("f".repeat(101) + ":1").is_err(), "name too long");
+        assert!(ChildMoniker::parse("f".repeat(101) + ":f:1").is_err(), "collection too long");
     }
 
     #[test]
@@ -729,11 +767,21 @@ mod tests {
         assert_eq!("coll:test", format!("{}", m));
         assert_eq!(m, PartialMoniker::from("coll:test"));
 
+        let max_length_part = "f".repeat(100);
+        let m = PartialMoniker::parse(format!("{0}:{0}", max_length_part)).expect("valid moniker");
+        assert_eq!(&max_length_part, m.name());
+        assert_eq!(Some(max_length_part.as_str()), m.collection());
+
         assert!(PartialMoniker::parse("").is_err(), "cannot be empty");
         assert!(PartialMoniker::parse(":").is_err(), "cannot be empty with colon");
         assert!(PartialMoniker::parse("f:").is_err(), "second part cannot be empty with colon");
         assert!(PartialMoniker::parse(":f").is_err(), "first part cannot be empty with colon");
         assert!(PartialMoniker::parse("f:f:f").is_err(), "multiple colons not allowed");
+        assert!(PartialMoniker::parse("@").is_err(), "invalid character in name");
+        assert!(PartialMoniker::parse("@:f").is_err(), "invalid character in collection");
+        assert!(PartialMoniker::parse("f:@").is_err(), "invalid character in name with collection");
+        assert!(PartialMoniker::parse("f".repeat(101)).is_err(), "name too long");
+        assert!(PartialMoniker::parse("f".repeat(101) + ":f").is_err(), "collection too long");
     }
 
     #[test]
