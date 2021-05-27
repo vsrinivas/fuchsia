@@ -484,8 +484,7 @@ static uint64_t bulldozer_apic_freq() {
     return v;
   }
 
-  // 15h-17h BKDGs mention the APIC timer rate is 2xCLKIN,
-  // which experimentally appears to be 100Mhz always
+  // 15h BKDG documents that is is 100Mhz.
   return 100ul * 1000 * 1000;
 }
 
@@ -776,7 +775,7 @@ static const x86_microarch_config_t intel_default_config{
 // AMD microarches
 static const x86_microarch_config_t zen_config{
     .x86_microarch = X86_MICROARCH_AMD_ZEN,
-    .get_apic_freq = bulldozer_apic_freq,
+    .get_apic_freq = unknown_freq,
     .get_tsc_freq = zen_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
@@ -792,7 +791,7 @@ static const x86_microarch_config_t zen_config{
 };
 static const x86_microarch_config_t jaguar_config{
     .x86_microarch = X86_MICROARCH_AMD_JAGUAR,
-    .get_apic_freq = bulldozer_apic_freq,
+    .get_apic_freq = unknown_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
@@ -821,7 +820,7 @@ static const x86_microarch_config_t bulldozer_config{
 };
 static const x86_microarch_config_t amd_default_config{
     .x86_microarch = X86_MICROARCH_UNKNOWN,
-    .get_apic_freq = default_apic_freq,
+    .get_apic_freq = unknown_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
