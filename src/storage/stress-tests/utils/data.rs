@@ -76,6 +76,7 @@ pub struct FileFactory {
     pub rng: SmallRng,
     pub uncompressed_size: UncompressedSize,
     pub compressibility: Compressibility,
+    pub file_name_count: u64,
 }
 
 impl FileFactory {
@@ -85,12 +86,13 @@ impl FileFactory {
         uncompressed_size: UncompressedSize,
         compressibility: Compressibility,
     ) -> Self {
-        Self { rng, uncompressed_size, compressibility }
+        Self { rng, uncompressed_size, compressibility, file_name_count: 0 }
     }
 
-    /// Generate a random filename that can be used for a file created by this factory
-    pub fn random_filename(&mut self) -> String {
-        format!("file_{}", self.rng.gen::<u32>())
+    /// Generate a unique filename that can be used for a file created by this factory.
+    pub fn generate_filename(&mut self) -> String {
+        self.file_name_count += 1;
+        format!("file_{}", self.file_name_count)
     }
 
     /// Generate all the bytes for this file in memory.

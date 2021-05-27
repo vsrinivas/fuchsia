@@ -25,8 +25,7 @@ impl FileActor {
     }
 
     async fn create_file(&mut self) -> Result<(), Status> {
-        // Create the root hash for the file
-        let filename = self.factory.random_filename();
+        let filename = self.factory.generate_filename();
         let data_bytes = self.factory.generate_bytes();
 
         // Write the file to disk
