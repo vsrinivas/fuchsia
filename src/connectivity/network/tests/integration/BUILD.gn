@@ -48,9 +48,6 @@ fuchsia_test_package("netstack-integration-tests") {
     # device_name_provider provides fuchsia.device.NameProvider.
     "..:device_name_provider",
 
-    # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
-    "//src/cobalt/bin/testing/mock_cobalt:component_v1",
-
     # stash_secure is used by dhcpd and netstack.
     "//src/sys/stash:stash_secure",
 

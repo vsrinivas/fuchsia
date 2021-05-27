@@ -61,7 +61,6 @@ pub enum KnownServices {
     Log(NetstackVersion),
     NeighborView(NetstackVersion),
     NeighborController(NetstackVersion),
-    MockCobalt,
     SecureStash,
     DhcpServer,
     Dhcpv6Client,
@@ -74,8 +73,6 @@ impl KnownServices {
         match self {
             KnownServices::Stack(v) => (<net_stack::StackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                         v.get_url()),
-            KnownServices::MockCobalt => (<fidl_fuchsia_cobalt::LoggerFactoryMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-                                          "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/mock_cobalt.cmx"),
             KnownServices::Netstack(v) => (<fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
                                            v.get_url()),
             KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
@@ -290,7 +287,6 @@ impl TestSandboxExt for netemul::TestSandbox {
                 KnownServices::Log(N::VERSION),
                 KnownServices::NeighborView(N::VERSION),
                 KnownServices::NeighborController(N::VERSION),
-                KnownServices::MockCobalt,
             ]
             .iter()
             .map(netemul_environment::LaunchService::from)

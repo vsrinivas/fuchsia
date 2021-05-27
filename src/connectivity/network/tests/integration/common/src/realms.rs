@@ -6,12 +6,12 @@
 
 use {
     anyhow::Context as _, async_trait::async_trait, fidl::endpoints::DiscoverableService as _,
-    fidl_fuchsia_cobalt as fcobalt, fidl_fuchsia_net as fnet,
-    fidl_fuchsia_net_filter as fnet_filter, fidl_fuchsia_net_interfaces as fnet_interfaces,
-    fidl_fuchsia_net_name as fnet_name, fidl_fuchsia_net_neighbor as fnet_neighbor,
-    fidl_fuchsia_net_routes as fnet_routes, fidl_fuchsia_net_stack as fnet_stack,
-    fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netstack as fnetstack,
-    fidl_fuchsia_posix_socket as fposix_socket, fidl_fuchsia_stash as fstash,
+    fidl_fuchsia_net as fnet, fidl_fuchsia_net_filter as fnet_filter,
+    fidl_fuchsia_net_interfaces as fnet_interfaces, fidl_fuchsia_net_name as fnet_name,
+    fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_routes as fnet_routes,
+    fidl_fuchsia_net_stack as fnet_stack, fidl_fuchsia_netemul as fnetemul,
+    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_posix_socket as fposix_socket,
+    fidl_fuchsia_stash as fstash,
 };
 
 use crate::Result;
@@ -65,7 +65,6 @@ impl NetstackVersion {
 #[allow(missing_docs)]
 pub enum KnownServiceProvider {
     Netstack(NetstackVersion),
-    MockCobalt,
     SecureStash,
     DhcpServer,
     Dhcpv6Client,
@@ -78,11 +77,6 @@ pub enum KnownServiceProvider {
 mod constants {
     pub mod netstack {
         pub const COMPONENT_NAME: &str = "netstack";
-    }
-    pub mod mock_cobalt {
-        pub const COMPONENT_NAME: &str = "mock-cobalt";
-        pub const COMPONENT_URL: &str =
-            "TODO(https://fxbug.dev/77202): specify a CFv2 component manifest for mock cobalt";
     }
     pub mod secure_stash {
         pub const COMPONENT_NAME: &str = "stash-secure";
@@ -130,13 +124,6 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 exposes: Some(
                     version.get_services().iter().map(|service| service.to_string()).collect(),
                 ),
-                uses: use_log_sink(),
-                ..fnetemul::ChildDef::EMPTY
-            },
-            KnownServiceProvider::MockCobalt => fnetemul::ChildDef {
-                name: Some(constants::mock_cobalt::COMPONENT_NAME.to_string()),
-                url: Some(constants::mock_cobalt::COMPONENT_URL.to_string()),
-                exposes: Some(vec![fcobalt::LoggerFactoryMarker::SERVICE_NAME.to_string()]),
                 uses: use_log_sink(),
                 ..fnetemul::ChildDef::EMPTY
             },
@@ -353,7 +340,7 @@ impl TestSandboxExt for netemul::TestSandbox {
     {
         self.create_realm(
             name,
-            [KnownServiceProvider::Netstack(N::VERSION), KnownServiceProvider::MockCobalt]
+            [KnownServiceProvider::Netstack(N::VERSION)]
                 .iter()
                 .map(fnetemul::ChildDef::from)
                 .chain(children.into_iter().map(Into::into)),
