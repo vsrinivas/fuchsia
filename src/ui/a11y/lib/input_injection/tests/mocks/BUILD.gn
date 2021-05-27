@@ -1,0 +1,13 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  public = [ "mock_injector_manager.h" ]
+
+  sources = [ "mock_injector_manager.cc" ]
+
+  deps = [ "//src/ui/a11y/lib/input_injection" ]
+}
