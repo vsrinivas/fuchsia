@@ -8,8 +8,10 @@ use std::ffi::CString;
 use crate::mm::*;
 use crate::not_implemented;
 use crate::runner::*;
+use crate::signals::signal_handling::send_signal;
 use crate::strace;
 use crate::syscalls::*;
+use crate::task::UncheckedSignal;
 use crate::types::*;
 
 pub fn sys_clone(
@@ -26,7 +28,11 @@ pub fn sys_clone(
 
     let mut registers = ctx.registers;
     registers.rax = 0;
-    spawn_task(task_owner, registers, |_| {});
+
+    let task = ctx.task.clone();
+    spawn_task(task_owner, registers, move |_| {
+        let _ = send_signal(&task, &UncheckedSignal::from(SIGCHLD));
+    });
 
     Ok(tid.into())
 }

@@ -57,7 +57,7 @@ impl Kernel {
 
 pub struct Scheduler {
     /// The condvars that suspended tasks are waiting on, organized by pid_t of the suspended task.
-    suspended_tasks: HashMap<pid_t, Arc<Condvar>>,
+    pub suspended_tasks: HashMap<pid_t, Arc<Condvar>>,
 
     /// The number of pending signals for a given task.
     ///
@@ -70,7 +70,7 @@ pub struct Scheduler {
     ///      scheduled to run.
     ///   2. The signal is blocked by the target. The signal is then pending until the signal is
     ///      unblocked and can be delivered to the target.
-    pending_signals: HashMap<pid_t, HashMap<Signal, u64>>,
+    pub pending_signals: HashMap<pid_t, HashMap<Signal, u64>>,
 }
 
 impl Scheduler {
@@ -127,8 +127,7 @@ impl Scheduler {
     ///
     /// Note: `self` is `&mut` because an empty map is created if no map currently exists. This
     /// could potentially return Option<&HashMap> if the `&mut` becomes a problem.
-    #[cfg(test)]
-    pub fn get_pending_signals(&mut self, pid: pid_t) -> &HashMap<Signal, u64> {
+    pub fn get_pending_signals(&mut self, pid: pid_t) -> &mut HashMap<Signal, u64> {
         self.pending_signals.entry(pid).or_default()
     }
 }

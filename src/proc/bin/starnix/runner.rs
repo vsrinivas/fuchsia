@@ -128,15 +128,13 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
                 strace!("-> {:#x}", return_value);
                 ctx.registers.rax = return_value;
             }
-            Ok(SyscallResult::HandleSignal(signal, action)) => {
-                strace!("-> executing signal handler for: {:?}", signal);
-                dispatch_signal_handler(&mut ctx, signal, action);
-            }
             Err(errno) => {
                 strace!("!-> {}", errno);
                 ctx.registers.rax = (-errno.value()) as u64;
             }
         }
+
+        dequeue_signal(&mut ctx);
 
         thread.write_state_general_regs(ctx.registers)?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;

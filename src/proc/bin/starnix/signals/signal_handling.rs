@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::not_implemented;
 use crate::signals::{Signal, SignalAction, UncheckedSignal};
 use crate::syscalls::{SyscallContext, SyscallResult, SUCCESS};
-use crate::task::Task;
-use crate::types::{sigaction_t, Errno, UserAddress};
+use crate::task::{Scheduler, Task};
+use crate::types::{pid_t, sigaction_t, Errno, UserAddress};
 use fuchsia_zircon::sys::zx_thread_state_general_regs_t;
 use std::convert::TryFrom;
 
@@ -68,7 +69,7 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 /// This function stores the state required to restore after the signal handler on the stack.
 // TODO(lindkvist): Honor the flags in `sa_flags`.
 // TODO(lindkvist): Apply `sa_mask` to block signals during the execution of the signal handler.
-pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: Signal, action: sigaction_t) {
+pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: &Signal, action: sigaction_t) {
     let signal_stack_frame = SignalStackFrame::new(ctx.registers, action.sa_restorer.ptr() as u64);
 
     // Adjust the stack pointer to allow space for the red zone.
@@ -101,9 +102,6 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     let signal_stack_frame = SignalStackFrame::from_bytes(signal_stack_bytes);
     // Restore the register state from before executing the signal handler.
     ctx.registers = signal_stack_frame.registers;
-
-    // If the task is suspended, wake it.
-    wake(ctx.task);
 }
 
 pub fn send_signal(
@@ -117,32 +115,63 @@ pub fn send_signal(
     }
 
     let signal = Signal::try_from(unchecked_signal)?;
+    let mut scheduler = task.thread_group.kernel.scheduler.write();
+    scheduler.add_pending_signal(task.id, signal.clone());
+
     if signal.mask() & *task.signal_mask.lock() == 0 {
-        let signal_actions = task.thread_group.signal_actions.read();
-        // TODO(lindkvist): Handle default actions correctly.
-        return match signal_actions.get(&signal) {
-            SignalAction::Cont => {
-                wake(task);
-                Ok(SUCCESS)
-            }
-            SignalAction::Core => Ok(SUCCESS),
-            SignalAction::Ignore => Ok(SUCCESS),
-            SignalAction::Stop => Ok(SUCCESS),
-            SignalAction::Term => Ok(SUCCESS),
-            SignalAction::Custom(action) => Ok(SyscallResult::HandleSignal(signal, *action)),
-        };
-    } else {
-        let mut scheduler = task.thread_group.kernel.scheduler.write();
-        scheduler.add_pending_signal(task.id, signal);
+        // Wake the task. Note that any potential signal handler will be executed before
+        // the task returns from the suspend (from the perspective of user space).
+        wake(task.id, &mut scheduler);
     }
+
     Ok(SUCCESS)
 }
 
-/// Wakes the task from call to `sigsuspend`.
-fn wake(task: &Task) {
-    if let Some(waiter_condvar) =
-        task.thread_group.kernel.scheduler.write().remove_suspended_task(task.id)
+/// Dequeues and handles a pending signal for `ctx.task`.
+pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
+    let task = ctx.task;
+
+    let mut scheduler = task.thread_group.kernel.scheduler.write();
+    let signals = scheduler.get_pending_signals(task.id);
+
+    if let Some(unblocked_signal) = signals
+        .iter()
+        // Filter out signals that are blocked.
+        .filter(|(signal, _num_signals)| signal.mask() & *task.signal_mask.lock() == 0)
+        .flat_map(
+            // Filter out signals that are present in the map but have a 0 count.
+            |(signal, num_signals)| if *num_signals > 0 { Some(signal.clone()) } else { None },
+        )
+        .next()
     {
+        let signal_actions = task.thread_group.signal_actions.read();
+        // TODO(lindkvist): Handle default actions correctly.
+        match signal_actions.get(&unblocked_signal) {
+            SignalAction::Cont => {
+                not_implemented!("Haven't implemented signal action Cont");
+            }
+            SignalAction::Core => {
+                not_implemented!("Haven't implemented signal action Core");
+            }
+            SignalAction::Ignore => (),
+            SignalAction::Stop => {
+                not_implemented!("Haven't implemented signal action Stop");
+            }
+            SignalAction::Term => {
+                not_implemented!("Haven't implemented signal action Term");
+            }
+            SignalAction::Custom(action) => {
+                dispatch_signal_handler(ctx, &unblocked_signal, action.clone());
+            }
+        };
+        // This unwrap is safe since we checked the signal comes from the signals collection.
+        *signals.get_mut(&unblocked_signal).unwrap() -= 1;
+    }
+}
+
+/// Wakes the task from call to `sigsuspend`.
+fn wake(pid: pid_t, scheduler: &mut Scheduler) {
+    if let Some(waiter_condvar) = scheduler.remove_suspended_task(pid) {
         waiter_condvar.notify_all();
     }
 }

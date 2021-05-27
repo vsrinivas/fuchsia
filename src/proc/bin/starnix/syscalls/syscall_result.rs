@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use crate::fs::FdNumber;
-use crate::signals::Signal;
-use crate::types::{sigaction_t, UserAddress};
+use crate::types::UserAddress;
 
 /// The result of executing a syscall.
 ///
@@ -20,9 +19,6 @@ pub enum SyscallResult {
     /// The syscall completed successfully. The associated `u64` is the return value from the
     /// syscall.
     Success(u64),
-
-    /// The syscall completed successfully and the handler for `Signal` should be executed.
-    HandleSignal(Signal, sigaction_t),
 }
 
 pub const SUCCESS: SyscallResult = SyscallResult::Success(0);
