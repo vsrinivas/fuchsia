@@ -5,6 +5,7 @@
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use crate::not_implemented;
 use crate::signals::signal_handling::*;
 use crate::signals::*;
 use crate::syscalls::*;
@@ -296,6 +297,41 @@ where
     } else {
         return Err(last_error);
     }
+}
+
+pub fn sys_wait4(
+    ctx: &SyscallContext<'_>,
+    pid: pid_t,
+    user_wstatus: UserRef<i32>,
+    _options: i32,
+    user_rusage: UserRef<rusage>,
+) -> Result<SyscallResult, Errno> {
+    if pid != -1 {
+        not_implemented!("Can only wait for any child process in wait4");
+        return Err(ENOSYS);
+    }
+
+    // TODO(fxb/76976): Implement waiting for tasks that have not already exited.
+    let exit_code = match ctx.task.zombie_tasks.write().pop() {
+        Some(task_owner) => task_owner.task.exit_code.lock().clone(),
+        None => None,
+    };
+
+    if !user_rusage.is_null() {
+        let usage = rusage::default();
+        // TODO(fxb/76976): Return proper usage information.
+        ctx.task.mm.write_object(user_rusage, &usage)?;
+        not_implemented!("Don't provide accurate rusage in wait4")
+    }
+
+    if !user_wstatus.is_null() {
+        // TODO(fxb/76976): Return proper status.
+        let status = 0;
+        ctx.task.mm.write_object(user_wstatus, &status)?;
+        not_implemented!("Don't provide accurate wstatus in wait4")
+    }
+
+    Ok(exit_code.ok_or(ECHILD)?.into())
 }
 
 #[cfg(test)]

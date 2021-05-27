@@ -328,6 +328,12 @@ pub struct Task {
 
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
+
+    /// The exit code that this task exited with.
+    pub exit_code: Mutex<Option<i32>>,
+
+    /// Child tasks that have exited, but not yet been `waited` on.
+    pub zombie_tasks: RwLock<Vec<TaskOwner>>,
 }
 
 impl Task {
@@ -373,6 +379,8 @@ impl Task {
             signal_stack: Mutex::new(None),
             signal_mask: Mutex::new(sigset_t::default()),
             exit_signal,
+            exit_code: Mutex::new(None),
+            zombie_tasks: RwLock::new(vec![]),
         });
         pids.add_task(&task);
         pids.add_thread_group(&task.thread_group);

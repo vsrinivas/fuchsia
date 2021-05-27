@@ -23,6 +23,7 @@
 #include <linux/limits.h>
 #include <linux/mman.h>
 #include <linux/prctl.h>
+#include <linux/resource.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
 #include <linux/stat.h>

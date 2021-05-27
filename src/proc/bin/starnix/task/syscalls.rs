@@ -109,12 +109,14 @@ pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
 
 pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
     info!(target: "exit", "exit: tid={} error_code={}", ctx.task.get_tid(), error_code);
+    *ctx.task.exit_code.lock() = Some(error_code);
     Ok(SyscallResult::Exit(error_code))
 }
 
 pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
     info!(target: "exit", "exit_group: pid={} error_code={}", ctx.task.get_pid(), error_code);
     // TODO: Once we have more than one thread in a thread group, we'll need to exit them as well.
+    *ctx.task.exit_code.lock() = Some(error_code);
     Ok(SyscallResult::Exit(error_code))
 }
 

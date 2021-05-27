@@ -117,6 +117,11 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
                 strace!("-> exit {:#x}", error_code);
                 // TODO: Set the error_code on the Zircon process object. Currently missing a way
                 //       to do this in Zircon. Might be easier in the new execution model.
+                if let Some(parent) = task.get_task(task.parent) {
+                    // TODO: Clean up the resources associated with the process.
+                    let _ = ctx.task.thread_group.process.kill();
+                    parent.zombie_tasks.write().push(task_owner);
+                }
                 return Ok(error_code);
             }
             Ok(SyscallResult::Success(return_value)) => {

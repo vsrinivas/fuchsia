@@ -162,6 +162,7 @@ pub fn dispatch_syscall(
         tgkill[3],
         umask[1],
         uname[1],
+        wait4[4],
         write[3],
         writev[3],
     }
