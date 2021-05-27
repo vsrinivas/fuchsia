@@ -6,12 +6,14 @@ use crate::config::{from_reader, BoardConfig, ProductConfig, VBMetaConfig};
 use crate::vfs::RealFilesystemProvider;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
+use assembly_blobfs::BlobFSBuilder;
 use assembly_update_package::UpdatePackageBuilder;
 use ffx_assembly_args::ImageArgs;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::{PackageManifest, PackagePath};
 use log::info;
+use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -28,32 +30,43 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let (product, board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
 
-    let base_merkle = if has_base_package(&product) {
+    let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
-        let base_package = construct_base_package(&outdir, &gendir, &product)?;
-        let base_merkle = MerkleTree::from_reader(&base_package)
-            .context("Failed to calculate the base merkle")?
-            .root();
-        info!("Base merkle: {}", &base_merkle);
-        Some(base_merkle)
+        Some(construct_base_package(&outdir, &gendir, &product)?)
     } else {
         info!("Skipping base package creation");
         None
     };
 
     info!("Creating the ZBI");
-    let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_merkle)?;
+    let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_package.as_ref())?;
 
-    let vbmeta_path = if let Some(vbmeta_config) = &board.vbmeta {
+    let vbmeta_path: Option<PathBuf> = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
         Some(construct_vbmeta(&outdir, vbmeta_config, &zbi_path)?)
     } else {
+        info!("Skipping vbmeta creation");
         None
     };
 
     info!("Creating the update package");
-    let _update_pkg_path =
-        construct_update(&outdir, &gendir, &product, &board, &zbi_path, vbmeta_path, base_merkle)?;
+    let update_package: UpdatePackage = construct_update(
+        &outdir,
+        &gendir,
+        &product,
+        &board,
+        &zbi_path,
+        vbmeta_path,
+        base_package.as_ref(),
+    )?;
+
+    let _blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
+        info!("Creating the blobfs");
+        Some(construct_blobfs(&outdir, &gendir, &product, &base_package, &update_package)?)
+    } else {
+        info!("Skipping blobfs creation");
+        None
+    };
 
     Ok(())
 }
@@ -76,11 +89,17 @@ fn has_base_package(product: &ProductConfig) -> bool {
         && product.extra_packages_for_base_package.is_empty());
 }
 
+struct BasePackage {
+    merkle: Hash,
+    contents: BTreeMap<String, String>,
+    path: PathBuf,
+}
+
 fn construct_base_package(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
-) -> Result<File> {
+) -> Result<BasePackage> {
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &product.extra_packages_for_base_package {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
@@ -106,13 +125,23 @@ fn construct_base_package(
         .read(true)
         .write(true)
         .create(true)
-        .open(base_package_path)
+        .open(&base_package_path)
         .context("Failed to create the base package file")?;
-    let _ = base_pkg_builder
+    let build_results = base_pkg_builder
         .build(gendir, &mut base_package)
         .context("Failed to build the base package")?;
+
     base_package.seek(SeekFrom::Start(0))?;
-    Ok(base_package)
+    let base_merkle = MerkleTree::from_reader(&base_package)
+        .context("Failed to calculate the base merkle")?
+        .root();
+    info!("Base merkle: {}", &base_merkle);
+
+    Ok(BasePackage {
+        merkle: base_merkle,
+        contents: build_results.contents,
+        path: base_package_path,
+    })
 }
 
 fn pkg_manifest_from_path(path: impl AsRef<Path>) -> Result<PackageManifest> {
@@ -126,7 +155,7 @@ fn construct_zbi(
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
     board: &BoardConfig,
-    base_merkle: Option<Hash>,
+    base_package: Option<&BasePackage>,
 ) -> Result<PathBuf> {
     let mut zbi_builder = ZbiBuilder::default();
 
@@ -138,9 +167,10 @@ fn construct_zbi(
 
     // If a base merkle is supplied, then add the boot arguments for startup up pkgfs with the
     // merkle of the Base Package.
-    if let Some(base_merkle) = base_merkle {
+    if let Some(base_package) = &base_package {
         // Specify how to launch pkgfs: bin/pkgsvr <base-merkle>
-        zbi_builder.add_boot_arg(&format!("zircon.system.pkgfs.cmd=bin/pkgsvr+{}", base_merkle));
+        zbi_builder
+            .add_boot_arg(&format!("zircon.system.pkgfs.cmd=bin/pkgsvr+{}", &base_package.merkle));
 
         // Add the pkgfs blobs to the boot arguments, so that pkgfs can be bootstrapped out of blobfs,
         // before the blobfs service is available.
@@ -215,6 +245,11 @@ fn construct_vbmeta(
     Ok(vbmeta_path)
 }
 
+struct UpdatePackage {
+    contents: BTreeMap<String, String>,
+    path: PathBuf,
+}
+
 fn construct_update(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
@@ -222,8 +257,8 @@ fn construct_update(
     board: &BoardConfig,
     zbi: impl AsRef<Path>,
     vbmeta: Option<impl AsRef<Path>>,
-    base_merkle: Option<Hash>,
-) -> Result<PathBuf> {
+    base_package: Option<&BasePackage>,
+) -> Result<UpdatePackage> {
     // Create the board name file.
     // TODO(fxbug.dev/76326): Create a better system for writing intermediate files.
     let board_name = gendir.as_ref().join("board");
@@ -268,11 +303,13 @@ fn construct_update(
     add_packages_to_update(&product.base_packages)?;
     add_packages_to_update(&product.cache_packages)?;
 
-    if let Some(base_merkle) = base_merkle {
+    if let Some(base_package) = &base_package {
         // Add the base package merkle.
         // TODO(fxbug.dev/76986): Do not hardcode the base package path.
-        update_pkg_builder
-            .add_package(PackagePath::from_name_and_variant("system_image", "0")?, base_merkle)?;
+        update_pkg_builder.add_package(
+            PackagePath::from_name_and_variant("system_image", "0")?,
+            base_package.merkle,
+        )?;
     }
 
     // Build the update package and return its path.
@@ -283,8 +320,43 @@ fn construct_update(
         .create(true)
         .open(&update_package_path)
         .context("Failed to create the update package file")?;
-    update_pkg_builder
+    let update_contents = update_pkg_builder
         .build(gendir, &mut update_package)
         .context("Failed to build the update package")?;
-    Ok(update_package_path)
+    Ok(UpdatePackage { contents: update_contents, path: update_package_path })
+}
+
+fn construct_blobfs(
+    outdir: impl AsRef<Path>,
+    gendir: impl AsRef<Path>,
+    product: &ProductConfig,
+    base_package: &BasePackage,
+    update_package: &UpdatePackage,
+) -> Result<PathBuf> {
+    let mut blobfs_builder = BlobFSBuilder::new();
+
+    // Add the base and cache packages.
+    for package_manifest_path in &product.base_packages {
+        blobfs_builder.add_package(&package_manifest_path)?;
+    }
+    for package_manifest_path in &product.cache_packages {
+        blobfs_builder.add_package(&package_manifest_path)?;
+    }
+
+    // Add the base package and its contents.
+    blobfs_builder.add_file(&base_package.path)?;
+    for (_, source) in &base_package.contents {
+        blobfs_builder.add_file(source)?;
+    }
+
+    // Add the update package and its contents.
+    blobfs_builder.add_file(&update_package.path)?;
+    for (_, source) in &update_package.contents {
+        blobfs_builder.add_file(source)?;
+    }
+
+    // Build the blobfs and return its path.
+    let blobfs_path = outdir.as_ref().join("blob.blk");
+    blobfs_builder.build(gendir, &blobfs_path).context("Failed to build the blobfs")?;
+    Ok(blobfs_path)
 }

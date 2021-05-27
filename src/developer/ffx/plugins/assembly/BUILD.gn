@@ -23,6 +23,7 @@ ffx_plugin("ffx_assembly") {
   args_deps = []
   deps = [
     "//src/lib/assembly/base_package",
+    "//src/lib/assembly/blobfs",
     "//src/lib/assembly/update_package",
     "//src/lib/assembly/vbmeta",
     "//src/lib/assembly/zbi",

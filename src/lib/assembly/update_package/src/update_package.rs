@@ -56,7 +56,11 @@ impl UpdatePackageBuilder {
     }
 
     /// Build the update package.
-    pub fn build(mut self, gendir: impl AsRef<Path>, out: &mut impl Write) -> Result<()> {
+    pub fn build(
+        mut self,
+        gendir: impl AsRef<Path>,
+        out: &mut impl Write,
+    ) -> Result<BTreeMap<String, String>> {
         // Add the package list.
         let packages_path = gendir.as_ref().join("packages.json");
         let packages = File::create(&packages_path).context("Failed to create packages.json")?;
@@ -67,12 +71,13 @@ impl UpdatePackageBuilder {
         let far_contents = BTreeMap::new();
 
         // Build the update package.
+        let update_contents = self.contents.clone();
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(self.contents, far_contents)?;
         let meta_package = MetaPackage::from_name_and_variant("update", "0")?;
         fuchsia_pkg::build(&creation_manifest, &meta_package, out)?;
 
-        Ok(())
+        Ok(update_contents)
     }
 }
 
