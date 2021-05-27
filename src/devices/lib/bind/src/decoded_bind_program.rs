@@ -15,7 +15,7 @@ const MINIMUM_BYTECODE_SZ: usize = HEADER_SZ * 3;
 
 // This struct decodes and unwraps the given bytecode into a symbol table
 // and list of instructions.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DecodedProgram {
     pub symbol_table: HashMap<u32, String>,
     pub instructions: Vec<u8>,

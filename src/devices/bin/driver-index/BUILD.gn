@@ -52,12 +52,14 @@ fuchsia_package("package") {
 bind_rules("test-bind") {
   rules = "test.bind"
   driver_url = "fuchsia-pkg://my-test-driver#meta/my-driver.cm"
+  use_new_bytecode = true
   output_bytecode = true
 }
 
 bind_rules("test-bind2") {
   rules = "test2.bind"
   driver_url = "fuchsia-pkg://my-test-driver#meta/my-driver2.cm"
+  use_new_bytecode = true
   output_bytecode = true
 }
 

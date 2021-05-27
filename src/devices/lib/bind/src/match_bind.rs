@@ -27,9 +27,9 @@ pub enum PropertyKey {
     StringKey(String),
 }
 
-type DeviceProperties = HashMap<PropertyKey, Symbol>;
+pub type DeviceProperties = HashMap<PropertyKey, Symbol>;
 
-struct DeviceMatcher {
+pub struct DeviceMatcher {
     properties: DeviceProperties,
     symbol_table: HashMap<u32, String>,
     iter: BytecodeIter,

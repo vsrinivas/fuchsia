@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
-use bind::encode_bind_program_v1 as bind_v1;
-use bind::instruction::DeviceProperty;
 use fidl_fuchsia_driver_framework as fdf;
 use fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream};
 use fuchsia_async as fasync;
@@ -12,10 +10,9 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{zx_status_t, Status};
 use futures::prelude::*;
 use serde::Deserialize;
-use std::collections::HashSet;
 use std::rc::Rc;
 
-fn encode_err_to_stdio_err(error: bind::compiler::BindProgramDecodeError) -> std::io::Error {
+fn encode_err_to_stdio_err(error: bind::bytecode_common::BytecodeError) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::Other, format!("Error decoding bind file: {}", error))
 }
 
@@ -39,23 +36,28 @@ enum IncomingRequest {
 }
 
 struct Driver {
-    bind_program: Vec<bind_v1::RawInstruction<[u32; 3]>>,
+    bind_program: bind::decoded_bind_program::DecodedProgram,
     url: String,
 }
 
 impl Driver {
     fn matches(
         &self,
-        properties: &Vec<DeviceProperty>,
-    ) -> Result<Option<HashSet<DeviceProperty>>, bind::debugger::DebuggerError> {
-        bind::debugger::debug(&self.bind_program, properties)
+        properties: bind::match_bind::DeviceProperties,
+    ) -> Result<bool, bind::bytecode_common::BytecodeError> {
+        // TODO(fxbug.dev/77377): This needs to be updated when DeviceMatcher no longer consumes
+        // the bind program.
+        bind::match_bind::DeviceMatcher::new(self.bind_program.clone(), properties).match_bind()
     }
 
     fn create(
         url: String,
         bind_program: Vec<u8>,
-    ) -> Result<Driver, bind::compiler::BindProgramDecodeError> {
-        Ok(Driver { bind_program: bind_v1::decode_from_bytecode_v1(&bind_program)?, url: url })
+    ) -> Result<Driver, bind::bytecode_common::BytecodeError> {
+        Ok(Driver {
+            bind_program: bind::decoded_bind_program::DecodedProgram::new(bind_program)?,
+            url: url,
+        })
     }
 }
 
@@ -87,16 +89,14 @@ impl Indexer {
         let properties = args.properties.unwrap();
         let properties = node_to_device_property(&properties)?;
         for driver in &self.drivers {
-            match driver.matches(&properties) {
-                Ok(matched_properties) => {
-                    if matched_properties.is_some() {
-                        return Ok(fdf::MatchedDriver {
-                            url: Some(driver.url.clone()),
-                            ..fdf::MatchedDriver::EMPTY
-                        });
-                    }
-                    continue;
+            match driver.matches(properties.clone()) {
+                Ok(true) => {
+                    return Ok(fdf::MatchedDriver {
+                        url: Some(driver.url.clone()),
+                        ..fdf::MatchedDriver::EMPTY
+                    });
                 }
+                Ok(false) => continue,
                 Err(e) => {
                     // If a driver has a bind error we will keep trying to match the other drivers
                     // instead of returning an error.
@@ -111,15 +111,17 @@ impl Indexer {
 
 fn node_to_device_property(
     node_properties: &Vec<fdf::NodeProperty>,
-) -> Result<Vec<DeviceProperty>, zx_status_t> {
-    let mut device_properties = Vec::<DeviceProperty>::with_capacity(node_properties.len());
+) -> Result<bind::match_bind::DeviceProperties, zx_status_t> {
+    let mut device_properties = bind::match_bind::DeviceProperties::new();
 
     for property in node_properties {
         if property.key.is_none() || property.value.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
-        device_properties
-            .push(DeviceProperty { key: property.key.unwrap(), value: property.value.unwrap() });
+        device_properties.insert(
+            bind::match_bind::PropertyKey::NumberKey(property.key.unwrap().into()),
+            bind::compiler::Symbol::NumberValue(property.value.unwrap().into()),
+        );
     }
     Ok(device_properties)
 }
@@ -200,8 +202,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn match_driver_no_node_properties() {
+        let bind_program = bind::compiler::BindProgram {
+            symbol_table: bind::compiler::SymbolTable::new(),
+            instructions: vec![],
+            use_new_bytecode: true,
+        };
+        let byte_code = bind_program.encode_to_bytecode().unwrap();
+        let bind_program = bind::decoded_bind_program::DecodedProgram::new(byte_code).unwrap();
         let index = Rc::new(Indexer {
-            drivers: vec![Driver { bind_program: vec![], url: "my-url.cmx".to_string() }],
+            drivers: vec![Driver { bind_program: bind_program, url: "my-url.cmx".to_string() }],
         });
 
         let (proxy, stream) =
@@ -218,15 +227,26 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn match_driver_bind_error() {
-        let mut index = Rc::new(Indexer { drivers: vec![] });
+        let bind_program = bind::compiler::BindProgram {
+            symbol_table: bind::compiler::SymbolTable::new(),
+            instructions: vec![bind::compiler::SymbolicInstructionInfo {
+                location: None,
+                instruction: bind::compiler::SymbolicInstruction::AbortIfNotEqual {
+                    lhs: bind::compiler::Symbol::DeprecatedKey(10),
+                    rhs: bind::compiler::Symbol::NumberValue(1),
+                },
+            }],
+            use_new_bytecode: true,
+        };
+        let byte_code = bind_program.encode_to_bytecode().unwrap();
+        let bind_program = bind::decoded_bind_program::DecodedProgram::new(byte_code).unwrap();
+        let index = Rc::new(Indexer {
+            drivers: vec![Driver { bind_program: bind_program, url: "my-url.cmx".to_string() }],
+        });
 
+        // This property does not match the above program.
         let property =
-            fdf::NodeProperty { key: Some(0x10), value: Some(0x20), ..fdf::NodeProperty::EMPTY };
-
-        let url = "my-url.cmx";
-        let mut_index = Rc::get_mut(&mut index).unwrap();
-        // Setting an empty bind program should give us an error.
-        mut_index.add_driver(Driver { bind_program: vec![], url: url.to_string() });
+            fdf::NodeProperty { key: Some(10), value: Some(20), ..fdf::NodeProperty::EMPTY };
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
@@ -242,21 +262,28 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn match_driver_success() {
-        let mut index = Rc::new(Indexer { drivers: vec![] });
+        let bind_program = bind::compiler::BindProgram {
+            symbol_table: bind::compiler::SymbolTable::new(),
+            instructions: vec![bind::compiler::SymbolicInstructionInfo {
+                location: None,
+                instruction: bind::compiler::SymbolicInstruction::AbortIfNotEqual {
+                    lhs: bind::compiler::Symbol::DeprecatedKey(10),
+                    rhs: bind::compiler::Symbol::NumberValue(1),
+                },
+            }],
+            use_new_bytecode: true,
+        };
+        let byte_code = bind_program.encode_to_bytecode().unwrap();
+        let bind_program = bind::decoded_bind_program::DecodedProgram::new(byte_code).unwrap();
 
+        let url = "my-url.cmx".to_string();
+        let index = Rc::new(Indexer {
+            drivers: vec![Driver { bind_program: bind_program, url: url.clone() }],
+        });
+
+        // This property does match the above program
         let property =
-            fdf::NodeProperty { key: Some(0x10), value: Some(0x20), ..fdf::NodeProperty::EMPTY };
-
-        let key = bind::compiler::Symbol::NumberValue(property.key.unwrap() as u64);
-        let value = bind::compiler::Symbol::NumberValue(property.value.unwrap() as u64);
-        let instruction =
-            bind::instruction::Instruction::Match(bind::instruction::Condition::Equal(key, value));
-        let instruction = bind::instruction::InstructionInfo::new(instruction);
-        let instruction = bind_v1::encode_instruction(instruction).unwrap();
-
-        let url = "my-url.cmx";
-        let mut_index = Rc::get_mut(&mut index).unwrap();
-        mut_index.add_driver(Driver { bind_program: vec![instruction], url: url.to_string() });
+            fdf::NodeProperty { key: Some(10), value: Some(1), ..fdf::NodeProperty::EMPTY };
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
