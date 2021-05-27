@@ -139,7 +139,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
       fit::defer([this, &dc_image]() { controller_->dc()->ReleaseImage(&dc_image); });
   zx::vmo vmo;
   uint32_t stride = 0;
-  if (is_vc_) {
+  if (use_kernel_framebuffer_) {
     ZX_ASSERT(it->second.kernel.channel());
     auto res = it->second.kernel.WaitForBuffersAllocated();
     if (!res.ok() || res->status != ZX_OK) {
@@ -218,7 +218,7 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
 
   // Make a second handle to represent the kernel's usage of the buffer as a
   // framebuffer, so we can set constraints and get VMOs for zx_framebuffer_set_range.
-  if (is_vc_) {
+  if (use_kernel_framebuffer_) {
     zx::channel vc_token_server, vc_token_client;
     zx::channel::create(0, &vc_token_server, &vc_token_client);
     if (!fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
@@ -291,7 +291,7 @@ void Client::SetBufferCollectionConstraints(
   zx_status_t status = controller_->dc()->SetBufferCollectionConstraints(
       &dc_image, it->second.driver.channel().get());
 
-  if (status == ZX_OK && is_vc_) {
+  if (status == ZX_OK && use_kernel_framebuffer_) {
     ZX_ASSERT(it->second.kernel.channel());
 
     // Constraints to be used with zx_framebuffer_set_range.
@@ -338,6 +338,7 @@ void Client::SetBufferCollectionConstraints(
       return;
     }
   }
+
   _completer.Reply(status);
 }
 
@@ -1146,7 +1147,7 @@ void Client::ApplyConfig() {
         display_config.pending_apply_layer_change_property_.Set(true);
       }
 
-      if (is_vc_) {
+      if (use_kernel_framebuffer_) {
         auto fb = layer->current_image();
         if (fb) {
           // If the virtcon is displaying an image, set it as the kernel's framebuffer
@@ -1536,18 +1537,21 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
   return fit::ok(binding);
 }
 
-Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id)
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,
+               uint32_t client_id)
     : controller_(controller),
       proxy_(proxy),
       is_vc_(is_vc),
+      use_kernel_framebuffer_(use_kernel_framebuffer),
       id_(client_id),
       fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)) {}
 
-Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t client_id,
-               zx::channel server_channel)
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,
+               uint32_t client_id, zx::channel server_channel)
     : controller_(controller),
       proxy_(proxy),
       is_vc_(is_vc),
+      use_kernel_framebuffer_(use_kernel_framebuffer),
       id_(client_id),
       server_handle_(server_channel.get()),
       fences_(controller->loop().dispatcher(), fit::bind_member(this, &Client::OnFenceFired)),
@@ -1836,22 +1840,23 @@ zx_status_t ClientProxy::Init(inspect::Node* parent_node, zx::channel server_cha
   return ZX_OK;
 }
 
-ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
-                         fit::function<void()> on_client_dead)
+ClientProxy::ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer,
+                         uint32_t client_id, fit::function<void()> on_client_dead)
     : ClientParent(controller->zxdev()),
       controller_(controller),
       is_vc_(is_vc),
-      handler_(controller_, this, is_vc_, client_id),
+      handler_(controller_, this, is_vc_, use_kernel_framebuffer, client_id),
       on_client_dead_(std::move(on_client_dead)) {
   mtx_init(&mtx_, mtx_plain);
 }
 
-ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
-                         zx::channel server_channel)
+ClientProxy::ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer,
+                         uint32_t client_id, zx::channel server_channel)
     : ClientParent(nullptr),
       controller_(controller),
       is_vc_(is_vc),
-      handler_(controller_, this, is_vc_, client_id, std::move(server_channel)) {
+      handler_(controller_, this, is_vc_, use_kernel_framebuffer, client_id,
+               std::move(server_channel)) {
   mtx_init(&mtx_, mtx_plain);
 }
 

@@ -178,11 +178,12 @@ class DisplayControllerBindingState {
 class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
  public:
   // |controller| must outlive this and |proxy|.
-  Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id);
+  Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,
+         uint32_t id);
 
   // This is used for testing
-  Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t id,
-         zx::channel server_channel);
+  Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,
+         uint32_t id, zx::channel server_channel);
 
   ~Client();
 
@@ -295,7 +296,8 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
 
   Controller* controller_;
   ClientProxy* proxy_;
-  bool is_vc_;
+  const bool is_vc_;
+  const bool use_kernel_framebuffer_;
   uint64_t console_fb_display_id_ = -1;
   const uint32_t id_;
   uint32_t single_buffer_framebuffer_stride_ = 0;
@@ -363,11 +365,12 @@ using ClientParent = ddk::Device<ClientProxy, ddk::Closable>;
 class ClientProxy : public ClientParent {
  public:
   // "client_id" is assigned by the Controller to distinguish clients.
-  ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
+  ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer, uint32_t client_id,
               fit::function<void()> on_client_dead);
 
   // This is used for testing
-  ClientProxy(Controller* controller, bool is_vc, uint32_t client_id, zx::channel server_channel);
+  ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer, uint32_t client_id,
+              zx::channel server_channel);
 
   ~ClientProxy();
   zx_status_t Init(inspect::Node* parent_node, zx::channel server_channel);

@@ -55,6 +55,17 @@ edid::ddc_i2c_transact ddc_tx = [](void* ctx, edid::ddc_i2c_msg_t* msgs, uint32_
   return i2c->i2c.Transact(i2c->bus_id, ops, count) == ZX_OK;
 };
 
+bool IsKernelFramebufferDisabled() {
+  const char* value = getenv("driver.display.disable-kernel-framebuffer");
+  if (!value) {
+    return false;
+  }
+  if ((strcmp(value, "0") == 0) || (strcmp(value, "false") == 0) || (strcmp(value, "off") == 0)) {
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 namespace display {
@@ -922,8 +933,14 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, next_client_id_++,
-                                                      std::move(on_client_dead));
+  // Kernel framebuffer currently prevent non-linear formats and result
+  // in a significant performance cost each time a new config is applied.
+  // We limit usage to virtcon mode until these problems have been
+  // resolved.
+  bool use_kernel_framebuffer = is_vc && !kernel_framebuffer_disabled_;
+
+  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, use_kernel_framebuffer,
+                                                      next_client_id_++, std::move(on_client_dead));
   if (!ac.check()) {
     zxlogf(DEBUG, "Failed to alloc client");
     return ZX_ERR_NO_MEMORY;
@@ -1091,6 +1108,7 @@ static constexpr uint64_t kWatchdogTimeoutMs = 45000;
 
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent),
+      kernel_framebuffer_disabled_(IsKernelFramebufferDisabled()),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       watchdog_("display-client-loop", kWatchdogWarningIntervalMs, kWatchdogTimeoutMs,
                 loop_.dispatcher()) {

@@ -16,7 +16,7 @@ TEST(DispTest, ClientVSyncOk) {
   zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
   EXPECT_OK(status);
   Controller controller(nullptr);
-  ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
+  ClientProxy clientproxy(&controller, false, false, 0, std::move(server_chl));
   clientproxy.EnableVsync(true);
   fbl::AutoLock lock(controller.mtx());
   status = clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
@@ -35,7 +35,7 @@ TEST(DispTest, ClientVSynPeerClosed) {
   zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
   EXPECT_OK(status);
   Controller controller(nullptr);
-  ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
+  ClientProxy clientproxy(&controller, false, false, 0, std::move(server_chl));
   clientproxy.EnableVsync(true);
   fbl::AutoLock lock(controller.mtx());
   client_chl.reset();
@@ -49,7 +49,7 @@ TEST(DispTest, ClientVSyncNotSupported) {
   zx_status_t status = zx::channel::create(0, &server_chl, &client_chl);
   EXPECT_OK(status);
   Controller controller(nullptr);
-  ClientProxy clientproxy(&controller, false, 0, std::move(server_chl));
+  ClientProxy clientproxy(&controller, false, false, 0, std::move(server_chl));
   fbl::AutoLock lock(controller.mtx());
   status = clientproxy.OnDisplayVsync(0, 0, nullptr, 0);
   EXPECT_TRUE(status == ZX_ERR_NOT_SUPPORTED);
