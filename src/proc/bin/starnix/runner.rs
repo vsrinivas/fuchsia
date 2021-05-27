@@ -212,8 +212,15 @@ async fn start_component(
     files.insert(FdNumber::from_raw(1), stdio.clone());
     files.insert(FdNumber::from_raw(2), stdio);
 
-    let task_owner =
-        Task::new(&kernel, &binary_path, files, FileSystem::new(root), Credentials::new(3), None)?;
+    let task_owner = Task::new(
+        &kernel,
+        &binary_path,
+        0,
+        files,
+        FileSystem::new(root),
+        Credentials::new(3),
+        None,
+    )?;
 
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());

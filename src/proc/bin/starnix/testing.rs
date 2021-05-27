@@ -38,6 +38,7 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
     let task = Task::new(
         &kernel,
         &CString::new("test-task").unwrap(),
+        0,
         FdTable::new(),
         create_test_file_system(),
         Credentials::default(),
@@ -55,6 +56,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
     Task::new(
         kernel,
         &CString::new(task_name).unwrap(),
+        0,
         FdTable::new(),
         create_test_file_system(),
         Credentials::default(),

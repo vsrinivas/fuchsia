@@ -296,6 +296,9 @@ pub struct Task {
     /// The parent task, if any.
     pub parent: pid_t,
 
+    /// The children of this task.
+    pub children: RwLock<HashSet<pid_t>>,
+
     // TODO: The children of this task.
     /// A handle to the underlying Zircon thread object.
     pub thread: zx::Thread,
@@ -331,6 +334,7 @@ impl Task {
     pub fn new(
         kernel: &Arc<Kernel>,
         name: &CString,
+        parent: pid_t,
         files: Arc<FdTable>,
         fs: Arc<FileSystem>,
         creds: Credentials,
@@ -354,7 +358,8 @@ impl Task {
         let task = Arc::new(Task {
             id,
             thread_group: Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
-            parent: 0,
+            parent: parent,
+            children: RwLock::new(HashSet::new()),
             thread,
             files,
             mm: Arc::new(
@@ -414,6 +419,7 @@ impl Task {
         let child = Self::new(
             &self.thread_group.kernel,
             &CString::new("cloned-child").unwrap(),
+            self.id,
             files,
             fs,
             creds,
@@ -432,6 +438,8 @@ impl Task {
             *child.task.set_child_tid.lock() = user_child_tid;
             child.task.mm.write_object(user_child_tid, &child.task.id)?;
         }
+
+        self.children.write().insert(child.task.id);
 
         Ok(child)
     }
@@ -477,6 +485,9 @@ impl Task {
     /// Called by the Drop trait on TaskOwner.
     fn destroy(&self) {
         self.thread_group.remove(self);
+        if let Some(parent) = self.get_task(self.parent) {
+            parent.remove_child(self.id);
+        }
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {
@@ -527,6 +538,10 @@ impl Task {
         }
 
         false
+    }
+
+    fn remove_child(&self, pid: pid_t) {
+        self.children.write().remove(&pid);
     }
 }
 
