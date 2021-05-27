@@ -10,7 +10,7 @@ use {
         repository::Repository,
         DEFAULT_TUF_METADATA_TIMEOUT,
     },
-    anyhow::anyhow,
+    anyhow::{anyhow, Context as _},
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg::LocalMirrorProxy,
     fidl_fuchsia_pkg_ext::{self as pkg, cache, BlobId, RepositoryConfig, RepositoryConfigs},
@@ -221,13 +221,13 @@ impl RepositoryManager {
             temp_path.push(".new");
             let temp_path = PathBuf::from(temp_path);
             {
-                let f = fs::File::create(&temp_path)?;
-                serde_json::to_writer(
-                    io::BufWriter::new(f),
-                    &RepositoryConfigs::Version1(configs),
-                )?;
+                let f = fs::File::create(&temp_path)
+                    .with_context(|| format!("create temp file {:?}", temp_path))?;
+                serde_json::to_writer(io::BufWriter::new(f), &RepositoryConfigs::Version1(configs))
+                    .context("serialize config")?;
             }
-            fs::rename(temp_path, dynamic_configs_path)
+            fs::rename(&temp_path, dynamic_configs_path)
+                .with_context(|| format!("rename {:?} to {:?}", temp_path, dynamic_configs_path))
         })();
 
         match result {

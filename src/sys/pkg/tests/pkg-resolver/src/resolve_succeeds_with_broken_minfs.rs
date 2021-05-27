@@ -28,7 +28,7 @@ use {
     },
 };
 
-trait OpenRequestHandler {
+trait OpenRequestHandler: Sized {
     fn handle_open_request(
         &self,
         flags: u32,
@@ -36,10 +36,11 @@ trait OpenRequestHandler {
         path: String,
         object: ServerEnd<NodeMarker>,
         control_handle: DirectoryControlHandle,
+        parent: Arc<DirectoryStreamHandler<Self>>,
     );
 }
 
-struct DirectoryStreamHandler<O> {
+struct DirectoryStreamHandler<O: Sized> {
     open_handler: Arc<O>,
 }
 
@@ -63,10 +64,19 @@ where
                         mock_filesystem::describe_dir(flags, &stream);
                         fasync::Task::spawn(Arc::clone(&self).handle_stream(stream)).detach();
                     }
-                    DirectoryRequest::Open { flags, mode, path, object, control_handle } => self
-                        .open_handler
-                        .handle_open_request(flags, mode, path, object, control_handle),
-                    other => panic!("unhandled request type: {:?}", other),
+                    DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
+                        self.open_handler.handle_open_request(
+                            flags,
+                            mode,
+                            path,
+                            object,
+                            control_handle,
+                            Arc::clone(&self),
+                        )
+                    }
+                    DirectoryRequest::Close { .. } => (),
+                    DirectoryRequest::GetToken { .. } => (),
+                    req => panic!("DirectoryStreamHandler unhandled request {:?}", req),
                 }
             }
         }
@@ -110,9 +120,16 @@ impl OpenRequestHandler for OpenFailOrTempFs {
         path: String,
         object: ServerEnd<NodeMarker>,
         _control_handle: DirectoryControlHandle,
+        parent: Arc<DirectoryStreamHandler<Self>>,
     ) {
         if self.should_fail() {
-            self.fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            if path == "." {
+                let stream = object.into_stream().unwrap().cast_stream();
+                mock_filesystem::describe_dir(flags, &stream);
+                fasync::Task::spawn(parent.handle_stream(stream)).detach();
+            } else {
+                self.fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            }
         } else {
             let (tempdir_proxy, server_end) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
@@ -166,6 +183,10 @@ impl WriteFailOrTempFs {
     fn make_write_succeed(&self) {
         self.should_fail.store(false, std::sync::atomic::Ordering::SeqCst);
     }
+
+    fn should_fail(&self) -> bool {
+        self.should_fail.load(std::sync::atomic::Ordering::SeqCst)
+    }
 }
 
 impl OpenRequestHandler for WriteFailOrTempFs {
@@ -174,12 +195,20 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         flags: u32,
         mode: u32,
         path: String,
-        server_end: ServerEnd<NodeMarker>,
+        object: ServerEnd<NodeMarker>,
         _control_handle: DirectoryControlHandle,
+        parent: Arc<DirectoryStreamHandler<Self>>,
     ) {
+        if path == "." && self.should_fail() {
+            let stream = object.into_stream().unwrap().cast_stream();
+            mock_filesystem::describe_dir(flags, &stream);
+            fasync::Task::spawn(parent.handle_stream(stream)).detach();
+            return;
+        }
+
         if !self.files_to_fail_writes.contains(&path) {
             // We don't want to intercept file operations, so just open the file normally.
-            self.tempdir_proxy.open(flags, mode, &path, server_end).unwrap();
+            self.tempdir_proxy.open(flags, mode, &path, object).unwrap();
             return;
         }
 
@@ -188,7 +217,7 @@ impl OpenRequestHandler for WriteFailOrTempFs {
         // to the backing file instead to our FailingWriteFileStreamHandler.
 
         let (file_requests, file_control_handle) =
-            ServerEnd::<FileMarker>::new(server_end.into_channel())
+            ServerEnd::<FileMarker>::new(object.into_channel())
                 .into_stream_and_control_handle()
                 .expect("split file server end");
 
@@ -201,8 +230,8 @@ impl OpenRequestHandler for WriteFailOrTempFs {
             .expect("open file requested by pkg-resolver");
 
         // All the things pkg-resolver attempts to open in these tests are files,
-        // not directories, so cast the NodeProxy to a FileProxy. If the pkg-resolver assumption changes,
-        // this code will have to support both.
+        // not directories, so cast the NodeProxy to a FileProxy. If the pkg-resolver assumption
+        // changes, this code will have to support both.
         let backing_file_proxy = FileProxy::new(backing_node_proxy.into_channel().unwrap());
         let send_onopen = flags & fidl_fuchsia_io::OPEN_FLAG_DESCRIBE != 0;
 
@@ -311,7 +340,7 @@ struct RenameFailOrTempFs {
     fail_count: Arc<AtomicU64>,
     files_to_fail_renames: Vec<String>,
     should_fail: Arc<AtomicBool>,
-    tempdir: tempfile::TempDir,
+    tempdir: Arc<tempfile::TempDir>,
 }
 
 impl RenameFailOrTempFs {
@@ -320,7 +349,7 @@ impl RenameFailOrTempFs {
             fail_count: Arc::new(AtomicU64::new(0)),
             files_to_fail_renames,
             should_fail: Arc::new(AtomicBool::new(true)),
-            tempdir: tempfile::tempdir().expect("/tmp to exist"),
+            tempdir: Arc::new(tempfile::tempdir().expect("/tmp to exist")),
         })
     }
 
@@ -345,13 +374,14 @@ impl OpenRequestHandler for RenameFailOrTempFs {
         path: String,
         object: ServerEnd<NodeMarker>,
         _control_handle: DirectoryControlHandle,
+        parent: Arc<DirectoryStreamHandler<Self>>,
     ) {
         // Set up proxy to tmpdir and delegate to it on success.
         let (tempdir_proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
         fdio::service_connect(self.tempdir.path().to_str().unwrap(), server_end.into_channel())
             .unwrap();
-        if !self.should_fail() {
+        if !self.should_fail() || path != "." {
             tempdir_proxy.open(flags, mode, &path, object).unwrap();
             return;
         }
@@ -386,6 +416,16 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                         }
                         fail_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                         responder.send(&mut Err(Status::NOT_FOUND.into_raw())).unwrap();
+                    }
+                    DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
+                        parent.open_handler.handle_open_request(
+                            flags,
+                            mode,
+                            path,
+                            object,
+                            control_handle,
+                            Arc::clone(&parent.clone()),
+                        );
                     }
                     other => {
                         panic!("unhandled request type for path {:?}: {:?}", path, other);
@@ -550,7 +590,7 @@ async fn minfs_fails_create_repo_configs() {
 }
 
 // Test that when pkg-resolver can open neither the file for rewrite rules
-// NOR the file for rewrite rules, the resolver still works.
+// NOR the file for dynamic repositories, the resolver still works.
 #[fasync::run_singlethreaded(test)]
 async fn minfs_fails_create_rewrite_rules() {
     let open_handler = OpenFailOrTempFs::new_failing();

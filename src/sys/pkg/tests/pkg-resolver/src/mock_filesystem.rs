@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::RequestStream,
+    fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream,
+        DirectoryObject, DirectoryProxy, DirectoryRequest, DirectoryRequestStream, NodeMarker,
         OPEN_FLAG_DESCRIBE,
     },
     fuchsia_async as fasync,
@@ -34,24 +34,28 @@ fn handle_directory_request_stream(
 async fn handle_directory_request(req: DirectoryRequest, open_counts: OpenCounter) {
     match req {
         DirectoryRequest::Clone { flags, object, control_handle: _control_handle } => {
-            let stream = DirectoryRequestStream::from_channel(
-                fasync::Channel::from_channel(object.into_channel()).unwrap(),
-            );
-            describe_dir(flags, &stream);
-            fasync::Task::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts)))
-                .detach();
+            reopen_self(object, flags, Arc::clone(&open_counts));
         }
         DirectoryRequest::Open {
-            flags: _flags,
+            flags,
             mode: _mode,
             path,
-            object: _object,
+            object,
             control_handle: _control_handle,
         } => {
+            if path == "." {
+                reopen_self(object, flags, Arc::clone(&open_counts));
+            }
             *open_counts.lock().entry(path).or_insert(0) += 1;
         }
         other => panic!("unhandled request type: {:?}", other),
     }
+}
+
+fn reopen_self(node: ServerEnd<NodeMarker>, flags: u32, open_counts: OpenCounter) {
+    let stream = node.into_stream().unwrap().cast_stream();
+    describe_dir(flags, &stream);
+    fasync::Task::spawn(handle_directory_request_stream(stream, Arc::clone(&open_counts))).detach();
 }
 
 pub fn describe_dir(flags: u32, stream: &DirectoryRequestStream) {
