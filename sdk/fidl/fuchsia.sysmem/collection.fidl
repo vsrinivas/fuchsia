@@ -129,7 +129,6 @@ protocol BufferCollectionToken {
     /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
     /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
     /// multiple clients set different names then the larger priority value will win.
-    [Transitional]
     SetName(uint32 priority, string:64 name);
 
     /// Set information about the current client that can be used by sysmem to
@@ -186,7 +185,6 @@ protocol BufferCollectionToken {
     /// to notice failure of that other process via other means.
     ///
     /// SetDispensable() on an already-dispensable token is idempotent.
-    [Transitional = "SetDispensable() not yet implemented by server"]
     SetDispensable();
 };
 
@@ -471,7 +469,6 @@ protocol BufferCollection {
     /// to help diagnose the bug in client code):
     ///   * ZX_RIGHT_SAME_RIGHTS (preferred)
     ///   * 0xFFFFFFFF (this is reasonable when an attenuation mask is computed)
-    [Transitional = "AttachToken() not yet implemented by server"]
     AttachToken(uint32 rights_attenuation_mask,
                 request<BufferCollectionToken> token_request);
 
@@ -541,7 +538,6 @@ protocol BufferCollection {
     /// The server_end may lack ZX_RIGHT_SIGNAL or ZX_RIGHT_SIGNAL_PEER, but
     /// must have ZX_RIGHT_DUPLICATE (and must have ZX_RIGHT_TRANSFER to
     /// transfer without causing CodecFactory channel failure).
-    [Transitional = "AttachLifetimeTracking() not yet implemented by server"]
     AttachLifetimeTracking(
         zx.handle:EVENTPAIR server_end, uint32 buffers_remaining);
 };

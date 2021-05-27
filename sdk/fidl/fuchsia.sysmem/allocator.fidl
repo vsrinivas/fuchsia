@@ -120,6 +120,5 @@ protocol Allocator {
     /// BindSharedCollection() or AllocateNonSharedCollection() from this
     /// allocator. It does not affect BufferCollectionTokens, since they are
     /// often passed cross-process and should have their names managed manually.
-    [Transitional]
     SetDebugClientInfo(string:64 name, uint64 id);
 };
