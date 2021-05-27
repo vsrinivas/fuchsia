@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SYSMEM_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_SYSMEM_H_
 
-#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <lib/async/dispatcher.h>
 
 #include <list>
@@ -20,7 +20,7 @@ class FakeBufferCollectionToken;
 class FakeBufferCollection;
 
 // Implements sysmem for testing.
-class FakeSysmem : public fuchsia::sysmem::Allocator {
+class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
  public:
   // Expectations relating to a single buffer collection requested using
   // |Allocator::AllocateSharedCollection|. |constraints_| are constraints that are expected to be
@@ -71,9 +71,6 @@ class FakeSysmem : public fuchsia::sysmem::Allocator {
   void RemoveCollection(FakeBufferCollection* collection);
 
   // Allocator implementation.
-  void AllocateNonSharedCollection(
-      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> collection) override;
-
   void AllocateSharedCollection(
       fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) override;
 
@@ -81,8 +78,7 @@ class FakeSysmem : public fuchsia::sysmem::Allocator {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
       fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> buffer_collection_request) override;
 
-  void ValidateBufferCollectionToken(uint64_t token_server_koid,
-                                     ValidateBufferCollectionTokenCallback callback) override;
+  void NotImplemented_(const std::string& name) override;
 
  private:
   async_dispatcher_t* dispatcher_;
@@ -105,7 +101,7 @@ class FakeSysmem : public fuchsia::sysmem::Allocator {
   FakeSysmem& operator=(FakeSysmem&&) = delete;
 };
 
-class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken {
+class FakeBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollectionToken_TestBase {
  public:
   FakeBufferCollectionToken(FakeSysmem* owner);
 
@@ -129,7 +125,7 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken 
 
   void SetDebugTimeoutLogDeadline(int64_t deadline) override;
 
-  void SetDispensable() override;
+  void NotImplemented_(const std::string& name) override;
 
  private:
   FakeSysmem* owner_;
@@ -142,7 +138,7 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken 
   FakeBufferCollectionToken& operator=(FakeBufferCollectionToken&&) = delete;
 };
 
-class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
+class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_TestBase {
  public:
   FakeBufferCollection(FakeSysmem* owner, uint32_t id,
                        std::unique_ptr<FakeSysmem::Expectations> expectations,
@@ -163,8 +159,6 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
   void AllParticipantsBound();
 
   // BufferCollection implementation.
-  void SetEventSink(fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionEvents> events) override;
-
   void Sync(SyncCallback callback) override;
 
   void SetConstraints(bool has_constraints,
@@ -172,30 +166,13 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
 
   void WaitForBuffersAllocated(WaitForBuffersAllocatedCallback callback) override;
 
-  void CheckBuffersAllocated(CheckBuffersAllocatedCallback callback) override;
-
-  void CloseSingleBuffer(uint64_t buffer_index) override;
-
-  void AllocateSingleBuffer(uint64_t buffer_index) override;
-
-  void WaitForSingleBufferAllocated(uint64_t buffer_index,
-                                    WaitForSingleBufferAllocatedCallback callback) override;
-
-  void CheckSingleBufferAllocated(uint64_t buffer_index) override;
-
   void Close() override;
 
   void SetName(uint32_t priority, std::string name) override;
 
   void SetDebugClientInfo(std::string name, uint64_t id) override;
 
-  void SetConstraintsAuxBuffers(
-      fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) override;
-  void GetAuxBuffers(GetAuxBuffersCallback callback) override;
-
-  void AttachToken(
-      uint32_t rights_attenuation_mask,
-      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) override;
+  void NotImplemented_(const std::string& name) override;
 
  private:
   void MaybeCompleteAllocation();

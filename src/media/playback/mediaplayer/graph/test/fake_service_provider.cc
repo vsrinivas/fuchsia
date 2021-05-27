@@ -13,6 +13,8 @@ FakeBufferCollection::FakeBufferCollection(FakeServiceProvider* owner) : owner_(
   bindings_.set_empty_set_handler([this]() { owner_->RemoveCollection(this); });
 }
 
+FakeBufferCollection::~FakeBufferCollection() {}
+
 void FakeBufferCollection::Bind(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request) {
   bindings_.AddBinding(this, std::move(request));
 }
@@ -26,12 +28,6 @@ void FakeBufferCollection::SetBufferCollection(
     wait_callback(buffer_allocation_status_, fidl::Clone(buffer_collection_info_));
   }
   wait_callbacks_.clear();
-}
-
-void FakeBufferCollection::SetEventSink(
-    fidl::InterfaceHandle<class fuchsia::sysmem::BufferCollectionEvents> events) {
-  // Not used.
-  EXPECT_TRUE(false);
 }
 
 void FakeBufferCollection::Sync(SyncCallback callback) { callback(); }
@@ -54,54 +50,7 @@ void FakeBufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedCallback c
   callback(buffer_allocation_status_);
 }
 
-void FakeBufferCollection::CloseSingleBuffer(uint64_t buffer_index) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::AllocateSingleBuffer(uint64_t buffer_index) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::WaitForSingleBufferAllocated(
-    uint64_t buffer_index, WaitForSingleBufferAllocatedCallback callback) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::CheckSingleBufferAllocated(uint64_t buffer_index) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::Close() {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::SetName(uint32_t priority, std::string name) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::SetConstraintsAuxBuffers(
-    fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::GetAuxBuffers(GetAuxBuffersCallback callback) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
-void FakeBufferCollection::AttachToken(
-    uint32_t rights_attenuation_mask,
-    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
+void FakeBufferCollection::NotImplemented_(const std::string& name) { FX_NOTIMPLEMENTED() << name; }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollectionToken implementation.
@@ -109,6 +58,8 @@ void FakeBufferCollection::AttachToken(
 FakeBufferCollectionToken::FakeBufferCollectionToken(FakeServiceProvider* owner) : owner_(owner) {
   bindings_.set_empty_set_handler([this]() { owner_->RemoveToken(this); });
 }
+
+FakeBufferCollectionToken::~FakeBufferCollectionToken() {}
 
 void FakeBufferCollectionToken::Bind(
     fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) {
@@ -124,10 +75,9 @@ void FakeBufferCollectionToken::Duplicate(
 
 void FakeBufferCollectionToken::Sync(SyncCallback callback) { callback(); }
 
-void FakeBufferCollectionToken::Close() {
-  // Not used.
-  EXPECT_TRUE(false);
-};
+void FakeBufferCollectionToken::NotImplemented_(const std::string& name) {
+  FX_NOTIMPLEMENTED() << name;
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // FakeServiceProvider implementation.
@@ -137,6 +87,8 @@ FakeBufferCollection* FakeServiceProvider::GetCollectionFromToken(
   EXPECT_TRUE(!!token);
   return FindOrCreateCollectionForToken(token.Unbind().TakeChannel());
 }
+
+FakeServiceProvider::~FakeServiceProvider() {}
 
 void FakeServiceProvider::AddTokenBinding(FakeBufferCollectionToken* token,
                                           const zx::channel& channel) {
@@ -168,12 +120,6 @@ void FakeServiceProvider::ConnectToService(std::string service_path, zx::channel
                        fidl::InterfaceRequest<fuchsia::sysmem::Allocator>(std::move(channel)));
 }
 
-void FakeServiceProvider::AllocateNonSharedCollection(
-    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> collection) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
 void FakeServiceProvider::AllocateSharedCollection(
     fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) {
   EXPECT_TRUE(!!token_request);
@@ -196,6 +142,8 @@ void FakeServiceProvider::ValidateBufferCollectionToken(
     fuchsia::sysmem::Allocator::ValidateBufferCollectionTokenCallback callback) {
   callback(tokens_by_server_koid_.find(token_server_koid) != tokens_by_server_koid_.end());
 }
+
+void FakeServiceProvider::NotImplemented_(const std::string& name) { FX_NOTIMPLEMENTED() << name; }
 
 FakeBufferCollection* FakeServiceProvider::FindOrCreateCollectionForToken(
     zx::channel client_channel) {

@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_TEST_FAKE_SERVICE_PROVIDER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_TEST_FAKE_SERVICE_PROVIDER_H_
 
-#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl_test_base.h>
 
 #include <unordered_map>
 
@@ -18,9 +18,11 @@ namespace media_player::test {
 
 class FakeServiceProvider;
 
-class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
+class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_TestBase {
  public:
   explicit FakeBufferCollection(FakeServiceProvider* owner);
+
+  ~FakeBufferCollection() override;
 
   void Bind(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request);
 
@@ -33,9 +35,6 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
 
  private:
   // fuchsia::sysmem::BufferCollection implementation.
-  void SetEventSink(
-      fidl::InterfaceHandle<class fuchsia::sysmem::BufferCollectionEvents> events) override;
-
   void Sync(SyncCallback callback) override;
 
   void SetConstraints(bool has_constraints,
@@ -45,27 +44,9 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
 
   void CheckBuffersAllocated(CheckBuffersAllocatedCallback callback) override;
 
-  void CloseSingleBuffer(uint64_t buffer_index) override;
-
-  void AllocateSingleBuffer(uint64_t buffer_index) override;
-
-  void WaitForSingleBufferAllocated(uint64_t buffer_index,
-                                    WaitForSingleBufferAllocatedCallback callback) override;
-
-  void CheckSingleBufferAllocated(uint64_t buffer_index) override;
-
-  void Close() override;
-
-  void SetName(uint32_t priority, std::string name) override;
+  void SetName(uint32_t priority, std::string name) override {}
   void SetDebugClientInfo(std::string name, uint64_t id) override {}
-
-  void SetConstraintsAuxBuffers(
-      fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) override;
-
-  void GetAuxBuffers(GetAuxBuffersCallback callback) override;
-
-  void AttachToken(uint32_t rights_attenuation_mask,
-                   fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) override;
+  void NotImplemented_(const std::string& name) override;
 
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;
@@ -75,9 +56,10 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info_;
 };
 
-class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken {
+class FakeBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollectionToken_TestBase {
  public:
   explicit FakeBufferCollectionToken(FakeServiceProvider* owner);
+  ~FakeBufferCollectionToken() override;
 
   void Bind(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request);
 
@@ -88,18 +70,21 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken 
 
   void Sync(SyncCallback callback) override;
 
-  void Close() override;
   void SetDebugClientInfo(std::string name, uint64_t id) override {}
   void SetDebugTimeoutLogDeadline(int64_t deadline) override {}
   void SetDispensable() override {}
+  void NotImplemented_(const std::string& name) override;
 
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollectionToken> bindings_;
 };
 
-class FakeServiceProvider : public ServiceProvider, public fuchsia::sysmem::Allocator {
+class FakeServiceProvider : public ServiceProvider,
+                            public fuchsia::sysmem::testing::Allocator_TestBase {
  public:
   FakeBufferCollection* GetCollectionFromToken(fuchsia::sysmem::BufferCollectionTokenPtr token);
+
+  ~FakeServiceProvider() override;
 
   // Methods called by FakeBufferCollection and FakeBufferCollectionToken.
   void AddTokenBinding(FakeBufferCollectionToken* token, const zx::channel& channel);
@@ -113,9 +98,6 @@ class FakeServiceProvider : public ServiceProvider, public fuchsia::sysmem::Allo
 
  private:
   // fuchsia::sysmem::Allocator implementation.
-  void AllocateNonSharedCollection(
-      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> collection) override;
-
   void AllocateSharedCollection(
       fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) override;
 
@@ -127,6 +109,7 @@ class FakeServiceProvider : public ServiceProvider, public fuchsia::sysmem::Allo
       uint64_t token_server_koid,
       fuchsia::sysmem::Allocator::ValidateBufferCollectionTokenCallback callback) override;
   void SetDebugClientInfo(std::string name, uint64_t id) override {}
+  void NotImplemented_(const std::string& name) override;
 
   FakeBufferCollection* FindOrCreateCollectionForToken(zx::channel client_channel);
 

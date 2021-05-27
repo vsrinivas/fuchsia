@@ -73,11 +73,6 @@ void FakeSysmem::RemoveCollection(FakeBufferCollection* collection) {
   FX_CHECK(false) << "RemoveCollection called for unrecognized collection";
 }
 
-void FakeSysmem::AllocateNonSharedCollection(
-    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> collection) {
-  FX_NOTIMPLEMENTED();
-}
-
 void FakeSysmem::AllocateSharedCollection(
     fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) {
   auto token = std::make_unique<FakeBufferCollectionToken>(this);
@@ -129,10 +124,7 @@ void FakeSysmem::BindSharedCollection(
   FX_CHECK(false) << "BindSharedCollection: token not recognized";
 }
 
-void FakeSysmem::ValidateBufferCollectionToken(uint64_t token_server_koid,
-                                               ValidateBufferCollectionTokenCallback callback) {
-  FX_NOTIMPLEMENTED();
-}
+void FakeSysmem::NotImplemented_(const std::string& name) { FX_NOTIMPLEMENTED() << name; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollectionToken implementation.
@@ -179,7 +171,9 @@ void FakeBufferCollectionToken::SetDebugClientInfo(std::string name, uint64_t id
 
 void FakeBufferCollectionToken::SetDebugTimeoutLogDeadline(int64_t deadline) {}
 
-void FakeBufferCollectionToken::SetDispensable() {}
+void FakeBufferCollectionToken::NotImplemented_(const std::string& name) {
+  FX_NOTIMPLEMENTED() << name;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollection implementation.
@@ -201,11 +195,6 @@ FakeBufferCollection::FakeBufferCollection(FakeSysmem* owner, uint32_t id,
 FakeBufferCollection::~FakeBufferCollection() {}
 
 bool FakeBufferCollection::expected() const { return expected_; }
-
-void FakeBufferCollection::SetEventSink(
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionEvents> events) {
-  FX_NOTIMPLEMENTED();
-}
 
 void FakeBufferCollection::AllParticipantsBound() {
   all_participants_bound_ = true;
@@ -251,41 +240,13 @@ void FakeBufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedCallba
   MaybeCompleteAllocation();
 }
 
-void FakeBufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedCallback callback) {
-  FX_NOTIMPLEMENTED();
-}
-
-void FakeBufferCollection::CloseSingleBuffer(uint64_t buffer_index) { FX_NOTIMPLEMENTED(); }
-
-void FakeBufferCollection::AllocateSingleBuffer(uint64_t buffer_index) { FX_NOTIMPLEMENTED(); }
-
-void FakeBufferCollection::WaitForSingleBufferAllocated(
-    uint64_t buffer_index, WaitForSingleBufferAllocatedCallback callback) {
-  FX_NOTIMPLEMENTED();
-}
-
-void FakeBufferCollection::CheckSingleBufferAllocated(uint64_t buffer_index) {
-  FX_NOTIMPLEMENTED();
-}
-
 void FakeBufferCollection::Close() {}
 
 void FakeBufferCollection::SetName(uint32_t priority, std::string name) {}
 
 void FakeBufferCollection::SetDebugClientInfo(std::string name, uint64_t id) {}
 
-void FakeBufferCollection::SetConstraintsAuxBuffers(
-    fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) {
-  FX_NOTIMPLEMENTED();
-}
-
-void FakeBufferCollection::GetAuxBuffers(GetAuxBuffersCallback callback) { FX_NOTIMPLEMENTED(); }
-
-void FakeBufferCollection::AttachToken(
-    uint32_t rights_attenuation_mask,
-    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) {
-  FX_NOTIMPLEMENTED();
-}
+void FakeBufferCollection::NotImplemented_(const std::string& name) { FX_NOTIMPLEMENTED() << name; }
 
 void FakeBufferCollection::MaybeCompleteAllocation() {
   if (!all_participants_bound_ || waiter_callbacks_.size() != bindings_.size()) {
