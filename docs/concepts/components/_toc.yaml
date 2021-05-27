@@ -49,8 +49,10 @@ toc:
     status: deprecated
 - title: "Internals"
   section:
-  - title: "Design principles"
+  - title: "Component Framework design principles"
     path: /docs/concepts/components/v2/design_principles.md
+  - title: "Component manifest design principles"
+    path: /docs/contribute/governance/rfcs/0093_component_manifest_design_principles.md
   - title: "Components vs. processes"
     path: /docs/concepts/components/v2/components_vs_processes.md
 - title: "Legacy components"

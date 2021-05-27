@@ -55,14 +55,15 @@ For details on legacy components, see [Legacy components][legacy-components].
 
 ## Internals
 
-- [Design principles](design_principles.md): Guidelines for arriving at
-  architectural decisions.
-- [Components vs. processes](components_vs_processes.md): how the concepts differ
+- [Component Framework design principles](design_principles.md)
+- [Component manifest design principles][rfc0093]
+- [Components vs. processes](components_vs_processes.md): how the concepts differ.
 
 [doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [legacy-components]: /docs/concepts/components/v1/README.md
 [migration]: /docs/contribute/open_projects/components/migration.md
+[rfc0093]: /docs/contribute/governance/rfcs/0093_component_manifest_design_principles.md
 [test-components]: /docs/concepts/testing/v2/test_component.md
 [trf]: /docs/concepts/testing/v2/test_runner_framework.md
 [integration-testing]: /docs/concepts/testing/v2/integration_testing.md
