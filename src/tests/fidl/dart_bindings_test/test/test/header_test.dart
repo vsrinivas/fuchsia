@@ -28,8 +28,8 @@ void main() {
       final TestServerProxy proxy = TestServerProxy();
       Channel server = proxy.ctrl.request().passChannel();
       await proxy.oneWayStringArg('foo');
-      final ReadResult result = server.queryAndRead();
-      final IncomingMessage message = IncomingMessage.fromReadResult(result);
+      final ReadEtcResult result = server.queryAndReadEtc();
+      final IncomingMessage message = IncomingMessage.fromReadEtcResult(result);
       expect(message.magic, equals(kMagicNumberInitial));
     });
 
@@ -37,8 +37,8 @@ void main() {
       final TestServerProxy proxy = TestServerProxy();
       Channel client = proxy.ctrl.request().passChannel();
       await proxy.sendStringEvent('bar');
-      final ReadResult result = client.queryAndRead();
-      final IncomingMessage message = IncomingMessage.fromReadResult(result);
+      final ReadEtcResult result = client.queryAndReadEtc();
+      final IncomingMessage message = IncomingMessage.fromReadEtcResult(result);
       expect(message.magic, equals(kMagicNumberInitial));
     });
 

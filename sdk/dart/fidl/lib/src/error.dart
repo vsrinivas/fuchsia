@@ -22,6 +22,8 @@ enum FidlErrorCode {
   fidlIntOutOfRange,
   fidlNonEmptyStringWithNullBody,
   fidlNonResourceHandle,
+  fidlMissingRequiredHandleRights,
+  fidlIncorrectHandleType,
 }
 
 class FidlError implements Exception {

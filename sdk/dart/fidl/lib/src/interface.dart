@@ -295,13 +295,13 @@ abstract class Binding<T> {
   void handleMessage(IncomingMessage message, OutgoingMessageSink respond);
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel!.queryAndRead();
+    final ReadEtcResult result = _reader.channel!.queryAndReadEtc();
     if (result.bytes.lengthInBytes == 0) {
       throw FidlError('Unexpected empty message or error: $result '
           'from channel ${_reader.channel}');
     }
 
-    final IncomingMessage message = IncomingMessage.fromReadResult(result);
+    final IncomingMessage message = IncomingMessage.fromReadEtcResult(result);
     if (!message.isCompatible()) {
       close();
       throw FidlError(
@@ -520,7 +520,7 @@ class ProxyController<T> {
   }
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel!.queryAndRead();
+    final ReadEtcResult result = _reader.channel!.queryAndReadEtc();
     if (result.bytes.lengthInBytes == 0) {
       proxyError('Read from channel ${_reader.channel} failed');
       return;
@@ -529,11 +529,11 @@ class ProxyController<T> {
       _pendingResponsesCount--;
       final callback = onResponse;
       if (callback != null) {
-        callback(IncomingMessage.fromReadResult(result));
+        callback(IncomingMessage.fromReadEtcResult(result));
       }
     } on FidlError catch (e) {
-      for (Handle handle in result.handles) {
-        handle.close();
+      for (HandleInfo handleInfo in result.handleInfos) {
+        handleInfo.handle.close();
       }
       proxyError(e.toString());
       close();

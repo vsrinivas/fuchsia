@@ -144,12 +144,12 @@ class Encoder {
 class Decoder {
   Decoder(IncomingMessage message)
       : data = message.data,
-        handles = message.handles;
+        handleInfos = message.handleInfos;
 
-  Decoder.fromRawArgs(this.data, this.handles);
+  Decoder.fromRawArgs(this.data, this.handleInfos);
 
   ByteData data;
-  List<Handle> handles;
+  List<HandleInfo> handleInfos;
 
   int _nextOffset = 0;
   int _nextHandle = 0;
@@ -176,15 +176,15 @@ class Decoder {
   }
 
   int countUnclaimedHandles() {
-    return handles.length - _nextHandle;
+    return handleInfos.length - _nextHandle;
   }
 
-  Handle claimHandle() {
-    if (_nextHandle >= handles.length) {
+  HandleInfo claimHandle() {
+    if (_nextHandle >= handleInfos.length) {
       throw FidlError(
           'Cannot access out of range handle', FidlErrorCode.fidlTooFewHandles);
     }
-    return handles[_nextHandle++];
+    return handleInfos[_nextHandle++];
   }
 
   bool decodeBool(int offset) => data.getInt8(offset) != 0;

@@ -113,6 +113,10 @@ protocol TestServer {
     CloseConnectionWithEpitaph(int32 status, float64 delaySeconds);
 
     -> NeverEvent();
+
+    SendEvent(zx.handle:EVENT h);
+    EchoChannelAsEvent(zx.handle:CHANNEL h) -> (zx.handle:EVENT h);
+    EventEvent(zx.handle:EVENT h);
 };
 
 strict enum EnumOne {

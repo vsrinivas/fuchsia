@@ -231,13 +231,13 @@ abstract class AsyncBinding<T> extends _Stateful {
   void handleMessage(IncomingMessage message, OutgoingMessageSink respond);
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel!.queryAndRead();
+    final ReadEtcResult result = _reader.channel!.queryAndReadEtc();
     if (result.bytes.lengthInBytes == 0) {
       throw FidlError(
           'AsyncBinding<${$interfaceName}> Unexpected empty message or error: $result');
     }
 
-    final IncomingMessage message = IncomingMessage.fromReadResult(result);
+    final IncomingMessage message = IncomingMessage.fromReadEtcResult(result);
     if (!message.isCompatible()) {
       close();
       throw FidlError(
@@ -449,14 +449,14 @@ class AsyncProxyController<T> extends _Stateful {
   IncomingMessageSink? onResponse;
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel!.queryAndRead();
+    final ReadEtcResult result = _reader.channel!.queryAndReadEtc();
     if (result.bytes.lengthInBytes == 0) {
       proxyError(FidlError(
           'AsyncProxyController<${$interfaceName}>: Read from channel failed'));
       return;
     }
     try {
-      IncomingMessage message = IncomingMessage.fromReadResult(result);
+      IncomingMessage message = IncomingMessage.fromReadEtcResult(result);
       final epitaphCallback = onEpitaphReceived;
       final responseCallback = onResponse;
       if (message.ordinal == epitaphOrdinal) {
@@ -468,8 +468,8 @@ class AsyncProxyController<T> extends _Stateful {
         responseCallback(message);
       }
     } on FidlError catch (e) {
-      for (Handle handle in result.handles) {
-        handle.close();
+      for (HandleInfo handleInfo in result.handleInfos) {
+        handleInfo.handle.close();
       }
       proxyError(e);
     }

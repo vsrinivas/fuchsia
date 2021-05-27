@@ -22,6 +22,7 @@ dart_library("server_lib") {
     "fidl:bindings_test",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
   ]
 }
 
@@ -73,6 +74,7 @@ dart_library("server_test_lib") {
   sources = [ "server.dart" ]
   deps = [
     "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.sys",
     "//src/tests/fidl/dart_bindings_test/fidl:bindings_test",
   ]
@@ -91,6 +93,7 @@ dart_test_component("bindings-test-component") {
     "error_test.dart",
     "event_test.dart",
     "failure_test.dart",
+    "handle_rights_test.dart",
     "hash_test.dart",
     "header_test.dart",
     "oneway_test.dart",

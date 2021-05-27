@@ -7,6 +7,8 @@ import 'dart:async';
 import 'package:fidl/fidl.dart' show MethodException;
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
 import 'package:fuchsia_services/services.dart';
+import 'package:zircon/zircon.dart';
+import 'package:fidl/fidl.dart';
 
 Duration durationFromSeconds(double seconds) =>
     Duration(microseconds: (seconds * Duration.microsecondsPerSecond).round());
@@ -246,6 +248,13 @@ class TestServerImpl extends TestServer {
 
   @override
   Stream<void> get neverEvent => null;
+
+  @override
+  Future<void> sendEvent(Handle h) => null;
+  @override
+  Future<Handle> echoChannelAsEvent(Channel h) async => h.handle;
+  @override
+  Future<void> eventEvent(Handle h) => null;
 }
 
 ComponentContext _context;

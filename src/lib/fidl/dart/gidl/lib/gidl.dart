@@ -57,8 +57,13 @@ T _decode<T, I extends Iterable<T>>(
   BytesBuilder input = BytesBuilder(copy: false)
     ..add(Uint8List(fidl.kMessageHeaderSize))
     ..add(bytes);
+  // TODO(fxbug.dev/41920) Use GIDL-specified handle rights and type here.
   fidl.IncomingMessage message = fidl.IncomingMessage(
-      ByteData.view(input.toBytes().buffer, 0, input.length), handles);
+      ByteData.view(input.toBytes().buffer, 0, input.length),
+      handles
+          .map((handle) =>
+              HandleInfo(handle, ZX.OBJ_TYPE_NONE, ZX.RIGHT_SAME_RIGHTS))
+          .toList());
   fidl.MemberType member = fidl.MemberType(
     type: type,
     offset: 0,
