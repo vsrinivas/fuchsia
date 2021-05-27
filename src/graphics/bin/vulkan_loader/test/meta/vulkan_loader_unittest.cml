@@ -21,11 +21,6 @@
                 "#test_lib_provider",
             ],
         },
-        {
-            directory: "system-lib",
-            from: "#test_lib_provider",
-            to: [ "#test_driver" ],
-        },
     ],
     expose: [
         {

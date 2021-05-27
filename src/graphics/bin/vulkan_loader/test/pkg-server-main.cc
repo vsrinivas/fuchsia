@@ -92,9 +92,6 @@ int main(int argc, const char* const* argv) {
   // Use fs:: instead of vfs:: because vfs doesn't support executable directories.
   fs::SynchronousVfs vfs(loop.dispatcher());
   auto root = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto remote = fbl::MakeRefCounted<fs::RemoteDir>(
-      fidl::ClientEnd<fuchsia_io::Directory>(pkg_dir.TakeChannel()));
-  root->AddEntry("pkg", remote);
 
   // Add a dev directory that the loader can watch for devices to be added.
   auto dev_dir = fbl::MakeRefCounted<fs::PseudoDir>();

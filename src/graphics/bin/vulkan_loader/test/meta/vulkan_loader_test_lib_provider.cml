@@ -8,12 +8,6 @@
     },
     capabilities: [
         {
-            // Use /bin because we know that the pkg-server executable will always be there.
-            directory: "bin",
-            rights: [ "rx*" ],
-            path: "/pkg/bin",
-        },
-        {
             // /dev directory is always empty. It's used for device paths that
             // aren't required by the vulkan loader.
             directory: "dev",
@@ -32,12 +26,6 @@
         },
     ],
     expose: [
-        {
-            directory: "bin",
-            from: "self",
-            as: "system-lib",
-            rights: [ "rx*" ],
-        },
         {
             directory: "dev-gpu",
             from: "self",

@@ -992,13 +992,6 @@
             to: [ "#appmgr" ],
         },
         {
-            directory: "system",
-            from: "parent",
-            as: "system-lib",
-            to: [ "#vulkan_loader" ],
-            subdir: "lib",
-        },
-        {
             directory: "dev",
             from: "parent",
             as: "dev-gpu",

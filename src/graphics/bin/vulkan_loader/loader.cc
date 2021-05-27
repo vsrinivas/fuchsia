@@ -38,23 +38,7 @@ void LoaderImpl::OnIcdListChanged(LoaderApp* app) {
 
 // fuchsia::vulkan::loader::Loader impl
 void LoaderImpl::Get(std::string name, GetCallback callback) {
-  // TODO(fxbug.dev/13078): Remove code to load from /system/lib.
-  std::string load_path = "/system/lib/" + name;
-  int fd;
-  zx_status_t status =
-      fdio_open_fd(load_path.c_str(),
-                   fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
-  if (status != ZX_OK) {
-    AddCallback(std::move(name), std::move(callback));
-    return;
-  }
-  zx::vmo vmo;
-  status = fdio_get_vmo_exec(fd, vmo.reset_and_get_address());
-  close(fd);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not clone vmo exec: " << status;
-  }
-  callback(std::move(vmo));
+  AddCallback(std::move(name), std::move(callback));
 }
 
 void LoaderImpl::ConnectToDeviceFs(zx::channel channel) { app_->ServeDeviceFs(std::move(channel)); }
