@@ -37,7 +37,7 @@ use crate::audio::facade::AudioFacade;
 use crate::backlight::facade::BacklightFacade;
 
 // Session related includes
-use crate::basemgr::facade::BaseManagerFacade;
+use crate::modular::facade::ModularFacade;
 
 // Battery related includes
 use crate::battery_simulator::facade::BatterySimulatorFacade;
@@ -219,7 +219,9 @@ impl Sl4f {
                 "avdtp_facade" => AvdtpFacade::new(),
                 "avrcp_facade" => AvrcpFacade::new(),
                 "backlight_facade" => BacklightFacade::new(),
-                "basemgr_facade" => BaseManagerFacade::new(),
+                // TODO(fxbug.dev/77551): Remove basemgr_facade in favor of modular_facade
+                "basemgr_facade" => ModularFacade::new(),
+                "modular_facade" => ModularFacade::new(),
                 "battery_simulator" => BatterySimulatorFacade::new(),
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),

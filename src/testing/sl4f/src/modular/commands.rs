@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::basemgr::{facade::BaseManagerFacade, types::BaseManagerMethod};
+use crate::modular::{facade::ModularFacade, types::ModularMethod};
 use crate::server::Facade;
 use anyhow::Error;
 use async_trait::async_trait;
 use serde_json::{to_value, Value};
 
 #[async_trait(?Send)]
-impl Facade for BaseManagerFacade {
+impl Facade for ModularFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.parse()? {
-            BaseManagerMethod::RestartSession => {
+            ModularMethod::RestartSession => {
                 let result = self.restart_session().await?;
                 Ok(to_value(result)?)
             }
-            BaseManagerMethod::StartBasemgr => {
+            ModularMethod::StartBasemgr => {
                 let result = self.start_basemgr(args).await?;
                 Ok(to_value(result)?)
             }
-            BaseManagerMethod::KillBasemgr => {
+            ModularMethod::KillBasemgr => {
                 let result = self.kill_basemgr().await?;
                 Ok(to_value(result)?)
             }
-            BaseManagerMethod::LaunchMod => {
+            ModularMethod::LaunchMod => {
                 let result = self.launch_mod(args).await?;
                 Ok(to_value(result)?)
             }

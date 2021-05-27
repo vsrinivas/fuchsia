@@ -3,24 +3,24 @@
 // found in the LICENSE file.
 use serde::{Deserialize, Serialize};
 
-/// Enum for supported BaseManager commands.
-pub enum BaseManagerMethod {
+/// Enum for supported Modular commands.
+pub enum ModularMethod {
     RestartSession,
     StartBasemgr,
     KillBasemgr,
     LaunchMod,
 }
 
-impl std::str::FromStr for BaseManagerMethod {
+impl std::str::FromStr for ModularMethod {
     type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
-            "RestartSession" => Ok(BaseManagerMethod::RestartSession),
-            "StartBasemgr" => Ok(BaseManagerMethod::StartBasemgr),
-            "KillBasemgr" => Ok(BaseManagerMethod::KillBasemgr),
-            "LaunchMod" => Ok(BaseManagerMethod::LaunchMod),
-            _ => return Err(format_err!("invalid BaseManager Facade method: {}", method)),
+            "RestartSession" => Ok(ModularMethod::RestartSession),
+            "StartBasemgr" => Ok(ModularMethod::StartBasemgr),
+            "KillBasemgr" => Ok(ModularMethod::KillBasemgr),
+            "LaunchMod" => Ok(ModularMethod::LaunchMod),
+            _ => return Err(format_err!("invalid ModularMethod: {}", method)),
         }
     }
 }

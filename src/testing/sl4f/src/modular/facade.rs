@@ -1,10 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::basemgr::types::{
+use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
+use crate::modular::types::{
     BasemgrResult, KillBasemgrResult, LaunchModRequest, RestartSessionResult,
 };
-use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl::endpoints::ServerEnd;
 use fidl::endpoints::ServiceMarker;
@@ -36,11 +36,11 @@ const CHUNK_SIZE: usize = 32;
 
 /// Facade providing access to session testing interfaces.
 #[derive(Debug)]
-pub struct BaseManagerFacade {}
+pub struct ModularFacade {}
 
-impl BaseManagerFacade {
-    pub fn new() -> BaseManagerFacade {
-        BaseManagerFacade {}
+impl ModularFacade {
+    pub fn new() -> ModularFacade {
+        ModularFacade {}
     }
 
     /// Discovers a |BasemgrDebug| service published by
@@ -122,7 +122,7 @@ impl BaseManagerFacade {
         }
 
         //launch basemgr
-        let tag = "BaseManagerFacade::start_basemgr";
+        let tag = "ModularFacade::start_basemgr";
         let launcher = match client::launcher() {
             Ok(r) => r,
             Err(err) => fx_err_and_bail!(
