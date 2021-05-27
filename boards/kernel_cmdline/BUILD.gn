@@ -93,7 +93,10 @@ kernel_cmdline("x64-reduced-perf-variation") {
 }
 
 kernel_cmdline("gce") {
-  args = [ "kernel.serial=legacy" ]
+  args = [
+    "kernel.serial=legacy",
+    "driver.virtio_ethernet.disable",
+  ]
 }
 
 kernel_cmdline("vs680") {
