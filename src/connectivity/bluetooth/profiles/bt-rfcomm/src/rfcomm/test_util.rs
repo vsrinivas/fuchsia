@@ -9,8 +9,9 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::Channel,
-    futures::{channel::mpsc, task::Poll, StreamExt},
+    futures::{channel::mpsc, stream::Stream, task::Poll, StreamExt},
     packet_encoding::Encodable,
+    std::marker::Unpin,
 };
 
 /// Simulates the peer sending an RFCOMM frame over the L2CAP `remote` socket.
@@ -30,16 +31,11 @@ pub fn expect_frame_received_by_peer(exec: &mut fasync::TestExecutor, remote: &m
     assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
 }
 
-#[track_caller]
-pub fn expect_pending<T: std::fmt::Debug>(
+pub fn poll_stream<T>(
     exec: &mut fasync::TestExecutor,
-    receiver: &mut mpsc::Receiver<T>,
-) {
-    let mut stream = Box::pin(receiver.next());
-    match exec.run_until_stalled(&mut stream) {
-        Poll::Pending => {}
-        x => panic!("Expected pending but got {:?}", x),
-    }
+    receiver: &mut (impl Stream<Item = T> + Unpin),
+) -> Poll<Option<T>> {
+    exec.run_until_stalled(&mut receiver.next())
 }
 
 #[track_caller]

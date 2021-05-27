@@ -518,6 +518,7 @@ impl SignaledTask for SessionChannel {
 mod tests {
     use super::*;
     use {
+        async_utils::PollExt,
         bt_rfcomm::frame::FrameData,
         fuchsia_async::DurationExt,
         fuchsia_inspect_derive::WithInspect,
@@ -527,7 +528,7 @@ mod tests {
         std::convert::TryFrom,
     };
 
-    use crate::rfcomm::test_util::{expect_frame, expect_pending, expect_user_data_frame};
+    use crate::rfcomm::test_util::{expect_frame, expect_user_data_frame, poll_stream};
 
     fn establish_channel(channel: &mut SessionChannel) -> (Channel, mpsc::Receiver<Frame>) {
         let (local, remote) = Channel::create();
@@ -599,9 +600,9 @@ mod tests {
 
         let data_received_by_client = client.next();
         pin_mut!(data_received_by_client);
-        assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
+        exec.run_until_stalled(&mut data_received_by_client).expect_pending("shouldn't have data");
 
-        expect_pending(&mut exec, &mut outgoing_frames);
+        poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
 
         // Receive user data to be relayed to the profile-client - no credits.
         let user_data = UserData { information: vec![0x01, 0x02, 0x03] };
@@ -655,7 +656,7 @@ mod tests {
             assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
         }
 
-        expect_pending(&mut exec, &mut outgoing_frames);
+        poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
 
         // Receive user data from remote peer be relayed to the profile-client - 0 credits issued.
         let user_data = UserData { information: vec![0x01, 0x02, 0x03] };
@@ -684,7 +685,7 @@ mod tests {
         // be queued for later.
         let client_data = vec![0xaa, 0xcc];
         assert!(client.as_ref().write(&client_data).is_ok());
-        expect_pending(&mut exec, &mut outgoing_frames);
+        poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
 
         // Remote peer sends more user data with a refreshed credit amount.
         let user_data = UserData { information: vec![0x00, 0x00, 0x00, 0x00, 0x00] };
@@ -726,7 +727,7 @@ mod tests {
         pin_mut!(data_received_by_client);
         assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
 
-        expect_pending(&mut exec, &mut outgoing_frames);
+        poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
 
         // Receive user data to be relayed to the profile-client - random amount of credits.
         let user_data = UserData { information: vec![0x01, 0x02, 0x03] };
@@ -822,7 +823,7 @@ mod tests {
             // Because we have no local credits, the data should be queued for later.
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
             // No frame should be sent to the peer.
-            expect_pending(&mut exec, &mut outgoing_frames);
+            poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
         }
 
         // 2d. RFCOMM client sends more data.
@@ -832,7 +833,7 @@ mod tests {
             // Because we have no local credits, the data should be queued for later.
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
             // No frame should be sent to the peer.
-            expect_pending(&mut exec, &mut outgoing_frames);
+            poll_stream(&mut exec, &mut outgoing_frames).expect_pending("shouldn't have frames");
         }
 
         // 3. Remote peer sends an empty frame to "refresh" our credits.
@@ -860,7 +861,7 @@ mod tests {
             );
 
             // `data3` should not be relayed to the client since it's empty.
-            assert!(exec.run_until_stalled(&mut data_received_by_client).is_pending());
+            exec.run_until_stalled(&mut data_received_by_client).expect_pending("no data");
             assert!(exec.run_until_stalled(&mut receive_fut).is_ready());
         }
     }

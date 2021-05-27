@@ -964,6 +964,7 @@ impl SignaledTask for Session {
 mod tests {
     use super::*;
     use {
+        async_utils::PollExt,
         fuchsia_async as fasync,
         futures::{pin_mut, task::Poll, Future},
         matches::assert_matches,
@@ -2143,6 +2144,6 @@ mod tests {
         // Client should be notified that the second request failed.
         expect_channel_error(&mut exec, &mut outbound_channels2, ErrorCode::Failed);
         // First request should still be alive - nothing relayed.
-        expect_pending(&mut exec, &mut outbound_channels1);
+        poll_stream(&mut exec, &mut outbound_channels1).expect_pending("nothing relayed")
     }
 }

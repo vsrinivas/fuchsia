@@ -16,6 +16,9 @@ pub trait PollExt<T> {
     /// Returns the value contained in a Poll::Ready value or panics with a custom message.
     fn expect(self, msg: &str) -> T;
 
+    /// Expect a Poll to be Pending, or panics with a custom message.
+    fn expect_pending(&self, msg: &str);
+
     /// Turns a Poll into a Result, mapping Poll::Ready(value) to Ok(value) and
     /// Poll::Pending to Err(error)
     fn ready_or<E>(self, error: E) -> Result<T, E>;
@@ -43,6 +46,14 @@ impl<T> PollExt<T> for Poll<T> {
         match self {
             Poll::Ready(val) => val,
             Poll::Pending => panic!("{}", msg),
+        }
+    }
+
+    #[inline]
+    #[track_caller]
+    fn expect_pending(&self, msg: &str) {
+        if self.is_ready() {
+            panic!("{}", msg);
         }
     }
 
@@ -82,6 +93,19 @@ mod tests {
     fn poll_expect_ready_returns_value() {
         let p = Poll::Ready("value");
         assert_eq!(p.expect("missing value"), "value");
+    }
+
+    #[test]
+    fn poll_expect_pending() {
+        let p: Poll<()> = Poll::Pending;
+        p.expect_pending("is pending");
+    }
+
+    #[test]
+    #[should_panic]
+    fn poll_expect_pending_on_ready() {
+        let p = Poll::Ready("value");
+        p.expect_pending("value is not pending");
     }
 
     #[test]
