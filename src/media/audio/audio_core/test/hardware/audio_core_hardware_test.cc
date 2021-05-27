@@ -218,7 +218,7 @@ TEST_F(AudioCoreHardwareTest, AnalogNoiseDetectable) {
                                OnPacketProduced(packet);
                              }));
   // Wait for the capture buffer to be returned.
-  ExpectCallback();
+  ExpectCallbacks();
   ASSERT_GT(received_payload_frames_, 0u) << "No data frames captured";
 
   float sum_squares = 0.0f;
@@ -243,7 +243,7 @@ TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
                              AddCallback("CaptureAt", [this](fuchsia::media::StreamPacket packet) {
                                OnPacketProduced(packet);
                              }));
-  ExpectCallback();
+  ExpectCallbacks();
   ASSERT_GT(received_payload_frames_, 0u) << "No data frames captured";
 
   float sum = 0.0f;

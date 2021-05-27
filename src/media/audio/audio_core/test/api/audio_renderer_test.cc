@@ -66,7 +66,7 @@ class AudioRendererClockTest : public AudioRendererTest {
         AddCallback("GetReferenceClock",
                     [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
 
-    ExpectCallback();
+    ExpectCallbacks();
 
     return clock;
   }
@@ -92,7 +92,7 @@ void AudioRendererTest::TearDown() {
 void AudioRendererTest::AssertConnectedAndDiscardAllPackets() {
   audio_renderer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
 
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
@@ -210,7 +210,7 @@ TEST_F(AudioRendererTest, SendPacket) {
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
                         [](int64_t, int64_t) {});
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
@@ -231,7 +231,7 @@ TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
   // Play and expect the callbacks in order.
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
                         [](int64_t, int64_t) {});
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 TEST_F(AudioRendererTest, SendPacketTooManyShouldDisconnect) {
@@ -376,7 +376,7 @@ TEST_F(AudioRendererTest, DiscardAllPacketsBeforeConfiguredDoesntComputeTimeline
         play_media_time = media_time;
       }));
 
-  ExpectCallback();
+  ExpectCallbacks();
 
   // If we call Play(NO_TIMESTAMP) and then Pause immediately, it is possible for pause_ref_time <
   // play_ref_time.  Even in the NO_TIMESTAMP case, audio_core still applies some small amount of
@@ -393,7 +393,7 @@ TEST_F(AudioRendererTest, DiscardAllPacketsBeforeConfiguredDoesntComputeTimeline
         pause_media_time = media_time;
       }));
 
-  ExpectCallback();
+  ExpectCallbacks();
 
   EXPECT_GE(pause_ref_time, play_ref_time);
 
@@ -426,7 +426,7 @@ TEST_F(AudioRendererTest, DiscardAllPacketsReturnsAfterAllPackets) {
 
   // Packets must complete in order, with the DiscardAllPackets completion afterward.
   audio_renderer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // TODO(mpuryear): test DiscardAllPacketsNoReply();
@@ -479,7 +479,7 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
 
   // Allow an error Disconnect callback, but we expect a timeout instead.
   audio_renderer_->GetMinLeadTime(AddCallback("GetMinLeadTime"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // TODO(mpuryear): test SetPtsUnits(uint32 tick_per_sec_num,uint32 denom);
@@ -509,7 +509,7 @@ TEST_F(AudioRendererTest, Play) {
                         });
   // Note we expect that we receive the |Play| callback _before_ the
   // |SendPacket| callback.
-  ExpectCallback();
+  ExpectCallbacks();
   ASSERT_NE(ref_time_received, -1);
   ASSERT_NE(media_time_received, -1);
 }
@@ -527,7 +527,7 @@ TEST_F(AudioRendererTest, PlayNoReply) {
   audio_renderer_->SendPacket(std::move(packet), AddCallback("SendPacket"));
 
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // Validate MinLeadTime events, when enabled.
@@ -541,7 +541,7 @@ TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
 
   // After enabling MinLeadTime events, we expect an initial notification.
   // Because we have not yet set the format, we expect MinLeadTime to be 0.
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_EQ(min_lead_time, 0);
 
   // FYI: after setting format, MinLeadTime should change to be greater than 0
@@ -560,7 +560,7 @@ TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
   // We should not receive a OnMinLeadTimeChanged callback (or Disconnect)
   // before receiving this direct GetMinLeadTime callback.
   audio_renderer_->GetMinLeadTime(AddCallback("GetMinLeadTime"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 //
@@ -573,7 +573,7 @@ TEST_F(AudioRendererTest, GetMinLeadTime) {
       [&min_lead_time](int64_t min_lead_time_nsec) { min_lead_time = min_lead_time_nsec; }));
 
   // Wait to receive Lead time callback (will loop timeout? EXPECT_FALSE)
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_EQ(min_lead_time, 0);
 }
 
@@ -604,7 +604,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
 
   // Let audio_renderer_ show it is still alive (and allow other disconnects)
   audio_renderer_->GetMinLeadTime(AddCallback("GetMinLeadTime"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // Before setting format, Play should not succeed.
@@ -949,7 +949,7 @@ TEST_F(AudioRendererClockTest, SetRefClockAfterPacketShouldDisconnect) {
   audio_renderer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
 
   // Wait for the Discard completion; now there are no active packets.
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_renderer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
   ExpectDisconnect(audio_renderer_);
@@ -961,7 +961,7 @@ TEST_F(AudioRendererClockTest, SetRefClockDuringPlayShouldDisconnect) {
   audio_renderer_->SetPcmStreamType(kTestStreamType);
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
                         AddCallback("Play"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We are now playing, but there are no active packets.
   audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
@@ -977,7 +977,7 @@ TEST_F(AudioRendererClockTest, SetRefClockAfterPlayShouldDisconnect) {
 
   audio_renderer_->Pause(AddCallback("Pause"));
   // Even though we are paused with no packets, SetReferenceClock is still not allowed.
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_renderer_->SetReferenceClock(clock::CloneOfMonotonic());
   ExpectDisconnect(audio_renderer_);

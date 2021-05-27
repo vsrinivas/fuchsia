@@ -203,7 +203,7 @@ TEST_F(AudioAdminTest, SingleRenderStream) {
                            ref_time_received = ref_time;
                            media_time_received = media_time;
                          }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -224,7 +224,7 @@ TEST_F(AudioAdminTest, SingleRenderStream) {
 
   // Capture 10 frames of audio.
   capturer->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that we got 10 frames as we expected.
   ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10, kPlaybackData1);
@@ -270,7 +270,7 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
                            ref_time_received = ref_time;
                            media_time_received = media_time;
                          }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -289,7 +289,7 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
         }
       });
   capturer->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
   ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10, 0x0);
@@ -340,7 +340,7 @@ TEST_F(AudioAdminTest, CaptureMuteRender) {
                            ref_time_received = ref_time;
                            media_time_received = media_time;
                          }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -365,7 +365,7 @@ TEST_F(AudioAdminTest, CaptureMuteRender) {
 
   // Capture 10 samples of audio.
   loopback_capturer->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
   ExpectPacketContains("loopback_captured", loopback_captured, loopback_capturer->SnapshotPayload(),
@@ -419,7 +419,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
                             ref_time_received = ref_time;
                             media_time_received = media_time;
                           }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -439,7 +439,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
         }
       });
   capturer->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
   ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10,
@@ -502,7 +502,7 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
                             ref_time_received = ref_time;
                             media_time_received = media_time;
                           }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -522,7 +522,7 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
         }
       });
   capturer->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
   ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10,
@@ -575,7 +575,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
                             ref_time_received = ref_time;
                             media_time_received = media_time;
                           }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -595,7 +595,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
         }
       });
   capturer->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
   ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10, kPlaybackData1);
@@ -645,7 +645,7 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
                            ref_time_received = ref_time;
                            media_time_received = media_time;
                          }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -676,7 +676,7 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
 
   capturer1->fidl()->StartAsyncCapture(10);
   capturer2->fidl()->StartAsyncCapture(10);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Check that all of the samples contain the expected data.
   ExpectPacketContains("captured1", captured1, capturer1->SnapshotPayload(), 10,
@@ -752,7 +752,7 @@ TEST_F(AudioAdminTest, DISABLED_DualCaptureStreamMute) {
                            ref_time_received = ref_time;
                            media_time_received = media_time;
                          }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.

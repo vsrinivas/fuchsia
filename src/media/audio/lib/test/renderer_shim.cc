@@ -90,7 +90,7 @@ void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64
           media_time = actual_media_time;
         }
       }));
-  fixture->ExpectCallback();
+  fixture->ExpectCallbacks();
 
   // Update the reference times for each in-flight packet.
   TimelineRate ns_per_pts_tick =
@@ -130,7 +130,7 @@ std::pair<int64_t, int64_t> RendererShimImpl::Pause(TestFixture* fixture) {
     pause_ref_time = reference_time;
     pause_media_time = media_time;
   }));
-  fixture->ExpectCallback();
+  fixture->ExpectCallbacks();
 
   // Now do something with these clock values.
   return std::make_pair(pause_ref_time, pause_media_time);

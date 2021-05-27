@@ -107,7 +107,7 @@ TEST_F(UsageReporterTest, RenderUsageInitialState) {
       }));
 
   // The initial callback happens immediately.
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_state.is_unadjusted());
   EXPECT_TRUE(last_usage.is_render_usage());
   EXPECT_EQ(last_usage.render_usage(), AudioRenderUsage::MEDIA);
@@ -118,7 +118,7 @@ TEST_F(UsageReporterTest, RenderUsageDucked) {
 
   // The initial callback happens immediately.
   c->fake_watcher.SetNextHandler(AddCallback("OnStateChange InitialCall"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   fuchsia::media::Usage last_usage;
   fuchsia::media::UsageState last_state;
@@ -136,7 +136,7 @@ TEST_F(UsageReporterTest, RenderUsageDucked) {
       fuchsia::media::Behavior::DUCK);
 
   StartRendererWithUsage(AudioRenderUsage::SYSTEM_AGENT);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_state.is_ducked());
   EXPECT_TRUE(last_usage.is_render_usage());
   EXPECT_EQ(last_usage.render_usage(), AudioRenderUsage::MEDIA);
@@ -147,7 +147,7 @@ TEST_F(UsageReporterTest, RenderUsageMuted) {
 
   // The initial callback happens immediately.
   c->fake_watcher.SetNextHandler(AddCallback("OnStateChange InitialCall"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   fuchsia::media::Usage last_usage;
   fuchsia::media::UsageState last_state;
@@ -165,7 +165,7 @@ TEST_F(UsageReporterTest, RenderUsageMuted) {
       fuchsia::media::Behavior::MUTE);
 
   StartRendererWithUsage(AudioRenderUsage::SYSTEM_AGENT);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_state.is_muted());
   EXPECT_TRUE(last_usage.is_render_usage());
   EXPECT_EQ(last_usage.render_usage(), AudioRenderUsage::MEDIA);
@@ -184,7 +184,7 @@ TEST_F(UsageReporterTest, CaptureUsageInitialState) {
       }));
 
   // The initial callback happens immediately.
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_state.is_unadjusted());
   EXPECT_TRUE(last_usage.is_capture_usage());
   EXPECT_EQ(last_usage.capture_usage(), AudioCaptureUsage::COMMUNICATION);
@@ -195,7 +195,7 @@ TEST_F(UsageReporterTest, CaptureUsageDucked) {
 
   // The initial callback happens immediately.
   c->fake_watcher.SetNextHandler(AddCallback("OnStateChange InitialCall"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   fuchsia::media::Usage last_usage;
   fuchsia::media::UsageState last_state;
@@ -213,7 +213,7 @@ TEST_F(UsageReporterTest, CaptureUsageDucked) {
       fuchsia::media::Behavior::DUCK);
 
   StartCapturerWithUsage(AudioCaptureUsage::SYSTEM_AGENT);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_state.is_ducked());
   EXPECT_TRUE(last_usage.is_capture_usage());
   EXPECT_EQ(last_usage.capture_usage(), AudioCaptureUsage::COMMUNICATION);
@@ -224,7 +224,7 @@ TEST_F(UsageReporterTest, CaptureUsageMuted) {
 
   // The initial callback happens immediately.
   c->fake_watcher.SetNextHandler(AddCallback("OnStateChange InitialCall"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   fuchsia::media::Usage last_usage;
   fuchsia::media::UsageState last_state;
@@ -242,7 +242,7 @@ TEST_F(UsageReporterTest, CaptureUsageMuted) {
       fuchsia::media::Behavior::MUTE);
 
   StartCapturerWithUsage(AudioCaptureUsage::SYSTEM_AGENT);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_state.is_muted());
   EXPECT_TRUE(last_usage.is_capture_usage());
   EXPECT_EQ(last_usage.capture_usage(), AudioCaptureUsage::COMMUNICATION);

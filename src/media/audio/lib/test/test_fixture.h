@@ -41,7 +41,7 @@ namespace media::audio::test {
 //
 //     // This verifies that callbacks A and B are executed, in that order, that B
 //     // is called with the correct argument, and that the ErrorHandler is not called.
-//     ExpectCallback();
+//     ExpectCallbacks();
 //     EXPECT_EQ(b, 42);
 //
 class TestFixture : public ::gtest::RealLoopFixture {
@@ -104,8 +104,8 @@ class TestFixture : public ::gtest::RealLoopFixture {
   // Wait until all pending callbacks are drained. Fails if an error is encountered.
   // Callbacks are expected to occur in the order they are added. After this method
   // returns, the pending callback set is emptied and new callbacks may be added for
-  // a future call to ExpectCallback.
-  void ExpectCallback();
+  // a future call to ExpectCallbacks.
+  void ExpectCallbacks();
 
   // Wait for the given ErrorHandlers to trigger with their expected errors. Fails if
   // different errors are found or if errors are triggered in different ErrorHandlers.
@@ -151,20 +151,20 @@ class TestFixture : public ::gtest::RealLoopFixture {
  private:
   struct PendingCallback {
     std::string name;
-    int64_t seqno = 0;
+    int64_t sequence_num = 0;
     bool ordered;
   };
 
   auto AddCallbackInternal(const std::string& name, bool ordered) {
     auto pb = NewPendingCallback(name, ordered);
-    return [this, pb](auto&&...) { pb->seqno = next_seqno_++; };
+    return [this, pb](auto&&...) { pb->sequence_num = next_sequence_num_++; };
   }
 
   template <typename Callable>
   auto AddCallbackInternal(const std::string& name, Callable callback, bool ordered) {
     auto pb = NewPendingCallback(name, ordered);
     return [this, pb, callback = std::move(callback)](auto&&... args) {
-      pb->seqno = next_seqno_++;
+      pb->sequence_num = next_sequence_num_++;
       callback(std::forward<decltype(args)>(args)...);
     };
   }
@@ -177,7 +177,7 @@ class TestFixture : public ::gtest::RealLoopFixture {
 
   std::unordered_map<zx_handle_t, std::shared_ptr<ErrorHandler>> error_handlers_;
   std::deque<std::shared_ptr<PendingCallback>> pending_callbacks_;
-  int64_t next_seqno_ = 1;
+  int64_t next_sequence_num_ = 1;
   bool new_error_ = false;
 };
 

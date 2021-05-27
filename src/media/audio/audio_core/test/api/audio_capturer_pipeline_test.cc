@@ -111,7 +111,7 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
   // Stop the capture so we don't overflow while running the following tests.
   capturer_->fidl().events().OnPacketProduced = nullptr;
   capturer_->fidl()->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // The captured data should be silence up to start_time, followed by the input_buffer,
   // followed by more silence.
@@ -236,7 +236,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
     // Stop the capture so we don't overflow while running the following tests.
     capturer->fidl().events().OnPacketProduced = nullptr;
     capturer->fidl()->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-    ExpectCallback();
+    ExpectCallbacks();
 
     // Find the first output frame.
     auto first_output_value = expected_output.samples()[0];

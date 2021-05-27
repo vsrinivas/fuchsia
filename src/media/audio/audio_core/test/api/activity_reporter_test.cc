@@ -47,34 +47,34 @@ TEST_F(ActivityReporterTest, AddAndRemove) {
 
   // First call should return immediately, others should wait for updates.
   add_callback("WatchRenderActivity InitialCall");
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_EQ(active_usages, std::vector<AudioRenderUsage>{});
 
   add_callback("WatchRenderActivity AfterPlayBackground");
   auto r1 = CreateAndPlayWithUsage(AudioRenderUsage::BACKGROUND);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_THAT(active_usages, UnorderedElementsAreArray({AudioRenderUsage::BACKGROUND}));
 
   add_callback("WatchRenderActivity AfterPlayMedia");
   auto r2 = CreateAndPlayWithUsage(AudioRenderUsage::MEDIA);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_THAT(active_usages,
               UnorderedElementsAreArray({AudioRenderUsage::BACKGROUND, AudioRenderUsage::MEDIA}));
 
   add_callback("WatchRenderActivity AfterPauseBackground");
   r1->fidl()->PauseNoReply();
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_THAT(active_usages, UnorderedElementsAreArray({AudioRenderUsage::MEDIA}));
 
   add_callback("WatchRenderActivity AfterDisconnectMedia");
   Unbind(r2);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_THAT(active_usages, UnorderedElementsAre());
 }
 
 TEST_F(ActivityReporterTest, DisconnectOnMultipleConcurrentCalls) {
   activity_reporter_->WatchRenderActivity(AddCallback("WatchRenderActivity"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   activity_reporter_->WatchRenderActivity(AddUnexpectedCallback("WatchRenderActivity Unexpected1"));
   activity_reporter_->WatchRenderActivity(AddUnexpectedCallback("WatchRenderActivity Unexpected2"));

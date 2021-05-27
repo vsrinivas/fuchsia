@@ -31,7 +31,7 @@ TEST_F(AudioTunerTest, ConnectToAudioTuner) {
   environment()->ConnectToService(audio_tuner.NewRequest());
   AddErrorHandler(audio_tuner, "AudioTuner");
   audio_tuner->GetAvailableAudioEffects(AddCallback("GetAvailableAudioEffects"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 }  // namespace media::audio::test

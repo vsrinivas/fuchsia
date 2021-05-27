@@ -93,7 +93,7 @@ TEST_F(UsageGainReporterTest, SetVolumeAndMute) {
 
   // The initial callback happens immediately.
   c->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged InitialCall"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   bool last_muted;
   float last_gain_db;
@@ -111,13 +111,13 @@ TEST_F(UsageGainReporterTest, SetVolumeAndMute) {
 
   set_callback("SetVolume(0)");
   c->volume_control->SetVolume(0);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_FALSE(last_muted);
   EXPECT_FLOAT_EQ(last_gain_db, fuchsia::media::audio::MUTED_GAIN_DB);
 
   set_callback("SetVolume(1)");
   c->volume_control->SetVolume(1);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_FALSE(last_muted);
   EXPECT_FLOAT_EQ(last_gain_db, 0);
 
@@ -125,14 +125,14 @@ TEST_F(UsageGainReporterTest, SetVolumeAndMute) {
 #if 0
   set_callback("SetMute(true)");
   c->volume_control->SetMute(true);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_TRUE(last_muted);
   EXPECT_FLOAT_EQ(last_gain_db, fuchsia::media::audio::MUTED_GAIN_DB);
 
   // Unmute should restore the volume.
   set_callback("SetMute(false)");
   c->volume_control->SetMute(false);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_FALSE(last_muted);
   EXPECT_FLOAT_EQ(last_gain_db, 0);
 #endif
@@ -145,19 +145,19 @@ TEST_F(UsageGainReporterTest, RoutedCorrectly) {
   // The initial callbacks happen immediately.
   c1->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged1 InitialCall"));
   c2->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged2 InitialCall"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Routing to c1.
   c1->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged1 RouteTo1"));
   c2->fake_listener.SetNextHandler(AddUnexpectedCallback("OnGainMuteChanged2 RouteTo1"));
   c1->volume_control->SetVolume(0);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Routing to c2.
   c1->fake_listener.SetNextHandler(AddUnexpectedCallback("OnGainMuteChanged1 RouteTo2"));
   c2->fake_listener.SetNextHandler(AddCallback("OnGainMuteChanged2 RouteTo2"));
   c2->volume_control->SetVolume(0);
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 }  // namespace media::audio::test

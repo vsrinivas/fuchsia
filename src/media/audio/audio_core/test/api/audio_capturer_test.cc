@@ -75,7 +75,7 @@ class AudioCapturerClockTestOldAPI : public AudioCapturerTestOldAPI {
         AddCallback("GetReferenceClock",
                     [&clock](zx::clock received_clock) { clock = std::move(received_clock); }));
 
-    ExpectCallback();
+    ExpectCallbacks();
 
     return clock;
   }
@@ -122,7 +122,7 @@ TEST_F(AudioCapturerTestOldAPI, DiscardAll_ReturnsAfterAllPackets) {
 
   // Packets should complete in strict order, with DiscardAllPackets' completion afterward.
   audio_capturer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 TEST_F(AudioCapturerTestOldAPI, DiscardAll_WithNoVmoShouldDisconnect) {
@@ -139,7 +139,7 @@ TEST_F(AudioCapturerTestOldAPI, DiscardAll_DuringAsyncCaptureShouldDisconnect) {
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->DiscardAllPackets(AddUnexpectedCallback("DiscardAllPackets"));
   ExpectDisconnect(audio_capturer_);
@@ -152,7 +152,7 @@ TEST_F(AudioCapturerTestOldAPI, DISABLED_DiscardAll_AsyncCaptureStoppingShouldDi
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->StopAsyncCaptureNoReply();
   audio_capturer_->DiscardAllPackets(AddUnexpectedCallback("DiscardAllPackets"));
@@ -166,13 +166,13 @@ TEST_F(AudioCapturerTestOldAPI, DiscardAll_AfterAsyncCapture) {
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // TODO(mpuryear): DiscardAllPacketsNoReply() post-stop
@@ -190,7 +190,7 @@ TEST_F(AudioCapturerTestOldAPI, DiscardAllNoReply_DuringAsyncCaptureShouldDiscon
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->DiscardAllPacketsNoReply();
   ExpectDisconnect(audio_capturer_);
@@ -203,7 +203,7 @@ TEST_F(AudioCapturerTestOldAPI, DISABLED_DiscardAllNoReply_AsyncCaptureStoppingS
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->StopAsyncCaptureNoReply();
   audio_capturer_->DiscardAllPacketsNoReply();
@@ -217,10 +217,10 @@ TEST_F(AudioCapturerTestOldAPI, DiscardAllNoReply_AfterAsyncCapture) {
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->DiscardAllPacketsNoReply();
   RunLoopUntilIdle();
@@ -249,7 +249,7 @@ TEST_F(AudioCapturerTestOldAPI, StopAsyncWithAllPacketsInFlight) {
   usleep(150 * 1000);
 
   audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // AudioCapturer methods
@@ -307,14 +307,14 @@ TEST_F(AudioCapturerTestOldAPI, BindGainControl) {
 
   // Give time for other Disconnects to occur, if they must.
   audio_capturer_2->GetStreamType(AddCallback("GetStreamType"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 // Setting a payload buffer should fail, if format has not yet been set (even if it was retrieved).
 TEST_F(AudioCapturerTestOldAPI, AddPayloadBuffer_BeforeSetFormatShouldDisconnect) {
   // Give time for Disconnect to occur, if it must.
   audio_capturer_->GetStreamType(AddCallback("GetStreamType"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Calling this before SetPcmStreamType should fail
   SetUpPayloadBuffer();
@@ -466,7 +466,7 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_AfterCaptureShouldDisconnect) {
   SetUpPayloadBuffer();
 
   audio_capturer_->CaptureAt(0, 0, 8000, AddCallback("CaptureAt"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
   ExpectDisconnect(audio_capturer_);
@@ -481,7 +481,7 @@ TEST_F(AudioCapturerClockTestOldAPI, DISABLED_SetRefClock_CaptureCancelledShould
 
   audio_capturer_->CaptureAt(0, 0, 8000, [](fuchsia::media::StreamPacket) {});
   audio_capturer_->DiscardAllPackets(AddCallback("DiscardAllPackets"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
   ExpectDisconnect(audio_capturer_);
@@ -494,7 +494,7 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_DuringAsyncCaptureShouldDisconn
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->SetReferenceClock(clock::CloneOfMonotonic());
   ExpectDisconnect(audio_capturer_);
@@ -507,10 +507,10 @@ TEST_F(AudioCapturerClockTestOldAPI, SetRefClock_AfterAsyncCaptureShouldDisconne
 
   audio_capturer_.events().OnPacketProduced = AddCallback("OnPacketProduced");
   audio_capturer_->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   audio_capturer_->SetReferenceClock(clock::AdjustableCloneOfMonotonic());
   ExpectDisconnect(audio_capturer_);
@@ -550,10 +550,10 @@ TEST_F(AudioCapturerTest, CaptureAsyncNoDevice) {
   capturer->fidl().events().OnPacketProduced = AddCallback(
       "OnPacketProduced", [&capture_packet](auto packet) { capture_packet = std::move(packet); });
   capturer->fidl()->StartAsyncCapture(1600);
-  ExpectCallback();
+  ExpectCallbacks();
 
   capturer->fidl()->StopAsyncCapture(AddCallback("StopAsyncCapture"));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Expect the packet to be silent. Since we initialized the buffer to non-silence we know that
   // this silence was populated by audio_core.

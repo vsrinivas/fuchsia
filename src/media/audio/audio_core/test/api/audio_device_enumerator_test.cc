@@ -39,7 +39,7 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
     audio_dev_enum_->SetDeviceGain(
         device->token(), AudioGainInfo{.gain_db = -30.0},
         AudioGainValidFlags::GAIN_VALID | AudioGainValidFlags::MUTE_VALID);
-    ExpectCallback();
+    ExpectCallbacks();
   }
 
   template <typename DeviceT>
@@ -49,7 +49,7 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
           EXPECT_EQ(token, device->token());
           EXPECT_FLOAT_EQ(info.gain_db, 0);
         }));
-    ExpectCallback();
+    ExpectCallbacks();
   }
 
   template <typename Interface>
@@ -84,28 +84,28 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
       audio_dev_enum_.events().OnDefaultDeviceChanged = AddCallback(
           "OnDefaultDeviceChanged after unplug Device2",
           [d1](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, d1->token()); });
-      ExpectCallback();
+      ExpectCallbacks();
 
       // Unplug d1.
       d1->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), false);
       audio_dev_enum_.events().OnDefaultDeviceChanged =
           AddCallback("OnDefaultDeviceChanged after unplug Device1",
                       [](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, 0u); });
-      ExpectCallback();
+      ExpectCallbacks();
 
       // Plug d1.
       d1->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), true);
       audio_dev_enum_.events().OnDefaultDeviceChanged = AddCallback(
           "OnDefaultDeviceChanged after plug Device1",
           [d1](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, d1->token()); });
-      ExpectCallback();
+      ExpectCallbacks();
 
       // Plug d2.
       d2->fidl()->ChangePlugState(zx::clock::get_monotonic().get(), true);
       audio_dev_enum_.events().OnDefaultDeviceChanged = AddCallback(
           "OnDefaultDeviceChanged after plug Device2",
           [d2](uint64_t old_token, uint64_t new_token) { EXPECT_EQ(new_token, d2->token()); });
-      ExpectCallback();
+      ExpectCallbacks();
     }
 
     Unbind(d1);
@@ -129,7 +129,7 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
               got_tokens.push_back(d.token_id);
             }
           }));
-      ExpectCallback();
+      ExpectCallbacks();
       EXPECT_THAT(got_tokens, ::testing::UnorderedElementsAreArray(known_tokens));
     }
 
@@ -149,7 +149,7 @@ TEST_F(AudioDeviceEnumeratorTest, OnDeviceGainChangedIgnoresInvalidTokensInSets)
   // Since this call happens after the above calls, any event triggered by
   // the above calls should have been received by the time this call returns.
   audio_dev_enum_->GetDevices(AddCallback("GetDevices"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 TEST_F(AudioDeviceEnumeratorTest, SetDeviceGain_Input) {

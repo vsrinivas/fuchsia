@@ -40,26 +40,26 @@ TEST_F(VolumeControlTest, SetVolumeAndMute) {
 
   // The initial callback happens immediately.
   add_callback();
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_FLOAT_EQ(volume, 1.0);
   EXPECT_EQ(muted, false);
 
   // Further callbacks happen in response to events.
   add_callback();
   client1->SetVolume(0.5);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_FLOAT_EQ(volume, 0.5);
   EXPECT_EQ(muted, false);
 
   add_callback();
   client1->SetMute(true);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_EQ(muted, true);
 
   // Unmute should restore the volume.
   add_callback();
   client1->SetMute(false);
-  ExpectCallback();
+  ExpectCallbacks();
   EXPECT_FLOAT_EQ(volume, 0.5);
   EXPECT_EQ(muted, false);
 }
@@ -71,19 +71,19 @@ TEST_F(VolumeControlTest, RoutedCorrectly) {
   // The initial callbacks happen immediately.
   c1.events().OnVolumeMuteChanged = AddCallback("OnVolumeMuteChanged1 InitialCall");
   c2.events().OnVolumeMuteChanged = AddCallback("OnVolumeMuteChanged2 InitialCall");
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Routing to c1.
   c1.events().OnVolumeMuteChanged = AddCallback("OnVolumeMuteChanged1 RouteTo1");
   c2.events().OnVolumeMuteChanged = AddUnexpectedCallback("OnVolumeMuteChanged2 RouteTo1");
   c1->SetVolume(0);
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Routing to c2.
   c1.events().OnVolumeMuteChanged = AddUnexpectedCallback("OnVolumeMuteChanged1 RouteTo2");
   c2.events().OnVolumeMuteChanged = AddCallback("OnVolumeMuteChanged2 RouteTo2");
   c2->SetVolume(0);
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 TEST_F(VolumeControlTest, FailToConnectToCaptureUsageVolume) {

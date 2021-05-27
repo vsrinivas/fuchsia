@@ -410,7 +410,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
 
   renderer->fidl()->DiscardAllPackets(AddCallback(
       "DiscardAllPackets", []() { FX_LOGS(DEBUG) << "DiscardAllPackets #1 complete"; }));
-  ExpectCallback();
+  ExpectCallbacks();
 
   // The entire first two packets must have been written. Subsequent packets may have been partially
   // written, depending on exactly when the DiscardAllPackets command is received. The remaining
@@ -976,7 +976,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
       device_id, std::move(device_profile_with_inversion_effect),
       AddCallback("SetAudioDeviceProfile", [](zx_status_t status) { EXPECT_EQ(status, ZX_OK); }));
 
-  ExpectCallback();
+  ExpectCallbacks();
 
   // Send second set of packets through new OutputPipeline (with inversion effect disabled); play
   // packets at least "min_lead_time" after the last audio frame previously written to the ring
@@ -1015,7 +1015,7 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
       device_id, std::move(updated_effect),
       AddCallback("SetAudioEffectConfig", [](zx_status_t status) { EXPECT_EQ(status, ZX_OK); }));
 
-  ExpectCallback();
+  ExpectCallbacks();
 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   auto min_lead_time = renderer->min_lead_time();

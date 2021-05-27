@@ -110,7 +110,7 @@ class GainControlTest : public HermeticAudioTest {
                       received_mute_1 = muted;
                     });
 
-    ExpectCallback();
+    ExpectCallbacks();
     EXPECT_EQ(received_gain_db_1, expected_gain_db);
     EXPECT_EQ(received_gain_db_2, expected_gain_db);
     EXPECT_EQ(received_mute_1, expected_mute);

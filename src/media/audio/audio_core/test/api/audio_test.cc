@@ -21,7 +21,7 @@ TEST_F(AudioTest, ConnectToAudioService) {
 
   audio_client->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_->GetMinLeadTime(AddCallback("GetMinLeadTime"));
-  ExpectCallback();
+  ExpectCallbacks();
 }
 
 }  // namespace media::audio::test

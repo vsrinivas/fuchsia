@@ -6,6 +6,8 @@
 
 #include <zircon/status.h>
 
+#include <ostream>
+
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace media::audio::test {
@@ -21,31 +23,54 @@ void TestFixture::TearDown() {
   ::gtest::RealLoopFixture::TearDown();
 }
 
-void TestFixture::ExpectCallback() {
-  int64_t last_seqno = 0;
+void TestFixture::ExpectCallbacks() {
+  std::vector<PendingCallback> retired_callbacks;
+
   while (!pending_callbacks_.empty()) {
-    auto pcb = pending_callbacks_.front();
+    auto callback = pending_callbacks_.front();
     pending_callbacks_.pop_front();
 
-    RunLoopWithTimeoutOrUntil([this, pcb]() { return new_error_ || pcb->seqno > 0; }, kLoopTimeout);
+    RunLoopWithTimeoutOrUntil(
+        [this, callback]() { return new_error_ || callback->sequence_num > 0; }, kLoopTimeout);
 
     if (new_error_) {
       new_error_ = false;
-      ADD_FAILURE() << "Unexpected error while waiting for " << pcb->name;
-      ExpectNoUnexpectedErrors(fxl::StringPrintf("while waiting for %s", pcb->name.c_str()));
+      auto error_str = fxl::StringPrintf("while waiting for '%s'", callback->name.c_str());
+      ADD_FAILURE() << "Unexpected error " << error_str;
+      ExpectNoUnexpectedErrors(error_str);
       pending_callbacks_.clear();
       return;
     }
-    if (pcb->seqno == 0) {
-      ADD_FAILURE() << "Did not get a " << pcb->name << " callback within "
-                    << kLoopTimeout.to_msecs() << "ms";
+    if (callback->sequence_num == 0) {
+      ADD_FAILURE() << "Did not get a '" << callback->name << "' callback within "
+                    << kLoopTimeout.to_msecs() << " ms";
       pending_callbacks_.clear();
       return;
     }
 
-    if (pcb->ordered) {
-      EXPECT_GT(pcb->seqno, last_seqno) << pcb->name << " called out-of-order";
-      last_seqno = pcb->seqno;
+    if (callback->ordered) {
+      if (!retired_callbacks.empty()) {
+        auto prev_callback = retired_callbacks.back();
+
+        if (callback->sequence_num <= prev_callback.sequence_num) {
+          std::ostringstream out_stream;
+          auto format_cb_entry = [&out_stream](const PendingCallback callback_entry) {
+            out_stream << std::right << std::setw(20)
+                       << (std::string("'") + callback_entry.name + "'  [")
+                       << callback_entry.sequence_num << "]" << std::endl;
+          };
+
+          out_stream << "   Expected order  [Actual order]" << std::endl;
+          std::for_each(retired_callbacks.begin(), retired_callbacks.end(), format_cb_entry);
+          format_cb_entry(*callback);
+
+          ADD_FAILURE() << "Out-of-order callbacks: '" << callback->name
+                        << "' completed too early -- should have been after '" << prev_callback.name
+                        << "'" << std::endl
+                        << out_stream.str();
+        }
+      }
+      retired_callbacks.push_back(*callback);
     }
   }
 }
@@ -95,11 +120,11 @@ TestFixture::NewErrorHandler(const std::string& name) {
 
 std::shared_ptr<TestFixture::PendingCallback> TestFixture::NewPendingCallback(
     const std::string& name, bool ordered) {
-  auto pcb = std::make_shared<PendingCallback>();
-  pcb->name = name;
-  pcb->ordered = ordered;
-  pending_callbacks_.push_back(pcb);
-  return pcb;
+  auto callback = std::make_shared<PendingCallback>();
+  callback->name = name;
+  callback->ordered = ordered;
+  pending_callbacks_.push_back(callback);
+  return callback;
 }
 
 bool TestFixture::ErrorOccurred() {
