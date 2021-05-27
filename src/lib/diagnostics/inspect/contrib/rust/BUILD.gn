@@ -15,6 +15,8 @@ rustc_library("fuchsia-inspect-contrib") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/diagnostics/lib/util/injectable-time",
+    "//src/diagnostics/persistence/fidl:persist-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
@@ -26,12 +28,15 @@ rustc_library("fuchsia-inspect-contrib") {
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
+    "src/auto_persist.rs",
     "src/inspectable/mod.rs",
     "src/lib.rs",
     "src/log/impls.rs",

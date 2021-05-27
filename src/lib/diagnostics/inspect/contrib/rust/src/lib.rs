@@ -11,6 +11,7 @@
 //!
 //! [fuchsia_inspect]: crate.fuchsia_inspect.html
 
+pub mod auto_persist;
 pub mod inspectable;
 #[macro_use]
 pub mod log;
