@@ -76,20 +76,8 @@ fdio_ptr fdio_iodir(const char** path, int dirfd);
 fdio_ptr fdio_datagram_socket_create(zx::eventpair event,
                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
-// Possible states for a stream socket.
-//
-// Exposed here to keep the factory function infallible; i.e. state observation happens in the
-// factory's caller.
-enum class StreamSocketState {
-  kUnconnected,
-  kListening,
-  kConnecting,
-  kConnected,
-};
-
-fdio_ptr fdio_stream_socket_create(zx::socket socket,
-                                   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                   zx_info_socket_t info, StreamSocketState state);
+zx::status<fdio_ptr> fdio_stream_socket_create(
+    zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns);

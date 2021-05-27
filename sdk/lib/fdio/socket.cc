@@ -1798,6 +1798,13 @@ static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
 namespace fdio_internal {
 
 struct stream_socket : public pipe {
+  enum class State {
+    kUnconnected,
+    kListening,
+    kConnecting,
+    kConnected,
+  };
+
   zx_status_t borrow_channel(zx_handle_t* h) override {
     *h = zxio_stream_socket().client.channel().get();
     return ZX_OK;
@@ -1806,22 +1813,22 @@ struct stream_socket : public pipe {
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
     zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
 
-    auto [state, has_error] = State();
+    auto [state, has_error] = GetState();
     switch (state) {
-      case StreamSocketState::kUnconnected:
+      case State::kUnconnected:
         // Stream sockets which are non-listening or unconnected do not have a potential peer
         // to generate any waitable signals, skip signal waiting and notify the caller of the
         // same.
         *out_signals = ZX_SIGNAL_NONE;
         return;
-      case StreamSocketState::kListening:
+      case State::kListening:
         break;
-      case StreamSocketState::kConnecting:
+      case State::kConnecting:
         if (events & POLLIN) {
           signals |= ZXIO_SIGNAL_READABLE;
         }
         break;
-      case StreamSocketState::kConnected:
+      case State::kConnected:
         wait_begin_inner(events, signals, handle, out_signals);
         return;
     }
@@ -1856,27 +1863,27 @@ struct stream_socket : public pipe {
       std::lock_guard lock(state_lock_);
       auto [state, has_error] = StateLocked();
       switch (state) {
-        case StreamSocketState::kUnconnected:
+        case State::kUnconnected:
           ZX_ASSERT_MSG(zx_signals == ZX_SIGNAL_NONE, "zx_signals=%s on unconnected socket",
                         std::bitset<sizeof(zx_signals)>(zx_signals).to_string().c_str());
           *out_events = POLLOUT | POLLHUP;
           return;
 
-        case StreamSocketState::kListening:
+        case State::kListening:
           if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
             events |= POLLIN;
           }
           use_inner = false;
           break;
-        case StreamSocketState::kConnecting:
+        case State::kConnecting:
           if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
-            state_ = StreamSocketState::kConnected;
+            state_ = State::kConnected;
             events |= POLLOUT;
           }
           zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
           use_inner = false;
           break;
-        case StreamSocketState::kConnected:
+        case State::kConnected:
           use_inner = true;
           break;
       }
@@ -1916,10 +1923,10 @@ struct stream_socket : public pipe {
       std::lock_guard lock(state_lock_);
       switch (*out_code) {
         case 0:
-          state_ = StreamSocketState::kConnected;
+          state_ = State::kConnected;
           break;
         case EINPROGRESS:
-          state_ = StreamSocketState::kConnecting;
+          state_ = State::kConnecting;
           break;
       }
     }
@@ -1939,7 +1946,7 @@ struct stream_socket : public pipe {
     }
     {
       std::lock_guard lock(state_lock_);
-      state_ = StreamSocketState::kListening;
+      state_ = State::kListening;
     }
     *out_code = 0;
     return ZX_OK;
@@ -2092,7 +2099,7 @@ struct stream_socket : public pipe {
   zxio_stream_socket_t& zxio_stream_socket() { return ::zxio_stream_socket(&zxio_storage().io); }
 
   zx::status<std::optional<int32_t>> Preflight(int fallback) {
-    auto [state, has_error] = State();
+    auto [state, has_error] = GetState();
     if (has_error) {
       zx::status err = GetError();
       if (err.is_error()) {
@@ -2105,17 +2112,17 @@ struct stream_socket : public pipe {
     }
 
     switch (state) {
-      case StreamSocketState::kUnconnected:
+      case State::kUnconnected:
         __FALLTHROUGH;
-      case StreamSocketState::kListening:
+      case State::kListening:
         return zx::ok(fallback);
-      case StreamSocketState::kConnecting:
+      case State::kConnecting:
         if (!has_error) {
           return zx::ok(EAGAIN);
         }
         // There's an error on the socket, we will discover it when we perform our I/O.
         __FALLTHROUGH;
-      case StreamSocketState::kConnected:
+      case State::kConnected:
         return zx::ok(std::nullopt);
     }
   }
@@ -2135,22 +2142,22 @@ struct stream_socket : public pipe {
   }
 
   std::mutex state_lock_;
-  StreamSocketState state_ __TA_GUARDED(state_lock_);
+  State state_ __TA_GUARDED(state_lock_);
 
-  std::pair<StreamSocketState, bool> StateLocked() __TA_REQUIRES(state_lock_) {
+  std::pair<State, bool> StateLocked() __TA_REQUIRES(state_lock_) {
     switch (state_) {
-      case StreamSocketState::kUnconnected:
+      case State::kUnconnected:
         __FALLTHROUGH;
-      case StreamSocketState::kListening:
+      case State::kListening:
         return std::make_pair(state_, false);
-      case StreamSocketState::kConnecting: {
+      case State::kConnecting: {
         zx_signals_t observed;
         zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
             ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
         switch (status) {
           case ZX_OK:
             if (observed & ZXSIO_SIGNAL_CONNECTED) {
-              state_ = StreamSocketState::kConnected;
+              state_ = State::kConnected;
             }
             __FALLTHROUGH;
           case ZX_ERR_TIMED_OUT:
@@ -2161,12 +2168,12 @@ struct stream_socket : public pipe {
         }
         break;
       }
-      case StreamSocketState::kConnected:
+      case State::kConnected:
         return std::make_pair(state_, false);
     }
   }
 
-  std::pair<StreamSocketState, bool> State() __TA_EXCLUDES(state_lock_) {
+  std::pair<State, bool> GetState() __TA_EXCLUDES(state_lock_) {
     std::lock_guard lock(state_lock_);
     return StateLocked();
   }
@@ -2175,7 +2182,7 @@ struct stream_socket : public pipe {
   friend class fbl::internal::MakeRefCountedHelper<stream_socket>;
   friend class fbl::RefPtr<stream_socket>;
 
-  explicit stream_socket(StreamSocketState state) : state_(state) {}
+  explicit stream_socket(State state) : state_(state) {}
   ~stream_socket() override = default;
 };
 
@@ -2258,11 +2265,34 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   return ops;
 }();
 
-fdio_ptr fdio_stream_socket_create(zx::socket socket, fidl::ClientEnd<fsocket::StreamSocket> client,
-                                   zx_info_socket_t info, StreamSocketState state) {
-  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::stream_socket>(state);
+zx::status<fdio_ptr> fdio_stream_socket_create(zx::socket socket,
+                                               fidl::ClientEnd<fsocket::StreamSocket> client) {
+  zx_info_socket_t info;
+  if (zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  zx::status state = [&socket]() -> zx::status<fdio_internal::stream_socket::State> {
+    zx_status_t status =
+        socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), nullptr);
+    // TODO(tamird): Transferring a listening or connecting socket to another process doesn't work
+    // correctly since those states can't be observed here.
+    switch (status) {
+      case ZX_OK:
+        return zx::ok(fdio_internal::stream_socket::State::kConnected);
+      case ZX_ERR_TIMED_OUT:
+        return zx::ok(fdio_internal::stream_socket::State::kUnconnected);
+      default:
+        return zx::error(status);
+    }
+  }();
+  if (state.is_error()) {
+    return state.take_error();
+  }
+
+  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::stream_socket>(state.value());
   if (io == nullptr) {
-    return nullptr;
+    return zx::ok(nullptr);
   }
   zxio_storage_t& storage = io->zxio_storage();
   auto zs = new (&storage) zxio_stream_socket_t{
@@ -2272,7 +2302,7 @@ fdio_ptr fdio_stream_socket_create(zx::socket socket, fidl::ClientEnd<fsocket::S
   };
   zxio_init(&zs->io, &zxio_stream_socket_ops);
   zxio_pipe_init(reinterpret_cast<zxio_storage_t*>(&zs->pipe), std::move(socket), info);
-  return io;
+  return zx::ok(io);
 }
 
 bool fdio_is_socket(fdio_t* io) {

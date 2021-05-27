@@ -91,30 +91,8 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
     }
     case fio::wire::NodeInfo::Tag::kStreamSocket: {
       auto& socket = info.mutable_stream_socket().socket;
-      zx_info_socket_t socket_info;
-      zx_status_t status =
-          socket.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info), nullptr, nullptr);
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      StreamSocketState state;
-      status = socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), nullptr);
-      // TODO(tamird): Transferring a listening or connecting socket to another process doesn't work
-      // correctly since those states can't be observed here.
-      switch (status) {
-        case ZX_OK:
-          state = StreamSocketState::kConnected;
-          break;
-        case ZX_ERR_TIMED_OUT:
-          state = StreamSocketState::kUnconnected;
-          break;
-        default:
-          return zx::error(status);
-      }
-
-      return zx::ok(fdio_stream_socket_create(
-          std::move(socket), fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()),
-          socket_info, state));
+      return fdio_stream_socket_create(std::move(socket),
+                                       fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()));
     }
     default:
       return zx::error(ZX_ERR_NOT_SUPPORTED);
