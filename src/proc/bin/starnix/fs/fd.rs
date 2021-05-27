@@ -94,6 +94,16 @@ pub trait FileOps: Send + Sync {
     ) -> Result<SyscallResult, Errno> {
         default_ioctl(request)
     }
+
+    fn fcntl(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _cmd: u32,
+        _arg: u64,
+    ) -> Result<SyscallResult, Errno> {
+        Err(EINVAL)
+    }
 }
 
 /// Implements FileDesc methods in a way that makes sense for nonseekable files. You must implement

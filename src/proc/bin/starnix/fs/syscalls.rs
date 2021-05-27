@@ -83,6 +83,10 @@ pub fn sys_fcntl(
             *file_flags = (*file_flags & !SETTABLE_FLAGS) | requested_flags;
             Ok(SUCCESS)
         }
+        F_GETPIPE_SZ | F_SETPIPE_SZ => {
+            let file = ctx.task.files.get(fd)?;
+            file.ops().fcntl(&file, &ctx.task, cmd, arg)
+        }
         _ => {
             not_implemented!("fcntl command {} not implemented", cmd);
             Err(ENOSYS)
