@@ -5,8 +5,6 @@
 #include "src/developer/debug/debug_agent/debug_agent.h"
 
 #include <inttypes.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/features.h>
@@ -22,8 +20,6 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/developer/debug/debug_agent/time.h"
-#include "src/developer/debug/debug_agent/zircon_job_handle.h"
-#include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -226,8 +222,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
   reply->timestamp = GetNowTimestamp();
   switch (request.type) {
     case debug_ipc::TaskType::kJob: {
-      auto debug_job = GetDebuggedJob(request.koid);
-      if (debug_job && debug_job->job_handle().GetNativeHandle().is_valid()) {
+      if (auto debug_job = GetDebuggedJob(request.koid)) {
         RemoveDebuggedJob(request.koid);
         reply->status = ZX_OK;
       } else {

@@ -5,14 +5,16 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_JOB_HANDLE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_JOB_HANDLE_H_
 
-#include <lib/zx/job.h>
-
 #include <memory>
+#include <string>
 #include <vector>
 
-#include "src/developer/debug/debug_agent/process_handle.h"
+#include <lib/fit/function.h>
+#include <zircon/types.h>
 
 namespace debug_agent {
+
+class ProcessHandle;
 
 class JobHandle {
  public:
@@ -21,19 +23,17 @@ class JobHandle {
   // Creates a copy of this job handle.
   virtual std::unique_ptr<JobHandle> Duplicate() const = 0;
 
-  // Access to the underlying native job object. This is for porting purposes, ideally this object
-  // would encapsulate all details about the job for testing purposes and this getter would be
-  // removed. In testing situations, the returned value may be an empty object,
-  // TODO(brettw) Remove this.
-  virtual const zx::job& GetNativeHandle() const = 0;
-  virtual zx::job& GetNativeHandle() = 0;
-
   virtual zx_koid_t GetKoid() const = 0;
   virtual std::string GetName() const = 0;
 
   // Returns the set of child objects for this job.
   virtual std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const = 0;
   virtual std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const = 0;
+
+  // Registers for job exceptions. On success, the given callback will be issued for all process
+  // launches in this job. Can be called with an empty function to unregister.
+  virtual zx_status_t WatchJobExceptions(
+      fit::function<void(std::unique_ptr<ProcessHandle>)> cb) = 0;
 
   // Recursively searches the job tree from this job/process and returns a handle to it. Returns a
   // null pointer if the job/process was not found. This can also happen if the debug_agent doesn't

@@ -6,12 +6,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/regex.h"
-#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
@@ -21,16 +19,10 @@ DebuggedJob::DebuggedJob(ProcessStartHandler* handler, std::unique_ptr<JobHandle
 DebuggedJob::~DebuggedJob() = default;
 
 zx_status_t DebuggedJob::Init() {
-  debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
-  FX_DCHECK(loop);  // Loop must be created on this thread first.
-
-  // Register for debug exceptions.
-  debug_ipc::MessageLoopTarget::WatchJobConfig config;
-  config.job_name = job_handle_->GetName();
-  config.job_handle = job_handle_->GetNativeHandle().get();
-  config.job_koid = koid();
-  config.watcher = this;
-  return loop->WatchJobExceptions(std::move(config), &job_watch_handle_);
+  // Register for debug exceptions. Since this class owks the job_handle_ it is safe to capture
+  // |this| here.
+  return job_handle_->WatchJobExceptions(
+      [this](std::unique_ptr<ProcessHandle> process) { OnProcessStarting(std::move(process)); });
 }
 
 bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
@@ -42,15 +34,7 @@ bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
   return proc_name.find(filter) != std::string::npos;
 }
 
-void DebuggedJob::OnProcessStarting(zx::exception exception_token,
-                                    zx_exception_info_t exception_info) {
-  // TODO(brettw) convert this to ExceptionHandle.
-  zx_handle_t zircon_handle = ZX_HANDLE_INVALID;
-  zx_status_t status = zx_exception_get_process(exception_token.get(), &zircon_handle);
-  FX_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
-
-  std::unique_ptr<ProcessHandle> process =
-      std::make_unique<ZirconProcessHandle>(zx::process(zircon_handle));
+void DebuggedJob::OnProcessStarting(std::unique_ptr<ProcessHandle> process) {
   auto proc_name = process->GetName();
 
   // Tools like fx serve will connect every second or so to the target, spamming logging for this
@@ -74,13 +58,6 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
                    << ". Attaching.";
     handler_->OnProcessStart(matching_filter->filter, std::move(process));
   }
-
-  // Attached to the process. At that point it will get a new thread notification for the initial
-  // thread which it can stop or continue as it desires. Therefore, we can always resume the thread
-  // in the "new process" exception.
-  //
-  // Technically it's not necessary to reset the handle, but being explicit here helps readability.
-  exception_token.reset();
 }
 
 void DebuggedJob::ApplyToJob(FilterInfo& filter, JobHandle& job, ProcessHandleSetByKoid& matches) {

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/job_handle.h"
 
+#include "src/developer/debug/debug_agent/process_handle.h"
+
 namespace debug_agent {
 
 std::unique_ptr<JobHandle> JobHandle::FindJob(zx_koid_t job_koid) const {

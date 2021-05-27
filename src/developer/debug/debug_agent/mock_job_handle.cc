@@ -8,14 +8,8 @@
 
 namespace debug_agent {
 
-zx::job MockJobHandle::null_handle_;
-
 MockJobHandle::MockJobHandle(zx_koid_t koid, std::string name)
-    : job_koid_(koid), name_(std::move(name)) {
-  // Tests could accidentally write to this handle since it's returned as a mutable value in some
-  // cases. Catch accidents like that.
-  FX_DCHECK(!null_handle_);
-}
+    : job_koid_(koid), name_(std::move(name)) {}
 
 std::unique_ptr<JobHandle> MockJobHandle::Duplicate() const {
   return std::make_unique<MockJobHandle>(*this);

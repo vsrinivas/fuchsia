@@ -30,13 +30,6 @@ zx_koid_t KoidForObject(const zx::object_base& object);
 // Returns empty string on failure.
 std::string NameForObject(const zx::object_base& object);
 
-// Returns an !is_valid() job object on failure.
-zx::job GetRootJob();
-
-// Returns the koid of the job the component manager uses as its root job. Returns ZX_KOID_INVALID
-// on failure.
-zx_koid_t GetComponentRootJobKoid();
-
 // Returns the given type of child koids.
 std::vector<zx_koid_t> GetChildKoids(const zx::object_base& parent, uint32_t child_kind);
 

@@ -32,7 +32,7 @@ class ZirconSystemInterface final : public SystemInterface {
   std::string GetSystemVersion() override;
 
  private:
-  ZirconJobHandle root_job_;
+  std::unique_ptr<ZirconJobHandle> root_job_;  // May be null.
   std::shared_ptr<sys::ServiceDirectory> services_;
   ZirconComponentManager component_manager_;
   ZirconLimboProvider limbo_provider_;

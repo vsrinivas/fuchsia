@@ -4,8 +4,12 @@
 
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
+#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
 
@@ -34,6 +38,46 @@ std::vector<std::unique_ptr<ProcessHandle>> ZirconJobHandle::GetChildProcesses()
   for (auto& zx_process : zircon::GetChildProcesses(job_))
     result.push_back(std::make_unique<ZirconProcessHandle>(std::move(zx_process)));
   return result;
+}
+
+zx_status_t ZirconJobHandle::WatchJobExceptions(
+    fit::function<void(std::unique_ptr<ProcessHandle>)> cb) {
+  zx_status_t status = ZX_OK;
+
+  if (!cb) {
+    // Unregistering.
+    job_watch_handle_.StopWatching();
+  } else if (!process_callback_) {
+    // Registering for the first time.
+    debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
+    FX_DCHECK(loop);  // Loop must be created on this thread first.
+
+    debug_ipc::MessageLoopTarget::WatchJobConfig config;
+    config.job_name = GetName();
+    config.job_handle = job_.get();
+    config.job_koid = job_koid_;
+    config.watcher = this;
+    status = loop->WatchJobExceptions(std::move(config), &job_watch_handle_);
+  }
+
+  process_callback_ = std::move(cb);
+  return status;
+}
+
+void ZirconJobHandle::OnProcessStarting(zx::exception exception_token,
+                                        zx_exception_info_t exception_info) {
+  zx_handle_t zircon_handle = ZX_HANDLE_INVALID;
+  zx_status_t status = zx_exception_get_process(exception_token.get(), &zircon_handle);
+  FX_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
+
+  process_callback_(std::make_unique<ZirconProcessHandle>(zx::process(zircon_handle)));
+
+  // Attached to the process. At that point it will get a new thread notification for the initial
+  // thread which it can stop or continue as it desires. Therefore, we can always resume the thread
+  // in the "new process" exception.
+  //
+  // Technically it's not necessary to reset the handle, but being explicit here helps readability.
+  exception_token.reset();
 }
 
 }  // namespace debug_agent

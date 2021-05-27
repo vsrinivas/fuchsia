@@ -8,10 +8,12 @@
 #include <lib/zx/job.h>
 
 #include "src/developer/debug/debug_agent/job_handle.h"
+#include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/zircon_exception_watcher.h"
 
 namespace debug_agent {
 
-class ZirconJobHandle final : public JobHandle {
+class ZirconJobHandle final : public JobHandle, public debug_ipc::ZirconExceptionWatcher {
  public:
   explicit ZirconJobHandle(zx::job j);
   ZirconJobHandle(const ZirconJobHandle& other);
@@ -19,16 +21,22 @@ class ZirconJobHandle final : public JobHandle {
 
   // JobHandle implementation.
   std::unique_ptr<JobHandle> Duplicate() const override;
-  const zx::job& GetNativeHandle() const override { return job_; }
-  zx::job& GetNativeHandle() override { return job_; }
   zx_koid_t GetKoid() const override { return job_koid_; }
   std::string GetName() const override;
   std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const override;
   std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const override;
+  zx_status_t WatchJobExceptions(fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override;
 
  private:
+  // ZirconExceptionWatcher implementation.
+  void OnProcessStarting(zx::exception exception_token,
+                         zx_exception_info_t exception_info) override;
+
   zx_koid_t job_koid_;
   zx::job job_;
+
+  debug_ipc::MessageLoop::WatchHandle job_watch_handle_;
+  fit::function<void(std::unique_ptr<ProcessHandle>)> process_callback_;
 };
 
 }  // namespace debug_agent

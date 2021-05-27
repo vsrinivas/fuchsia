@@ -11,9 +11,7 @@
 
 #include "src/developer/debug/debug_agent/job_handle.h"
 #include "src/developer/debug/debug_agent/process_handle.h"
-#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/regex.h"
-#include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -31,7 +29,7 @@ class ProcessStartHandler {
                               std::unique_ptr<ProcessHandle> process) = 0;
 };
 
-class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
+class DebuggedJob {
  public:
   struct FilterInfo {
     std::string filter;
@@ -72,9 +70,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   zx_status_t Init();
 
  private:
-  // ZirconExceptionWatcher implementation.
-  void OnProcessStarting(zx::exception exception_token,
-                         zx_exception_info_t exception_info) override;
+  void OnProcessStarting(std::unique_ptr<ProcessHandle> process);
 
   // Computes the set of currently running processes that matches any of the |filters|.
   void ApplyToJob(FilterInfo& filter, JobHandle& job, ProcessHandleSetByKoid& matches);
@@ -83,7 +79,6 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   std::unique_ptr<JobHandle> job_handle_;
 
   // Handle for watching the process exceptions.
-  debug_ipc::MessageLoop::WatchHandle job_watch_handle_;
   std::vector<FilterInfo> filters_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedJob);

@@ -23,18 +23,15 @@ class MockJobHandle final : public JobHandle {
 
   // JobHandle implementation.
   std::unique_ptr<JobHandle> Duplicate() const override;
-  const zx::job& GetNativeHandle() const override { return null_handle_; }
-  zx::job& GetNativeHandle() override { return null_handle_; }
   zx_koid_t GetKoid() const override { return job_koid_; }
   std::string GetName() const override { return name_; }
   std::vector<std::unique_ptr<JobHandle>> GetChildJobs() const override;
   std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const override;
+  zx_status_t WatchJobExceptions(fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
  private:
-  // Always null, for returning only from the getters above.
-  // TODO(brettw) Remove this when the ThreadHandle no longer exposes a zx::thread getter.
-  static zx::job null_handle_;
-
   zx_koid_t job_koid_;
   std::string name_;
 
