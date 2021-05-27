@@ -107,7 +107,7 @@ impl FileOps for PipeReadEndpoint {
     fd_impl_nonseekable!();
 
     fn write(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        Err(EBADF)
     }
 
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
@@ -137,7 +137,7 @@ impl FileOps for PipeWriteEndpoint {
     }
 
     fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        Err(EBADF)
     }
 
     fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
