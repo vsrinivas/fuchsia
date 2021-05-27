@@ -200,22 +200,24 @@ pub async fn is_device_type(
 /// # Parameters
 /// - `device_type`: The type of the input device.
 /// - `device_proxy`: The device proxy which is used to get input reports.
+/// - `device_id`: The id of the connected input device.
 /// - `input_event_sender`: The channel to send generated InputEvents to.
 pub async fn get_device_binding(
     device_type: InputDeviceType,
     device_proxy: fidl_input_report::InputDeviceProxy,
+    device_id: u32,
     input_event_sender: Sender<InputEvent>,
 ) -> Result<Box<dyn InputDeviceBinding>, Error> {
     match device_type {
         InputDeviceType::MediaButtons => Ok(Box::new(
             media_buttons::MediaButtonsBinding::new(device_proxy, input_event_sender).await?,
         )),
-        InputDeviceType::Mouse => {
-            Ok(Box::new(mouse::MouseBinding::new(device_proxy, input_event_sender).await?))
-        }
-        InputDeviceType::Touch => {
-            Ok(Box::new(touch::TouchBinding::new(device_proxy, input_event_sender).await?))
-        }
+        InputDeviceType::Mouse => Ok(Box::new(
+            mouse::MouseBinding::new(device_proxy, device_id, input_event_sender).await?,
+        )),
+        InputDeviceType::Touch => Ok(Box::new(
+            touch::TouchBinding::new(device_proxy, device_id, input_event_sender).await?,
+        )),
         InputDeviceType::Keyboard => {
             Ok(Box::new(keyboard::KeyboardBinding::new(device_proxy, input_event_sender).await?))
         }

@@ -113,15 +113,18 @@ impl MouseBinding {
     ///
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    /// - `device_id`: The id of the connected mouse device.
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
     pub async fn new(
         device_proxy: InputDeviceProxy,
+        device_id: u32,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
-        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
+        let device_binding =
+            Self::bind_device(&device_proxy, device_id, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -136,6 +139,7 @@ impl MouseBinding {
     ///
     /// # Parameters
     /// - `device`: The device to use to initialize the binding.
+    /// - `device_id`: The id of the connected mouse device.
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
@@ -143,6 +147,7 @@ impl MouseBinding {
     /// not be parsed correctly.
     async fn bind_device(
         device: &InputDeviceProxy,
+        device_id: u32,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
         let device_descriptor: fidl_input_report::DeviceDescriptor =
@@ -157,7 +162,7 @@ impl MouseBinding {
             .ok_or_else(|| format_err!("MouseDescriptor does not have a MouseInputDescriptor"))?;
 
         let device_descriptor: MouseDeviceDescriptor = MouseDeviceDescriptor {
-            device_id: 0,
+            device_id,
             absolute_x_range: mouse_input_descriptor.position_x.map(|axis| axis.range),
             absolute_y_range: mouse_input_descriptor.position_y.map(|axis| axis.range),
         };

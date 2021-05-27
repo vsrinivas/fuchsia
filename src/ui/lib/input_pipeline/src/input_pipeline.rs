@@ -25,7 +25,7 @@ type BoxedInputDeviceBinding = Box<dyn input_device::InputDeviceBinding>;
 /// An [`InputDeviceBindingHashMap`] maps an input device to one or more InputDeviceBindings.
 /// It expects filenames of the input devices seen in /dev/class/input-report (ex. "001") or
 /// "injected_device" as keys.
-pub type InputDeviceBindingHashMap = Arc<Mutex<HashMap<String, Vec<BoxedInputDeviceBinding>>>>;
+pub type InputDeviceBindingHashMap = Arc<Mutex<HashMap<u32, Vec<BoxedInputDeviceBinding>>>>;
 
 /// An [`InputPipeline`] manages input devices and propagates input events through input handlers.
 ///
@@ -188,7 +188,7 @@ impl InputPipeline {
                             device_proxy,
                             &input_event_sender,
                             &bindings,
-                            filename,
+                            filename.parse::<u32>().unwrap_or_default(),
                         )
                         .await;
                     }
@@ -239,7 +239,7 @@ impl InputPipeline {
                         device_proxy,
                         input_event_sender,
                         bindings,
-                        "injected_device".to_string(),
+                        u32::MAX, // Max value that's unlikely to conflict.
                     )
                     .await;
                 }
@@ -257,22 +257,26 @@ impl InputPipeline {
 /// - `device_proxy`: A proxy to the input device.
 /// - `input_event_sender`: The channel new InputDeviceBindings will send InputEvents to.
 /// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
-/// - `device_name`: The device name of the associated bindings.
+/// - `device_id`: The device name of the associated bindings.
 async fn add_device_bindings(
     device_types: &Vec<input_device::InputDeviceType>,
     device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
     input_event_sender: &Sender<input_device::InputEvent>,
     bindings: &InputDeviceBindingHashMap,
-    device_name: String,
+    device_id: u32,
 ) {
     let mut new_bindings: Vec<BoxedInputDeviceBinding> = vec![];
 
     for device_type in device_types {
         let proxy = device_proxy.clone();
         if input_device::is_device_type(&proxy, *device_type).await {
-            if let Ok(binding) =
-                input_device::get_device_binding(*device_type, proxy, input_event_sender.clone())
-                    .await
+            if let Ok(binding) = input_device::get_device_binding(
+                *device_type,
+                proxy,
+                device_id,
+                input_event_sender.clone(),
+            )
+            .await
             {
                 new_bindings.push(binding);
             }
@@ -281,7 +285,7 @@ async fn add_device_bindings(
 
     if !new_bindings.is_empty() {
         let mut bindings = bindings.lock().await;
-        bindings.entry(device_name).or_insert(Vec::new()).extend(new_bindings);
+        bindings.entry(device_id).or_insert(Vec::new()).extend(new_bindings);
     }
 }
 
@@ -337,7 +341,7 @@ mod tests {
         input_event
     }
 
-    /// Returns a KeyboardDescriptor on an InputDeviceRequest.
+    /// Returns a MouseDescriptor on an InputDeviceRequest.
     ///
     /// # Parameters
     /// - `input_device_request`: The request to handle.
@@ -348,17 +352,22 @@ mod tests {
             fidl_fuchsia_input_report::InputDeviceRequest::GetDescriptor { responder } => {
                 let _ = responder.send(fidl_fuchsia_input_report::DeviceDescriptor {
                     device_info: None,
-                    mouse: None,
+                    mouse: Some(fidl_fuchsia_input_report::MouseDescriptor {
+                        input: Some(fidl_fuchsia_input_report::MouseInputDescriptor {
+                            movement_x: None,
+                            movement_y: None,
+                            scroll_v: None,
+                            scroll_h: None,
+                            buttons: None,
+                            position_x: None,
+                            position_y: None,
+                            ..fidl_fuchsia_input_report::MouseInputDescriptor::EMPTY
+                        }),
+                        ..fidl_fuchsia_input_report::MouseDescriptor::EMPTY
+                    }),
                     sensor: None,
                     touch: None,
-                    keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                        input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
-                            keys3: None,
-                            ..fidl_fuchsia_input_report::KeyboardInputDescriptor::EMPTY
-                        }),
-                        output: None,
-                        ..fidl_fuchsia_input_report::KeyboardDescriptor::EMPTY
-                    }),
+                    keyboard: None,
                     consumer_control: None,
                     ..fidl_fuchsia_input_report::DeviceDescriptor::EMPTY
                 });
@@ -454,7 +463,7 @@ mod tests {
         assert_eq!(second_handler_event, Some(input_event));
     }
 
-    /// Tests that a single keyboard device binding is created for the one input device in the
+    /// Tests that a single mouse device binding is created for the one input device in the
     /// input report directory.
     #[fasync::run_singlethreaded(test)]
     async fn watch_devices_one_match_exists() {
@@ -514,20 +523,33 @@ mod tests {
         let _ = InputPipeline::watch_for_devices(
             device_watcher,
             dir_proxy_for_pipeline,
-            vec![input_device::InputDeviceType::Keyboard],
+            vec![input_device::InputDeviceType::Mouse],
             input_event_sender,
             bindings.clone(),
             true, /* break_on_idle */
         )
         .await;
 
-        // Assert that one device was found.
-        let bindings = bindings.lock().await;
-        assert_eq!(bindings.len(), 1);
+        // Assert that one mouse device with accurate device id was found.
+        let bindings_hashmap = bindings.lock().await;
+        assert_eq!(bindings_hashmap.len(), 1);
+        let bindings_vector = bindings_hashmap.get(&1);
+        assert!(bindings_vector.is_some());
+        assert_eq!(bindings_vector.unwrap().len(), 1);
+        let boxed_mouse_binding = bindings_vector.unwrap().get(0);
+        assert!(boxed_mouse_binding.is_some());
+        assert_eq!(
+            boxed_mouse_binding.unwrap().get_device_descriptor(),
+            input_device::InputDeviceDescriptor::Mouse(mouse::MouseDeviceDescriptor {
+                device_id: 1,
+                absolute_x_range: None,
+                absolute_y_range: None
+            })
+        );
     }
 
-    /// Tests that no device bindings are created because the input pipeline looks for mouse devices
-    /// but only a keyboard exists.
+    /// Tests that no device bindings are created because the input pipeline looks for keyboard devices
+    /// but only a mouse exists.
     #[fasync::run_singlethreaded(test)]
     async fn watch_devices_no_matches_exist() {
         // Create a file in a pseudo directory that represents an input device.
@@ -586,7 +608,7 @@ mod tests {
         let _ = InputPipeline::watch_for_devices(
             device_watcher,
             dir_proxy_for_pipeline,
-            vec![input_device::InputDeviceType::Mouse],
+            vec![input_device::InputDeviceType::Keyboard],
             input_event_sender,
             bindings.clone(),
             true, /* break_on_idle */
@@ -608,7 +630,7 @@ mod tests {
         let (input_device_client_end, mut input_device_request_stream) =
             create_request_stream::<fidl_fuchsia_input_report::InputDeviceMarker>().unwrap();
 
-        let device_types = vec![input_device::InputDeviceType::Keyboard];
+        let device_types = vec![input_device::InputDeviceType::Mouse];
         let (input_event_sender, _input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
         let bindings: InputDeviceBindingHashMap = Arc::new(Mutex::new(HashMap::new()));

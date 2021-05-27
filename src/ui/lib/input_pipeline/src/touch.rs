@@ -160,15 +160,18 @@ impl TouchBinding {
     ///
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    /// - `device_id`: The id of the connected touch device.
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
     pub async fn new(
         device_proxy: InputDeviceProxy,
+        device_id: u32,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
-        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
+        let device_binding =
+            Self::bind_device(&device_proxy, device_id, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -183,6 +186,7 @@ impl TouchBinding {
     ///
     /// # Parameters
     /// - `device`: The device to use to initialize the binding.
+    /// - `device_id`: The id of the connected touch device.
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
@@ -190,6 +194,7 @@ impl TouchBinding {
     /// correctly.
     async fn bind_device(
         device: &InputDeviceProxy,
+        device_id: u32,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
         let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
@@ -209,7 +214,7 @@ impl TouchBinding {
             }) => Ok(TouchBinding {
                 event_sender: input_event_sender,
                 device_descriptor: TouchDeviceDescriptor {
-                    device_id: 0,
+                    device_id,
                     contacts: contact_descriptors
                         .iter()
                         .map(TouchBinding::parse_contact_descriptor)
