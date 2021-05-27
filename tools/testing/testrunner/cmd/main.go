@@ -14,6 +14,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -325,9 +326,10 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string) ([]*testrunner.TestResult, error) {
 	var results []*testrunner.TestResult
 	runTestCtx := ctx
-	if test.TimeoutSecs > 0 {
+	timeoutSecs := math.Max(float64(test.TimeoutSecs), perTestTimeout.Seconds())
+	if timeoutSecs > 0 {
 		var cancel func()
-		runTestCtx, cancel = context.WithTimeout(ctx, time.Duration(test.TimeoutSecs)*time.Second)
+		runTestCtx, cancel = context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 		defer cancel()
 	}
 	eg, runTestCtx := errgroup.WithContext(runTestCtx)

@@ -499,6 +499,7 @@ func (w *lastWriteSaver) Write(p []byte) (int, error) {
 // everything not pertaining to a kernel log. A kernel log is distinguished by
 // a line that starts with the timestamp represented as a float inside brackets.
 type parseOutKernelReader struct {
+	ctx    context.Context
 	reader io.Reader
 	// lineStart stores the last characters read from a Read() block if it
 	// ended with a truncated line. This will be prepended to the next Read() block.
@@ -521,10 +522,26 @@ func (r *parseOutKernelReader) Read(buf []byte) (int, error) {
 	}
 	bytesRead := 0
 	for bytesRead < len(buf) {
+		if r.ctx.Err() != nil {
+			err = r.ctx.Err()
+			break
+		}
 		bytesLeftToRead := len(buf) - bytesRead
 		b := make([]byte, bytesLeftToRead)
 		var n int
-		n, err = r.reader.Read(b)
+		ch := make(chan error)
+		// Call the underlying reader's Read() in a goroutine so that we can
+		// break out if the context is canceled.
+		go func() {
+			n, err = r.reader.Read(b)
+			ch <- err
+		}()
+		select {
+		case err = <-ch:
+		case <-r.ctx.Done():
+			err = r.ctx.Err()
+		}
+
 		if err != nil && err != io.EOF {
 			break
 		}
@@ -633,7 +650,7 @@ func (t *fuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 
 	testOutputReader := io.TeeReader(
 		// See comment above lastWrite declaration.
-		&parseOutKernelReader{reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},
+		&parseOutKernelReader{ctx: ctx, reader: io.MultiReader(bytes.NewReader(lastWrite.buf), t.socket)},
 		// Writes to stdout as it reads from the above reader.
 		stdout)
 	success, err := runtests.TestPassed(ctx, testOutputReader, test.Name)

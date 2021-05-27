@@ -592,6 +592,26 @@ func longKernelLog(numChars int) string {
 	return kernelLog + "\n"
 }
 
+type hangForeverReader struct {
+	mu         sync.Mutex
+	readCalled bool
+}
+
+func (r *hangForeverReader) Read(buf []byte) (int, error) {
+	r.mu.Lock()
+	r.readCalled = true
+	r.mu.Unlock()
+	for {
+	}
+	return 0, nil
+}
+
+func (r *hangForeverReader) getReadCalled() bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.readCalled
+}
+
 func TestParseOutKernelReader(t *testing.T) {
 	cases := []struct {
 		name           string
@@ -615,6 +635,7 @@ func TestParseOutKernelReader(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			r := &parseOutKernelReader{
+				ctx:    context.Background(),
 				reader: strings.NewReader(c.output),
 			}
 			b, err := ioutil.ReadAll(r)
@@ -626,6 +647,26 @@ func TestParseOutKernelReader(t *testing.T) {
 			}
 		})
 	}
+	t.Run("canceled context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		reader := &hangForeverReader{}
+		r := &parseOutKernelReader{
+			ctx:    ctx,
+			reader: reader,
+		}
+		errs := make(chan error)
+		go func() {
+			_, err := ioutil.ReadAll(r)
+			errs <- err
+		}()
+		// Wait for Read() to be called before canceling the context.
+		for !reader.getReadCalled() {
+		}
+		cancel()
+		if err := <-errs; err == nil {
+			t.Fatal("expected canceled context, got nil error")
+		}
+	})
 }
 
 func TestCommandForTest(t *testing.T) {
