@@ -170,7 +170,7 @@ func TestRunNinja(t *testing.T) {
 				buildDir:  filepath.Join(t.TempDir(), "out"),
 				jobCount:  23, // Arbitrary but distinctive value.
 			}
-			msg, err := runNinja(ctx, r, []string{"foo", "bar"})
+			msg, err := runNinja(ctx, r, []string{"foo", "bar"}, false)
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)

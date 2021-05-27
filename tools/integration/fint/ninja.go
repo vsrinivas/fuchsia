@@ -162,6 +162,7 @@ func runNinja(
 	ctx context.Context,
 	r ninjaRunner,
 	targets []string,
+	explain bool,
 ) (string, error) {
 	stdioReader, stdioWriter := io.Pipe()
 	defer stdioReader.Close()
@@ -177,6 +178,9 @@ func runNinja(
 		// Close the pipe as soon as the subprocess completes so that the pipe
 		// reader will return an EOF.
 		defer stdioWriter.Close()
+		if explain {
+			targets = append(targets, "-d", "explain")
+		}
 		ninjaErr = r.run(
 			ctx,
 			targets,

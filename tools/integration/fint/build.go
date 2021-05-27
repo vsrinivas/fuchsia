@@ -109,7 +109,13 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		// instead of printing each log on a new line.
 		ninjaErr = runner.run(ctx, targets, os.Stdout, os.Stderr)
 	} else {
-		artifacts.FailureSummary, ninjaErr = runNinja(ctx, runner, targets)
+		artifacts.FailureSummary, ninjaErr = runNinja(
+			ctx,
+			runner,
+			targets,
+			// Add -d explain to incremental builds.
+			contextSpec.Incremental,
+		)
 	}
 	ninjaDuration := time.Since(ninjaStartTime)
 	artifacts.NinjaDurationSeconds = int32(math.Round(ninjaDuration.Seconds()))
