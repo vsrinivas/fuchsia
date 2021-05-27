@@ -48,6 +48,7 @@ class AccessibilityView : public AccessibilityViewInterface {
   std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() {
     return a11y_view_properties_;
   }
+  bool is_initialized() const { return is_initialized_; }
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
@@ -79,6 +80,10 @@ class AccessibilityView : public AccessibilityViewInterface {
   // Holds the a11y view properties.
   // If not present, the a11y view has not yet been connected to the scene.
   std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
+
+  // True if the a11y view and proxy view holder have been created, and
+  // their properties have been set.
+  bool is_initialized_ = false;
 };
 
 }  // namespace a11y

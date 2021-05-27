@@ -30,6 +30,22 @@ FakeView::FakeView(sys::ComponentContext* component_context, fuchsia::ui::scenic
                    /* presentation_callback = */ [](fuchsia::images::PresentationInfo info) {});
 }
 
+void FakeView::AddRectangle(float width, float height, float x, float y, bool& rectangle_added) {
+  scenic::ShapeNode shape(&session_);
+  scenic::Rectangle rec(&session_, width, height);
+  shape.SetTranslation(x, y, 0);
+  fake_view_->AddChild(shape);
+  shape.SetShape(rec);
+
+  // Apply changes.
+  session_.Present(
+      /* presentation_time = */ 0,
+      /* presentation_callback = */ [&rectangle_added](
+                                        fuchsia::images::PresentationInfo info) mutable {
+        rectangle_added = true;
+      });
+}
+
 bool FakeView::IsAttachedToScene() {
   for (const auto& event : events_) {
     // We're looking for the view attached event, so skip any events that are

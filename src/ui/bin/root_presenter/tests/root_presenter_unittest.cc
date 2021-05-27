@@ -65,7 +65,6 @@ class RootPresenterTest : public gtest::RealLoopFixture,
                         real_component_context_->svc()->Connect(std::move(request));
                       }));
 
-    injector_registry_ = std::make_unique<testing::FakeInjectorRegistry>(context_provider_);
     keyboard_focus_ctl_ = std::make_unique<testing::FakeKeyboardFocusController>(context_provider_);
 
     // Start RootPresenter with fake context.
@@ -77,10 +76,26 @@ class RootPresenterTest : public gtest::RealLoopFixture,
   App* root_presenter() { return root_presenter_.get(); }
   Presentation* presentation() { return root_presenter_->presentation(); }
 
-  void SetUpInputTest() {
+  void ConnectInjectorRegistry(bool use_fake = true) {
+    if (use_fake) {
+      injector_registry_ = std::make_unique<testing::FakeInjectorRegistry>(context_provider_);
+    } else {
+      ASSERT_EQ(
+          ZX_OK,
+          context_provider_.service_directory_provider()
+              ->AddService<fuchsia::ui::pointerinjector::Registry>(
+                  [this](fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Registry> request) {
+                    real_component_context_->svc()->Connect(std::move(request));
+                  }));
+    }
+
     context_provider_.ConnectToPublicService<fuchsia::ui::input::InputDeviceRegistry>(
         input_device_registry_ptr_.NewRequest());
     input_device_registry_ptr_.set_error_handler([](auto...) { FAIL(); });
+  }
+
+  void SetUpInputTest(bool use_fake_injector_registry = true) {
+    ConnectInjectorRegistry(use_fake_injector_registry);
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     presentation()->PresentView(std::move(view_holder_token), nullptr);
@@ -196,6 +211,9 @@ TEST_F(RootPresenterTest, TestSceneSetup) {
 }
 
 TEST_F(RootPresenterTest, TestAttachA11yView) {
+  ConnectInjectorRegistry(/* use_fake = */ false);
+  RunLoopUntilIdle();
+
   // Present a fake view.
   fuchsia::ui::scenic::ScenicPtr scenic =
       context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
@@ -216,7 +234,45 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
   a11y::AccessibilityView a11y_view(std::move(registry), std::move(scenic));
 
   // Verify that nothing crashes during a11y view setup.
+  RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
+
+  // Add a rectangle to the fakeview so that hit testing will return a result.
+  auto view_properties = a11y_view.get_a11y_view_properties();
+  auto x = view_properties->bounding_box.min.x;
+  auto y = view_properties->bounding_box.min.y;
+  auto width = view_properties->bounding_box.max.x - view_properties->bounding_box.min.x;
+  auto height = view_properties->bounding_box.max.y - view_properties->bounding_box.min.y;
+  bool rectangle_added = false;
+  fake_view.AddRectangle(width, height, x, y, rectangle_added);
+  RunLoopUntil([&rectangle_added] { return rectangle_added; });
+
+  fake_view.clear_events();
+
+  // Register an input device.
+  fuchsia::ui::input::InputDevicePtr input_device_ptr;
+  bool channel_error = false;
+  input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
+  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
+                                             input_device_ptr.NewRequest());
+
   RunLoopUntilIdle();
+
+  // Inject a touch event.
+  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
+
+  // Verify that client view receives the event.
+  RunLoopUntil([&fake_view]() {
+    const auto& view_events = fake_view.events();
+    for (const auto& event : view_events) {
+      // We're looking for the view attached event, so skip any events that are
+      // not gfx events.
+      if (event.Which() == fuchsia::ui::scenic::Event::Tag::kInput) {
+        return true;
+      }
+    }
+
+    return false;
+  });
 }
 
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {
@@ -559,6 +615,8 @@ TEST_F(RootPresenterTest, InputInjection_FinishStreamOnServerAndClientDisconnect
 
 // Tests that Injector correctly buffers events until the scene is ready.
 TEST_F(RootPresenterTest, InjectorStartupTest) {
+  SetUpInputTest();
+
   auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
   input::Injector injector(context_provider_.context(), std::move(view_ref1), std::move(view_ref2));

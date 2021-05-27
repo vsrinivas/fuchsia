@@ -71,7 +71,9 @@ AccessibilityView::AccessibilityView(
               // Apply changes.
               session_.Present(
                   /* presentation_time = */ 0,
-                  /* presentation_callback = */ [](fuchsia::images::PresentationInfo info) {});
+                  /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
+                    is_initialized_ |= a11y_view_properties_.has_value();
+                  });
             });
       });
 }
@@ -112,7 +114,9 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
   if (changes_to_present) {
     session_.Present(
         /* presentation_time = */ 0,
-        /* presentation_callback = */ [](fuchsia::images::PresentationInfo info) {});
+        /* presentation_callback = */ [this](fuchsia::images::PresentationInfo info) {
+          is_initialized_ |= proxy_view_holder_.has_value();
+        });
   }
 }
 

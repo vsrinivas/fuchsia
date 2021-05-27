@@ -6,6 +6,7 @@
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.focus.FocusChainListenerRegistry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.keyboard.focus.Controller": "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx",
+                "fuchsia.ui.pointerinjector.Registry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
             }
         }
@@ -29,7 +30,9 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.keyboard.focus.Controller",
+            "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

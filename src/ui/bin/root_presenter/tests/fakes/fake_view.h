@@ -23,6 +23,9 @@ class FakeView {
   FakeView(sys::ComponentContext* component_context, fuchsia::ui::scenic::ScenicPtr scenic);
   ~FakeView() = default;
 
+  // Attaches a rectangle as a child of the view node.
+  // Sets *rectangle_added to true when present call completes.
+  void AddRectangle(float width, float height, float x, float y, bool& rectangle_added);
   bool IsAttachedToScene();
 
   const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
