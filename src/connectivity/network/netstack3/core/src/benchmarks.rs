@@ -163,7 +163,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
             DUMMY_CONFIG_V4.remote_ip,
             DUMMY_CONFIG_V4.remote_ip,
             64,
-            IpProto::Udp,
+            IpProto::Udp.into(),
         ))
         .encapsulate(EthernetFrameBuilder::new(
             DUMMY_CONFIG_V4.remote_mac,

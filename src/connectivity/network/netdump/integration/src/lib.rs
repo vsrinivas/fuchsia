@@ -405,12 +405,17 @@ fn build_udp_packet<I: IpExt>(
             dst_port,
         ))
         .encapsulate(
-            I::PacketBuilder::new(I::src_ip(), I::dst_ip(), 1, packet_formats::ip::IpProto::Udp)
-                .encapsulate(packet_formats::ethernet::EthernetFrameBuilder::new(
-                    src_mac,
-                    dst_mac,
-                    packet_formats::ethernet::EtherType::Ipv4,
-                )),
+            I::PacketBuilder::new(
+                I::src_ip(),
+                I::dst_ip(),
+                1,
+                packet_formats::ip::IpProto::Udp.into(),
+            )
+            .encapsulate(packet_formats::ethernet::EthernetFrameBuilder::new(
+                src_mac,
+                dst_mac,
+                packet_formats::ethernet::EtherType::Ipv4,
+            )),
         )
         .serialize_vec_outer()
         .expect("serialization into vec can't fail")
@@ -657,7 +662,7 @@ async fn pcapng_packet_headers_test() -> Result {
             .context("failed to parse IP frame")?;
         assert_eq!(ip.src_ip(), net_types::ip::Ipv4::src_ip());
         assert_eq!(ip.dst_ip(), net_types::ip::Ipv4::dst_ip());
-        assert_eq!(ip.proto(), packet_formats::ip::IpProto::Udp);
+        assert_eq!(ip.proto(), packet_formats::ip::IpProto::Udp.into());
 
         let parse_args = packet_formats::udp::UdpParseArgs::new(ip.src_ip(), ip.dst_ip());
         let udp = packet_formats::udp::UdpPacket::parse(&mut packet, parse_args)

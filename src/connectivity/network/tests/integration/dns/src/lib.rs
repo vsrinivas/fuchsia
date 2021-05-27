@@ -385,7 +385,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
             DHCPV6_SERVER,
             src_ip,
             ipv6_consts::DEFAULT_HOP_LIMIT,
-            IpProto::Udp,
+            IpProto::Udp.into(),
         ))
         .encapsulate(EthernetFrameBuilder::new(dst_mac, src_mac, EtherType::Ipv6))
         .serialize_vec_outer()

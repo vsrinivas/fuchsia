@@ -10,13 +10,13 @@ use core::ops::Range;
 
 use log::debug;
 use net_types::ethernet::Mac;
-use net_types::ip::{Ip, Ipv4Addr, Ipv6Addr};
+use net_types::ip::{Ipv4Addr, Ipv6Addr};
 use packet::{ParsablePacket, ParseBuffer};
 
 use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use crate::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpParseArgs};
-use crate::ip::{IpExtByteSlice, IpProto};
+use crate::ip::{IpExt, IpExtByteSlice, Ipv4Proto};
 use crate::ipv4::{Ipv4Header, Ipv4Packet};
 use crate::ipv6::{Ipv6Header, Ipv6Packet};
 use crate::tcp::options::TcpOption;
@@ -44,7 +44,7 @@ pub struct Ipv4PacketMetadata {
     pub more_fragments: bool,
     pub fragment_offset: u16,
     pub ttl: u8,
-    pub proto: IpProto,
+    pub proto: Ipv4Proto,
     pub src_ip: Ipv4Addr,
     pub dst_ip: Ipv4Addr,
 }
@@ -179,9 +179,9 @@ pub fn parse_ethernet_frame(mut buf: &[u8]) -> ParseResult<(&[u8], Mac, Mac, Opt
 /// `parse_ip_packet` parses an IP packet, returning the body along with some
 /// important header fields.
 #[allow(clippy::type_complexity)]
-pub fn parse_ip_packet<I: Ip>(
+pub fn parse_ip_packet<I: IpExt>(
     mut buf: &[u8],
-) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, IpProto, u8)> {
+) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, I::Proto, u8)> {
     use crate::ip::IpPacket;
 
     let packet = (&mut buf).parse::<<I as IpExtByteSlice<_>>::Packet>()?;
@@ -232,9 +232,9 @@ where
 /// frame, returning the body of the IP packet along with some important fields
 /// from both the IP and Ethernet headers.
 #[allow(clippy::type_complexity)]
-pub fn parse_ip_packet_in_ethernet_frame<I: Ip>(
+pub fn parse_ip_packet_in_ethernet_frame<I: IpExt>(
     buf: &[u8],
-) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, IpProto, u8)> {
+) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, I::Proto, u8)> {
     use crate::ethernet::EthernetIpExt;
     let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
     if ethertype != Some(I::ETHER_TYPE) {
@@ -359,8 +359,10 @@ mod crateonly {
 
 #[cfg(test)]
 mod tests {
-    use crate::icmp::{IcmpDestUnreachable, IcmpEchoReply, Icmpv4DestUnreachableCode};
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+
+    use crate::icmp::{IcmpDestUnreachable, IcmpEchoReply, Icmpv4DestUnreachableCode};
+    use crate::ip::Ipv6NextHeader;
 
     use super::*;
 
@@ -382,7 +384,7 @@ mod tests {
         assert_eq!(body, &IP_PACKET_BYTES[20..]);
         assert_eq!(src_ip, Ipv4Addr::new([10, 123, 0, 2]));
         assert_eq!(dst_ip, Ipv4Addr::new([10, 123, 0, 1]));
-        assert_eq!(proto, IpProto::Icmp);
+        assert_eq!(proto, Ipv4Proto::Icmp);
         assert_eq!(ttl, 255);
 
         use crate::testdata::icmp_echo_v6::REQUEST_IP_PACKET_BYTES;
@@ -391,7 +393,7 @@ mod tests {
         assert_eq!(body, &REQUEST_IP_PACKET_BYTES[40..]);
         assert_eq!(src_ip, Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
         assert_eq!(dst_ip, Ipv6Addr::new([0xFE, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
-        assert_eq!(proto, IpProto::Icmpv6);
+        assert_eq!(proto, Ipv6NextHeader::Icmpv6);
         assert_eq!(ttl, 64);
     }
 

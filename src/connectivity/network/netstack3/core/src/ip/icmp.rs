@@ -16,14 +16,14 @@ use net_types::ip::{
 use net_types::{MulticastAddress, SpecifiedAddr, UnicastAddr, Witness};
 use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
 use packet_formats::icmp::{
-    self as wire_icmp, peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage,
-    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
-    IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
-    Icmpv4ParameterProblemCode, Icmpv4RedirectCode, Icmpv4TimeExceededCode,
-    Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem,
-    Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
+    peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage, IcmpMessageType,
+    IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode,
+    Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode,
+    Icmpv4RedirectCode, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6Packet,
+    Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
+    MessageBody, OriginalPacket,
 };
-use packet_formats::ip::IpExt;
+use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
 use packet_formats::ipv4::Ipv4Header;
 use packet_formats::ipv6::{Ipv6Header, UndefinedBodyBoundsError};
 use zerocopy::ByteSlice;
@@ -40,8 +40,7 @@ use crate::ip::{
     socket::{
         BufferIpSocketContext, IpSock, IpSocket, IpSocketContext, SendError, UnroutableBehavior,
     },
-    BufferIpTransportContext, IpDeviceIdContext, IpProto, IpTransportContext,
-    TransportReceiveError,
+    BufferIpTransportContext, IpDeviceIdContext, IpTransportContext, TransportReceiveError,
 };
 use crate::socket::Socket;
 use crate::transport::ConnAddrMap;
@@ -293,7 +292,7 @@ pub(super) fn apply_ipv6_socket_update<C: Icmpv6SocketContext>(
 }
 
 /// An extension trait adding extra ICMP-related functionality to IP versions.
-pub trait IcmpIpExt: wire_icmp::IcmpIpExt {
+pub trait IcmpIpExt: packet_formats::icmp::IcmpIpExt {
     /// The type of error code for this version of ICMP - [`Icmpv4ErrorCode`] or
     /// [`Icmpv6ErrorCode`].
     type ErrorCode: Debug;
@@ -524,7 +523,7 @@ pub(crate) trait IcmpContext<I: IcmpIpExt>:
         &mut self,
         original_src_ip: Option<SpecifiedAddr<I::Addr>>,
         original_dst_ip: SpecifiedAddr<I::Addr>,
-        original_proto: IpProto,
+        original_proto: I::Proto,
         original_body: &[u8],
         err: I::ErrorCode,
     );
@@ -1384,7 +1383,7 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: BufferIcmpv4Context<B
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
-    proto: IpProto,
+    proto: Ipv4Proto,
     original_packet: B,
     header_len: usize,
 ) {
@@ -1424,7 +1423,7 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: BufferIcmpv6Context<B
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: IpProto,
+    proto: Ipv6NextHeader,
     original_packet: B,
     header_len: usize,
 ) {
@@ -1464,7 +1463,7 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: BufferIcmpv4Context<B>>(
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
-    proto: IpProto,
+    proto: Ipv4Proto,
     mut original_packet: B,
     header_len: usize,
 ) {
@@ -1517,7 +1516,7 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: BufferIcmpv6Context<B>>(
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: IpProto,
+    proto: Ipv6NextHeader,
     original_packet: B,
     header_len: usize,
 ) {
@@ -1572,7 +1571,7 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: BufferIcmpv6Context<B>
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: IpProto,
+    proto: Ipv6NextHeader,
     mtu: u32,
     original_packet: B,
     header_len: usize,
@@ -1888,7 +1887,7 @@ pub(crate) fn should_send_icmpv6_error(
 /// Section 2.4.e].
 ///
 /// [RFC 4443 Section 2.4.e]: https://tools.ietf.org/html/rfc4443#section-2.4
-fn is_icmp_error_message<I: IcmpIpExt>(proto: IpProto, buf: &[u8]) -> bool {
+fn is_icmp_error_message<I: IcmpIpExt>(proto: I::Proto, buf: &[u8]) -> bool {
     proto == I::ICMP_IP_PROTO
         && peek_message_type::<I::IcmpMessageType>(buf).map(IcmpMessageType::is_err).unwrap_or(true)
 }
@@ -2019,8 +2018,13 @@ fn new_icmpv4_connection_inner<C: Icmpv4SocketContext>(
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, SocketError> {
-    let ip =
-        ctx.new_ip_socket(local_addr, remote_addr, IpProto::Icmp, UnroutableBehavior::Close, None)?;
+    let ip = ctx.new_ip_socket(
+        local_addr,
+        remote_addr,
+        Ipv4Proto::Icmp,
+        UnroutableBehavior::Close,
+        None,
+    )?;
     Ok(new_icmp_connection_inner(&mut ctx.get_state_mut().inner.conns, remote_addr, icmp_id, ip)?)
 }
 
@@ -2053,7 +2057,7 @@ fn new_icmpv6_connection_inner<C: Icmpv6SocketContext>(
     let ip = ctx.new_ip_socket(
         local_addr,
         remote_addr,
-        IpProto::Icmpv6,
+        Ipv6NextHeader::Icmpv6,
         UnroutableBehavior::Close,
         None,
     )?;
@@ -2086,7 +2090,7 @@ mod tests {
         mld::MldPacket, ndp::NdpPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket,
         IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
     };
-    use packet_formats::ip::IpPacketBuilder;
+    use packet_formats::ip::{IpPacketBuilder, IpProto};
     use packet_formats::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame;
     use packet_formats::udp::UdpPacketBuilder;
     use specialize_ip_macro::{ip_test, specialize_ip};
@@ -2135,7 +2139,7 @@ mod tests {
         body: &mut [u8],
         dst_ip: SpecifiedAddr<I::Addr>,
         ttl: u8,
-        proto: IpProto,
+        proto: I::Proto,
         assert_counters: &[&str],
         expect_message_code: Option<(M, C)>,
         f: FF,
@@ -2254,7 +2258,7 @@ mod tests {
             buffer.as_mut(),
             DUMMY_CONFIG_V4.local_ip,
             64,
-            IpProto::Icmp,
+            Ipv4Proto::Icmp,
             &["<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request", "send_ipv4_packet"],
             Some((req.reply(0x80000000, 0x80000000), IcmpUnusedCode)),
             |_| {},
@@ -2271,26 +2275,26 @@ mod tests {
         // that limitation exists. Once the limitation is fixed, we should test
         // with all unreachable protocols for both versions.
 
-        for proto in 0..256 {
-            let proto = IpProto::from(proto as u8);
-
-            const IPV4_RECOGNIZED_PROTOS: &[IpProto] =
-                &[IpProto::Icmp, IpProto::Igmp, IpProto::Udp];
-            if !IPV4_RECOGNIZED_PROTOS.iter().any(|p| *p == proto) {
-                test_receive_ip_packet::<Ipv4, _, _, _, _>(
-                    |_| {},
-                    &mut [0u8; 128],
-                    DUMMY_CONFIG_V4.local_ip,
-                    64,
-                    proto,
-                    &["send_icmpv4_protocol_unreachable", "send_icmp_error_message"],
-                    Some((
-                        IcmpDestUnreachable::default(),
-                        Icmpv4DestUnreachableCode::DestProtocolUnreachable,
-                    )),
-                    // Ensure packet is truncated to the right length.
-                    |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
-                );
+        for proto in 0u8..=255 {
+            let v4proto = Ipv4Proto::from(proto);
+            match v4proto {
+                Ipv4Proto::Proto(IpProto::Tcp) | Ipv4Proto::Other(_) => {
+                    test_receive_ip_packet::<Ipv4, _, _, _, _>(
+                        |_| {},
+                        &mut [0u8; 128],
+                        DUMMY_CONFIG_V4.local_ip,
+                        64,
+                        v4proto,
+                        &["send_icmpv4_protocol_unreachable", "send_icmp_error_message"],
+                        Some((
+                            IcmpDestUnreachable::default(),
+                            Icmpv4DestUnreachableCode::DestProtocolUnreachable,
+                        )),
+                        // Ensure packet is truncated to the right length.
+                        |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
+                    );
+                }
+                Ipv4Proto::Icmp | Ipv4Proto::Igmp | Ipv4Proto::Proto(IpProto::Udp) => {}
             }
 
             // TODO(fxbug.dev/47953): We seem to fail to parse an IPv6 packet if
@@ -2298,21 +2302,28 @@ mod tests {
             // as a valid parsing but then replying with a parameter problem
             // error message). We should a) fix this and, b) expand this test to
             // ensure we don't regress.
-            if (&[IpProto::Igmp, IpProto::Tcp]).iter().any(|p| *p == proto) {
-                test_receive_ip_packet::<Ipv6, _, _, _, _>(
-                    |_| {},
-                    &mut [0u8; 128],
-                    DUMMY_CONFIG_V6.local_ip,
-                    64,
-                    proto,
-                    &["send_icmpv6_protocol_unreachable", "send_icmp_error_message"],
-                    Some((
-                        Icmpv6ParameterProblem::new(40),
-                        Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                    )),
-                    // Ensure packet is truncated to the right length.
-                    |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
-                );
+            let v6proto = Ipv6NextHeader::from(proto);
+            match v6proto {
+                Ipv6NextHeader::Proto(IpProto::Tcp) => {
+                    test_receive_ip_packet::<Ipv6, _, _, _, _>(
+                        |_| {},
+                        &mut [0u8; 128],
+                        DUMMY_CONFIG_V6.local_ip,
+                        64,
+                        v6proto,
+                        &["send_icmpv6_protocol_unreachable", "send_icmp_error_message"],
+                        Some((
+                            Icmpv6ParameterProblem::new(40),
+                            Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
+                        )),
+                        // Ensure packet is truncated to the right length.
+                        |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
+                    );
+                }
+                Ipv6NextHeader::Icmpv6
+                | Ipv6NextHeader::NoNextHeader
+                | Ipv6NextHeader::Proto(IpProto::Udp)
+                | Ipv6NextHeader::Other(_) => {}
             }
         }
     }
@@ -2351,7 +2362,7 @@ mod tests {
                 buffer.as_mut(),
                 I::DUMMY_CONFIG.local_ip,
                 64,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 assert_counters,
                 Some((IcmpDestUnreachable::default(), code)),
                 // Ensure packet is truncated to the right length.
@@ -2363,7 +2374,7 @@ mod tests {
                 buffer.as_mut(),
                 I::DUMMY_CONFIG.local_ip,
                 64,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 &[],
                 None,
                 |_| {},
@@ -2393,7 +2404,7 @@ mod tests {
             &mut [0u8; 128],
             SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
             64,
-            IpProto::Udp,
+            IpProto::Udp.into(),
             &["send_icmpv4_net_unreachable", "send_icmp_error_message"],
             Some((
                 IcmpDestUnreachable::default(),
@@ -2410,7 +2421,7 @@ mod tests {
             SpecifiedAddr::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]))
                 .unwrap(),
             64,
-            IpProto::Udp,
+            IpProto::Udp.into(),
             &["send_icmpv6_net_unreachable", "send_icmp_error_message"],
             Some((IcmpDestUnreachable::default(), Icmpv6DestUnreachableCode::NoRoute)),
             // Ensure packet is truncated to the right length.
@@ -2429,7 +2440,7 @@ mod tests {
             &mut [0u8; 128],
             DUMMY_CONFIG_V4.remote_ip,
             1,
-            IpProto::Udp,
+            IpProto::Udp.into(),
             &["send_icmpv4_ttl_expired", "send_icmp_error_message"],
             Some((IcmpTimeExceeded::default(), Icmpv4TimeExceededCode::TtlExpired)),
             // Ensure packet is truncated to the right length.
@@ -2442,7 +2453,7 @@ mod tests {
             &mut [0u8; 128],
             DUMMY_CONFIG_V6.remote_ip,
             1,
-            IpProto::Udp,
+            IpProto::Udp.into(),
             &["send_icmpv6_ttl_expired", "send_icmp_error_message"],
             Some((IcmpTimeExceeded::default(), Icmpv6TimeExceededCode::HopLimitExceeded)),
             // Ensure packet is truncated to the right length.
@@ -2702,12 +2713,12 @@ mod tests {
 
     struct DummyIcmpv4Context {
         inner: DummyIcmpContext<Ipv4>,
-        icmp_state: Icmpv4State<DummyInstant, DummyIpSocket<Ipv4Addr>>,
+        icmp_state: Icmpv4State<DummyInstant, DummyIpSocket<Ipv4>>,
     }
 
     struct DummyIcmpv6Context {
         inner: DummyIcmpContext<Ipv6>,
-        icmp_state: Icmpv6State<DummyInstant, DummyIpSocket<Ipv6Addr>>,
+        icmp_state: Icmpv6State<DummyInstant, DummyIpSocket<Ipv6>>,
     }
 
     impl Default for DummyIcmpv4Context {
@@ -2731,7 +2742,7 @@ mod tests {
     impl Icmpv4SocketContext for Dummyv4Context {
         fn get_state_and_update_meta(
             &mut self,
-        ) -> (&mut Icmpv4State<DummyInstant, DummyIpSocket<Ipv4Addr>>, &()) {
+        ) -> (&mut Icmpv4State<DummyInstant, DummyIpSocket<Ipv4>>, &()) {
             (&mut self.get_mut().icmp_state, &())
         }
     }
@@ -2739,7 +2750,7 @@ mod tests {
     impl Icmpv6SocketContext for Dummyv6Context {
         fn get_state_and_update_meta(
             &mut self,
-        ) -> (&mut Icmpv6State<DummyInstant, DummyIpSocket<Ipv6Addr>>, &()) {
+        ) -> (&mut Icmpv6State<DummyInstant, DummyIpSocket<Ipv6>>, &()) {
             (&mut self.get_mut().icmp_state, &())
         }
     }
@@ -2782,18 +2793,15 @@ mod tests {
                 }
             }
 
-            impl StateContext<$state<DummyInstant, DummyIpSocket<<$ip as Ip>::Addr>>> for $outer {
-                fn get_state_with(
-                    &self,
-                    _id: (),
-                ) -> &$state<DummyInstant, DummyIpSocket<<$ip as Ip>::Addr>> {
+            impl StateContext<$state<DummyInstant, DummyIpSocket<$ip>>> for $outer {
+                fn get_state_with(&self, _id: ()) -> &$state<DummyInstant, DummyIpSocket<$ip>> {
                     &self.get_ref().icmp_state
                 }
 
                 fn get_state_mut_with(
                     &mut self,
                     _id: (),
-                ) -> &mut $state<DummyInstant, DummyIpSocket<<$ip as Ip>::Addr>> {
+                ) -> &mut $state<DummyInstant, DummyIpSocket<$ip>> {
                     &mut self.get_mut().icmp_state
                 }
             }
@@ -2840,7 +2848,7 @@ mod tests {
                     &mut self,
                     original_src_ip: Option<SpecifiedAddr<<$ip as Ip>::Addr>>,
                     original_dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
-                    original_proto: IpProto,
+                    original_proto: <$ip as packet_formats::ip::IpExt>::Proto,
                     original_body: &[u8],
                     err: <$ip as IcmpIpExt>::ErrorCode,
                 ) {
@@ -3046,7 +3054,7 @@ mod tests {
                 DUMMY_CONFIG_V4.local_ip,
                 DUMMY_CONFIG_V4.remote_ip,
                 64,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3136,7 +3144,7 @@ mod tests {
                 DUMMY_CONFIG_V4.local_ip,
                 DUMMY_CONFIG_V4.remote_ip,
                 64,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3203,7 +3211,7 @@ mod tests {
                 DUMMY_CONFIG_V4.local_ip,
                 DUMMY_CONFIG_V4.remote_ip,
                 64,
-                IpProto::Udp,
+                IpProto::Udp.into(),
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3357,7 +3365,7 @@ mod tests {
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3445,7 +3453,7 @@ mod tests {
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3510,7 +3518,7 @@ mod tests {
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
-                IpProto::Udp,
+                IpProto::Udp.into(),
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3578,7 +3586,7 @@ mod tests {
                 FrameDestination::Unicast,
                 DUMMY_CONFIG_V4.remote_ip,
                 DUMMY_CONFIG_V4.local_ip,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 Buf::new(&mut [], ..),
                 0,
             );
@@ -3621,7 +3629,7 @@ mod tests {
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 Buf::new(&mut [], ..),
                 0,
             );
@@ -3635,7 +3643,7 @@ mod tests {
                 FrameDestination::Unicast,
                 UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap(),
                 DUMMY_CONFIG_V6.local_ip,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 0,
                 Buf::new(&mut [], ..),
                 0,

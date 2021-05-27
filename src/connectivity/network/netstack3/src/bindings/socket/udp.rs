@@ -24,9 +24,9 @@ use futures::{StreamExt, TryFutureExt};
 use log::{debug, error, trace, warn};
 use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
-    connect_udp, get_udp_conn_info, get_udp_listener_info, icmp::IcmpIpExt, listen_udp,
-    remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, IdMap,
-    IdMapCollection, UdpConnId, UdpEventDispatcher, UdpListenerId,
+    connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
+    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, IdMap, IdMapCollection, IpExt,
+    UdpConnId, UdpEventDispatcher, UdpListenerId,
 };
 use packet::serialize::Buf;
 use std::collections::VecDeque;
@@ -68,7 +68,7 @@ impl<I: Ip> UdpSocketCollectionInner<I> {
 }
 
 /// Extension trait for [`Ip`] for UDP sockets operations.
-pub(crate) trait UdpSocketIpExt: IpSockAddrExt + IcmpIpExt {
+pub(crate) trait UdpSocketIpExt: IpSockAddrExt + IpExt {
     fn get_collection<D: InnerValue<UdpSocketCollection>>(
         dispatcher: &D,
     ) -> &UdpSocketCollectionInner<Self>;

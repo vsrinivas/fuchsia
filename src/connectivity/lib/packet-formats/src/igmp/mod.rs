@@ -360,7 +360,7 @@ mod tests {
 
     use super::*;
     use crate::igmp::messages::*;
-    use crate::ip::IpProto;
+    use crate::ip::Ipv4Proto;
     use crate::ipv4::{
         options::{Ipv4Option, Ipv4OptionData},
         Ipv4Header, Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
@@ -371,7 +371,7 @@ mod tests {
         src_ip: Ipv4Addr,
         dst_ip: Ipv4Addr,
     ) -> Vec<u8> {
-        let ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp);
+        let ipv4 = Ipv4PacketBuilder::new(src_ip, dst_ip, 1, Ipv4Proto::Igmp);
         let with_options = Ipv4PacketBuilderWithOptions::new(
             ipv4,
             &[Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } }],

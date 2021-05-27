@@ -38,7 +38,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::IpProto;
+use crate::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
 use crate::ipv4::{self, Ipv4PacketRaw};
 use crate::ipv6::Ipv6PacketRaw;
 use crate::U16;
@@ -127,7 +127,7 @@ impl IcmpIpTypes for Ipv6 {
 }
 
 /// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
-pub trait IcmpIpExt: Ip {
+pub trait IcmpIpExt: IpExt {
     /// The type of ICMP messages.
     ///
     /// For `Ipv4`, this is `Icmpv4MessageType`, and for `Ipv6`, this is
@@ -139,7 +139,7 @@ pub trait IcmpIpExt: Ip {
     /// This value will be found in an IPv4 packet's Protocol field (for ICMPv4
     /// packets) or an IPv6 fixed header's or last extension header's Next
     /// Heeader field (for ICMPv6 packets).
-    const ICMP_IP_PROTO: IpProto;
+    const ICMP_IP_PROTO: <Self as IpExt>::Proto;
 
     /// Compute the length of the header of the packet prefix stored in `bytes`.
     ///
@@ -153,7 +153,7 @@ pub trait IcmpIpExt: Ip {
 impl IcmpIpExt for Ipv4 {
     type IcmpMessageType = Icmpv4MessageType;
 
-    const ICMP_IP_PROTO: IpProto = IpProto::Icmp;
+    const ICMP_IP_PROTO: Ipv4Proto = Ipv4Proto::Icmp;
 
     fn header_len(bytes: &[u8]) -> usize {
         if bytes.len() < ipv4::IPV4_MIN_HDR_LEN {
@@ -168,7 +168,7 @@ impl IcmpIpExt for Ipv4 {
 impl IcmpIpExt for Ipv6 {
     type IcmpMessageType = Icmpv6MessageType;
 
-    const ICMP_IP_PROTO: IpProto = IpProto::Icmpv6;
+    const ICMP_IP_PROTO: Ipv6NextHeader = Ipv6NextHeader::Icmpv6;
 
     // TODO: Re-implement this in terms of partial parsing, and then get rid of
     // the `header_len` method.
@@ -534,7 +534,7 @@ fn compute_checksum_fragmented<
         NetworkEndian::write_u32(&mut len_bytes, icmpv6_len.try_into().ok()?);
         c.add_bytes(&len_bytes[..]);
         c.add_bytes(&[0, 0, 0]);
-        c.add_bytes(&[IpProto::Icmpv6.into()]);
+        c.add_bytes(&[Ipv6NextHeader::Icmpv6.into()]);
     }
     c.add_bytes(&[header.prefix.msg_type, header.prefix.code]);
     c.add_bytes(&header.prefix.checksum);

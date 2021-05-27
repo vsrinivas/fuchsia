@@ -39,7 +39,7 @@ use packet_formats::icmp::ndp::{
     RouterSolicitation,
 };
 use packet_formats::icmp::{ndp::NdpPacket, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::IpProto;
+use packet_formats::ip::Ipv6NextHeader;
 use packet_formats::ipv6::Ipv6PacketBuilder;
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
@@ -2604,7 +2604,7 @@ where
                 src_ip,
                 dst_ip,
                 REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
             )),
     )
     .map_err(|_| ())
@@ -3655,6 +3655,7 @@ mod tests {
         options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
     };
     use packet_formats::icmp::{IcmpEchoRequest, Icmpv6Packet};
+    use packet_formats::ip::IpProto;
     use packet_formats::testutil::{
         parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
@@ -4348,7 +4349,7 @@ mod tests {
             local_ip().get(),
             remote_ip().get(),
             remote_ip().into_specified(),
-            IpProto::Icmpv6,
+            Ipv6NextHeader::Icmpv6,
             body,
             None,
         )
@@ -5408,7 +5409,7 @@ mod tests {
                 config.local_ip.get(),
                 config.remote_ip.get(),
                 config.remote_ip,
-                IpProto::Tcp,
+                IpProto::Tcp.into(),
                 Buf::new(vec![0; 10], ..),
                 None,
             )

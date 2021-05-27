@@ -137,8 +137,8 @@ impl<T: Eq + Hash> RefCountedHashSet<T> {
 
 #[cfg(test)]
 mod test {
-    use alloc::format;
     use super::*;
+    use alloc::format;
 
     #[test]
     fn test_ref_counted_hash_map() {

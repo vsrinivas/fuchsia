@@ -837,7 +837,7 @@ mod tests {
             DUMMY_CONFIG_V4.remote_ip,
             DUMMY_CONFIG_V4.local_ip,
             10,
-            IpProto::Tcp,
+            IpProto::Tcp.into(),
         )
     }
 
@@ -847,7 +847,7 @@ mod tests {
             DUMMY_CONFIG_V6.remote_ip,
             DUMMY_CONFIG_V6.local_ip,
             10,
-            IpProto::Tcp,
+            IpProto::Tcp.into(),
         )
     }
 

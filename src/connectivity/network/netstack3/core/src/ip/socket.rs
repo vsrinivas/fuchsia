@@ -11,7 +11,7 @@ use core::num::NonZeroU8;
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{BufferMut, Serializer};
-use packet_formats::ip::{IpExt, IpProto};
+use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
 use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 
 use crate::device::{AddressEntry, DeviceId};
@@ -30,7 +30,7 @@ pub(crate) trait IpSocket<I: Ip>: Socket<UpdateError = NoRouteError> {
 }
 
 /// An execution context defining a type of IP socket.
-pub(crate) trait IpSocketContext<I: Ip> {
+pub(crate) trait IpSocketContext<I: IpExt> {
     // TODO(joshlf): Remove `Clone` bound once we're no longer cloning sockets.
     type IpSocket: IpSocket<I> + Clone;
 
@@ -59,7 +59,7 @@ pub(crate) trait IpSocketContext<I: Ip> {
         &mut self,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
-        proto: IpProto,
+        proto: I::Proto,
         unroutable_behavior: UnroutableBehavior,
         builder: Option<Self::Builder>,
     ) -> Result<Self::IpSocket, NoRouteError>;
@@ -79,7 +79,7 @@ pub enum SendError {
     Unroutable,
 }
 
-pub(crate) trait BufferIpSocketContext<I: Ip, B: BufferMut>: IpSocketContext<I> {
+pub(crate) trait BufferIpSocketContext<I: IpExt, B: BufferMut>: IpSocketContext<I> {
     /// Send an IP packet on a socket.
     ///
     /// The generated packet has its metadata initialized from `socket`,
@@ -197,7 +197,7 @@ pub(crate) struct IpSock<I: IpExt, D> {
     // even well-defined for IPv4 in the absence of a subnet? B) Presumably we
     // have to always bind to a particular interface?
     local_ip: SpecifiedAddr<I::Addr>,
-    proto: IpProto,
+    proto: I::Proto,
     unroutable_behavior: UnroutableBehavior,
 
     // This is merely cached and can change.
@@ -304,7 +304,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
         &mut self,
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         remote_ip: SpecifiedAddr<Ipv4Addr>,
-        proto: IpProto,
+        proto: Ipv4Proto,
         unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv4SocketBuilder>,
     ) -> Result<IpSock<Ipv4, DeviceId>, NoRouteError> {
@@ -364,7 +364,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
         &mut self,
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         remote_ip: SpecifiedAddr<Ipv6Addr>,
-        proto: IpProto,
+        proto: Ipv6NextHeader,
         unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv6SocketBuilder>,
     ) -> Result<IpSock<Ipv6, DeviceId>, NoRouteError> {
@@ -622,17 +622,15 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Co
 /// Test mock implementations of the traits defined in the `socket` module.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use net_types::ip::IpAddress;
-
     use super::*;
     use crate::context::testutil::DummyContext;
 
     /// A dummy implementation of [`IpSocket`].
     #[derive(Clone)]
-    pub(crate) struct DummyIpSocket<A: IpAddress> {
-        local_ip: SpecifiedAddr<A>,
-        remote_ip: SpecifiedAddr<A>,
-        proto: IpProto,
+    pub(crate) struct DummyIpSocket<I: IpExt> {
+        local_ip: SpecifiedAddr<I::Addr>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        proto: I::Proto,
         ttl: u8,
         unroutable_behavior: UnroutableBehavior,
         // Guaranteed to be `true` if `unroutable_behavior` is `Close`.
@@ -646,14 +644,14 @@ pub(crate) mod testutil {
         _marker: PhantomData<I>,
     }
 
-    impl<A: IpAddress> Socket for DummyIpSocket<A> {
-        type Update = DummyIpSocketUpdate<A::Version>;
+    impl<I: IpExt> Socket for DummyIpSocket<I> {
+        type Update = DummyIpSocketUpdate<I>;
         type UpdateMeta = ();
         type UpdateError = NoRouteError;
 
         fn apply_update(
             &mut self,
-            update: &DummyIpSocketUpdate<A::Version>,
+            update: &DummyIpSocketUpdate<I>,
             _meta: &(),
         ) -> Result<(), NoRouteError> {
             if !update.routable && self.unroutable_behavior == UnroutableBehavior::Close {
@@ -664,7 +662,7 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<I: Ip> IpSocket<I> for DummyIpSocket<I::Addr> {
+    impl<I: IpExt> IpSocket<I> for DummyIpSocket<I> {
         fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
             &self.local_ip
         }
@@ -706,10 +704,14 @@ pub(crate) mod testutil {
         ttl: Option<u8>,
     }
 
-    impl<I: Ip, S: AsRef<DummyIpSocketContext<I>> + AsMut<DummyIpSocketContext<I>>, Id, Meta>
-        IpSocketContext<I> for DummyContext<S, Id, Meta>
+    impl<
+            I: IpExt,
+            S: AsRef<DummyIpSocketContext<I>> + AsMut<DummyIpSocketContext<I>>,
+            Id,
+            Meta,
+        > IpSocketContext<I> for DummyContext<S, Id, Meta>
     {
-        type IpSocket = DummyIpSocket<I::Addr>;
+        type IpSocket = DummyIpSocket<I>;
 
         type Builder = DummyIpSocketBuilder;
 
@@ -717,10 +719,10 @@ pub(crate) mod testutil {
             &mut self,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             remote_ip: SpecifiedAddr<I::Addr>,
-            proto: IpProto,
+            proto: I::Proto,
             unroutable_behavior: UnroutableBehavior,
             builder: Option<DummyIpSocketBuilder>,
-        ) -> Result<DummyIpSocket<I::Addr>, NoRouteError> {
+        ) -> Result<DummyIpSocket<I>, NoRouteError> {
             let builder = builder.unwrap_or_default();
 
             let ctx = self.get_ref().as_ref();
@@ -783,14 +785,14 @@ mod tests {
         let template = IpSock {
             remote_ip: DUMMY_CONFIG_V4.remote_ip,
             local_ip: DUMMY_CONFIG_V4.local_ip,
-            proto: IpProto::Icmp,
+            proto: Ipv4Proto::Icmp,
             unroutable_behavior: UnroutableBehavior::Close,
             cached: CachedInfo::Routable {
                 builder: Ipv4PacketBuilder::new(
                     DUMMY_CONFIG_V4.local_ip,
                     DUMMY_CONFIG_V4.remote_ip,
                     crate::ip::DEFAULT_TTL.get(),
-                    IpProto::Icmp,
+                    Ipv4Proto::Icmp,
                 ),
                 device: DeviceId::new_ethernet(0),
                 next_hop: DUMMY_CONFIG_V4.remote_ip,
@@ -803,7 +805,7 @@ mod tests {
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V4.remote_ip,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
                 UnroutableBehavior::Close,
                 None,
             )
@@ -819,7 +821,7 @@ mod tests {
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V4.remote_ip,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
                 UnroutableBehavior::Close,
                 Some(builder),
             )
@@ -832,7 +834,7 @@ mod tests {
                             DUMMY_CONFIG_V4.local_ip,
                             DUMMY_CONFIG_V4.remote_ip,
                             1,
-                            IpProto::Icmp,
+                            Ipv4Proto::Icmp,
                         ),
                         device: DeviceId::new_ethernet(0),
                         next_hop: DUMMY_CONFIG_V4.remote_ip,
@@ -847,7 +849,7 @@ mod tests {
                 &mut ctx,
                 Some(DUMMY_CONFIG_V4.local_ip),
                 DUMMY_CONFIG_V4.remote_ip,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
                 UnroutableBehavior::Close,
                 None,
             )
@@ -861,7 +863,7 @@ mod tests {
                 &mut ctx,
                 Some(DUMMY_CONFIG_V4.remote_ip),
                 DUMMY_CONFIG_V4.remote_ip,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
                 UnroutableBehavior::Close,
                 None,
             ) == Err(NoRouteError)
@@ -873,7 +875,7 @@ mod tests {
                 &mut ctx,
                 None,
                 Ipv4::LOOPBACK_ADDRESS,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
                 UnroutableBehavior::Close,
                 None,
             ) == Err(NoRouteError)
@@ -889,14 +891,14 @@ mod tests {
         let template = IpSock {
             remote_ip: DUMMY_CONFIG_V6.remote_ip,
             local_ip: DUMMY_CONFIG_V6.local_ip,
-            proto: IpProto::Icmpv6,
+            proto: Ipv6NextHeader::Icmpv6,
             unroutable_behavior: UnroutableBehavior::Close,
             cached: CachedInfo::Routable {
                 builder: Ipv6PacketBuilder::new(
                     DUMMY_CONFIG_V6.local_ip,
                     DUMMY_CONFIG_V6.remote_ip,
                     crate::ip::DEFAULT_TTL.get(),
-                    IpProto::Icmpv6,
+                    Ipv6NextHeader::Icmpv6,
                 ),
                 device: DeviceId::new_ethernet(0),
                 next_hop: DUMMY_CONFIG_V6.remote_ip,
@@ -909,7 +911,7 @@ mod tests {
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V6.remote_ip,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             )
@@ -925,7 +927,7 @@ mod tests {
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V6.remote_ip,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
                 UnroutableBehavior::Close,
                 Some(builder),
             )
@@ -938,7 +940,7 @@ mod tests {
                             DUMMY_CONFIG_V6.local_ip,
                             DUMMY_CONFIG_V6.remote_ip,
                             1,
-                            IpProto::Icmpv6,
+                            Ipv6NextHeader::Icmpv6,
                         ),
                         device: DeviceId::new_ethernet(0),
                         next_hop: DUMMY_CONFIG_V6.remote_ip,
@@ -953,7 +955,7 @@ mod tests {
                 &mut ctx,
                 Some(DUMMY_CONFIG_V6.local_ip),
                 DUMMY_CONFIG_V6.remote_ip,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             )
@@ -967,7 +969,7 @@ mod tests {
                 &mut ctx,
                 Some(DUMMY_CONFIG_V6.remote_ip),
                 DUMMY_CONFIG_V6.remote_ip,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             ) == Err(NoRouteError)
@@ -979,7 +981,7 @@ mod tests {
                 &mut ctx,
                 None,
                 Ipv6::LOOPBACK_ADDRESS,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             ) == Err(NoRouteError)
@@ -1003,7 +1005,7 @@ mod tests {
             &mut ctx,
             None,
             DUMMY_CONFIG_V4.remote_ip,
-            IpProto::Icmp,
+            Ipv4Proto::Icmp,
             UnroutableBehavior::Close,
             Some(builder),
         )
@@ -1029,7 +1031,7 @@ mod tests {
         assert_eq!(dst_mac, DUMMY_CONFIG_V4.remote_mac);
         assert_eq!(src_ip, DUMMY_CONFIG_V4.local_ip.get());
         assert_eq!(dst_ip, DUMMY_CONFIG_V4.remote_ip.get());
-        assert_eq!(proto, IpProto::Icmp);
+        assert_eq!(proto, Ipv4Proto::Icmp);
         assert_eq!(ttl, 1);
 
         // Try sending a packet which will be larger than the device's MTU,
@@ -1071,7 +1073,7 @@ mod tests {
             &mut ctx,
             None,
             DUMMY_CONFIG_V6.remote_ip,
-            IpProto::Icmpv6,
+            Ipv6NextHeader::Icmpv6,
             UnroutableBehavior::Close,
             Some(builder),
         )
@@ -1097,7 +1099,7 @@ mod tests {
         assert_eq!(dst_mac, DUMMY_CONFIG_V6.remote_mac);
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
-        assert_eq!(proto, IpProto::Icmpv6);
+        assert_eq!(proto, Ipv6NextHeader::Icmpv6);
         assert_eq!(ttl, 1);
 
         // Try sending a packet which will be larger than the device's MTU,

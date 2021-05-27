@@ -20,7 +20,7 @@ use packet_formats::igmp::{
     messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
     IgmpMessage, IgmpPacketBuilder, MessageType,
 };
-use packet_formats::ip::IpProto;
+use packet_formats::ip::Ipv4Proto;
 use packet_formats::ipv4::{
     options::{Ipv4Option, Ipv4OptionData},
     Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
@@ -282,7 +282,7 @@ where
     let body =
         IgmpPacketBuilder::<EmptyBuf, M>::new_with_resp_time(group_addr.get(), max_resp_time);
     let builder = match Ipv4PacketBuilderWithOptions::new(
-        Ipv4PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Igmp),
+        Ipv4PacketBuilder::new(src_ip, dst_ip, 1, Ipv4Proto::Igmp),
         &[Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } }],
     ) {
         None => return Err(IgmpError::SendFailure { addr: *group_addr }),

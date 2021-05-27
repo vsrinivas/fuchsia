@@ -433,7 +433,7 @@ pub trait UdpContext<I: IcmpIpExt>:
 /// [`send_udp_conn`] and [`send_udp_listener`]), and allows any generated
 /// link-layer frames to reuse that buffer rather than needing to always
 /// allocate a new one.
-pub trait BufferUdpContext<I: IcmpIpExt, B: BufferMut>:
+pub trait BufferUdpContext<I: IpExt, B: BufferMut>:
     UdpContext<I> + BufferTransportIpContext<I, B>
 {
     /// Receive a UDP packet for a connection.
@@ -497,8 +497,8 @@ impl<I: IcmpIpExt, D: EventDispatcher + UdpEventDispatcher<I>> UdpContext<I> for
     }
 }
 
-impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B> + UdpEventDispatcher<I>>
-    BufferUdpContext<I, B> for Context<D>
+impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B> + UdpEventDispatcher<I>> BufferUdpContext<I, B>
+    for Context<D>
 {
     fn receive_udp_from_conn(
         &mut self,
@@ -682,7 +682,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>> BufferIpTransportContext
 /// `send_udp` fails if the selected 4-tuple conflicts with any existing socket.
 // TODO(brunodalbo): We may need more arguments here to express REUSEADDR and
 // BIND_TO_DEVICE options.
-pub fn send_udp<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
@@ -703,7 +703,7 @@ pub fn send_udp<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
 }
 
 /// Send a UDP packet on an existing connection.
-pub fn send_udp_conn<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     conn: UdpConnId<I>,
     body: B,
@@ -716,7 +716,7 @@ pub fn send_udp_conn<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
         .expect("transport::udp::send_udp_conn: no such conn");
 
     ctx.send_frame(
-        IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp),
+        IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp.into()),
         body.encapsulate(UdpPacketBuilder::new(
             local_ip.get(),
             remote_ip.get(),
@@ -738,7 +738,7 @@ pub fn send_udp_conn<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
 ///
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
-pub fn send_udp_listener<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
+pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     ctx: &mut C,
     listener: UdpListenerId<I>,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
@@ -789,7 +789,7 @@ pub fn send_udp_listener<I: IcmpIpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
     };
 
     ctx.send_frame(
-        IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp),
+        IpPacketFromArgs::new(local_ip, remote_ip, IpProto::Udp.into()),
         body.encapsulate(UdpPacketBuilder::new(
             local_ip.get(),
             remote_ip.get(),
@@ -1103,11 +1103,8 @@ mod tests {
         }
     }
 
-    type DummyContext<I> = crate::context::testutil::DummyContext<
-        DummyUdpContext<I>,
-        (),
-        IpPacketFromArgs<<I as Ip>::Addr>,
-    >;
+    type DummyContext<I> =
+        crate::context::testutil::DummyContext<DummyUdpContext<I>, (), IpPacketFromArgs<I>>;
 
     impl<I: TestIpExt> IpDeviceIdContext for DummyContext<I> {
         type DeviceId = DummyDeviceId;
@@ -1197,7 +1194,7 @@ mod tests {
         I::get_other_ip_address(2)
     }
 
-    trait TestIpExt: crate::testutil::TestIpExt + IpExt + packet_formats::ip::IpExt {
+    trait TestIpExt: crate::testutil::TestIpExt + IpExt {
         fn try_into_recv_src_addr(addr: Self::Addr) -> Option<Self::RecvSrcAddr>;
     }
 
@@ -1293,10 +1290,10 @@ mod tests {
         .expect("send_udp_listener failed");
         let frames = ctx.frames();
         assert_eq!(frames.len(), 2);
-        let check_frame = |(meta, frame_body): &(IpPacketFromArgs<I::Addr>, Vec<u8>)| {
+        let check_frame = |(meta, frame_body): &(IpPacketFromArgs<I>, Vec<u8>)| {
             assert_eq!(meta.src_ip, local_ip);
             assert_eq!(meta.dst_ip, remote_ip);
-            assert_eq!(meta.proto, IpProto::Udp);
+            assert_eq!(meta.proto, IpProto::Udp.into());
             let mut buf = &frame_body[..];
             let packet =
                 UdpPacket::parse(&mut buf, UdpParseArgs::new(meta.src_ip.get(), meta.dst_ip.get()))
@@ -1381,7 +1378,7 @@ mod tests {
         let (meta, frame_body) = &frames[0];
         assert_eq!(meta.src_ip, local_ip);
         assert_eq!(meta.dst_ip, remote_ip);
-        assert_eq!(meta.proto, IpProto::Udp);
+        assert_eq!(meta.proto, IpProto::Udp.into());
         let mut buf = &frame_body[..];
         let packet =
             UdpPacket::parse(&mut buf, UdpParseArgs::new(meta.src_ip.get(), meta.dst_ip.get()))
@@ -1553,7 +1550,7 @@ mod tests {
         let (meta, frame_body) = &frames[0];
         assert_eq!(meta.src_ip, local_ip);
         assert_eq!(meta.dst_ip, remote_ip);
-        assert_eq!(meta.proto, IpProto::Udp);
+        assert_eq!(meta.proto, IpProto::Udp.into());
         let mut buf = &frame_body[..];
         let packet =
             UdpPacket::parse(&mut buf, UdpParseArgs::new(meta.src_ip.get(), meta.dst_ip.get()))
@@ -1614,7 +1611,7 @@ mod tests {
         );
 
         // Instruct the dummy frame context to throw errors.
-        let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I::Addr>> =
+        let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I>> =
             ctx.as_mut();
         frames.set_should_error_for_frame(|_frame_meta| true);
 
@@ -1665,7 +1662,7 @@ mod tests {
         .expect("connect_udp failed");
 
         // Instruct the dummy frame context to throw errors.
-        let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I::Addr>> =
+        let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I>> =
             ctx.as_mut();
         frames.set_should_error_for_frame(|_frame_meta| true);
 
@@ -2175,7 +2172,7 @@ mod tests {
                     NonZeroU16::new(src_port),
                     NonZeroU16::new(dst_port).unwrap(),
                 ))
-                .encapsulate(I::PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Udp))
+                .encapsulate(I::PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Udp.into()))
                 .serialize_vec_outer()
                 .unwrap();
             f(ctx, packet.as_ref(), err);

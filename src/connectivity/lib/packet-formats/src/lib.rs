@@ -83,17 +83,27 @@ use internet_checksum::Checksum;
 use net_types::ip::{IpAddress, Ipv4Addr, Ipv6Addr};
 use packet::SerializeBuffer;
 
-use crate::ip::IpProto;
+use crate::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
+
+// The "sealed trait" pattern.
+//
+// https://rust-lang.github.io/api-guidelines/future-proofing.html
+mod private {
+    pub trait Sealed {}
+}
 
 type U16 = zerocopy::U16<NetworkEndian>;
 type U32 = zerocopy::U32<NetworkEndian>;
 
-trait IpAddressExt: IpAddress {
+trait IpAddressExt: IpAddress
+where
+    <Self as IpAddress>::Version: IpExt,
+{
     fn update_transport_checksum_pseudo_header(
         checksum: &mut Checksum,
         src_ip: Self,
         dst_ip: Self,
-        proto: IpProto,
+        proto: <Self::Version as IpExt>::Proto,
         transport_len: usize,
     ) -> Result<(), core::num::TryFromIntError>;
 }
@@ -103,7 +113,7 @@ impl<A: IpAddress> IpAddressExt for A {
         _checksum: &mut Checksum,
         _src_ip: A,
         _dst_ip: A,
-        _proto: IpProto,
+        _proto: <Self::Version as IpExt>::Proto,
         _transport_len: usize,
     ) -> Result<(), core::num::TryFromIntError> {
         unimplemented!()
@@ -115,7 +125,7 @@ impl IpAddressExt for Ipv4Addr {
         checksum: &mut Checksum,
         src_ip: Ipv4Addr,
         dst_ip: Ipv4Addr,
-        proto: IpProto,
+        proto: Ipv4Proto,
         transport_len: usize,
     ) -> Result<(), core::num::TryFromIntError> {
         let pseudo_header = {
@@ -142,7 +152,7 @@ impl IpAddressExt for Ipv6Addr {
         checksum: &mut Checksum,
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
-        proto: IpProto,
+        proto: Ipv6NextHeader,
         transport_len: usize,
     ) -> Result<(), core::num::TryFromIntError> {
         let pseudo_header = {
@@ -173,7 +183,7 @@ impl IpAddressExt for Ipv6Addr {
 fn compute_transport_checksum_parts<'a, A: IpAddressExt, I>(
     src_ip: A,
     dst_ip: A,
-    proto: IpProto,
+    proto: <A::Version as IpExt>::Proto,
     parts: I,
 ) -> Option<[u8; 2]>
 where
@@ -198,7 +208,7 @@ where
 fn compute_transport_checksum_serialize<A: IpAddressExt>(
     src_ip: A,
     dst_ip: A,
-    proto: IpProto,
+    proto: <A::Version as IpExt>::Proto,
     buffer: &mut SerializeBuffer<'_>,
 ) -> Option<[u8; 2]> {
     // See for details:
@@ -223,7 +233,7 @@ fn compute_transport_checksum_serialize<A: IpAddressExt>(
 fn compute_transport_checksum<A: IpAddressExt>(
     src_ip: A,
     dst_ip: A,
-    proto: IpProto,
+    proto: <A::Version as IpExt>::Proto,
     packet: &[u8],
 ) -> Option<[u8; 2]> {
     let mut checksum = Checksum::new();

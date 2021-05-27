@@ -162,9 +162,13 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
         }
 
         let parts = [hdr_prefix.bytes(), options.bytes(), body.deref().as_ref()];
-        let checksum =
-            compute_transport_checksum_parts(args.src_ip, args.dst_ip, IpProto::Tcp, parts.iter())
-                .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
+        let checksum = compute_transport_checksum_parts(
+            args.src_ip,
+            args.dst_ip,
+            IpProto::Tcp.into(),
+            parts.iter(),
+        )
+        .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
 
         if checksum != [0, 0] {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
@@ -458,7 +462,7 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         let checksum = compute_transport_checksum_serialize(
             self.src_ip,
             self.dst_ip,
-            IpProto::Tcp,
+            IpProto::Tcp.into(),
             buffer,
         )
         .unwrap_or_else(|| {
@@ -751,7 +755,7 @@ mod tests {
             let mut buf = &mut hdr_prefix_to_bytes(hdr_prefix)[..];
             NetworkEndian::write_u16(&mut buf[CHECKSUM_OFFSET..], 0);
             let checksum =
-                compute_transport_checksum(TEST_SRC_IPV4, TEST_DST_IPV4, IpProto::Tcp, buf)
+                compute_transport_checksum(TEST_SRC_IPV4, TEST_DST_IPV4, IpProto::Tcp.into(), buf)
                     .unwrap();
             buf[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
             assert_eq!(

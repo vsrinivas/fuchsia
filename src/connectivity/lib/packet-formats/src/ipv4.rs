@@ -19,7 +19,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{IpParseError, IpParseResult, ParseError};
-use crate::ip::IpProto;
+use crate::ip::Ipv4Proto;
 use crate::U16;
 
 pub(crate) use self::inner::IPV4_MIN_HDR_LEN;
@@ -165,9 +165,9 @@ pub trait Ipv4Header {
 
     /// The IP Protocol.
     ///
-    /// `proto` returns the `IpProto` from the protocol field.
-    fn proto(&self) -> IpProto {
-        IpProto::from(self.get_header_prefix().proto)
+    /// `proto` returns the `Ipv4Proto` from the protocol field.
+    fn proto(&self) -> Ipv4Proto {
+        Ipv4Proto::from(self.get_header_prefix().proto)
     }
 
     /// The source IP address.
@@ -530,7 +530,7 @@ impl Ipv4PacketBuilder {
         src_ip: S,
         dst_ip: D,
         ttl: u8,
-        proto: IpProto,
+        proto: Ipv4Proto,
     ) -> Ipv4PacketBuilder {
         Ipv4PacketBuilder {
             dscp: 0,
@@ -845,9 +845,10 @@ pub mod options {
 
     #[cfg(test)]
     mod test {
-        use super::*;
         use packet::records::options::Options;
         use packet::records::RecordsSerializerImpl;
+
+        use super::*;
 
         #[test]
         fn test_serialize_router_alert() {
@@ -896,6 +897,7 @@ mod tests {
     use crate::ethernet::{
         EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck,
     };
+    use crate::ip::IpProto;
     use crate::testutil::*;
 
     const DEFAULT_SRC_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
@@ -981,7 +983,7 @@ mod tests {
         let packet = bytes.parse::<Ipv4Packet<_>>().unwrap();
         assert_eq!(packet.id(), 0x0102);
         assert_eq!(packet.ttl(), 0x03);
-        assert_eq!(packet.proto(), IpProto::Tcp);
+        assert_eq!(packet.proto(), IpProto::Tcp.into());
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), []);
@@ -991,7 +993,12 @@ mod tests {
     fn test_parse_padding() {
         // Test that we properly discard post-packet padding.
         let mut buffer = Buf::new(Vec::new(), ..)
-            .encapsulate(Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 0, IpProto::Tcp))
+            .encapsulate(Ipv4PacketBuilder::new(
+                DEFAULT_DST_IP,
+                DEFAULT_DST_IP,
+                0,
+                IpProto::Tcp.into(),
+            ))
             .encapsulate(EthernetFrameBuilder::new(
                 DEFAULT_SRC_MAC,
                 DEFAULT_DST_MAC,
@@ -1045,7 +1052,7 @@ mod tests {
 
     // Return a stock Ipv4PacketBuilder with reasonable default values.
     fn new_builder() -> Ipv4PacketBuilder {
-        Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
+        Ipv4PacketBuilder::new(DEFAULT_DST_IP, DEFAULT_DST_IP, 64, IpProto::Tcp.into())
     }
 
     #[test]

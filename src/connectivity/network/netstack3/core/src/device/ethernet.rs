@@ -1922,7 +1922,7 @@ mod tests {
                 src_ip.get(),
                 config.remote_ip.get(),
                 64,
-                IpProto::Tcp,
+                IpProto::Tcp.into(),
             ))
             .serialize_vec_outer()
             .ok()
@@ -1995,7 +1995,7 @@ mod tests {
                 .unwrap();
         assert_eq!(src_ip.get(), packet_src_ip);
         assert_eq!(config.remote_ip.get(), packet_dst_ip);
-        assert_eq!(proto, IpProto::Tcp);
+        assert_eq!(proto, IpProto::Tcp.into());
         assert_eq!(body, packet_buf);
         assert_eq!(ttl, 63);
 
@@ -2007,7 +2007,7 @@ mod tests {
                 // request rather than ICMP unreachable.
                 I::get_other_remote_ip_address(10).get(),
                 64,
-                IpProto::Tcp,
+                IpProto::Tcp.into(),
             ))
             .serialize_vec_outer()
             .ok()
@@ -2044,7 +2044,7 @@ mod tests {
                 config.remote_ip.get(),
                 config.local_ip.get(),
                 64,
-                IpProto::Tcp,
+                IpProto::Tcp.into(),
             ))
             .encapsulate(EthernetFrameBuilder::new(
                 config.remote_mac,
@@ -2071,7 +2071,7 @@ mod tests {
                 config.remote_ip.get(),
                 config.local_ip.get(),
                 64,
-                IpProto::Tcp,
+                IpProto::Tcp.into(),
             ))
             .encapsulate(EthernetFrameBuilder::new(config.remote_mac, other_mac, I::ETHER_TYPE))
             .serialize_vec_outer()
@@ -2174,7 +2174,7 @@ mod tests {
                 src_ip,
                 dst_ip,
                 64,
-                IpProto::Tcp,
+                IpProto::Tcp.into(),
             ))
             .serialize_vec_outer()
             .ok()

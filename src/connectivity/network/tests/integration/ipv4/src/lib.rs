@@ -18,7 +18,7 @@ use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
 use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use packet_formats::igmp::{messages::IgmpMembershipReportV2, IgmpMessage};
-use packet_formats::ip::IpProto;
+use packet_formats::ip::Ipv4Proto;
 use packet_formats::testutil::parse_ip_packet;
 
 #[variants_test]
@@ -75,7 +75,7 @@ async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) -> Result {
                     parse_ip_packet::<net_types_ip::Ipv4>(&data)
                         .context("error parsing IPv4 packet")?;
 
-                if proto != IpProto::Igmp {
+                if proto != Ipv4Proto::Igmp {
                     // Ignore non-IGMP packets.
                     return Ok(None);
                 }

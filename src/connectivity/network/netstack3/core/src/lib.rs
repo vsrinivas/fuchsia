@@ -54,7 +54,7 @@ pub use crate::device::{
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
 pub use crate::ip::{
-    icmp, EntryDest, EntryDestEither, EntryEither, IpLayerEventDispatcher, Ipv4StateBuilder,
+    icmp, EntryDest, EntryDestEither, EntryEither, IpExt, IpLayerEventDispatcher, Ipv4StateBuilder,
     Ipv6StateBuilder,
 };
 pub use crate::transport::udp::{

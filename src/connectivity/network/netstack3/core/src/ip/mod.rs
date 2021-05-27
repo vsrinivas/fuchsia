@@ -32,7 +32,7 @@ use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
 use packet_formats::error::IpParseError;
 use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use packet_formats::ip::{IpPacket, IpPacketBuilder, IpProto};
+use packet_formats::ip::{IpPacket, IpPacketBuilder, IpProto, Ipv4Proto, Ipv6NextHeader};
 use packet_formats::ipv4::Ipv4Packet;
 use packet_formats::ipv6::Ipv6Packet;
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
@@ -68,19 +68,19 @@ const DEFAULT_TTL: NonZeroU8 = unsafe { NonZeroU8::new_unchecked(64) };
 /// from a particular source address.
 // TODO(rheacock): remove `allow(dead_code)` when this is used.
 #[allow(dead_code)]
-pub struct IpPacketFromArgs<A: IpAddress> {
-    pub(crate) src_ip: SpecifiedAddr<A>,
-    pub(crate) dst_ip: SpecifiedAddr<A>,
-    pub(crate) proto: IpProto,
+pub struct IpPacketFromArgs<I: IpExt> {
+    pub(crate) src_ip: SpecifiedAddr<I::Addr>,
+    pub(crate) dst_ip: SpecifiedAddr<I::Addr>,
+    pub(crate) proto: I::Proto,
 }
 
-impl<A: IpAddress> IpPacketFromArgs<A> {
+impl<I: IpExt> IpPacketFromArgs<I> {
     /// Constructs a new `IpPacketFromArgs`.
     pub(crate) fn new(
-        src_ip: SpecifiedAddr<A>,
-        dst_ip: SpecifiedAddr<A>,
-        proto: IpProto,
-    ) -> IpPacketFromArgs<A> {
+        src_ip: SpecifiedAddr<I::Addr>,
+        dst_ip: SpecifiedAddr<I::Addr>,
+        proto: I::Proto,
+    ) -> IpPacketFromArgs<I> {
         IpPacketFromArgs { src_ip, dst_ip, proto }
     }
 }
@@ -113,7 +113,8 @@ enum TransportReceiveErrorInner {
     PortUnreachable,
 }
 
-pub(crate) trait IpExt: IcmpIpExt {
+/// An [`Ip`] extension trait adding functionality specific to the IP layer.
+pub trait IpExt: packet_formats::ip::IpExt + IcmpIpExt {
     /// The type used to specify an IP packet's source address in a call to
     /// [`BufferIpTransportContext::receive_ip_packet`].
     ///
@@ -233,16 +234,13 @@ pub trait TransportIpContext<I: Ip>: IpDeviceIdContext {
 /// particular, in the [`FrameContext`] implementation), and allows any
 /// generated link-layer frames to reuse that buffer rather than needing to
 /// always allocate a new one.
-pub trait BufferTransportIpContext<I: Ip, B: BufferMut>:
-    TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I::Addr>>
+pub trait BufferTransportIpContext<I: IpExt, B: BufferMut>:
+    TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I>>
 {
 }
 
-impl<
-        I: Ip,
-        B: BufferMut,
-        C: TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I::Addr>>,
-    > BufferTransportIpContext<I, B> for C
+impl<I: IpExt, B: BufferMut, C: TransportIpContext<I> + FrameContext<B, IpPacketFromArgs<I>>>
+    BufferTransportIpContext<I, B> for C
 {
 }
 
@@ -284,12 +282,12 @@ impl<D: EventDispatcher> Ipv6TransportLayerContext for Context<D> {
     type Proto17 = crate::transport::udp::UdpIpTransportContext;
 }
 
-impl<A: IpAddress, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFromArgs<A>>
+impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, IpPacketFromArgs<I>>
     for Context<D>
 {
     fn send_frame<S: Serializer<Buffer = B>>(
         &mut self,
-        meta: IpPacketFromArgs<A>,
+        meta: IpPacketFromArgs<I>,
         body: S,
     ) -> Result<(), S> {
         // TODO(brunodalbo) this lookup is not considering the source IP in
@@ -651,7 +649,7 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
     frame_dst: FrameDestination,
     src_ip: Ipv4Addr,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
-    proto: IpProto,
+    proto: Ipv4Proto,
     buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
@@ -660,9 +658,9 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
     macro_rules! mtch {
         ($($cond:pat => $ty:ident),*) => {
             match proto {
-                IpProto::Icmp => <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>
+                Ipv4Proto::Icmp => <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
-                IpProto::Igmp => {
+                Ipv4Proto::Igmp => {
                     IgmpPacketHandler::<(), _, _>::receive_igmp_packet(
                         ctx,
                         device.expect("IGMP messages should come from a device"),
@@ -685,7 +683,10 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
     }
 
     #[rustfmt::skip]
-    let res = mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
+    let res = mtch!(
+        Ipv4Proto::Proto(IpProto::Tcp) => Proto6,
+        Ipv4Proto::Proto(IpProto::Udp) => Proto17
+    );
 
     if let Err((mut buffer, err)) = res {
         // All branches promise to return the buffer in the same state it was in
@@ -741,7 +742,7 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     frame_dst: FrameDestination,
     src_ip: Ipv6SourceAddr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: IpProto,
+    proto: Ipv6NextHeader,
     buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
@@ -750,12 +751,12 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     macro_rules! mtch {
         ($($cond:pat => $ty:ident),*) => {
             match proto {
-                IpProto::Icmpv6 => <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>
+                Ipv6NextHeader::Icmpv6 => <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
-                // A value of `IpProto::NoNextHeader` tells us that there is no
-                // header whatsoever following the last lower-level header so we
-                // stop processing here.
-                IpProto::NoNextHeader => Ok(()),
+                // A value of `Ipv6NextHeader::NoNextHeader` tells us that there
+                // is no header whatsoever following the last lower-level header
+                // so we stop processing here.
+                Ipv6NextHeader::NoNextHeader => Ok(()),
                 $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP Next Header numbers are covered,
@@ -769,7 +770,10 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     }
 
     #[rustfmt::skip]
-    let res = mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
+    let res = mtch!(
+        Ipv6NextHeader::Proto(IpProto::Tcp) => Proto6,
+        Ipv6NextHeader::Proto(IpProto::Udp) => Proto17
+    );
 
     if let Err((mut buffer, err)) = res {
         // All branches promise to return the buffer in the same state it was in
@@ -1584,7 +1588,7 @@ pub(crate) fn send_ipv4_packet<
 >(
     ctx: &mut Context<D>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
-    proto: IpProto,
+    proto: Ipv4Proto,
     get_body: F,
 ) -> Result<(), S> {
     trace!("send_ipv4_packet({}, {})", dst_ip, proto);
@@ -1683,7 +1687,7 @@ pub(crate) fn send_ipv6_packet<
 >(
     ctx: &mut Context<D>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: IpProto,
+    proto: Ipv6NextHeader,
     get_body: F,
 ) -> Result<(), S> {
     trace!("send_ipv6_packet({}, {})", dst_ip, proto);
@@ -1788,7 +1792,7 @@ pub(crate) fn send_ip_packet_from_device<B: BufferMut, D: BufferDispatcher<B>, A
     src_ip: A,
     dst_ip: A,
     next_hop: SpecifiedAddr<A>,
-    proto: IpProto,
+    proto: <A::Version as packet_formats::ip::IpExt>::Proto,
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), S>
@@ -1858,7 +1862,7 @@ impl<D: EventDispatcher> IcmpContext<Ipv4> for Context<D> {
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
-        original_proto: IpProto,
+        original_proto: Ipv4Proto,
         original_body: &[u8],
         err: Icmpv4ErrorCode,
     ) {
@@ -1868,7 +1872,7 @@ impl<D: EventDispatcher> IcmpContext<Ipv4> for Context<D> {
         macro_rules! mtch {
             ($($cond:pat => $ty:ident),*) => {
                 match original_proto {
-                    IpProto::Icmp => <IcmpIpTransportContext as IpTransportContext<Ipv4, _>>
+                    Ipv4Proto::Icmp => <IcmpIpTransportContext as IpTransportContext<Ipv4, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
                     $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as IpTransportContext<Ipv4, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
@@ -1880,7 +1884,10 @@ impl<D: EventDispatcher> IcmpContext<Ipv4> for Context<D> {
         }
 
         #[rustfmt::skip]
-        mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
+        mtch!(
+            Ipv4Proto::Proto(IpProto::Tcp) => Proto6,
+            Ipv4Proto::Proto(IpProto::Udp) => Proto17
+        );
     }
 }
 
@@ -1896,7 +1903,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv4, B> for Contex
         self.increment_counter("send_icmp_reply");
 
         // TODO(joshlf): Use `dst_ip` for anything?
-        send_ipv4_packet(self, src_ip, IpProto::Icmp, get_body)
+        send_ipv4_packet(self, src_ip, Ipv4Proto::Icmp, get_body)
     }
 
     fn send_icmp_error_message<
@@ -1928,7 +1935,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv4, B> for Contex
                 local_ip.get(),
                 src_ip.get(),
                 next_hop,
-                IpProto::Icmp,
+                Ipv4Proto::Icmp,
                 get_body(local_ip),
                 ip_mtu,
             )?;
@@ -1943,7 +1950,7 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv6Addr>,
-        original_next_header: IpProto,
+        original_next_header: Ipv6NextHeader,
         original_body: &[u8],
         err: Icmpv6ErrorCode,
     ) {
@@ -1953,7 +1960,7 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
         macro_rules! mtch {
             ($($cond:pat => $ty:ident),*) => {
                 match original_next_header {
-                    IpProto::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _>>
+                    Ipv6NextHeader::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _>>
                     ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
                     $($cond => <<Context<D> as Ipv6TransportLayerContext>::$ty as IpTransportContext<Ipv6, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
@@ -1965,7 +1972,10 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
         }
 
         #[rustfmt::skip]
-        mtch!(IpProto::Tcp => Proto6, IpProto::Udp => Proto17);
+        mtch!(
+            Ipv6NextHeader::Proto(IpProto::Tcp) => Proto6,
+            Ipv6NextHeader::Proto(IpProto::Udp) => Proto17
+        );
     }
 }
 
@@ -1981,7 +1991,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv6, B> for Contex
         self.increment_counter("send_icmp_reply");
 
         // TODO(joshlf): Use `dst_ip` for anything?
-        send_ipv6_packet(self, src_ip, IpProto::Icmpv6, get_body)
+        send_ipv6_packet(self, src_ip, Ipv6NextHeader::Icmpv6, get_body)
     }
 
     fn send_icmp_error_message<
@@ -2018,7 +2028,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv6, B> for Contex
                 local_ip.get(),
                 src_ip.get(),
                 next_hop,
-                IpProto::Icmpv6,
+                Ipv6NextHeader::Icmpv6,
                 get_body(local_ip),
                 ip_mtu,
             )?;
@@ -2162,7 +2172,7 @@ mod tests {
         let (src_ip, dst_ip, proto, _) = packet.into_metadata();
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());
-        assert_eq!(proto, IpProto::Icmpv6);
+        assert_eq!(proto, Ipv6NextHeader::Icmpv6);
         let icmp =
             buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
         if let Icmpv6Packet::ParameterProblem(icmp) = icmp {
@@ -2230,7 +2240,7 @@ mod tests {
             DUMMY_CONFIG_V4.remote_ip,
             DUMMY_CONFIG_V4.local_ip,
             10,
-            IpProto::Udp,
+            IpProto::Udp.into(),
         )
     }
 
@@ -2761,7 +2771,12 @@ mod tests {
         // Ip packet from some node destined to a remote on this network,
         // arriving locally.
         let mut ipv6_packet_buf = Buf::new(body.clone(), ..)
-            .encapsulate(Ipv6PacketBuilder::new(extra_ip, dummy_config.remote_ip, 64, IpProto::Udp))
+            .encapsulate(Ipv6PacketBuilder::new(
+                extra_ip,
+                dummy_config.remote_ip,
+                64,
+                IpProto::Udp.into(),
+            ))
             .serialize_vec_outer()
             .unwrap();
         // Receive the IP packet.
@@ -2821,7 +2836,7 @@ mod tests {
                 Icmpv4DestUnreachableCode::FragmentationRequired,
                 msg,
             ))
-            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmp))
+            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, Ipv4Proto::Icmp))
             .serialize_vec_outer()
             .unwrap()
         };
@@ -2834,7 +2849,7 @@ mod tests {
                 IcmpUnusedCode,
                 Icmpv6PacketTooBig::new(u32::from(mtu)),
             ))
-            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Icmpv6))
+            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, Ipv6NextHeader::Icmpv6))
             .serialize_vec_outer()
             .unwrap();
 
@@ -2966,7 +2981,7 @@ mod tests {
     /// where the original packet's body  length is `body_len`.
     fn create_orig_packet_buf(src_ip: Ipv4Addr, dst_ip: Ipv4Addr, body_len: usize) -> Buf<Vec<u8>> {
         Buf::new(vec![0; body_len], ..)
-            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Udp))
+            .encapsulate(Ipv4PacketBuilder::new(src_ip, dst_ip, 64, IpProto::Udp.into()))
             .serialize_vec_outer()
             .unwrap()
             .into_inner()
@@ -3100,8 +3115,12 @@ mod tests {
             IcmpEchoRequest::new(0, 0),
         );
 
-        let ip_builder =
-            Ipv6PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmp);
+        let ip_builder = Ipv6PacketBuilder::new(
+            ip_config.remote_ip,
+            ip_config.local_ip,
+            64,
+            Ipv6NextHeader::Other(Ipv4Proto::Icmp.into()),
+        );
 
         let buf = Buf::new(Vec::new(), ..)
             .encapsulate(icmp_builder)
@@ -3138,8 +3157,12 @@ mod tests {
             IcmpEchoRequest::new(0, 0),
         );
 
-        let ip_builder =
-            Ipv4PacketBuilder::new(ip_config.remote_ip, ip_config.local_ip, 64, IpProto::Icmpv6);
+        let ip_builder = Ipv4PacketBuilder::new(
+            ip_config.remote_ip,
+            ip_config.local_ip,
+            64,
+            Ipv4Proto::Other(Ipv6NextHeader::Icmpv6.into()),
+        );
 
         let buf = Buf::new(Vec::new(), ..)
             .encapsulate(icmp_builder)
@@ -3188,7 +3211,7 @@ mod tests {
                 config.remote_ip.get(),
                 multi_addr,
                 64,
-                IpProto::Udp,
+                IpProto::Udp.into(),
             ))
             .encapsulate(EthernetFrameBuilder::new(config.remote_mac, dst_mac, I::ETHER_TYPE))
             .serialize_vec_outer()
@@ -3253,7 +3276,7 @@ mod tests {
         let ip: Ipv6Addr = config.local_mac.to_ipv6_link_local().addr().get();
 
         let buf = Buf::new(vec![0; 10], ..)
-            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))
+            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp.into()))
             .serialize_vec_outer()
             .unwrap()
             .into_inner();
@@ -3276,7 +3299,7 @@ mod tests {
             .unwrap();
 
         let buf = Buf::new(vec![0; 10], ..)
-            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))
+            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp.into()))
             .serialize_vec_outer()
             .unwrap()
             .into_inner();
@@ -3311,7 +3334,7 @@ mod tests {
                 Ipv6::MULTICAST_SUBNET.network(),
                 ip,
                 64,
-                IpProto::Udp,
+                IpProto::Udp.into(),
             ))
             .serialize_vec_outer()
             .unwrap()

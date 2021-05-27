@@ -217,7 +217,7 @@ mod tests {
             DUMMY_CONFIG_V6.remote_ip,
             DUMMY_CONFIG_V6.local_ip,
             10,
-            IpProto::Tcp,
+            IpProto::Tcp.into(),
         );
         let device_id = DeviceId::new_ethernet(0);
         let frame_dst = FrameDestination::Unicast;

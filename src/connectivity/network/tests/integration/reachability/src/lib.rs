@@ -27,7 +27,7 @@ use packet_formats::{
     ethernet::{EtherType, EthernetFrameBuilder},
     icmp::ndp::options::{NdpOption, PrefixInformation},
     icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode, MessageBody as _},
-    ip::IpProto,
+    ip::{Ipv4Proto, Ipv6NextHeader},
     ipv4::Ipv4PacketBuilder,
     ipv6::Ipv6PacketBuilder,
     testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
@@ -63,7 +63,7 @@ fn reply_if_echo_request(frame: Vec<u8>, gateway_only: bool) -> Result<Option<Bu
                         dst_ip,
                         src_ip,
                         ipv4_consts::DEFAULT_TTL,
-                        IpProto::Icmp,
+                        Ipv4Proto::Icmp,
                     ))
                     .encapsulate(EthernetFrameBuilder::new(dst_mac, src_mac, EtherType::Ipv4))
                     .serialize_vec_outer()
@@ -104,7 +104,7 @@ fn reply_if_echo_request(frame: Vec<u8>, gateway_only: bool) -> Result<Option<Bu
                         dst_ip,
                         src_ip,
                         ipv6_consts::DEFAULT_HOP_LIMIT,
-                        IpProto::Icmpv6,
+                        Ipv6NextHeader::Icmpv6,
                     ))
                     .encapsulate(EthernetFrameBuilder::new(dst_mac, src_mac, EtherType::Ipv6))
                     .serialize_vec_outer()

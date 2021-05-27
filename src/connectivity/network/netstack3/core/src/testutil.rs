@@ -1253,6 +1253,7 @@ mod tests {
 
     use packet::{Buf, Serializer};
     use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
+    use packet_formats::ip::Ipv4Proto;
     use specialize_ip_macro::ip_test;
 
     use super::*;
@@ -1268,7 +1269,7 @@ mod tests {
         ip::send_ipv4_packet(
             net.context("alice"),
             DUMMY_CONFIG_V4.remote_ip,
-            IpProto::Icmp,
+            Ipv4Proto::Icmp,
             |_| {
                 let req = IcmpEchoRequest::new(0, 0);
                 let req_body = &[1, 2, 3, 4];
@@ -1415,7 +1416,7 @@ mod tests {
         ip::send_ipv4_packet(
             net.context("alice"),
             DUMMY_CONFIG_V4.remote_ip,
-            IpProto::Icmp,
+            Ipv4Proto::Icmp,
             |_| {
                 let req = IcmpEchoRequest::new(0, 0);
                 let req_body = &[1, 2, 3, 4];
@@ -1500,7 +1501,7 @@ mod tests {
                 src_ip.get(),
                 dst_ip.get(),
                 dst_ip,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 Buf::new(vec![1, 2, 3, 4], ..),
                 None,
             )

@@ -10,7 +10,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{Ipv4Addr, Ipv6Addr};
 
 use crate::ethernet::EtherType;
-use crate::ip::IpProto;
+use crate::ip::{IpProto, Ipv4Proto};
 use crate::testutil::{
     EthernetFrameMetadata, Ipv4PacketMetadata, Ipv6PacketMetadata, TcpSegmentMetadata, TestPacket,
     UdpPacketMetadata,
@@ -84,7 +84,7 @@ pub mod dns_request_v4 {
             fragment_offset: 0,
             id: 0x17f1,
             ttl: 64,
-            proto: IpProto::Udp,
+            proto: Ipv4Proto::Proto(IpProto::Udp),
             src_ip: Ipv4Addr::new([192, 168, 1, 15]),
             dst_ip: Ipv4Addr::new([192, 168, 1, 1]),
         },
@@ -221,7 +221,7 @@ pub mod tls_client_hello_v4 {
             more_fragments: false,
             fragment_offset: 0,
             ttl: 64,
-            proto: IpProto::Tcp,
+            proto: Ipv4Proto::Proto(IpProto::Tcp),
             src_ip: Ipv4Addr::new([192, 168, 1, 15]),
             dst_ip: Ipv4Addr::new([104, 237, 191, 1]),
         },

@@ -248,7 +248,7 @@ mod tests {
 
     use super::*;
     use crate::icmp::{IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, MessageBody};
-    use crate::ip::IpProto;
+    use crate::ip::Ipv6NextHeader;
     use crate::ipv6::ext_hdrs::{
         ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData, Ipv6ExtensionHeaderData,
     };
@@ -262,7 +262,7 @@ mod tests {
         dst_ip: Ipv6Addr,
         icmp: &IcmpPacket<Ipv6, B, M>,
     ) -> Vec<u8> {
-        let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6);
+        let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, Ipv6NextHeader::Icmpv6);
         let with_options = Ipv6PacketBuilderWithHbhOptions::new(
             ip,
             &[HopByHopOption {
@@ -313,7 +313,7 @@ mod tests {
         group_addr: M::GroupAddr,
         max_resp_delay: M::MaxRespDelay,
     ) -> Vec<u8> {
-        let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, IpProto::Icmpv6);
+        let ip = Ipv6PacketBuilder::new(src_ip, dst_ip, 1, Ipv6NextHeader::Icmpv6);
         let with_options = Ipv6PacketBuilderWithHbhOptions::new(
             ip,
             &[HopByHopOption {

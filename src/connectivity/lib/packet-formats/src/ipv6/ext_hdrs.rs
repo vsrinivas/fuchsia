@@ -17,7 +17,7 @@ use packet::records::{
 };
 use packet::BufferView;
 
-use crate::ip::{IpProto, Ipv6ExtHdrType};
+use crate::ip::{IpProto, Ipv6ExtHdrType, Ipv6NextHeader};
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
@@ -1073,11 +1073,12 @@ pub(super) fn is_valid_next_header(next_header: u8, for_fixed_header: bool) -> b
 /// Make sure a Next Header is a valid upper layer protocol in an IPv6 packet. Note,
 /// we intentionally are not allowing ICMP(v4) since we are working on IPv6 packets.
 pub(super) fn is_valid_next_header_upper_layer(next_header: u8) -> bool {
-    match IpProto::from(next_header) {
-        IpProto::Igmp | IpProto::Tcp | IpProto::Udp | IpProto::Icmpv6 | IpProto::NoNextHeader => {
-            true
-        }
-        _ => false,
+    match Ipv6NextHeader::from(next_header) {
+        Ipv6NextHeader::Proto(IpProto::Tcp)
+        | Ipv6NextHeader::Proto(IpProto::Udp)
+        | Ipv6NextHeader::Icmpv6
+        | Ipv6NextHeader::NoNextHeader => true,
+        Ipv6NextHeader::Other(_) => false,
     }
 }
 
@@ -1122,18 +1123,21 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use packet::records::{AlignedRecordsSerializer, Records, RecordsSerializerImpl};
+
+    use crate::ip::{IpProto, Ipv4Proto};
+
+    use super::*;
 
     #[test]
     fn test_is_valid_next_header_upper_layer() {
-        // Make sure upper layer protocols like tcp is valid
+        // Make sure upper layer protocols like TCP are valid
         assert!(is_valid_next_header_upper_layer(IpProto::Tcp.into()));
         assert!(is_valid_next_header_upper_layer(IpProto::Tcp.into()));
 
         // Make sure upper layer protocol ICMP(v4) is not valid
-        assert!(!is_valid_next_header_upper_layer(IpProto::Icmp.into()));
-        assert!(!is_valid_next_header_upper_layer(IpProto::Icmp.into()));
+        assert!(!is_valid_next_header_upper_layer(Ipv4Proto::Icmp.into()));
+        assert!(!is_valid_next_header_upper_layer(Ipv4Proto::Icmp.into()));
 
         // Make sure any other value is not valid.
         // Note, if 255 becomes a valid value, we should fix this test
@@ -1153,13 +1157,13 @@ mod tests {
         assert!(is_valid_next_header(Ipv6ExtHdrType::Routing.into(), true));
         assert!(is_valid_next_header(Ipv6ExtHdrType::Routing.into(), false));
 
-        // Make sure upper layer protocols like tcp can be in any Next Header
+        // Make sure upper layer protocols like TCP can be in any Next Header
         assert!(is_valid_next_header(IpProto::Tcp.into(), true));
         assert!(is_valid_next_header(IpProto::Tcp.into(), false));
 
         // Make sure upper layer protocol ICMP(v4) cannot be in any Next Header
-        assert!(!is_valid_next_header(IpProto::Icmp.into(), true));
-        assert!(!is_valid_next_header(IpProto::Icmp.into(), false));
+        assert!(!is_valid_next_header(Ipv4Proto::Icmp.into(), true));
+        assert!(!is_valid_next_header(Ipv4Proto::Icmp.into(), false));
 
         // Make sure any other value is not valid.
         // Note, if 255 becomes a valid value, we should fix this test
@@ -1779,7 +1783,7 @@ mod tests {
     #[test]
     fn test_no_next_header_ext_hdr() {
         // Test parsing of just a single NoNextHeader Extension Header.
-        let context = Ipv6ExtensionHeaderParsingContext::new(IpProto::NoNextHeader.into());
+        let context = Ipv6ExtensionHeaderParsingContext::new(Ipv6NextHeader::NoNextHeader.into());
         #[rustfmt::skip]
         let buffer = [0, 0, 0, 0,];
         let ext_hdrs =

@@ -79,7 +79,7 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<UdpPacketRaw<B>, UdpParseArgs<A>> for U
             let checksum = compute_transport_checksum_parts(
                 args.src_ip,
                 args.dst_ip,
-                IpProto::Udp,
+                IpProto::Udp.into(),
                 parts.iter(),
             )
             .ok_or_else(debug_err_fn!(ParseError::Format, "packet too large"))?;
@@ -376,14 +376,18 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
             checksum: [0, 0],
         }).expect("too few bytes for UDP header");
 
-        let mut checksum =
-            compute_transport_checksum_serialize(self.src_ip, self.dst_ip, IpProto::Udp, buffer)
-                .unwrap_or_else(|| {
-                    panic!(
+        let mut checksum = compute_transport_checksum_serialize(
+            self.src_ip,
+            self.dst_ip,
+            IpProto::Udp.into(),
+            buffer,
+        )
+        .unwrap_or_else(|| {
+            panic!(
                 "total UDP packet length of {} bytes overflows length field of pseudo-header",
                 total_len
             )
-                });
+        });
         if checksum == [0, 0] {
             checksum = [0xFF, 0xFF];
         }

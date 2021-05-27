@@ -22,7 +22,7 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::icmp::Icmpv6ParameterProblemCode;
-use crate::ip::{IpProto, Ipv6ExtHdrType};
+use crate::ip::{Ipv6ExtHdrType, Ipv6NextHeader};
 use crate::ipv6::ext_hdrs::{HopByHopOption, HopByHopOptionData, HopByHopOptionsImpl};
 use crate::U16;
 
@@ -245,9 +245,9 @@ pub trait Ipv6Header {
 
     /// The Next Header.
     ///
-    /// `next_header` returns the `IpProto` from the next header field.
-    fn next_header(&self) -> IpProto {
-        IpProto::from(self.get_fixed_header().next_hdr)
+    /// `next_header` returns the `Ipv6NextHeader` from the next header field.
+    fn next_header(&self) -> Ipv6NextHeader {
+        Ipv6NextHeader::from(self.get_fixed_header().next_hdr)
     }
 
     /// The source IP address.
@@ -270,7 +270,7 @@ pub struct Ipv6Packet<B> {
     fixed_hdr: LayoutVerified<B, FixedHeader>,
     extension_hdrs: Records<B, Ipv6ExtensionHeaderImpl>,
     body: B,
-    proto: IpProto,
+    proto: Ipv6NextHeader,
 }
 
 impl<B: ByteSlice> Ipv6Header for Ipv6Packet<B> {
@@ -329,7 +329,7 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
 
         // If extension headers parse sucessfully, then proto MUST be available,
         // in the raw form AND that it's a valid next header for upper layers.
-        let proto = raw.proto.expect("Unable to retrieve IpProto from raw");
+        let proto = raw.proto.expect("Unable to retrieve Ipv6NextHeader from raw");
         debug_assert!(is_valid_next_header_upper_layer(proto.into()));
 
         let body = match raw.body {
@@ -393,8 +393,8 @@ impl<B: ByteSlice> Ipv6Packet<B> {
     ///
     /// This is found in the fixed header's Next Header if there are no extension
     /// headers, or the Next Header value in the last extension header if there are.
-    /// This also  uses the same codes, encoded by the Rust type `IpProto`.
-    pub fn proto(&self) -> IpProto {
+    /// This also  uses the same codes, encoded by the Rust type `Ipv6NextHeader`.
+    pub fn proto(&self) -> Ipv6NextHeader {
         self.proto
     }
 
@@ -585,9 +585,9 @@ pub struct Ipv6PacketRaw<B> {
     /// were present otherwise.
     body: Result<MaybeParsed<B, B>, UndefinedBodyBoundsError>,
     /// If extension headers are successfully parsed, the last "next header"
-    /// value is stored in `proto` as `Some(IpProto)`. Otherwise, `proto` will
+    /// value is stored in `proto` as `Some(Ipv6NextHeader)`. Otherwise, `proto` will
     /// be `None`.
-    proto: Option<IpProto>,
+    proto: Option<Ipv6NextHeader>,
 }
 
 impl<B: ByteSlice> Ipv6Header for Ipv6PacketRaw<B> {
@@ -636,7 +636,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
             // next header that is meant for the upper layer. The assertion
             // below enforces that contract.
             assert!(is_valid_next_header_upper_layer(extension_hdr_context.next_header));
-            let proto = Some(IpProto::from(extension_hdr_context.next_header));
+            let proto = Some(Ipv6NextHeader::from(extension_hdr_context.next_header));
             let body = MaybeParsed::new_with_min_len(
                 buffer.into_rest(),
                 pl_len.saturating_sub(extension_hdrs.len()),
@@ -690,7 +690,7 @@ impl Ipv6PacketBuilder {
         src_ip: S,
         dst_ip: D,
         hop_limit: u8,
-        next_hdr: IpProto,
+        next_hdr: Ipv6NextHeader,
     ) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: 0,
@@ -913,11 +913,12 @@ mod tests {
 
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
 
+    use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
+    use crate::ip::{IpProto, Ipv4Proto, Ipv6ExtHdrType};
+    use crate::testutil::*;
+
     use super::ext_hdrs::*;
     use super::*;
-    use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
-    use crate::ip::Ipv6ExtHdrType;
-    use crate::testutil::*;
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
@@ -991,7 +992,7 @@ mod tests {
         assert_eq!(packet.flowlabel(), 0x77);
         assert_eq!(packet.hop_limit(), 64);
         assert_eq!(packet.fixed_hdr.next_hdr, IpProto::Tcp.into());
-        assert_eq!(packet.proto(), IpProto::Tcp);
+        assert_eq!(packet.proto(), IpProto::Tcp.into());
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), []);
@@ -1045,7 +1046,7 @@ mod tests {
         assert_eq!(packet.flowlabel(), 0x77);
         assert_eq!(packet.hop_limit(), 64);
         assert_eq!(packet.fixed_hdr.next_hdr, Ipv6ExtHdrType::HopByHopOptions.into());
-        assert_eq!(packet.proto(), IpProto::Tcp);
+        assert_eq!(packet.proto(), IpProto::Tcp.into());
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), [1, 2, 3, 4, 5]);
@@ -1080,7 +1081,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
             // HopByHop Options Extension Header w/ NoNextHeader as the next header
-            IpProto::NoNextHeader.into(), // Next Header
+            Ipv6NextHeader::NoNextHeader.into(), // Next Header
             0,                       // Hdr Ext Len (In 8-octet units, not including first 8 octets)
             0,                       // Pad1
             1, 0,                    // Pad2
@@ -1101,14 +1102,14 @@ mod tests {
         assert_eq!(packet.flowlabel(), 0x77);
         assert_eq!(packet.hop_limit(), 64);
         assert_eq!(packet.fixed_hdr.next_hdr, Ipv6ExtHdrType::HopByHopOptions.into());
-        assert_eq!(packet.proto(), IpProto::NoNextHeader);
+        assert_eq!(packet.proto(), Ipv6NextHeader::NoNextHeader);
         assert_eq!(packet.src_ip(), DEFAULT_SRC_IP);
         assert_eq!(packet.dst_ip(), DEFAULT_DST_IP);
         assert_eq!(packet.body(), [1, 2, 3, 4, 5]);
         let ext_hdrs: Vec<Ipv6ExtensionHeader<'_>> = packet.iter_extension_hdrs().collect();
         assert_eq!(ext_hdrs.len(), 1);
         // Check first extension header (hop-by-hop options)
-        assert_eq!(ext_hdrs[0].next_header, IpProto::NoNextHeader.into());
+        assert_eq!(ext_hdrs[0].next_header, Ipv6NextHeader::NoNextHeader.into());
         if let Ipv6ExtensionHeaderData::HopByHopOptions { options } = ext_hdrs[0].data() {
             // Everything should have been a NOP/ignore
             assert_eq!(options.iter().count(), 0);
@@ -1153,7 +1154,7 @@ mod tests {
 
         // Use ICMP(v4) as next header.
         let mut fixed_hdr = new_fixed_hdr();
-        fixed_hdr.next_hdr = IpProto::Icmp.into();
+        fixed_hdr.next_hdr = Ipv4Proto::Icmp.into();
         assert_eq!(
             (&fixed_hdr_to_bytes(fixed_hdr)[..]).parse::<Ipv6Packet<_>>().unwrap_err(),
             IpParseError::ParameterProblem {
@@ -1307,13 +1308,13 @@ mod tests {
             *partial.body.as_ref().unwrap().as_ref().unwrap_incomplete(),
             &buf[IPV6_FIXED_HDR_LEN..]
         );
-        assert_eq!(partial.proto.unwrap(), IpProto::Tcp);
+        assert_eq!(partial.proto.unwrap(), IpProto::Tcp.into());
         assert!(Ipv6Packet::try_from_raw(partial).is_err());
     }
 
     // Return a stock Ipv6PacketBuilder with reasonable default values.
     fn new_builder() -> Ipv6PacketBuilder {
-        Ipv6PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp)
+        Ipv6PacketBuilder::new(DEFAULT_SRC_IP, DEFAULT_DST_IP, 64, IpProto::Tcp.into())
     }
 
     #[test]

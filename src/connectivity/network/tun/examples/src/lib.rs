@@ -391,7 +391,7 @@ mod helpers {
         arp::{ArpOp, ArpPacket, ArpPacketBuilder},
         ethernet::{EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck},
         icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode, Icmpv4Packet},
-        ip::IpProto,
+        ip::Ipv4Proto,
         ipv4::{Ipv4Header as _, Ipv4Packet, Ipv4PacketBuilder},
     };
 
@@ -449,7 +449,7 @@ mod helpers {
                 IcmpUnusedCode,
                 IcmpEchoRequest::new(ICMP_ID, ICMP_SEQNUM),
             ))
-            .encapsulate(Ipv4PacketBuilder::new(bob_ip, alice_ip, 1, IpProto::Icmp))
+            .encapsulate(Ipv4PacketBuilder::new(bob_ip, alice_ip, 1, Ipv4Proto::Icmp))
             .serialize_vec_outer()
             .expect("serialization failed")
             .as_ref()
@@ -532,7 +532,7 @@ mod helpers {
     ) -> Result<Option<(fidl_fuchsia_net::IpAddress, fidl_fuchsia_net::IpAddress)>, Error> {
         let mut bv = data;
         let ipv4 = Ipv4Packet::parse(&mut bv, ()).context("failed to parse IPv4")?;
-        if ipv4.proto() != IpProto::Icmp {
+        if ipv4.proto() != Ipv4Proto::Icmp {
             return Ok(None);
         }
         let src_ip = ipv4.src_ip();

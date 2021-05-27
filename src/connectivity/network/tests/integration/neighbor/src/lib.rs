@@ -381,7 +381,7 @@ fn extract_frame_metadata(data: Vec<u8>) -> Result<FrameMetadata> {
         arp::{ArpOp, ArpPacket},
         ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck},
         icmp::{ndp::NdpPacket, IcmpParseArgs, Icmpv6Packet},
-        ip::{IpPacket, IpProto},
+        ip::{IpPacket, IpProto, Ipv6NextHeader},
         ipv4::Ipv4Packet,
         ipv6::Ipv6Packet,
     };
@@ -395,7 +395,7 @@ fn extract_frame_metadata(data: Vec<u8>) -> Result<FrameMetadata> {
     {
         EtherType::Ipv4 => {
             let ipv4 = Ipv4Packet::parse(&mut bv, ()).context("failed to parse IPv4 packet")?;
-            if ipv4.proto() != IpProto::Udp {
+            if ipv4.proto() != IpProto::Udp.into() {
                 return Ok(FrameMetadata::Other);
             }
             Ok(FrameMetadata::Udp(fidl_fuchsia_net::IpAddress::Ipv4(
@@ -421,7 +421,7 @@ fn extract_frame_metadata(data: Vec<u8>) -> Result<FrameMetadata> {
         EtherType::Ipv6 => {
             let ipv6 = Ipv6Packet::parse(&mut bv, ()).context("failed to parse IPv6 packet")?;
             match ipv6.proto() {
-                IpProto::Icmpv6 => {
+                Ipv6NextHeader::Icmpv6 => {
                     // NB: filtering out packets with an unspecified source address will
                     // filter out DAD-related solicitations.
                     if !ipv6.src_ip().is_specified() {
@@ -441,9 +441,11 @@ fn extract_frame_metadata(data: Vec<u8>) -> Result<FrameMetadata> {
                         _ => Ok(FrameMetadata::Other),
                     }
                 }
-                IpProto::Udp => Ok(FrameMetadata::Udp(fidl_fuchsia_net::IpAddress::Ipv6(
-                    fidl_fuchsia_net::Ipv6Address { addr: ipv6.dst_ip().ipv6_bytes() },
-                ))),
+                Ipv6NextHeader::Proto(IpProto::Udp) => {
+                    Ok(FrameMetadata::Udp(fidl_fuchsia_net::IpAddress::Ipv6(
+                        fidl_fuchsia_net::Ipv6Address { addr: ipv6.dst_ip().ipv6_bytes() },
+                    )))
+                }
                 _ => Ok(FrameMetadata::Other),
             }
         }
