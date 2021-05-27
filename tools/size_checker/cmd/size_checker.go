@@ -669,7 +669,7 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	for name, cs := range sizes {
 		simpleSizes[name] = cs.Size
 		simpleSizes[name+budgetSuffix] = cs.Budget
-		simpleSizes[name+ownerSuffix] = "http://go/fuchsia-size-stats/single_component/?f=component:in" + url.QueryEscape(name)
+		simpleSizes[name+ownerSuffix] = "http://go/fuchsia-size-stats/single_component/?f=component:in:" + url.QueryEscape(name)
 	}
 	if err := encoder.Encode(&simpleSizes); err != nil {
 		log.Fatal("failed to encode simpleSizes: ", err)
