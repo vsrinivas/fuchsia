@@ -8,18 +8,14 @@
 # metadata entries in //out/default/tool_paths.json for Dart binaries.
 
 # Build the tool, but only if necessary.
-function _build-if-necessary {
+function _build {
   local target="$1"
   local executable="$2"
 
-  # It is only necessary to rebuild if the binary isn't present. It is rebuilt
-  # as part of an `fx build` so always up-to-date.
-  if [[ ! -f "${executable}" ]]; then
-    fx-info "Building required tool \"${target}\"..."
-    if ! fx-command-run build "${target}"; then
-      fx-error "Could not compile ${executable##*/}"
-      return 1
-    fi
+  fx-info "Building required tool \"${target}\"..."
+  if ! fx-command-run build "${target}"; then
+    fx-error "Could not compile ${executable##*/}"
+    exit 1
   fi
 }
 
@@ -33,7 +29,18 @@ function run-dart-tool {
   local executable="${HOST_OUT_DIR}/dart-tools/${tool_name}"
   local tool_build_target="${HOST_OUT_DIR##*/}/dart-tools/${tool_name}"
 
-  _build-if-necessary "${tool_build_target}" "${executable}"
+  # Rebuild if the binary isn't present. Generally, the Dart executable is
+  # rebuilt as part of an `fx build` so always up-to-date.
+  if [[ ! -f "${executable}" ]]; then
+    _build "${tool_build_target}" "${executable}"
+  fi
 
-  exec "${executable}" "$@"
+  "${executable}" "$@"
+  if [[ $? == 253 ]]; then
+    # This error typically occurs when files that the executable depends on
+    # have been updated, but the executable itself has not. Rebuilding the
+    # command.
+    _build "${tool_build_target}" "${executable}"
+    "${executable}" "$@"
+  fi
 }
