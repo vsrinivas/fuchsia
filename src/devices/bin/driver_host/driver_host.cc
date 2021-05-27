@@ -74,24 +74,23 @@ fuchsia_device_manager::wire::DeviceProperty convert_device_prop(const zx_device
 }
 
 fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
-    const zx_device_str_prop_t& prop) {
+    const zx_device_str_prop_t& prop, fidl::AnyAllocator& allocator) {
+  ZX_ASSERT(property_value_type_valid(prop.property_value.value_type));
+
   auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
-      .key = ::fidl::StringView::FromExternal(prop.key),
+      .key = fidl::StringView(allocator, prop.key),
   };
 
-  property_value_type_valid(prop.property_value.value_type);
   if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_INT) {
-    auto property_val = prop.property_value.value.int_val;
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithIntValue(
-        ::fidl::ObjectView<uint32_t>::FromExternal(&property_val));
+        fidl::ObjectView<uint32_t>(allocator, prop.property_value.value.int_val));
   } else if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
-    auto property_val = fidl::StringView::FromExternal(prop.property_value.value.str_val);
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
-        ::fidl::ObjectView<::fidl::StringView>::FromExternal(&property_val));
+        fidl::ObjectView<fidl::StringView>(
+            allocator, fidl::StringView(allocator, prop.property_value.value.str_val)));
   } else if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_BOOL) {
-    auto property_val = prop.property_value.value.bool_val;
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(
-        ::fidl::ObjectView<bool>::FromExternal(&property_val));
+        fidl::ObjectView<bool>(allocator, prop.property_value.value.bool_val));
   }
 
   return str_property;
@@ -261,13 +260,13 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     props_list.push_back(convert_device_prop(props[i]));
   }
 
+  fidl::FidlAllocator allocator;
   std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props_list = {};
   for (size_t i = 0; i < str_prop_count; i++) {
     if (!property_value_type_valid(str_props[i].property_value.value_type)) {
       return ZX_ERR_INVALID_ARGS;
     }
-
-    str_props_list.push_back(convert_device_str_prop(str_props[i]));
+    str_props_list.push_back(convert_device_str_prop(str_props[i], allocator));
   }
 
   const auto& rpc = parent->coordinator_client;
