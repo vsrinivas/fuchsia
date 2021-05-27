@@ -584,8 +584,8 @@ impl<'a> TestEndpoint<'a> {
     /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
     /// `realm`, returning a [`TestInterface`] on success.
     pub async fn into_interface_in_realm(self, realm: &TestRealm<'a>) -> Result<TestInterface<'a>> {
-        let stack = realm.connect_to_service::<net_stack::StackMarker>()?;
-        let netstack = realm.connect_to_service::<netstack::NetstackMarker>()?;
+        let stack = realm.connect_to_service::<fnet_stack::StackMarker>()?;
+        let netstack = realm.connect_to_service::<fnetstack::NetstackMarker>()?;
         let id = self
             .add_to_stack(&stack)
             .await

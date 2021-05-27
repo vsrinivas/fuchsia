@@ -8,8 +8,17 @@ import("//build/config.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":compile",
     ":netstack-integration-tests",
     "ip_forward:netemul-ip-forward-tests",
+  ]
+}
+
+group("compile") {
+  testonly = true
+  deps = [
+    "common:netstack_testing_common",
+    "common-v1:netstack_testing_common",
   ]
 }
 
