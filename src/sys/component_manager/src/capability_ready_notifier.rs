@@ -14,12 +14,12 @@ use {
             Event, EventError, EventErrorPayload, EventPayload, EventType, Hook, HooksRegistration,
         },
         model::Model,
-        rights::{Rights, WRITE_RIGHTS},
+        rights::Rights,
     },
     async_trait::async_trait,
     cm_rust::{
         CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeProtocolDecl, ExposeSource, ExposeTarget,
+        ExposeSource, ExposeTarget,
     },
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeEvent, NodeMarker, NodeProxy},
@@ -165,26 +165,7 @@ impl CapabilityReadyNotifier {
                     self.create_event(
                         &target,
                         outgoing_dir_result.as_ref(),
-                        fio::MODE_TYPE_DIRECTORY,
                         Rights::from(rights),
-                        source_path,
-                        target_name,
-                    )
-                    .await
-                }
-                ExposeDecl::Protocol(ExposeProtocolDecl { source_name, target_name, .. }) => {
-                    let source_path = {
-                        if let Some(protocol_decl) = decl.find_protocol_source(source_name) {
-                            &protocol_decl.source_path
-                        } else {
-                            panic!("Missing protocol declaration for expose: {:?}", decl);
-                        }
-                    };
-                    self.create_event(
-                        &target,
-                        outgoing_dir_result.as_ref(),
-                        fio::MODE_TYPE_SERVICE,
-                        Rights::from(*WRITE_RIGHTS),
                         source_path,
                         target_name,
                     )
@@ -206,7 +187,6 @@ impl CapabilityReadyNotifier {
         &self,
         target: &Arc<ComponentInstance>,
         outgoing_dir_result: Result<&DirectoryProxy, &ModelError>,
-        mode: u32,
         rights: Rights,
         source_path: &CapabilityPath,
         target_name: &CapabilityName,
@@ -224,7 +204,7 @@ impl CapabilityReadyNotifier {
             outgoing_dir
                 .open(
                     rights.into_legacy() | fio::OPEN_FLAG_DESCRIBE,
-                    mode,
+                    fio::MODE_TYPE_DIRECTORY,
                     &canonicalized_path,
                     ServerEnd::new(server_end.into_channel()),
                 )
@@ -294,9 +274,6 @@ fn filter_matching_exposes<'a>(
         .filter(|expose_decl| {
             match expose_decl {
                 ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source, target, target_name, ..
-                })
-                | ExposeDecl::Protocol(ExposeProtocolDecl {
                     source, target, target_name, ..
                 }) => {
                     if let Some(filter) = filter {
