@@ -505,20 +505,35 @@ var tokenizerTestCases = []tokenizerTestCase{
 			{Kind: EOF, Content: ""},
 		},
 	},
+	{
+		input: "text <!--\ncomment\n-->",
+		tokens: []expectedToken{
+			{Kind: Text, Content: "text"},
+			{Kind: Space, Content: " "},
+			{Kind: HTMLComment, Content: "<!--\ncomment\n-->"},
+			{Kind: EOF, Content: ""},
+		},
+	},
+	{
+		input: "text {# <!--weird--> jinja comment #}\ntext <!-- {#weird#} HTML comment -->",
+		tokens: []expectedToken{
+			{Kind: Text, Content: "text"},
+			{Kind: Space, Content: " "},
+			{Kind: JinjaComment, Content: "{# <!--weird--> jinja comment #}"},
+			{Kind: Newline, Content: "\n"},
+			{Kind: Text, Content: "text"},
+			{Kind: Space, Content: " "},
+			{Kind: HTMLComment, Content: "<!-- {#weird#} HTML comment -->"},
+			{Kind: EOF, Content: ""},
+		},
+	},
 
 	// codebase examples
 
 	{
 		input: "<!-- xref -->\n\n[`zx_vmo_create()`]: vmo_create.md\n",
 		tokens: []expectedToken{
-			// TODO(fxbug.dev/62964): need to recognize HTML elements, and in
-			// particular comments
-			{Kind: Text, Content: "<!--"},
-			{Kind: Space, Content: " "},
-			{Kind: Text, Content: "xref"},
-			{Kind: Space, Content: " "},
-			{Kind: Text, Content: "-->"},
-
+			{Kind: HTMLComment, Content: "<!-- xref -->"},
 			{Kind: Newline, Content: "\n"},
 			{Kind: Newline, Content: "\n"},
 			{Kind: Link, Content: "[`zx_vmo_create()`]"},

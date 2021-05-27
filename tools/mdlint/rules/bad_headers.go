@@ -88,7 +88,7 @@ func (rule *badHeaders) OnNext(tok core.Token) {
 				return
 			}
 			rule.headerDepth = curr_depth
-		case core.JinjaStatement, core.JinjaComment, core.Newline:
+		case core.JinjaStatement, core.JinjaComment, core.HTMLComment, core.Newline:
 			return
 		default:
 			// No tokens should exist before the initial header

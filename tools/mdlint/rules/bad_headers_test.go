@@ -137,6 +137,14 @@ func TestBadHeaders_initialHeaderAtTopOfDoc(t *testing.T) {
 «This» is text before a header, and it is unacceptable.
 {# This comment is acceptable #}
 # Header`,
+			"h1_preceded_by_html_comment.md": `
+<!-- This is an HTML comment, which is allowed to precede H1 -->
+# Header`,
+			"h1_preceded_by_html_comment_jinja_and_text.md": `
+<!-- This HTML comment is acceptable -->
+{# This jinja comment is acceptable #}
+«This» is text before a header, and it is unacceptable.
+# Header`,
 		},
 	}.runOverTokens(t, newBadHeaders)
 }

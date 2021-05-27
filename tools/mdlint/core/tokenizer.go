@@ -21,8 +21,8 @@ const (
 
 	Anchor
 	CodeBlock
-	FencedCodeBlock
 	EOF
+	FencedCodeBlock
 	Header
 	Link
 	List
@@ -30,6 +30,8 @@ const (
 	Space
 	Text
 	URL
+
+	HTMLComment
 
 	// See https://jinja.palletsprojects.com/en/2.11.x/templates/
 	JinjaStatement
@@ -40,8 +42,8 @@ const (
 var tokenKindStrings = map[TokenKind]string{
 	Anchor:          "Anchor",
 	CodeBlock:       "CodeBlock",
-	FencedCodeBlock: "FencedCodeBlock",
 	EOF:             "EOF",
+	FencedCodeBlock: "FencedCodeBlock",
 	Header:          "Header",
 	Link:            "Link",
 	List:            "List",
@@ -49,6 +51,7 @@ var tokenKindStrings = map[TokenKind]string{
 	Space:           "Space",
 	Text:            "Text",
 	URL:             "URL",
+	HTMLComment:     "HTMLComment",
 	JinjaStatement:  "JinjaStatement",
 	JinjaExpression: "JinjaExpression",
 	JinjaComment:    "JinjaComment",
@@ -350,6 +353,18 @@ func (t *tokenizer) next() (Token, error) {
 					tok.Kind = Anchor
 				}
 				return tok, nil
+			}
+		}
+		if r == '<' {
+			peek, err := t.doc.peekRune(3)
+			if err != nil {
+				return Token{}, err
+			}
+			if peek[0] == '!' && peek[1] == '-' && peek[2] == '-' {
+				if err := t.readUntilEscapeSeq('-', '-', '>'); err != nil {
+					return Token{}, err
+				}
+				return t.newToken(HTMLComment), nil
 			}
 		}
 		// TODO(fxbug.dev/62964): We need to handle more than three backticks,
