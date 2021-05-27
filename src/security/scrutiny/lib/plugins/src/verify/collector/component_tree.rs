@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys2,
     fuchsia_url::boot_url::BootUrl,
     lazy_static::lazy_static,
-    log::{info, warn},
+    log::{error, info, warn},
     routing::config::RuntimeConfig,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
@@ -51,9 +51,19 @@ impl V2ComponentTreeDataCollector {
             if let ManifestData::Version2(decl_base64) = &manifest.manifest {
                 match urls.remove(&manifest.component_id) {
                     Some(url) => {
-                        let decl: fsys2::ComponentDecl =
-                            decode_persistent(&base64::decode(&decl_base64)?)?;
-                        decls.insert(url, decl.fidl_into_native());
+                        let result: Result<fsys2::ComponentDecl, fidl::Error> =
+                            decode_persistent(&base64::decode(&decl_base64)?);
+                        match result {
+                            Ok(decl) => {
+                                decls.insert(url, decl.fidl_into_native());
+                            }
+                            Err(err) => {
+                                error!(
+                                    "Manifest for component: {} is corrupted. Error: {}",
+                                    url, err
+                                );
+                            }
+                        }
                     }
                     None => {
                         return Err(anyhow!(
