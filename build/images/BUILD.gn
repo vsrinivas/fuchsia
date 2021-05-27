@@ -2320,7 +2320,7 @@ action("update.manifest") {
 }
 
 pm_build("update.meta") {
-  visibility = [ "//build/images/*" ]
+  visibility = [ ":*" ]
   testonly = true
   manifest = ":update.manifest"
   package_name = "update"

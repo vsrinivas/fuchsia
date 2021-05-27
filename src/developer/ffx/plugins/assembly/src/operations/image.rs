@@ -21,7 +21,7 @@ use vbmeta::Salt;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { product, board, outdir, gendir, full: _ } = args;
+    let ImageArgs { product, board, outdir, gendir, full } = args;
 
     info!("Loading configuration files.");
     info!("  product:  {}", product.display());
@@ -48,6 +48,11 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         info!("Skipping vbmeta creation");
         None
     };
+
+    // Bail out here for now, unless asked to do otherwise.
+    if !full {
+        return Ok(());
+    }
 
     info!("Creating the update package");
     let update_package: UpdatePackage = construct_update(
@@ -281,10 +286,7 @@ fn construct_update(
 
     if let Some(recovery_config) = &board.recovery {
         update_pkg_builder.add_file(&recovery_config.zbi, "zedboot")?;
-
-        if let Some(recovery_vbmeta) = &recovery_config.vbmeta {
-            update_pkg_builder.add_file(recovery_vbmeta, "recovery.vbmeta")?;
-        }
+        update_pkg_builder.add_file(&recovery_config.vbmeta, "recovery.vbmeta")?;
     }
 
     // Add the bootloaders.

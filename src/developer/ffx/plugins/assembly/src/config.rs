@@ -227,7 +227,7 @@ pub struct RecoveryConfig {
     pub zbi: PathBuf,
 
     /// The path on the host to the prebuilt recovery VBMeta.
-    pub vbmeta: Option<PathBuf>,
+    pub vbmeta: PathBuf,
 }
 
 pub fn from_reader<R, T>(reader: &mut R) -> Result<T>
