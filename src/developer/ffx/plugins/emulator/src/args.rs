@@ -227,12 +227,16 @@ fn default_window_width() -> usize {
     1280
 }
 
-fn default_port() -> String {
-    "8080".to_string()
+fn default_port() -> usize {
+    8080
 }
 
 fn default_display() -> String {
     "xvfb-run".to_string()
+}
+
+fn default_dir() -> String {
+    "~/fuchsia".to_string()
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -259,8 +263,8 @@ pub struct RemoteCommand {
     pub host: String,
 
     /// defaults to ~/fuchsia, the path to the FUCHSIA_DIR on <host>
-    #[argh(option)]
-    pub dir: Option<String>,
+    #[argh(option, default = "default_dir()")]
+    pub dir: String,
 
     /// do not build, just pull artifacts already present
     #[argh(switch)]
@@ -288,7 +292,7 @@ pub struct RemoteCommand {
 
     /// port used on local machine to connect with remote emulator over HTTP (default: 8080)
     #[argh(option, default = "default_port()")]
-    pub port: String,
+    pub port: usize,
 
     /// arguments to pass to the emulator
     #[argh(positional)]

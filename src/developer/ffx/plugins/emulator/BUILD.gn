@@ -18,7 +18,8 @@ ffx_plugin("ffx_emulator") {
     "src/portpicker.rs",
     "src/tools.rs",
     "src/types.rs",
-    "src/vdl_files.rs",
+    "src/vdl_files/mod.rs",
+    "src/vdl_files/remote.rs",
     "src/vdl_proto_parser.rs",
   ]
   deps = [

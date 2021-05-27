@@ -10,7 +10,7 @@ use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
 use ffx_core::ffx_bail;
-use ffx_emulator_args::{KillCommand, RemoteCommand, StartCommand};
+use ffx_emulator_args::{KillCommand, StartCommand};
 use regex::Regex;
 use shared_child::SharedChild;
 use signal_hook;
@@ -25,6 +25,8 @@ use std::sync::Arc;
 use std::thread;
 use std::time;
 use tempfile::{Builder, TempDir};
+
+mod remote;
 
 /// Monitors a shared process for the interrupt signal. Only used for --monitor or --emu-only modes.
 ///
@@ -475,13 +477,13 @@ impl VDLFiles {
         }
         if start_command.nointeractive {
             println!(
-                    "{}",
-                    Yellow.paint(format!(
+                "{}",
+                Yellow.paint(format!(
                     "\nNOTE: For --noninteractive launcher artifacts need to be manually cleaned using the `kill` subcommand: \n\
                     In Fuchsia Repo: \"fx vdl kill --launched-proto {}\"\n\
                     In SDK: \"./fvdl --sdk kill --launched-proto {}\"", self.output_proto.display(), self.output_proto.display()
-                    ))
-                );
+                ))
+            );
         } else {
             // TODO(fxbug.dev/72190) Ensure we have a way for user to interact with emulator
             // once SSH support goes away.
@@ -606,10 +608,6 @@ impl VDLFiles {
                     .status()?;
             }
         }
-        Ok(())
-    }
-
-    pub fn remote_emulator(&self, _remote_command: &RemoteCommand) -> Result<()> {
         Ok(())
     }
 }
