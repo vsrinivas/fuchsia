@@ -97,13 +97,12 @@ void Logger::ConnectToLogger(
         logger_factory_.Unbind();
 
         if (status == fuchsia::metrics::Status::OK) {
-          FX_LOGS(INFO) << "Logger has been initialized";
           logger_reconnection_backoff_.Reset();
         } else if (status == fuchsia::metrics::Status::SHUT_DOWN) {
-          FX_LOGS(INFO) << "Stopping logging Cobalt events";
+          FX_LOGS(INFO) << "Stopping sending Cobalt events";
           logger_.Unbind();
         } else {
-          FX_LOGS(WARNING) << "Failed to set up Logger: " << StatusToString(status);
+          FX_LOGS(WARNING) << "Failed to set up Cobalt: " << StatusToString(status);
           logger_.Unbind();
           RetryConnectingToLogger();
         }
