@@ -65,7 +65,6 @@ bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_ctxt_switch;
 bool g_cpu_vulnerable_to_rsb_underflow;
 bool g_has_enhanced_ibrs;
-bool g_amd_retpoline;
 
 enum x86_hypervisor_list x86_hypervisor;
 bool g_hypervisor_has_pv_clock;
@@ -428,7 +427,6 @@ void x86_feature_debug(void) {
   print_property("enhanced_ibrs", g_has_enhanced_ibrs);
 #ifdef KERNEL_RETPOLINE
   print_property("retpoline");
-  print_property("amd_retpoline", g_amd_retpoline);
 #endif
 #ifdef X64_KERNEL_JCC_WORKAROUND
   print_property("jcc_fix");
