@@ -77,11 +77,18 @@ dep_labels = {
   if (uses_base_package) {
     fuchsia_zbi = "//build/images:fuchsia"
     fuchsia_zbi_manifest = "//build/images:fuchsia_unverified"
+
+    if (use_vbmeta) {
+      fuchsia_vbmeta = "//build/images:fuchsia.vbmeta"
+    }
   } else {
     fuchsia_zbi = "//build/images/bringup"
     fuchsia_zbi_manifest = fuchsia_zbi
+
+    if (use_vbmeta) {
+      fuchsia_vbmeta = "//build/images/bringup:bringup.vbmeta"
+    }
   }
-  fuchsia_vbmeta = "//build/images:fuchsia.vbmeta"
   fuchsia_update = "//build/images:update.meta"
 
   ####
@@ -151,6 +158,9 @@ files = {
   # ZBI output manifest
   zbi_manifest = "${target_out_dir}/gen/zbi.json"
 
+  # The vbmeta (if created)
+  vbmeta = "${target_out_dir}/fuchsia.vbmeta"
+
   #####
   # Files used for validation against external label outputs (temporary)
   #
@@ -174,13 +184,22 @@ files = {
   extracted_sysimg_meta_contents = "${extracted_sysimg_pkg}/meta/contents"
   extracted_sysimg_meta_package = "${extracted_sysimg_pkg}/meta/package"
 
-  # The zbi created by //build/images:fuchsia
   if (uses_base_package) {
+    # The zbi created by //build/images:fuchsia
     fuchsia_zbi = "${root_build_dir}/fuchsia.zbi"
     fuchsia_zbi_manifest = "${root_build_dir}/fuchsia_unverified.zbi.json"
+
+    # The vbmeta for fuchsia_zbi
+    fuchsia_vbmeta = "${root_build_dir}/fuchsia.vbmeta"
+    fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
   } else {
+    # The zbi created by //build/images/bringup
     fuchsia_zbi = "${root_build_dir}/bringup.zbi"
     fuchsia_zbi_manifest = "${fuchsia_zbi}.json"
+
+    # The vbmeta for bringup.
+    fuchsia_vbmeta = "${root_build_dir}/bringup.vbmeta"
+    fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
   }
 }
 
@@ -245,6 +264,11 @@ file_args = {
       rebase_path(files.extracted_sysimg_meta_package, root_build_dir)
 
   fuchsia_zbi = rebase_path(files.fuchsia_zbi, root_build_dir)
+
+  if (defined(files.fuchsia_vbmeta)) {
+    fuchsia_vbmeta = rebase_path(files.fuchsia_vbmeta, root_build_dir)
+    fuchsia_vbmeta_salt = rebase_path(files.fuchsia_vbmeta_salt, root_build_dir)
+  }
 }
 
 #####
@@ -517,6 +541,8 @@ action("create_config") {
 # This is all generated from GN args.  Some values are stubs
 #
 generated_file(labels.board_config) {
+  testonly = true
+  public_deps = []
   outputs = [ files.board_config ]
   output_conversion = "json"
   contents = {
@@ -528,17 +554,30 @@ generated_file(labels.board_config) {
       max_size = 0
       compression = zbi_compression
     }
-    vbmeta = {
-      partition = "vbmeta_a"
-      kernel_partition = "zircon"
-      key = "not/yet"
-      key_metadata = "not/yet"
+    if (use_vbmeta) {
+      vbmeta = {
+        partition = "vbmeta_a"
+        kernel_partition = "zircon"
+        key = rebase_path(avb_key, root_build_dir)
+        key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
+        additional_descriptor_files =
+            rebase_path(board_extra_vbmeta_descriptors, root_build_dir)
+
+        # TODO(aaronwood) - Remove when no longer matching against other impl.
+        salt = file_args.fuchsia_vbmeta_salt
+      }
     }
     fvm = {
       partition = "stub"
       slice_size = 0
       reserved_slices = 0
     }
+  }
+
+  # If vbmeta was used, and a salt file is defined, add the fuchsia vbmeta
+  # label to deps.
+  if (use_vbmeta) {
+    public_deps += [ dep_labels.fuchsia_vbmeta ]
   }
 }
 
@@ -594,6 +633,11 @@ ffx_action("images") {
     files.zbi,
     files.zbi_manifest,
   ]
+
+  if (use_vbmeta) {
+    inputs += [ files.fuchsia_vbmeta_salt ]
+    outputs += [ files.vbmeta ]
+  }
 }
 
 #####
@@ -664,6 +708,9 @@ group("output_validation_checks") {
     ":zbi_manifest_matches",
     ":zbi_matches",
   ]
+  if (use_vbmeta) {
+    deps += [ ":vbmeta_matches" ]
+  }
 }
 
 if (uses_base_package) {
@@ -758,4 +805,17 @@ verify_files_match("zbi_manifest_matches") {
   second = files.zbi_manifest
 
   display_text_diff_on_failure = true
+}
+
+if (use_vbmeta) {
+  verify_files_match("vbmeta_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      dep_labels.fuchsia_vbmeta,
+    ]
+
+    first = files.fuchsia_vbmeta
+    second = files.vbmeta
+  }
 }

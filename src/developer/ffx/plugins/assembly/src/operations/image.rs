@@ -44,16 +44,17 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     info!("Creating the ZBI");
     let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_merkle)?;
 
-    if !full {
-        return Ok(());
-    }
-
     let vbmeta_path = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
         Some(construct_vbmeta(&outdir, vbmeta_config, &zbi_path)?)
     } else {
         None
     };
+
+    // Bail out here for now, unless asked to do otherwise.
+    if !full {
+        return Ok(());
+    }
 
     info!("Creating the update package");
     let _update_pkg_path =
