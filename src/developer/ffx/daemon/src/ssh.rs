@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::constants::SSH_PRIV,
-    crate::target::TargetAddr,
     anyhow::{anyhow, Result},
     ffx_config::file,
+    std::net::SocketAddr,
     std::process::Command,
 };
 
@@ -21,11 +21,7 @@ static DEFAULT_SSH_OPTIONS: &'static [&str] = &[
     "-R 8084:localhost:8084",
 ];
 
-pub async fn build_ssh_command(
-    addrs: Vec<TargetAddr>,
-    ssh_port: Option<u16>,
-    command: Vec<&str>,
-) -> Result<Command> {
+pub async fn build_ssh_command(addr: SocketAddr, command: Vec<&str>) -> Result<Command> {
     if command.is_empty() {
         return Err(anyhow!("missing SSH command"));
     }
@@ -34,83 +30,40 @@ pub async fn build_ssh_command(
 
     let mut c = Command::new("ssh");
 
-    if let Some(p) = ssh_port {
-        c.arg("-p").arg(p.to_string());
-    }
+    let mut addr_str = format!("{}", addr);
+    let colon_port = addr_str.split_off(addr_str.rfind(':').expect("socket format includes port"));
+
+    c.arg("-p").arg(&colon_port[1..]);
 
     c.arg("-i").arg(key);
 
-    let addr = addrs.iter().next().ok_or(anyhow!("no IP's for chosen target"))?;
-
-    c.args(DEFAULT_SSH_OPTIONS).arg(format!("{}", addr)).args(&command);
+    c.args(DEFAULT_SSH_OPTIONS).arg(addr_str).args(&command);
 
     return Ok(c);
 }
 
 #[cfg(test)]
 mod test {
-    use {
-        super::build_ssh_command,
-        crate::target::TargetAddr,
-        serial_test::serial,
-        std::net::{IpAddr, Ipv4Addr},
-    };
+    use {super::*, serial_test::serial};
 
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
-    async fn test_empty_command_vec_produces_error() {
-        ffx_config::init_config_test().unwrap();
-        let result = build_ssh_command(Vec::new(), None, vec![]).await;
-        assert!(result.is_err(), "empty command vec should produce an error");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[serial]
-    async fn test_no_ips_produces_error() {
-        ffx_config::init_config_test().unwrap();
-        let result = build_ssh_command(Vec::new(), None, vec!["ls"]).await;
-        assert!(result.is_err(), "target with no IP's should produce an error");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[serial]
-    async fn test_ssh_default_port() {
+    async fn test_build_ssh_command() {
         ffx_config::init_config_test().unwrap();
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
         std::env::set_var("FUCHSIA_SSH_KEY", key_path);
 
-        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1));
-        let mut addrs = Vec::new();
-        addrs.push(TargetAddr::from((ip, 0)));
+        let addr = "192.168.0.1:22".parse().unwrap();
 
-        // Port falls back to config:
-        let result = build_ssh_command(addrs, None, vec!["ls"]).await.unwrap();
+        let result = build_ssh_command(addr, vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
-        let search_string = &format!("\"-i\" \"{}\"", key_path);
+        let search_string = &format!("\"-p\" \"22\" \"-i\" \"{}\"", key_path);
 
         assert!(dbgstr.contains(search_string), "`{}` not found in `{}`", search_string, dbgstr);
-        assert!(dbgstr.contains(&ip.to_string()), "{}", dbgstr);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[serial]
-    async fn test_ssh_with_target_configured_port() {
-        ffx_config::init_config_test().unwrap();
-        let key_path = std::env::current_exe().unwrap();
-        let key_path = key_path.to_str().take().unwrap();
-        std::env::set_var("FUCHSIA_SSH_KEY", key_path);
-
-        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1));
-        let mut addrs = Vec::new();
-        addrs.push(TargetAddr::from((ip, 0)));
-
-        // Port, if given, takes precedence:
-        let result = build_ssh_command(addrs, Some(456), vec!["ls"]).await.unwrap();
-        let dbgstr = format!("{:?}", result);
-
-        let search_string = &format!("\"-p\" \"456\" \"-i\" \"{}\"", key_path);
-        assert!(dbgstr.contains(search_string), "`{}` not found in `{}`", search_string, dbgstr);
-        assert!(dbgstr.contains(&ip.to_string()), "{}", dbgstr);
+        assert!(dbgstr.contains(&addr.ip().to_string()), "{}", dbgstr);
+        for option in DEFAULT_SSH_OPTIONS {
+            assert!(dbgstr.contains(option));
+        }
     }
 }
