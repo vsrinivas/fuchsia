@@ -14,8 +14,8 @@ use {
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
-    futures::StreamExt as _,
-    std::collections::HashSet,
+    futures::{stream, StreamExt as _},
+    std::{collections::HashSet, sync::Arc},
     thiserror::Error,
 };
 
@@ -157,6 +157,48 @@ impl Client {
             }
         }
     }
+
+    /// Determines which of candidate blobs exist and are readable in blobfs, returning the
+    /// set difference of candidates and readable.
+    pub async fn filter_to_missing_blobs(&self, candidates: &HashSet<Hash>) -> HashSet<Hash> {
+        // This heuristic was taken from pkgfs. We are not sure how useful it is or why it was
+        // added, however it is kept in out of an abundance of caution. We *suspect* the heuristic
+        // is a performance optimization. Without the heuristic, we would always have to open every
+        // candidate blob and see if it's readable, which may be expensive if there are many blobs.
+        //
+        // Note that if there are less than 20 blobs, we don't use the heuristic. This is because we
+        // assume there is a certain threshold of number of blobs in a package where it is faster to
+        // first do a readdir on blobfs to help rule out some blobs without having to open them. We
+        // assume this threshold is 20. The optimal threshold is likely different between pkg-cache
+        // and pkgfs, and, especially since this checks multiple blobs concurrently, we may not be
+        // getting any benefits from the heuristic anymore.
+        //
+        // If you wish to remove this heuristic or change the threshold, consider doing a trace on
+        // packages with varying numbers of blobs present/missing.
+        let all_known_blobs =
+            if candidates.len() > 20 { self.list_known_blobs().await.ok() } else { None };
+        let all_known_blobs = Arc::new(all_known_blobs);
+
+        stream::iter(candidates.clone())
+            .map(move |blob| {
+                let all_known_blobs = Arc::clone(&all_known_blobs);
+                async move {
+                    // We still need to check `has_blob()` even if the blob is in `all_known_blobs`,
+                    // because it might not have been fully written yet.
+                    if (*all_known_blobs).as_ref().map(|blobs| blobs.contains(&blob)) == Some(false)
+                        || !self.has_blob(&blob).await
+                    {
+                        Some(blob)
+                    } else {
+                        None
+                    }
+                }
+            })
+            .buffer_unordered(50)
+            .filter_map(|blob| async move { blob })
+            .collect()
+            .await
+    }
 }
 
 #[cfg(test)]
@@ -285,6 +327,239 @@ mod tests {
         assert_eq!(client.has_blob(&hash).await, false);
         file.write_all(&blob[512..]).unwrap();
         assert_eq!(client.has_blob(&hash).await, true);
+
+        blobfs.stop().await.unwrap();
+    }
+
+    /// Wrapper for a blob and its hash. This lets the tests retain ownership of the Blob struct,
+    /// which is important because it ensures blobfs will not close partially written blobs for the
+    /// duration of the test.
+    struct TestBlob<S> {
+        _blob: blob::Blob<S>,
+        hash: Hash,
+    }
+
+    async fn open_blob_only(client: &Client, blob: &[u8; 1024]) -> TestBlob<blob::NeedsTruncate> {
+        let hash = MerkleTree::from_reader(&blob[..]).unwrap().root();
+        let blob = client.open_blob_for_write(&hash).await.unwrap();
+        TestBlob { _blob: blob, hash }
+    }
+
+    async fn open_and_truncate_blob(
+        client: &Client,
+        blob: &[u8; 1024],
+    ) -> TestBlob<blob::NeedsData> {
+        let hash = MerkleTree::from_reader(&blob[..]).unwrap().root();
+        let blob = client
+            .open_blob_for_write(&hash)
+            .await
+            .unwrap()
+            .truncate(blob.len() as u64)
+            .await
+            .unwrap()
+            .unwrap_needs_data();
+        TestBlob { _blob: blob, hash }
+    }
+
+    async fn partially_write_blob(client: &Client, blob: &[u8; 1024]) -> TestBlob<blob::NeedsData> {
+        let hash = MerkleTree::from_reader(&blob[..]).unwrap().root();
+        let blob = client
+            .open_blob_for_write(&hash)
+            .await
+            .unwrap()
+            .truncate(blob.len() as u64)
+            .await
+            .unwrap()
+            .unwrap_needs_data()
+            .write(&blob[..512])
+            .await
+            .unwrap()
+            .unwrap_more_to_write();
+        TestBlob { _blob: blob, hash }
+    }
+
+    async fn fully_write_blob(client: &Client, blob: &[u8; 1024]) -> TestBlob<blob::AtEof> {
+        let hash = MerkleTree::from_reader(&blob[..]).unwrap().root();
+        let blob = client
+            .open_blob_for_write(&hash)
+            .await
+            .unwrap()
+            .truncate(blob.len() as u64)
+            .await
+            .unwrap()
+            .unwrap_needs_data()
+            .write(&blob[..])
+            .await
+            .unwrap()
+            .unwrap_done();
+        TestBlob { _blob: blob, hash }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn filter_to_missing_blobs_without_heuristic() {
+        let blobfs = BlobfsRamdisk::builder().start().unwrap();
+        let client = Client::for_ramdisk(&blobfs);
+
+        let missing_hash0 = Hash::from([0; 32]);
+        let missing_hash1 = Hash::from([1; 32]);
+
+        let present_blob0 = fully_write_blob(&client, &[2; 1024]).await;
+        let present_blob1 = fully_write_blob(&client, &[3; 1024]).await;
+
+        assert_eq!(
+            client
+                .filter_to_missing_blobs(
+                    // Pass in <= 20 candidates so the heuristic is not used.
+                    &hashset! { missing_hash0, missing_hash1,
+                        present_blob0.hash, present_blob1.hash
+                    }
+                )
+                .await,
+            hashset! { missing_hash0, missing_hash1 }
+        );
+
+        blobfs.stop().await.unwrap();
+    }
+
+    /// Similar to the above test, except also test that partially written blobs count as missing.
+    #[fasync::run_singlethreaded(test)]
+    async fn filter_to_missing_blobs_without_heuristic_and_with_partially_written_blobs() {
+        let blobfs = BlobfsRamdisk::builder().start().unwrap();
+        let client = Client::for_ramdisk(&blobfs);
+
+        // Some blobs are created (but not yet truncated).
+        let missing_blob0 = open_blob_only(&client, &[0; 1024]).await;
+
+        // Some are truncated but not written.
+        let missing_blob1 = open_and_truncate_blob(&client, &[1; 1024]).await;
+
+        // Some are partially written.
+        let missing_blob2 = partially_write_blob(&client, &[2; 1024]).await;
+
+        // Some are fully written.
+        let present_blob = fully_write_blob(&client, &[3; 1024]).await;
+
+        assert_eq!(
+            client
+                .filter_to_missing_blobs(&hashset! {
+                    missing_blob0.hash, missing_blob1.hash, missing_blob2.hash, present_blob.hash
+                })
+                .await,
+            // All partially written blobs should count as missing.
+            hashset! { missing_blob0.hash, missing_blob1.hash, missing_blob2.hash }
+        );
+
+        blobfs.stop().await.unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn filter_to_missing_blobs_with_heuristic() {
+        let blobfs = BlobfsRamdisk::builder().start().unwrap();
+        let client = Client::for_ramdisk(&blobfs);
+
+        let missing_hash0 = Hash::from([0; 32]);
+        let missing_hash1 = Hash::from([1; 32]);
+        let missing_hash2 = Hash::from([2; 32]);
+        let missing_hash3 = Hash::from([3; 32]);
+        let missing_hash4 = Hash::from([4; 32]);
+        let missing_hash5 = Hash::from([5; 32]);
+        let missing_hash6 = Hash::from([6; 32]);
+        let missing_hash7 = Hash::from([7; 32]);
+        let missing_hash8 = Hash::from([8; 32]);
+        let missing_hash9 = Hash::from([9; 32]);
+        let missing_hash10 = Hash::from([10; 32]);
+
+        let present_blob0 = fully_write_blob(&client, &[20; 1024]).await;
+        let present_blob1 = fully_write_blob(&client, &[21; 1024]).await;
+        let present_blob2 = fully_write_blob(&client, &[22; 1024]).await;
+        let present_blob3 = fully_write_blob(&client, &[23; 1024]).await;
+        let present_blob4 = fully_write_blob(&client, &[24; 1024]).await;
+        let present_blob5 = fully_write_blob(&client, &[25; 1024]).await;
+        let present_blob6 = fully_write_blob(&client, &[26; 1024]).await;
+        let present_blob7 = fully_write_blob(&client, &[27; 1024]).await;
+        let present_blob8 = fully_write_blob(&client, &[28; 1024]).await;
+        let present_blob9 = fully_write_blob(&client, &[29; 1024]).await;
+        let present_blob10 = fully_write_blob(&client, &[30; 1024]).await;
+
+        assert_eq!(
+            client
+                .filter_to_missing_blobs(
+                    // Pass in over 20 candidates to trigger the heuristic.
+                    &hashset! { missing_hash0, missing_hash1, missing_hash2, missing_hash3,
+                        missing_hash4, missing_hash5, missing_hash6, missing_hash7, missing_hash8,
+                        missing_hash9, missing_hash10, present_blob0.hash, present_blob1.hash,
+                        present_blob2.hash, present_blob3.hash, present_blob4.hash,
+                        present_blob5.hash, present_blob6.hash, present_blob7.hash,
+                        present_blob8.hash, present_blob9.hash, present_blob10.hash
+                    }
+                )
+                .await,
+            hashset! { missing_hash0, missing_hash1, missing_hash2, missing_hash3,
+                missing_hash4, missing_hash5, missing_hash6, missing_hash7, missing_hash8,
+                missing_hash9, missing_hash10
+            }
+        );
+
+        blobfs.stop().await.unwrap();
+    }
+
+    /// Similar to the above test, except also test that partially written blobs count as missing.
+    #[fasync::run_singlethreaded(test)]
+    async fn filter_to_missing_blobs_with_heuristic_and_with_partially_written_blobs() {
+        let blobfs = BlobfsRamdisk::builder().start().unwrap();
+        let client = Client::for_ramdisk(&blobfs);
+
+        // Some blobs are created (but not yet truncated).
+        let missing_blob0 = open_blob_only(&client, &[0; 1024]).await;
+        let missing_blob1 = open_blob_only(&client, &[1; 1024]).await;
+        let missing_blob2 = open_blob_only(&client, &[2; 1024]).await;
+
+        // Some are truncated but not written.
+        let missing_blob3 = open_and_truncate_blob(&client, &[3; 1024]).await;
+        let missing_blob4 = open_and_truncate_blob(&client, &[4; 1024]).await;
+        let missing_blob5 = open_and_truncate_blob(&client, &[5; 1024]).await;
+
+        // Some are partially written.
+        let missing_blob6 = partially_write_blob(&client, &[6; 1024]).await;
+        let missing_blob7 = partially_write_blob(&client, &[7; 1024]).await;
+        let missing_blob8 = partially_write_blob(&client, &[8; 1024]).await;
+
+        // Some aren't even open.
+        let missing_hash9 = Hash::from([9; 32]);
+        let missing_hash10 = Hash::from([10; 32]);
+
+        let present_blob0 = fully_write_blob(&client, &[20; 1024]).await;
+        let present_blob1 = fully_write_blob(&client, &[21; 1024]).await;
+        let present_blob2 = fully_write_blob(&client, &[22; 1024]).await;
+        let present_blob3 = fully_write_blob(&client, &[23; 1024]).await;
+        let present_blob4 = fully_write_blob(&client, &[24; 1024]).await;
+        let present_blob5 = fully_write_blob(&client, &[25; 1024]).await;
+        let present_blob6 = fully_write_blob(&client, &[26; 1024]).await;
+        let present_blob7 = fully_write_blob(&client, &[27; 1024]).await;
+        let present_blob8 = fully_write_blob(&client, &[28; 1024]).await;
+        let present_blob9 = fully_write_blob(&client, &[29; 1024]).await;
+        let present_blob10 = fully_write_blob(&client, &[30; 1024]).await;
+
+        assert_eq!(
+            client
+                .filter_to_missing_blobs(
+                    &hashset! { missing_blob0.hash, missing_blob1.hash, missing_blob2.hash,
+                        missing_blob3.hash, missing_blob4.hash, missing_blob5.hash,
+                        missing_blob6.hash, missing_blob7.hash, missing_blob8.hash,
+                        missing_hash9, missing_hash10, present_blob0.hash,
+                        present_blob1.hash, present_blob2.hash, present_blob3.hash,
+                        present_blob4.hash, present_blob5.hash, present_blob6.hash,
+                        present_blob7.hash, present_blob8.hash, present_blob9.hash,
+                        present_blob10.hash
+                    }
+                )
+                .await,
+            // All partially written blobs should count as missing.
+            hashset! { missing_blob0.hash, missing_blob1.hash, missing_blob2.hash,
+                missing_blob3.hash, missing_blob4.hash, missing_blob5.hash, missing_blob6.hash,
+                missing_blob7.hash, missing_blob8.hash, missing_hash9, missing_hash10
+            }
+        );
 
         blobfs.stop().await.unwrap();
     }

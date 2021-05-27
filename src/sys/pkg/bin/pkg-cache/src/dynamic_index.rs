@@ -9,7 +9,7 @@ use {
     fuchsia_pkg::{MetaContents, MetaPackage, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, stream, StreamExt},
+    futures::lock::Mutex,
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
     std::{
         collections::{HashMap, HashSet},
@@ -264,31 +264,7 @@ pub async fn fulfill_meta_far_blob(
         .await?
         .ok_or_else(|| DynamicIndexError::BlobNotFound(blob_hash))?;
 
-    // This heuristic was taken from pkgfs, the total number of blobs has grown since it was
-    // initially written, we probably want to reevaluate the proper value to use here.
-    let all_known_blobs =
-        if required_blobs.len() > 20 { blobfs.list_known_blobs().await.ok() } else { None };
-    let all_known_blobs = Arc::new(all_known_blobs);
-
-    let missing_blobs: HashSet<_> = stream::iter(required_blobs.clone())
-        .map(move |blob| {
-            let all_known_blobs = Arc::clone(&all_known_blobs);
-            async move {
-                // We still need to check `has_blob()` even if the blob is in `all_known_blobs`,
-                // because it might not have been fully written yet.
-                if (*all_known_blobs).as_ref().map(|blobs| blobs.contains(&blob)) == Some(false)
-                    || !blobfs.has_blob(&blob).await
-                {
-                    Some(blob)
-                } else {
-                    None
-                }
-            }
-        })
-        .buffer_unordered(50)
-        .filter_map(|blob| async move { blob })
-        .collect()
-        .await;
+    let missing_blobs = blobfs.filter_to_missing_blobs(&required_blobs).await;
 
     index
         .lock()
