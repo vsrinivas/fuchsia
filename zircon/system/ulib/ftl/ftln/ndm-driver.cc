@@ -11,6 +11,7 @@
 
 #include "ftl.h"
 #include "ftl_private.h"
+#include "ftlnp.h"
 #include "ndm/ndmp.h"
 
 namespace ftl {
@@ -93,6 +94,10 @@ int ReadSpareNoEcc(uint32_t page, uint8_t* spare, void* dev) {
 int WritePages(uint32_t page, uint32_t count, const uint8_t* data, uint8_t* spare, int action,
                void* dev) {
   NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
+  for (uint32_t i = 0; i < count; i++) {
+    FtlnSetSpareValidity(&spare[i * device->SpareSize()], &data[i * device->PageSize()],
+                         device->PageSize());
+  }
   return device->NandWrite(page, count, data, spare);
 }
 
@@ -129,13 +134,14 @@ int IsEmpty(uint32_t page, uint8_t* data, uint8_t* spare, void* dev) {
 // Returns kNdmOk or kNdmError, but kNdmError implies aborting initialization.
 int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* dev) {
   int result = ReadPagesImpl(page, 1, data, spare, dev);
+  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
 
-  if (result == kNdmUncorrectableEcc || result == kNdmFatalError) {
+  if (result == kNdmUncorrectableEcc || result == kNdmFatalError ||
+      device->IncompletePageWrite(spare, data)) {
     *status = NDM_PAGE_INVALID;
     return kNdmOk;
   }
 
-  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
   bool empty = device->IsEmptyPage(page, data, spare) ? kTrue : kFalse;
 
   *status = empty ? NDM_PAGE_ERASED : NDM_PAGE_VALID;
@@ -398,6 +404,14 @@ void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_
       driver->logger.error = logger_->error;
     }
   }
+}
+
+uint32_t NdmBaseDriver::PageSize() { return ndm_->page_size; }
+
+uint8_t NdmBaseDriver::SpareSize() { return ndm_->eb_size; }
+
+bool NdmBaseDriver::IncompletePageWrite(uint8_t* spare, uint8_t* data) {
+  return FtlnIncompleteWrite(spare, data, PageSize());
 }
 
 __EXPORT

@@ -75,6 +75,8 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final;
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
+  uint32_t PageSize() final;
+  uint8_t SpareSize() final;
 
  private:
   // Reads or Writes a single page.

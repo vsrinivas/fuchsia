@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/ftl/ndm-driver.h>
+#include <string.h>
 
 #include <optional>
 #include <vector>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "ftl.h"
 #include "ndm/ndmp.h"
@@ -27,17 +28,16 @@ constexpr ftl::VolumeOptions kDefaultOptions = {kNumBlocks, 2, kBlockSize, kPage
 
 class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
-  NdmRamDriver(const ftl::VolumeOptions options = kDefaultOptions) : options_(options) {}
-  ~NdmRamDriver() final {}
+  NdmRamDriver(const ftl::VolumeOptions options = kDefaultOptions,
+               FtlLogger logger = ftl::DefaultLogger())
+      : NdmBaseDriver(logger), options_(options) {}
 
   const uint8_t* data(uint32_t page_num) const { return &volume_[page_num * kPageSize]; }
   NDM ndm() { return GetNdmForTest(); }
   void format_using_v2(bool value) { format_using_v2_ = value; }
 
   // Goes through the normal logic to create a volume with user data info.
-  const char* CreateVolume(std::optional<ftl::LoggerProxy> logger = std::nullopt) {
-    return CreateNdmVolumeWithLogger(nullptr, options_, true, logger);
-  }
+  const char* CreateVolume() { return CreateNdmVolume(nullptr, options_, true); }
 
   // NdmDriver interface:
   const char* Init() final;
@@ -51,6 +51,8 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final {
     return IsEmptyPageImpl(data, kPageSize, spare, kOobSize);
   }
+  uint32_t PageSize() final { return kPageSize; }
+  uint8_t SpareSize() final { return kOobSize; }
 
  private:
   std::vector<uint8_t> volume_;
@@ -113,12 +115,12 @@ int NdmRamDriver::NandErase(uint32_t page_num) {
   return ftl::kNdmOk;
 }
 
-class NdmTest : public zxtest::Test {
+class NdmTest : public ::testing::Test {
  public:
   void SetUp() override {
     ASSERT_TRUE(ftl::InitModules());
-    ASSERT_NULL(ndm_driver_.Init());
-    ASSERT_NULL(ndm_driver_.Attach(nullptr));
+    ASSERT_EQ(nullptr, ndm_driver_.Init());
+    ASSERT_EQ(nullptr, ndm_driver_.Attach(nullptr));
   }
 
  protected:
@@ -149,9 +151,9 @@ class NdmTestOldFormat : public NdmTest {
  public:
   void SetUp() override {
     ASSERT_TRUE(ftl::InitModules());
-    ASSERT_NULL(ndm_driver_.Init());
+    ASSERT_EQ(nullptr, ndm_driver_.Init());
     ndm_driver_.format_using_v2(false);
-    ASSERT_NULL(ndm_driver_.Attach(nullptr));
+    ASSERT_EQ(nullptr, ndm_driver_.Attach(nullptr));
   }
 };
 
@@ -160,12 +162,12 @@ TEST_F(NdmTestOldFormat, WritesVersion1) {
   EXPECT_EQ(1, header->current_location);
   EXPECT_EQ(1, header->last_location);
   EXPECT_EQ(0, header->sequence_num);
-  EXPECT_EQ(kNumBlocks, header->num_blocks);
-  EXPECT_EQ(kPageSize * kPagesPerBlock, header->block_size);
-  EXPECT_EQ(kNumBlocks - 1, header->control_block0);
-  EXPECT_EQ(kNumBlocks - 2, header->control_block1);
-  EXPECT_EQ(kNumBlocks - 4, header->free_virt_block);
-  EXPECT_EQ(kNumBlocks - 3, header->free_control_block);
+  EXPECT_EQ(kNumBlocks, static_cast<uint32_t>(header->num_blocks));
+  EXPECT_EQ(kPageSize * kPagesPerBlock, static_cast<uint32_t>(header->block_size));
+  EXPECT_EQ(kNumBlocks - 1, static_cast<uint32_t>(header->control_block0));
+  EXPECT_EQ(kNumBlocks - 2, static_cast<uint32_t>(header->control_block1));
+  EXPECT_EQ(kNumBlocks - 4, static_cast<uint32_t>(header->free_virt_block));
+  EXPECT_EQ(kNumBlocks - 3, static_cast<uint32_t>(header->free_control_block));
   EXPECT_EQ(-1, header->transfer_to_block);
 }
 
@@ -176,12 +178,12 @@ TEST_F(NdmTest, WritesVersion2) {
   EXPECT_EQ(1, header->v1.current_location);
   EXPECT_EQ(1, header->v1.last_location);
   EXPECT_EQ(0, header->v1.sequence_num);
-  EXPECT_EQ(kNumBlocks, header->v1.num_blocks);
-  EXPECT_EQ(kPageSize * kPagesPerBlock, header->v1.block_size);
-  EXPECT_EQ(kNumBlocks - 1, header->v1.control_block0);
-  EXPECT_EQ(kNumBlocks - 2, header->v1.control_block1);
-  EXPECT_EQ(kNumBlocks - 4, header->v1.free_virt_block);
-  EXPECT_EQ(kNumBlocks - 3, header->v1.free_control_block);
+  EXPECT_EQ(kNumBlocks, static_cast<uint32_t>(header->v1.num_blocks));
+  EXPECT_EQ(kPageSize * kPagesPerBlock, static_cast<uint32_t>(header->v1.block_size));
+  EXPECT_EQ(kNumBlocks - 1, static_cast<uint32_t>(header->v1.control_block0));
+  EXPECT_EQ(kNumBlocks - 2, static_cast<uint32_t>(header->v1.control_block1));
+  EXPECT_EQ(kNumBlocks - 4, static_cast<uint32_t>(header->v1.free_virt_block));
+  EXPECT_EQ(kNumBlocks - 3, static_cast<uint32_t>(header->v1.free_control_block));
   EXPECT_EQ(-1, header->v1.transfer_to_block);
 }
 
@@ -198,8 +200,8 @@ TEST_F(NdmTestOldFormat, NoVersion2) {
   partition.num_blocks = ndmGetNumVBlocks(ndm_driver_.ndm());
   ASSERT_EQ(0, ndmWritePartition(ndm_driver_.ndm(), &partition, 0, "foo"));
 
-  EXPECT_NOT_NULL(ndmGetPartition(ndm_driver_.ndm(), 0));
-  EXPECT_NULL(ndmGetPartitionInfo(ndm_driver_.ndm()));
+  EXPECT_NE(nullptr, ndmGetPartition(ndm_driver_.ndm(), 0));
+  EXPECT_EQ(nullptr, ndmGetPartitionInfo(ndm_driver_.ndm()));
 }
 
 TEST_F(NdmTest, UsesVersion2) {
@@ -209,14 +211,14 @@ TEST_F(NdmTest, UsesVersion2) {
   strcpy(partition.basic_data.name, "foo");
   ASSERT_EQ(0, ndmWritePartitionInfo(ndm_driver_.ndm(), &partition));
 
-  EXPECT_NOT_NULL(ndmGetPartition(ndm_driver_.ndm(), 0));
+  EXPECT_NE(nullptr, ndmGetPartition(ndm_driver_.ndm(), 0));
 
   const NDMPartitionInfo* info = ndmGetPartitionInfo(ndm_driver_.ndm());
-  ASSERT_NOT_NULL(info);
-  EXPECT_EQ(0, info->basic_data.first_block);
+  ASSERT_NE(nullptr, info);
+  EXPECT_EQ(0u, info->basic_data.first_block);
   EXPECT_EQ(partition_size, info->basic_data.num_blocks);
-  EXPECT_EQ(0, info->user_data.data_size);
-  EXPECT_STR_EQ("foo", info->basic_data.name);
+  EXPECT_EQ(0u, info->user_data.data_size);
+  EXPECT_STREQ("foo", info->basic_data.name);
 }
 
 TEST_F(NdmTest, SavesVersion2) {
@@ -231,12 +233,12 @@ TEST_F(NdmTest, SavesVersion2) {
   EXPECT_EQ(1, header->v1.current_location);
   EXPECT_EQ(1, header->v1.last_location);
   EXPECT_EQ(1, header->v1.sequence_num);
-  EXPECT_EQ(kNumBlocks, header->v1.num_blocks);
-  EXPECT_EQ(kPageSize * kPagesPerBlock, header->v1.block_size);
-  EXPECT_EQ(kNumBlocks - 1, header->v1.control_block0);
-  EXPECT_EQ(kNumBlocks - 2, header->v1.control_block1);
-  EXPECT_EQ(kNumBlocks - 4, header->v1.free_virt_block);
-  EXPECT_EQ(kNumBlocks - 3, header->v1.free_control_block);
+  EXPECT_EQ(kNumBlocks, static_cast<uint32_t>(header->v1.num_blocks));
+  EXPECT_EQ(kPageSize * kPagesPerBlock, static_cast<uint32_t>(header->v1.block_size));
+  EXPECT_EQ(kNumBlocks - 1, static_cast<uint32_t>(header->v1.control_block0));
+  EXPECT_EQ(kNumBlocks - 2, static_cast<uint32_t>(header->v1.control_block1));
+  EXPECT_EQ(kNumBlocks - 4, static_cast<uint32_t>(header->v1.free_virt_block));
+  EXPECT_EQ(kNumBlocks - 3, static_cast<uint32_t>(header->v1.free_control_block));
   EXPECT_EQ(-1, header->v1.transfer_to_block);
 }
 
@@ -302,7 +304,7 @@ TEST_F(NdmTest, UpdatesUserData) {
 
   // Reinitialize NDM.
   EXPECT_TRUE(ndm_driver_.Detach());
-  ASSERT_NULL(ndm_driver_.Attach(nullptr));
+  ASSERT_EQ(nullptr, ndm_driver_.Attach(nullptr));
 
   // Redefine the partition.
   PartitionInfo new_info = {};
@@ -314,14 +316,14 @@ TEST_F(NdmTest, UpdatesUserData) {
 
   // Read the latest version from disk.
   EXPECT_TRUE(ndm_driver_.Detach());
-  ASSERT_NULL(ndm_driver_.Attach(nullptr));
+  ASSERT_EQ(nullptr, ndm_driver_.Attach(nullptr));
 
   const NDMPartitionInfo* info = ndmGetPartitionInfo(ndm_driver_.ndm());
-  ASSERT_NOT_NULL(info);
+  ASSERT_NE(nullptr, info);
   ASSERT_EQ(sizeof(new_info.exploded.data), info->user_data.data_size);
 
   auto actual_info = reinterpret_cast<const PartitionInfo*>(info);
-  EXPECT_EQ(42, actual_info->exploded.data);
+  EXPECT_EQ(42u, actual_info->exploded.data);
 
   // Verify the expected disk layout.
   auto header = reinterpret_cast<const HeaderV2*>(ndm_driver_.data(kControlPage0 + 1));
@@ -340,25 +342,25 @@ TEST_F(NdmTest, UpdatesUserData) {
 }
 
 TEST_F(NdmTest, BaseDriverSavesConfig) {
-  ASSERT_NULL(ndm_driver_.CreateVolume());
+  ASSERT_EQ(nullptr, ndm_driver_.CreateVolume());
 
   const NDMPartitionInfo* info = ndmGetPartitionInfo(ndm_driver_.ndm());
-  ASSERT_NOT_NULL(info);
-  ASSERT_GE(info->user_data.data_size, 96);  // Size of the first version of the data.
+  ASSERT_NE(nullptr, info);
+  ASSERT_GE(info->user_data.data_size, 96u);  // Size of the first version of the data.
 
   const ftl::VolumeOptions* options = ndm_driver_.GetSavedOptions();
-  ASSERT_NOT_NULL(options);
-  ASSERT_BYTES_EQ(&kDefaultOptions, options, sizeof(*options));
+  ASSERT_NE(nullptr, options);
+  ASSERT_EQ(memcmp(&kDefaultOptions, options, sizeof(*options)), 0);
 }
 
-class NdmReadOnlyTest : public zxtest::Test {
+class NdmReadOnlyTest : public ::testing::Test {
  public:
   void SetUp() override {
     ASSERT_TRUE(ftl::InitModules());
     ftl::VolumeOptions options = kDefaultOptions;
     options.flags |= ftl::kReadOnlyInit;
     ndm_driver_.reset(new NdmRamDriver(options));
-    ASSERT_NULL(ndm_driver_->Init());
+    ASSERT_EQ(nullptr, ndm_driver_->Init());
     buffer_ = std::vector<uint8_t>(kPageSize, 0xff);
   }
 
@@ -378,7 +380,7 @@ TEST_F(NdmReadOnlyTest, Version1Only) {
   memcpy(buffer_.data(), kControl29V1, sizeof(kControl29V1));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
 
-  ASSERT_NULL(ndm_driver_->CreateVolume());
+  ASSERT_EQ(nullptr, ndm_driver_->CreateVolume());
 }
 
 // An NDM control block version 2.0, stored on page 29.
@@ -390,7 +392,7 @@ TEST_F(NdmReadOnlyTest, Version2Only) {
   memcpy(buffer_.data(), kControl29V2, sizeof(kControl29V2));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
 
-  ASSERT_NULL(ndm_driver_->CreateVolume());
+  ASSERT_EQ(nullptr, ndm_driver_->CreateVolume());
 }
 
 // An NDM control block version 2.0, stored on page 28, with partition data.
@@ -408,7 +410,7 @@ TEST_F(NdmReadOnlyTest, UpgradedVersion2) {
 
   memcpy(buffer_.data(), kControl28V2, sizeof(kControl28V2));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage1, 1, buffer_.data(), kControlOob));
-  ASSERT_NULL(ndm_driver_->CreateVolume());
+  ASSERT_EQ(nullptr, ndm_driver_->CreateVolume());
 }
 
 // An NDM control block version 1, stored on page 29, with one factory bad block and
@@ -423,7 +425,7 @@ TEST_F(NdmReadOnlyTest, InTransferV1) {
   memcpy(buffer_.data(), kControlBlockTransferV1, sizeof(kControlBlockTransferV1));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
 
-  ASSERT_NOT_NULL(ndm_driver_->CreateVolume());
+  ASSERT_NE(nullptr, ndm_driver_->CreateVolume());
   ASSERT_EQ(NDM_BAD_BLK_RECOV, GetFsErrCode());
 }
 
@@ -438,8 +440,8 @@ TEST_F(NdmReadOnlyTest, BadBlocksV1) {
   memcpy(buffer_.data(), kControlBlockBadBlocksV1, sizeof(kControlBlockBadBlocksV1));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
 
-  ASSERT_NULL(ndm_driver_->CreateVolume());
-  EXPECT_EQ(2, ndm_driver_->ndm()->num_bad_blks);
+  ASSERT_EQ(nullptr, ndm_driver_->CreateVolume());
+  EXPECT_EQ(2u, ndm_driver_->ndm()->num_bad_blks);
 }
 
 // An NDM control block version 2.0, stored on page 29, with one factory bad block and
@@ -454,7 +456,7 @@ TEST_F(NdmReadOnlyTest, InTransferV2) {
   memcpy(buffer_.data(), kControlBlockTransferV2, sizeof(kControlBlockTransferV2));
   ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
 
-  ASSERT_NOT_NULL(ndm_driver_->CreateVolume());
+  ASSERT_NE(nullptr, ndm_driver_->CreateVolume());
   ASSERT_EQ(NDM_BAD_BLK_RECOV, GetFsErrCode());
 }
 
@@ -466,7 +468,7 @@ constexpr uint32_t kControlBlockBadBlocksV2[] = {
     0x00000003, 0x0000001b, 0xffffffff, 0xffffffff, 0x00000000, 0x0000001a, 0x006c7466, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
 
-TEST_F(NdmReadOnlyTest, BadBlocksV2) {
+TEST(NdmReadOnlyTestWithLogger, BadBlocksV2) {
   static bool logger_called = false;
   logger_called = false;
 
@@ -477,18 +479,25 @@ TEST_F(NdmReadOnlyTest, BadBlocksV2) {
     }
   };
 
-  ftl::LoggerProxy logger;
+  FtlLogger logger;
   logger.trace = &LoggerHelper::Log;
   logger.debug = &LoggerHelper::Log;
   logger.info = &LoggerHelper::Log;
   logger.warn = &LoggerHelper::Log;
   logger.error = &LoggerHelper::Log;
 
-  memcpy(buffer_.data(), kControlBlockBadBlocksV2, sizeof(kControlBlockBadBlocksV2));
-  ASSERT_EQ(ftl::kNdmOk, ndm_driver_->NandWrite(kControlPage0, 1, buffer_.data(), kControlOob));
+  ASSERT_TRUE(ftl::InitModules());
+  ftl::VolumeOptions options = kDefaultOptions;
+  options.flags |= ftl::kReadOnlyInit;
+  auto ndm_driver = std::make_unique<NdmRamDriver>(options, logger);
+  ASSERT_EQ(nullptr, ndm_driver->Init());
+  std::vector<uint8_t> buffer(kPageSize, 0xff);
 
-  ASSERT_NULL(ndm_driver_->CreateVolume(logger));
-  EXPECT_EQ(2, ndm_driver_->ndm()->num_bad_blks);
+  memcpy(buffer.data(), kControlBlockBadBlocksV2, sizeof(kControlBlockBadBlocksV2));
+  ASSERT_EQ(ftl::kNdmOk, ndm_driver->NandWrite(kControlPage0, 1, buffer.data(), kControlOob));
+
+  ASSERT_EQ(nullptr, ndm_driver->CreateVolume());
+  EXPECT_EQ(2u, ndm_driver->ndm()->num_bad_blks);
   EXPECT_TRUE(logger_called);
 }
 

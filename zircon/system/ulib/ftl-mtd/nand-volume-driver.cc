@@ -54,8 +54,8 @@ const char* NandVolumeDriver::Attach(const ftl::Volume* ftl_volume) {
       // This should be 2%, but that is of the whole device, not just this partition.
       .max_bad_blocks = max_bad_blocks_,
       .block_size = interface_->BlockSize(),
-      .page_size = MappedPageSize(),
-      .eb_size = MappedOobSize(),
+      .page_size = PageSize(),
+      .eb_size = SpareSize(),
       .flags = 0  // Same as FSF_DRVR_PAGES (current default).
   };
 
@@ -155,7 +155,7 @@ int NandVolumeDriver::IsBadBlock(uint32_t page_num) {
 
 bool NandVolumeDriver::IsEmptyPage(uint32_t page_num, const uint8_t* page_buffer,
                                    const uint8_t* oob_buffer) {
-  return IsEmptyPageImpl(page_buffer, MappedPageSize(), oob_buffer, MappedOobSize());
+  return IsEmptyPageImpl(page_buffer, PageSize(), oob_buffer, SpareSize());
 }
 
 zx_status_t NandVolumeDriver::ReadPageAndOob(uint32_t byte_offset, void* page_buffer,
@@ -208,8 +208,8 @@ uint32_t NandVolumeDriver::GetByteOffsetForPage(uint32_t real_page) {
 
 uint32_t NandVolumeDriver::ByteOffset() { return block_offset_ * interface_->BlockSize(); }
 
-uint32_t NandVolumeDriver::MappedPageSize() { return page_multiplier_ * interface_->PageSize(); }
+uint32_t NandVolumeDriver::PageSize() { return page_multiplier_ * interface_->PageSize(); }
 
-uint32_t NandVolumeDriver::MappedOobSize() { return page_multiplier_ * interface_->OobSize(); }
+uint8_t NandVolumeDriver::SpareSize() { return page_multiplier_ * interface_->OobSize(); }
 
 }  // namespace ftl_mtd

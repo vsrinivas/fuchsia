@@ -22,11 +22,13 @@ test("ftl-test") {
     }
   }
   sources = [
+    "ftl_test.cc",
     "ndm_driver_test.cc",
     "ndm_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/zxtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
     "//zircon/system/ulib/ftl",
     "//zircon/system/ulib/ftl:private_headers",
   ]
