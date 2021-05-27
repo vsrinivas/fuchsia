@@ -12,13 +12,9 @@ std::unique_ptr<JobHandle> MockSystemInterface::GetRootJob() const {
 
 std::unique_ptr<JobHandle> MockSystemInterface::GetComponentRootJob() const { return nullptr; }
 
-std::unique_ptr<BinaryLauncher> MockSystemInterface::GetLauncher() const {
-  // Unimplemented in this mock.
-  FX_NOTREACHED();
-  return nullptr;
-}
+ComponentManager& MockSystemInterface::GetComponentManager() { return component_manager_; }
 
-std::unique_ptr<ComponentLauncher> MockSystemInterface::GetComponentLauncher() const {
+std::unique_ptr<BinaryLauncher> MockSystemInterface::GetLauncher() const {
   // Unimplemented in this mock.
   FX_NOTREACHED();
   return nullptr;

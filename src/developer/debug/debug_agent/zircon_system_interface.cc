@@ -4,7 +4,6 @@
 
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
 
-#include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/zircon_binary_launcher.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
@@ -15,6 +14,7 @@ namespace debug_agent {
 ZirconSystemInterface::ZirconSystemInterface()
     : root_job_(zircon::GetRootJob()),
       services_(sys::ServiceDirectory::CreateFromNamespace()),
+      component_manager_(services_),
       limbo_provider_(services_) {}
 
 uint32_t ZirconSystemInterface::GetNumCpus() const { return zx_system_get_num_cpus(); }
@@ -40,9 +40,7 @@ std::unique_ptr<BinaryLauncher> ZirconSystemInterface::GetLauncher() const {
   return std::make_unique<ZirconBinaryLauncher>(services_);
 }
 
-std::unique_ptr<ComponentLauncher> ZirconSystemInterface::GetComponentLauncher() const {
-  return std::make_unique<ComponentLauncher>(services_);
-}
+ComponentManager& ZirconSystemInterface::GetComponentManager() { return component_manager_; }
 
 std::string ZirconSystemInterface::GetSystemVersion() { return zx_system_get_version_string(); }
 

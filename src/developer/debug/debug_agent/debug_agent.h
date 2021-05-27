@@ -13,7 +13,6 @@
 #include "gtest/gtest_prod.h"
 #include "src/developer/debug/debug_agent/agent_configuration.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
-#include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/limbo_provider.h"
@@ -154,8 +153,6 @@ class DebugAgent : public RemoteAPI,
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 
   void LaunchComponent(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
-  void OnComponentTerminated(int64_t return_code, const ComponentDescription& description,
-                             fuchsia::sys::TerminationReason reason);
 
   // Process Limbo ---------------------------------------------------------------------------------
 
@@ -203,21 +200,6 @@ class DebugAgent : public RemoteAPI,
   // TODO(donosoc): Hopefully we could get the created job for the component
   //                so we can only filter on that.
   zx_koid_t attached_root_job_koid_ = 0;
-
-  // Each component launch is assigned an unique filter and id. This is because
-  // new components are attached via the job filter mechanism. When a particular
-  // filter attached, we use this id to know which component launch just
-  // happened and we can communicate it to the client.
-  struct ExpectedComponent {
-    ComponentDescription description;
-    StdioHandles handles;
-    fuchsia::sys::ComponentControllerPtr controller;
-  };
-  std::map<std::string, ExpectedComponent> expected_components_;
-
-  // Once we caught the component, we hold on into the controller to be able
-  // to detach/kill it correctly.
-  std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_components_;
 
   std::map<debug_ipc::ExceptionType, debug_ipc::ExceptionStrategy> exception_strategies_;
 

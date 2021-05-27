@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "src/developer/debug/debug_agent/mock_component_manager.h"
 #include "src/developer/debug/debug_agent/mock_job_handle.h"
 #include "src/developer/debug/debug_agent/mock_limbo_provider.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
@@ -25,12 +26,13 @@ class MockSystemInterface final : public SystemInterface {
   std::unique_ptr<JobHandle> GetRootJob() const override;
   std::unique_ptr<JobHandle> GetComponentRootJob() const override;
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
-  std::unique_ptr<ComponentLauncher> GetComponentLauncher() const override;
+  ComponentManager& GetComponentManager() override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
   std::string GetSystemVersion() override { return "Mock version"; }
 
  private:
   MockJobHandle root_job_;
+  MockComponentManager component_manager_;
   MockLimboProvider limbo_provider_;
 };
 

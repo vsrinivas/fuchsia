@@ -15,7 +15,7 @@
 namespace debug_agent {
 
 class BinaryLauncher;
-class ComponentLauncher;
+class ComponentManager;
 class LimboProvider;
 
 // Abstract interface that represents the system. This is eqivalent to ProcessHandle for processes
@@ -47,12 +47,8 @@ class SystemInterface {
   // interface that can itself be mocked.
   virtual std::unique_ptr<BinaryLauncher> GetLauncher() const = 0;
 
-  // Returns a component launcher to use.
-  //
-  // TODO(brettw) revisit component launching. If would be best if all work to launch a component
-  // could be done by the SystemInterface implementation, or at least return an object that allows
-  // simple two-phase creation (need to create, attach, then continue).
-  virtual std::unique_ptr<ComponentLauncher> GetComponentLauncher() const = 0;
+  // Returns the component manager for this system. Ownership stays with the SystemInterface.
+  virtual ComponentManager& GetComponentManager() = 0;
 
   // Returns a reference to the limbo provider. This gives access to processes that have crashed and
   // are being held for attaching to the debugger. The limbo provider may have failed, in which

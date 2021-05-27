@@ -9,6 +9,7 @@
 
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
+#include "src/developer/debug/debug_agent/zircon_component_manager.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_limbo_provider.h"
 
@@ -26,13 +27,14 @@ class ZirconSystemInterface final : public SystemInterface {
   std::unique_ptr<JobHandle> GetRootJob() const override;
   std::unique_ptr<JobHandle> GetComponentRootJob() const override;
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
-  std::unique_ptr<ComponentLauncher> GetComponentLauncher() const override;
+  ComponentManager& GetComponentManager() override;
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
   std::string GetSystemVersion() override;
 
  private:
   ZirconJobHandle root_job_;
   std::shared_ptr<sys::ServiceDirectory> services_;
+  ZirconComponentManager component_manager_;
   ZirconLimboProvider limbo_provider_;
 };
 
