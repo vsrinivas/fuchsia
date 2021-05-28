@@ -44,6 +44,16 @@ group("assembly") {
     ":input_validation_checks",
     ":output_validation_checks",
   ]
+
+  # Recovery-only configurations don't have a properly configured fuchsia.zbi,
+  # as they are really building a recovery.zbi, with it's own separate
+  # configuration.
+  #
+  # `ffx assembly` cannot build the configurations these fuchsia.zbi's have, and
+  # so we clear the deps here to disable all these targets.
+  if (recovery_only) {
+    deps = []
+  }
 }
 
 #####
@@ -74,7 +84,7 @@ dep_labels = {
   #
   system_image_pkg = "//build/images:system_image.meta"
 
-  if (uses_base_package) {
+  if (build_info_product != "bringup") {
     fuchsia_zbi = "//build/images:fuchsia"
     fuchsia_zbi_manifest = "//build/images:fuchsia_unverified"
 
@@ -184,7 +194,7 @@ files = {
   extracted_sysimg_meta_contents = "${extracted_sysimg_pkg}/meta/contents"
   extracted_sysimg_meta_package = "${extracted_sysimg_pkg}/meta/package"
 
-  if (uses_base_package) {
+  if (build_info_product != "bringup") {
     # The zbi created by //build/images:fuchsia
     fuchsia_zbi = "${root_build_dir}/fuchsia.zbi"
     fuchsia_zbi_manifest = "${root_build_dir}/fuchsia_unverified.zbi.json"

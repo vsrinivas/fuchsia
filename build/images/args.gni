@@ -13,6 +13,11 @@ declare_args() {
   # otherwise be /system/... at runtime is /boot/... instead.
   bootfs_only = false
 
+  # This is really a build for a recovery image, and so the fuchsia image that
+  # is being built isn't properly configured, and so just disable the new image
+  # assembly work until that's been addressed.
+  recovery_only = false
+
   # List of arguments to add to /boot/config/devmgr.
   # These come after synthesized arguments to configure blobfs and pkgfs.
   devmgr_config = []
