@@ -171,10 +171,26 @@ enum arm64_microarch midr_to_microarch(uint32_t midr) {
         return ARM_CORTEX_A77;
       case 0xd0e:
         return ARM_CORTEX_A76AE;
+      case 0xd40:
+        return ARM_NEOVERSE_V1;
       case 0xd41:
         return ARM_CORTEX_A78;
+      case 0xd42:
+        return ARM_CORTEX_A78AE;
+      case 0xd44:
+        return ARM_CORTEX_X1;
+      case 0xd46:
+        return ARM_CORTEX_A510;
+      case 0xd47:
+        return ARM_CORTEX_A710;
+      case 0xd48:
+        return ARM_CORTEX_X2;
+      case 0xd49:
+        return ARM_NEOVERSE_N2;
       case 0xd4a:
         return ARM_NEOVERSE_E1;
+      case 0xd4b:
+        return ARM_CORTEX_A78C;
       default:
         return UNKNOWN;
     }
@@ -212,49 +228,73 @@ static void midr_to_core_string(uint32_t midr, char* str, size_t len) {
   const char* partnum_str = "unknown";
   switch (microarch) {
     case ARM_CORTEX_A32:
-      partnum_str = "ARM Cortex-a32";
+      partnum_str = "ARM Cortex-A32";
       break;
     case ARM_CORTEX_A35:
-      partnum_str = "ARM Cortex-a35";
+      partnum_str = "ARM Cortex-A35";
       break;
     case ARM_CORTEX_A53:
-      partnum_str = "ARM Cortex-a53";
+      partnum_str = "ARM Cortex-A53";
       break;
     case ARM_CORTEX_A55:
-      partnum_str = "ARM Cortex-a55";
+      partnum_str = "ARM Cortex-A55";
       break;
     case ARM_CORTEX_A57:
-      partnum_str = "ARM Cortex-a57";
+      partnum_str = "ARM Cortex-A57";
       break;
     case ARM_CORTEX_A65:
-      partnum_str = "ARM Cortex-a65";
+      partnum_str = "ARM Cortex-A65";
       break;
     case ARM_CORTEX_A72:
-      partnum_str = "ARM Cortex-a72";
+      partnum_str = "ARM Cortex-A72";
       break;
     case ARM_CORTEX_A73:
-      partnum_str = "ARM Cortex-a73";
+      partnum_str = "ARM Cortex-A73";
       break;
     case ARM_CORTEX_A75:
-      partnum_str = "ARM Cortex-a75";
+      partnum_str = "ARM Cortex-A75";
       break;
     case ARM_CORTEX_A76:
-      partnum_str = "ARM Cortex-a76";
+      partnum_str = "ARM Cortex-A76";
       break;
     case ARM_CORTEX_A76AE:
-      partnum_str = "ARM Cortex-a76ae";
+      partnum_str = "ARM Cortex-A76AE";
       break;
     case ARM_CORTEX_A77:
-      partnum_str = "ARM Cortex-a77";
+      partnum_str = "ARM Cortex-A77";
       break;
     case ARM_CORTEX_A78:
-      partnum_str = "ARM Cortex-a78";
+      partnum_str = "ARM Cortex-A78";
+      break;
+    case ARM_CORTEX_A78AE:
+      partnum_str = "ARM Cortex-A78AE";
+      break;
+    case ARM_CORTEX_A78C:
+      partnum_str = "ARM Cortex-A78C";
+      break;
+    case ARM_CORTEX_A510:
+      partnum_str = "ARM Cortex-A510";
+      break;
+    case ARM_CORTEX_A710:
+      partnum_str = "ARM Cortex-A710";
+      break;
+    case ARM_CORTEX_X1:
+      partnum_str = "ARM Cortex-X1";
+      break;
+    case ARM_CORTEX_X2:
+      partnum_str = "ARM Cortex-X2";
       break;
     case ARM_NEOVERSE_E1:
       partnum_str = "ARM Neoverse E1";
       break;
     case ARM_NEOVERSE_N1:
       partnum_str = "ARM Neoverse N1";
+      break;
+    case ARM_NEOVERSE_N2:
+      partnum_str = "ARM Neoverse N2";
+      break;
+    case ARM_NEOVERSE_V1:
+      partnum_str = "ARM Neoverse V1";
       break;
     case CAVIUM_CN88XX:
       partnum_str = "Cavium CN88XX";
