@@ -162,9 +162,11 @@ struct GlobalIdPair {
                fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>) { return true; })); \
   }                                                                                               \
   bool processed_callback = false;                                                                \
+  fuchsia::scenic::allocation::RegisterBufferCollectionArgs args;                                 \
+  args.set_export_token(std::move(export_token));                                                 \
+  args.set_buffer_collection_token(token);                                                        \
   allocator->RegisterBufferCollection(                                                            \
-      std::move(export_token), token,                                                             \
-      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {                   \
+      std::move(args), [&processed_callback](Allocator_RegisterBufferCollection_Result result) {  \
         EXPECT_EQ(!expect_success, result.is_err());                                              \
         processed_callback = true;                                                                \
       });                                                                                         \
@@ -271,8 +273,9 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
   std::shared_ptr<Allocator> CreateAllocator() {
     std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
+    std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
     importers.push_back(buffer_collection_importer_);
-    return std::make_shared<Allocator>(context_provider_.context(), importers,
+    return std::make_shared<Allocator>(context_provider_.context(), importers, screenshot_importers,
                                        utils::CreateSysmemAllocatorSyncPtr("-allocator"));
   }
 
@@ -3569,8 +3572,10 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   // Create flatland and allocator instances that has two BufferCollectionImporters.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers(
       {buffer_collection_importer_, local_buffer_collection_importer});
-  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
-      context_provider_.context(), importers, utils::CreateSysmemAllocatorSyncPtr());
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(context_provider_.context(), importers, screenshot_importers,
+                                  utils::CreateSysmemAllocatorSyncPtr());
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
   auto flatland = Flatland::New(

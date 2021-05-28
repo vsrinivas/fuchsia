@@ -11,7 +11,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
-#include <unordered_set>
+#include <unordered_map>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
@@ -23,17 +23,17 @@ namespace allocation {
 // used in multiple Flatland/Gfx sessions simultaneously.
 class Allocator : public fuchsia::scenic::allocation::Allocator {
  public:
-  Allocator(
-      sys::ComponentContext* app_context,
-      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
-      fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
+  Allocator(sys::ComponentContext* app_context,
+            const std::vector<std::shared_ptr<BufferCollectionImporter>>&
+                default_buffer_collection_importers,
+            const std::vector<std::shared_ptr<BufferCollectionImporter>>&
+                screenshot_buffer_collection_importers,
+            fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Allocator() override;
 
   // |fuchsia::scenic::allocation::Allocator|
-  void RegisterBufferCollection(
-      fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token,
-      RegisterBufferCollectionCallback callback) override;
+  void RegisterBufferCollection(fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
+                                RegisterBufferCollectionCallback callback) override;
 
  private:
   void ReleaseBufferCollection(GlobalBufferCollectionId collection_id);
@@ -47,13 +47,18 @@ class Allocator : public fuchsia::scenic::allocation::Allocator {
 
   // Used to import Flatland buffer collections and images to external services that Flatland does
   // not have knowledge of. Each importer is used for a different service.
-  std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
+  std::vector<std::shared_ptr<BufferCollectionImporter>> default_buffer_collection_importers_;
+
+  // Used to import buffer collections for screenshot purposes.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_buffer_collection_importers_;
 
   // A Sysmem allocator to facilitate buffer allocation with the Renderer.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   // Keep track of buffer collection Ids for garbage collection.
-  std::unordered_set<GlobalBufferCollectionId> buffer_collections_;
+  std::unordered_map<GlobalBufferCollectionId,
+                     fuchsia::scenic::allocation::RegisterBufferCollectionUsage>
+      buffer_collections_;
 
   // Should be last.
   fxl::WeakPtrFactory<Allocator> weak_factory_;

@@ -18,12 +18,15 @@ using fuchsia::scenic::allocation::RegisterBufferCollectionError;
 
 namespace allocation {
 
-Allocator::Allocator(
-    sys::ComponentContext* app_context,
-    const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
-    fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
+Allocator::Allocator(sys::ComponentContext* app_context,
+                     const std::vector<std::shared_ptr<BufferCollectionImporter>>&
+                         default_buffer_collection_importers,
+                     const std::vector<std::shared_ptr<BufferCollectionImporter>>&
+                         screenshot_buffer_collection_importers,
+                     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
     : dispatcher_(async_get_default_dispatcher()),
-      buffer_collection_importers_(buffer_collection_importers),
+      default_buffer_collection_importers_(default_buffer_collection_importers),
+      screenshot_buffer_collection_importers_(screenshot_buffer_collection_importers),
       sysmem_allocator_(std::move(sysmem_allocator)),
       weak_factory_(this) {
   FX_DCHECK(app_context);
@@ -33,18 +36,31 @@ Allocator::Allocator(
 Allocator::~Allocator() {
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
-  // Allocator outlives |buffer_collection_importers_| instances, because we hold shared_ptrs. It is
-  // safe to release all remaining buffer collections because there should be no more usage.
+  // Allocator outlives |*_buffer_collection_importers_| instances, because we hold shared_ptrs. It
+  // is safe to release all remaining buffer collections because there should be no more usage.
   while (!buffer_collections_.empty()) {
-    ReleaseBufferCollection(*buffer_collections_.begin());
+    ReleaseBufferCollection(buffer_collections_.begin()->first);
   }
 }
 
 void Allocator::RegisterBufferCollection(
-    BufferCollectionExportToken export_token,
-    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token,
+    fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
     RegisterBufferCollectionCallback callback) {
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
+
+  // It's okay if there's no specified RegisterBufferCollectionUsage. In that case, assume it is
+  // DEFAULT.
+  if (!args.has_buffer_collection_token() || !args.has_export_token()) {
+    FX_LOGS(ERROR) << "RegisterBufferCollection called with missing arguments";
+    callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
+    return;
+  }
+
+  auto export_token = std::move(*args.mutable_export_token());
+  auto buffer_collection_token = std::move(*args.mutable_buffer_collection_token());
+  auto usage = args.has_usage()
+                   ? args.usage()
+                   : fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT;
 
   if (!buffer_collection_token.is_valid()) {
     FX_LOGS(ERROR) << "RegisterBufferCollection called with invalid buffer collection token";
@@ -80,7 +96,14 @@ void Allocator::RegisterBufferCollection(
   // a std::vector.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = buffer_collection_token.BindSync();
   std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> tokens;
-  for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {
+
+  // Case on whether or not it is a default or screenshot BufferCollection.
+  std::vector<std::shared_ptr<BufferCollectionImporter>>* importers =
+      usage == fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT
+          ? &default_buffer_collection_importers_
+          : &screenshot_buffer_collection_importers_;
+
+  for (uint32_t i = 0; i < importers->size(); i++) {
     fuchsia::sysmem::BufferCollectionTokenSyncPtr extra_token;
     zx_status_t status =
         sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), extra_token.NewRequest());
@@ -121,8 +144,8 @@ void Allocator::RegisterBufferCollection(
   // created above. We declare the iterator |i| outside the loop to aid in cleanup if registering
   // fails.
   uint32_t i = 0;
-  for (i = 0; i < buffer_collection_importers_.size(); i++) {
-    auto importer = buffer_collection_importers_[i];
+  for (i = 0; i < importers->size(); i++) {
+    auto importer = (*importers)[i];
     auto result =
         importer->ImportBufferCollection(koid, sysmem_allocator_.get(), std::move(tokens[i]));
     // Exit the loop early if a importer fails to import the buffer collection.
@@ -133,18 +156,18 @@ void Allocator::RegisterBufferCollection(
 
   // If the iterator |i| isn't equal to the number of importers than we know that one of the
   // importers has failed.
-  if (i < buffer_collection_importers_.size()) {
+  if (i < importers->size()) {
     // We have to clean up the buffer collection from the importers where importation was
     // successful.
     for (uint32_t j = 0; j < i; j++) {
-      buffer_collection_importers_[j]->ReleaseBufferCollection(koid);
+      (*importers)[j]->ReleaseBufferCollection(koid);
     }
     FX_LOGS(ERROR) << "Failed to import the buffer collection to the BufferCollectionimporter.";
     callback(fit::error(RegisterBufferCollectionError::BAD_OPERATION));
     return;
   }
 
-  buffer_collections_.insert(koid);
+  buffer_collections_[koid] = usage;
 
   // Use a self-referencing async::WaitOnce to deregister buffer collections when all
   // BufferCollectionImportTokens are used, i.e. peers of eventpair are closed. Note that the
@@ -171,9 +194,14 @@ void Allocator::RegisterBufferCollection(
 void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
   FX_DCHECK(dispatcher_ == async_get_default_dispatcher());
 
+  auto usage = buffer_collections_[collection_id];
   buffer_collections_.erase(collection_id);
+
   // Remove buffer collections from all importers.
-  for (auto& importer : buffer_collection_importers_) {
+  auto importers = usage == fuchsia::scenic::allocation::RegisterBufferCollectionUsage::DEFAULT
+                       ? &default_buffer_collection_importers_
+                       : &screenshot_buffer_collection_importers_;
+  for (auto& importer : (*importers)) {
     importer->ReleaseBufferCollection(collection_id);
   }
 }

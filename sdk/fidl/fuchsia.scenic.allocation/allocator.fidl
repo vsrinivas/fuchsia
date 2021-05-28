@@ -7,7 +7,7 @@ library fuchsia.scenic.allocation;
 using fuchsia.sysmem;
 using zx;
 
-// The set of error codes returned by Allocator::RegisterBufferCollection().
+/// The set of error codes returned by Allocator::RegisterBufferCollection().
 enum RegisterBufferCollectionError {
     BAD_OPERATION = 1;
 };
@@ -23,19 +23,35 @@ resource struct BufferCollectionImportToken {
     zx.handle:EVENTPAIR value;
 };
 
-[Discoverable]
-protocol Allocator {
-    /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
-    /// participants, one of which is the Flatland Renderer. Some content, such as Images, use a
-    /// BufferCollection as their backing memory.
+/// The possible usages for registered buffer collection.
+enum RegisterBufferCollectionUsage {
+    /// DEFAULT means that the specified buffer collection will be used for
+    /// Flatland and gfx image creation.
     ///
-    /// Clients can send `export_token` to register buffer collections with Allocator to be used
-    /// later in [`fuchsia.ui.scenic.internal/Flatland`] instances or other Scenic APIs. For
-    /// example, by passing a [`BufferCollectionImportToken`] containing the matching peer of
+    /// See [`fuchsia.ui.scenic.internal/Flatland.CreateImage`] for more.
+    DEFAULT = 0;
+
+    /// SCREENSHOT means that the specified buffer collection will be used for
+    /// screenshotting purposes.
+    SCREENSHOT = 1;
+};
+
+/// The table of arguments for [`RegisterBufferCollection`]. Note that some
+/// fields below are REQUIRED.
+resource table RegisterBufferCollectionArgs {
+    /// Clients can send [`export_token`] to register buffer collections with Allocator to be used
+    /// later in [`fuchsia.ui.scenic.internal/Flatland`] instances or other Scenic APIs, such as
+    /// Screenshot.
+    ///
+    /// For example, by passing a [`BufferCollectionImportToken`] containing the matching peer of
     /// [`BufferCollectionExportToken`], they can create image resources via
-    /// [`fuchsia.ui.scenic.internal/Flatland.CreateImage`]. Clients should wait for the response
-    /// before using `import_token`.
+    /// [`fuchsia.ui.scenic.internal/Flatland.CreateImage`].
     ///
+    /// Clients should wait for the response before using `import_token`.
+    ///
+    /// This field is REQUIRED.
+    1: BufferCollectionExportToken export_token;
+
     /// Flatland participates in the allocation of buffers by setting constraints on the
     /// BufferCollection referenced by `buffer_collection_token`. It will not block on buffers
     /// being allocated until the client creates content using the BufferCollection.
@@ -44,7 +60,25 @@ protocol Allocator {
     /// as the client holds a valid [`BufferCollectionImportToken`]. They will be garbage collected
     /// when all [`BufferCollectionImportToken`]s are closed and all the associated Image resources
     /// are released.
-    RegisterBufferCollection(BufferCollectionExportToken export_token,
-                             fuchsia.sysmem.BufferCollectionToken buffer_collection_token)
+    ///
+    /// This field is REQUIRED.
+    2: fuchsia.sysmem.BufferCollectionToken buffer_collection_token;
+
+    /// The client can register a buffer collection for various uses, each
+    /// coming with their own unique constraints.
+    ///
+    /// This field is OPTIONAL. If `usage` is omitted it will be treated as if
+    /// it has the DEFAULT option.
+    3: RegisterBufferCollectionUsage usage;
+};
+
+[Discoverable]
+protocol Allocator {
+    /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
+    /// participants, one of which is the Flatland Renderer. Some content, such as Images, use a
+    /// BufferCollection as their backing memory.
+    ///
+    /// See [`RegisterBufferCollectionArgs`] for information on each argument.
+    RegisterBufferCollection(RegisterBufferCollectionArgs args)
         -> () error RegisterBufferCollectionError;
 };

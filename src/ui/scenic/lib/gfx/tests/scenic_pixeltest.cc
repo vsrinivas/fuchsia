@@ -90,6 +90,17 @@ inline SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_a
   return {std::move(local_token), std::move(dup_token)};
 }
 
+fuchsia::scenic::allocation::RegisterBufferCollectionArgs CreateArgs(
+    allocation::BufferCollectionExportToken export_token,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token) {
+  fuchsia::scenic::allocation::RegisterBufferCollectionArgs args;
+
+  args.set_export_token(std::move(export_token));
+  args.set_buffer_collection_token(std::move(buffer_collection_token));
+
+  return args;
+}
+
 class ScenicPixelTest : public gfx::PixelTest {
  protected:
   ScenicPixelTest() : gfx::PixelTest(kEnvironment) {}
@@ -2394,11 +2405,11 @@ TEST_P(ParameterizedImage3PixelTest, Image3PixelTest) {
 
   // Register BufferCollection with Scenic Allocator using |dup_token|.
   auto ref_pair = allocation::BufferCollectionImportExportTokens::New();
-  scenic_allocator->RegisterBufferCollection(std::move(ref_pair.export_token), std::move(dup_token),
-                                             [this](auto result) {
-                                               EXPECT_FALSE(result.is_err());
-                                               QuitLoop();
-                                             });
+  scenic_allocator->RegisterBufferCollection(
+      CreateArgs(std::move(ref_pair.export_token), std::move(dup_token)), [this](auto result) {
+        EXPECT_FALSE(result.is_err());
+        QuitLoop();
+      });
 
   // Make sure that Scenic is initalized and Allocator is done with RegisterBufferCollection().
   ASSERT_FALSE(RunLoopWithTimeout(zx::sec(15)));
@@ -2603,11 +2614,11 @@ TEST_F(ScenicPixelTest, CreateImage3FromMultipleSessions) {
 
   // Register BufferCollection with Scenic Allocator using |dup_token|.
   auto ref_pair = allocation::BufferCollectionImportExportTokens::New();
-  scenic_allocator->RegisterBufferCollection(std::move(ref_pair.export_token), std::move(dup_token),
-                                             [this](auto result) {
-                                               EXPECT_FALSE(result.is_err());
-                                               QuitLoop();
-                                             });
+  scenic_allocator->RegisterBufferCollection(
+      CreateArgs(std::move(ref_pair.export_token), std::move(dup_token)), [this](auto result) {
+        EXPECT_FALSE(result.is_err());
+        QuitLoop();
+      });
 
   // Make sure that Scenic is initalized and Allocator is done with RegisterBufferCollection().
   ASSERT_FALSE(RunLoopWithTimeout(zx::sec(15)));

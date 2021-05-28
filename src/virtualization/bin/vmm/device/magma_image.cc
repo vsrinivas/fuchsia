@@ -294,8 +294,12 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
       return vk::Result::eErrorInitializationFailed;
     }
 
-    auto result = scenic_allocator_.RegisterBufferCollection(std::move(export_token),
-                                                             std::move(scenic_token_endpoint_));
+    fidl::FidlAllocator allocator;
+    fuchsia_scenic_allocation::wire::RegisterBufferCollectionArgs args(allocator);
+    args.set_export_token(allocator, std::move(export_token));
+    args.set_buffer_collection_token(allocator, std::move(scenic_token_endpoint_));
+
+    auto result = scenic_allocator_.RegisterBufferCollection(std::move(args));
     if (!result.ok()) {
       LOG_VERBOSE("RegisterBufferCollection returned %d", result.status());
       return vk::Result::eErrorInitializationFailed;

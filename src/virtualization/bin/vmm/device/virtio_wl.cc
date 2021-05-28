@@ -769,8 +769,11 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
     return;
   }
 
+  fuchsia::scenic::allocation::RegisterBufferCollectionArgs args;
+  args.set_export_token(std::move(export_token));
+  args.set_buffer_collection_token(std::move(scenic_token));
   scenic_allocator_->RegisterBufferCollection(
-      std::move(export_token), std::move(scenic_token),
+      std::move(args),
       [](fuchsia::scenic::allocation::Allocator_RegisterBufferCollection_Result result) {
         if (result.is_err()) {
           FX_LOGS(ERROR) << "RegisterBufferCollection failed";

@@ -145,10 +145,8 @@ class TestAllocator : public fuchsia::scenic::allocation::testing::Allocator_Tes
   }
 
  private:
-  void RegisterBufferCollection(
-      fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> scenic_token,
-      RegisterBufferCollectionCallback callback) override {
+  void RegisterBufferCollection(fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
+                                RegisterBufferCollectionCallback callback) override {
     callback(fit::ok());
   }
 

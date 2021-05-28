@@ -3,13 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_scenic_allocation as scenic_alloc,
-    fidl_fuchsia_ui_scenic_internal as fland,
-    fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog as syslog,
-    fuchsia_zircon as zx,
-    log::*,
+    fidl_fuchsia_scenic_allocation as scenic_alloc, fidl_fuchsia_ui_scenic_internal as fland,
+    fuchsia_async as fasync, fuchsia_component::client::connect_to_protocol,
+    fuchsia_syslog as syslog, fuchsia_zircon as zx, log::*,
 };
 
 use fidl::endpoints::create_proxy;
@@ -114,8 +110,14 @@ async fn main() {
     // "Gfx" and "Flatland" APIs, the latter being used in this example.  See below:
     // flatland.create_image().
     let mut buffer_tokens = BufferCollectionTokenPair::new();
+    let args = fidl_fuchsia_scenic_allocation::RegisterBufferCollectionArgs {
+        export_token: Some(buffer_tokens.export_token),
+        buffer_collection_token: Some(sysmem_buffer_collection_token),
+        ..fidl_fuchsia_scenic_allocation::RegisterBufferCollectionArgs::EMPTY
+    };
+
     allocator
-        .register_buffer_collection(&mut buffer_tokens.export_token, sysmem_buffer_collection_token)
+        .register_buffer_collection(args)
         .await
         .expect("fidl error")
         .expect("error registering buffer collection");
@@ -154,7 +156,7 @@ async fn main() {
             vmo.write(&blue_pixel, offset + row_pitch).expect("failed to write pixel");
             vmo.write(&red_pixel, offset + row_pitch + 4).expect("failed to write pixel");
         }
-        None => unreachable!()
+        None => unreachable!(),
     }
 
     // Create an image in the Flatland session, using the sysmem buffer we just allocated.

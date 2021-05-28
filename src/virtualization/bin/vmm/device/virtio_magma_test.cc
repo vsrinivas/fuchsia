@@ -64,10 +64,22 @@ class ScenicAllocatorFake : public fuchsia::scenic::allocation::Allocator {
  public:
   // Must set constraints on the given buffer collection token to allow the constraints
   // negotiation to complete.
-  void RegisterBufferCollection(
-      fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> scenic_token,
-      RegisterBufferCollectionCallback callback) override {
+  void RegisterBufferCollection(fuchsia::scenic::allocation::RegisterBufferCollectionArgs args,
+                                RegisterBufferCollectionCallback callback) override {
+    if (!args.has_export_token()) {
+      FX_LOGS(ERROR) << "RegisterBufferCollection called with missing export token";
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
+      return;
+    }
+
+    if (!args.has_buffer_collection_token()) {
+      FX_LOGS(ERROR) << "RegisterBufferCollection called with missing buffer collection token";
+      callback(
+          fit::error(fuchsia::scenic::allocation::RegisterBufferCollectionError::BAD_OPERATION));
+      return;
+    }
+
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     auto context = sys::ComponentContext::Create();
     context->svc()->Connect(sysmem_allocator.NewRequest());
@@ -75,8 +87,8 @@ class ScenicAllocatorFake : public fuchsia::scenic::allocation::Allocator {
                                          fsl::GetCurrentProcessKoid());
 
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-    zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(scenic_token),
-                                                                buffer_collection.NewRequest());
+    zx_status_t status = sysmem_allocator->BindSharedCollection(
+        std::move(*args.mutable_buffer_collection_token()), buffer_collection.NewRequest());
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "BindSharedCollection failed: " << status;
       callback(

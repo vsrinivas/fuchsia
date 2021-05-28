@@ -267,13 +267,15 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
   // Create Allocator with the available importers.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screenshot_importers;
   auto gfx_buffer_collection_importer =
       std::make_shared<gfx::GfxBufferCollectionImporter>(escher_->GetWeakPtr());
   importers.push_back(gfx_buffer_collection_importer);
   if (config_values_.enable_allocator_for_flatland && flatland_compositor_)
     importers.push_back(flatland_compositor_);
-  allocator_ = std::make_shared<allocation::Allocator>(
-      app_context_.get(), importers, utils::CreateSysmemAllocatorSyncPtr("Allocator"));
+  allocator_ =
+      std::make_shared<allocation::Allocator>(app_context_.get(), importers, screenshot_importers,
+                                              utils::CreateSysmemAllocatorSyncPtr("Allocator"));
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");

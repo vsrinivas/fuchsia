@@ -21,11 +21,13 @@ using ::testing::Return;
 using fuchsia::scenic::allocation::Allocator_RegisterBufferCollection_Result;
 using fuchsia::scenic::allocation::BufferCollectionExportToken;
 using fuchsia::scenic::allocation::BufferCollectionImportToken;
+using fuchsia::scenic::allocation::RegisterBufferCollectionArgs;
+using fuchsia::scenic::allocation::RegisterBufferCollectionUsage;
 
 namespace allocation {
 namespace test {
 
-#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, expect_success)                \
+#define REGISTER_BUFFER_COLLECTION(allocator, export_token, token, usage, expect_success)         \
   if (expect_success) {                                                                           \
     EXPECT_CALL(*mock_buffer_collection_importer_,                                                \
                 ImportBufferCollection(fsl::GetKoid(export_token.value.get()), _, _))             \
@@ -35,12 +37,25 @@ namespace test {
   }                                                                                               \
   bool processed_callback = false;                                                                \
   allocator->RegisterBufferCollection(                                                            \
-      std::move(export_token), token,                                                             \
+      CreateArgs(std::move(export_token), token, usage),                                          \
       [&processed_callback](Allocator_RegisterBufferCollection_Result result) {                   \
         EXPECT_EQ(!expect_success, result.is_err());                                              \
         processed_callback = true;                                                                \
       });                                                                                         \
   EXPECT_TRUE(processed_callback);
+
+RegisterBufferCollectionArgs CreateArgs(
+    BufferCollectionExportToken export_token,
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token,
+    RegisterBufferCollectionUsage usage) {
+  RegisterBufferCollectionArgs args;
+
+  args.set_export_token(std::move(export_token));
+  args.set_buffer_collection_token(std::move(buffer_collection_token));
+  args.set_usage(usage);
+
+  return args;
+}
 
 class AllocatorTest : public gtest::TestLoopFixture {
  public:
@@ -60,10 +75,19 @@ class AllocatorTest : public gtest::TestLoopFixture {
 
   void TearDown() override { RunLoopUntilIdle(); }
 
-  std::shared_ptr<Allocator> CreateAllocator() {
-    std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
-    importers.push_back(buffer_collection_importer_);
-    return std::make_shared<Allocator>(context_provider_.context(), importers,
+  std::shared_ptr<Allocator> CreateAllocator(RegisterBufferCollectionUsage usage) {
+    std::vector<std::shared_ptr<BufferCollectionImporter>> default_importers;
+    std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
+
+    bool use_default_importer = (usage == RegisterBufferCollectionUsage::DEFAULT) ? true : false;
+
+    if (use_default_importer)
+      default_importers.push_back(buffer_collection_importer_);
+    else
+      screenshot_importers.push_back(buffer_collection_importer_);
+
+    return std::make_shared<Allocator>(context_provider_.context(), default_importers,
+                                       screenshot_importers,
                                        utils::CreateSysmemAllocatorSyncPtr("-allocator"));
   }
 
@@ -85,8 +109,17 @@ class AllocatorTest : public gtest::TestLoopFixture {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
 
-TEST_F(AllocatorTest, CreateAndDestroyAllocatorChannel) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+class AllocatorTestParameterized
+    : public AllocatorTest,
+      public testing::WithParamInterface<RegisterBufferCollectionUsage> {};
+
+INSTANTIATE_TEST_SUITE_P(, AllocatorTestParameterized,
+                         testing::Values(RegisterBufferCollectionUsage::DEFAULT,
+                                         RegisterBufferCollectionUsage::SCREENSHOT));
+
+TEST_P(AllocatorTestParameterized, CreateAndDestroyAllocatorChannel) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
   fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
   context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -94,8 +127,9 @@ TEST_F(AllocatorTest, CreateAndDestroyAllocatorChannel) {
   allocator_ptr.Unbind();
 }
 
-TEST_F(AllocatorTest, CreateAndDestroyMultipleAllocatorChannels) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, CreateAndDestroyMultipleAllocatorChannels) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
   fuchsia::scenic::allocation::AllocatorPtr allocator_ptr1;
   context_provider_.ConnectToPublicService(allocator_ptr1.NewRequest());
   fuchsia::scenic::allocation::AllocatorPtr allocator_ptr2;
@@ -106,8 +140,10 @@ TEST_F(AllocatorTest, CreateAndDestroyMultipleAllocatorChannels) {
   allocator_ptr2.Unbind();
 }
 
-TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughAllocatorChannel) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
+
   fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
   context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
 
@@ -117,7 +153,7 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
       .WillOnce(Return(true));
   allocator_ptr->RegisterBufferCollection(
-      std::move(ref_pair.export_token), CreateToken(),
+      CreateArgs(std::move(ref_pair.export_token), CreateToken(), usage),
       [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
         EXPECT_FALSE(result.is_err());
         processed_callback = true;
@@ -138,8 +174,9 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
   }
 }
 
-TEST_F(AllocatorTest, RegisterBufferCollectionThroughMultipleAllocatorChannels) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, RegisterBufferCollectionThroughMultipleAllocatorChannels) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   const int kNumAllocators = 3;
   std::vector<fuchsia::scenic::allocation::AllocatorPtr> allocator_ptrs;
@@ -156,7 +193,7 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughMultipleAllocatorChannels) 
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
         .WillOnce(Return(true));
     allocator_ptr->RegisterBufferCollection(
-        std::move(ref_pair.export_token), CreateToken(),
+        CreateArgs(std::move(ref_pair.export_token), CreateToken(), usage),
         [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
           EXPECT_FALSE(result.is_err());
           processed_callback = true;
@@ -168,20 +205,22 @@ TEST_F(AllocatorTest, RegisterBufferCollectionThroughMultipleAllocatorChannels) 
 
 // Tests that Allocator passes the Sysmem token to the importer. This is necessary since the client
 // may block on buffers being allocated before presenting.
-TEST_F(AllocatorTest, RegisterBufferCollectionValidCase) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, RegisterBufferCollectionValidCase) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, true);
 }
 
-TEST_F(AllocatorTest, RegisterBufferCollectionErrorCases) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, RegisterBufferCollectionErrorCases) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   // Sending an invalid export token is not valid.
   {
     BufferCollectionExportToken export_token;
-    REGISTER_BUFFER_COLLECTION(allocator, export_token, CreateToken(), false);
+    REGISTER_BUFFER_COLLECTION(allocator, export_token, CreateToken(), usage, false);
   }
 
   // Registering the same export token multiple times is not valid.
@@ -191,15 +230,15 @@ TEST_F(AllocatorTest, RegisterBufferCollectionErrorCases) {
     zx_status_t status =
         ref_pair.export_token.value.duplicate(ZX_RIGHT_SAME_RIGHTS, &export_token_dup.value);
     EXPECT_TRUE(status == ZX_OK);
-    { REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true); }
-    { REGISTER_BUFFER_COLLECTION(allocator, export_token_dup, CreateToken(), false); }
+    { REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, true); }
+    { REGISTER_BUFFER_COLLECTION(allocator, export_token_dup, CreateToken(), usage, false); }
   }
 
   // Passing an uninitiated buffer collection token is not valid.
   {
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-    REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, std::move(token), false);
+    REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, std::move(token), usage, false);
   }
 
   // Passing a buffer collection token whose channel(s) have closed or gone out of scope is also
@@ -213,7 +252,7 @@ TEST_F(AllocatorTest, RegisterBufferCollectionErrorCases) {
       token = fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>(std::move(remote));
     }
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-    REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, std::move(token), false);
+    REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, std::move(token), usage, false);
   }
 
   // The buffer importer call can fail.
@@ -222,7 +261,7 @@ TEST_F(AllocatorTest, RegisterBufferCollectionErrorCases) {
     EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
         .WillOnce(Return(false));
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
-    REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), false);
+    REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, false);
   }
 }
 
@@ -230,17 +269,30 @@ TEST_F(AllocatorTest, RegisterBufferCollectionErrorCases) {
 // collection while others do not. We have to therefore make sure that if importer A properly
 // imports a buffer collection and then importer B fails, that Flatland automatically releases the
 // buffer collection from importer A.
-TEST_F(AllocatorTest, BufferCollectionImportPassesAndFailsOnDifferentImportersTest) {
+TEST_P(AllocatorTestParameterized, BufferCollectionImportPassesAndFailsOnDifferentImportersTest) {
+  const auto usage = GetParam();
+  bool use_default_importer = (usage == RegisterBufferCollectionUsage::DEFAULT) ? true : false;
+
   // Create a second buffer collection importer.
   auto local_mock_buffer_collection_importer = new MockBufferCollectionImporter();
   auto local_buffer_collection_importer =
       std::shared_ptr<BufferCollectionImporter>(local_mock_buffer_collection_importer);
 
   // Create an allocator instance that has two BufferCollectionImporters.
-  std::vector<std::shared_ptr<BufferCollectionImporter>> importers(
-      {buffer_collection_importer_, local_buffer_collection_importer});
-  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
-      context_provider_.context(), importers, utils::CreateSysmemAllocatorSyncPtr());
+  std::vector<std::shared_ptr<BufferCollectionImporter>> default_importers;
+  std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
+
+  if (use_default_importer) {
+    default_importers.push_back(buffer_collection_importer_);
+    default_importers.push_back(local_buffer_collection_importer);
+  } else {
+    screenshot_importers.push_back(buffer_collection_importer_);
+    screenshot_importers.push_back(local_buffer_collection_importer);
+  }
+
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(context_provider_.context(), default_importers,
+                                  screenshot_importers, utils::CreateSysmemAllocatorSyncPtr());
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
@@ -255,15 +307,16 @@ TEST_F(AllocatorTest, BufferCollectionImportPassesAndFailsOnDifferentImportersTe
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
   EXPECT_CALL(*local_mock_buffer_collection_importer, ReleaseBufferCollection(koid)).Times(0);
 
-  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), false);
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, false);
 }
 
-TEST_F(AllocatorTest, DroppingImportTokensTriggerRelease) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, DroppingImportTokensTriggerRelease) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
-  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, true);
 
   // Drop the import token via reset().
   {
@@ -273,16 +326,17 @@ TEST_F(AllocatorTest, DroppingImportTokensTriggerRelease) {
   }
 }
 
-TEST_F(AllocatorTest, RegisterAndReleaseMultipleBufferCollections) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, RegisterAndReleaseMultipleBufferCollections) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
   const auto koid_1 = fsl::GetKoid(ref_pair_1.export_token.value.get());
-  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_1.export_token, CreateToken(), true); }
+  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_1.export_token, CreateToken(), usage, true); }
 
   BufferCollectionImportExportTokens ref_pair_2 = BufferCollectionImportExportTokens::New();
   const auto koid_2 = fsl::GetKoid(ref_pair_2.export_token.value.get());
-  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_2.export_token, CreateToken(), true); }
+  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_2.export_token, CreateToken(), usage, true); }
 
   // Drop the import token for the second buffer collection, which should be the only one released.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid_2)).Times(1);
@@ -294,14 +348,15 @@ TEST_F(AllocatorTest, RegisterAndReleaseMultipleBufferCollections) {
   allocator.reset();
 }
 
-TEST_F(AllocatorTest, DuplicatedImportTokensKeepBufferCollectionRegistered) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, DuplicatedImportTokensKeepBufferCollectionRegistered) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
   auto import_token_dup = ref_pair.DuplicateImportToken();
 
-  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, true);
 
   // Drop the import token via reset(). That should not trigger release because |import_token_dup|
   // is valid.
@@ -319,18 +374,72 @@ TEST_F(AllocatorTest, DuplicatedImportTokensKeepBufferCollectionRegistered) {
   }
 }
 
-TEST_F(AllocatorTest, DestructorReleasesAllBufferCollections) {
-  std::shared_ptr<Allocator> allocator = CreateAllocator();
+TEST_P(AllocatorTestParameterized, DestructorReleasesAllBufferCollections) {
+  const auto usage = GetParam();
+  std::shared_ptr<Allocator> allocator = CreateAllocator(usage);
 
   BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
-  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_1.export_token, CreateToken(), true); }
+  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_1.export_token, CreateToken(), usage, true); }
 
   BufferCollectionImportExportTokens ref_pair_2 = BufferCollectionImportExportTokens::New();
-  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_2.export_token, CreateToken(), true); }
+  { REGISTER_BUFFER_COLLECTION(allocator, ref_pair_2.export_token, CreateToken(), usage, true); }
 
   // Cleanup.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_)).Times(2);
   allocator.reset();
+}
+
+TEST_F(AllocatorTest, RegisterDefaultAndScreenshotBufferCollections) {
+  // Create default importer.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> default_importers;
+  auto default_mock_buffer_collection_importer = new MockBufferCollectionImporter();
+  auto default_buffer_collection_importer =
+      std::shared_ptr<BufferCollectionImporter>(default_mock_buffer_collection_importer);
+  default_importers.push_back(default_buffer_collection_importer);
+
+  // Create screenshot importer.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
+  auto screenshot_mock_buffer_collection_importer = new MockBufferCollectionImporter();
+  auto screenshot_buffer_collection_importer =
+      std::shared_ptr<BufferCollectionImporter>(screenshot_mock_buffer_collection_importer);
+  screenshot_importers.push_back(screenshot_buffer_collection_importer);
+
+  // Create allocator.
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(context_provider_.context(), default_importers,
+                                  screenshot_importers, utils::CreateSysmemAllocatorSyncPtr());
+
+  // Register with the default importer.
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
+
+  EXPECT_CALL(*default_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _))
+      .WillOnce(Return(true));
+  bool processed_callback = false;
+  allocator->RegisterBufferCollection(
+      CreateArgs(std::move(ref_pair.export_token), CreateToken(),
+                 RegisterBufferCollectionUsage::DEFAULT),
+      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
+        EXPECT_FALSE(result.is_err());
+        processed_callback = true;
+      });
+  EXPECT_TRUE(processed_callback);
+
+  // Register with the screenshot screenshot.
+  BufferCollectionImportExportTokens ref_pair2 = BufferCollectionImportExportTokens::New();
+  const auto koid2 = fsl::GetKoid(ref_pair2.export_token.value.get());
+
+  EXPECT_CALL(*screenshot_mock_buffer_collection_importer, ImportBufferCollection(koid2, _, _))
+      .WillOnce(Return(true));
+  processed_callback = false;
+  allocator->RegisterBufferCollection(
+      CreateArgs(std::move(ref_pair2.export_token), CreateToken(),
+                 RegisterBufferCollectionUsage::SCREENSHOT),
+      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
+        EXPECT_FALSE(result.is_err());
+        processed_callback = true;
+      });
+  EXPECT_TRUE(processed_callback);
 }
 
 }  // namespace test
