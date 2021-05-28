@@ -141,19 +141,7 @@ TEST_P(OpenTest, OpenFileWithCreateFailsInReadOnlyDirPosixClone) {
   EXPECT_EQ(OpenFileWithCreate(clone_dir, "b"), ZX_ERR_ACCESS_DENIED);
 }
 
-// TODO(fxbug.dev/45624): fix this issue in the rust vfs, then enable these tests for fat.
-std::vector<TestFilesystemOptions> GetTestCombinations() {
-  return MapAndFilterAllTestFilesystems(
-      [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
-        if (!options.filesystem->GetTraits().is_fat) {
-          return options;
-        } else {
-          return std::nullopt;
-        }
-      });
-}
-
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, OpenTest, testing::ValuesIn(GetTestCombinations()),
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, OpenTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
 }  // namespace

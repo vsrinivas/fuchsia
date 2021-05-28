@@ -71,7 +71,6 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, z
 
     let prohibited_flags = OPEN_FLAG_APPEND | OPEN_FLAG_TRUNCATE;
 
-    // Pseudo directories do not allow mounting at this point.
     if flags & OPEN_RIGHT_ADMIN != 0 {
         return Err(zx::Status::ACCESS_DENIED);
     }

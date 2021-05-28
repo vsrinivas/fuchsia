@@ -28,7 +28,7 @@ use {
         DirectorySetAttrResponder, DirectorySyncResponder, DirectoryUnlink2Responder,
         DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes, NodeInfo, NodeMarker,
         INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_POSIX, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
@@ -464,6 +464,14 @@ where
             return;
         }
 
+        let mut flags = match check_child_connection_flags(self.flags, flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
+
         if path == "." || path == "./" {
             // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
             // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
@@ -472,6 +480,14 @@ where
                 send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
                 return;
             }
+
+            // Clone ignores the POSIX flag, but open shouldn't.  The flag would have been stripped
+            // above by check_child_connection_flags if we had insufficient privileges.
+            if flags & OPEN_FLAG_POSIX != 0 {
+                flags &= !OPEN_FLAG_POSIX;
+                flags |= OPEN_RIGHT_WRITABLE;
+            }
+
             self.handle_clone(flags, mode, server_end);
             return;
         }
@@ -487,14 +503,6 @@ where
         if path.is_dir() {
             mode |= MODE_TYPE_DIRECTORY;
         }
-
-        let flags = match check_child_connection_flags(self.flags, flags) {
-            Ok(updated) => updated,
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
-        };
 
         // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
         let directory = self.directory.clone();

@@ -1201,6 +1201,15 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                             OPEN_REQ_SUPPORTED_FLAGS,
                         )?;
                         if let Some(&next_node_pos) = children.get(end_segment) {
+                            // serve_connection_at uses clone, but this is open and open behaves
+                            // differently to clone in at least one respect (e.g. handling of the
+                            // POSIX flag).
+                            if let ServiceFsNode::Directory(Directory::Remote(proxy)) =
+                                &self.nodes[next_node_pos]
+                            {
+                                proxy.open(flags, mode, ".", object)?;
+                                return Ok((None, ConnectionState::Open));
+                            }
                             let output = self.serve_connection_at(
                                 object,
                                 next_node_pos,
