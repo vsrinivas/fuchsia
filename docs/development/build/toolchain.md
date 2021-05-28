@@ -211,7 +211,7 @@ cmake -GNinja \
   -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
   -DCMAKE_INSTALL_PREFIX= \
   -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-arm64 \
-  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-amd64 \
+  -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR}/linux-x64 \
   -DSTAGE2_FUCHSIA_SDK=${IDK_DIR} \
   -C ${LLVM_SRCDIR}/clang/cmake/caches/Fuchsia.cmake \
   ${LLVM_SRCDIR}/llvm
@@ -282,11 +282,11 @@ cp ${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/lib/runtime.json ${INS
 ### Building Fuchsia with a Custom Clang
 
 To specify a custom clang toolchain for building Fuchsia, pass
-`--args clang_prefix=\"${LLVM_BUILD_DIR}/bin\" --no-goma`
+`--args clang_prefix=\"${INSTALL_DIR}/bin\" --no-goma`
 to `fx set` command and run `fx build`.
 
 ```bash
-fx set core.x64 --args=clang_prefix=\"${LLVM_BUILD_DIR}/bin\" --no-goma
+fx set core.x64 --args=clang_prefix=\"${INSTALL_DIR}/bin\" --no-goma
 fx build
 ```
 
