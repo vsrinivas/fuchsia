@@ -42,7 +42,7 @@ use {
     std::{
         convert::TryInto,
         fs::File,
-        io::{self, BufWriter, Read},
+        io::{self, BufWriter, Read, Write},
         path::{Path, PathBuf},
         sync::Arc,
         time::Duration,
@@ -175,8 +175,9 @@ impl MountsBuilder {
 impl Mounts {
     fn add_enable_dynamic_config(&self, config: &EnableDynamicConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
-            let f = File::create(d.path().join("config.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
+            let mut f = BufWriter::new(File::create(d.path().join("config.json")).unwrap());
+            serde_json::to_writer(&mut f, &config).unwrap();
+            f.flush().unwrap();
         } else {
             panic!("not supported");
         }
@@ -184,8 +185,10 @@ impl Mounts {
 
     fn add_persisted_repos_config(&self, config: &PersistedReposConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
-            let f = File::create(d.path().join("persisted_repos_dir.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
+            let mut f =
+                BufWriter::new(File::create(d.path().join("persisted_repos_dir.json")).unwrap());
+            serde_json::to_writer(&mut f, &config).unwrap();
+            f.flush().unwrap();
         } else {
             panic!("not supported");
         }
@@ -197,11 +200,12 @@ impl Mounts {
             if !static_repo_path.exists() {
                 std::fs::create_dir(&static_repo_path).unwrap();
             }
-            let f =
+            let mut f = BufWriter::new(
                 File::create(static_repo_path.join(format!("{}.json", config.repo_url().host())))
-                    .unwrap();
-            serde_json::to_writer(BufWriter::new(f), &RepositoryConfigs::Version1(vec![config]))
-                .unwrap();
+                    .unwrap(),
+            );
+            serde_json::to_writer(&mut f, &RepositoryConfigs::Version1(vec![config])).unwrap();
+            f.flush().unwrap();
         } else {
             panic!("not supported");
         }
@@ -209,16 +213,18 @@ impl Mounts {
 
     fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
-            let f = File::create(d.path().join("rewrites.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), rule_config).unwrap();
+            let mut f = BufWriter::new(File::create(d.path().join("rewrites.json")).unwrap());
+            serde_json::to_writer(&mut f, rule_config).unwrap();
+            f.flush().unwrap();
         } else {
             panic!("not supported");
         }
     }
     fn add_dynamic_repositories(&self, repo_configs: &RepositoryConfigs) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
-            let f = File::create(d.path().join("repositories.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), repo_configs).unwrap();
+            let mut f = BufWriter::new(File::create(d.path().join("repositories.json")).unwrap());
+            serde_json::to_writer(&mut f, repo_configs).unwrap();
+            f.flush().unwrap();
         } else {
             panic!("not supported");
         }

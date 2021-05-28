@@ -29,7 +29,7 @@ use {
     parking_lot::Mutex,
     serde::Serialize,
     std::sync::Arc,
-    std::{convert::TryInto, fs::File},
+    std::{convert::TryInto, fs::File, io::Write},
 };
 
 const ROOT_KEY_1: &str = "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307";
@@ -156,12 +156,11 @@ impl TestEnv {
             File::open(mounts.config_data.path()).unwrap(),
         )
         .expect("/config/data to mount");
-        let f = File::create(mounts.config_data.path().join("config.json")).unwrap();
-        serde_json::to_writer(
-            std::io::BufWriter::new(f),
-            &Config { enable_dynamic_configuration: true },
-        )
-        .unwrap();
+        let mut f = std::io::BufWriter::new(
+            File::create(mounts.config_data.path().join("config.json")).unwrap(),
+        );
+        serde_json::to_writer(&mut f, &Config { enable_dynamic_configuration: true }).unwrap();
+        f.flush().unwrap();
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service_to::<RepositoryManagerMarker, _>(

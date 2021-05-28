@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::anyhow,
+    anyhow::{anyhow, Context as _},
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig, RuleInspectState},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
@@ -11,7 +11,7 @@ use {
     std::{
         collections::VecDeque,
         fs::{self, File},
-        io,
+        io::{self, Write as _},
         path::{Path, PathBuf},
     },
     thiserror::Error,
@@ -74,7 +74,7 @@ impl RewriteManager {
         url.clone()
     }
 
-    fn save(dynamic_rules: &mut Vec<Rule>, dynamic_rules_path: &Path) -> io::Result<()> {
+    fn save(dynamic_rules: &mut Vec<Rule>, dynamic_rules_path: &Path) -> Result<(), anyhow::Error> {
         let config = RuleConfig::Version1(std::mem::replace(dynamic_rules, vec![]));
 
         let result = (|| {
@@ -82,10 +82,15 @@ impl RewriteManager {
             temp_path.push(".new");
             let temp_path = PathBuf::from(temp_path);
             {
-                let f = File::create(&temp_path)?;
-                serde_json::to_writer(io::BufWriter::new(f), &config)?;
+                let mut f = io::BufWriter::new(
+                    File::create(&temp_path)
+                        .with_context(|| format!("create temp file {:?}", temp_path))?,
+                );
+                serde_json::to_writer(&mut f, &config).context("serialize config")?;
+                f.flush().context("flush config")?;
             };
-            fs::rename(temp_path, dynamic_rules_path)
+            fs::rename(&temp_path, dynamic_rules_path)
+                .with_context(|| format!("rename {:?} to {:?}", temp_path, dynamic_rules_path))
         })();
 
         let RuleConfig::Version1(rules) = config;
@@ -115,7 +120,7 @@ impl RewriteManager {
                 self.generation += 1;
                 // FIXME(kevinwells) synchronous I/O in an async context
                 if let Err(err) = Self::save(&mut self.dynamic_rules, dynamic_rules_path) {
-                    fx_log_err!("error while saving dynamic rewrite rules: {}", err);
+                    fx_log_err!("error while saving dynamic rewrite rules: {:#}", anyhow!(err));
                 }
                 self.update_inspect_objects();
                 Ok(())

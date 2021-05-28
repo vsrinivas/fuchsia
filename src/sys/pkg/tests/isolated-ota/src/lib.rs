@@ -26,6 +26,7 @@ use {
     serde_json::json,
     std::{
         collections::{BTreeSet, HashMap},
+        io::Write,
         str::FromStr,
         sync::Arc,
     },
@@ -187,11 +188,10 @@ impl TestEnvBuilder {
         let mut path = dir.path().to_owned();
         path.push("repo_config.json");
         let path = path.as_path();
-        serde_json::to_writer(
-            std::io::BufWriter::new(std::fs::File::create(path).context("creating file")?),
-            &repo_config,
-        )
-        .unwrap();
+        let mut file =
+            std::io::BufWriter::new(std::fs::File::create(path).context("creating file")?);
+        serde_json::to_writer(&mut file, &repo_config).unwrap();
+        file.flush().unwrap();
 
         Ok(TestEnv {
             blobfs: self.blobfs,
@@ -526,7 +526,7 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::Sync { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing sync")?
             }
-            DirectoryAdminRequest::AdvisoryLock { responder, ..  } => {
+            DirectoryAdminRequest::AdvisoryLock { responder, .. } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
             DirectoryAdminRequest::GetAttr { responder } => responder

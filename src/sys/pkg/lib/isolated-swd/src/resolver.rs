@@ -15,7 +15,7 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
-    std::sync::Arc,
+    std::{io::Write, sync::Arc},
 };
 
 const RESOLVER_URL: &str =
@@ -191,11 +191,10 @@ pub mod for_tests {
             let mut temp_path = tempdir.path().to_owned();
             temp_path.push("test.json");
             let path = temp_path.as_path();
-            serde_json::to_writer(
-                std::io::BufWriter::new(std::fs::File::create(path).context("creating file")?),
-                &repo_config,
-            )
-            .unwrap();
+            let mut file =
+                std::io::BufWriter::new(std::fs::File::create(path).context("creating file")?);
+            serde_json::to_writer(&mut file, &repo_config).unwrap();
+            file.flush().unwrap();
 
             // Launch the resolver.
             let repo_dir =

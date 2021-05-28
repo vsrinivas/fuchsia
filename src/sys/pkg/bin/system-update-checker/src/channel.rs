@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::connect::*;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use fidl_fuchsia_boot::ArgumentsMarker;
 use fidl_fuchsia_cobalt::{
     SoftwareDistributionInfo, Status as CobaltStatus, SystemDataUpdaterMarker,
@@ -28,7 +28,7 @@ use serde_json;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use thiserror::Error;
@@ -349,7 +349,7 @@ fn read_channel(path: impl AsRef<Path>) -> Result<String, Error> {
     }
 }
 
-fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(), io::Error> {
+fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(), anyhow::Error> {
     let path = path.as_ref();
     let channel = Channel::Version1 { legacy_amber_source_name: channel.into() };
 
@@ -358,12 +358,16 @@ fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(
     let temp_path = PathBuf::from(temp_path);
     {
         if let Some(dir) = temp_path.parent() {
-            fs::create_dir_all(dir)?;
+            fs::create_dir_all(dir).with_context(|| format!("create_dir_all {:?}", dir))?;
         }
-        let f = fs::File::create(&temp_path)?;
-        serde_json::to_writer(io::BufWriter::new(f), &channel)?;
+        let mut f = io::BufWriter::new(
+            fs::File::create(&temp_path)
+                .with_context(|| format!("create temp file {:?}", temp_path))?,
+        );
+        serde_json::to_writer(&mut f, &channel).context("serialize config")?;
+        f.flush().context("flush")?;
     };
-    fs::rename(temp_path, path)
+    fs::rename(&temp_path, path).with_context(|| format!("rename {:?} to {:?}", temp_path, path))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

@@ -5,7 +5,11 @@
 use {
     serde::Serialize,
     serde_json,
-    std::{fs::File, io, str},
+    std::{
+        fs::File,
+        io::{self, Write as _},
+        str,
+    },
     tempfile::{self, TempDir},
 };
 
@@ -18,8 +22,9 @@ where
 
     for (name, config) in iter {
         let path = dir.path().join(name);
-        let f = File::create(path).unwrap();
-        serde_json::to_writer(io::BufWriter::new(f), &config).unwrap();
+        let mut f = io::BufWriter::new(File::create(path).unwrap());
+        serde_json::to_writer(&mut f, &config).unwrap();
+        f.flush().unwrap();
     }
 
     dir

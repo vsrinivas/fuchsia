@@ -24,7 +24,8 @@ use {
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{btree_set, hash_map::Entry, BTreeSet, HashMap},
-        fs, io,
+        fs,
+        io::{self, Write as _},
         ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
@@ -221,10 +222,13 @@ impl RepositoryManager {
             temp_path.push(".new");
             let temp_path = PathBuf::from(temp_path);
             {
-                let f = fs::File::create(&temp_path)
-                    .with_context(|| format!("create temp file {:?}", temp_path))?;
-                serde_json::to_writer(io::BufWriter::new(f), &RepositoryConfigs::Version1(configs))
+                let mut f = io::BufWriter::new(
+                    fs::File::create(&temp_path)
+                        .with_context(|| format!("create temp file {:?}", temp_path))?,
+                );
+                serde_json::to_writer(&mut f, &RepositoryConfigs::Version1(configs))
                     .context("serialize config")?;
+                f.flush().context("flush config")?;
             }
             fs::rename(&temp_path, dynamic_configs_path)
                 .with_context(|| format!("rename {:?} to {:?}", temp_path, dynamic_configs_path))
@@ -884,8 +888,9 @@ mod tests {
                 let dir = tempfile::tempdir().unwrap();
 
                 for (name, configs) in static_configs.into_iter() {
-                    let f = File::create(dir.path().join(name)).unwrap();
-                    serde_json::to_writer(io::BufWriter::new(f), &configs).unwrap();
+                    let mut f = io::BufWriter::new(File::create(dir.path().join(name)).unwrap());
+                    serde_json::to_writer(&mut f, &configs).unwrap();
+                    f.flush().unwrap();
                 }
 
                 dir
@@ -896,8 +901,9 @@ mod tests {
                 let path = dir.path().join(DYNAMIC_CONFIG_NAME);
 
                 if let Some(configs) = dynamic_configs {
-                    let f = File::create(&path).unwrap();
-                    serde_json::to_writer(io::BufWriter::new(f), &configs).unwrap();
+                    let mut f = io::BufWriter::new(File::create(&path).unwrap());
+                    serde_json::to_writer(&mut f, &configs).unwrap();
+                    f.flush().unwrap();
                 }
 
                 (dir, path)
@@ -1146,19 +1152,21 @@ mod tests {
             let mut f = File::create(&invalid_path).unwrap();
             f.write(b"hello world").unwrap();
 
-            let f = File::create(dir.path().join("a")).unwrap();
+            let mut f = io::BufWriter::new(File::create(dir.path().join("a")).unwrap());
             serde_json::to_writer(
-                io::BufWriter::new(f),
+                &mut f,
                 &RepositoryConfigs::Version1(vec![example_config.clone()]),
             )
             .unwrap();
+            f.flush().unwrap();
 
-            let f = File::create(dir.path().join("z")).unwrap();
+            let mut f = io::BufWriter::new(File::create(dir.path().join("z")).unwrap());
             serde_json::to_writer(
-                io::BufWriter::new(f),
+                &mut f,
                 &RepositoryConfigs::Version1(vec![fuchsia_config.clone()]),
             )
             .unwrap();
+            f.flush().unwrap();
         }
 
         let dynamic_dir = tempfile::tempdir().unwrap();

@@ -198,7 +198,7 @@ pub mod tests {
         anyhow::Error,
         serde::Serialize,
         serde_json,
-        std::fs::File,
+        std::{fs::File, io::Write},
         tempfile::{self, TempDir},
     };
 
@@ -217,8 +217,9 @@ pub mod tests {
     ) -> Result<(TempDir, PathBuf), Error> {
         let dir = tempfile::tempdir()?;
         let path = dir.path().join(file_name);
-        let f = File::create(&path)?;
-        serde_json::to_writer(io::BufWriter::new(f), &contents)?;
+        let mut f = io::BufWriter::new(File::create(&path)?);
+        serde_json::to_writer(&mut f, &contents)?;
+        f.flush().unwrap();
 
         Ok((dir, path))
     }
