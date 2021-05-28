@@ -1234,7 +1234,8 @@ mod test {
         daemon.load_manual_targets().await;
 
         let target = daemon.get_target(Some("127.0.0.1:8022".to_string())).await.unwrap();
-        assert_eq!(target.ssh_address(), Some("127.0.0.1:8022".parse::<SocketAddr>().unwrap()));
+        let ta = TargetAddr::from("127.0.0.1:8022".parse::<SocketAddr>().unwrap());
+        assert_eq!(target.ssh_address(), Some(ta));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

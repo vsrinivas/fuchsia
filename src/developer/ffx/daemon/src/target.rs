@@ -226,6 +226,54 @@ impl PartialOrd for TargetAddrEntry {
     }
 }
 
+/// Given an iterator of TargetAddrEntry, return the TargetAddr from the entry
+/// that should be attempted for SSH connections next.
+///
+/// The sort algorithm for SSH address priority is in order of:
+/// - Manual addresses first
+///   - By recency of observation
+/// - Other addresses
+///   - By link-local first
+///   - By most recently observed
+///
+/// The host-pipe connection mechanism will requests addresses from this function
+/// on each connection attempt.
+fn ssh_address_from<'a, I>(iter: I) -> Option<TargetAddr>
+where
+    I: Iterator<Item = &'a TargetAddrEntry>,
+{
+    use itertools::Itertools;
+
+    // Order e1 & e2 by most recent timestamp
+    let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
+
+    // Order by link-local first, then by recency
+    let link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| match (
+        e1.addr.ip.is_link_local_addr(),
+        e2.addr.ip.is_link_local_addr(),
+    ) {
+        (true, true) | (false, false) => recency(e1, e2),
+        (true, false) => Ordering::Less,
+        (false, true) => Ordering::Greater,
+    };
+
+    let manual_link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| {
+        match (e1.manual, e2.manual) {
+            // Note: for manually added addresses, they are ordered strictly
+            // by recency, not link-local first.
+            (true, true) => recency(e1, e2),
+            (true, false) => Ordering::Less,
+            (false, true) => Ordering::Greater,
+            (false, false) => link_local_recency(e1, e2),
+        }
+    };
+
+    iter.filter(|t| !t.netsvc)
+        .sorted_by(|e1, e2| manual_link_local_recency(e1, e2))
+        .next()
+        .map(|e| e.addr.clone())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildConfig {
     pub product_config: String,
@@ -432,58 +480,9 @@ impl Target {
         }
     }
 
-    /// ssh_address returns the SocketAddr of the next SSH address to connect to for this target.
-    ///
-    /// The sort algorithm for SSH address priority is in order of:
-    /// - Manual addresses first
-    ///   - By recency of observation
-    /// - Other addresses
-    ///   - By link-local first
-    ///   - By most recently observed
-    ///
-    /// The host-pipe connection mechanism will requests addresses from this function on each
-    /// connection attempt.
-    pub fn ssh_address(&self) -> Option<SocketAddr> {
-        use itertools::Itertools;
-
-        // Order e1 & e2 by most recent timestamp
-        let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
-
-        // Order by link-local first, then by recency
-        let link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| match (
-            e1.addr.ip.is_link_local_addr(),
-            e2.addr.ip.is_link_local_addr(),
-        ) {
-            (true, true) | (false, false) => recency(e1, e2),
-            (true, false) => Ordering::Less,
-            (false, true) => Ordering::Greater,
-        };
-
-        let manual_link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| {
-            match (e1.manual, e2.manual) {
-                // Note: for manually added addresses, they are ordered strictly
-                // by recency, not link-local first.
-                (true, true) => recency(e1, e2),
-                (true, false) => Ordering::Less,
-                (false, true) => Ordering::Greater,
-                (false, false) => link_local_recency(e1, e2),
-            }
-        };
-
-        let target_addr = self
-            .addrs
-            .borrow()
-            .iter()
-            .filter(|t| !t.netsvc)
-            .sorted_by(|e1, e2| manual_link_local_recency(e1, e2))
-            .next()
-            .map(|e| e.addr);
-
-        target_addr.map(|target_addr| {
-            let mut socket_addr: SocketAddr = target_addr.into();
-            socket_addr.set_port(self.ssh_port().unwrap_or(DEFAULT_SSH_PORT));
-            socket_addr
-        })
+    /// ssh_address returns the TargetAddr of the next SSH address to connect to for this target.
+    pub fn ssh_address(&self) -> Option<TargetAddr> {
+        ssh_address_from(self.addrs.borrow().iter())
     }
 
     pub fn netsvc_address(&self) -> Option<TargetAddr> {
@@ -504,11 +503,7 @@ impl Target {
                 IpAddr::V6(i) => IpAddress::Ipv6(Ipv6Address { addr: i.octets().into() }),
                 IpAddr::V4(i) => IpAddress::Ipv4(Ipv4Address { addr: i.octets().into() }),
             };
-
-            let scope_id = match addr {
-                SocketAddr::V6(ref v6) => v6.scope_id(),
-                _ => 0,
-            };
+            let scope_id = addr.scope_id();
 
             let port = self.ssh_port().unwrap_or(DEFAULT_SSH_PORT);
 
@@ -2455,23 +2450,19 @@ mod test {
 
     #[test]
     fn test_target_ssh_address_priority() {
-        let name = Some("bubba");
         let start = std::time::SystemTime::now();
         use std::iter::FromIterator;
 
         // An empty set returns nothing.
         let addrs = BTreeSet::<TargetAddrEntry>::new();
-        assert_eq!(Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(), None);
+        assert_eq!(ssh_address_from(addrs.iter()), None);
 
         // Given two addresses, from the exact same time, neither manual, prefer any link-local address.
         let addrs = BTreeSet::from_iter(vec![
             (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
             (("fe80::1".parse().unwrap(), 2).into(), start.into(), false).into(),
         ]);
-        assert_eq!(
-            Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
-            Some("[fe80::1%2]:22".parse().unwrap())
-        );
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::1".parse().unwrap(), 2).into()));
 
         // Given two addresses, one link local the other not, prefer the link local even if older.
         let addrs = BTreeSet::from_iter(vec![
@@ -2483,10 +2474,7 @@ mod test {
             )
                 .into(),
         ]);
-        assert_eq!(
-            Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
-            Some("[fe80::1%2]:22".parse().unwrap())
-        );
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::1".parse().unwrap(), 2).into()));
 
         // Given two addresses, both link-local, pick the one most recent.
         let addrs = BTreeSet::from_iter(vec![
@@ -2498,10 +2486,7 @@ mod test {
             )
                 .into(),
         ]);
-        assert_eq!(
-            Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
-            Some("[fe80::2%1]:22".parse().unwrap())
-        );
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::2".parse().unwrap(), 1).into()));
 
         // Given two addresses, one manual, old and non-local, prefer the manual entry.
         let addrs = BTreeSet::from_iter(vec![
@@ -2509,10 +2494,7 @@ mod test {
             (("2000::1".parse().unwrap(), 0).into(), (start - Duration::from_secs(1)).into(), true)
                 .into(),
         ]);
-        assert_eq!(
-            Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
-            Some("[2000::1]:22".parse().unwrap())
-        );
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("2000::1".parse().unwrap(), 0).into()));
 
         // Given two addresses, neither local, neither manual, prefer the most recent.
         let addrs = BTreeSet::from_iter(vec![
@@ -2524,10 +2506,7 @@ mod test {
             )
                 .into(),
         ]);
-        assert_eq!(
-            Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
-            Some("[2000::2]:22".parse().unwrap())
-        );
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("2000::2".parse().unwrap(), 0).into()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2681,23 +2660,28 @@ mod test {
 
     #[test]
     fn test_netsvc_target_has_no_ssh() {
+        let start = std::time::SystemTime::now();
         use std::iter::FromIterator;
-        let target = Target::new_with_netsvc_addrs(
-            Some("foo"),
-            BTreeSet::from_iter(
-                vec!["[fe80::1%1]:0".parse::<SocketAddr>().unwrap().into()].into_iter(),
-            ),
-        );
-        assert_eq!(target.ssh_address(), None);
 
-        let target = Target::new();
-        target.addrs_insert_entry(
-            (("2000::1".parse().unwrap(), 0).into(), Utc::now().into(), false, true).into(),
-        );
-        target.addrs_insert_entry(
-            (("fe80::1".parse().unwrap(), 0).into(), Utc::now().into(), false).into(),
-        );
-        assert_eq!(target.ssh_address(), Some("[fe80::1%0]:22".parse::<SocketAddr>().unwrap()));
+        // An empty set returns nothing.
+        let addrs = BTreeSet::<TargetAddrEntry>::new();
+        assert_eq!(ssh_address_from(addrs.iter()), None);
+
+        let addrs = BTreeSet::from_iter(vec![(
+            ("2000::1".parse().unwrap(), 0).into(),
+            start.into(),
+            false,
+            true,
+        )
+            .into()]);
+        assert_eq!(ssh_address_from(addrs.iter()), None);
+
+        let addrs = BTreeSet::from_iter(vec![
+            (("2000::1".parse().unwrap(), 0).into(), start.into(), false, true).into(),
+            (("fe80::1".parse().unwrap(), 0).into(), start.into(), false).into(),
+        ]);
+
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::1".parse().unwrap(), 0).into()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
