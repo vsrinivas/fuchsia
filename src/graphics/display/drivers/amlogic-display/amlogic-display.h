@@ -153,6 +153,9 @@ class AmlogicDisplay
   // powered on.
   zx_status_t RestartDisplay() TA_REQ(display_lock_);
 
+  bool fully_initialized() const { return full_init_done_.load(std::memory_order_relaxed); }
+  void set_fully_initialized() { full_init_done_.store(true, std::memory_order_release); }
+
   // Zircon handles
   zx::bti bti_;
   zx::interrupt inth_;
@@ -183,7 +186,8 @@ class AmlogicDisplay
   uint64_t current_image_ TA_GUARDED(display_lock_) = 0;
   bool current_image_valid_ TA_GUARDED(display_lock_) = false;
 
-  bool full_init_done_ = false;
+  // Relaxed is safe because full_init_done_ only ever moves from false to true.
+  std::atomic<bool> full_init_done_ = false;
 
   // Display controller related data
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
@@ -198,7 +202,7 @@ class AmlogicDisplay
   fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
   fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_captures_ TA_GUARDED(capture_lock_);
 
-  // Objects
+  // Objects: only valid if fully_initialized()
   std::unique_ptr<amlogic_display::Vpu> vpu_;
   std::unique_ptr<amlogic_display::Osd> osd_;
   std::unique_ptr<amlogic_display::Vout> vout_;

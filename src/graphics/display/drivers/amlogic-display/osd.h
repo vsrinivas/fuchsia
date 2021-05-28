@@ -213,13 +213,14 @@ class Osd {
 
   void SetAfbcRdmaTableValue(uint32_t val) const;
   void FlushAfbcRdmaTable() const;
-  int RdmaThread();
+  int RdmaThread() __TA_EXCLUDES(rdma_lock_);
   void EnableGamma();
   void DisableGamma();
   zx_status_t ConfigAfbc();
   zx_status_t SetGamma(GammaChannel channel, const float* data);
   zx_status_t WaitForGammaAddressReady();
   zx_status_t WaitForGammaWriteReady();
+  void WaitForRdmaIdle() __TA_REQUIRES(rdma_lock_);
 
   int GetNextAvailableRdmaTableIndex();
 

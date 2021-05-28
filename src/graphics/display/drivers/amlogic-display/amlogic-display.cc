@@ -48,7 +48,7 @@ constexpr uint32_t kBufferAlignment = 64;
 }  // namespace
 
 zx_status_t AmlogicDisplay::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
-  if (osd_) {
+  if (fully_initialized()) {
     osd_->SetMinimumRgb(minimum_rgb);
     return ZX_OK;
   }
@@ -56,6 +56,9 @@ zx_status_t AmlogicDisplay::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb
 }
 
 zx_status_t AmlogicDisplay::RestartDisplay() {
+  if (!fully_initialized()) {
+    return ZX_ERR_INTERNAL;
+  }
   vpu_->PowerOff();
   vpu_->PowerOn();
   vpu_->VppInit();
@@ -66,6 +69,7 @@ zx_status_t AmlogicDisplay::RestartDisplay() {
 }
 
 zx_status_t AmlogicDisplay::DisplayInit() {
+  ZX_ASSERT(!fully_initialized());
   zx_status_t status;
   fbl::AllocChecker ac;
 
@@ -331,12 +335,12 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   zx_status_t status;
   if (display_count == 1 && display_configs[0]->layer_count) {
-    if (!full_init_done_) {
+    if (!fully_initialized()) {
       if ((status = DisplayInit()) != ZX_OK) {
         DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
         ZX_ASSERT(0);
       }
-      full_init_done_ = true;
+      set_fully_initialized();
     }
 
     status = vout_->ApplyConfiguration(&display_configs[0]->mode);
@@ -361,7 +365,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
     osd_->FlipOnVsync(info->canvas_idx, display_configs[0]);
   } else {
     current_image_valid_ = false;
-    if (full_init_done_) {
+    if (fully_initialized()) {
       {
         fbl::AutoLock lock2(&capture_lock_);
         if (capture_active_id_ != INVALID_ID) {
@@ -376,7 +380,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   // If bootloader does not enable any of the display hardware, no vsync will be generated.
   // This fakes a vsync to let clients know we are ready until we actually initialize hardware
-  if (!full_init_done_) {
+  if (!fully_initialized()) {
     if (dc_intf_.is_valid()) {
       if (display_count == 0 || display_configs[0]->layer_count == 0) {
         dc_intf_.OnDisplayVsync(display_id_, zx_clock_get_monotonic(), nullptr, 0);
@@ -386,12 +390,11 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 }
 
 void AmlogicDisplay::DdkSuspend(ddk::SuspendTxn txn) {
-  fbl::AutoLock lock(&display_lock_);
   if (txn.suspend_reason() != DEVICE_SUSPEND_REASON_MEXEC) {
     txn.Reply(ZX_ERR_NOT_SUPPORTED, txn.requested_state());
     return;
   }
-  if (osd_) {
+  if (fully_initialized()) {
     osd_->Disable();
   }
 
@@ -408,8 +411,7 @@ void AmlogicDisplay::DdkSuspend(ddk::SuspendTxn txn) {
 }
 
 void AmlogicDisplay::DdkResume(ddk::ResumeTxn txn) {
-  fbl::AutoLock lock(&display_lock_);
-  if (osd_) {
+  if (fully_initialized()) {
     osd_->Enable();
   }
   txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
@@ -418,11 +420,12 @@ void AmlogicDisplay::DdkResume(ddk::ResumeTxn txn) {
 void AmlogicDisplay::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AmlogicDisplay::DdkRelease() {
-  if (osd_) {
-    osd_->Release();
-  }
   vsync_irq_.destroy();
   thrd_join(vsync_thread_, nullptr);
+  if (fully_initialized()) {
+    osd_->Release();
+  }
+
   vd1_wr_irq_.destroy();
   thrd_join(capture_thread_, nullptr);
   hpd_irq_.destroy();
@@ -638,6 +641,11 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
 }
 
 zx_status_t AmlogicDisplay::DisplayCaptureImplStartCapture(uint64_t capture_handle) {
+  if (!fully_initialized()) {
+    DISP_ERROR("Cannot start capture before initializing the display\n");
+    return ZX_ERR_SHOULD_WAIT;
+  }
+
   fbl::AutoLock lock(&capture_lock_);
   if (capture_active_id_ != INVALID_ID) {
     DISP_ERROR("Cannot start capture while another capture is in progress\n");
@@ -714,8 +722,12 @@ int AmlogicDisplay::CaptureThread() {
       DISP_ERROR("Vd1 Wr interrupt wait failed %d\n", status);
       break;
     }
-    fbl::AutoLock lock(&capture_lock_);
+    if (!fully_initialized()) {
+      DISP_ERROR("Capture interrupt fired before the display was initialized\n");
+      continue;
+    }
     vpu_->CaptureDone();
+    fbl::AutoLock lock(&capture_lock_);
     if (capture_intf_.is_valid()) {
       capture_intf_.OnCaptureComplete();
     }
@@ -733,12 +745,12 @@ int AmlogicDisplay::VSyncThread() {
       DISP_ERROR("VSync Interrupt Wait failed\n");
       break;
     }
-    fbl::AutoLock lock(&display_lock_);
     uint64_t live = 0;
-    if (osd_) {
+    if (fully_initialized()) {
       live = osd_->GetLastImageApplied();
     }
     bool current_image_valid = live != 0;
+    fbl::AutoLock lock(&display_lock_);
     if (dc_intf_.is_valid() && display_attached_) {
       dc_intf_.OnDisplayVsync(display_id_, timestamp.get(), &live, current_image_valid);
     }
