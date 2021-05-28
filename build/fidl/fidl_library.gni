@@ -49,7 +49,6 @@ template("fidl_library") {
   # make this unconditional.
   generate_api_summary = true
   if (defined(invoker.experimental_api_summary) || generate_api_summary) {
-    not_needed(invoker, [ "experimental_api_summary" ])
     generate_api_summary =
         generate_api_summary || invoker.experimental_api_summary
     summarization_target_name = "${target_name}_api_summarize"
@@ -457,6 +456,9 @@ template("fidl_library") {
         api_contents = [
           {
             source = normalized_file
+            if (generate_api_summary) {
+              source = summary_file
+            }
             dest = "fidl/$library_name"
           },
         ]
@@ -481,6 +483,9 @@ template("fidl_library") {
         ":$compilation_target_name",
         ":$meta_target_name",
       ]
+      if (generate_api_summary) {
+        non_sdk_deps += [ ":${summarization_target_name}" ]
+      }
 
       deps = []
       foreach(dep, fidl_deps) {
