@@ -37,27 +37,6 @@ func Run(ctx context.Context, config *Config) error {
 	var workSem = make(chan int, runtime.GOMAXPROCS(0))
 	metrics := NewMetrics()
 
-	dependencies := make([]string, 0)
-	if config.Target != "" {
-		gn, err := NewGn(ctx, config)
-		if err != nil {
-			return err
-		}
-
-		deps, err := gn.Dependencies(ctx, config.Target)
-		if err != nil {
-			return err
-		}
-
-		for _, dep := range deps {
-			d, err := LabelToDirectory(dep)
-			if err != nil {
-				return err
-			}
-			dependencies = append(dependencies, d)
-		}
-	}
-
 	file_tree, err := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
 	if err != nil {
 		return err
@@ -106,22 +85,6 @@ func Run(ctx context.Context, config *Config) error {
 	r = trace.StartRegion(ctx, "regular file walk")
 	for file := range file_tree.getFileIterator() {
 		file := file
-
-		// Skip files that aren't dependencies of the specified GN target, if there is one.
-		skip := true
-		if len(dependencies) == 0 {
-			skip = false
-		}
-		for _, dep := range dependencies {
-			if file.Parent.GnTarget == dep {
-				skip = false
-				break
-			}
-		}
-		if skip {
-			continue
-		}
-
 		workSem <- 1
 		eg.Go(func() error {
 			if err := processFile(file, metrics, licenses, unlicensedFiles, config); err != nil {
@@ -205,12 +168,9 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 	}
 	data = data[:n]
 
-	isMatched, matchedLic, licMatch := licenses.MatchFile(data, file.Path, metrics)
+	isMatched, matchedLic, _ := licenses.MatchFile(data, file.Path, metrics)
 	if isMatched {
 		file.Licenses = append(file.Licenses, matchedLic)
-		licMatch.Lock()
-		licMatch.Used = true
-		licMatch.Unlock()
 	} else {
 		if len(file_tree.SingleLicenseFiles) == 0 {
 			metrics.increment("num_unlicensed")
@@ -236,7 +196,6 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 					for _, match := range matches {
 						match.Lock()
 						match.LicenseAppliesToFiles = append(match.LicenseAppliesToFiles, path)
-						match.Used = true
 						match.Unlock()
 					}
 				}

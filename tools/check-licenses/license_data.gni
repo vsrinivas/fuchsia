@@ -67,10 +67,6 @@ template("license_data") {
       string_join(",", rebase_path(configs, "//")),
       "--out_dir",
       rebase_path(target_out_dir, "//"),
-      "--gn_path",
-      rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn", "//"),
-      "--build_dir",
-      rebase_path(root_out_dir, "//"),
     ]
 
     if (defined(skip_dirs)) {

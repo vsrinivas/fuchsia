@@ -28,17 +28,10 @@ func saveToOutputFile(path string, licenses *Licenses, config *Config) error {
 	}{}
 
 	for _, l := range licenses.licenses {
-		isUsed := false
-		for _, m := range l.matches {
-			if m.Used {
-				isUsed = true
-			}
-			break
-		}
-		if isUsed {
-			data.Used = append(data.Used, l)
-		} else {
+		if len(l.matches) == 0 {
 			data.Unused = append(data.Unused, l)
+		} else {
+			data.Used = append(data.Used, l)
 		}
 	}
 	for _, n := range licenses.notices {

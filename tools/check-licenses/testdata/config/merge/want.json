@@ -17,7 +17,6 @@
   "licenseAllowList": {},
   "baseDir": ".",
   "outDir": ".",
-  "buildDir": "out/default",
   "target": "all",
   "logLevel": "verbose"
 }

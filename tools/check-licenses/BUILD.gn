@@ -48,8 +48,6 @@ go_library("lib") {
     "file_tree.go",
     "file_tree_test.go",
     "flutter.go",
-    "gn.go",
-    "gn_test.go",
     "license.go",
     "license_test.go",
     "licenses.go",
