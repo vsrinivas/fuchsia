@@ -2,9 +2,9 @@
 #Use of this source code is governed by a BSD - style license that can be
 #found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 dart_app("dart-inspect-validator-puppet") {
@@ -34,25 +34,15 @@ dart_app("dart-inspect-validator-puppet") {
   ]
 }
 
-test_package("inspect-validator-test-dart") {
-  public_deps = [
-    ":dart-inspect-validator-puppet",
-    "//src/diagnostics/validator/inspect:validator_bin",
-  ]
+fuchsia_test_component("validator-component") {
+  component_name = "validator"
+  manifest = "meta/validator.cmx"
+  deps = [ "//src/diagnostics/validator/inspect:validator_bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/inspect_validator_test_dart.cmx")
-      dest = "inspect_validator_test_dart.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "validator"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("inspect-validator-test-dart") {
+  test_components = [ ":validator-component" ]
+  deps = [ ":dart-inspect-validator-puppet" ]
 }
 
 group("tests") {

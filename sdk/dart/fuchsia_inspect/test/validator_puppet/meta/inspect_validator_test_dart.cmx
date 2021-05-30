@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "data": "bin/dart_inspect_validator_puppet"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

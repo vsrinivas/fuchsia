@@ -2,13 +2,13 @@
 #Use of this source code is governed by a BSD - style license that can be
 #found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
-import("//build/test/test_package.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
 
-executable("test") {
-  testonly = true
+test("test") {
   output_name = "dart_inspect_vmo_test"
 
   sources = [ "test.cc" ]
@@ -50,18 +50,10 @@ dart_app("dart_inspect_vmo_test_writer") {
   ]
 }
 
-# Run these tests using
-#   fx run-test dart_inspect_vmo_test
-test_package("dart_inspect_vmo_test") {
+fuchsia_unittest_package("dart_inspect_vmo_test") {
   deps = [
     ":dart_inspect_vmo_test_writer",
     ":test",
   ]
-
-  tests = [
-    {
-      name = "dart_inspect_vmo_test"
-      environments = basic_envs
-    },
-  ]
+  manifest = "meta/dart_inspect_vmo_test.cmx"
 }
