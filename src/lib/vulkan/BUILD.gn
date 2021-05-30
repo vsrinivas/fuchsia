@@ -3,9 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dist/resource.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/vulkan/build/config.gni")
+import("//src/lib/vulkan/layers.gni")
 
 # Centralizing the GN points of entry into Vulkan ecosystem repositories here is helpful
 # for grasping the full scope.  Note, there are also entry points in //sdk/BUILD.gn.
@@ -340,4 +342,17 @@ config("vulkan_host_config") {
       ]
     }
   }
+}
+
+group("vulkan_validation_layers") {
+  deps = [
+    ":vklayer_khronos_validation_json",
+    "//third_party/Vulkan-ValidationLayers:vulkan_validation_layers",
+  ]
+}
+
+resource("vklayer_khronos_validation_json") {
+  sources = [ "$vulkan_data_dir/VkLayer_khronos_validation.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json" ]
+  deps = [ "//third_party/Vulkan-ValidationLayers:vulkan_gen_json_files" ]
 }

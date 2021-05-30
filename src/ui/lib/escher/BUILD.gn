@@ -471,3 +471,34 @@ group("unittests") {
     "//src/ui/lib/escher/test:escher_unittests",
   ]
 }
+
+escher_examples_assets_targets = []
+foreach(asset, asset_files) {
+  resource(asset) {
+    # TODO(jayzhuang): Move `asset_files` here when it's no longer referenced
+    # anywhere else.
+    sources = [ rebase_path(asset, ".", "../../examples/escher/common/assets") ]
+    outputs = [ "data/assets/$asset" ]
+  }
+  escher_examples_assets_targets += [ ":$asset" ]
+}
+
+group("escher_examples_assets") {
+  deps = escher_examples_assets_targets
+}
+
+escher_shaders_resources_targets = []
+foreach(shader, shader_files) {
+  resource_target_name = get_path_info(shader, "file")
+  resource(resource_target_name) {
+    # TODO(jayzhuang): Move `asset_files` here when it's no longer referenced
+    # anywhere else.
+    sources = [ rebase_path(shader, ".", "shaders") ]
+    outputs = [ "data/shaders/$shader" ]
+  }
+  escher_shaders_resources_targets += [ ":$resource_target_name" ]
+}
+
+group("escher_shaders_resources") {
+  deps = escher_shaders_resources_targets
+}

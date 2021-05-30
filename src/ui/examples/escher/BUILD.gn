@@ -2,11 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/vulkan/image_pipe_swapchain.gni")
-import("//src/lib/vulkan/layers.gni")
-import("//src/ui/examples/escher/common/assets/assets.gni")
-import("//src/ui/lib/escher/shaders/shaders.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 
 # NOTE: whenever a new example is added, also add it to
 # //src/ui/lib/escher/test:force_waterfall_to_build_on_host
@@ -17,62 +14,48 @@ group("escher") {
   ]
 }
 
-package("escher_waterfall") {
-  deps = [ "waterfall" ]
-
-  binaries = [
-    {
-      name = "waterfall"
-      dest = "escher_examples"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/escher_examples.cmx")
-      dest = "escher_waterfall.cmx"
-    },
-  ]
-
-  public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain_fb.loadable_modules
-
-  resources =
-      escher_examples_assets + escher_shaders_resources +
-      vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+renamed_binary("waterfall_bin") {
+  dest = "bin/escher_examples"
+  source = "$root_out_dir/waterfall"
+  source_deps = [ "waterfall" ]
 }
 
-package("escher_rainfall") {
-  deps = [ "rainfall" ]
-
-  binaries = [
-    {
-      name = "rainfall"
-      dest = "escher_examples"
-    },
+fuchsia_package_with_single_component("escher_waterfall") {
+  manifest = "meta/escher_examples.cmx"
+  deps = [
+    ":waterfall_bin",
+    "//src/lib/vulkan:vulkan_validation_layers",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/ui/lib/escher:escher_examples_assets",
+    "//src/ui/lib/escher:escher_shaders_resources",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/escher_examples.cmx")
-      dest = "escher_rainfall.cmx"
-    },
+}
+
+resource("flat_main.vert") {
+  sources = [ "//src/ui/lib/escher/shaders/flatland/flat_main.vert" ]
+  outputs = [ "data/shaders/flatland/flat_main.vert" ]
+  visibility = [ ":*" ]
+}
+
+resource("flat_main.frag") {
+  sources = [ "//src/ui/lib/escher/shaders/flatland/flat_main.frag" ]
+  outputs = [ "data/shaders/flatland/flat_main.frag" ]
+  visibility = [ ":*" ]
+}
+
+renamed_binary("rainfall_bin") {
+  dest = "bin/escher_examples"
+  source = "$root_out_dir/rainfall"
+  source_deps = [ "rainfall" ]
+}
+
+fuchsia_package_with_single_component("escher_rainfall") {
+  manifest = "meta/escher_examples.cmx"
+  deps = [
+    ":flat_main.frag",
+    ":flat_main.vert",
+    ":rainfall_bin",
+    "//src/lib/vulkan:vulkan_validation_layers",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
   ]
-
-  public_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain_fb.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules +
-                     image_pipe_swapchain_fb.loadable_modules
-
-  resources =
-      [
-        {
-          path = "//src/ui/lib/escher/shaders/flatland/flat_main.vert"
-          dest = "shaders/flatland/flat_main.vert"
-        },
-        {
-          path = "//src/ui/lib/escher/shaders/flatland/flat_main.frag"
-          dest = "shaders/flatland/flat_main.frag"
-        },
-      ] + vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
 }

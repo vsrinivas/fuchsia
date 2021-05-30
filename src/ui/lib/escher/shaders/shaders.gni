@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-_shader_files = [
+shader_files = [
   # Flatland renderer.
   "flatland/flat_main.frag",
   "flatland/flat_main.vert",
@@ -61,7 +61,7 @@ escher_shaders_spirv_resources = []
 
 escher_test_shaders_spirv_resources = []
 
-foreach(shader, _shader_files) {
+foreach(shader, shader_files) {
   escher_shaders_resources += [
     {
       path = rebase_path(shader)
@@ -98,7 +98,7 @@ escher_shaders_files = []
 
 escher_shaders_spirv_files = []
 
-foreach(shader, _shader_files) {
+foreach(shader, shader_files) {
   escher_shaders_files += [
     {
       source = rebase_path(shader)
