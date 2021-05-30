@@ -75,20 +75,14 @@ impl DynamicIndex {
                 time: child_node.create_int("time", zx::Time::get_monotonic().into_nanos()),
                 node: child_node,
             },
-            Package::WithMetaFar { path, missing_blobs, required_blobs } => {
-                PackageNode::WithMetaFar {
-                    state: child_node.create_string("state", "with_meta_far"),
-                    path: child_node.create_string("path", format!("{}", path)),
-                    time: child_node.create_int("time", zx::Time::get_monotonic().into_nanos()),
-                    missing_blobs: child_node
-                        .create_int("missing_blobs", missing_blobs.len().try_into().unwrap_or(-1)),
-                    required_blobs: child_node.create_int(
-                        "required_blobs",
-                        required_blobs.len().try_into().unwrap_or(-1),
-                    ),
-                    node: child_node,
-                }
-            }
+            Package::WithMetaFar { path, required_blobs } => PackageNode::WithMetaFar {
+                state: child_node.create_string("state", "with_meta_far"),
+                path: child_node.create_string("path", format!("{}", path)),
+                time: child_node.create_int("time", zx::Time::get_monotonic().into_nanos()),
+                required_blobs: child_node
+                    .create_int("required_blobs", required_blobs.len().try_into().unwrap_or(-1)),
+                node: child_node,
+            },
             Package::Active { path, required_blobs } => PackageNode::Active {
                 state: child_node.create_string("state", "active"),
                 path: child_node.create_string("path", format!("{}", path)),
@@ -158,7 +152,7 @@ impl DynamicIndex {
                 package: package @ Package::WithMetaFar { .. },
                 package_node,
             }) => {
-                if let Package::WithMetaFar { path, missing_blobs: _, required_blobs } =
+                if let Package::WithMetaFar { path, required_blobs } =
                     std::mem::replace(package, Package::Pending)
                 {
                     let child_node = self.node.create_child(&package_hash.to_string());
@@ -264,12 +258,7 @@ pub async fn fulfill_meta_far_blob(
         .await?
         .ok_or_else(|| DynamicIndexError::BlobNotFound(blob_hash))?;
 
-    let missing_blobs = blobfs.filter_to_missing_blobs(&required_blobs).await;
-
-    index
-        .lock()
-        .await
-        .add_package(blob_hash, Package::WithMetaFar { path, missing_blobs, required_blobs });
+    index.lock().await.add_package(blob_hash, Package::WithMetaFar { path, required_blobs });
 
     Ok(())
 }
@@ -306,7 +295,6 @@ pub enum PackageNode {
         node: finspect::Node,
         state: finspect::StringProperty,
         path: finspect::StringProperty,
-        missing_blobs: finspect::IntProperty,
         required_blobs: finspect::IntProperty,
         time: finspect::IntProperty,
     },
@@ -333,9 +321,6 @@ pub enum Package {
     WithMetaFar {
         /// The name and variant of the package.
         path: PackagePath,
-        /// Subset of `required_blobs` that does not exist in blobfs.
-        /// This could be empty if all blobs already exist when meta far blob is fulfilled.
-        missing_blobs: HashSet<Hash>,
         /// Set of blobs this package depends on, does not include meta.far blob itself.
         required_blobs: HashSet<Hash>,
     },
@@ -352,12 +337,10 @@ pub enum Package {
 mod tests {
     use {
         super::*,
-        crate::test_utils::{add_meta_far_to_blobfs, get_meta_far},
+        crate::test_utils::add_meta_far_to_blobfs,
         fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync,
-        fuchsia_merkle::MerkleTree,
         fuchsia_pkg::MetaContents,
-        futures::future,
         maplit::{btreemap, hashmap, hashset},
         matches::assert_matches,
         std::{
@@ -378,7 +361,6 @@ mod tests {
             Hash::from([2; 32]),
             Package::WithMetaFar {
                 path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
-                missing_blobs: hashset! { Hash::from([3; 32]) },
                 required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
             },
         );
@@ -421,11 +403,7 @@ mod tests {
         );
         dynamic_index.add_package(
             hash,
-            Package::WithMetaFar {
-                path: path.clone(),
-                missing_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
-                required_blobs: required_blobs.clone(),
-            },
+            Package::WithMetaFar { path: path.clone(), required_blobs: required_blobs.clone() },
         );
 
         dynamic_index.complete_install(hash).unwrap();
@@ -501,7 +479,6 @@ mod tests {
         let hash = Hash::from([2; 32]);
         let package = Package::WithMetaFar {
             path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
-            missing_blobs: hashset! { Hash::from([3; 32]) },
             required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
         };
         dynamic_index.add_package(hash, package.clone());
@@ -533,7 +510,6 @@ mod tests {
             hash,
             Package::WithMetaFar {
                 path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
-                missing_blobs: hashset! { Hash::from([3; 32]) },
                 required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
             },
         );
@@ -713,57 +689,6 @@ mod tests {
             hashmap! {
                 hash => Package::WithMetaFar {
                     path,
-                    missing_blobs: hashset! { blob_hash },
-                    required_blobs: hashset! { blob_hash },
-                }
-            }
-        );
-        assert_eq!(dynamic_index.active_packages, hashmap! {});
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn fulfill_meta_far_blob_no_missing_blobs() {
-        let inspector = finspect::Inspector::new();
-        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
-        let (mut blobfs_mock, blobfs) = fuchsia_pkg_testing::blobfs::Mock::new();
-
-        let blob_hash = Hash::from([3; 32]);
-        let meta_far = get_meta_far("fake-package", vec![blob_hash]);
-        let meta_far_hash = MerkleTree::from_reader(&meta_far[..]).unwrap().root();
-
-        dynamic_index.start_install(meta_far_hash);
-
-        let dynamic_index = Arc::new(Mutex::new(dynamic_index));
-
-        let ((), ()) = future::join(
-            async {
-                blobfs_mock
-                    .expect_open_blob(meta_far_hash)
-                    .await
-                    .then_send_on_open_readable()
-                    .await
-                    .expect_read_at(&meta_far[..64], 0)
-                    .await
-                    .expect_get_attr(meta_far.len() as u64)
-                    .await
-                    .handle_read_at_until_close(&meta_far)
-                    .await;
-                blobfs_mock.expect_open_blob(blob_hash).await.expect_close().await;
-            },
-            async {
-                fulfill_meta_far_blob(&dynamic_index, &blobfs, meta_far_hash).await.unwrap();
-            },
-        )
-        .await;
-
-        let dynamic_index = dynamic_index.lock().await;
-        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
-        assert_eq!(
-            dynamic_index.packages(),
-            hashmap! {
-                meta_far_hash => Package::WithMetaFar {
-                    path,
-                    missing_blobs: hashset! {  },
                     required_blobs: hashset! { blob_hash },
                 }
             }

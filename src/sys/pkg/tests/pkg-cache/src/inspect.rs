@@ -284,7 +284,6 @@ async fn dynamic_index_needed_blobs() {
                     pkg.meta_far_merkle_root().to_string() => {
                         "state": "with_meta_far",
                         "required_blobs": 0u64,
-                        "missing_blobs": 0u64,
                         "time": AnyProperty,
                         "path": "single-blob/0",
                     }
