@@ -8,6 +8,7 @@ use {
     crate::{
         errors::FxfsError,
         lsm_tree::{
+            layers_from_handles,
             skip_list_layer::SkipListLayer,
             types::{
                 BoxedLayerIterator, Item, ItemRef, LayerIterator, MutableLayer, NextKey,
@@ -383,7 +384,7 @@ impl Allocator for SimpleAllocator {
         let result = {
             let tree = &self.tree;
             let mut layer_set = tree.empty_layer_set();
-            layer_set.add_layer(self.reserved_allocations.clone());
+            layer_set.layers.push(self.reserved_allocations.clone());
             tree.add_all_layers_to_layer_set(&mut layer_set);
             let mut merger = layer_set.merger();
             let mut iter = merger.seek(Bound::Unbounded).await?;
@@ -737,7 +738,7 @@ impl Mutations for SimpleAllocator {
         transaction.commit().await;
 
         // TODO(csuter): what if this fails.
-        self.tree.set_layers(Box::new([layer_object_handle])).await?;
+        self.tree.set_layers(layers_from_handles(Box::new([layer_object_handle])).await?);
 
         object_sync.commit();
         Ok(())

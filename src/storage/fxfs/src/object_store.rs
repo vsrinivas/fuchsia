@@ -22,7 +22,7 @@ pub use record::{ObjectDescriptor, Timestamp};
 use {
     crate::{
         errors::FxfsError,
-        lsm_tree::{types::LayerIterator, LSMTree},
+        lsm_tree::{layers_from_handles, types::LayerIterator, LSMTree},
         object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties, INVALID_OBJECT_ID},
         object_store::{
             filesystem::{Filesystem, Mutations, ObjectFlush},
@@ -630,7 +630,33 @@ impl Mutations for ObjectStore {
         );
         transaction.commit().await;
 
-        self.tree.compact(&object_handle).await?;
+        // This size can't be too big because we've been called to flush in-memory data in order to
+        // relieve space in the journal, so if it's too large, we could end up exhausting the
+        // journal before we've finished.  With that said, its current value might be too small;
+        // it's something that will need to be tuned.
+        const SIZE_THRESHOLD: u64 = 32768;
+        let mut layer_set = self.tree.immutable_layer_set();
+        let mut total_size = 0;
+        let mut layers_to_keep = match layer_set.layers.iter().enumerate().find(|(_, layer)| {
+            match layer.handle() {
+                None => {}
+                Some(handle) => {
+                    let size = handle.get_size();
+                    if total_size + size > SIZE_THRESHOLD {
+                        return true;
+                    }
+                    total_size += size;
+                }
+            }
+            false
+        }) {
+            Some((index, _)) => layer_set.layers.split_off(index),
+            None => Vec::new(),
+        };
+
+        let mut merger = layer_set.merger();
+        let iter = merger.seek(Bound::Unbounded).await?;
+        self.tree.compact_with_iterator(iter, &object_handle).await?;
 
         let mut serialized_info = Vec::new();
         let mut new_store_info = self.store_info();
@@ -640,13 +666,25 @@ impl Mutations for ObjectStore {
             .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
             .await?;
 
-        // Move all the existing layers to the graveyard.
-        for object_id in new_store_info.layers {
-            graveyard.add(&mut transaction, parent_store.store_object_id(), object_id);
+        // Move the existing layers we're compacting to the graveyard.
+        // TODO(jfsulliv): these layer files need to be purged when no longer used.
+        for layer in &layer_set.layers {
+            if let Some(handle) = layer.handle() {
+                graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
+            }
         }
 
         new_store_info.last_object_id = self.last_object_id.load(atomic::Ordering::Relaxed);
-        new_store_info.layers = vec![object_id];
+
+        let mut layers = layers_from_handles(Box::new([object_handle])).await?;
+        layers.append(&mut layers_to_keep);
+
+        new_store_info.layers = Vec::new();
+        for layer in &layers {
+            if let Some(handle) = layer.handle() {
+                new_store_info.layers.push(handle.object_id());
+            }
+        }
         serialize_into(&mut serialized_info, &new_store_info)?;
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
@@ -662,7 +700,7 @@ impl Mutations for ObjectStore {
         *self.store_info.lock().unwrap() = Some(new_store_info);
         transaction.commit().await;
 
-        self.tree.set_layers(Box::new([object_handle])).await.expect("set_layers failed");
+        self.tree.set_layers(layers);
 
         object_sync.commit();
         Ok(())

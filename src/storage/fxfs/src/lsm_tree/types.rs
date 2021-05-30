@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{lsm_tree::merge, object_handle::INVALID_OBJECT_ID},
+    crate::{lsm_tree::merge, object_handle::ObjectHandle},
     anyhow::Error,
     async_trait::async_trait,
     serde::{Deserialize, Serialize},
@@ -177,8 +177,8 @@ pub trait NextKey: Clone {
 /// Layer is a trait that all layers need to implement (mutable and immutable).
 #[async_trait]
 pub trait Layer<K, V>: Send + Sync {
-    fn object_id(&self) -> u64 {
-        INVALID_OBJECT_ID
+    fn handle(&self) -> Option<&dyn ObjectHandle> {
+        None
     }
 
     /// Searches for a key. Bound::Excluded is not supported. Bound::Unbounded positions the

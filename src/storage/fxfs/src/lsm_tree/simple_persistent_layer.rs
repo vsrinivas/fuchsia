@@ -125,8 +125,8 @@ impl SimplePersistentLayer {
 
 #[async_trait]
 impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
-    fn object_id(&self) -> u64 {
-        self.object_handle.object_id()
+    fn handle(&self) -> Option<&dyn ObjectHandle> {
+        Some(self.object_handle.as_ref())
     }
 
     async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<BoxedLayerIterator<'a, K, V>, Error> {

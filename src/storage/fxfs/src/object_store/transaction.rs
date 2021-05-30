@@ -265,7 +265,7 @@ pub trait AsAny: Any {
 }
 
 /// Mutations can be associated with an object so that when mutations are applied, updates can be
-/// applied to in-memory strucutres.  For example, we cache object sizes, so when a size change is
+/// applied to in-memory structures.  For example, we cache object sizes, so when a size change is
 /// applied, we can update the cached object size.
 pub trait AssociatedObject: AsAny + Send + Sync {
     fn will_apply_mutation(&self, _mutation: &Mutation) {}
