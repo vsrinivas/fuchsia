@@ -107,20 +107,25 @@ void MarkPagesInUsePhys(paddr_t pa, size_t len) {
 
 }  // namespace
 
-// Initializes the statically known initial kernel region vmars. This is split out from
-// vm_init_preheap so that it can be marked with TA_NO_THREAD_SAFETY_ANALYSIS. It needs to be global
-// so that VmAddressRegion can friend it.
-void vm_init_preheap_vmars() TA_NO_THREAD_SAFETY_ANALYSIS {
+// Initializes the statically known initial kernel region vmars. It needs to be global so that
+// VmAddressRegion can friend it.
+void vm_init_preheap_vmars() {
   fbl::RefPtr<VmAddressRegion> root_vmar = VmAspace::kernel_aspace()->RootVmar();
 
   // For VMARs that we are just reserving we request full RWX permissions. This will get refined
   // later in the proper vm_init.
   constexpr uint32_t kKernelVmarFlags = VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_CAN_RWX_FLAGS;
 
-  fbl::AdoptRef<VmAddressRegion>(&kernel_physmap_vmar.Initialize(*root_vmar, PHYSMAP_BASE,
-                                                                 PHYSMAP_SIZE, kKernelVmarFlags,
-                                                                 "physmap vmar"))
-      ->Activate();
+  // Hold the vmar in a temporary refptr until we can activate it. Activating it will cause the
+  // address space to acquire a refptr allowing us to then safely drop our ref without triggering
+  // the object to get destroyed.
+  fbl::RefPtr<VmAddressRegion> vmar =
+      fbl::AdoptRef<VmAddressRegion>(&kernel_physmap_vmar.Initialize(
+          *root_vmar, PHYSMAP_BASE, PHYSMAP_SIZE, kKernelVmarFlags, "physmap vmar"));
+  {
+    Guard<Mutex> guard(kernel_physmap_vmar->lock());
+    kernel_physmap_vmar->Activate();
+  }
 
   // |kernel_image_size| is the size in bytes of the region of memory occupied by the kernel
   // program's various segments (code, rodata, data, bss, etc.), inclusive of any gaps between
@@ -135,10 +140,13 @@ void vm_init_preheap_vmars() TA_NO_THREAD_SAFETY_ANALYSIS {
   // Note: Even though there might be usable gaps in between the segments, we're covering the whole
   // regions. The thinking is that it's both simpler and safer to not use the address space that
   // exists between kernel program segments.
-  fbl::AdoptRef<VmAddressRegion>(&kernel_image_vmar.Initialize(*root_vmar, kernel_regions[0].base,
-                                                               kernel_image_size, kKernelVmarFlags,
-                                                               "kernel region vmar"))
-      ->Activate();
+  vmar = fbl::AdoptRef<VmAddressRegion>(
+      &kernel_image_vmar.Initialize(*root_vmar, kernel_regions[0].base, kernel_image_size,
+                                    kKernelVmarFlags, "kernel region vmar"));
+  {
+    Guard<Mutex> guard(kernel_image_vmar->lock());
+    kernel_image_vmar->Activate();
+  }
 
 #if !DISABLE_KASLR  // Disable random memory padding for KASLR
   // Reserve random padding of up to 64GB after first mapping. It will make
@@ -148,10 +156,13 @@ void vm_init_preheap_vmars() TA_NO_THREAD_SAFETY_ANALYSIS {
   crypto::GlobalPRNG::GetInstance()->Draw(&size_entropy, sizeof(size_entropy));
 
   const size_t random_size = PAGE_ALIGN(size_entropy % (64ULL * GB));
-  fbl::AdoptRef<VmAddressRegion>(
+  vmar = fbl::AdoptRef<VmAddressRegion>(
       &kernel_random_padding_vmar.Initialize(*root_vmar, PHYSMAP_BASE + PHYSMAP_SIZE, random_size,
-                                             kKernelVmarFlags, "random padding vmar"))
-      ->Activate();
+                                             kKernelVmarFlags, "random padding vmar"));
+  {
+    Guard<Mutex> guard(kernel_random_padding_vmar->lock());
+    kernel_random_padding_vmar->Activate();
+  }
   LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 #endif
 }
