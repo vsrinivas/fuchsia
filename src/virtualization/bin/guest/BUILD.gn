@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 
 executable("bin") {
   output_name = "guest"
@@ -51,18 +52,15 @@ executable("bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-package("guest") {
-  deps = [ ":bin" ]
+renamed_binary("vsh-bin") {
+  dest = "bin/vsh"
+  source = "$root_out_dir/guest"
+  source_deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "guest"
-      shell = true
-    },
-    {
-      name = "vsh"
-      shell = true
-      source = "guest"
-    },
+fuchsia_shell_package("guest") {
+  deps = [
+    ":bin",
+    ":vsh-bin",
   ]
 }

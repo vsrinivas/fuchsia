@@ -58,7 +58,6 @@ group("deprecated_package") {
     "//src/ui/examples/shadertoy/service/*",
     "//src/ui/lib/escher/*",
     "//src/ui/scenic/*",
-    "//src/virtualization/bin/guest/*",
   ]
 }
 
