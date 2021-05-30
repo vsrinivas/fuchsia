@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
@@ -23,24 +23,20 @@ group("tests") {
   ]
 }
 
-test_package("flutter-embedder-test") {
-  deps = [ ":flutter-embedder-test-bin" ]
-
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "flutter-embedder-test"
-      environments = [ nuc_env ]
-    },
-  ]
-
-  data_deps = [
+fuchsia_unittest_package("flutter-embedder-test") {
+  manifest = "meta/flutter-embedder-test.cmx"
+  deps = [
+    ":flutter-embedder-test-bin",
     "//src/ui/scenic",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [ nuc_env ]
+  }
 }
 
 test("flutter-embedder-test-bin") {

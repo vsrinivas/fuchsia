@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true
@@ -11,15 +11,12 @@ group("tests") {
   deps = [ ":integration_input_tests" ]
 }
 
-test_package("integration_input_tests") {
+fuchsia_unittest_package("integration_input_tests") {
+  manifest = "meta/mediabuttons_listener_test.cmx"
   deps = [ ":mediabuttons_listener_test" ]
-
-  tests = [
-    {
-      name = "mediabuttons_listener_test"
-      environments = [ nuc_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ nuc_env ]
+  }
 }
 
 # Each integration test must run in its own executable.
