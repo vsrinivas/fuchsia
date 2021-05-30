@@ -24,7 +24,10 @@ rustc_test("driver") {
     "//third_party/rust_crates:itertools",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/lib.rs",
+    "src/open.rs",
+  ]
 }
 
 fuchsia_component("pkgdir-integration-test") {
