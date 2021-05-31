@@ -265,7 +265,7 @@ mod tests {
 
     use surpass::TILE_SIZE;
 
-    use crate::{Fill, Point, Style};
+    use crate::{Fill, FillRule, Point, Style};
 
     const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
     const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -694,5 +694,54 @@ mod tests {
 
         assert_eq!(buffer[0], BLACK);
         assert_eq!(buffer[1], RED);
+    }
+
+    #[test]
+    fn even_odd() {
+        let mut path = Path::new();
+
+        path.line(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32));
+        path.line(
+            Point::new(0.0, TILE_SIZE as f32),
+            Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32),
+        );
+        path.line(
+            Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32),
+            Point::new(3.0 * TILE_SIZE as f32, 0.0),
+        );
+        path.line(Point::new(3.0 * TILE_SIZE as f32, 0.0), Point::new(TILE_SIZE as f32, 0.0));
+        path.line(
+            Point::new(TILE_SIZE as f32, 0.0),
+            Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
+        );
+        path.line(
+            Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
+            Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32),
+        );
+        path.line(
+            Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32),
+            Point::new(2.0 * TILE_SIZE as f32, 0.0),
+        );
+        path.line(Point::new(2.0 * TILE_SIZE as f32, 0.0), Point::new(0.0, 0.0));
+
+        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE];
+        let mut composition = Composition::new();
+
+        let layer_id = composition.create_layer().unwrap();
+        composition.insert_in_layer(layer_id, &path).set_style(Style {
+            fill_rule: FillRule::EvenOdd,
+            fill: Fill::Solid(REDF),
+            ..Default::default()
+        });
+
+        composition.render(
+            Buffer { buffer: &mut buffer, width: 3 * TILE_SIZE, ..Default::default() },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], RED);
+        assert_eq!(buffer[TILE_SIZE], BLACK);
+        assert_eq!(buffer[2 * TILE_SIZE], RED);
     }
 }

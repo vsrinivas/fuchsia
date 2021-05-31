@@ -196,6 +196,11 @@ impl i8x16 {
             if self.0[15] == other.0[15] { u8::MAX } else { 0 },
         ])
     }
+
+    pub fn abs(mut self) -> Self {
+        self.0.iter_mut().for_each(|val| *val = val.abs());
+        self
+    }
 }
 
 impl Add for i8x16 {
@@ -210,6 +215,15 @@ impl Add for i8x16 {
 impl AddAssign for i8x16 {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
+    }
+}
+
+impl BitAnd for i8x16 {
+    type Output = Self;
+
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t &= o);
+        self
     }
 }
 

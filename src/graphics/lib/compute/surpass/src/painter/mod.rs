@@ -148,6 +148,30 @@ struct CoverCarry {
     layer: u16,
 }
 
+impl CoverCarry {
+    pub fn is_empty(&self, fill_rule: FillRule) -> bool {
+        match fill_rule {
+            FillRule::NonZero => self.covers.iter().all(|&cover| cover.eq(i8x16::splat(0)).all()),
+            FillRule::EvenOdd => self
+                .covers
+                .iter()
+                .all(|&cover| (cover.abs() & i8x16::splat(31)).eq(i8x16::splat(0)).all()),
+        }
+    }
+
+    pub fn is_full(&self, fill_rule: FillRule) -> bool {
+        match fill_rule {
+            FillRule::NonZero => self
+                .covers
+                .iter()
+                .all(|&cover| cover.abs().eq(i8x16::splat(PIXEL_WIDTH as i8)).all()),
+            FillRule::EvenOdd => self.covers.iter().any(|&cover| {
+                (cover.abs() & i8x16::splat(0b1_1111)).eq(i8x16::splat(0b1_0000)).all()
+            }),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Painter {
     areas: [i16x16; TILE_SIZE * TILE_SIZE / i16x16::LANES],
@@ -365,84 +389,113 @@ impl Painter {
                 });
             }
 
-            let covers = self.paint_layer(tile_i, tile_j, &styles.get(layer));
-            if covers.iter().any(|&cover| !cover.eq(i8x16::splat(0)).all()) {
-                self.next_queue.push_back(CoverCarry { covers, layer });
+            let style = styles.get(layer);
+            let cover_carry =
+                CoverCarry { covers: self.paint_layer(tile_i, tile_j, &style), layer };
+
+            if !cover_carry.is_empty(style.fill_rule) {
+                self.next_queue.push_back(cover_carry);
             }
         }
     }
 
-    fn top_carry_layer_solid_opaque<S: LayerStyles>(
+    fn top_carry_layers_solid_opaque<S: LayerStyles>(
         &mut self,
         segments: &[CompactSegment],
         styles: &S,
+        clear_color: [f32; 4],
     ) -> Option<[f32; 4]> {
-        let top_carry_layer = self
+        if self.queue.is_empty() {
+            return None;
+        }
+
+        let first_incomplete_layer_index = self
             .queue
-            .back()
-            .filter(|cover_carry| {
-                cover_carry
-                    .covers
-                    .iter()
-                    .all(|&cover| cover.eq(i8x16::splat(PIXEL_WIDTH as i8)).all())
-            })
-            .map(|cover_carry| cover_carry.layer)?;
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, cover_carry)| !cover_carry.is_full(styles.get(cover_carry.layer).fill_rule))
+            .map(|(i, _)| i);
+
+        let mut first_incomplete_layer = None;
+
+        if let Some(i) = first_incomplete_layer_index {
+            if i == self.queue.len() - 1 {
+                // Last layer is incomplete.
+                return None;
+            }
+
+            first_incomplete_layer = Some(self.queue[i + 1].layer);
+        }
 
         if let Some(segment_layer) = segments.last().map(|segment| segment.layer()) {
-            if segment_layer >= top_carry_layer {
+            if segment_layer >= first_incomplete_layer.unwrap_or_else(|| self.queue[0].layer) {
+                // There are segments over the complete top carry layer.
                 return None;
             }
         }
 
-        match styles.get(top_carry_layer).fill {
-            Fill::Solid(color) => {
-                if color[3] < 1.0 {
-                    return None;
-                }
-
-                let mut i = 0;
-
-                self.next_queue.clear();
-
-                while let Some(ordering) = Self::next_layer(&self.queue, segments.get(i)) {
-                    match ordering {
-                        Ordering::Less => {
-                            self.next_queue.push_back(self.queue.pop_front().unwrap())
-                        }
-                        Ordering::Equal => {
-                            let mut cover_carry = self.queue.pop_front().unwrap();
-
-                            i += Self::for_each_layer_segments(
-                                &segments[i..],
-                                cover_carry.layer,
-                                |segment| {
-                                    let covers: &mut [i8; TILE_SIZE] =
-                                        unsafe { mem::transmute(&mut cover_carry.covers) };
-                                    covers[segment.tile_y() as usize] += segment.cover();
-                                },
-                            );
-
-                            self.next_queue.push_back(cover_carry);
-                        }
-                        Ordering::Greater => {
-                            let layer = segments[i].layer();
-                            let mut covers = [i8x16::splat(0); TILE_SIZE / 16];
-
-                            i += Self::for_each_layer_segments(&segments[i..], layer, |segment| {
-                                let covers: &mut [i8; TILE_SIZE] =
-                                    unsafe { mem::transmute(&mut covers) };
-                                covers[segment.tile_y() as usize] += segment.cover();
-                            });
-
-                            self.next_queue.push_back(CoverCarry { covers, layer });
-                        }
-                    }
-                }
-
+        let bottom_color = match first_incomplete_layer.map(|layer| styles.get(layer)) {
+            Some(Style { fill: Fill::Solid(color), blend_mode: BlendMode::Over, .. })
+                if color[3] == 1.0 =>
+            {
                 Some(color)
             }
+            None => Some(clear_color),
+            // Bottom layer is not opaque.
             _ => None,
-        }
+        };
+
+        bottom_color.and_then(|bottom_color| {
+            let color = self.queue.iter().try_fold(bottom_color, |dst, cover_carry| {
+                match styles.get(cover_carry.layer) {
+                    Style { fill: Fill::Solid(color), blend_mode, .. } => {
+                        Some(blend_mode.blend(dst, color))
+                    }
+                    // Fill is not solid.
+                    _ => None,
+                }
+            })?;
+
+            let mut i = 0;
+
+            self.next_queue.clear();
+
+            while let Some(ordering) = Self::next_layer(&self.queue, segments.get(i)) {
+                match ordering {
+                    Ordering::Less => self.next_queue.push_back(self.queue.pop_front().unwrap()),
+                    Ordering::Equal => {
+                        let mut cover_carry = self.queue.pop_front().unwrap();
+
+                        i += Self::for_each_layer_segments(
+                            &segments[i..],
+                            cover_carry.layer,
+                            |segment| {
+                                let covers: &mut [i8; TILE_SIZE] =
+                                    unsafe { mem::transmute(&mut cover_carry.covers) };
+                                covers[segment.tile_y() as usize] += segment.cover();
+                            },
+                        );
+
+                        self.next_queue.push_back(cover_carry);
+                    }
+                    Ordering::Greater => {
+                        let layer = segments[i].layer();
+                        let mut covers = [i8x16::splat(0); TILE_SIZE / 16];
+
+                        i += Self::for_each_layer_segments(&segments[i..], layer, |segment| {
+                            let covers: &mut [i8; TILE_SIZE] =
+                                unsafe { mem::transmute(&mut covers) };
+                            covers[segment.tile_y() as usize] += segment.cover();
+                        });
+
+                        self.next_queue.push_back(CoverCarry { covers, layer });
+                    }
+                }
+            }
+
+            Some(color)
+        })
     }
 
     fn is_unchanged<S: LayerStyles>(
@@ -662,7 +715,9 @@ impl Painter {
             }
 
             if !is_unchanged {
-                if let Some(color) = self.top_carry_layer_solid_opaque(current_segments, styles) {
+                if let Some(color) =
+                    self.top_carry_layers_solid_opaque(current_segments, styles, clear_color)
+                {
                     self.write_to_tile(tile, Some(to_bytes(color)), flusher);
                 } else {
                     self.clear(clear_color);
@@ -735,10 +790,11 @@ mod tests {
         }
     }
 
-    fn line_segments(points: &[(Point<f32>, Point<f32>)]) -> Vec<CompactSegment> {
+    fn line_segments(points: &[(Point<f32>, Point<f32>)], same_layer: bool) -> Vec<CompactSegment> {
         let mut builder = LinesBuilder::new();
 
         for (layer, &(p0, p1)) in points.iter().enumerate() {
+            let layer = if same_layer { 0 } else { layer };
             builder.push(layer as u16, &Segment::new(p0, p1));
         }
 
@@ -759,7 +815,8 @@ mod tests {
         cover_carry.covers[0].as_mut_array()[1] = 16;
         cover_carry.layer = 1;
 
-        let segments = line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32))]);
+        let segments =
+            line_segments(&[(Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32))], false);
 
         let mut styles = HashMap::new();
 
@@ -790,10 +847,13 @@ mod tests {
 
     #[test]
     fn overlapping_triangles() {
-        let segments = line_segments(&[
-            (Point::new(0.0, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32)),
-            (Point::new(TILE_SIZE as f32, 0.0), Point::new(0.0, TILE_SIZE as f32)),
-        ]);
+        let segments = line_segments(
+            &[
+                (Point::new(0.0, 0.0), Point::new(TILE_SIZE as f32, TILE_SIZE as f32)),
+                (Point::new(TILE_SIZE as f32, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+            ],
+            false,
+        );
 
         let mut styles = HashMap::new();
 
@@ -847,10 +907,13 @@ mod tests {
 
     #[test]
     fn transparent_overlay() {
-        let segments = line_segments(&[
-            (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
-            (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
-        ]);
+        let segments = line_segments(
+            &[
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+                (Point::new(0.0, 0.0), Point::new(0.0, TILE_SIZE as f32)),
+            ],
+            false,
+        );
 
         let mut styles = HashMap::new();
 
@@ -875,5 +938,204 @@ mod tests {
         painter.paint_tile(0, 0, &segments, &|order| styles[&order].clone());
 
         assert_eq!(painter.colors()[0], RED_50);
+    }
+
+    #[test]
+    fn cover_carry_is_empty() {
+        assert!(CoverCarry { covers: [i8x16::splat(0); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::NonZero));
+        assert!(!CoverCarry { covers: [i8x16::splat(1); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::NonZero));
+        assert!(!CoverCarry { covers: [i8x16::splat(-1); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::NonZero));
+        assert!(!CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::NonZero));
+        assert!(!CoverCarry { covers: [i8x16::splat(-16); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::NonZero));
+
+        assert!(CoverCarry { covers: [i8x16::splat(0); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(1); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(-1); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(-16); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(CoverCarry { covers: [i8x16::splat(32); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(CoverCarry { covers: [i8x16::splat(-32); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(48); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(-48); TILE_SIZE / 16], layer: 0 }
+            .is_empty(FillRule::EvenOdd));
+    }
+
+    #[test]
+    fn cover_carry_is_full() {
+        assert!(!CoverCarry { covers: [i8x16::splat(0); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::NonZero));
+        assert!(!CoverCarry { covers: [i8x16::splat(1); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::NonZero));
+        assert!(!CoverCarry { covers: [i8x16::splat(-1); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::NonZero));
+        assert!(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::NonZero));
+        assert!(CoverCarry { covers: [i8x16::splat(-16); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::NonZero));
+
+        assert!(!CoverCarry { covers: [i8x16::splat(0); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(1); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(-1); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(CoverCarry { covers: [i8x16::splat(-16); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(32); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(!CoverCarry { covers: [i8x16::splat(-32); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(CoverCarry { covers: [i8x16::splat(48); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+        assert!(CoverCarry { covers: [i8x16::splat(-48); TILE_SIZE / 16], layer: 0 }
+            .is_full(FillRule::EvenOdd));
+    }
+
+    #[test]
+    fn top_carry_layers_solid_opaque_incomplete() {
+        let mut painter = Painter::new();
+
+        let mut queue = VecDeque::new();
+
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(15); TILE_SIZE / 16], layer: 1 });
+
+        painter.queue = queue;
+
+        let result = painter.top_carry_layers_solid_opaque(&[], &|_| Style::default(), [0.0; 4]);
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn top_carry_layers_solid_opaque_segments_on_top() {
+        let mut painter = Painter::new();
+
+        let mut queue = VecDeque::new();
+
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 });
+
+        painter.queue = queue;
+
+        let result = painter.top_carry_layers_solid_opaque(
+            &[CompactSegment::new(0, 0, 0, 1, 0, 0, 0, 0)],
+            &|_| Style::default(),
+            [0.0; 4],
+        );
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn top_carry_layers_solid_opaque_blend() {
+        let mut painter = Painter::new();
+
+        let mut queue = VecDeque::new();
+
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 0 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 1 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 2 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 3 });
+
+        painter.queue = queue;
+
+        let result = painter.top_carry_layers_solid_opaque(
+            &[],
+            &|_| Style {
+                fill: Fill::Solid([0.5, 0.5, 0.5, 1.0]),
+                blend_mode: BlendMode::Multiply,
+                ..Default::default()
+            },
+            [1.0; 4],
+        );
+
+        assert_eq!(result, Some([0.0625, 0.0625, 0.0625, 1.0]));
+    }
+
+    #[test]
+    fn top_carry_layers_solid_opaque_bottom_layer_not_opaque() {
+        let mut painter = Painter::new();
+
+        let mut queue = VecDeque::new();
+
+        queue.push_back(CoverCarry { covers: [i8x16::splat(15); TILE_SIZE / 16], layer: 0 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 1 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 2 });
+
+        painter.queue = queue;
+
+        let result = painter.top_carry_layers_solid_opaque(
+            &[],
+            &|order| {
+                if order == 1 {
+                    Style { blend_mode: BlendMode::Difference, ..Default::default() }
+                } else {
+                    Style::default()
+                }
+            },
+            [0.0; 4],
+        );
+
+        assert_eq!(result, None);
+
+        let result = painter.top_carry_layers_solid_opaque(
+            &[],
+            &|order| {
+                if order == 1 {
+                    Style { fill: Fill::Solid([0.9; 4]), ..Default::default() }
+                } else {
+                    Style::default()
+                }
+            },
+            [0.0; 4],
+        );
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn top_carry_layers_solid_opaque_overlay_not_solid() {
+        let mut painter = Painter::new();
+
+        let mut queue = VecDeque::new();
+
+        queue.push_back(CoverCarry { covers: [i8x16::splat(15); TILE_SIZE / 16], layer: 0 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 1 });
+        queue.push_back(CoverCarry { covers: [i8x16::splat(16); TILE_SIZE / 16], layer: 2 });
+
+        painter.queue = queue;
+
+        let mut builder = GradientBuilder::new([0.0; 2], [0.0; 2]);
+        builder.color([0.1; 4]).color([0.2; 4]);
+        let gradient = builder.build().unwrap();
+
+        let result = painter.top_carry_layers_solid_opaque(
+            &[],
+            &|order| {
+                if order == 2 {
+                    Style { fill: Fill::Gradient(gradient.clone()), ..Default::default() }
+                } else {
+                    Style::default()
+                }
+            },
+            [0.0; 4],
+        );
+
+        assert_eq!(result, None);
     }
 }

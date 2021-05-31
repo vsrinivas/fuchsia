@@ -213,6 +213,10 @@ impl i8x16 {
     pub fn eq(self, other: Self) -> m8x16 {
         m8x16(unsafe { _mm_cmpeq_epi8(self.0, other.0) })
     }
+
+    pub fn abs(self) -> Self {
+        Self(unsafe { _mm_abs_epi8(self.0) })
+    }
 }
 
 impl Default for i8x16 {
@@ -232,6 +236,14 @@ impl Add for i8x16 {
 impl AddAssign for i8x16 {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
+    }
+}
+
+impl BitAnd for i8x16 {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm_and_si128(self.0, rhs.0) })
     }
 }
 

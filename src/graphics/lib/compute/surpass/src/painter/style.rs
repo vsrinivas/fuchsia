@@ -195,6 +195,89 @@ pub enum BlendMode {
     Exclusion,
 }
 
+impl BlendMode {
+    pub(crate) fn blend_fn(self) -> fn(f32, f32) -> f32 {
+        fn multiply(dst: f32, src: f32) -> f32 {
+            dst * src
+        }
+
+        fn screen(dst: f32, src: f32) -> f32 {
+            dst + src - (dst * src)
+        }
+
+        fn hard_light(dst: f32, src: f32) -> f32 {
+            if dst <= 0.5 {
+                multiply(2.0 * dst, src)
+            } else {
+                screen(2.0 * dst - 1.0, src)
+            }
+        }
+
+        match self {
+            Self::Over => |_dst, src| src,
+            Self::Multiply => multiply,
+            Self::Screen => screen,
+            Self::Overlay => |dst, src| hard_light(src, dst),
+            Self::Darken => |dst, src| dst.min(src),
+            Self::Lighten => |dst, src| dst.max(src),
+            Self::ColorDodge => |dst, src| {
+                if src == 0.0 {
+                    0.0
+                } else if dst == 1.0 {
+                    1.0
+                } else {
+                    1.0f32.min(src / (1.0 - dst))
+                }
+            },
+            Self::ColorBurn => |dst, src| {
+                if src == 1.0 {
+                    1.0
+                } else if dst == 0.0 {
+                    0.0
+                } else {
+                    1.0 - 1.0f32.min((1.0 - src) / dst)
+                }
+            },
+            Self::HardLight => hard_light,
+            Self::SoftLight => |dst, src| {
+                fn d(src: f32) -> f32 {
+                    if src <= 0.25 {
+                        ((16.0 * src - 12.0) * src + 4.0) * src
+                    } else {
+                        src.sqrt()
+                    }
+                }
+
+                if dst <= 0.5 {
+                    src - (1.0 - 2.0 * dst) * src * (1.0 - src)
+                } else {
+                    src + (2.0 * dst - 1.0) * (d(src) - src)
+                }
+            },
+            Self::Difference => |dst, src| (dst - src).abs(),
+            Self::Exclusion => |dst, src| dst + src - 2.0 * dst * src,
+        }
+    }
+
+    pub(crate) fn blend(self, dst: [f32; 4], src: [f32; 4]) -> [f32; 4] {
+        let f = self.blend_fn();
+
+        let alpha = src[3];
+        let inv_alpha = 1.0 - alpha;
+
+        let current_c0 = f(dst[0], src[0]) * alpha;
+        let current_c1 = f(dst[1], src[1]) * alpha;
+        let current_c2 = f(dst[2], src[2]) * alpha;
+
+        [
+            dst[0].mul_add(inv_alpha, current_c0),
+            dst[1].mul_add(inv_alpha, current_c1),
+            dst[2].mul_add(inv_alpha, current_c2),
+            dst[3].mul_add(inv_alpha, alpha),
+        ]
+    }
+}
+
 macro_rules! blend_function {
     (
         $mode:expr,
@@ -373,8 +456,9 @@ mod tests {
         colors
     }
 
-    fn test_blend_mode(blend_mode: BlendMode, f: impl Fn(f32, f32) -> f32) {
+    fn test_blend_mode(blend_mode: BlendMode) {
         let color_values = [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0];
+        let f = blend_mode.blend_fn();
 
         for &dst in &color_values {
             for &src in &color_values {
@@ -486,107 +570,61 @@ mod tests {
 
     #[test]
     fn test_blend_mode_over() {
-        test_blend_mode(BlendMode::Over, |_dst, src| src);
-    }
-
-    fn multiply(dst: f32, src: f32) -> f32 {
-        dst * src
+        test_blend_mode(BlendMode::Over);
     }
 
     #[test]
     fn test_blend_mode_multiply() {
-        test_blend_mode(BlendMode::Multiply, multiply);
-    }
-
-    fn screen(dst: f32, src: f32) -> f32 {
-        dst + src - (dst * src)
+        test_blend_mode(BlendMode::Multiply);
     }
 
     #[test]
     fn test_blend_mode_screen() {
-        test_blend_mode(BlendMode::Screen, screen);
-    }
-
-    fn hard_light(dst: f32, src: f32) -> f32 {
-        if dst <= 0.5 {
-            multiply(2.0 * dst, src)
-        } else {
-            screen(2.0 * dst - 1.0, src)
-        }
+        test_blend_mode(BlendMode::Screen);
     }
 
     #[test]
     fn test_blend_mode_overlay() {
-        test_blend_mode(BlendMode::Overlay, |dst, src| hard_light(src, dst));
+        test_blend_mode(BlendMode::Overlay);
     }
 
     #[test]
     fn test_blend_mode_darken() {
-        test_blend_mode(BlendMode::Darken, |dst, src| dst.min(src));
+        test_blend_mode(BlendMode::Darken);
     }
 
     #[test]
     fn test_blend_mode_lighten() {
-        test_blend_mode(BlendMode::Lighten, |dst, src| dst.max(src));
+        test_blend_mode(BlendMode::Lighten);
     }
 
     #[test]
     fn test_blend_mode_color_dodge() {
-        test_blend_mode(BlendMode::ColorDodge, |dst, src| {
-            if src == 0.0 {
-                0.0
-            } else if dst == 1.0 {
-                1.0
-            } else {
-                1.0f32.min(src / (1.0 - dst))
-            }
-        });
+        test_blend_mode(BlendMode::ColorDodge);
     }
 
     #[test]
     fn test_blend_mode_color_burn() {
-        test_blend_mode(BlendMode::ColorBurn, |dst, src| {
-            if src == 1.0 {
-                1.0
-            } else if dst == 0.0 {
-                0.0
-            } else {
-                1.0 - 1.0f32.min((1.0 - src) / dst)
-            }
-        });
+        test_blend_mode(BlendMode::ColorBurn);
     }
 
     #[test]
     fn test_blend_mode_hard_light() {
-        test_blend_mode(BlendMode::HardLight, hard_light);
+        test_blend_mode(BlendMode::HardLight);
     }
 
     #[test]
     fn test_blend_mode_soft_light() {
-        test_blend_mode(BlendMode::SoftLight, |dst, src| {
-            fn d(src: f32) -> f32 {
-                if src <= 0.25 {
-                    ((16.0 * src - 12.0) * src + 4.0) * src
-                } else {
-                    src.sqrt()
-                }
-            }
-
-            if dst <= 0.5 {
-                src - (1.0 - 2.0 * dst) * src * (1.0 - src)
-            } else {
-                src + (2.0 * dst - 1.0) * (d(src) - src)
-            }
-        });
+        test_blend_mode(BlendMode::SoftLight);
     }
 
     #[test]
     fn test_blend_mode_difference() {
-        test_blend_mode(BlendMode::Difference, |dst, src| (dst - src).abs());
+        test_blend_mode(BlendMode::Difference);
     }
 
     #[test]
     fn test_blend_mode_exclusion() {
-        test_blend_mode(BlendMode::Exclusion, |dst, src| dst + src - 2.0 * dst * src);
+        test_blend_mode(BlendMode::Exclusion);
     }
 }
