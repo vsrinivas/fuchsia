@@ -39,17 +39,18 @@ zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, zx_handle_t bti_
   trb_set_control(&ring->start[count - 1], TRB_LINK, TRB_TC);
   for (size_t i = 0; i < phys_count; i++) {
     if (i + 1 < phys_count) {
-      xhci_trb_t* trb =
-          reinterpret_cast<xhci_trb_t*>(reinterpret_cast<size_t>(ring->start) + (i * PAGE_SIZE) +
-                                        (PAGE_SIZE - sizeof(xhci_trb_t)));
+      xhci_trb_t* trb = reinterpret_cast<xhci_trb_t*>(
+          reinterpret_cast<size_t>(ring->start) + (i * zx_system_get_page_size()) +
+          (zx_system_get_page_size() - sizeof(xhci_trb_t)));
       XHCI_WRITE64(&trb->ptr, sg_list[i + 1]);
       XHCI_WRITE32(&trb->control, TRB_LINK << TRB_TYPE_START);
     }
     VirtualAddress address_mapping(reinterpret_cast<size_t>((*container)->virt()) +
-                                   (PAGE_SIZE * i));
+                                   (zx_system_get_page_size() * i));
     address_mapping.phys_start = sg_list[i];
     ring->virt_to_phys_map[address_mapping] = address_mapping.phys_start;
-    ring->phys_to_virt_map[address_mapping.phys_start / PAGE_SIZE] = address_mapping.virt_start;
+    ring->phys_to_virt_map[address_mapping.phys_start / zx_system_get_page_size()] =
+        address_mapping.virt_start;
   }
   ring->buffers.push_back(std::move(container));
   return ZX_OK;
@@ -105,12 +106,13 @@ zx_status_t xhci_event_ring_init(xhci_event_ring_t* ring, zx_handle_t bti_handle
   ring->ccs = TRB_C;
   for (size_t i = 0; i < phys_count; i++) {
     VirtualAddress address_mapping(reinterpret_cast<size_t>((*container)->virt()) +
-                                   (PAGE_SIZE * i));
+                                   (zx_system_get_page_size() * i));
     address_mapping.phys_start = sg_list[i];
     ring->virt_to_phys_map[address_mapping] = address_mapping.phys_start;
-    ring->phys_to_virt_map[address_mapping.phys_start / PAGE_SIZE] = address_mapping.virt_start;
+    ring->phys_to_virt_map[address_mapping.phys_start / zx_system_get_page_size()] =
+        address_mapping.virt_start;
     XHCI_WRITE64(&erst_array[i].ptr, sg_list[i]);
-    XHCI_WRITE32(&erst_array[i].size, PAGE_SIZE / sizeof(xhci_trb_t));
+    XHCI_WRITE32(&erst_array[i].size, zx_system_get_page_size() / sizeof(xhci_trb_t));
   }
   ring->buffers.push_back(std::move(container));
   return ZX_OK;
@@ -142,7 +144,8 @@ void xhci_set_transfer_noop_trb(xhci_trb_t* trb) {
 xhci_trb_t* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
   // convert physical address to virtual
   uintptr_t ptr = trb->ptr;
-  return reinterpret_cast<xhci_trb_t*>(ring->phys_to_virt_map[ptr / PAGE_SIZE] + (ptr % PAGE_SIZE));
+  return reinterpret_cast<xhci_trb_t*>(ring->phys_to_virt_map[ptr / zx_system_get_page_size()] +
+                                       (ptr % zx_system_get_page_size()));
 }
 xhci_trb_t* xhci_next_evt(xhci_event_ring_t* ring, xhci_trb_t* trb) { return trb + 1; }
 xhci_trb_t* xhci_get_next_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
@@ -188,8 +191,8 @@ void xhci_set_dequeue_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* new_ptr) {
 }
 
 xhci_trb_t* xhci_transfer_ring_phys_to_trb(xhci_transfer_ring_t* ring, zx_paddr_t phys) {
-  return reinterpret_cast<xhci_trb_t*>(ring->phys_to_virt_map[phys / PAGE_SIZE] +
-                                       (phys % PAGE_SIZE));
+  return reinterpret_cast<xhci_trb_t*>(ring->phys_to_virt_map[phys / zx_system_get_page_size()] +
+                                       (phys % zx_system_get_page_size()));
 }
 
 }  // namespace usb_xhci

@@ -129,13 +129,12 @@ static size_t xhci_get_max_transfer_size(uint8_t ep_address) {
     // control requests have uint16 length field so we need to support UINT16_MAX
     // we require one setup, status and data event TRB in addition to data transfer TRBs
     // and subtract one more to account for the link TRB
-    static_assert(PAGE_SIZE * (TRANSFER_RING_SIZE - 4) >= UINT16_MAX,
-                  "TRANSFER_RING_SIZE too small");
+    assert(zx_system_get_page_size() * (TRANSFER_RING_SIZE - 4) >= UINT16_MAX);
     return UINT16_MAX;
   }
   // non-control transfers consist of normal transfer TRBs plus one data event TRB
   // Subtract 2 to reserve a TRB for data event and to account for the link TRB
-  return PAGE_SIZE * (TRANSFER_RING_SIZE - 2);
+  return zx_system_get_page_size() * (TRANSFER_RING_SIZE - 2);
 }
 
 size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address) {

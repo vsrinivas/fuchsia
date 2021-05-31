@@ -5,9 +5,9 @@
 #include "xhci.h"
 
 #include <lib/ddk/debug.h>
-#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/hw/arch_ops.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/io-buffer.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,7 +32,7 @@
 namespace usb_xhci {
 
 #define ROUNDUP_TO(x, multiple) ((x + multiple - 1) & ~(multiple - 1))
-#define PAGE_ROUNDUP(x) ROUNDUP_TO(x, PAGE_SIZE)
+#define PAGE_ROUNDUP(x) ROUNDUP_TO(x, zx_system_get_page_size())
 
 // The Interrupter Moderation Interval prevents the controller from sending interrupts too often.
 // According to XHCI Rev 1.1 4.17.2, the default is 4000 (= 1 ms). We set it to 1000 (= 250 us) to
@@ -147,6 +147,12 @@ static zx_status_t xhci_claim_ownership(xhci_t* xhci) {
 zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
   zx_status_t result = ZX_OK;
 
+  if (XHCI_PAGE_SIZE != zx_system_get_page_size()) {
+    zxlogf(ERROR, "Expected page size of %u, actual system page size is %u\n", XHCI_PAGE_SIZE,
+           zx_system_get_page_size());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   list_initialize(&xhci->command_queue);
   sync_completion_reset(&xhci->command_queue_completion);
 
@@ -180,8 +186,8 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
       XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_MAX_SBBUF_LO_START, HCSPARAMS2_MAX_SBBUF_LO_BITS);
   uint32_t max_erst_count =
       1 << XHCI_GET_BITS32(hcsparams2, HCSPARAMS2_ERST_MAX_START, HCSPARAMS2_ERST_MAX_BITS);
-  if (max_erst_count * sizeof(erst_entry_t) > PAGE_SIZE) {
-    max_erst_count = PAGE_SIZE / sizeof(erst_entry_t);
+  if (max_erst_count * sizeof(erst_entry_t) > zx_system_get_page_size()) {
+    max_erst_count = zx_system_get_page_size() / sizeof(erst_entry_t);
     // TODO(bbosak): Implement a mechanism to allocate many physically contiguous pages
     // reliably.
   }
@@ -215,14 +221,15 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
   }
 
   // Allocate DMA memory for various things
-  result = xhci->dcbaa_erst_buffer.Init(xhci->bti_handle.get(), PAGE_SIZE,
+  result = xhci->dcbaa_erst_buffer.Init(xhci->bti_handle.get(), zx_system_get_page_size(),
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
   if (result != ZX_OK) {
     zxlogf(ERROR, "io_buffer_init failed for xhci->dcbaa_erst_buffer");
     goto fail;
   }
-  result = xhci->input_context_buffer.Init(
-      xhci->bti_handle.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
+  result =
+      xhci->input_context_buffer.Init(xhci->bti_handle.get(), zx_system_get_page_size(),
+                                      IO_BUFFER_RW | IO_BUFFER_CONTIG | XHCI_IO_BUFFER_UNCACHED);
   if (result != ZX_OK) {
     zxlogf(ERROR, "io_buffer_init failed for xhci->input_context_buffer");
     goto fail;
@@ -233,7 +240,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
   if (scratch_pad_bufs > 0) {
     // map scratchpad buffers read-only
     uint32_t flags = IO_BUFFER_RO;
-    if (xhci->page_size > PAGE_SIZE) {
+    if (xhci->page_size > zx_system_get_page_size()) {
       flags |= IO_BUFFER_CONTIG;
       scratch_pad_is_contig = true;
     }
@@ -292,8 +299,8 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
       if (scratch_pad_is_contig) {
         scratch_pad_phys = xhci->scratch_pad_pages_buffer.phys() + offset;
       } else {
-        size_t index = offset / PAGE_SIZE;
-        size_t suboffset = offset & (PAGE_SIZE - 1);
+        size_t index = offset / zx_system_get_page_size();
+        size_t suboffset = offset & (zx_system_get_page_size() - 1);
         scratch_pad_phys = xhci->scratch_pad_pages_buffer.phys_list()[index] + suboffset;
       }
 

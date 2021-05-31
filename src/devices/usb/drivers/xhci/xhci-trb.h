@@ -41,14 +41,16 @@ struct VirtualAddress {
   VirtualAddress(zx_vaddr_t virt_start, size_t virt_end)
       : virt_start(virt_start), virt_end(virt_end) {}
   VirtualAddress(size_t virt_start)
-      : virt_start(virt_start), virt_end((virt_start + PAGE_SIZE) - 1) {}
+      : virt_start(virt_start), virt_end((virt_start + zx_system_get_page_size()) - 1) {}
   bool operator<(const VirtualAddress& other) const {
-    return (virt_start / PAGE_SIZE) < (other.virt_start / PAGE_SIZE);
+    return (virt_start / zx_system_get_page_size()) <
+           (other.virt_start / zx_system_get_page_size());
   }
   bool operator==(const VirtualAddress& other) const {
-    return (virt_start / PAGE_SIZE) == (other.virt_start / PAGE_SIZE);
+    return (virt_start / zx_system_get_page_size()) ==
+           (other.virt_start / zx_system_get_page_size());
   }
-  size_t GetKey() const { return virt_start / PAGE_SIZE; }
+  size_t GetKey() const { return virt_start / zx_system_get_page_size(); }
   zx_vaddr_t virt_start = 0;
   zx_vaddr_t virt_end = 0;
   size_t phys_start = 0;
