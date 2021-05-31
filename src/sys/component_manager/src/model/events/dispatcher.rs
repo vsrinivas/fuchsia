@@ -206,7 +206,7 @@ impl EventDispatcherScope {
             Ok(EventPayload::CapabilityRequested { name, .. }) => Some(hashmap! {
                 "name".to_string() => DictionaryValue::Str(name.into())
             }),
-            Ok(EventPayload::CapabilityReady { name, .. }) => Some(hashmap! {
+            Ok(EventPayload::DirectoryReady { name, .. }) => Some(hashmap! {
                 "name".to_string() => DictionaryValue::Str(name.into())
             }),
             Err(EventError {
@@ -216,7 +216,7 @@ impl EventDispatcherScope {
                 "name".to_string() => DictionaryValue::Str(name.into())
             }),
             Err(EventError {
-                event_error_payload: EventErrorPayload::CapabilityReady { name, .. },
+                event_error_payload: EventErrorPayload::DirectoryReady { name, .. },
                 ..
             }) => Some(hashmap! {
                 "name".to_string() => DictionaryValue::Str(name.into())

@@ -108,7 +108,7 @@ where
 /// All system event types accepted by the
 /// fuchsia.sys2.EventSource::Subscribe FIDL Call
 const SYSTEM_EVENT_TYPES: [&'static str; 9] = [
-    "capability_ready",
+    "directory_ready",
     "capability_requested",
     "capability_routed",
     "discovered",

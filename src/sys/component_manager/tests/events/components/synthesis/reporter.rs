@@ -4,7 +4,7 @@
 
 use {
     component_events::events::{
-        CapabilityReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
+        DirectoryReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
         Running, Started,
     },
     fuchsia_async as fasync,
@@ -19,12 +19,12 @@ use {
 async fn main() {
     syslog::init_with_tags(&[]).unwrap();
 
-    // Make 4 components: 1 capability ready child and 3 stub children
+    // Make 4 components: 1 directory ready child and 3 stub children
     let mut instances = vec![];
     let url =
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
     let url_cap_ready =
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm"
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_child.cm"
             .to_string();
     let scoped_instance =
         ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await.unwrap();
@@ -44,18 +44,18 @@ async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME, CapabilityReady::NAME],
+            vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME, DirectoryReady::NAME],
             EventMode::Async,
         )])
         .await
         .unwrap();
 
     // There were 4 running instances when the stream was created: this instance itself and three
-    // more. We are also expecting capability ready for one of them.
+    // more. We are also expecting directory ready for one of them.
     let mut running = vec![];
-    let mut capability_ready = vec![];
+    let mut directory_ready = vec![];
 
-    while running.len() < 4 || capability_ready.len() < 1 {
+    while running.len() < 4 || directory_ready.len() < 1 {
         let event = event_stream.next().await.unwrap();
         if let Some(header) = &event.header {
             match header.event_type {
@@ -64,22 +64,22 @@ async fn main() {
                     info!("Got running event");
                     running.push(event.target_moniker().to_string());
                 }
-                Some(CapabilityReady::TYPE) => {
+                Some(DirectoryReady::TYPE) => {
                     let event =
-                        CapabilityReady::try_from(event).expect("convert to capability ready");
-                    info!("Got capability ready event");
-                    capability_ready.push(event.target_moniker().to_string());
+                        DirectoryReady::try_from(event).expect("convert to directory ready");
+                    info!("Got directory ready event");
+                    directory_ready.push(event.target_moniker().to_string());
                 }
                 other => panic!("unexpected event type: {:?}", other),
             }
         }
     }
 
-    // There must be exactly 4 unique running events, 1 capability ready event.
+    // There must be exactly 4 unique running events, 1 directory ready event.
     // The first running event must be for this component itself.
     // The others must be from the dynamic collection.
     assert_eq!(running.len(), 4);
-    assert_eq!(capability_ready.len(), 1);
+    assert_eq!(directory_ready.len(), 1);
     assert_eq!(running[0], ".");
 
     let re = Regex::new(r"./coll:auto-\d+:\d").unwrap();
@@ -96,7 +96,7 @@ async fn main() {
         let event = event_stream.next().await.unwrap();
         if let Some(header) = event.header {
             match header.event_type {
-                Some(CapabilityReady::TYPE) => {
+                Some(DirectoryReady::TYPE) => {
                     // ignore. we could get a duplicate here.
                 }
                 Some(MarkedForDestruction::TYPE) => {

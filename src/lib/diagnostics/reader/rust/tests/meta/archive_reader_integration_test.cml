@@ -41,7 +41,7 @@
             modes: [ "async" ],
         },
         {
-            event: "capability_ready",
+            event: "directory_ready",
             from: "framework",
             to: "#archivist",
             filter: { name: "diagnostics" },

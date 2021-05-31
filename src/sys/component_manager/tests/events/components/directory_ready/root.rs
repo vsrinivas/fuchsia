@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{CapabilityReady, Event, EventSource},
+        events::{DirectoryReady, Event, EventSource},
         matcher::EventMatcher,
     },
     fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd},
@@ -40,7 +40,7 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
     }
 }
 
-/// This component receives `CapabilityReady` events when its child makes them available.
+/// This component receives `DirectoryReady` events when its child makes them available.
 /// Those directories contain a `Trigger` service that should be accessible when opening the
 /// directory.
 /// It sends "Saw: /path/to/dir on /some_moniker:0" for each successful read.
@@ -48,7 +48,7 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
 async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream =
-        event_source.take_static_event_stream("CapabilityReadyStream").await.unwrap();
+        event_source.take_static_event_stream("DirectoryReadyStream").await.unwrap();
 
     // For successful CapablityReady events, this is a map of the directory to expected contents
     let mut all_expected_entries = hashmap! {
@@ -59,12 +59,11 @@ async fn main() {
     let mut err_event_names = vec!["insufficient_rights", "not_published"];
 
     for _ in 0..4 {
-        let event =
-            EventMatcher::default().expect_match::<CapabilityReady>(&mut event_stream).await;
+        let event = EventMatcher::default().expect_match::<DirectoryReady>(&mut event_stream).await;
 
         assert_eq!(
             event.component_url(),
-            "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm"
+            "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_child.cm"
         );
         assert_eq!(event.target_moniker(), "./child:0");
 

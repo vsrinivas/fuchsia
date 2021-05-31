@@ -219,10 +219,10 @@ rustc_binary("realm_offered_bin") {
   sources = [ "realm_offered/reporter.rs" ]
 }
 
-rustc_binary("capability_ready_root_bin") {
-  name = "capability_ready_root"
+rustc_binary("directory_ready_root_bin") {
+  name = "directory_ready_root"
   edition = "2018"
-  source_root = "capability_ready/root.rs"
+  source_root = "directory_ready/root.rs"
   testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
@@ -241,13 +241,13 @@ rustc_binary("capability_ready_root_bin") {
     "//third_party/rust_crates:matches",
   ]
 
-  sources = [ "capability_ready/root.rs" ]
+  sources = [ "directory_ready/root.rs" ]
 }
 
-rustc_binary("capability_ready_child_bin") {
-  name = "capability_ready_child"
+rustc_binary("directory_ready_child_bin") {
+  name = "directory_ready_child"
   edition = "2018"
-  source_root = "capability_ready/child.rs"
+  source_root = "directory_ready/child.rs"
   testonly = true
   deps = [
     "//src/lib/fuchsia-async",
@@ -258,7 +258,7 @@ rustc_binary("capability_ready_child_bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  sources = [ "capability_ready/child.rs" ]
+  sources = [ "directory_ready/child.rs" ]
 }
 
 rustc_binary("synthesis_reporter_bin") {

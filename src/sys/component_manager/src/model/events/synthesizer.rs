@@ -429,7 +429,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn synthesize_capability_ready() {
+    async fn synthesize_directory_ready() {
         let test = setup_synthesis_test().await;
 
         test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
@@ -451,23 +451,23 @@ mod tests {
         let mut event_stream = create_stream(CreateStreamArgs {
             registry: &registry,
             scope_monikers: vec![vec!["b:0"].into(), vec!["c:0", "e:0"].into()],
-            events: vec![EventType::Running, EventType::CapabilityReady],
+            events: vec![EventType::Running, EventType::DirectoryReady],
             include_builtin: false,
         })
         .await;
 
-        // We expect 4 CapabilityReady events and 5 running events.
+        // We expect 4 DirectoryReady events and 5 running events.
         // CR: b, d, e, g
         // RN: b, d, e, g, h
-        let expected_capability_ready_monikers =
+        let expected_directory_ready_monikers =
             vec!["/b:0", "/b:0/d:0", "/c:0/e:0", "/c:0/e:0/g:0"];
-        let mut expected_running_monikers = expected_capability_ready_monikers.clone();
+        let mut expected_running_monikers = expected_directory_ready_monikers.clone();
         expected_running_monikers.extend(vec!["/c:0/e:0/h:0"].into_iter());
-        // We use sets given that the CapabilityReady could be dispatched twice: regular +
+        // We use sets given that the DirectoryReady could be dispatched twice: regular +
         // synthesized.
         let mut result_running_monikers = HashSet::new();
-        let mut result_capability_ready_monikers = HashSet::new();
-        while result_running_monikers.len() < 5 || result_capability_ready_monikers.len() < 4 {
+        let mut result_directory_ready_monikers = HashSet::new();
+        while result_running_monikers.len() < 5 || result_directory_ready_monikers.len() < 4 {
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
                 Ok(EventPayload::Running { .. }) => {
@@ -476,25 +476,25 @@ mod tests {
                 // We get an error cuz the component is not really serving the directory, but is
                 // exposing it. For the purposes of the test, this is enough information.
                 Err(EventError {
-                    event_error_payload: EventErrorPayload::CapabilityReady { name, .. },
+                    event_error_payload: EventErrorPayload::DirectoryReady { name, .. },
                     ..
                 }) if name == "diagnostics" => {
-                    result_capability_ready_monikers.insert(event.event.target_moniker.to_string());
+                    result_directory_ready_monikers.insert(event.event.target_moniker.to_string());
                 }
-                payload => panic!("Expected running or capability ready. Got: {:?}", payload),
+                payload => panic!("Expected running or directory ready. Got: {:?}", payload),
             }
         }
         let mut result_running = result_running_monikers.into_iter().collect::<Vec<_>>();
-        let mut result_capability_ready =
-            result_capability_ready_monikers.into_iter().collect::<Vec<_>>();
+        let mut result_directory_ready =
+            result_directory_ready_monikers.into_iter().collect::<Vec<_>>();
         result_running.sort();
-        result_capability_ready.sort();
+        result_directory_ready.sort();
         assert_eq!(result_running, expected_running_monikers);
-        assert_eq!(result_capability_ready, expected_capability_ready_monikers);
+        assert_eq!(result_directory_ready, expected_directory_ready_monikers);
     }
 
     #[fuchsia::test]
-    async fn synthesize_capability_ready_builtin() {
+    async fn synthesize_directory_ready_builtin() {
         let test = setup_synthesis_test().await;
 
         let mut fs = ServiceFs::new();
@@ -504,17 +504,17 @@ mod tests {
         let mut event_stream = create_stream(CreateStreamArgs {
             registry: &registry,
             scope_monikers: vec![],
-            events: vec![EventType::CapabilityReady],
+            events: vec![EventType::DirectoryReady],
             include_builtin: true,
         })
         .await;
 
         let event = event_stream.next().await.expect("got running event");
         match event.event.result {
-            Ok(EventPayload::CapabilityReady { name, .. }) if name == "diagnostics" => {
+            Ok(EventPayload::DirectoryReady { name, .. }) if name == "diagnostics" => {
                 assert_eq!(event.event.target_moniker, ExtendedMoniker::ComponentManager);
             }
-            payload => panic!("Expected running or capability ready. Got: {:?}", payload),
+            payload => panic!("Expected running or directory ready. Got: {:?}", payload),
         }
     }
 

@@ -23,7 +23,7 @@ impl EventLogger {
         vec![HooksRegistration::new(
             "EventLogger",
             vec![
-                EventType::CapabilityReady,
+                EventType::DirectoryReady,
                 EventType::CapabilityRequested,
                 EventType::CapabilityRouted,
                 EventType::Destroyed,

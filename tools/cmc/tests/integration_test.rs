@@ -103,7 +103,7 @@ fn main() {
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
-                source_name: Some("capability_ready".to_string()),
+                source_name: Some("directory_ready".to_string()),
                 target_name: Some("diagnostics_ready".to_string()),
                 filter: Some(fdata::Dictionary {
                     entries: Some(vec![fdata::DictionaryEntry {

@@ -40,7 +40,7 @@ pub enum EventError {
         source: SourceIdentityValidationError,
     },
 
-    #[error("missing diagnostics directory in CapabilityReady payload")]
+    #[error("missing diagnostics directory in DirectoryReady payload")]
     MissingDiagnosticsDir,
 
     #[error("running event didn't encode start timestamp.")]

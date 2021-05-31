@@ -39,7 +39,7 @@
             modes: [ "async" ],
         },
         {
-            event: "capability_ready",
+            event: "directory_ready",
             from: "parent",
             as: "diagnostics_ready",
             filter: { name: "diagnostics" },

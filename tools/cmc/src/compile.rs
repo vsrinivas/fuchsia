@@ -1746,7 +1746,7 @@ mod tests {
                     { "event": "destroyed", "from": "parent" },
                     { "event": ["started", "stopped"], "from": "framework" },
                     {
-                        "event": "capability_ready",
+                        "event": "directory_ready",
                         "as": "diagnostics",
                         "from": "parent",
                         "filter": { "name": "diagnostics" }
@@ -1883,7 +1883,7 @@ mod tests {
                     fsys::UseDecl::Event (
                         fsys::UseEventDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_name: Some("capability_ready".to_string()),
+                            source_name: Some("directory_ready".to_string()),
                             target_name: Some("diagnostics".to_string()),
                             filter: Some(fdata::Dictionary {
                                 entries: Some(vec![
@@ -2311,7 +2311,7 @@ mod tests {
                         "to": [ "#modular" ],
                     },
                     {
-                        "event": "capability_ready",
+                        "event": "directory_ready",
                         "from": "parent",
                         "to": [ "#netstack" ],
                         "as": "net-ready",
@@ -2656,7 +2656,7 @@ mod tests {
                     fsys::OfferDecl::Event (
                         fsys::OfferEventDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_name: Some("capability_ready".to_string()),
+                            source_name: Some("directory_ready".to_string()),
                             target: Some(fsys::Ref::Child(fsys::ChildRef {
                                 name: "netstack".to_string(),
                                 collection: None,

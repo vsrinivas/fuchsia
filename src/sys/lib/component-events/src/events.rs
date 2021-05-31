@@ -24,10 +24,10 @@ lazy_static! {
 /// Returns the string name for the given `event_type`
 pub fn event_name(event_type: &fsys::EventType) -> String {
     match event_type {
-        fsys::EventType::CapabilityReady => "capability_ready",
         fsys::EventType::CapabilityRequested => "capability_requested",
         fsys::EventType::CapabilityRouted => "capability_routed",
         fsys::EventType::Destroyed => "destroyed",
+        fsys::EventType::DirectoryReady => "directory_ready",
         fsys::EventType::Discovered => "discovered",
         fsys::EventType::MarkedForDestruction => "",
         fsys::EventType::Resolved => "resolved",
@@ -520,8 +520,8 @@ create_event!(
     }
 );
 create_event!(
-    event_type: CapabilityReady,
-    event_name: capability_ready,
+    event_type: DirectoryReady,
+    event_name: directory_ready,
     payload: {
         data: {
             {

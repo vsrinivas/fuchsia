@@ -54,7 +54,7 @@ impl EventSourceFactory {
     }
 
     /// Creates the subscription to the required events.
-    /// `CapabilityReady` used to track events and associate them with the component that needs them
+    /// `DirectoryReady` used to track events and associate them with the component that needs them
     /// as well as the scoped that will be allowed. Also the EventSource protocol capability.
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![

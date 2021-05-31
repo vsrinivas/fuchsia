@@ -55,7 +55,7 @@ pub enum Event {
     // Filter.name
     CapabilityRequested(String),
     // Filter.name
-    CapabilityReady(String),
+    DirectoryReady(String),
 }
 
 impl Event {
@@ -74,8 +74,8 @@ impl Event {
         Self::CapabilityRequested(filter_name.into())
     }
 
-    pub fn capability_ready(filter_name: impl Into<String>) -> Self {
-        Self::CapabilityReady(filter_name.into())
+    pub fn directory_ready(filter_name: impl Into<String>) -> Self {
+        Self::DirectoryReady(filter_name.into())
     }
 }
 
@@ -86,15 +86,15 @@ impl Event {
             Event::Stopped => "stopped",
             Event::Running => "running",
             Event::CapabilityRequested(_) => "capability_requested",
-            Event::CapabilityReady(_) => "capability_ready",
+            Event::DirectoryReady(_) => "directory_ready",
         }
     }
 
-    /// Returns the Event Filter that some events (like CapabilityReady and CapabilityRequested)
+    /// Returns the Event Filter that some events (like DirectoryReady and CapabilityRequested)
     /// have.
     fn filter(&self) -> Option<HashMap<String, cm_rust::DictionaryValue>> {
         match self {
-            Event::CapabilityRequested(name) | Event::CapabilityReady(name) => Some(
+            Event::CapabilityRequested(name) | Event::DirectoryReady(name) => Some(
                 hashmap!("name".to_string() => cm_rust::DictionaryValue::Str(name.to_string())),
             ),
             _ => None,
@@ -1309,7 +1309,7 @@ mod tests {
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::Event(
-                    Event::capability_ready("diagnostics"),
+                    Event::directory_ready("diagnostics"),
                     cm_rust::EventMode::Async,
                 ),
                 source: RouteEndpoint::component("a"),
@@ -1385,9 +1385,9 @@ mod tests {
                         offers: vec![
                             OfferDecl::Event(OfferEventDecl {
                                 source: cm_rust::OfferSource::Framework,
-                                source_name: "capability_ready".into(),
+                                source_name: "directory_ready".into(),
                                 target: cm_rust::OfferTarget::Child("b".to_string()),
-                                target_name: "capability_ready".into(),
+                                target_name: "directory_ready".into(),
                                 mode: EventMode::Async,
                                 filter: Some(hashmap!(
                                     "name".to_string() => DictionaryValue::Str(
@@ -1430,8 +1430,8 @@ mod tests {
                         uses: vec![
                             UseDecl::Event(UseEventDecl {
                                 source: UseSource::Parent,
-                                source_name: "capability_ready".into(),
-                                target_name: "capability_ready".into(),
+                                source_name: "directory_ready".into(),
+                                target_name: "directory_ready".into(),
                                 mode: EventMode::Async,
                                 filter: Some(hashmap!(
                                     "name".to_string() => DictionaryValue::Str(

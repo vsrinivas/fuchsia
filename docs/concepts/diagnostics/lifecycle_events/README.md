@@ -11,7 +11,7 @@ The archivist ingests events from both the v1 and v2 component framework. The
 main difference between them is the protocol it uses to consume the events.
 
 The following diagram shows a very high level overview of the three lifecycle events (started,
-capability_ready and stopped) the archivist is interested on:
+directory_ready and stopped) the archivist is interested on:
 
 - {Components v1}
 
@@ -43,7 +43,7 @@ capability_ready and stopped) the archivist is interested on:
   - **Existing**: Sent by component manager for all components that are running at the moment the
     archivist starts listening for events. In other words, a synthesized started event. This event
     is provided to the reader as **Running**, but consumed from the framework as “Existing”.
-  - **Capability ready**: The archivist listens for capability ready of the `out/diagnostics`
+  - **Directory ready**: The archivist listens for directory ready of the `out/diagnostics`
     directory. When the component starts serving this directory, the component manager sends this
     event to the Archivist.
 

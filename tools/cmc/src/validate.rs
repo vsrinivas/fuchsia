@@ -1424,8 +1424,8 @@ mod tests {
                   { "event": [ "launched"], "from": "framework" },
                   { "event": "destroyed", "from": "framework", "as": "destroyed_x" },
                   {
-                    "event": "capability_ready_diagnostics",
-                    "as": "capability_ready",
+                    "event": "directory_ready_diagnostics",
+                    "as": "directory_ready",
                     "from": "parent",
                     "filter": {
                         "name": "diagnositcs"
@@ -2241,7 +2241,7 @@ mod tests {
                         "to": [ "#modular" ],
                     },
                     {
-                        "event": "capability_ready",
+                        "event": "directory_ready",
                         "from": "parent",
                         "to": [ "#modular" ],
                         "as": "capability-ready-for-modular",

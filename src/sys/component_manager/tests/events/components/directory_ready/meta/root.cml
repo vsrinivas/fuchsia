@@ -2,12 +2,12 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/capability_ready_root",
+        binary: "bin/directory_ready_root",
     },
     children: [
         {
             name: "child",
-            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm",
+            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_child.cm",
             startup: "eager",
         },
     ],
@@ -18,7 +18,7 @@
             from: "framework",
         },
         {
-            event: "capability_ready",
+            event: "directory_ready",
             from: "framework",
             filter: {
                 name: [
@@ -31,10 +31,10 @@
             modes: [ "async" ],
         },
         {
-            event_stream: "CapabilityReadyStream",
+            event_stream: "DirectoryReadyStream",
             subscriptions: [
                 {
-                    event: "capability_ready",
+                    event: "directory_ready",
                     mode: "async",
                 },
             ],

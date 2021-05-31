@@ -2,7 +2,7 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/capability_ready_child",
+        binary: "bin/directory_ready_child",
     },
     capabilities: [
         {

@@ -15,8 +15,8 @@ pub mod klog;
 pub mod model;
 pub mod startup;
 
-pub(crate) mod capability_ready_notifier;
 pub(crate) mod channel;
+pub(crate) mod directory_ready_notifier;
 pub(crate) mod framework;
 pub(crate) mod fuchsia_pkg_resolver;
 pub(crate) mod root_stop_notifier;

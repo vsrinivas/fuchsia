@@ -148,8 +148,6 @@ impl EventType {
 
 // Keep the event types listed below in alphabetical order!
 events!([
-    /// A capability exposed to the framework by a component is available.
-    (CapabilityReady, capability_ready),
     /// After a CapabilityProvider has been selected through the CapabilityRouted event,
     /// the CapabilityRequested event is dispatched with the ServerEnd of the channel
     /// for the capability.
@@ -160,6 +158,8 @@ events!([
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
     (Destroyed, destroyed),
+    /// A directory exposed to the framework by a component is available.
+    (DirectoryReady, directory_ready),
     /// A component instance was discovered.
     (Discovered, discovered),
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
@@ -200,10 +200,10 @@ impl EventError {
 #[derive(Clone)]
 pub enum EventErrorPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityReady { name: String },
     CapabilityRequested { source_moniker: AbsoluteMoniker, name: String },
     CapabilityRouted,
     Destroyed,
+    DirectoryReady { name: String },
     Discovered,
     MarkedForDestruction,
     Resolved,
@@ -223,7 +223,7 @@ impl fmt::Debug for EventErrorPayload {
         let mut formatter = fmt.debug_struct("EventErrorPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventErrorPayload::CapabilityReady { name } => formatter.field("name", &name).finish(),
+            EventErrorPayload::DirectoryReady { name } => formatter.field("name", &name).finish(),
             EventErrorPayload::CapabilityRequested { source_moniker, name } => {
                 formatter.field("source_moniker", &source_moniker);
                 formatter.field("name", &name).finish()
@@ -273,10 +273,6 @@ impl HooksRegistration {
 #[derive(Clone)]
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
-    CapabilityReady {
-        name: String,
-        node: NodeProxy,
-    },
     CapabilityRequested {
         source_moniker: AbsoluteMoniker,
         name: String,
@@ -290,6 +286,10 @@ pub enum EventPayload {
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
     Destroyed,
+    DirectoryReady {
+        name: String,
+        node: NodeProxy,
+    },
     Discovered,
     MarkedForDestruction,
     Resolved {
@@ -354,7 +354,7 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.event_type());
         match self {
-            EventPayload::CapabilityReady { name, .. } => {
+            EventPayload::DirectoryReady { name, .. } => {
                 formatter.field("name", &name.as_str()).finish()
             }
             EventPayload::CapabilityRequested { name, .. } => {
@@ -532,7 +532,7 @@ impl fmt::Display for Event {
         let output = match &self.result {
             Ok(payload) => {
                 let payload = match payload {
-                    EventPayload::CapabilityReady { name, .. } => format!("serving {}", name),
+                    EventPayload::DirectoryReady { name, .. } => format!("serving {}", name),
                     EventPayload::CapabilityRequested { source_moniker, name, .. } => {
                         format!("requested '{}' from '{}'", name.to_string(), source_moniker)
                     }

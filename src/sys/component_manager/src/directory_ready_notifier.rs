@@ -32,22 +32,22 @@ use {
 };
 
 /// Awaits for `Started` events and for each capability exposed to framework, dispatches a
-/// `CapabilityReady` event.
-pub struct CapabilityReadyNotifier {
+/// `DirectoryReady` event.
+pub struct DirectoryReadyNotifier {
     model: Weak<Model>,
-    /// Capabilities offered by component manager that we wish to provide through `CapabilityReady`
+    /// Capabilities offered by component manager that we wish to provide through `DirectoryReady`
     /// events. For example, the diagnostics directory hosting inspect data.
     builtin_capabilities: Mutex<Vec<(String, NodeProxy)>>,
 }
 
-impl CapabilityReadyNotifier {
+impl DirectoryReadyNotifier {
     pub fn new(model: Weak<Model>) -> Self {
         Self { model, builtin_capabilities: Mutex::new(Vec::new()) }
     }
 
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
-            "CapabilityReadyNotifier",
+            "DirectoryReadyNotifier",
             vec![EventType::Started],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
@@ -73,7 +73,7 @@ impl CapabilityReadyNotifier {
         let this = self.clone();
         let moniker = target_moniker.clone();
         fasync::Task::spawn(async move {
-            // If we can't find the component then we can't dispatch any CapabilityReady event,
+            // If we can't find the component then we can't dispatch any DirectoryReady event,
             // error or otherwise. This isn't necessarily an error as the model or component might've been
             // destroyed in the intervening time, so we just exit early.
             let target = match this.model.upgrade() {
@@ -125,11 +125,11 @@ impl CapabilityReadyNotifier {
         matching_exposes: Vec<&ExposeDecl>,
         target: &Arc<ComponentInstance>,
     ) {
-        let capability_ready_events =
+        let directory_ready_events =
             self.create_events(outgoing_node_result, decl, matching_exposes, target).await;
-        for capability_ready_event in capability_ready_events {
-            target.hooks.dispatch(&capability_ready_event).await.unwrap_or_else(|e| {
-                error!("Error notifying capability ready for {}: {:?}", target.abs_moniker, e)
+        for directory_ready_event in directory_ready_events {
+            target.hooks.dispatch(&directory_ready_event).await.unwrap_or_else(|e| {
+                error!("Error notifying directory ready for {}: {:?}", target.abs_moniker, e)
             });
         }
     }
@@ -141,7 +141,7 @@ impl CapabilityReadyNotifier {
         matching_exposes: Vec<&ExposeDecl>,
         target: &Arc<ComponentInstance>,
     ) -> Vec<Event> {
-        // Forward along the result for opening the outgoing directory into the CapabilityReady
+        // Forward along the result for opening the outgoing directory into the DirectoryReady
         // dispatch in order to propagate any potential errors as an event.
         let outgoing_dir_result = async move {
             let outgoing_node = outgoing_node_result?;
@@ -222,11 +222,11 @@ impl CapabilityReadyNotifier {
 
         match node_result {
             Ok(node) => {
-                Event::new(&target, Ok(EventPayload::CapabilityReady { name: target_name, node }))
+                Event::new(&target, Ok(EventPayload::DirectoryReady { name: target_name, node }))
             }
             Err(e) => Event::new(
                 &target,
-                Err(EventError::new(&e, EventErrorPayload::CapabilityReady { name: target_name })),
+                Err(EventError::new(&e, EventErrorPayload::DirectoryReady { name: target_name })),
             ),
         }
     }
@@ -243,7 +243,7 @@ impl CapabilityReadyNotifier {
                     let event = node
                         .clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end)
                         .map(|_| {
-                            Event::new_builtin(Ok(EventPayload::CapabilityReady {
+                            Event::new_builtin(Ok(EventPayload::DirectoryReady {
                                 name: name.clone(),
                                 node: node_clone,
                             }))
@@ -253,7 +253,7 @@ impl CapabilityReadyNotifier {
                                 ModelError::clone_node_error(AbsoluteMoniker::root(), name.clone());
                             Event::new_builtin(Err(EventError::new(
                                 &err,
-                                EventErrorPayload::CapabilityReady { name: name.clone() },
+                                EventErrorPayload::DirectoryReady { name: name.clone() },
                             )))
                         });
                     Some(event)
@@ -310,7 +310,7 @@ async fn clone_outgoing_root(
 }
 
 #[async_trait]
-impl EventSynthesisProvider for CapabilityReadyNotifier {
+impl EventSynthesisProvider for DirectoryReadyNotifier {
     async fn provide(&self, component: ExtendedComponent, filter: &EventFilter) -> Vec<Event> {
         let component = match component {
             ExtendedComponent::ComponentManager => {
@@ -327,7 +327,7 @@ impl EventSynthesisProvider for CapabilityReadyNotifier {
         let matching_exposes = filter_matching_exposes(&decl, Some(&filter));
         if matching_exposes.is_empty() {
             // Short-circuit if there are no matching exposes so we don't wait for the component's
-            // outgoing directory if there are no CapabilityReady events to send.
+            // outgoing directory if there are no DirectoryReady events to send.
             return vec![];
         }
 
@@ -356,7 +356,7 @@ impl EventSynthesisProvider for CapabilityReadyNotifier {
 }
 
 #[async_trait]
-impl Hook for CapabilityReadyNotifier {
+impl Hook for DirectoryReadyNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         let target_moniker = event
             .target_moniker
@@ -366,7 +366,7 @@ impl Hook for CapabilityReadyNotifier {
                 if filter_matching_exposes(&component_decl, None).is_empty() {
                     // Short-circuit if there are no matching exposes so we don't spawn a task
                     // if there's nothing to do. In particular, don't wait for the component's
-                    // outgoing directory if there are no CapabilityReady events to send.
+                    // outgoing directory if there are no DirectoryReady events to send.
                     return Ok(());
                 }
                 if let Some(outgoing_dir) = &runtime.outgoing_dir {

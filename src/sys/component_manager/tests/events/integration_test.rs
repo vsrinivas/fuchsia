@@ -150,9 +150,9 @@ async fn event_dispatch_order_test() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn event_capability_ready() {
+async fn event_directory_ready() {
     let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_root.cm",
+        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_root.cm",
     )
     .await
     .unwrap();

@@ -126,7 +126,7 @@ pub async fn create() -> Result<RealmInstance, Error> {
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(
-                Event::capability_ready("diagnostics"),
+                Event::directory_ready("diagnostics"),
                 cm_rust::EventMode::Async,
             ),
             source: RouteEndpoint::component("wrapper"),

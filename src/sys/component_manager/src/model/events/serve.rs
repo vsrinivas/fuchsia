@@ -137,8 +137,8 @@ async fn maybe_create_event_result(
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
-        Ok(EventPayload::CapabilityReady { name, node, .. }) => {
-            Ok(Some(create_capability_ready_payload(name.to_string(), node)?))
+        Ok(EventPayload::DirectoryReady { name, node, .. }) => {
+            Ok(Some(create_directory_ready_payload(name.to_string(), node)?))
         }
         Ok(EventPayload::CapabilityRequested { name, capability, .. }) => Ok(Some(
             create_capability_requested_payload(name.to_string(), capability.clone()).await,
@@ -161,12 +161,12 @@ async fn maybe_create_event_result(
         Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
         Err(EventError {
             source,
-            event_error_payload: EventErrorPayload::CapabilityReady { name },
+            event_error_payload: EventErrorPayload::DirectoryReady { name },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
-            error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
-                fsys::CapabilityReadyError {
+            error_payload: Some(fsys::EventErrorPayload::DirectoryReady(
+                fsys::DirectoryReadyError {
                     name: Some(name.to_string()),
-                    ..fsys::CapabilityReadyError::EMPTY
+                    ..fsys::DirectoryReadyError::EMPTY
                 },
             )),
             description: Some(format!("{}", source)),
@@ -200,7 +200,7 @@ async fn maybe_create_event_result(
     }
 }
 
-fn create_capability_ready_payload(
+fn create_directory_ready_payload(
     name: String,
     node: &NodeProxy,
 ) -> Result<fsys::EventResult, fidl::Error> {
@@ -215,12 +215,12 @@ fn create_capability_ready_payload(
         Some(node_client_end)
     };
 
-    let payload = fsys::CapabilityReadyPayload {
+    let payload = fsys::DirectoryReadyPayload {
         name: Some(name),
         node,
-        ..fsys::CapabilityReadyPayload::EMPTY
+        ..fsys::DirectoryReadyPayload::EMPTY
     };
-    Ok(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(payload)))
+    Ok(fsys::EventResult::Payload(fsys::EventPayload::DirectoryReady(payload)))
 }
 
 async fn create_capability_requested_payload(

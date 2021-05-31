@@ -412,7 +412,7 @@ impl TryFrom<Event> for ComponentEvent {
                 let stop_event = StopEvent { metadata };
                 Ok(ComponentEvent::Stop(stop_event))
             }
-            fsys::EventType::CapabilityReady | fsys::EventType::Running => {
+            fsys::EventType::DirectoryReady | fsys::EventType::Running => {
                 construct_payload_holding_component_event(event, metadata)
             }
             fsys::EventType::CapabilityRequested => {
@@ -430,12 +430,10 @@ fn construct_payload_holding_component_event(
     match event.event_result {
         Some(result) => {
             match result {
-                fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
-                    capability_ready,
-                )) => {
-                    let name = capability_ready.name.ok_or(EventError::MissingField("name"))?;
+                fsys::EventResult::Payload(fsys::EventPayload::DirectoryReady(directory_ready)) => {
+                    let name = directory_ready.name.ok_or(EventError::MissingField("name"))?;
                     if name == "diagnostics" {
-                        match capability_ready.node {
+                        match directory_ready.node {
                             Some(node) => {
                                 let diagnostics_ready_event = DiagnosticsReadyEvent {
                                     metadata: shared_data,

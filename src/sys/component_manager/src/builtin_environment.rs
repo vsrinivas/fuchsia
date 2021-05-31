@@ -25,9 +25,9 @@ use {
             time::{create_utc_clock, UtcTimeMaintainer},
             vmex_resource::VmexResource,
         },
-        capability_ready_notifier::CapabilityReadyNotifier,
         config::RuntimeConfig,
         diagnostics::ComponentTreeStats,
+        directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
         fuchsia_pkg_resolver,
@@ -307,7 +307,7 @@ pub struct BuiltinEnvironment {
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
     pub stop_notifier: Arc<RootStopNotifier>,
-    pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
+    pub directory_ready_notifier: Arc<DirectoryReadyNotifier>,
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
     pub component_tree_stats: Arc<ComponentTreeStats<DiagnosticsTask>>,
@@ -614,17 +614,17 @@ impl BuiltinEnvironment {
         let node = inspect::stats::Node::new(&inspector, inspector.root());
         inspector.root().record(node.take());
 
-        // Set up the capability ready notifier.
-        let capability_ready_notifier =
-            Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(&model)));
-        model.root.hooks.install(capability_ready_notifier.hooks()).await;
+        // Set up the directory ready notifier.
+        let directory_ready_notifier =
+            Arc::new(DirectoryReadyNotifier::new(Arc::downgrade(&model)));
+        model.root.hooks.install(directory_ready_notifier.hooks()).await;
 
         // Set up the event registry.
         let event_registry = {
             let mut event_registry = EventRegistry::new(Arc::downgrade(&model));
             event_registry.register_synthesis_provider(
-                EventType::CapabilityReady,
-                capability_ready_notifier.clone(),
+                EventType::DirectoryReady,
+                directory_ready_notifier.clone(),
             );
             event_registry
                 .register_synthesis_provider(EventType::Running, Arc::new(RunningProvider::new()));
@@ -677,7 +677,7 @@ impl BuiltinEnvironment {
             event_registry,
             event_source_factory,
             stop_notifier,
-            capability_ready_notifier,
+            directory_ready_notifier,
             event_stream_provider,
             event_logger,
             component_tree_stats,
@@ -825,7 +825,7 @@ impl BuiltinEnvironment {
             )
             .map_err(|err| ModelError::namespace_creation_failed(err))?;
 
-        self.capability_ready_notifier.register_component_manager_capability("diagnostics", node);
+        self.directory_ready_notifier.register_component_manager_capability("diagnostics", node);
 
         Ok(())
     }

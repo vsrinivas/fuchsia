@@ -1796,7 +1796,7 @@ pub mod tests {
     }
 
     #[fuchsia::test]
-    async fn notify_capability_ready() {
+    async fn notify_directory_ready() {
         let test = RoutingTest::new(
             "root",
             vec![(
@@ -1828,7 +1828,7 @@ pub mod tests {
             .expect("create event source");
         let mut event_stream = event_source
             .subscribe(vec![EventSubscription::new(
-                EventType::CapabilityReady.into(),
+                EventType::DirectoryReady.into(),
                 EventMode::Async,
             )])
             .await
@@ -1838,13 +1838,13 @@ pub mod tests {
         let _component =
             test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
         let event =
-            event_stream.wait_until(EventType::CapabilityReady, vec![].into()).await.unwrap().event;
+            event_stream.wait_until(EventType::DirectoryReady, vec![].into()).await.unwrap().event;
 
         assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
         assert_matches!(event.result,
                         Err(EventError {
                             event_error_payload:
-                                EventErrorPayload::CapabilityReady { name, .. }, .. }) if name == "diagnostics");
+                                EventErrorPayload::DirectoryReady { name, .. }, .. }) if name == "diagnostics");
     }
 
     #[fuchsia::test]

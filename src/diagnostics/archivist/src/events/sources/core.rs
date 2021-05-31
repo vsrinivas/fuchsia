@@ -158,24 +158,24 @@ pub mod tests {
             })
             .expect("send running event ok");
 
-        // Send a `CapabilityReady` event for diagnostics.
+        // Send a `DirectoryReady` event for diagnostics.
         let (node, _) = fidl::endpoints::create_request_stream::<NodeMarker>().unwrap();
         stream_server
             .on_event(fsys::Event {
                 header: Some(fsys::EventHeader {
-                    event_type: Some(fsys::EventType::CapabilityReady),
+                    event_type: Some(fsys::EventType::DirectoryReady),
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                     ..fsys::EventHeader::EMPTY
                 }),
-                event_result: Some(fsys::EventResult::Payload(
-                    fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
+                event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::DirectoryReady(
+                    fsys::DirectoryReadyPayload {
                         name: Some("diagnostics".to_string()),
                         node: Some(node),
-                        ..fsys::CapabilityReadyPayload::EMPTY
-                    }),
-                )),
+                        ..fsys::DirectoryReadyPayload::EMPTY
+                    },
+                ))),
                 ..fsys::Event::EMPTY
             })
             .expect("send diagnostics ready event ok");
@@ -223,7 +223,7 @@ pub mod tests {
             }),
         );
 
-        // Assert the third received event was a CapabilityReady event for diagnostics.
+        // Assert the third received event was a DirectoryReady event for diagnostics.
         let event = event_stream.next().await.unwrap();
         match event {
             ComponentEvent::DiagnosticsReady(DiagnosticsReadyEvent {

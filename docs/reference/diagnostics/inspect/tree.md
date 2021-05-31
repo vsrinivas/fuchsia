@@ -200,7 +200,7 @@ following:
 - **Started**: sent to the Archivist when a component is started.
 - **Running**: sent to the Archivist when subscribing for components that were
   already running.
-- **Capability ready**: with a filter for `/diagnostics`. Sent to the Archivist
+- **Directory ready**: with a filter for `/diagnostics`. Sent to the Archivist
   when a component exposes a `/diagnostics` directory to the framework.
 - **Stopped**: sent to the Archivist when a component is stopped.
 

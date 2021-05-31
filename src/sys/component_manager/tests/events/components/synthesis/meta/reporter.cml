@@ -31,7 +31,7 @@
             modes: [ "async" ],
         },
         {
-            event: "capability_ready",
+            event: "directory_ready",
             from: "framework",
             filter: { name: "normal" },
             modes: [ "async" ],

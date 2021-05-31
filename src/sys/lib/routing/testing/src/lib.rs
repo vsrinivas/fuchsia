@@ -2435,11 +2435,11 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     ///  / \
     /// c   d
     ///
-    /// a: offer framework event "capability_ready" with filters "/foo", "/bar", "/baz" to b
-    /// b: uses realm event "capability_ready" with filters "/foo"
+    /// a: offer framework event "directory_ready" with filters "/foo", "/bar", "/baz" to b
+    /// b: uses realm event "directory_ready" with filters "/foo"
     /// b: offers realm event "capabilty_ready" with filters "/foo", "/bar" to c, d
-    /// c: uses realm event "capability_ready" with filters "/foo", "/bar"
-    /// d: uses realm event "capability_ready" with filters "/baz" (fails)
+    /// c: uses realm event "directory_ready" with filters "/foo", "/bar"
+    /// d: uses realm event "directory_ready" with filters "/baz" (fails)
     pub async fn test_event_filter_routing(&self) {
         let components = vec![
             (
@@ -2447,8 +2447,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Framework,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("b".to_string()),
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::StrVec(vec![
@@ -2477,8 +2477,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready_foo".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready_foo".into(),
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::Str("foo".into()),
                         }),
@@ -2514,8 +2514,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("c".to_string()),
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::StrVec(vec![
@@ -2526,8 +2526,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("d".to_string()),
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::StrVec(vec![
@@ -2550,8 +2550,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready_foo_bar".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready_foo_bar".into(),
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::StrVec(vec![
                                 "foo".to_string(), "bar".to_string()
@@ -2585,8 +2585,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     }))
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready_baz".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready_baz".into(),
                         filter: Some(hashmap! {
                             "name".to_string() => DictionaryValue::Str("baz".into()),
                         }),
@@ -2615,7 +2615,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b:0"].into(),
                 CheckUse::Event {
                     requests: vec![EventSubscription::new(
-                        "capability_ready_foo".into(),
+                        "directory_ready_foo".into(),
                         EventMode::Sync,
                     )],
                     expected_res: ExpectedResult::Ok,
@@ -2627,7 +2627,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
                     requests: vec![EventSubscription::new(
-                        "capability_ready_foo_bar".into(),
+                        "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     )],
                     expected_res: ExpectedResult::Ok,
@@ -2639,7 +2639,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b:0", "d:0"].into(),
                 CheckUse::Event {
                     requests: vec![EventSubscription::new(
-                        "capability_ready_baz".into(),
+                        "directory_ready_baz".into(),
                         EventMode::Sync,
                     )],
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
@@ -2654,9 +2654,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     ///   |
     ///   c
     ///
-    /// a: offer framework event "capability_ready" with mode "async".
+    /// a: offer framework event "directory_ready" with mode "async".
     /// b: offers parent event "capabilty_ready" with mode "sync".
-    /// c: uses realm event "capability_ready" with mode "sync"
+    /// c: uses realm event "directory_ready" with mode "sync"
     pub async fn test_event_mode_routing_failure(&self) {
         let components = vec![
             (
@@ -2664,8 +2664,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Framework,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("b".to_string()),
                         filter: None,
                         mode: cm_rust::EventMode::Async,
@@ -2685,8 +2685,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("c".to_string()),
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
@@ -2706,8 +2706,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready_foo_bar".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready_foo_bar".into(),
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
                     }))
@@ -2732,7 +2732,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
                     requests: vec![EventSubscription::new(
-                        "capability_ready_foo_bar".into(),
+                        "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     )],
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
@@ -2747,9 +2747,9 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     ///   |
     ///   c
     ///
-    /// a: offer framework event "capability_ready" with mode "sync".
+    /// a: offer framework event "directory_ready" with mode "sync".
     /// b: offers parent event "capabilty_ready" with mode "async".
-    /// c: uses realm event "capability_ready" with mode "async"
+    /// c: uses realm event "directory_ready" with mode "async"
     pub async fn test_event_mode_routing_success(&self) {
         let components = vec![
             (
@@ -2757,8 +2757,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Framework,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("b".to_string()),
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
@@ -2778,8 +2778,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .offer(OfferDecl::Event(OfferEventDecl {
                         source: OfferSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready".into(),
                         target: OfferTarget::Child("c".to_string()),
                         filter: None,
                         mode: cm_rust::EventMode::Async,
@@ -2799,8 +2799,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::Event(UseEventDecl {
                         source: UseSource::Parent,
-                        source_name: "capability_ready".into(),
-                        target_name: "capability_ready_foo_bar".into(),
+                        source_name: "directory_ready".into(),
+                        target_name: "directory_ready_foo_bar".into(),
                         filter: None,
                         mode: cm_rust::EventMode::Async,
                     }))
@@ -2832,7 +2832,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
                     requests: vec![EventSubscription::new(
-                        "capability_ready_foo_bar".into(),
+                        "directory_ready_foo_bar".into(),
                         EventMode::Async,
                     )],
                     expected_res: ExpectedResult::Ok,
@@ -2844,7 +2844,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b:0", "c:0"].into(),
                 CheckUse::Event {
                     requests: vec![EventSubscription::new(
-                        "capability_ready_foo_bar".into(),
+                        "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     )],
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),

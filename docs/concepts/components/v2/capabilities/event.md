@@ -26,7 +26,7 @@ offers an event `foo` with filters `x: [/a, /b, /c]`. A component B might route
 this event using only a subset of filters `x: [/b, /c]` and a component C could
 use this event using a single filter `x: /b`.
 
-For example, the `capability_ready` event defines a filter for the `path`. The
+For example, the `directory_ready` event defines a filter for the `path`. The
 `path` is one or more paths exposed to framework that the component is
 interested in offering or listening to.
 
@@ -64,7 +64,7 @@ by client libraries via a `start_component_tree` API.
 ## Offering events {#offering-events}
 
 Events may be [offered][routing-terminology] to children. For example, a
-component wishing to expose `started`, `stopped` and `capability_ready` to a
+component wishing to expose `started`, `stopped` and `directory_ready` to a
 child of itself could do the following:
 
 ```
@@ -79,7 +79,7 @@ child of itself could do the following:
             to: [ "#child" ],
         },
         {
-            event: "capability_ready",
+            event: "directory_ready",
             from: "parent",
             as: "foo_bar_ready",
             filter: { path: [ "/foo", "/bar"] },

@@ -1672,7 +1672,7 @@ mod tests {
                     }),
                     fsys::UseDecl::Event(fsys::UseEventDecl {
                         source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                        source_name: Some("capability_ready".to_string()),
+                        source_name: Some("directory_ready".to_string()),
                         target_name: Some("diagnostics_ready".to_string()),
                         filter: Some(fdata::Dictionary{
                             entries: Some(vec![
@@ -2029,7 +2029,7 @@ mod tests {
                         }),
                         UseDecl::Event(UseEventDecl {
                             source: UseSource::Parent,
-                            source_name: "capability_ready".into(),
+                            source_name: "directory_ready".into(),
                             target_name: "diagnostics_ready".into(),
                             filter: Some(hashmap!{"path".to_string() =>  DictionaryValue::Str("/diagnostics".to_string())}),
                             mode: EventMode::Sync,

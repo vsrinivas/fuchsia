@@ -34,16 +34,16 @@ fuchsia_component("async_reporter") {
   manifest = "components/async/meta/reporter.cml"
 }
 
-fuchsia_component("capability_ready_child") {
+fuchsia_component("directory_ready_child") {
   testonly = true
-  deps = [ "components:capability_ready_child_bin" ]
-  manifest = "components/capability_ready/meta/child.cml"
+  deps = [ "components:directory_ready_child_bin" ]
+  manifest = "components/directory_ready/meta/child.cml"
 }
 
-fuchsia_component("capability_ready_root") {
+fuchsia_component("directory_ready_root") {
   testonly = true
-  deps = [ "components:capability_ready_root_bin" ]
-  manifest = "components/capability_ready/meta/root.cml"
+  deps = [ "components:directory_ready_root_bin" ]
+  manifest = "components/directory_ready/meta/root.cml"
 }
 
 fuchsia_component("echo_realm") {
@@ -142,8 +142,8 @@ fuchsia_unittest_package("events_integration_test") {
   manifest = "meta/events_integration_test.cmx"
   deps = [
     ":async_reporter",
-    ":capability_ready_child",
-    ":capability_ready_root",
+    ":directory_ready_child",
+    ":directory_ready_root",
     ":echo_client",
     ":echo_realm",
     ":echo_reporter",

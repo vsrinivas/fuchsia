@@ -764,7 +764,7 @@
             modes: [ "async" ],
         },
         {
-            event: "capability_ready",
+            event: "directory_ready",
             from: "parent",
             to: "#archivist",
             filter: { name: "diagnostics" },
