@@ -58,7 +58,7 @@ class SparseContainer final : public Container {
   size_t SliceSize() const final;
   size_t SliceCount() const;
   zx_status_t AddPartition(const char* path, const char* type_name, FvmReservation* reserve) final;
-  zx_status_t AddSnapshotMetadataPartition(size_t reserved_slices) final;
+  zx_status_t AddReservedPartition(size_t reserved_slices) final;
 
   // Decompresses the contents of the sparse file (if they are compressed), and writes the output
   // to |path|.

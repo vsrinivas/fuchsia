@@ -315,7 +315,7 @@ int add_partitions(Container* container, int argc, char** argv) {
     container->AddCorruptedPartition(kDataTypeName, 0);
   }
   if (slices_to_reserve) {
-    container->AddSnapshotMetadataPartition(slices_to_reserve);
+    container->AddReservedPartition(slices_to_reserve);
   }
 
   return 0;

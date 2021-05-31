@@ -126,7 +126,7 @@ static constexpr uint64_t kMaxSliceSize = std::numeric_limits<uint64_t>::max() /
 static constexpr std::array<uint8_t, kGuidSize> kPlaceHolderInstanceGuid = {0};
 
 // Type GUID for an internally defined partition used to reserve slices for future uses.
-static constexpr std::array<uint8_t, kGuidSize> kSnapshotMetadataTypeGuid = {
+static constexpr std::array<uint8_t, kGuidSize> kReservedPartitionTypeGuid = {
     0xa0, 0x44, 0xe4, 0x75, 0xaa, 0x6b, 0xe5, 0xf3, 0x52, 0x4b, 0xf3, 0x67, 0x81, 0x61, 0xf9, 0xce,
 };
 
@@ -344,7 +344,7 @@ struct VPartitionEntry {
                   std::string name, uint32_t flags = 0);
 
   // Creates an entry which is used to retain slices for future use.
-  static VPartitionEntry CreateSnapshotMetadataPartition();
+  static VPartitionEntry CreateReservedPartition();
 
   // Creates a string from the given possibly-null-terminated fixed-length buffer. If there is a
   // null terminator it will indicate the end of the string. if there is none, the string will use

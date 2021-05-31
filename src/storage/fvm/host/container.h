@@ -58,10 +58,8 @@ class Container {
   virtual zx_status_t AddPartition(const char* path, const char* type_name,
                                    FvmReservation* reserve) = 0;
 
-  // Adds a partition to store snapshot metadata. This must be called if any partitions enable A/B
-  // snapshots, a condition which is checked before finalizing the image.
-  // Must be called at most once.
-  virtual zx_status_t AddSnapshotMetadataPartition(size_t reserved_slices) = 0;
+  // Adds a partition to hold reserved slices.
+  virtual zx_status_t AddReservedPartition(size_t reserved_slices) = 0;
 
   // Creates a partition of a given size and type, rounded to nearest slice. This is,
   // will allocate minimum amount of slices and the rest for the data region.

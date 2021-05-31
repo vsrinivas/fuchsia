@@ -22,8 +22,6 @@ static_library("fvm") {
     "fvm_check.cc",
     "metadata.cc",
     "metadata_buffer.cc",
-    "snapshot_metadata.cc",
-    "snapshot_metadata_format.cc",
     "sparse_reader.cc",
   ]
 
@@ -72,7 +70,6 @@ test("fvm_unit") {
     "metadata_test.cc",
     "partition_entry_test.cc",
     "slice_entry_test.cc",
-    "snapshot_metadata_test.cc",
   ]
 
   deps = [

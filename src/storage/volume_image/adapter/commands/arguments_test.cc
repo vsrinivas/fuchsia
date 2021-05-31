@@ -142,14 +142,14 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
   EXPECT_FALSE(empty_minfs_params.encrypted);
   EXPECT_EQ(empty_minfs_params.options.max_bytes.value(), options.slice_size + 1);
 
-  auto snapshot_partition_params = params[6];
-  EXPECT_EQ(snapshot_partition_params.label, "internal");
-  EXPECT_EQ(snapshot_partition_params.source_image_path, "");
-  EXPECT_EQ(snapshot_partition_params.format, PartitionImageFormat::kEmptyPartition);
-  EXPECT_TRUE(memcmp(snapshot_partition_params.type_guid->data(),
-                     fvm::kSnapshotMetadataTypeGuid.data(), kGuidLength) == 0);
-  EXPECT_FALSE(snapshot_partition_params.encrypted);
-  EXPECT_EQ(snapshot_partition_params.options.max_bytes.value(), 5 * options.slice_size);
+  auto reserved_partition_params = params[6];
+  EXPECT_EQ(reserved_partition_params.label, "internal");
+  EXPECT_EQ(reserved_partition_params.source_image_path, "");
+  EXPECT_EQ(reserved_partition_params.format, PartitionImageFormat::kEmptyPartition);
+  EXPECT_TRUE(memcmp(reserved_partition_params.type_guid->data(),
+                     fvm::kReservedPartitionTypeGuid.data(), kGuidLength) == 0);
+  EXPECT_FALSE(reserved_partition_params.encrypted);
+  EXPECT_EQ(reserved_partition_params.options.max_bytes.value(), 5 * options.slice_size);
 }
 
 TEST(ArgumentTest, CreateParamsFromArgsIsOk) {

@@ -22,8 +22,6 @@ static_library("host") {
     "fvm_info.h",
     "fvm_reservation.cc",
     "fvm_reservation.h",
-    "internal_snapshot_meta_format.cc",
-    "internal_snapshot_meta_format.h",
     "minfs_format.cc",
     "minfs_format.h",
     "sparse_container.cc",

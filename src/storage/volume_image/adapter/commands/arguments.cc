@@ -206,7 +206,7 @@ fit::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArgu
     PartitionParams empty_metadata_partition;
     empty_metadata_partition.format = PartitionImageFormat::kEmptyPartition;
     empty_metadata_partition.label = "internal";
-    empty_metadata_partition.type_guid = fvm::kSnapshotMetadataTypeGuid;
+    empty_metadata_partition.type_guid = fvm::kReservedPartitionTypeGuid;
     empty_metadata_partition.encrypted = false;
     empty_metadata_partition.options.max_bytes = reserved_slices.value() * options.slice_size;
 

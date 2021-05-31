@@ -19,7 +19,6 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/host/format.h"
-#include "src/storage/fvm/host/internal_snapshot_meta_format.h"
 #include "src/storage/fvm/host/sparse_paver.h"
 #include "src/storage/minfs/format.h"
 
@@ -243,7 +242,7 @@ zx_status_t SparseContainer::Verify() const {
     xprintf("Found partition %u with %u extents\n", i, partitions_[i].descriptor.extent_count);
 
     // Internal partition GUID.
-    if (memcmp(partitions_[i].descriptor.type, fvm::kSnapshotMetadataTypeGuid.data(),
+    if (memcmp(partitions_[i].descriptor.type, fvm::kReservedPartitionTypeGuid.data(),
                sizeof(fvm::VPartitionEntry::type)) == 0) {
       // Reserve partitions need no verification.
       continue;
@@ -644,9 +643,9 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
   return ZX_OK;
 }
 
-zx_status_t SparseContainer::AddSnapshotMetadataPartition(size_t reserved_slices) {
+zx_status_t SparseContainer::AddReservedPartition(size_t reserved_slices) {
   uint64_t partition_index = image_.partition_count;
-  fvm::VPartitionEntry entry = fvm::VPartitionEntry::CreateSnapshotMetadataPartition();
+  fvm::VPartitionEntry entry = fvm::VPartitionEntry::CreateReservedPartition();
   SparsePartitionInfo info;
   auto& descriptor = info.descriptor;
   info.format = nullptr;
@@ -656,22 +655,11 @@ zx_status_t SparseContainer::AddSnapshotMetadataPartition(size_t reserved_slices
   descriptor.flags = 0;
   descriptor.extent_count = 0;
 
-  // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
-  std::vector<fvm::PartitionSnapshotState> partition_states{};
-  std::vector<fvm::SnapshotExtentType> extent_types{};
-  info.format = std::make_unique<InternalSnapshotMetaFormat>(reserved_slices, slice_size_,
-                                                             partition_states, extent_types);
-  // Find out the actual number of slices we need by asking |format|.
-  uint32_t final_slices;
-  if (zx_status_t status = info.format->GetSliceCount(&final_slices); status != ZX_OK) {
-    return status;
-  }
-
   fvm::ExtentDescriptor extent{
       .magic = fvm::kExtentDescriptorMagic,
       .slice_start = 0u,
-      .slice_count = final_slices,
-      .extent_length = info.format->BlockSize(),
+      .slice_count = reserved_slices,
+      .extent_length = 0u,
   };
 
   image_.header_length += sizeof(fvm::PartitionDescriptor);

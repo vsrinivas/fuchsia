@@ -46,7 +46,7 @@ class FvmContainer final : public Container {
   zx_status_t Extend(size_t length);
   size_t SliceSize() const final;
   zx_status_t AddPartition(const char* path, const char* type_name, FvmReservation* reserve) final;
-  zx_status_t AddSnapshotMetadataPartition(size_t reserved_slices) final;
+  zx_status_t AddReservedPartition(size_t reserved_slices) final;
 
   uint64_t CalculateDiskSize() const final;
 

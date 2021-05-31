@@ -9,16 +9,16 @@
 #include <lib/fit/defer.h>
 #include <sys/ioctl.h>
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <utility>
 
 #include <safemath/checked_math.h>
 
+#include "safemath/safe_conversions.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/host/format.h"
-#include "src/storage/fvm/host/internal_snapshot_meta_format.h"
-#include "src/storage/fvm/snapshot_metadata_format.h"
 #include "src/storage/fvm/sparse_reader.h"
 
 #if defined(__APPLE__)
@@ -546,35 +546,30 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
   return ZX_OK;
 }
 
-zx_status_t FvmContainer::AddSnapshotMetadataPartition(size_t reserved_slices) {
+zx_status_t FvmContainer::AddReservedPartition(size_t reserved_slices) {
   info_.CheckValid();
 
-  auto vpart_or = info_.AllocatePartition(fvm::VPartitionEntry::CreateSnapshotMetadataPartition());
+  auto vpart_or = info_.AllocatePartition(fvm::VPartitionEntry::CreateReservedPartition());
   if (vpart_or.is_error()) {
     return vpart_or.status_value();
   }
   uint32_t vpart_index = vpart_or.value();
 
-  // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
-  std::vector<fvm::PartitionSnapshotState> partition_states{};
-  std::vector<fvm::SnapshotExtentType> extent_types{};
-  auto format = std::make_unique<InternalSnapshotMetaFormat>(reserved_slices, slice_size_,
-                                                             partition_states, extent_types);
-
-  // Find out the actual number of slices we need by asking |format|.
-  uint32_t final_slices;
-  zx_status_t status = format->GetSliceCount(&final_slices);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if ((status = info_.GrowForSlices(final_slices)) != ZX_OK) {
+  zx_status_t status;
+  if ((status = info_.GrowForSlices(reserved_slices)) != ZX_OK) {
     fprintf(stderr, "Failed to resize metadata buffer: %d\n", status);
     return status;
   }
 
   // Allocate all slices for this partition.
-  // This assumes there is only one extent in |format|.
-  auto pslice_start_or = info_.AllocateSlicesContiguous(vpart_index, format->GetExtent(0).value());
+  ExtentInfo info{
+      .vslice_start = 0,
+      .vslice_count = safemath::checked_cast<uint32_t>(reserved_slices),
+      .block_offset = 0,
+      .block_count = 0,
+      .zero_fill = true,
+  };
+  auto pslice_start_or = info_.AllocateSlicesContiguous(vpart_index, info);
   if (pslice_start_or.is_error()) {
     fprintf(stderr, "Failed to allocate slices: %d\n", pslice_start_or.status_value());
     return pslice_start_or.status_value();
@@ -584,13 +579,13 @@ zx_status_t FvmContainer::AddSnapshotMetadataPartition(size_t reserved_slices) {
   if ((status = info_.GetPartition(vpart_index, &entry)) != ZX_OK) {
     return status;
   }
-  ZX_ASSERT(entry->slices == final_slices);
+  ZX_ASSERT(entry->slices == reserved_slices);
 
   FvmPartitionInfo partition;
-  partition.format = std::move(format);
+  partition.format = nullptr;
   partition.vpart_index = vpart_index;
   partition.pslice_start = pslice_start_or.value();
-  partition.vslice_count = final_slices;
+  partition.vslice_count = reserved_slices;
   partitions_.push_back(std::move(partition));
 
   return ZX_OK;
