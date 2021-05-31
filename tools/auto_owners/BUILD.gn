@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/copy_tree.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
@@ -63,10 +62,9 @@ if (is_host) {
   # we need to copy the GN binary from the builder into the test output
   # directory so we can run it on a different bot than does the builds.
   auto_owners_gn_out_dir = "${test_output_dir}/runfiles/gn"
-  copy_tree("auto_owners_gn_copy") {
-    src_dir = "//prebuilt/third_party/gn/${host_platform}"
-    dest_dir = auto_owners_gn_out_dir
-    inputs = [ "${src_dir}/.versions/gn.cipd_version" ]
+  copy("auto_owners_gn_copy") {
+    sources = [ "//prebuilt/third_party/gn/${host_platform}/gn" ]
+    outputs = [ "$auto_owners_gn_out_dir/{{source_file_part}}" ]
   }
 
   # Make the copied directory available at test runtime.

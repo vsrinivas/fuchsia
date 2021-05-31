@@ -109,7 +109,6 @@ group("non_hermetic_deps") {
     "//third_party/mesa/src/intel/vulkan/*",
     "//third_party/protobuf/*",
     "//third_party/tink/proto/*",
-    "//tools/auto_owners/*",
     "//tools/cargo-gnaw/tests/*",
     "//tools/debug/covargs/api/third_party/codecoverage/*",
     "//tools/femu-control/femu-grpc/*",
