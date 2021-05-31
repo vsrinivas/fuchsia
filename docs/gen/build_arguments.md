@@ -617,7 +617,7 @@ Include the vulkan validation layers in carnelian examples.
 
 **Current value (from the default):** `false`
 
-From //src/lib/ui/carnelian/BUILD.gn:14
+From //src/lib/ui/carnelian/BUILD.gn:13
 
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
