@@ -23,6 +23,7 @@
             "isolated-temp"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.ui.composition.Allocator"
