@@ -239,23 +239,24 @@ zx_status_t usb_request_physmap(usb_request_t* req, zx_handle_t bti_handle) {
   if (req->phys_count > 0) {
     return ZX_OK;
   }
+  const size_t kPageSize = zx_system_get_page_size();
   // zx_bti_pin returns whole pages, so take into account unaligned vmo
   // offset and length when calculating the amount of pages returned
-  uint64_t page_offset = ZX_ROUNDDOWN(req->offset, PAGE_SIZE);
+  uint64_t page_offset = ZX_ROUNDDOWN(req->offset, kPageSize);
   // The buffer size is the vmo size from offset 0.
   uint64_t page_length = req->size - page_offset;
-  uint64_t pages = ZX_ROUNDUP(page_length, PAGE_SIZE) / PAGE_SIZE;
+  uint64_t pages = ZX_ROUNDUP(page_length, kPageSize) / kPageSize;
 
   zx_paddr_t* paddrs = malloc(pages * sizeof(zx_paddr_t));
   if (paddrs == NULL) {
     zxlogf(ERROR, "usb_request_physmap: out of memory");
     return ZX_ERR_NO_MEMORY;
   }
-  const size_t sub_offset = page_offset & (PAGE_SIZE - 1);
+  const size_t sub_offset = page_offset & (kPageSize - 1);
   const size_t pin_offset = page_offset - sub_offset;
-  const size_t pin_length = ZX_ROUNDUP(page_length + sub_offset, PAGE_SIZE);
+  const size_t pin_length = ZX_ROUNDUP(page_length + sub_offset, kPageSize);
 
-  if (pin_length / PAGE_SIZE != pages) {
+  if (pin_length / kPageSize != pages) {
     return ZX_ERR_INVALID_ARGS;
   }
   zx_handle_t pmt;

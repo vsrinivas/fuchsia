@@ -605,7 +605,7 @@ TEST(UsbRequestTest, Alloc) {
 
 TEST(UsbRequestTest, Init) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   std::optional<Request> request;
   ASSERT_OK(Request::Alloc(&request, 0, 0, kParentReqSize));
   EXPECT_OK(request->Init(vmo, 0, 0, 0));
@@ -614,14 +614,14 @@ TEST(UsbRequestTest, Init) {
 
 TEST(UsbRequestTest, AllocVmo) {
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
   std::optional<Request> request;
   EXPECT_OK(Request::AllocVmo(&request, vmo, 0, 0, 0, kParentReqSize));
 }
 
 TEST(UsbRequestTest, Copy) {
   std::optional<Request> request;
-  EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize), ZX_OK);
+  EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);
 
   constexpr uint8_t kSampleData[] = "blahblahblah";
   EXPECT_EQ(request->CopyTo(kSampleData, sizeof(kSampleData), 10), sizeof(kSampleData));
@@ -632,7 +632,7 @@ TEST(UsbRequestTest, Copy) {
 
 TEST(UsbRequestTest, Mmap) {
   std::optional<Request> request;
-  EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize), ZX_OK);
+  EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);
 
   constexpr uint8_t kSampleData[] = "blahblahblah";
   EXPECT_EQ(request->CopyTo(kSampleData, sizeof(kSampleData), 10), sizeof(kSampleData));
@@ -644,7 +644,7 @@ TEST(UsbRequestTest, Mmap) {
 
 TEST(UsbRequestTest, CacheOp) {
   std::optional<Request> request;
-  EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize), ZX_OK);
+  EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);
 
   EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_INVALIDATE, 0, 0), ZX_OK);
   EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_INVALIDATE, 10, 10), ZX_OK);
@@ -658,22 +658,22 @@ TEST(UsbRequestTest, CacheOp) {
 
 TEST(UsbRequestTest, CacheFlush) {
   std::optional<Request> request;
-  EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize), ZX_OK);
+  EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);
 
   EXPECT_EQ(request->CacheFlush(0, 0), ZX_OK);
   EXPECT_EQ(request->CacheFlush(10, 10), ZX_OK);
-  EXPECT_EQ(request->CacheFlush(0, ZX_PAGE_SIZE + 1), ZX_ERR_OUT_OF_RANGE);
-  EXPECT_EQ(request->CacheFlush(ZX_PAGE_SIZE + 1, 0), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(request->CacheFlush(0, zx_system_get_page_size() + 1), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(request->CacheFlush(zx_system_get_page_size() + 1, 0), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(UsbRequestTest, CacheInvalidateFlush) {
   std::optional<Request> request;
-  EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize), ZX_OK);
+  EXPECT_EQ(Request::Alloc(&request, zx_system_get_page_size(), 0, kParentReqSize), ZX_OK);
 
   EXPECT_EQ(request->CacheFlushInvalidate(0, 0), ZX_OK);
   EXPECT_EQ(request->CacheFlushInvalidate(10, 10), ZX_OK);
-  EXPECT_EQ(request->CacheFlushInvalidate(0, ZX_PAGE_SIZE + 1), ZX_ERR_OUT_OF_RANGE);
-  EXPECT_EQ(request->CacheFlushInvalidate(ZX_PAGE_SIZE + 1, 0), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(request->CacheFlushInvalidate(0, zx_system_get_page_size() + 1), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(request->CacheFlushInvalidate(zx_system_get_page_size() + 1, 0), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(UsbRequestTest, PhysMap) {
@@ -681,7 +681,7 @@ TEST(UsbRequestTest, PhysMap) {
   ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK, "");
 
   std::optional<Request> request;
-  ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize), ZX_OK);
+  ASSERT_EQ(Request::Alloc(&request, zx_system_get_page_size() * 4, 1, kParentReqSize), ZX_OK);
 
   ASSERT_EQ(request->PhysMap(bti), ZX_OK);
   ASSERT_EQ(request->request()->phys_count, 4u);
@@ -692,19 +692,19 @@ TEST(UsbRequestTest, PhysIter) {
   ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK, "");
 
   std::optional<Request> request;
-  ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize), ZX_OK);
+  ASSERT_EQ(Request::Alloc(&request, zx_system_get_page_size() * 4, 1, kParentReqSize), ZX_OK);
 
   ASSERT_EQ(request->PhysMap(bti), ZX_OK);
   auto* req = request->take();
   for (size_t i = 0; i < req->phys_count; i++) {
-    req->phys_list[i] = ZX_PAGE_SIZE * i;
+    req->phys_list[i] = zx_system_get_page_size() * i;
   }
   request = usb::Request(req, kParentReqSize);
 
   size_t count = 0;
-  for (auto [paddr, size] : request->phys_iter(ZX_PAGE_SIZE)) {
-    EXPECT_EQ(paddr, ZX_PAGE_SIZE * count);
-    EXPECT_EQ(size, ZX_PAGE_SIZE);
+  for (auto [paddr, size] : request->phys_iter(zx_system_get_page_size())) {
+    EXPECT_EQ(paddr, zx_system_get_page_size() * count);
+    EXPECT_EQ(size, zx_system_get_page_size());
     ++count;
   }
   EXPECT_EQ(count, 4);
@@ -712,28 +712,30 @@ TEST(UsbRequestTest, PhysIter) {
 
 TEST(UsbRequestTest, SetScatterGatherList) {
   std::optional<Request> request;
-  ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 3, 1, kParentReqSize), ZX_OK);
+  ASSERT_EQ(Request::Alloc(&request, zx_system_get_page_size() * 3, 1, kParentReqSize), ZX_OK);
   // Wrap around the end of the request.
-  constexpr sg_entry_t kWrapped[] = {{.length = 10, .offset = (3 * PAGE_SIZE) - 10},
-                                     {.length = 50, .offset = 0}};
+  const sg_entry_t kWrapped[] = {{.length = 10, .offset = (3 * zx_system_get_page_size()) - 10},
+                                 {.length = 50, .offset = 0}};
   EXPECT_EQ(request->SetScatterGatherList(kWrapped, std::size(kWrapped)), ZX_OK);
   EXPECT_EQ(request->request()->header.length, 60u);
 
-  constexpr sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
-                                       {.length = 50, .offset = 500},
-                                       {.length = 10, .offset = 2000}};
+  const sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * zx_system_get_page_size()},
+                                   {.length = 50, .offset = 500},
+                                   {.length = 10, .offset = 2000}};
   EXPECT_EQ(request->SetScatterGatherList(kUnordered, std::size(kUnordered)), ZX_OK);
   EXPECT_EQ(request->request()->header.length, 160u);
 }
 
 TEST(UsbRequestTest, InvalidScatterGatherList) {
   zx::vmo vmo;
-  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE * 3, 0, &vmo), ZX_OK);
+  ASSERT_EQ(zx::vmo::create(zx_system_get_page_size() * 3, 0, &vmo), ZX_OK);
   std::optional<Request> request;
-  ASSERT_EQ(Request::AllocVmo(&request, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, kParentReqSize), ZX_OK);
+  ASSERT_EQ(Request::AllocVmo(&request, vmo, zx_system_get_page_size(),
+                              zx_system_get_page_size() * 3, 0, kParentReqSize),
+            ZX_OK);
 
-  constexpr sg_entry_t kOutOfBounds[] = {
-      {.length = 10, .offset = PAGE_SIZE * 3},
+  const sg_entry_t kOutOfBounds[] = {
+      {.length = 10, .offset = zx_system_get_page_size() * 3},
   };
   EXPECT_NE(request->SetScatterGatherList(kOutOfBounds, std::size(kOutOfBounds)), ZX_OK,
             "entry ends past end of vmo");
@@ -749,29 +751,29 @@ TEST(UsbRequestTest, ScatterGatherPhysIter) {
   ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK, "");
 
   std::optional<Request> request;
-  ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize), ZX_OK);
+  ASSERT_EQ(Request::Alloc(&request, zx_system_get_page_size() * 4, 1, kParentReqSize), ZX_OK);
 
   ASSERT_EQ(request->PhysMap(bti), ZX_OK);
 
-  constexpr sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * PAGE_SIZE},
-                                       {.length = 50, .offset = 500},
-                                       {.length = 10, .offset = 2000}};
+  const sg_entry_t kUnordered[] = {{.length = 100, .offset = 2 * zx_system_get_page_size()},
+                                   {.length = 50, .offset = 500},
+                                   {.length = 10, .offset = 2000}};
   EXPECT_EQ(request->SetScatterGatherList(kUnordered, std::size(kUnordered)), ZX_OK);
 
   auto* req = request->take();
   for (size_t i = 0; i < req->phys_count; i++) {
-    req->phys_list[i] = ZX_PAGE_SIZE * (i * 2 + 1);
+    req->phys_list[i] = zx_system_get_page_size() * (i * 2 + 1);
   }
   request = usb::Request(req, kParentReqSize);
 
-  auto phys_iter = request->phys_iter(ZX_PAGE_SIZE);
+  auto phys_iter = request->phys_iter(zx_system_get_page_size());
   auto iter = phys_iter.begin();
   const auto end = phys_iter.end();
 
   {
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, 5 * PAGE_SIZE);
+    EXPECT_EQ(paddr, 5 * zx_system_get_page_size());
     EXPECT_EQ(size, 100);
   }
 
@@ -779,7 +781,7 @@ TEST(UsbRequestTest, ScatterGatherPhysIter) {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, ZX_PAGE_SIZE + 500);
+    EXPECT_EQ(paddr, zx_system_get_page_size() + 500);
     EXPECT_EQ(size, 50);
   }
 
@@ -787,7 +789,7 @@ TEST(UsbRequestTest, ScatterGatherPhysIter) {
     ++iter;
     EXPECT_TRUE(iter != end);
     auto [paddr, size] = *iter;
-    EXPECT_EQ(paddr, ZX_PAGE_SIZE + 2000);
+    EXPECT_EQ(paddr, zx_system_get_page_size() + 2000);
     EXPECT_EQ(size, 10);
   }
 

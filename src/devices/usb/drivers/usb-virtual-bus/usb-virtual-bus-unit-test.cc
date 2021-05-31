@@ -98,7 +98,8 @@ TEST(VirtualBusUnitTest, UnbindDuringControlRequest) {
     };
     size_t parent_req_size = bus->UsbHciGetRequestSize();
     usb_request_t* fake_req;
-    ASSERT_OK(usb_request_alloc(&fake_req, PAGE_SIZE, 0 /* ep_address */, parent_req_size));
+    ASSERT_OK(usb_request_alloc(&fake_req, zx_system_get_page_size(), 0 /* ep_address */,
+                                parent_req_size));
 
     bus->UsbHciRequestQueue(fake_req, &callback);
   });

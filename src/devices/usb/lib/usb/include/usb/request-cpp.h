@@ -188,7 +188,7 @@ class RequestBase {
 
   // Initializes a ddk::PhysIter for a usb request.
   // |max_length| is the maximum length of a range returned the iterator.
-  // |max_length| must be either a positive multiple of PAGE_SIZE, or zero for no limit.
+  // |max_length| must be either a positive multiple of the system page size, or zero for no limit.
   ddk::PhysIter phys_iter(size_t max_length) {
     static_assert(sizeof(phys_iter_sg_entry_t) == sizeof(sg_entry_t) &&
                   offsetof(phys_iter_sg_entry_t, length) == offsetof(sg_entry_t, length) &&

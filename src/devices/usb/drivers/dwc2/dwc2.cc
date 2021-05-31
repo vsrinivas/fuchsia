@@ -375,7 +375,7 @@ void Dwc2::QueueNextRequest(Endpoint* ep) {
     phys_iter_t iter;
     zx_paddr_t phys;
     usb_request_physmap(usb_req, bti_.get());
-    usb_request_phys_iter_init(&iter, usb_req, PAGE_SIZE);
+    usb_request_phys_iter_init(&iter, usb_req, zx_system_get_page_size());
     usb_request_phys_iter_next(&iter, &phys);
     ep->phys = static_cast<uint32_t>(phys);
 

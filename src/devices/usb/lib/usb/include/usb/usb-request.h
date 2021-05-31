@@ -106,7 +106,7 @@ void usb_request_complete_base(usb_request_t* req, zx_status_t status, zx_off_t 
 
 // initializes a phys_iter_t for a usb request
 // max_length is the maximum length of a range returned by usb_request_phys_iter_next()
-// max_length must be either a positive multiple of PAGE_SIZE, or zero for no limit.
+// max_length must be either a positive multiple of the system page size, or zero for no limit.
 void usb_request_phys_iter_init(phys_iter_t* iter, usb_request_t* req, size_t max_length);
 
 // returns the next physical address and length for the iterator up to size max_length.
