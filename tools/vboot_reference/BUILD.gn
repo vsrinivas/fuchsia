@@ -225,6 +225,7 @@ config("internal_config") {
     "-Wno-missing-field-initializers",
     "-Wno-sign-compare",
     "-Wno-unused-function",
+    "-Wno-implicit-fallthrough",
   ]
   if (is_mac) {
     defines = [
