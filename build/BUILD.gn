@@ -46,7 +46,6 @@ group("deprecated_package") {
     "//sdk/dart/fuchsia_inspect/test/integration/*",
     "//sdk/dart/fuchsia_inspect/test/validator_puppet/*",
     "//src/intl/intl_services/tests/*",
-    "//src/lib/ui/carnelian/*",
     "//src/sys/pkg/bin/pkgctl/*",
     "//src/sys/pkg/bin/update/*",
     "//src/sys/pkg/tests/pkgctl/*",

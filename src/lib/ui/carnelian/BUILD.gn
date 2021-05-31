@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//src/lib/vulkan/layers.gni")
 
 declare_args() {
@@ -355,41 +354,21 @@ rustc_binary("textgrid") {
   ]
 }
 
-test_package("carnelian-render-tests") {
-  deps = [ ":carnelian_test" ]
-
-  tests = [
-    {
-      name = "carnelian_lib_test"
-      environments = basic_envs
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-}
-
-test_package("carnelian-tests") {
-  deps = [ ":carnelian_test" ]
-
-  tests = [
-    {
-      name = "carnelian_lib_test"
-      environments = basic_envs
-    },
+fuchsia_unittest_package("carnelian-render-tests") {
+  manifest = "meta/carnelian_lib_test.cmx"
+  deps = [
+    ":carnelian_test",
+    "//src/lib/vulkan:vulkan_validation_layers",
   ]
 }
 
-test_package("carnelian-layout-tests") {
+fuchsia_unittest_package("carnelian-tests") {
+  manifest = "meta/carnelian_lib_test.cmx"
+  deps = [ ":carnelian_test" ]
+}
+
+fuchsia_unittest_package("carnelian-layout-tests") {
   deps = [ ":layout_gallery_test" ]
-
-  tests = [
-    {
-      name = "layout_gallery_test"
-      environments = basic_envs
-    },
-  ]
 }
 
 rustc_binary("carnelian_integration_test_bin") {
