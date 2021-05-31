@@ -63,35 +63,57 @@ impl<V> Value for V where
 
 /// ItemRef is a struct that contains references to key and value, which is useful since in many
 /// cases since keys and values are stored separately so &Item is not possible.
-#[derive(Debug, Eq, PartialEq, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ItemRef<'a, K, V> {
     pub key: &'a K,
     pub value: &'a V,
+    pub sequence: u64,
 }
+
+impl<K: PartialEq, V: PartialEq> PartialEq for ItemRef<'_, K, V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key && self.value == other.value
+    }
+}
+
+impl<K: PartialEq, V: PartialEq> Eq for ItemRef<'_, K, V> {}
 
 impl<K: Clone, V: Clone> ItemRef<'_, K, V> {
     pub fn cloned(&self) -> Item<K, V> {
-        Item::new(self.key.clone(), self.value.clone())
+        Item { key: self.key.clone(), value: self.value.clone(), sequence: self.sequence }
     }
 }
 
 impl<'a, K, V> Clone for ItemRef<'a, K, V> {
     fn clone(&self) -> Self {
-        ItemRef { key: self.key, value: self.value }
+        ItemRef { key: self.key, value: self.value, sequence: self.sequence }
     }
 }
 impl<'a, K, V> Copy for ItemRef<'a, K, V> {}
 
 /// Item is a struct that combines a key and a value.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Item<K, V> {
     pub key: K,
     pub value: V,
+    /// |sequence| is a monotonically increasing sequence number for the Item, which is set when the
+    /// Item is inserted into the tree.  In practice, this is the journal file offset at the time of
+    /// committing the transaction containing the Item.  Note that two or more Items may share the
+    /// same |sequence|.
+    pub sequence: u64,
 }
+
+impl<K: PartialEq, V: PartialEq> PartialEq for Item<K, V> {
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key && self.value == other.value
+    }
+}
+
+impl<K: PartialEq, V: PartialEq> Eq for Item<K, V> {}
 
 impl<K, V> Item<K, V> {
     pub fn new(key: K, value: V) -> Item<K, V> {
-        Item { key, value }
+        Item { key, value, sequence: 0u64 }
     }
 
     pub fn as_item_ref(&self) -> ItemRef<'_, K, V> {
@@ -101,7 +123,7 @@ impl<K, V> Item<K, V> {
 
 impl<'a, K, V> From<&'a Item<K, V>> for ItemRef<'a, K, V> {
     fn from(item: &'a Item<K, V>) -> ItemRef<'a, K, V> {
-        ItemRef { key: &item.key, value: &item.value }
+        ItemRef { key: &item.key, value: &item.value, sequence: item.sequence }
     }
 }
 

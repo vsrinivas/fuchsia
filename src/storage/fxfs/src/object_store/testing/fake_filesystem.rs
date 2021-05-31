@@ -14,7 +14,10 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    std::sync::Arc,
+    std::sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     storage_device::{Device, DeviceHolder},
 };
 
@@ -22,12 +25,18 @@ pub struct FakeFilesystem {
     device: DeviceHolder,
     object_manager: Arc<ObjectManager>,
     lock_manager: LockManager,
+    num_syncs: AtomicU64,
 }
 
 impl FakeFilesystem {
     pub fn new(device: DeviceHolder) -> Arc<Self> {
         let object_manager = Arc::new(ObjectManager::new());
-        Arc::new(FakeFilesystem { device, object_manager, lock_manager: LockManager::new() })
+        Arc::new(FakeFilesystem {
+            device,
+            object_manager,
+            lock_manager: LockManager::new(),
+            num_syncs: AtomicU64::new(0),
+        })
     }
 }
 
@@ -54,6 +63,7 @@ impl Filesystem for FakeFilesystem {
     }
 
     async fn sync(&self, _: SyncOptions) -> Result<(), Error> {
+        self.num_syncs.fetch_add(1u64, Ordering::Relaxed);
         Ok(())
     }
 }
@@ -69,6 +79,8 @@ impl TransactionHandler for FakeFilesystem {
     }
 
     async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
+        let checkpoint =
+            JournalCheckpoint { file_offset: self.num_syncs.load(Ordering::Relaxed), checksum: 0 };
         self.lock_manager.commit_prepare(transaction).await;
         for TxnMutation { object_id, mutation, associated_object } in
             std::mem::take(&mut transaction.mutations)
@@ -78,7 +90,7 @@ impl TransactionHandler for FakeFilesystem {
                     object_id,
                     mutation,
                     Some(transaction),
-                    &JournalCheckpoint::default(),
+                    &checkpoint,
                     associated_object,
                 )
                 .await;

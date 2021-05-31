@@ -157,7 +157,7 @@ impl Fsck {
         for root_object in root_objects {
             object_refs.insert(*root_object, (0, 1));
         }
-        while let Some(ItemRef { key, value }) = iter.get() {
+        while let Some(ItemRef { key, value, .. }) = iter.get() {
             match (key, value) {
                 (
                     ObjectKey { object_id, data: ObjectKeyData::Object },

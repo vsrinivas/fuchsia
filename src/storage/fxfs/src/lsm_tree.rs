@@ -222,8 +222,8 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         let mut merger = layer_set.merger();
         let iter = merger.seek(Bound::Included(search_key)).await?;
         Ok(match iter.get() {
-            Some(ItemRef { key, value }) if key == search_key => {
-                Some(Item { key: key.clone(), value: value.clone() })
+            Some(ItemRef { key, value, sequence }) if key == search_key => {
+                Some(Item { key: key.clone(), value: value.clone(), sequence })
             }
             _ => None,
         })
@@ -310,10 +310,10 @@ mod tests {
         let layers = tree.layer_set();
         let mut merger = layers.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.expect("advance failed");
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
@@ -347,7 +347,7 @@ mod tests {
         let mut merger = layers.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 1..5 {
-            let ItemRef { key, value } = iter.get().expect("missing item");
+            let ItemRef { key, value, .. } = iter.get().expect("missing item");
             assert_eq!((key, value), (&TestKey(i..i), &i));
             iter.advance().await.expect("advance failed");
         }

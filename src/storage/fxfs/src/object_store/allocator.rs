@@ -463,6 +463,7 @@ impl Allocator for SimpleAllocator {
         while let Some(ItemRef {
             key: AllocatorKey { device_range, .. },
             value: AllocatorValue { delta, .. },
+            ..
         }) = iter.get()
         {
             if device_range.start >= dealloc_range.end {
@@ -561,7 +562,8 @@ impl Mutations for SimpleAllocator {
         mut assoc_obj: AssocObj<'_>,
     ) {
         match mutation {
-            Mutation::Allocator(AllocatorMutation(item)) => {
+            Mutation::Allocator(AllocatorMutation(mut item)) => {
+                item.sequence = log_offset;
                 // We currently rely on barriers here between inserting/removing from reserved
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
@@ -849,7 +851,7 @@ mod tests {
             CoalescingIterator::new(skip_list.seek(Bound::Unbounded).await.expect("seek failed"))
                 .await
                 .expect("new failed");
-        let ItemRef { key, value } = iter.get().expect("get failed");
+        let ItemRef { key, value, .. } = iter.get().expect("get failed");
         assert_eq!(
             (key, value),
             (&AllocatorKey { device_range: 0..200 }, &AllocatorValue { delta: 1 })
@@ -883,7 +885,7 @@ mod tests {
         ))
         .await
         .expect("new failed");
-        let ItemRef { key, value } = iter.get().expect("get failed");
+        let ItemRef { key, value, .. } = iter.get().expect("get failed");
         assert_eq!(
             (key, value),
             (&AllocatorKey { device_range: 0..200 }, &AllocatorValue { delta: 1 })

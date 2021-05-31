@@ -12,18 +12,18 @@ use {
     },
 };
 
-fn merge_extents<'a>(
+fn merge_extents(
     object_id: u64,
     attribute_id: u64,
-    left_layer: u16,
-    right_layer: u16,
+    left: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
+    right: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
     left_key: &ExtentKey,
     right_key: &ExtentKey,
     left_value: &ExtentValue,
     right_value: &ExtentValue,
 ) -> MergeResult<ObjectKey, ObjectValue> {
     // For now, we don't support/expect two extents with the same key in one layer.
-    debug_assert!(right_layer != left_layer);
+    debug_assert!(right.layer_index != left.layer_index);
 
     // TODO(jfsulliv): once we are at the base layer, we should be deleting records mapping to
     // deleted extents. Otherwise they'll stick around forever.
@@ -47,28 +47,30 @@ fn merge_extents<'a>(
     //  Emit  |------|
     //  Old          |--|
     //  New          |----------|
-    if right_layer < left_layer {
+    if right.layer_index < left.layer_index {
         // Right layer is newer.
         debug_assert!(left_key.range.start < right_key.range.start);
         return MergeResult::Other {
-            emit: Some(ObjectItem::new(
-                ObjectKey::extent(
+            emit: Some(ObjectItem {
+                key: ObjectKey::extent(
                     object_id,
                     attribute_id,
                     left_key.range.start..right_key.range.start,
                 ),
-                ObjectValue::Extent(*left_value),
-            )),
-            left: Replace(ObjectItem::new(
-                ObjectKey::extent(
+                value: ObjectValue::Extent(*left_value),
+                sequence: std::cmp::min(left.sequence(), right.sequence()),
+            }),
+            left: Replace(ObjectItem {
+                key: ObjectKey::extent(
                     object_id,
                     attribute_id,
                     right_key.range.start..left_key.range.end,
                 ),
-                ObjectValue::Extent(
+                value: ObjectValue::Extent(
                     left_value.offset_by(right_key.range.start - left_key.range.start),
                 ),
-            )),
+                sequence: std::cmp::min(left.sequence(), right.sequence()),
+            }),
             right: Keep,
         };
     }
@@ -80,17 +82,26 @@ fn merge_extents<'a>(
     MergeResult::Other {
         emit: None,
         left: Keep,
-        right: Replace(ObjectItem::new(
-            ObjectKey::extent(object_id, attribute_id, left_key.range.end..right_key.range.end),
-            ObjectValue::Extent(right_value.offset_by(left_key.range.end - right_key.range.start)),
-        )),
+        right: Replace(ObjectItem {
+            key: ObjectKey::extent(
+                object_id,
+                attribute_id,
+                left_key.range.end..right_key.range.end,
+            ),
+            value: ObjectValue::Extent(
+                right_value.offset_by(left_key.range.end - right_key.range.start),
+            ),
+            sequence: std::cmp::min(left.sequence(), right.sequence()),
+        }),
     }
 }
 
 // Assumes that the two extents to be merged are on adjacent layers (i.e. layers N, N+1).
-fn merge_deleted_extents<'a>(
+fn merge_deleted_extents(
     object_id: u64,
     attribute_id: u64,
+    left: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
+    right: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
     left_key: &ExtentKey,
     right_key: &ExtentKey,
 ) -> MergeResult<ObjectKey, ObjectValue> {
@@ -107,10 +118,15 @@ fn merge_deleted_extents<'a>(
     MergeResult::Other {
         emit: None,
         left: Discard,
-        right: Replace(ObjectItem::new(
-            ObjectKey::extent(object_id, attribute_id, left_key.range.start..right_key.range.end),
-            ObjectValue::deleted_extent(),
-        )),
+        right: Replace(ObjectItem {
+            key: ObjectKey::extent(
+                object_id,
+                attribute_id,
+                left_key.range.start..right_key.range.end,
+            ),
+            value: ObjectValue::deleted_extent(),
+            sequence: std::cmp::min(left.sequence(), right.sequence()),
+        }),
     }
 }
 
@@ -169,6 +185,8 @@ pub fn merge(
                     return merge_deleted_extents(
                         *object_id,
                         *left_attr_id,
+                        left,
+                        right,
                         left_extent_key,
                         right_extent_key,
                     );
@@ -177,8 +195,8 @@ pub fn merge(
             return merge_extents(
                 *object_id,
                 *left_attr_id,
-                left.layer_index,
-                right.layer_index,
+                left,
+                right,
                 left_extent_key,
                 right_extent_key,
                 left_extent,
@@ -912,5 +930,60 @@ mod tests {
             &[tombstone, other_object],
         )
         .await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_preserves_sequences() -> Result<(), Error> {
+        let object_id = 0;
+        let attr_id = 0;
+        let tree = LSMTree::<ObjectKey, ObjectValue>::new(merge);
+
+        tree.insert(Item {
+            key: ObjectKey::extent(object_id, attr_id, 0..1024),
+            value: ObjectValue::extent(0u64),
+            sequence: 1u64,
+        })
+        .await;
+        tree.seal().await;
+        tree.insert(Item {
+            key: ObjectKey::extent(object_id, attr_id, 0..512),
+            value: ObjectValue::deleted_extent(),
+            sequence: 2u64,
+        })
+        .await;
+        tree.insert(Item {
+            key: ObjectKey::extent(object_id, attr_id, 1536..2048),
+            value: ObjectValue::extent(1536),
+            sequence: 3u64,
+        })
+        .await;
+        tree.insert(Item {
+            key: ObjectKey::extent(object_id, attr_id, 768..1024),
+            value: ObjectValue::extent(12345),
+            sequence: 4u64,
+        })
+        .await;
+
+        let layer_set = tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::deleted_extent());
+        assert_eq!(iter.get().unwrap().sequence, 2u64);
+        iter.advance().await?;
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..768));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(512));
+        assert_eq!(iter.get().unwrap().sequence, 1u64);
+        iter.advance().await?;
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 768..1024));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(12345));
+        assert_eq!(iter.get().unwrap().sequence, 4u64);
+        iter.advance().await?;
+        assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1536..2048));
+        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(1536));
+        assert_eq!(iter.get().unwrap().sequence, 3u64);
+        iter.advance().await?;
+        assert!(iter.get().is_none());
+        Ok(())
     }
 }

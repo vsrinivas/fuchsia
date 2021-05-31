@@ -20,7 +20,7 @@ pub fn merge(
     // Wherever Replace is used below, it must not extend the *end* of the range for whichever item
     // is returned i.e. if replacing the left item, replacement.end <= left.end because otherwise we
     // might not merge records that come after that end point because the merger won't merge records
-    // in the same layer.
+    // in the same layer
 
     /*  Case 1:
      *    L:    |------------|
@@ -40,12 +40,13 @@ pub fn merge(
         return MergeResult::Other {
             emit: None,
             left: Discard,
-            right: Replace(Item::new(
-                AllocatorKey {
+            right: Replace(Item {
+                key: AllocatorKey {
                     device_range: left.key().device_range.start..right.key().device_range.end,
                 },
-                AllocatorValue { delta: left.value().delta },
-            )),
+                value: AllocatorValue { delta: left.value().delta },
+                sequence: std::cmp::min(left.sequence(), right.sequence()),
+            }),
         };
     }
     if left.key().device_range.start == right.key().device_range.start {
@@ -59,10 +60,11 @@ pub fn merge(
                 left: if left.value().delta + right.value().delta == 0 {
                     Discard
                 } else {
-                    Replace(Item::new(
-                        left.key().clone(),
-                        AllocatorValue { delta: left.value().delta + right.value().delta },
-                    ))
+                    Replace(Item {
+                        key: left.key().clone(),
+                        value: AllocatorValue { delta: left.value().delta + right.value().delta },
+                        sequence: std::cmp::min(left.sequence(), right.sequence()),
+                    })
                 },
                 right: Discard,
             };
@@ -77,17 +79,19 @@ pub fn merge(
                 left: if left.value().delta + right.value().delta == 0 {
                     Discard
                 } else {
-                    Replace(Item::new(
-                        left.key().clone(),
-                        AllocatorValue { delta: left.value().delta + right.value().delta },
-                    ))
+                    Replace(Item {
+                        key: left.key().clone(),
+                        value: AllocatorValue { delta: left.value().delta + right.value().delta },
+                        sequence: std::cmp::min(left.sequence(), right.sequence()),
+                    })
                 },
-                right: Replace(Item::new(
-                    AllocatorKey {
+                right: Replace(Item {
+                    key: AllocatorKey {
                         device_range: left.key().device_range.end..right.key().device_range.end,
                     },
-                    AllocatorValue { delta: right.value().delta },
-                )),
+                    value: AllocatorValue { delta: right.value().delta },
+                    sequence: std::cmp::min(left.sequence(), right.sequence()),
+                }),
             };
         }
         /*  Case 5:
@@ -96,19 +100,21 @@ pub fn merge(
          */
         return MergeResult::Other {
             emit: None,
-            left: Replace(Item::new(
-                AllocatorKey {
+            left: Replace(Item {
+                key: AllocatorKey {
                     device_range: right.key().device_range.end..left.key().device_range.end,
                 },
-                AllocatorValue { delta: left.value().delta },
-            )),
+                value: AllocatorValue { delta: left.value().delta },
+                sequence: std::cmp::min(left.sequence(), right.sequence()),
+            }),
             right: if left.value().delta + right.value().delta == 0 {
                 Discard
             } else {
-                Replace(Item::new(
-                    right.key().clone(),
-                    AllocatorValue { delta: left.value().delta + right.value().delta },
-                ))
+                Replace(Item {
+                    key: right.key().clone(),
+                    value: AllocatorValue { delta: left.value().delta + right.value().delta },
+                    sequence: std::cmp::min(left.sequence(), right.sequence()),
+                })
             },
         };
     }
@@ -117,21 +123,23 @@ pub fn merge(
      *    R:         |-----...
      */
     MergeResult::Other {
-        emit: Some(Item::new(
-            AllocatorKey {
+        emit: Some(Item {
+            key: AllocatorKey {
                 device_range: left.key().device_range.start..right.key().device_range.start,
             },
-            AllocatorValue { delta: left.value().delta },
-        )),
+            value: AllocatorValue { delta: left.value().delta },
+            sequence: std::cmp::min(left.sequence(), right.sequence()),
+        }),
         left: if right.key().device_range.start == left.key().device_range.end {
             Discard
         } else {
-            Replace(Item::new(
-                AllocatorKey {
+            Replace(Item {
+                key: AllocatorKey {
                     device_range: right.key().device_range.start..left.key().device_range.end,
                 },
-                left.value().clone(),
-            ))
+                value: left.value().clone(),
+                sequence: std::cmp::min(left.sequence(), right.sequence()),
+            })
         },
         right: Keep,
     }
@@ -172,7 +180,7 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         for e in expected {
-            let ItemRef { key, value } = iter.get().expect("get failed");
+            let ItemRef { key, value, .. } = iter.get().expect("get failed");
             assert_eq!(
                 (key, value),
                 (
@@ -216,5 +224,45 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_left_starts_before_right_with_overlap() {
         test_merge((0..200, 1), (100..150, 1), &[(0..100, 1), (100..150, 2), (150..200, 1)]).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_preserves_sequences() {
+        let tree = LSMTree::new(merge);
+        tree.insert(Item {
+            key: AllocatorKey { device_range: 0..100 },
+            value: AllocatorValue { delta: 1 },
+            sequence: 1u64,
+        })
+        .await;
+        tree.seal().await;
+        tree.insert(Item {
+            key: AllocatorKey { device_range: 25..50 },
+            value: AllocatorValue { delta: -1 },
+            sequence: 2u64,
+        })
+        .await;
+        tree.insert(Item {
+            key: AllocatorKey { device_range: 75..100 },
+            value: AllocatorValue { delta: 1 },
+            sequence: 3u64,
+        })
+        .await;
+        let layer_set = tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+        assert_eq!(iter.get().unwrap().key, &AllocatorKey { device_range: 0..25 });
+        assert_eq!(iter.get().unwrap().value, &AllocatorValue { delta: 1 });
+        assert_eq!(iter.get().unwrap().sequence, 1u64);
+        iter.advance().await.expect("advance failed");
+        assert_eq!(iter.get().unwrap().key, &AllocatorKey { device_range: 50..75 });
+        assert_eq!(iter.get().unwrap().value, &AllocatorValue { delta: 1 });
+        assert_eq!(iter.get().unwrap().sequence, 1u64);
+        iter.advance().await.expect("advance failed");
+        assert_eq!(iter.get().unwrap().key, &AllocatorKey { device_range: 75..100 });
+        assert_eq!(iter.get().unwrap().value, &AllocatorValue { delta: 2 });
+        assert_eq!(iter.get().unwrap().sequence, 1u64);
+        iter.advance().await.expect("advance failed");
+        assert!(iter.get().is_none());
     }
 }

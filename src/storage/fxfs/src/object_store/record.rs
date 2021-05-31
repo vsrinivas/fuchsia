@@ -403,6 +403,7 @@ impl<'a> From<ItemRef<'a, ObjectKey, ObjectValue>>
                             ),
                     },
                 value: ObjectValue::Extent(ref extent_value),
+                ..
             } => Some((*object_id, *attribute_id, extent_key, extent_value)),
             _ => None,
         }

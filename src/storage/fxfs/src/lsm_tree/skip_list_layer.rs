@@ -643,10 +643,10 @@ mod tests {
         skip_list.insert(items[1].clone()).await;
         skip_list.insert(items[0].clone()).await;
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -660,12 +660,12 @@ mod tests {
             skip_list.insert(Item::new(TestKey(i), i)).await;
         }
         let mut iter = skip_list.seek(Bound::Included(&TestKey(57))).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(57), &57));
 
         // And check the next item is correct.
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(58), &58));
     }
 
@@ -678,13 +678,13 @@ mod tests {
         }
         let mut expected_index = 57 * 3;
         let mut iter = skip_list.seek(Bound::Included(&TestKey(expected_index - 1))).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(expected_index), &expected_index));
 
         // And check the next item is correct.
         expected_index += 3;
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(expected_index), &expected_index));
     }
 
@@ -698,10 +698,10 @@ mod tests {
         skip_list.replace_or_insert(Item::new(items[1].key.clone(), replacement_value)).await;
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &replacement_value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -716,13 +716,13 @@ mod tests {
         skip_list.replace_or_insert(items[1].clone()).await;
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[2].key, &items[2].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -739,7 +739,7 @@ mod tests {
 
         {
             let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-            let ItemRef { key, value } = iter.get().expect("missing item");
+            let ItemRef { key, value, .. } = iter.get().expect("missing item");
             assert_eq!((key, value), (&items[0].key, &items[0].value));
             iter.advance().await.unwrap();
             assert!(iter.get().is_none());
@@ -830,17 +830,17 @@ mod tests {
 
         // Create the first iterator and check the first item.
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
 
         // Create a second iterator and check the first item.
         let iter2 = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter2.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter2.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
 
         // Now go back to the first iterator and check the second item.
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 
@@ -863,7 +863,7 @@ mod tests {
         skip_list.merge_into(Item::new(TestKey(2), 2), &TestKey(1), merge).await;
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(1), &3));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -880,10 +880,10 @@ mod tests {
         }
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 
@@ -899,7 +899,7 @@ mod tests {
         }
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -917,7 +917,7 @@ mod tests {
         }
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -936,10 +936,10 @@ mod tests {
         }
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[2].key, &items[2].value));
     }
 
@@ -957,7 +957,7 @@ mod tests {
         }
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[2].key, &items[2].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -970,11 +970,11 @@ mod tests {
         skip_list.insert(items[1].clone()).await;
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
 
         let mut iter2 = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
 
         join!(skip_list.insert(items[0].clone()), async {
@@ -1041,10 +1041,10 @@ mod tests {
             iter.erase();
         }
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
@@ -1057,7 +1057,7 @@ mod tests {
         skip_list.insert(items[0].clone()).await;
         skip_list.insert(items[1].clone()).await;
         let iter = skip_list.seek(Bound::Excluded(&items[0].key)).await.expect("seek failed");
-        let ItemRef { key, value } = iter.get().expect("missing item");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 

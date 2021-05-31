@@ -549,7 +549,7 @@ impl Mutations for ObjectStore {
         &self,
         mutation: Mutation,
         transaction: Option<&Transaction<'_>>,
-        _log_offset: u64,
+        log_offset: u64,
         _assoc_obj: AssocObj<'_>,
     ) {
         // It's not safe to fully open a store until replay is fully complete (because
@@ -564,7 +564,8 @@ impl Mutations for ObjectStore {
         );
 
         match mutation {
-            Mutation::ObjectStore(ObjectStoreMutation { item, op }) => {
+            Mutation::ObjectStore(ObjectStoreMutation { mut item, op }) => {
+                item.sequence = log_offset;
                 self.update_last_object_id(item.key.object_id);
                 match op {
                     Operation::Insert => self.tree.insert(item).await,
@@ -1528,7 +1529,7 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
-                filesystem::{Filesystem, Mutations},
+                filesystem::{Filesystem, Mutations, SyncOptions},
                 graveyard::Graveyard,
                 record::{ObjectKey, ObjectKeyData, Timestamp},
                 round_up,
@@ -2187,6 +2188,69 @@ mod tests {
         let properties = object.get_properties().await.expect("get_properties failed");
         assert_eq!(properties.creation_time, crtime);
         assert_eq!(properties.modification_time, mtime);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_item_sequences() {
+        let (fs, _allocator, store) = test_filesystem_and_store().await;
+        let object1;
+        let object2;
+        let object3;
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        object1 = Arc::new(
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+                .await
+                .expect("create_object failed"),
+        );
+        transaction.commit().await;
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        object2 = Arc::new(
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+                .await
+                .expect("create_object failed"),
+        );
+        transaction.commit().await;
+
+        fs.sync(SyncOptions::default()).await.expect("sync failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        object3 = Arc::new(
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+                .await
+                .expect("create_object failed"),
+        );
+        transaction.commit().await;
+
+        let layer_set = store.tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+        let mut sequences = [0u64; 3];
+        while let Some(ItemRef { key: ObjectKey { object_id, .. }, sequence, .. }) = iter.get() {
+            if *object_id == object1.object_id() {
+                sequences[0] = sequence;
+            } else if *object_id == object2.object_id() {
+                sequences[1] = sequence;
+            } else if *object_id == object3.object_id() {
+                sequences[2] = sequence;
+            }
+            iter.advance().await.expect("advance failed");
+        }
+
+        assert!(sequences[0] <= sequences[1], "sequences: {:?}", sequences);
+        // The last item came after a sync, so should be strictly greater.
+        assert!(sequences[1] < sequences[2], "sequences: {:?}", sequences);
     }
 }
 

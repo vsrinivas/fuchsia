@@ -258,13 +258,7 @@ impl SuperBlock {
                     serialize_into(&mut writer, &SuperBlockRecord::Extent(device_range))?;
                 }
             }
-            serialize_into(
-                &mut writer,
-                &SuperBlockRecord::Item(ObjectItem {
-                    key: (*item_ref.key).clone(),
-                    value: (*item_ref.value).clone(),
-                }),
-            )?;
+            serialize_into(&mut writer, &SuperBlockRecord::Item(item_ref.cloned()))?;
             iter.advance().await?;
         }
         serialize_into(&mut writer, &SuperBlockRecord::End)?;

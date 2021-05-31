@@ -303,7 +303,7 @@ mod tests {
         let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
-            let ItemRef { key, value } = iterator.get().expect("missing item");
+            let ItemRef { key, value, .. } = iterator.get().expect("missing item");
             assert_eq!((key, value), (&i, &i));
             iterator.advance().await.expect("failed to advance");
         }
@@ -326,7 +326,7 @@ mod tests {
         let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         for i in 0..ITEM_COUNT {
             let mut iterator = layer.seek(Bound::Included(&i)).await.expect("failed to seek");
-            let ItemRef { key, value } = iterator.get().expect("missing item");
+            let ItemRef { key, value, .. } = iterator.get().expect("missing item");
             assert_eq!((key, value), (&i, &i));
 
             // Check that we can advance to the next item.
@@ -334,7 +334,7 @@ mod tests {
             if i == ITEM_COUNT - 1 {
                 assert!(iterator.get().is_none());
             } else {
-                let ItemRef { key, value } = iterator.get().expect("missing item");
+                let ItemRef { key, value, .. } = iterator.get().expect("missing item");
                 let j = i + 1;
                 assert_eq!((key, value), (&j, &j));
             }
@@ -356,12 +356,12 @@ mod tests {
         }
         let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("failed to seek");
-        let ItemRef { key, value } = iterator.get().expect("missing item");
+        let ItemRef { key, value, .. } = iterator.get().expect("missing item");
         assert_eq!((key, value), (&0, &0));
 
         // Check that we can advance to the next item.
         iterator.advance().await.expect("failed to advance");
-        let ItemRef { key, value } = iterator.get().expect("missing item");
+        let ItemRef { key, value, .. } = iterator.get().expect("missing item");
         assert_eq!((key, value), (&1, &1));
     }
 
@@ -401,7 +401,7 @@ mod tests {
         let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
-            let ItemRef { key, value } = iterator.get().expect("missing item");
+            let ItemRef { key, value, .. } = iterator.get().expect("missing item");
             assert_eq!((key, value), (&i, &i));
             iterator.advance().await.expect("failed to advance");
         }
@@ -427,7 +427,7 @@ mod tests {
             let mut iterator = layer.seek(Bound::Excluded(&i)).await.expect("failed to seek");
             let i_plus_one = i + 1;
             if i_plus_one < ITEM_COUNT {
-                let ItemRef { key, value } = iterator.get().expect("missing item");
+                let ItemRef { key, value, .. } = iterator.get().expect("missing item");
 
                 assert_eq!((key, value), (&i_plus_one, &i_plus_one));
 
@@ -435,7 +435,7 @@ mod tests {
                 iterator.advance().await.expect("failed to advance");
                 let i_plus_two = i + 2;
                 if i_plus_two < ITEM_COUNT {
-                    let ItemRef { key, value } = iterator.get().expect("missing item");
+                    let ItemRef { key, value, .. } = iterator.get().expect("missing item");
                     assert_eq!((key, value), (&i_plus_two, &i_plus_two));
                 } else {
                     assert!(iterator.get().is_none());

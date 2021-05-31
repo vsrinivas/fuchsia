@@ -168,8 +168,11 @@ impl GraveyardIterator<'_, '_> {
             self.iter.advance().await?;
             // Skip deleted entries.
             match self.iter.get() {
-                Some(ItemRef { key: ObjectKey { object_id, .. }, value: ObjectValue::None })
-                    if *object_id == self.object_id => {}
+                Some(ItemRef {
+                    key: ObjectKey { object_id, .. },
+                    value: ObjectValue::None,
+                    ..
+                }) if *object_id == self.object_id => {}
                 _ => return Ok(()),
             }
         }
