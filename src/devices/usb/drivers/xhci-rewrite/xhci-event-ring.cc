@@ -27,7 +27,7 @@ zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bo
   page_size_ = page_size;
   is_32bit_ = is_32bit;
   mmio_.emplace(mmio->View(0));
-  zx_status_t status = factory.CreatePaged(bti, ZX_PAGE_SIZE, false, &erst_);
+  zx_status_t status = factory.CreatePaged(bti, page_size_, false, &erst_);
   if (status != ZX_OK) {
     return status;
   }
@@ -127,7 +127,8 @@ zx_status_t EventRing::AddSegment() {
   {
     std::unique_ptr<dma_buffer::ContiguousBuffer> buffer_tmp;
     zx_status_t status = hci_->buffer_factory().CreateContiguous(
-        *bti_, page_size_, static_cast<uint32_t>(page_size_ == PAGE_SIZE ? 0 : page_size_ >> 12),
+        *bti_, page_size_,
+        static_cast<uint32_t>(page_size_ == zx_system_get_page_size() ? 0 : page_size_ >> 12),
         &buffer_tmp);
     if (status != ZX_OK) {
       return status;

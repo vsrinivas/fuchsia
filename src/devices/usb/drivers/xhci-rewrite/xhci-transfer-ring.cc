@@ -8,11 +8,13 @@
 
 namespace usb_xhci {
 void TransferRing::AdvancePointer() {
-  if ((reinterpret_cast<size_t>(trbs_) / PAGE_SIZE) !=
-      (reinterpret_cast<size_t>(trbs_ + 1) / PAGE_SIZE)) {
+  if ((reinterpret_cast<size_t>(trbs_) / zx_system_get_page_size()) !=
+      (reinterpret_cast<size_t>(trbs_ + 1) / zx_system_get_page_size())) {
     CommitLocked();
     trbs_ = static_cast<TRB*>(
-        (*virt_to_buffer_.find((reinterpret_cast<size_t>(trbs_) / PAGE_SIZE) + 1)->second).virt());
+        (*virt_to_buffer_.find((reinterpret_cast<size_t>(trbs_) / zx_system_get_page_size()) + 1)
+              ->second)
+            .virt());
   } else {
     trbs_++;
   }
@@ -25,9 +27,9 @@ void TransferRing::AdvancePointer() {
       pcs_ = !pcs_;
     }
     CommitLocked();
-    zx_vaddr_t base_virt =
-        reinterpret_cast<zx_vaddr_t>((*(phys_to_buffer_.find(ptr / PAGE_SIZE)->second)).virt());
-    trbs_ = reinterpret_cast<TRB*>(base_virt + (ptr % PAGE_SIZE));
+    zx_vaddr_t base_virt = reinterpret_cast<zx_vaddr_t>(
+        (*(phys_to_buffer_.find(ptr / zx_system_get_page_size())->second)).virt());
+    trbs_ = reinterpret_cast<TRB*>(base_virt + (ptr % zx_system_get_page_size()));
   }
 }
 
@@ -75,7 +77,7 @@ zx_status_t TransferRing::AllocInternal(Control control) {
       return ZX_OK;
     }
     // Update pointer from new buffer to point to the spare TRB
-    ZX_ASSERT((*new_trb).size() == PAGE_SIZE);
+    ZX_ASSERT((*new_trb).size() == zx_system_get_page_size());
     reinterpret_cast<TRB*>((reinterpret_cast<size_t>((*new_trb).virt()) + (*new_trb).size()) -
                            sizeof(TRB))
         ->ptr = VirtToPhysLocked(spare_trb);
@@ -130,7 +132,7 @@ void TransferRing::CommitTransaction(const State& start) {
   if (!hci_->HasCoherentState()) {
     fbl::AutoLock l(&mutex_);
     size_t current_page = reinterpret_cast<size_t>(start.trbs);
-    current_page = fbl::round_down(current_page, static_cast<size_t>(PAGE_SIZE));
+    current_page = fbl::round_down(current_page, static_cast<size_t>(zx_system_get_page_size()));
     bool ccs = start.pcs;
     TRB* current = start.trbs;
     while (Control::FromTRB(current).Cycle() == ccs) {
@@ -142,7 +144,8 @@ void TransferRing::CommitTransaction(const State& start) {
         InvalidatePageCache(reinterpret_cast<void*>(current_page), ZX_CACHE_FLUSH_DATA);
         current = PhysToVirtLocked(current->ptr);
         current_page = reinterpret_cast<size_t>(current);
-        current_page = fbl::round_down(current_page, static_cast<size_t>(PAGE_SIZE));
+        current_page =
+            fbl::round_down(current_page, static_cast<size_t>(zx_system_get_page_size()));
       } else {
         current++;
       }
@@ -210,9 +213,9 @@ zx_status_t TransferRing::HandleShortPacket(TRB* short_trb, size_t* transferred,
       target_ctx->transfer_len_including_short_trb = *transferred;
       return ZX_OK;
     }
-    size_t page = reinterpret_cast<size_t>(current) / ZX_PAGE_SIZE;
+    size_t page = reinterpret_cast<size_t>(current) / zx_system_get_page_size();
     current++;
-    if ((reinterpret_cast<size_t>(current) / ZX_PAGE_SIZE) != page) {
+    if ((reinterpret_cast<size_t>(current) / zx_system_get_page_size()) != page) {
       return ZX_ERR_IO;
     }
     while (Control::FromTRB(current).Type() == Control::Link) {
@@ -324,8 +327,9 @@ zx_paddr_t TransferRing::VirtToPhys(TRB* trb) {
   return VirtToPhysLocked(trb);
 }
 zx_paddr_t TransferRing::VirtToPhysLocked(TRB* trb) {
-  const auto& buffer = virt_to_buffer_.find(reinterpret_cast<zx_vaddr_t>(trb) / PAGE_SIZE);
-  auto offset = reinterpret_cast<zx_vaddr_t>(trb) % PAGE_SIZE;
+  const auto& buffer =
+      virt_to_buffer_.find(reinterpret_cast<zx_vaddr_t>(trb) / zx_system_get_page_size());
+  auto offset = reinterpret_cast<zx_vaddr_t>(trb) % zx_system_get_page_size();
   return buffer->second->phys() + offset;
 }
 TRB* TransferRing::PhysToVirt(zx_paddr_t paddr) {
@@ -333,8 +337,8 @@ TRB* TransferRing::PhysToVirt(zx_paddr_t paddr) {
   return PhysToVirtLocked(paddr);
 }
 TRB* TransferRing::PhysToVirtLocked(zx_paddr_t paddr) {
-  const auto& buffer = phys_to_buffer_.find(paddr / PAGE_SIZE);
-  auto offset = paddr % PAGE_SIZE;
+  const auto& buffer = phys_to_buffer_.find(paddr / zx_system_get_page_size());
+  auto offset = paddr % zx_system_get_page_size();
   auto vaddr = reinterpret_cast<zx_vaddr_t>(buffer->second->virt()) + offset;
   return reinterpret_cast<TRB*>(vaddr);
 }
@@ -467,7 +471,8 @@ zx_status_t TransferRing::AllocBuffer(dma_buffer::ContiguousBuffer** out) {
   {
     std::unique_ptr<dma_buffer::ContiguousBuffer> buffer_tmp;
     zx_status_t status = hci_->buffer_factory().CreateContiguous(
-        *bti_, page_size_, static_cast<uint32_t>(page_size_ == PAGE_SIZE ? 0 : page_size_ >> 12),
+        *bti_, page_size_,
+        static_cast<uint32_t>(page_size_ == zx_system_get_page_size() ? 0 : page_size_ >> 12),
         &buffer_tmp);
     if (status != ZX_OK) {
       return status;
@@ -497,8 +502,8 @@ zx_status_t TransferRing::AllocBuffer(dma_buffer::ContiguousBuffer** out) {
   if (status != ZX_OK) {
     return status;
   }
-  virt_to_buffer_[virt / PAGE_SIZE] = buffer.get();
-  phys_to_buffer_[phys / PAGE_SIZE] = buffer.get();
+  virt_to_buffer_[virt / zx_system_get_page_size()] = buffer.get();
+  phys_to_buffer_[phys / zx_system_get_page_size()] = buffer.get();
   *out = buffer.get();
   buffers_.push_back(std::move(buffer));
   if (!pcs_) {

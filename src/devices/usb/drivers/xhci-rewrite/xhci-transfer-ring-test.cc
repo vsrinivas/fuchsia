@@ -118,7 +118,7 @@ zx_status_t UsbXhci::InitThread() {
     fbl::AutoLock l(&device_state_[i].transaction_lock());
     for (size_t c = 0; c < max_slots_; c++) {
       zx_status_t status = device_state_[i].GetTransferRing(c).Init(
-          ZX_PAGE_SIZE, kFakeBti,
+          zx_system_get_page_size(), kFakeBti,
           &static_cast<TransferRingHarness*>(get_test_harness())->event_ring(), false, nullptr,
           *this);
       if (status != ZX_OK) {

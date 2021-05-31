@@ -47,8 +47,8 @@ namespace usb_xhci {
 
 inline void InvalidatePageCache(void* addr, uint32_t options) {
   uintptr_t page = reinterpret_cast<uintptr_t>(addr);
-  page = fbl::round_down(page, static_cast<uintptr_t>(PAGE_SIZE));
-  zx_cache_flush(reinterpret_cast<void*>(page), PAGE_SIZE, options);
+  page = fbl::round_down(page, static_cast<uintptr_t>(zx_system_get_page_size()));
+  zx_cache_flush(reinterpret_cast<void*>(page), zx_system_get_page_size(), options);
 }
 
 // This is the main class for the USB XHCI host controller driver.

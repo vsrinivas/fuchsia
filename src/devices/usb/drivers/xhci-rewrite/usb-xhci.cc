@@ -247,7 +247,8 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
   // Section 4.3.3
   // 6.2.5 (Input Context initialization)
   std::unique_ptr<dma_buffer::PagedBuffer> buffer;
-  zx_status_t status = hci.buffer_factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &buffer);
+  zx_status_t status =
+      hci.buffer_factory().CreatePaged(hci.bti(), zx_system_get_page_size(), false, &buffer);
   if (status != ZX_OK) {
     return status;
   }
@@ -325,8 +326,8 @@ zx_status_t DeviceState::InitializeOutputContextBuffer(
   // Allocate an output device context data structure (6.2.1)
   // Update the DCBAA entry for this slot.
   std::unique_ptr<dma_buffer::PagedBuffer> output_context_buffer;
-  zx_status_t status =
-      hci.buffer_factory().CreatePaged(hci.bti(), ZX_PAGE_SIZE, false, &output_context_buffer);
+  zx_status_t status = hci.buffer_factory().CreatePaged(hci.bti(), zx_system_get_page_size(), false,
+                                                        &output_context_buffer);
   if (status != ZX_OK) {
     return status;
   }
@@ -1917,11 +1918,12 @@ zx_status_t UsbXhci::HciFinalize() {
   page_size_ = page_size;
   // TODO (bbosak): Correct this to use variable alignment when we get kernel
   // support for this.
-  if (page_size != ZX_PAGE_SIZE) {
+  if (page_size != zx_system_get_page_size()) {
     return ZX_ERR_INTERNAL;
   }
   uint32_t align_log2 = 0;
-  if (buffer_factory_->CreatePaged(bti_, ZX_PAGE_SIZE, false, &dcbaa_buffer_) != ZX_OK) {
+  if (buffer_factory_->CreatePaged(bti_, zx_system_get_page_size(), false, &dcbaa_buffer_) !=
+      ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
   if (is_32bit_ && (dcbaa_buffer_->phys()[0] >= UINT32_MAX)) {
@@ -1935,12 +1937,14 @@ zx_status_t UsbXhci::HciFinalize() {
   uint32_t buffers = hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() |
                      ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
   scratchpad_buffers_ = std::make_unique<std::unique_ptr<dma_buffer::ContiguousBuffer>[]>(buffers);
-  if (fbl::round_up(buffers * sizeof(uint64_t), ZX_PAGE_SIZE) > ZX_PAGE_SIZE) {
+  if (fbl::round_up(buffers * sizeof(uint64_t), zx_system_get_page_size()) >
+      zx_system_get_page_size()) {
     // We can't create multi-page contiguously physical uncached buffers.
     // This is presently not supported in the kernel.
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (buffer_factory_->CreatePaged(bti_, ZX_PAGE_SIZE, false, &scratchpad_buffer_array_) != ZX_OK) {
+  if (buffer_factory_->CreatePaged(bti_, zx_system_get_page_size(), false,
+                                   &scratchpad_buffer_array_) != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
   if (is_32bit_ && (scratchpad_buffer_array_->phys()[0] >= UINT32_MAX)) {

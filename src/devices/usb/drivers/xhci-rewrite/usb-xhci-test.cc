@@ -337,14 +337,15 @@ class XhciHarness : public zxtest::Test {
     void* virt;
     (*request)->Mmap(&virt);
     static_assert(sizeof(uint64_t) == sizeof(void*));
-    size_t phys_count = fbl::round_up(data_size, ZX_PAGE_SIZE) / ZX_PAGE_SIZE;
+    size_t phys_count =
+        fbl::round_up(data_size, zx_system_get_page_size()) / zx_system_get_page_size();
     (*request)->request()->phys_count = phys_count;
     // Need to use malloc for compatibility with the C ABI (which will eventually call free)
     (*request)->request()->phys_list =
         static_cast<zx_paddr_t*>(malloc(sizeof(zx_paddr_t) * phys_count));
     for (size_t i = 0; i < phys_count; i++) {
       auto trb = CreateTRB();
-      trb->ptr = reinterpret_cast<uint64_t>(virt) + (ZX_PAGE_SIZE * i);
+      trb->ptr = reinterpret_cast<uint64_t>(virt) + (zx_system_get_page_size() * i);
       (*request)->request()->phys_list[i] = trb->phys();
     }
     (*request)->request()->header.device_id = device_id;
@@ -629,7 +630,7 @@ zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bo
   page_size_ = page_size;
   is_32bit_ = is_32bit;
   mmio_.emplace(mmio->View(0));
-  zx_status_t status = factory.CreatePaged(bti, ZX_PAGE_SIZE, false, &erst_);
+  zx_status_t status = factory.CreatePaged(bti, zx_system_get_page_size(), false, &erst_);
   if (status != ZX_OK) {
     return status;
   }
@@ -698,7 +699,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
 
   std::optional<TestRequest> request;
   bool invoked = false;
-  AllocateRequest(&request, 0, ZX_PAGE_SIZE * 2, 0, [&](TestRequest request) {
+  AllocateRequest(&request, 0, zx_system_get_page_size() * 2, 0, [&](TestRequest request) {
     invoked = true;
     void** parameters;
     request.Mmap(reinterpret_cast<void**>(&parameters));
@@ -707,7 +708,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
   request->request()->setup.bm_request_type = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
   request->request()->setup.b_request = USB_REQ_GET_DESCRIPTOR;
   request->request()->setup.w_value = USB_DT_DEVICE << 8;
-  request->request()->setup.w_length = ZX_PAGE_SIZE * 2;
+  request->request()->setup.w_length = zx_system_get_page_size() * 2;
   RequestQueue(std::move(*request));
   ASSERT_TRUE(rang);
   // Find slot context pointer in address device command
@@ -733,7 +734,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
   auto data_trb = static_cast<ControlData*>(static_cast<TRB*>(trb));
   ASSERT_EQ(data_trb->DIRECTION(), 1);
   ASSERT_EQ(data_trb->INTERRUPTER(), 0);
-  ASSERT_EQ(data_trb->LENGTH(), ZX_PAGE_SIZE);
+  ASSERT_EQ(data_trb->LENGTH(), zx_system_get_page_size());
   ASSERT_EQ(data_trb->SIZE(), 1);
   ASSERT_TRUE(data_trb->ISP());
   ASSERT_TRUE(data_trb->NO_SNOOP());
@@ -743,7 +744,7 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
   trb = FakeTRB::get(trb->next);
   auto normal_trb = static_cast<Normal*>(static_cast<TRB*>(trb));
   ASSERT_EQ(normal_trb->INTERRUPTER(), 0);
-  ASSERT_EQ(normal_trb->LENGTH(), ZX_PAGE_SIZE);
+  ASSERT_EQ(normal_trb->LENGTH(), zx_system_get_page_size());
   ASSERT_EQ(normal_trb->SIZE(), 0);
   ASSERT_TRUE(normal_trb->ISP());
   ASSERT_TRUE(normal_trb->NO_SNOOP());
@@ -773,7 +774,7 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
 
   std::optional<TestRequest> request;
   bool invoked = false;
-  AllocateRequest(&request, 0, ZX_PAGE_SIZE * 2, 1 | 0x80, [&](TestRequest request) {
+  AllocateRequest(&request, 0, zx_system_get_page_size() * 2, 1 | 0x80, [&](TestRequest request) {
     invoked = true;
     void** parameters;
     request.Mmap(reinterpret_cast<void**>(&parameters));
@@ -802,7 +803,7 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
   ASSERT_EQ(data_trb->IOC(), 0);
   ASSERT_EQ(data_trb->ISP(), 1);
   ASSERT_EQ(data_trb->INTERRUPTER(), 0);
-  ASSERT_EQ(data_trb->LENGTH(), ZX_PAGE_SIZE);
+  ASSERT_EQ(data_trb->LENGTH(), zx_system_get_page_size());
   ASSERT_EQ(data_trb->SIZE(), 1);
   ASSERT_TRUE(data_trb->NO_SNOOP());
   void** virt = reinterpret_cast<void**>(FakeTRB::get(static_cast<zx_paddr_t>(data_trb->ptr))->ptr);
@@ -814,7 +815,7 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
   ASSERT_EQ(data_trb->IOC(), 1);
   ASSERT_EQ(data_trb->ISP(), 1);
   ASSERT_EQ(data_trb->INTERRUPTER(), 0);
-  ASSERT_EQ(data_trb->LENGTH(), ZX_PAGE_SIZE);
+  ASSERT_EQ(data_trb->LENGTH(), zx_system_get_page_size());
   ASSERT_EQ(data_trb->SIZE(), 0);
   ASSERT_TRUE(data_trb->NO_SNOOP());
 

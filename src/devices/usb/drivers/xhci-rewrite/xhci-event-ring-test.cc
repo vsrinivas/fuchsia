@@ -163,8 +163,8 @@ class EventRingHarness : public zxtest::Test {
   zx_status_t InitRing(EventRing* ring) {
     ring_ = ring;
     auto regoffset = RuntimeRegisterOffset::Get().ReadFrom(&buffer_.value());
-    zx_status_t status = ring->Init(ZX_PAGE_SIZE, kFakeBti, &buffer_.value(), false, kErstMax,
-                                    ERSTSZ::Get(regoffset, 0).ReadFrom(&buffer_.value()),
+    zx_status_t status = ring->Init(zx_system_get_page_size(), kFakeBti, &buffer_.value(), false,
+                                    kErstMax, ERSTSZ::Get(regoffset, 0).ReadFrom(&buffer_.value()),
                                     ERDP::Get(regoffset, 0).ReadFrom(&buffer_.value()),
                                     IMAN::Get(regoffset, 0).ReadFrom(&buffer_.value()),
                                     CapLength::Get().ReadFrom(&buffer_.value()).Length(),
@@ -259,8 +259,8 @@ zx_status_t UsbXhci::InitThread() {
   for (size_t i = 0; i < max_slots_; i++) {
     fbl::AutoLock l(&device_state_[i].transaction_lock());
     for (size_t c = 0; c < max_slots_; c++) {
-      device_state_[i].GetTransferRing(c).Init(ZX_PAGE_SIZE, kFakeBti, nullptr, false, nullptr,
-                                               *this);
+      device_state_[i].GetTransferRing(c).Init(zx_system_get_page_size(), kFakeBti, nullptr, false,
+                                               nullptr, *this);
     }
   }
   port_state_ = std::make_unique<PortState[]>(32);
@@ -397,7 +397,7 @@ TEST_F(EventRingHarness, ShortTransferTest) {
   zx_status_t transfer_status;
   ctx->trb = start;
   std::optional<TestRequest> request;
-  AllocateRequest(&request, 1, ZX_PAGE_SIZE * 3, 5, [&](TestRequest request) {
+  AllocateRequest(&request, 1, zx_system_get_page_size() * 3, 5, [&](TestRequest request) {
     transfer_status = request.request()->response.status;
     transfer_len = request.request()->response.actual;
   });
@@ -431,7 +431,7 @@ TEST_F(EventRingHarness, NormalStall) {
   zx_status_t transfer_status;
   ctx->trb = start;
   std::optional<TestRequest> request;
-  AllocateRequest(&request, 1, ZX_PAGE_SIZE * 3, 5, [&](TestRequest request) {
+  AllocateRequest(&request, 1, zx_system_get_page_size() * 3, 5, [&](TestRequest request) {
     transfer_status = request.request()->response.status;
     transfer_len = request.request()->response.actual;
   });
