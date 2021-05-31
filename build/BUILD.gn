@@ -51,9 +51,6 @@ group("deprecated_package") {
     "//src/sys/pkg/tests/pkgctl/*",
     "//src/sys/pkg/tests/update/*",
     "//src/tests/intl/timezone/*",
-    "//src/ui/examples/frame-compression/*",
-    "//src/ui/examples/lab/pose_buffer_presenter/*",
-    "//src/ui/examples/shadertoy/service/*",
     "//src/ui/lib/escher/*",
     "//src/ui/scenic/*",
   ]

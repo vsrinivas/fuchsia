@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/vulkan/compact_image.gni")
-import("//src/lib/vulkan/layers.gni")
+import("//build/components.gni")
 
 executable("bin") {
   output_name = "shadertoy_service"
@@ -63,22 +61,10 @@ group("service") {
   deps = [ ":shadertoy_service" ]
 }
 
-package("shadertoy_service") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "shadertoy_service"
-    },
+fuchsia_package_with_single_component("shadertoy_service") {
+  manifest = "meta/shadertoy_service.cmx"
+  deps = [
+    ":bin",
+    "//src/lib/vulkan:vulkan_validation_layers",
   ]
-  meta = [
-    {
-      path = rebase_path("meta/shadertoy_service.cmx")
-      dest = "shadertoy_service.cmx"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
 }

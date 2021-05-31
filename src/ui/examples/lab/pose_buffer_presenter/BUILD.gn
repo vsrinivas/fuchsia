@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/vulkan/layers.gni")
+import("//build/components.gni")
 
 executable("bin") {
   output_name = "pose_buffer_presenter"
@@ -37,22 +36,10 @@ executable("bin") {
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
 }
 
-package("pose_buffer_presenter") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "pose_buffer_presenter"
-    },
+fuchsia_package_with_single_component("pose_buffer_presenter") {
+  manifest = "meta/pose_buffer_presenter.cmx"
+  deps = [
+    ":bin",
+    "//src/lib/vulkan:vulkan_validation_layers",
   ]
-  meta = [
-    {
-      path = "meta/pose_buffer_presenter.cmx"
-      dest = "pose_buffer_presenter.cmx"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
 }

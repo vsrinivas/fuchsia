@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/package.gni")
-import("//src/lib/vulkan/compact_image.gni")
-import("//src/lib/vulkan/layers.gni")
 
 group("examples") {
   public_deps = [

@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//src/lib/vulkan/compact_image.gni")
-import("//src/lib/vulkan/layers.gni")
+import("//build/components.gni")
 
 executable("bin") {
   output_name = "frame-compression"
@@ -44,23 +42,17 @@ executable("bin") {
   ]
 }
 
-package("frame-compression") {
-  deps = [ ":bin" ]
+resource("compact_image-config") {
+  sources = [ "//src/lib/vulkan/compact_image/VkLayer_compact_image.json" ]
+  outputs = [ "data/vulkan/explicit_layer.d/VkLayer_compact_image.json" ]
+}
 
-  binaries = [
-    {
-      name = "frame-compression"
-    },
+fuchsia_package_with_single_component("frame-compression") {
+  manifest = "meta/frame-compression.cmx"
+  deps = [
+    ":bin",
+    ":compact_image-config",
+    "//src/lib/vulkan:vulkan_validation_layers",
+    "//src/lib/vulkan/compact_image",
   ]
-  meta = [
-    {
-      path = "meta/frame-compression.cmx"
-      dest = "frame-compression.cmx"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps + compact_image.public_deps
-  loadable_modules =
-      vulkan_validation_layers.loadable_modules + compact_image.loadable_modules
-  resources = vulkan_validation_layers.resources + compact_image.resources
 }
