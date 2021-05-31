@@ -122,6 +122,7 @@ class Filesystem {
     bool supports_sparse_files = true;
     bool is_fat = false;
     bool supports_fsck_after_every_transaction = false;
+    bool has_directory_size_limit = false;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(

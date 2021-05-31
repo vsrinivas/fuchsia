@@ -77,9 +77,14 @@ impl Allocator for FakeAllocator {
         len
     }
 
-    async fn mark_allocated(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
+    async fn mark_allocated(
+        &self,
+        _transaction: &mut Transaction<'_>,
+        device_range: Range<u64>,
+    ) -> Result<(), Error> {
         let mut inner = self.0.lock().unwrap();
         inner.next_offset = std::cmp::max(device_range.end, inner.next_offset);
+        Ok(())
     }
 
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {

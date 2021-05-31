@@ -794,7 +794,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         let old_end =
             round_up(self.txn_get_size(transaction), self.block_size).ok_or(FxfsError::TooBig)?;
         let new_size = old_end + device_range.end - device_range.start;
-        self.store().allocator().mark_allocated(transaction, device_range.clone()).await;
+        self.store().allocator().mark_allocated(transaction, device_range.clone()).await?;
         transaction.add_with_object(
             self.store().store_object_id,
             Mutation::replace_or_insert_object(

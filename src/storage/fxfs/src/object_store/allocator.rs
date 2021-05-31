@@ -65,7 +65,11 @@ pub trait Allocator: Send + Sync {
 
     /// Marks the given device range as allocated.  The main use case for this at this time is for
     /// the super-block which needs to be at a fixed location on the device.
-    async fn mark_allocated(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>);
+    async fn mark_allocated(
+        &self,
+        transaction: &mut Transaction<'_>,
+        device_range: Range<u64>,
+    ) -> Result<(), Error>;
 
     /// Adds a reference to the given device range which must already be allocated.
     fn add_ref(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>);
@@ -409,11 +413,16 @@ impl Allocator for SimpleAllocator {
         };
 
         log::debug!("allocate {:?}", result);
-        self.mark_allocated(transaction, result.clone()).await;
+        self.mark_allocated(transaction, result.clone()).await?;
         Ok(result)
     }
 
-    async fn mark_allocated(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
+    async fn mark_allocated(
+        &self,
+        transaction: &mut Transaction<'_>,
+        device_range: Range<u64>,
+    ) -> Result<(), Error> {
+        ensure!(device_range.end <= self.device_size, FxfsError::NoSpace);
         if let Some(reservation) = &mut transaction.allocator_reservation {
             // This shouldn't fail because we checked the reservation had enough space at the
             // beginning of allocate, after we took the lock and the lock should still be held.
@@ -424,6 +433,7 @@ impl Allocator for SimpleAllocator {
         let item = AllocatorItem::new(AllocatorKey { device_range }, AllocatorValue { delta: 1 });
         self.reserved_allocations.insert(item.clone()).await;
         transaction.add(self.object_id(), Mutation::allocation(item));
+        Ok(())
     }
 
     fn add_ref(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
@@ -991,7 +1001,10 @@ mod tests {
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
         device_ranges.push(0..512);
-        allocator.mark_allocated(&mut transaction, device_ranges.last().unwrap().clone()).await;
+        allocator
+            .mark_allocated(&mut transaction, device_ranges.last().unwrap().clone())
+            .await
+            .expect("mark_allocated failed");
         device_ranges
             .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
         assert!(device_ranges.last().unwrap().length() == 512);

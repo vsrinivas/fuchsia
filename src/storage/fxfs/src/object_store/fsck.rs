@@ -265,7 +265,8 @@ mod tests {
         let offset = 2047 * TEST_DEVICE_BLOCK_SIZE as u64;
         fs.allocator()
             .mark_allocated(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
-            .await;
+            .await
+            .expect("mark_allocated failed");
         transaction.commit().await;
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("found extra allocation"), "{}", error);

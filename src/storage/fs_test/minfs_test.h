@@ -26,6 +26,7 @@ class MinfsFilesystem : public FilesystemImplWithDefaultMake<MinfsFilesystem> {
         .is_case_sensitive = true,
         .supports_sparse_files = true,
         .supports_fsck_after_every_transaction = true,
+        .has_directory_size_limit = true,
     };
     return traits;
   }
