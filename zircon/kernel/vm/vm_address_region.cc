@@ -140,7 +140,8 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     }
     if (!subregions_.IsRangeAvailable(new_base, size)) {
       if (is_specific_overwrite) {
-        return OverwriteVmMapping(new_base, size, vmar_flags, vmo, vmo_offset, arch_mmu_flags, out);
+        return OverwriteVmMappingLocked(new_base, size, vmar_flags, vmo, vmo_offset, arch_mmu_flags,
+                                        out);
       }
       return ZX_ERR_NO_MEMORY;
     }
@@ -267,12 +268,12 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
   return ZX_OK;
 }
 
-zx_status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
-                                                fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                                                uint arch_mmu_flags,
-                                                fbl::RefPtr<VmAddressRegionOrMapping>* out) {
+zx_status_t VmAddressRegion::OverwriteVmMappingLocked(vaddr_t base, size_t size,
+                                                      uint32_t vmar_flags,
+                                                      fbl::RefPtr<VmObject> vmo,
+                                                      uint64_t vmo_offset, uint arch_mmu_flags,
+                                                      fbl::RefPtr<VmAddressRegionOrMapping>* out) {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
   DEBUG_ASSERT(vmo);
   DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
 
@@ -298,12 +299,12 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint3
 
 zx_status_t VmAddressRegion::DestroyLocked() {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
   LTRACEF("%p '%s'\n", this, name_);
 
   // The cur reference prevents regions from being destructed after dropping
   // the last reference to them when removing from their parent.
   fbl::RefPtr<VmAddressRegion> cur(this);
+  AssertHeld(cur->lock_ref());
   while (cur) {
     // Iterate through children destroying mappings. If we find a
     // subregion, stop so we can traverse down.
@@ -330,6 +331,7 @@ zx_status_t VmAddressRegion::DestroyLocked() {
       // All children are destroyed, so now destroy the current node.
       if (cur->parent_) {
         DEBUG_ASSERT(cur->in_subregion_tree());
+        AssertHeld(cur->parent_->lock_ref());
         cur->parent_->subregions_.RemoveRegion(cur.get());
       }
       cur->state_ = LifeCycleState::DEAD;
@@ -354,7 +356,6 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) 
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
   if (state_ != LifeCycleState::ALIVE) {
     return 0;
@@ -370,9 +371,9 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
 
 zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) {
   canary_.Assert();
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
   VmAddressRegion* vmar = this;
+  AssertHeld(vmar->lock_ref());
   while (VmAddressRegionOrMapping* next = vmar->subregions_.FindRegion(va)) {
     if (auto mapping = next->as_vm_mapping_ptr()) {
       AssertHeld(mapping->lock_ref());
@@ -519,6 +520,7 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
       }
     }
     if (depth > kStartDepth && itr == end) {
+      AssertHeld(up->lock_ref());
       // If we are at a depth greater than the minimum, and have reached
       // the end of a sub-VMAR range, we ascend and continue iteration.
       do {
@@ -580,6 +582,7 @@ void VmAddressRegion::Activate() {
   DEBUG_ASSERT(state_ == LifeCycleState::NOT_READY);
 
   state_ = LifeCycleState::ALIVE;
+  AssertHeld(parent_->lock_ref());
 
   // Validate we are a correct child of our parent.
   DEBUG_ASSERT(parent_->is_in_range(base_, size_));
@@ -736,8 +739,6 @@ zx_status_t VmAddressRegion::UnmapAllowPartial(vaddr_t base, size_t size) {
 zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
                                                  bool can_destroy_regions,
                                                  bool allow_partial_vmar) {
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-
   if (!is_in_range(base, size)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -828,6 +829,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         if (allow_partial_vmar) {
           // If partial VMARs are allowed, we descend into sub-VMARs.
           fbl::RefPtr<VmAddressRegion> vmar = curr->as_vm_address_region();
+          AssertHeld(vmar->lock_ref());
           if (!vmar->subregions_.IsEmpty()) {
             begin = vmar->subregions_.IncludeOrHigher(base);
             end = vmar->subregions_.UpperBound(end_addr_byte);
@@ -842,6 +844,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
     }
 
     if (allow_partial_vmar && !at_top && itr == end) {
+      AssertHeld(up->lock_ref());
       // If partial VMARs are allowed, and we have reached the end of a
       // sub-VMAR range, we ascend and continue iteration.
       do {

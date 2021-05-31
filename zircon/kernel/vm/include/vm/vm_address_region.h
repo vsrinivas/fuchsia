@@ -555,9 +555,10 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   // Create a new VmMapping within this region, overwriting any existing
   // mappings that are in the way.  If the range crosses a subregion, the call
   // fails.
-  zx_status_t OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
-                                 fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                                 uint arch_mmu_flags, fbl::RefPtr<VmAddressRegionOrMapping>* out);
+  zx_status_t OverwriteVmMappingLocked(vaddr_t base, size_t size, uint32_t vmar_flags,
+                                       fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                       uint arch_mmu_flags,
+                                       fbl::RefPtr<VmAddressRegionOrMapping>* out) TA_REQ(lock());
 
   // Implementation for Unmap() and OverwriteVmMapping() that does not hold
   // the aspace lock. If |can_destroy_regions| is true, then this may destroy
@@ -565,7 +566,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   // this can handle the situation where only part of the VMAR is contained
   // within the region and will not destroy any VMARs.
   zx_status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions,
-                                  bool allow_partial_vmar);
+                                  bool allow_partial_vmar) TA_REQ(lock());
 
   // returns true if we can meet the allocation between the given children,
   // and if so populates pva with the base address to use.
@@ -582,7 +583,7 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   bool EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr, ON_VMAR on_vmar,
                                        ON_MAPPING on_mapping);
 
-  RegionList<VmAddressRegionOrMapping> subregions_;
+  RegionList<VmAddressRegionOrMapping> subregions_ TA_GUARDED(lock());
 
   const char name_[32] = {};
 };

@@ -330,6 +330,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     if (base_ == base && size_ != size) {
       // We need to remove ourselves from tree before updating base_,
       // since base_ is the tree key.
+      AssertHeld(parent_->lock_ref());
       fbl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.RemoveRegion(this));
       base_ += size;
       object_offset_ += size;
@@ -745,6 +746,7 @@ zx_status_t VmMapping::DestroyLocked() {
 
   // Detach the now dead region from the parent
   if (parent_) {
+    AssertHeld(parent_->lock_ref());
     DEBUG_ASSERT(this->in_subregion_tree());
     parent_->subregions_.RemoveRegion(this);
   }
@@ -920,6 +922,7 @@ void VmMapping::ActivateLocked() {
 
   state_ = LifeCycleState::ALIVE;
   object_->AddMappingLocked(this);
+  AssertHeld(parent_->lock_ref());
   parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
@@ -989,6 +992,7 @@ void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
   // Detach the now dead region from the parent, ensuring our caller is correctly holding a refptr.
   DEBUG_ASSERT(right_candidate->in_subregion_tree());
   DEBUG_ASSERT(right_candidate->ref_count_debug() > 1);
+  AssertHeld(parent_->lock_ref());
   parent_->subregions_.RemoveRegion(right_candidate);
 
   // Mark it as dead.
@@ -1013,6 +1017,7 @@ void VmMapping::TryMergeNeighborsLocked() {
   DEBUG_ASSERT(ref_count_debug() > 1);
 
   // First consider merging any mapping on our right, into |this|.
+  AssertHeld(parent_->lock_ref());
   VmAddressRegionOrMapping* right_candidate = parent_->subregions_.FindRegion(base_ + size_);
   if (right_candidate) {
     // Request mapping as a refptr as we need to hold a refptr across the try merge.
@@ -1025,6 +1030,7 @@ void VmMapping::TryMergeNeighborsLocked() {
   if (base_ == 0) {
     return;
   }
+  AssertHeld(parent_->lock_ref());
   VmAddressRegionOrMapping* left_candidate = parent_->subregions_.FindRegion(base_ - 1);
   if (!left_candidate) {
     return;
