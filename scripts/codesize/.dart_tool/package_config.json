@@ -14,6 +14,30 @@
             "name": "codesize",
             "packageUri": "lib/",
             "rootUri": "../"
+        },
+        {
+            "languageVersion": "2.1",
+            "name": "googleapis",
+            "packageUri": "lib/",
+            "rootUri": "../../../third_party/dart-pkg/pub/googleapis/"
+        },
+        {
+            "languageVersion": "2.1",
+            "name": "googleapis_auth",
+            "packageUri": "lib/",
+            "rootUri": "../../../third_party/dart-pkg/pub/googleapis_auth/"
+        },
+        {
+            "languageVersion": "2.1",
+            "name": "_discoveryapis_commons",
+            "packageUri": "lib/",
+            "rootUri": "../../../third_party/dart-pkg/pub/_discoveryapis_commons/"
+        },
+        {
+            "languageVersion": "2.1",
+            "name": "gcloud",
+            "packageUri": "lib/",
+            "rootUri": "../../../third_party/dart-pkg/pub/gcloud/"
         }
     ]
 }
