@@ -140,6 +140,9 @@ pub enum BuildError {
     #[error("meta package")]
     MetaPackage(#[from] MetaPackageError),
 
+    #[error("package manifest")]
+    PackageManifest(#[from] PackageManifestError),
+
     #[error(
         "the creation manifest contained a resource path that conflicts with a generated resource path: '{}'",
         conflicting_resource_path

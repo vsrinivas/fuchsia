@@ -3,16 +3,19 @@
 // found in the LICENSE file.
 
 use crate::errors::BuildError;
-use crate::{CreationManifest, MetaContents, MetaPackage};
+use crate::{
+    CreationManifest, MetaContents, MetaPackage, Package, PackageManifest,
+};
 use fuchsia_merkle::{Hash, MerkleTree};
 use std::collections::{btree_map, BTreeMap};
+use std::path::PathBuf;
 use std::{fs, io};
 
 pub fn build(
     creation_manifest: &CreationManifest,
     meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
-) -> Result<(), BuildError> {
+) -> Result<PackageManifest, BuildError> {
     build_with_file_system(creation_manifest, meta_package, meta_far_writer, &ActualFileSystem {})
 }
 
@@ -44,9 +47,19 @@ pub(crate) fn build_with_file_system<'a>(
     meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
     file_system: &'a impl FileSystem<'a>,
-) -> Result<(), BuildError> {
+) -> Result<PackageManifest, BuildError> {
+    let mut package_builder = Package::builder(meta_package.name(), meta_package.variant())?;
     let external_content_infos =
         get_external_content_infos(creation_manifest.external_contents(), file_system)?;
+
+    for (path, info) in external_content_infos.iter() {
+        package_builder.add_entry(
+            path.to_string(),
+            info.hash,
+            PathBuf::from(info.source_path),
+            info.size,
+        );
+    }
 
     let meta_contents = MetaContents::from_map(
         external_content_infos.iter().map(|(path, info)| (path.clone(), info.hash)).collect(),
@@ -82,14 +95,16 @@ pub(crate) fn build_with_file_system<'a>(
         meta_entries.insert(resource_path, (content.len() as u64, Box::new(content.as_slice())));
     }
 
-    let () = fuchsia_archive::write(meta_far_writer, meta_entries)?;
+    fuchsia_archive::write(meta_far_writer, meta_entries)?;
 
-    Ok(())
+    let package = package_builder.build()?;
+    let package_manifest = PackageManifest::from_package(package)?;
+    Ok(package_manifest)
 }
 
 struct ExternalContentInfo<'a> {
-    _source_path: &'a str, // Field will be used when creating the PackageManifest
-    _size: u64,            // Field will be used when creating the PackageManifest
+    source_path: &'a str,
+    size: u64,
     hash: Hash,
 }
 
@@ -99,13 +114,13 @@ fn get_external_content_infos<'a, 'b>(
 ) -> Result<BTreeMap<String, ExternalContentInfo<'a>>, BuildError> {
     external_contents
         .iter()
-        .map(|(resource_path, _source_path)| -> Result<(String, ExternalContentInfo<'_>), BuildError> {
-            let file = file_system.open(_source_path)?;
+        .map(|(resource_path, source_path)| -> Result<(String, ExternalContentInfo<'_>), BuildError> {
+            let file = file_system.open(source_path)?;
             Ok((
                 resource_path.clone(),
                 ExternalContentInfo {
-                    _source_path,
-                    _size: file_system.len(_source_path)?,
+                    source_path,
+                    size: file_system.len(source_path)?,
                     hash: MerkleTree::from_reader(file)?.root(),
                 },
             ))
