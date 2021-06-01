@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/foundation.dart';
-
 import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:flutter/foundation.dart';
 
 /// Defines a [FocusChainListener] that calls [onChange] when the system
 /// notifies of change in focus between views.

@@ -4,10 +4,9 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-
 import 'package:fidl_fuchsia_bluetooth_control/fidl_async.dart' as bt;
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
+import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';

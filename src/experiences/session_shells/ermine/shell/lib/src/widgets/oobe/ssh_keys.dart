@@ -7,11 +7,10 @@ import 'dart:convert';
 import 'package:ermine_ui/ermine_ui.dart';
 import 'package:fidl_fuchsia_ssh/fidl_async.dart';
 import 'package:flutter/material.dart';
+import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:http/http.dart' as http;
 import 'package:internationalization/strings.dart';
-import 'package:fuchsia_services/services.dart' show Incoming;
-
-import 'package:fuchsia_logger/logger.dart';
 
 import '../../utils/styles.dart';
 import 'oobe_buttons.dart';

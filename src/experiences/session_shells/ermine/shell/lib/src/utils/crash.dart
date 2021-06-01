@@ -5,11 +5,10 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-
 import 'package:fidl_fuchsia_feedback/fidl_async.dart';
 import 'package:fidl_fuchsia_mem/fidl_async.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:zircon/zircon.dart';

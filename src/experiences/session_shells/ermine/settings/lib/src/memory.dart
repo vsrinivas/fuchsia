@@ -5,10 +5,9 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/material.dart';
-
 import 'package:fidl_fuchsia_memory/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
+import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';

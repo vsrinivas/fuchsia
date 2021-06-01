@@ -4,16 +4,14 @@
 
 import 'dart:convert' show json;
 
+import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
-
-import 'package:fidl/fidl.dart';
-import 'package:test/test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:zircon/zircon.dart';
-
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
+import 'package:mockito/mockito.dart';
+import 'package:test/test.dart';
+import 'package:zircon/zircon.dart';
 
 void main() async {
   test('Create KeyboardShortcut', () {

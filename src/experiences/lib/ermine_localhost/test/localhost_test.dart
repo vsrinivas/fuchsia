@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'package:test/test.dart';
+
 import 'package:ermine_localhost/localhost.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('bindServer should start listening on 127.0.0.1:8080 by default',

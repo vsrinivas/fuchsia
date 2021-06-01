@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
-import 'package:test/test.dart';
 import 'package:quickui/quickui.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('Create UiSpec', () async {

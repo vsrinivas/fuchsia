@@ -13,8 +13,8 @@ import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart';
+import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'

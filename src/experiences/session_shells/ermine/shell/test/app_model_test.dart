@@ -5,25 +5,24 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
-    show KeyboardShortcuts;
-import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:fuchsia_internationalization_flutter/internationalization.dart';
-import 'package:fuchsia_inspect/inspect.dart' show Inspect;
-import 'package:fuchsia_services/services.dart';
-import 'package:mockito/mockito.dart';
-
 // ignore_for_file: implementation_imports
+import 'package:ermine/src/models/app_model.dart';
 import 'package:ermine/src/models/cluster_model.dart';
 import 'package:ermine/src/models/ermine_story.dart';
 import 'package:ermine/src/models/status_model.dart';
 import 'package:ermine/src/utils/pointer_events_stream.dart';
 import 'package:ermine/src/utils/styles.dart';
 import 'package:ermine/src/utils/suggestions.dart';
-import 'package:ermine/src/models/app_model.dart';
+import 'package:fidl_fuchsia_ui_focus/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_input/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:fuchsia_inspect/inspect.dart' show Inspect;
+import 'package:fuchsia_internationalization_flutter/internationalization.dart';
+import 'package:fuchsia_services/services.dart';
+import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
+    show KeyboardShortcuts;
+import 'package:mockito/mockito.dart';
 
 void main() {
   AppModel appModel;

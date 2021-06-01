@@ -5,8 +5,8 @@
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:settings/settings.dart';
 import 'package:mockito/mockito.dart';
+import 'package:settings/settings.dart';
 
 void main() {
   test('System Information', () async {

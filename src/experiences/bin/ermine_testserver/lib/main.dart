@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'package:fuchsia_logger/logger.dart';
+
 import 'package:ermine_localhost/localhost.dart';
+import 'package:fuchsia_logger/logger.dart';
 
 import 'src/file_group.dart';
 

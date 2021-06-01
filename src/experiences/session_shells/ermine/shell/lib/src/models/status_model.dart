@@ -4,10 +4,9 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
+import 'package:flutter/material.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:quickui/uistream.dart';

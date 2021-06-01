@@ -5,8 +5,8 @@
 import 'dart:ui' as ui;
 
 import 'package:args/args.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_driver/driver_extension.dart';
 
 void main([List<String> args = const []]) {

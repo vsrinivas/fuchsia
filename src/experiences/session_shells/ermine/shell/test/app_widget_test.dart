@@ -4,15 +4,14 @@
 
 import 'dart:async';
 
+// ignore_for_file: implementation_imports
+import 'package:ermine/src/models/app_model.dart';
+import 'package:ermine/src/widgets/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
-
-// ignore_for_file: implementation_imports
-import 'package:ermine/src/models/app_model.dart';
-import 'package:ermine/src/widgets/app.dart';
 
 void main() async {
   setupLogger(name: 'ermine_unittests');

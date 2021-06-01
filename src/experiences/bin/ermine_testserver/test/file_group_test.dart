@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:ermine_testserver/src/file_group.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('FileGroup should return a right path', () async {

@@ -4,14 +4,13 @@
 
 import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:fuchsia_logger/logger.dart';
-import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
 import 'package:simple_browser/src/models/webpage_action.dart';
-import 'package:simple_browser/src/services/simple_browser_web_service.dart';
 import 'package:simple_browser/src/services/simple_browser_navigation_event_listener.dart';
+import 'package:simple_browser/src/services/simple_browser_web_service.dart';
+import 'package:test/test.dart';
 
 void main() {
   setupLogger(name: 'webpage_bloc_test');
@@ -41,7 +40,7 @@ void main() {
         when NavigationState.url changed.''', () {
       //  url should be an empty string by default.
       expect(webPageBloc.url, '',
-          reason: '''The initial value of url is expected to be a blank, 
+          reason: '''The initial value of url is expected to be a blank,
           but is actually ${webPageBloc.url}.''');
 
       // When NavigationState.url is changed to 'https://www.flutter.dev'.

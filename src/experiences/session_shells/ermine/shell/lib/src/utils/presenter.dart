@@ -4,9 +4,9 @@
 
 import 'dart:async';
 
+import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_session/fidl_async.dart' as fidl;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:fidl/fidl.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:internationalization/strings.dart';

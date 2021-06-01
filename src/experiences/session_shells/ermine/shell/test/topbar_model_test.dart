@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
-import 'package:mockito/mockito.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:ermine/src/models/app_model.dart';
 import 'package:ermine/src/models/topbar_model.dart';
+import 'package:mockito/mockito.dart';
+import 'package:test/test.dart';
 
 void main() {
   TopbarModel topbarModel;

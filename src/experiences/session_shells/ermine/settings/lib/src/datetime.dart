@@ -6,8 +6,8 @@ import 'dart:async';
 
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:internationalization/strings.dart';
+import 'package:intl/intl.dart';
 import 'package:quickui/quickui.dart';
 
 // ignore_for_file: prefer_constructors_over_static_methods

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
-import 'package:quickui/uistream.dart';
-import 'package:test/test.dart';
-import 'package:mockito/mockito.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:ermine/src/models/status_model.dart';
+import 'package:fidl/fidl.dart';
+import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
+import 'package:mockito/mockito.dart';
+import 'package:quickui/uistream.dart';
+import 'package:test/test.dart';
 
 void main() {
   StatusModel statusModel;

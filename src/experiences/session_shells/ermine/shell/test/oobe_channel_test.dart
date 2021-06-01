@@ -4,12 +4,11 @@
 
 import 'dart:async';
 
+// ignore_for_file: implementation_imports
+import 'package:ermine/src/widgets/oobe/channel.dart';
 import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
-
-// ignore_for_file: implementation_imports
-import 'package:ermine/src/widgets/oobe/channel.dart';
 
 const List<String> channels = [
   'channelA',

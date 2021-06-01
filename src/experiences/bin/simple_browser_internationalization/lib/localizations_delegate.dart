@@ -8,8 +8,8 @@ import 'dart:async';
 import 'dart:ui' show Locale;
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:intl/intl.dart';
 
 import 'localization/messages_all.dart' as messages_all;
 import 'supported_locales.dart' as supported_locales;

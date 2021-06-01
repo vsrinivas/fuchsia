@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: implementation_imports
+import 'package:ermine/src/widgets/oobe/ssh_keys.dart';
 import 'package:fidl_fuchsia_ssh/fidl_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:internationalization/strings.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
-
-// ignore_for_file: implementation_imports
-import 'package:ermine/src/widgets/oobe/ssh_keys.dart';
 
 const String kTestUsername = 'test_username';
 

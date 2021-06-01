@@ -4,14 +4,13 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:ermine/src/utils/suggestion.dart';
 import 'package:ermine/src/utils/suggestions.dart';
 import 'package:ermine/src/widgets/ask/ask.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
 
 void main() {
   testWidgets('Create Ask Widget', (tester) async {

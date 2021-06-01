@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 import 'package:fuchsia_logger/logger.dart';
-import 'package:test/test.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:simple_browser/src/utils/tld_checker.dart';
 import 'package:simple_browser/src/utils/tlds_provider.dart';
+import 'package:test/test.dart';
 
 void main() {
   setupLogger(name: 'tld_checker_test');

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
-
 // ignore: implementation_imports
 import 'package:ermine/src/models/alert_model.dart';
+import 'package:test/test.dart';
 
 void main() {
   AlertsModel model;

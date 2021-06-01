@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fidl_fuchsia_power/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:settings/settings.dart';
 import 'package:mockito/mockito.dart';
+import 'package:settings/settings.dart';
 
 void main() {
   test('Battery', () async {

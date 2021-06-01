@@ -4,12 +4,11 @@
 
 import 'dart:convert' show json;
 
-import 'package:flutter/material.dart' show VoidCallback;
-
 import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show Registry, RegistryProxy, Shortcut, Trigger, Listener, ListenerBinding;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
+import 'package:flutter/material.dart' show VoidCallback;
 import 'package:fuchsia_services/services.dart' show Incoming;
 
 /// Listens for keyboard shortcuts and triggers callbacks when they occur.

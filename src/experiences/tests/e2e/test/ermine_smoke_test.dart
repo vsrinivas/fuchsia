@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:ermine_driver/ermine_driver.dart';
-import 'package:flutter_driver/flutter_driver.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
+import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 

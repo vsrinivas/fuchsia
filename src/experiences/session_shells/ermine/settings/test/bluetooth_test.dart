@@ -7,10 +7,10 @@ import 'dart:async';
 import 'package:fidl_fuchsia_bluetooth_control/fidl_async.dart' as bt;
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:settings/settings.dart';
 import 'package:internationalization/strings.dart';
+import 'package:mockito/mockito.dart';
 import 'package:quickui/quickui.dart';
+import 'package:settings/settings.dart';
 
 void main() {
   String _disconnect = Strings.disconnect.toUpperCase();

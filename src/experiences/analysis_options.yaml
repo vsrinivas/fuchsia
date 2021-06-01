@@ -58,8 +58,7 @@ linter:
     - close_sinks
     - constant_identifier_names
     - control_flow_in_finally
-    # Disabling this for now to avoid build spam
-    #- directives_ordering
+    - directives_ordering
     - empty_catches
     - empty_constructor_bodies
     - empty_statements

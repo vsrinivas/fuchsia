@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: implementation_imports
+import 'package:ermine/src/models/cluster_model.dart';
+import 'package:ermine/src/utils/presenter.dart';
+import 'package:ermine/src/utils/suggestion.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
-
-// ignore_for_file: implementation_imports
-import 'package:ermine/src/models/cluster_model.dart';
-import 'package:ermine/src/utils/presenter.dart';
-import 'package:ermine/src/utils/suggestion.dart';
 
 void main() {
   ClustersModel clustersModel;

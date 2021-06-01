@@ -3,18 +3,16 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
 import '../models/app_model.dart';
 import '../models/oobe_model.dart';
 import '../utils/styles.dart';
-
 import 'support/alert.dart';
 import 'support/home_container.dart';
 import 'support/oobe.dart';

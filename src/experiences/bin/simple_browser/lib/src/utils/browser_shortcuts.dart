@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 import 'dart:io';
+
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
-import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
+
 import '../models/tabs_action.dart';
 import '../models/webpage_action.dart';
 

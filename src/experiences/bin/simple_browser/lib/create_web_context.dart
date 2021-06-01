@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:fidl/fidl.dart' show InterfaceHandle;
-import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fidl_io;
+import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:fuchsia_services/services.dart' show Incoming;
 import 'package:zircon/zircon.dart';
 

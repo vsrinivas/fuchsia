@@ -6,11 +6,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:image/image.dart' hide Point;
-import 'package:flutter_driver/flutter_driver.dart';
-import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
+import 'package:flutter_driver/flutter_driver.dart';
+import 'package:flutter_driver_sl4f/flutter_driver_sl4f.dart';
+import 'package:image/image.dart' hide Point;
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-
-import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;

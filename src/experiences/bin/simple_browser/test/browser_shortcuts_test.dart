@@ -4,17 +4,13 @@
 
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
-
 import 'package:flutter/material.dart';
-
 import 'package:fuchsia_logger/logger.dart';
-
 import 'package:mockito/mockito.dart';
-import 'package:test/test.dart';
-
 // ignore_for_file: implementation_imports
 import 'package:simple_browser/src/blocs/tabs_bloc.dart';
 import 'package:simple_browser/src/utils/browser_shortcuts.dart';
+import 'package:test/test.dart';
 
 void main() {
   late MockRegistryProxy mockRegistryProxy;
