@@ -8,7 +8,7 @@ language for defining protocols that are typically used over
 
 The FIDL team is actively exploring the following projects:
 
-### Unifying FIDL C++ bindings
+### Unifying FIDL C++ bindings {#unifying-fidl-cpp-bindings}
 
 Currently, there are two FIDL binding implementations,
 [high-level C++ bindings (HLCPP)](/docs/reference/fidl/bindings/hlcpp-bindings.md)

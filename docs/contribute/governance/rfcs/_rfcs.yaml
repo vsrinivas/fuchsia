@@ -1237,3 +1237,15 @@
   submitted: '2021-03-24'
   reviewed: '2021-05-19'
 
+- name: 'RFC-0097'
+  title: 'FIDL Toolchain'
+  short_description: 'Description of a canonical FIDL toolchain.'
+  authors: ['pascallouis@google.com']
+  file: '0097_fidl_toolchain.md'
+  area: ['FIDL']
+  issue: []
+  gerrit_change_id: ['521520']
+  status: 'Accepted'
+  reviewers: ['jeremymanson@google.com', 'mkember@google.com', 'shayba@google.com']
+  submitted: '2021-04-27'
+  reviewed: '2021-MM-DD'

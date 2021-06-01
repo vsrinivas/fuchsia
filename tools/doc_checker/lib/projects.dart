@@ -10,6 +10,7 @@ const List<String> validProjects = <String>[
   'experiences',
   'fargo',
   'fidl-misc',
+  'fidlbolt',
   'fontdata',
   'fuchsia',
   'infra', // This is a family of projects.
