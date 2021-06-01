@@ -22,8 +22,9 @@ List of documents to get started -
 * [Device and driver model][device-driver-model] - Documents that explain device and driver model
 * [Driver development][driver-development] - Documents related to interrupts, DMA and other concepts
 for developing drivers
-* [Driver architectures][driver-architectures] - Documents related to architecture of specfic driver
-types
+* [Drivers Rubric][drivers-rubric] = Rules for writing new drivers
+* [Driver architectures][driver-architectures] - Documents related to architecture of specific
+driver types
 
 The sections are listed above in default reading order, but it's perfectly fine to jump around and
 read them in order of interest or applicability.
@@ -31,6 +32,7 @@ read them in order of interest or applicability.
 
 <!-- xrefs -->
 [fdf]: /docs/concepts/drivers/fdf.md
+[driver-rubric]: /docs/concepts/drivers/rubric.md
 [fuchsia-drivers-overview]: /docs/concepts/drivers/device_driver_model/introduction.md
 [device-driver-model]: /docs/concepts/drivers/device_driver_model
 [driver-development]: /docs/concepts/drivers/driver_development

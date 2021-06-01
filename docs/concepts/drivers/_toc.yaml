@@ -16,6 +16,8 @@ toc:
 - title: "Driver development"
   section:
   - include: /docs/concepts/drivers/driver_development/_toc.yaml
+- title: "Drivers rubric"
+  path: /docs/concepts/drivers/rubric.md
 - title: "Driver architectures"
   section:
   - include: /docs/concepts/drivers/driver_architectures/_toc.yaml
