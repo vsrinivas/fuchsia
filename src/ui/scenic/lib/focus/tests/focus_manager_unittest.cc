@@ -39,7 +39,7 @@ std::shared_ptr<const view_tree::Snapshot> OneNodeSnapshot() {
 //     A
 //     |
 //     B
-std::shared_ptr<const view_tree::Snapshot> TwoNodeSnapshot() {
+std::shared_ptr<view_tree::Snapshot> TwoNodeSnapshot() {
   auto snapshot = std::make_shared<view_tree::Snapshot>();
 
   snapshot->root = kNodeA;
@@ -203,6 +203,23 @@ TEST(FocusManagerTest, FocusTransferUpwardDenied) {
 }
 
 // Tree topology:
+//     A
+//     |
+//     B
+TEST(FocusManagerTest, FocusTransfer_ToNonFocusableNode_Denied) {
+  auto snapshot = TwoNodeSnapshot();
+  snapshot->view_tree.at(kNodeB).is_focusable = false;
+
+  FocusManager focus_manager;
+  focus_manager.OnNewViewTreeSnapshot(snapshot);
+
+  // Transfer focus to B.
+  EXPECT_EQ(focus_manager.RequestFocus(kNodeA, kNodeB),
+            FocusChangeStatus::kErrorRequestCannotReceiveFocus);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA));
+}
+
+// Tree topology:
 //         A
 //      /    \
 //     B      C
@@ -227,6 +244,27 @@ TEST(FocusManagerTest, BranchedTree) {
   // Transfer focus from B to D.
   EXPECT_EQ(focus_manager.RequestFocus(kNodeB, kNodeD), FocusChangeStatus::kAccept);
   EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB, kNodeD));
+}
+
+// Tree topology:
+//         A
+//      /    \
+//     B      C
+//     |
+//     D
+TEST(FocusManagerTest, FocusTranser_WithRequestorNotInFocusChain_Denied) {
+  FocusManager focus_manager;
+  focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshot());
+
+  // Transfer focus from A to C.
+  EXPECT_EQ(focus_manager.RequestFocus(kNodeA, kNodeC), FocusChangeStatus::kAccept);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeC));
+
+  // Attempt to transfer focus to D on the authority of B. Should fail since B is not in the focus
+  // chain.
+  EXPECT_EQ(focus_manager.RequestFocus(kNodeB, kNodeD),
+            FocusChangeStatus::kErrorRequestorNotAuthorized);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeC));
 }
 
 // Tree topology:
