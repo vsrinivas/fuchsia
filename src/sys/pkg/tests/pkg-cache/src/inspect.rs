@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
-    fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
+    fuchsia_inspect::{assert_data_tree, testing::AnyProperty, tree_assertion},
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -273,9 +273,22 @@ async fn dynamic_index_needed_blobs() {
     );
 
     write_blob(&meta_far.contents, meta_blob).await;
+    env.wait_for_inspect_state(tree_assertion!(
+        "root": contains {
+            "index": {
+                "dynamic": contains {
+                    pkg.meta_far_merkle_root().to_string() => contains {
+                        "state": "with_meta_far",
+                        "path": AnyProperty,
+                        "required_blobs": AnyProperty,
+                    }
+                }
+            }
+        }
+    ))
+    .await;
 
     let hierarchy = env.inspect_hierarchy().await;
-
     assert_data_tree!(
         hierarchy,
         root: contains {

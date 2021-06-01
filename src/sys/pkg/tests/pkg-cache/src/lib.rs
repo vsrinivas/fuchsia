@@ -24,7 +24,7 @@ use {
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         RealmInstance,
     },
-    fuchsia_inspect::reader::DiagnosticsHierarchy,
+    fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_pkg_testing::{get_inspect_hierarchy, Package, SystemImageBuilder},
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
@@ -502,5 +502,12 @@ impl<P: PkgFs> TestEnv<P> {
         // Also, make sure the system-update-committer starts to prevent race conditions
         // where the system-update-commiter drops before the paver.
         let _ = self.proxies.commit_status_provider.is_current_system_committed().await.unwrap();
+    }
+
+    /// Wait until pkg-cache inspect state satisfies `desired_state`.
+    pub async fn wait_for_inspect_state(&self, desired_state: TreeAssertion<String>) {
+        while desired_state.run(&self.inspect_hierarchy().await).is_err() {
+            fasync::Timer::new(Duration::from_millis(10)).await;
+        }
     }
 }
