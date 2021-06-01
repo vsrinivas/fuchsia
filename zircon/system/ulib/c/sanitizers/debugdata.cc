@@ -143,10 +143,10 @@ zx_handle_t sanitizer_debugdata_connect() {
 }  // namespace
 
 __EXPORT
-void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
+zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
   if (__zircon_namespace_svc == ZX_HANDLE_INVALID) {
     _zx_handle_close(vmo);
-    return;
+    return ZX_HANDLE_INVALID;
   }
 
   zx_handle_t h = sanitizer_debugdata_connect();
@@ -157,6 +157,10 @@ void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
     constexpr const char kErrorPublish[] = "Failed to publish data";
     __sanitizer_log_write(kErrorPublish, sizeof(kErrorPublish) - 1);
   }
+
+  // TODO(fxbug.dev/75686): Make a "token" channel and pass one end in the
+  // protocol, return the other end here.
+  return ZX_HANDLE_INVALID;
 }
 
 __EXPORT

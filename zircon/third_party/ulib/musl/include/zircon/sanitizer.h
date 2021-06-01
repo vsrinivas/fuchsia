@@ -72,14 +72,22 @@ void __sanitizer_log_write(const char* buffer, size_t len);
 // blob of data; the string is not used after this call returns.  The
 // caller creates a VMO (e.g. zx_vmo_create) and passes it in; the VMO
 // handle is consumed by this call.  Each particular data sink has its
-// own conventions about both the format of the data in the VMO and the
-// protocol for when data must be written there.  For some sinks, the
-// VMO's data is used immediately.  For other sinks, the caller is
+// own conventions about both the format of the data in the VMO and
+// the protocol for when data must be written there.  For some sinks,
+// the VMO's data is used immediately.  For other sinks, the caller is
 // expected to have the VMO mapped in and be writing more data there
 // throughout the life of the process, to be analyzed only after the
 // process terminates.  Yet others might use an asynchronous shared
-// memory protocol between producer and consumer.
-void __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo);
+// memory protocol between producer and consumer.  The return value is
+// either ZX_HANDLE_INVALID or a Zircon handle whose lifetime is used
+// to signal the readiness of the data in the VMO.  This handle can be
+// passed to zx_handle_close() to indicate the data is ready to be
+// consumed.  Or the handle can safely be leaked by just ignoring the
+// return value; the data will be ready when the process exits.  Note
+// there is no indication of success or failure returned here (though
+// it may be logged).  A value of ZX_HANDLE_INVALID merely indicates
+// there is no way to communicate data readiness before process exit.
+zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo);
 
 // Runtimes that want to read configuration files use this interface.
 // The name is a string from the user (something akin to a file name
