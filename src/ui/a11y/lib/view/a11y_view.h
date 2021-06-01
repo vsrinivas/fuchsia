@@ -28,6 +28,14 @@ class AccessibilityViewInterface {
  public:
   AccessibilityViewInterface() = default;
   virtual ~AccessibilityViewInterface() = default;
+
+  // Returns the current a11y view properties if the a11y view is ready.
+  // If the a11y view is not yet ready, this method returns std::nullopt.
+  virtual std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() = 0;
+
+  // Returns the view ref of the a11y view if the a11y view is ready.
+  // If the a11y view is not yet ready, this method returns std::nullopt.
+  virtual std::optional<fuchsia::ui::views::ViewRef> view_ref() = 0;
 };
 
 // The AccessibilityView class represents the accessibility-owned view
@@ -43,12 +51,14 @@ class AccessibilityView : public AccessibilityViewInterface {
                     fuchsia::ui::scenic::ScenicPtr scenic);
   ~AccessibilityView() override = default;
 
-  // Returns the current a11y view properties if the a11y view is ready.
-  // If the a11y view is not yet ready, this method returns std::nullopt.
-  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() {
+  // |AccessibilityViewInterface |
+  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
     return a11y_view_properties_;
   }
   bool is_initialized() const { return is_initialized_; }
+
+  // |AccessibilityViewInterface |
+  std::optional<fuchsia::ui::views::ViewRef> view_ref() override;
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
@@ -84,6 +94,10 @@ class AccessibilityView : public AccessibilityViewInterface {
   // True if the a11y view and proxy view holder have been created, and
   // their properties have been set.
   bool is_initialized_ = false;
+  
+  // Holds a copy of the view ref of the a11y view.
+  // If not present, the a11y view has not yet been connected to the scene.
+  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
 };
 
 }  // namespace a11y

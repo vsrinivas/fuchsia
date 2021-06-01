@@ -32,6 +32,7 @@
 #include "src/ui/a11y/lib/util/tests/mocks/mock_boot_info_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
@@ -59,6 +60,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                       std::unique_ptr<MockViewSemanticsFactory>(mock_view_semantics_factory_),
                       std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
+                      std::make_unique<MockViewInjectorFactory>(),
                       std::make_unique<MockSemanticsEventManager>(),
                       std::make_unique<MockAccessibilityView>(), context_provider_.context(),
                       context_->outgoing()->debug_dir()),

@@ -7,6 +7,8 @@ source_set("mocks") {
 
   sources = [
     "mock_accessibility_view.h",
+    "mock_view_injector_factory.cc",
+    "mock_view_injector_factory.h",
     "mock_view_semantics.cc",
     "mock_view_semantics.h",
     "scenic_mocks.cc",
@@ -19,5 +21,6 @@ source_set("mocks") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/ui/a11y/lib/view",
+    "//src/ui/input/lib/injector",
   ]
 }

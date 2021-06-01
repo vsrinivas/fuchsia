@@ -28,6 +28,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
@@ -57,8 +58,9 @@ class ViewManagerTest : public gtest::TestLoopFixture {
 
     view_manager_ = std::make_unique<a11y::ViewManager>(
         std::move(tree_service_factory_), std::move(view_semantics_factory),
-        std::move(annotation_view_factory), std::make_unique<MockSemanticsEventManager>(),
-        std::make_unique<MockAccessibilityView>(), context_provider_.context(), debug_dir());
+        std::move(annotation_view_factory), std::make_unique<MockViewInjectorFactory>(),
+        std::make_unique<MockSemanticsEventManager>(), std::make_unique<MockAccessibilityView>(),
+        context_provider_.context(), debug_dir());
     view_manager_->SetAnnotationsEnabled(true);
 
     semantic_provider_ =

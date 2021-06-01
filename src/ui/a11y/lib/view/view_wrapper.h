@@ -13,6 +13,7 @@
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/view/view_semantics.h"
+#include "src/ui/input/lib/injector/injector.h"
 
 namespace a11y {
 
@@ -24,7 +25,8 @@ class ViewWrapper {
  public:
   // Creates a Wrapper for this view and binds the associated semantic tree.
   ViewWrapper(fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<ViewSemantics> view_semantics,
-              std::unique_ptr<AnnotationViewInterface> annotation_view);
+              std::unique_ptr<AnnotationViewInterface> annotation_view,
+              std::unique_ptr<input::Injector> view_injector);
 
   ~ViewWrapper() = default;
 
@@ -63,6 +65,10 @@ class ViewWrapper {
   void ClearFocusHighlights();
   void ClearMagnificationHighlights();
 
+  // Returns the injector for the view associated with this class. If no injector was registered,
+  // turns nullptr.
+  input::Injector* view_injector() { return view_injector_.get(); }
+
  private:
   fuchsia::ui::views::ViewRef view_ref_;
 
@@ -71,6 +77,9 @@ class ViewWrapper {
 
   // View used to draw annotations over semantic view.
   std::unique_ptr<AnnotationViewInterface> annotation_view_;
+
+  // Used to inject pointer events into the view.
+  std::unique_ptr<input::Injector> view_injector_;
 };
 
 }  // namespace a11y

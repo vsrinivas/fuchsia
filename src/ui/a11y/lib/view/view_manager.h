@@ -19,6 +19,7 @@
 #include "src/ui/a11y/lib/semantics/semantics_event_manager.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/a11y_view.h"
+#include "src/ui/a11y/lib/view/view_injector_factory.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
 
 namespace a11y {
@@ -37,6 +38,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                        std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                        std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
+                       std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory,
                        std::unique_ptr<SemanticsEventManager> semantics_event_manager,
                        std::unique_ptr<AccessibilityViewInterface> a11y_view,
                        sys::ComponentContext* context, vfs::PseudoDir* debug_dir);
@@ -165,6 +167,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   std::unique_ptr<ViewSemanticsFactory> view_semantics_factory_;
 
   std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory_;
+
+  std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory_;
 
   std::unique_ptr<SemanticsEventManager> semantics_event_manager_;
 

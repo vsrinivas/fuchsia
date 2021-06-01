@@ -5,16 +5,32 @@
 #ifndef SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_MOCK_ACCESSIBILITY_VIEW_H_
 #define SRC_UI_A11Y_LIB_VIEW_TESTS_MOCKS_MOCK_ACCESSIBILITY_VIEW_H_
 
+#include <optional>
+
 #include "src/ui/a11y/lib/view/a11y_view.h"
 
 namespace accessibility_test {
 
-// Mock accessibility view. As we route more functionality through the a11y
-// view, we will add to this class.
 class MockAccessibilityView : public a11y::AccessibilityViewInterface {
  public:
   MockAccessibilityView() = default;
   ~MockAccessibilityView() override = default;
+
+  // |AccessibilityViewInterface |
+  std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
+    return a11y_view_properties_;
+  }
+
+  void set_a11y_view_properties(
+      std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties) {
+    a11y_view_properties_ = a11y_view_properties;
+  }
+
+  // |AccessibilityViewInterface |
+  std::optional<fuchsia::ui::views::ViewRef> view_ref() override { return std::nullopt; }
+
+ private:
+  std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
 };
 
 }  // namespace accessibility_test

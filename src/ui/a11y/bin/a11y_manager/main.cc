@@ -19,6 +19,7 @@
 #include "src/ui/a11y/lib/util/boot_info_manager.h"
 #include "src/ui/a11y/lib/view/a11y_view.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
+#include "src/ui/a11y/lib/view/view_injector_factory.h"
 
 namespace {
 
@@ -36,6 +37,7 @@ int run_a11y_manager(int argc, const char** argv) {
           inspector->root().CreateChild("semantic_trees")),
       std::make_unique<a11y::A11yViewSemanticsFactory>(),
       std::make_unique<a11y::AnnotationViewFactory>(),
+      std::make_unique<a11y::ViewInjectorFactory>(),
       std::make_unique<a11y::A11ySemanticsEventManager>(),
       std::make_unique<a11y::AccessibilityView>(
           context->svc()->Connect<fuchsia::ui::accessibility::view::Registry>(),

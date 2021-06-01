@@ -8,6 +8,8 @@ source_set("view") {
     "a11y_view.h",
     "a11y_view_semantics.cc",
     "a11y_view_semantics.h",
+    "view_injector_factory.cc",
+    "view_injector_factory.h",
     "view_manager.cc",
     "view_manager.h",
     "view_semantics.h",
@@ -23,6 +25,7 @@ source_set("view") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ui/a11y/lib/util",
+    "//src/ui/input/lib/injector",
     "//src/ui/scenic/lib/gfx",
   ]
 

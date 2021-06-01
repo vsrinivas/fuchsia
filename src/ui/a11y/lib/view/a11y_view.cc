@@ -36,6 +36,8 @@ AccessibilityView::AccessibilityView(
   fuchsia::ui::views::ViewRef a11y_view_ref_copy;
   fidl::Clone(a11y_view_ref, &a11y_view_ref_copy);
 
+  fidl::Clone(a11y_view_ref, &(*view_ref_));
+
   // Create a11y view. We need to do this step before we ask root presenter to
   // add our view holder to the scene, because root presenter will try to route
   // input to the a11y view at that time. If the a11y view does not yet exist,
@@ -118,6 +120,15 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
           is_initialized_ |= proxy_view_holder_.has_value();
         });
   }
+}
+
+std::optional<fuchsia::ui::views::ViewRef> AccessibilityView::view_ref() {
+  if (!view_ref_) {
+    return std::nullopt;
+  }
+  fuchsia::ui::views::ViewRef copy;
+  fidl::Clone(*view_ref_, &copy);
+  return std::move(copy);
 }
 
 }  // namespace a11y

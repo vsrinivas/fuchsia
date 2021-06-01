@@ -18,12 +18,14 @@ namespace a11y {
 ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                          std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
                          std::unique_ptr<AnnotationViewFactoryInterface> annotation_view_factory,
+                         std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory,
                          std::unique_ptr<SemanticsEventManager> semantics_event_manager,
                          std::unique_ptr<AccessibilityViewInterface> a11y_view,
                          sys::ComponentContext* context, vfs::PseudoDir* debug_dir)
     : factory_(std::move(factory)),
       view_semantics_factory_(std::move(view_semantics_factory)),
       annotation_view_factory_(std::move(annotation_view_factory)),
+      view_injector_factory_(std::move(view_injector_factory)),
       semantics_event_manager_(std::move(semantics_event_manager)),
       a11y_view_(std::move(a11y_view)),
       virtualkeyboard_listener_binding_(this),
@@ -91,8 +93,18 @@ void ViewManager::RegisterViewForSemantics(
       fidl::Clone(view_ref), context_,
       // TODO: add callbacks
       []() {}, []() {}, []() {});
-  view_wrapper_map_[koid] = std::make_unique<ViewWrapper>(
-      std::move(view_ref), std::move(view_semantics), std::move(annotation_view));
+
+  auto context_view = a11y_view_->view_ref();
+  std::unique_ptr<input::Injector> view_injector;
+  if (context_view) {
+    fuchsia::ui::views::ViewRef target_view;
+    fidl::Clone(view_ref, &target_view);
+    view_injector = view_injector_factory_->BuildAndConfigureInjector(
+        a11y_view_.get(), context_, std::move(*context_view), std::move(target_view));
+  }
+  view_wrapper_map_[koid] =
+      std::make_unique<ViewWrapper>(std::move(view_ref), std::move(view_semantics),
+                                    std::move(annotation_view), std::move(view_injector));
 }
 
 void ViewManager::Register(

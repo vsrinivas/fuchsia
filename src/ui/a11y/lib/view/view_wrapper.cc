@@ -36,10 +36,12 @@ fuchsia::ui::gfx::mat4 MakeTranslationTransform(const fuchsia::ui::gfx::vec2& of
 
 ViewWrapper::ViewWrapper(fuchsia::ui::views::ViewRef view_ref,
                          std::unique_ptr<ViewSemantics> view_semantics,
-                         std::unique_ptr<AnnotationViewInterface> annotation_view)
+                         std::unique_ptr<AnnotationViewInterface> annotation_view,
+                         std::unique_ptr<input::Injector> view_injector)
     : view_ref_(std::move(view_ref)),
       view_semantics_(std::move(view_semantics)),
-      annotation_view_(std::move(annotation_view)) {}
+      annotation_view_(std::move(annotation_view)),
+      view_injector_(std::move(view_injector)) {}
 
 void ViewWrapper::EnableSemanticUpdates(bool enabled) {
   view_semantics_->EnableSemanticUpdates(enabled);

@@ -26,6 +26,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace accessibility_test {
@@ -72,7 +73,7 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(annotation_view_->IsInitialized());
 
     view_wrapper_ = std::make_unique<a11y::ViewWrapper>(
-        std::move(view_ref_), std::move(view_semantics), std::move(annotation_view));
+        std::move(view_ref_), std::move(view_semantics), std::move(annotation_view), nullptr);
 
     view_wrapper_->EnableSemanticUpdates(true);
   }
@@ -350,7 +351,8 @@ TEST_F(ViewWrapperTest, MagnificationHighlight) {
   EXPECT_EQ(highlight_bounding_box->max.x, 870.4f);
   EXPECT_EQ(highlight_bounding_box->max.y, 480.0f);
 
-  const auto& highlight_translation = annotation_view_->GetMagnificationHighlightTranslationVector();
+  const auto& highlight_translation =
+      annotation_view_->GetMagnificationHighlightTranslationVector();
   EXPECT_TRUE(highlight_translation.has_value());
   EXPECT_EQ((*highlight_translation)[0], 50.0f);
   EXPECT_EQ((*highlight_translation)[1], 60.0f);
