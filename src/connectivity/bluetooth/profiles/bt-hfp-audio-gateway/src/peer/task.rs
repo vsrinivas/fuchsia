@@ -469,8 +469,8 @@ mod tests {
         at_commands::{self as at, SerDe},
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{
-            CallState, PeerHandlerMarker, PeerHandlerRequest, PeerHandlerRequestStream,
-            PeerHandlerWatchNextCallResponder, SignalStrength,
+            CallDirection, CallState, NextCall, PeerHandlerMarker, PeerHandlerRequest,
+            PeerHandlerRequestStream, PeerHandlerWatchNextCallResponder, SignalStrength,
         },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
@@ -870,9 +870,14 @@ mod tests {
             // Send the incoming call
             let responder = stream.next().await.unwrap();
             let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
-            responder
-                .send(client_end, "1234567", CallState::IncomingRinging)
-                .expect("Successfully send call information");
+            let next_call = NextCall {
+                call: Some(client_end),
+                remote: Some("1234567".to_string()),
+                state: Some(CallState::IncomingRinging),
+                direction: Some(CallDirection::MobileTerminated),
+                ..NextCall::EMPTY
+            };
+            responder.send(next_call).expect("Successfully send call information");
 
             // Call manager should collect all further requests, without responding.
             stream.collect::<Vec<_>>().await;
@@ -1003,9 +1008,14 @@ mod tests {
             // Send the incoming waiting call
             let responder = stream.next().await.unwrap();
             let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
-            responder
-                .send(client_end, raw_number, CallState::IncomingWaiting)
-                .expect("Successfully send call information");
+            let next_call = NextCall {
+                call: Some(client_end),
+                remote: Some(raw_number.to_string()),
+                state: Some(CallState::IncomingWaiting),
+                direction: Some(CallDirection::MobileTerminated),
+                ..NextCall::EMPTY
+            };
+            responder.send(next_call).expect("Successfully send call information");
 
             // Call manager should collect all further requests, without responding.
             stream.collect::<Vec<_>>().await;

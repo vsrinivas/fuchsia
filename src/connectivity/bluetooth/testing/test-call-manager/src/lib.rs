@@ -7,11 +7,11 @@ use async_utils::hanging_get::client::HangingGetStream;
 use derivative::Derivative;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_hfp::{
-    CallAction, CallManagerMarker, CallManagerRequest, CallManagerRequestStream, CallMarker,
-    CallRequest, CallRequestStream, CallState as FidlCallState, CallWatchStateResponder, DtmfCode,
-    HeadsetGainProxy, HfpMarker, HfpProxy, NetworkInformation, PeerHandlerRequest,
-    PeerHandlerRequestStream, PeerHandlerWatchNetworkInformationResponder,
-    PeerHandlerWatchNextCallResponder, SignalStrength,
+    CallAction, CallDirection, CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
+    CallMarker, CallRequest, CallRequestStream, CallState as FidlCallState,
+    CallWatchStateResponder, DtmfCode, HeadsetGainProxy, HfpMarker, HfpProxy, NetworkInformation,
+    NextCall, PeerHandlerRequest, PeerHandlerRequestStream,
+    PeerHandlerWatchNetworkInformationResponder, PeerHandlerWatchNextCallResponder, SignalStrength,
 };
 use fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy};
 use fuchsia_async as fasync;
@@ -131,6 +131,7 @@ struct CallState {
     peer_id: Option<PeerId>,
     responder: Option<CallWatchStateResponder>,
     state: FidlCallState,
+    direction: CallDirection,
     reported_state: Option<FidlCallState>,
     dtmf_codes: Vec<DtmfCode>,
 }
@@ -229,6 +230,7 @@ impl From<&PeerState> for PeerStateSer {
 #[derive(Serialize)]
 struct CallStateSer {
     remote: String,
+    direction: String,
     state: String,
     reported_state: Option<String>,
     dtmf_codes: Vec<String>,
@@ -238,6 +240,7 @@ impl From<&CallState> for CallStateSer {
     fn from(state: &CallState) -> Self {
         Self {
             remote: state.remote.clone(),
+            direction: format!("{:?}", state.direction),
             state: format!("{:?}", state.state),
             reported_state: state.reported_state.clone().map(|s| format!("{:?}", s)),
             dtmf_codes: state.dtmf_codes.iter().map(|code| format!("{:?}", code)).collect(),
@@ -390,15 +393,22 @@ impl TestCallManager {
     ///     `remote`: The number associated with the remote party. This can be any string formatted
     ///     number (e.g. +1-555-555-5555).
     ///     `fidl_state`: The state to assign to the newly created call.
-    pub async fn new_call(&self, remote: &str, fidl_state: FidlCallState) -> Result<CallId, Error> {
+    pub async fn new_call(
+        &self,
+        remote: &str,
+        fidl_state: FidlCallState,
+        direction: CallDirection,
+    ) -> Result<CallId, Error> {
+        let remote = remote.to_string();
         let mut inner = self.inner.lock().await;
         let call_id = inner.next_call_id;
         inner.next_call_id += 1;
         let mut state = CallState {
-            remote: remote.into(),
+            remote: remote.clone(),
             peer_id: None,
             responder: None,
             state: fidl_state,
+            direction,
             reported_state: None,
             dtmf_codes: vec![],
         };
@@ -413,7 +423,14 @@ impl TestCallManager {
                 .call_responder
                 .take()
                 .ok_or_else(|| format_err!("No peer call responder for {:?}", peer_id))?;
-            if let Ok(()) = responder.send(client_end, remote, fidl_state) {
+            let next_call = NextCall {
+                call: Some(client_end),
+                remote: Some(remote),
+                state: Some(fidl_state),
+                direction: Some(direction),
+                ..NextCall::EMPTY
+            };
+            if let Ok(()) = responder.send(next_call) {
                 let task = fasync::Task::local(self.clone().manage_call(peer_id, call_id, stream));
                 peer.call_tasks.insert(call_id, task);
                 state.peer_id = Some(peer_id);
@@ -433,7 +450,7 @@ impl TestCallManager {
     ///     `remote`: The number associated with the remote party. This can be any string formatted
     ///     number (e.g. +1-555-555-5555).
     pub async fn incoming_call(&self, remote: &str) -> Result<CallId, Error> {
-        self.new_call(remote, FidlCallState::IncomingRinging).await
+        self.new_call(remote, FidlCallState::IncomingRinging, CallDirection::MobileTerminated).await
     }
 
     /// Notify HFP of an outgoing call. Simulates a new call to the network in the
@@ -443,7 +460,7 @@ impl TestCallManager {
     ///     `remote`: The number associated with the remote party. This can be any string formatted
     ///     number (e.g. +1-555-555-5555).
     pub async fn outgoing_call(&self, remote: &str) -> Result<CallId, Error> {
-        self.new_call(remote, FidlCallState::OutgoingDialing).await
+        self.new_call(remote, FidlCallState::OutgoingDialing, CallDirection::MobileOriginated).await
     }
 
     /// Notify HFP of an update to the state of an ongoing call.
@@ -546,16 +563,20 @@ impl TestCallManager {
             if let Some(call) = inner.calls.get(&cid) {
                 let remote = call.remote.clone();
                 let state = call.state;
+                let direction = call.direction;
                 drop(call);
                 let (client_end, stream) =
                     fidl::endpoints::create_request_stream::<CallMarker>()
                         .map_err(|e| format_err!("Error creating fidl endpoints: {}", e))?;
                 let peer = inner.peers.get_mut(&id).expect("peer just added");
-                let res = peer
-                    .call_responder
-                    .take()
-                    .expect("just put here")
-                    .send(client_end, &remote, state);
+                let next_call = NextCall {
+                    call: Some(client_end),
+                    remote: Some(remote),
+                    state: Some(state),
+                    direction: Some(direction),
+                    ..NextCall::EMPTY
+                };
+                let res = peer.call_responder.take().expect("just put here").send(next_call);
                 if let Ok(()) = res {
                     let task = fasync::Task::local(self.manage_call(id, cid, stream));
                     peer.call_tasks.insert(cid, task);

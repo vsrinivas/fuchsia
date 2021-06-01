@@ -5,25 +5,25 @@
 use {
     super::calls::{
         call_list::CallList,
-        types::{CallIndicators, CallIndicatorsUpdates, FidlNumber},
+        types::{CallIndicators, CallIndicatorsUpdates},
     },
     crate::{
-        error::CallError,
+        error::{CallError, Error},
         peer::procedure::{dtmf::DtmfCode, hold::CallHoldAction},
     },
     async_utils::{
         hanging_get::client::HangingGetStream,
         stream::{StreamItem, StreamMap, StreamWithEpitaph, Tagged, WithEpitaph, WithTag},
     },
-    fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth_hfp::{
-        CallAction as FidlCallAction, CallMarker, CallProxy, PeerHandlerProxy, RedialLast,
+        CallAction as FidlCallAction, CallProxy, NextCall, PeerHandlerProxy, RedialLast,
         TransferActive,
     },
     fuchsia_async as fasync,
     futures::stream::{FusedStream, Stream, StreamExt},
     log::{debug, info, warn},
     std::{
+        convert::{TryFrom, TryInto},
         pin::Pin,
         task::{Context, Poll},
     },
@@ -47,8 +47,6 @@ pub type CallIdx = usize;
 /// Internal state and resources associated with a single call.
 struct CallEntry {
     /// Proxy associated with this call.
-    // TODO (fxb/64550): Remove when call requests are initiated
-    #[allow(unused)]
     proxy: CallProxy,
     /// The remote party's number.
     number: Number,
@@ -56,23 +54,34 @@ struct CallEntry {
     state: CallState,
     /// Time of the last update to the call's `state`.
     state_updated_at: fasync::Time,
-    /// Direction of the call. If the Direction cannot be determined from the Call's CallState, it
-    /// is set to `Unknown`.
+    /// Direction of the call.
     direction: Direction,
 }
 
+impl TryFrom<NextCall> for CallEntry {
+    type Error = Error;
+
+    fn try_from(next: NextCall) -> Result<Self, Self::Error> {
+        match next {
+            NextCall {
+                call: Some(c), remote: Some(n), state: Some(s), direction: Some(d), ..
+            } => {
+                let proxy = c.into_proxy()?;
+                Ok(CallEntry::new(proxy, n.into(), s, d.into()))
+            }
+            _ => Err(Error::MissingParameter("Missing fidl in NextCall table".into())),
+        }
+    }
+}
+
 impl CallEntry {
-    pub fn new(proxy: CallProxy, number: Number, state: CallState) -> Self {
+    pub fn new(proxy: CallProxy, number: Number, state: CallState, direction: Direction) -> Self {
         let state_updated_at = fasync::Time::now();
-        Self { proxy, number, state, state_updated_at, direction: state.into() }
+        Self { proxy, number, state, state_updated_at, direction }
     }
 
-    /// Update the state. Also update the direction if it is Unknown.
-    /// `state_updated_at` is changed only if self.state != state.
+    /// Update the state. `state_updated_at` is changed only if self.state != state.
     pub fn set_state(&mut self, state: CallState) {
-        if self.direction == Direction::Unknown {
-            self.direction = state.into();
-        }
         if self.state != state {
             self.state_updated_at = fasync::Time::now();
             self.state = state;
@@ -149,7 +158,7 @@ type CallStateUpdates =
 /// which represents the current state of the calls as reported by the Call Manager.
 pub(crate) struct Calls {
     /// A Stream of new calls.
-    new_calls: Option<HangingGetStream<(ClientEnd<CallMarker>, FidlNumber, CallState)>>,
+    new_calls: Option<HangingGetStream<NextCall>>,
     /// Store the current state and associated resources of every Call.
     current_calls: CallList<CallEntry>,
     /// A Stream of all updates to the state of ongoing calls.
@@ -175,19 +184,14 @@ impl Calls {
 
     /// Insert a new call.
     /// Returns the index of the call inserted.
-    fn handle_new_call(
-        &mut self,
-        call: ClientEnd<CallMarker>,
-        number: Number,
-        state: CallState,
-    ) -> CallIdx {
-        let proxy = call.into_proxy().unwrap();
-        let call = CallEntry::new(proxy.clone(), number.clone(), state);
+    fn handle_new_call(&mut self, call: NextCall) -> Result<CallIdx, Error> {
+        let call: CallEntry = call.try_into()?;
+        let proxy = call.proxy.clone();
         let index = self.current_calls.insert(call);
         let call_state = HangingGetStream::new(Box::new(move || Some(proxy.watch_state())));
         self.call_updates.insert(index, call_state.tagged(index).with_epitaph(index));
         self.terminated = false;
-        index
+        Ok(index)
     }
 
     /// Check and mark this stream "terminated" if the appropriate conditions are met.
@@ -437,8 +441,10 @@ impl Calls {
         // Loop until pending or self.new_calls is set to None.
         while let Some(new_calls) = &mut self.new_calls {
             match new_calls.poll_next_unpin(cx) {
-                Poll::Ready(Some(Ok((call, fidl_number, state)))) => {
-                    self.handle_new_call(call, fidl_number.into(), state);
+                Poll::Ready(Some(Ok(next_call))) => {
+                    if let Err(e) = self.handle_new_call(next_call) {
+                        warn!("Ignoring next call value. Error: {}", e);
+                    }
                 }
                 Poll::Ready(Some(Err(_e))) => self.new_calls = None,
                 Poll::Ready(None) => self.new_calls = None,
@@ -549,9 +555,10 @@ impl From<FidlCallAction> for CallAction {
 mod tests {
     use {
         super::*,
+        fidl::endpoints::ClientEnd,
         fidl_fuchsia_bluetooth_hfp::{
-            CallRequest, CallRequestStream, PeerHandlerMarker, PeerHandlerRequest,
-            PeerHandlerRequestStream,
+            CallDirection, CallMarker, CallRequest, CallRequestStream, PeerHandlerMarker,
+            PeerHandlerRequest, PeerHandlerRequestStream,
         },
         fuchsia_async as fasync,
         matches::assert_matches,
@@ -563,13 +570,33 @@ mod tests {
         let _exec = fasync::TestExecutor::new().unwrap();
         let (proxy, _) = fidl::endpoints::create_proxy::<CallMarker>().unwrap();
 
-        let mut call = CallEntry::new(proxy, "1".into(), CallState::IncomingRinging);
+        let mut call = CallEntry::new(
+            proxy,
+            "1".into(),
+            CallState::IncomingRinging,
+            Direction::MobileTerminated,
+        );
 
         assert!(!call.is_active());
         call.set_state(CallState::OngoingActive);
         assert!(call.is_active());
         call.set_state(CallState::Terminated);
         assert!(!call.is_active());
+    }
+
+    /// Create a new NextCall fidl response object from an optional `client_end` and a remote party
+    /// `number`. Uses the most common test values for `state` and `direction`.
+    fn new_next_call_fidl(
+        client_end: impl Into<Option<ClientEnd<CallMarker>>>,
+        number: impl Into<String>,
+    ) -> NextCall {
+        NextCall {
+            call: client_end.into(),
+            remote: Some(number.into()),
+            state: Some(CallState::OngoingActive),
+            direction: Some(CallDirection::MobileTerminated),
+            ..NextCall::EMPTY
+        }
     }
 
     /// The most common test setup includes an initialized Calls instance and an ongoing call.
@@ -582,7 +609,9 @@ mod tests {
         let mut calls = Calls::new(Some(proxy));
         let (client_end, call_stream) = fidl::endpoints::create_request_stream().unwrap();
         let num = Number::from("1");
-        calls.handle_new_call(client_end, num.clone(), CallState::IncomingRinging);
+        let mut next_call = new_next_call_fidl(client_end, num.clone());
+        next_call.state = Some(CallState::IncomingRinging);
+        calls.handle_new_call(next_call).expect("success handling new call");
         let expected = CallIndicators {
             call: types::Call::None,
             callsetup: types::CallSetup::Incoming,
@@ -618,8 +647,8 @@ mod tests {
 
         // Make a second call that is active
         let (client_end, mut call_stream_2) = fidl::endpoints::create_request_stream().unwrap();
-        let num = "2".into();
-        let _ = calls.handle_new_call(client_end, num, CallState::OngoingActive);
+        let next_call = new_next_call_fidl(client_end, "2");
+        let _ = calls.handle_new_call(next_call).expect("success handling new call");
 
         // Sending a RequestActive for the first call will send a RequestTerminate for the second
         // call when `true` is passed to request_active.
@@ -633,8 +662,8 @@ mod tests {
 
         // Make a third call that is active
         let (client_end, mut call_stream_3) = fidl::endpoints::create_request_stream().unwrap();
-        let num = "3".into();
-        let _ = calls.handle_new_call(client_end, num, CallState::OngoingActive);
+        let next_call = new_next_call_fidl(client_end, "3");
+        let _ = calls.handle_new_call(next_call).expect("success handling new call");
 
         // Sending a RequestActive for the first call will send a RequestHold for the third
         // call when `false` is passed to request_active.
@@ -688,6 +717,18 @@ mod tests {
         assert!(call.is_none(), "Call must not exist in list of calls");
     }
 
+    fn direction_from_state(state: CallState) -> CallDirection {
+        match state {
+            CallState::IncomingRinging | CallState::IncomingWaiting => {
+                CallDirection::MobileTerminated
+            }
+            CallState::OutgoingDialing | CallState::OutgoingAlerting => {
+                CallDirection::MobileOriginated
+            }
+            _ => panic!("Cannot derive a CallDirection from {:?}", state),
+        }
+    }
+
     /// Make a new call, manually driving async execution.
     #[track_caller]
     fn new_call(
@@ -703,7 +744,14 @@ mod tests {
         };
         // Respond with a call.
         let (client, call) = fidl::endpoints::create_request_stream::<CallMarker>().unwrap();
-        responder.send(client, num, state).expect("response to succeed");
+        let next_call = NextCall {
+            call: Some(client),
+            remote: Some(num.to_string()),
+            state: Some(state),
+            direction: Some(direction_from_state(state)),
+            ..NextCall::EMPTY
+        };
+        responder.send(next_call).expect("response to succeed");
         call
     }
 
@@ -874,5 +922,18 @@ mod tests {
         let result = exec.run_until_stalled(&mut calls.next());
         assert_matches!(result, Poll::Ready(None));
         assert!(calls.is_terminated());
+    }
+
+    #[test]
+    fn bad_watch_next_call_data_returns_error() {
+        // `setup_ongoing_call` requires that an executor exists.
+        let mut _exec = fasync::TestExecutor::new();
+
+        let (mut calls, ..) = setup_ongoing_call();
+
+        // Make an call that is missing some required field.
+        let next_call = new_next_call_fidl(None, "2");
+        let result = calls.handle_new_call(next_call);
+        assert_matches!(result, Err(Error::MissingParameter(_)));
     }
 }

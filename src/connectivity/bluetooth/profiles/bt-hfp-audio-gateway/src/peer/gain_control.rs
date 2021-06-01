@@ -164,15 +164,11 @@ impl GainControl {
                 Some(GainRequest::Microphone(requested.try_into()?))
             }
             HeadsetGainRequest::WatchSpeakerGain { responder, .. } => {
-                self.speaker_gain_hanging_get_subscriber
-                    .register(responder)
-                    .map_err(|e| Error::ClientProtocol(Box::new(e)))?;
+                self.speaker_gain_hanging_get_subscriber.register(responder)?;
                 None
             }
             HeadsetGainRequest::WatchMicrophoneGain { responder, .. } => {
-                self.microphone_gain_hanging_get_subscriber
-                    .register(responder)
-                    .map_err(|e| Error::ClientProtocol(Box::new(e)))?;
+                self.microphone_gain_hanging_get_subscriber.register(responder)?;
                 None
             }
         };

@@ -114,10 +114,7 @@ protocol PeerHandler {
     /// Hanging get which returns when a new call Client is initiated by the
     /// call manager or an ongoing call is transferred to the headset.
     /// `RequestOutgoingCall` can be called before or after `WatchNextCall`.
-    /// `remote` is returned to identify the remote party by Number.
-    /// `state` is returned so that the Hands Free device can be notified
-    /// immediately without waiting for another FIDL response.
-    WatchNextCall() -> (Call call, Number remote, CallState state);
+    WatchNextCall() -> (NextCall call);
 
     /// Used to request an outgoing call be initiated by the call manager.
     /// `RequestOutgoingCall` shall complete after the outgoing call has been
@@ -235,6 +232,31 @@ enum CallState {
     /// The call has been transferred to the AG, after which the HF is no longer
     /// tracking its state.
     TRANSFERRED_TO_AG = 8;
+};
+
+/// The direction of call initiation.
+enum CallDirection {
+    /// Call originated on this device. This is also known as an Outgoing call.
+    MOBILE_ORIGINATED = 1;
+    /// Call is terminated on this device. This is also known as an Incoming call.
+    MOBILE_TERMINATED = 2;
+};
+
+/// Information for the next call reported by a Peer Handler.
+resource table NextCall {
+    /// Channel for this call.
+    /// This field is required.
+    1: Call call;
+    /// The Number of the remote party on the call.
+    /// This field is required.
+    2: Number remote;
+    /// State of the call when it is reported by the Peer Handler.
+    /// This field is required.
+    3: CallState state;
+    /// Direction of the call's initiation. See `CallDirection` documentation
+    /// for more information.
+    /// This field is required.
+    4: CallDirection direction;
 };
 
 /// Dual-tone multi-frequency signaling codes.
