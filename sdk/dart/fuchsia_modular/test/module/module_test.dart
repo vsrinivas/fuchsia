@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
-
 import 'package:fuchsia_modular/lifecycle.dart';
 import 'package:fuchsia_modular/module.dart';
 import 'package:fuchsia_services/services.dart';
+import 'package:test/test.dart';
 
 void main() {
   setUpAll(() {

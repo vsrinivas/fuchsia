@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'package:pedantic/pedantic.dart' show unawaited;
+
 import 'package:fidl_fuchsia_examples/fidl_async.dart' as fidl_echo;
-import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia/fuchsia.dart' show exit;
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart';
+import 'package:pedantic/pedantic.dart' show unawaited;
 
 // [START main]
 Future<void> main(List<String> args) async {

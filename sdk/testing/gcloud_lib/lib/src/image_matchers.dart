@@ -6,9 +6,9 @@ import 'dart:convert';
 
 import 'package:googleapis/vision/v1.dart' as gcloud;
 import 'package:image/image.dart';
+import 'package:logging/logging.dart';
 import 'package:matcher/matcher.dart';
 import 'package:meta/meta.dart';
-import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 
 import 'gcloud_exceptions.dart';

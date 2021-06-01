@@ -6,14 +6,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:path/path.dart' as path;
-
 import 'package:doc_checker/errors.dart';
 import 'package:doc_checker/graph.dart';
+import 'package:doc_checker/image_scraper.dart';
 import 'package:doc_checker/link_checker.dart';
 import 'package:doc_checker/link_scraper.dart';
-import 'package:doc_checker/image_scraper.dart';
 import 'package:doc_checker/yaml_checker.dart';
+import 'package:path/path.dart' as path;
 
 const String _optionHelp = 'help';
 const String _optionRootDir = 'root';

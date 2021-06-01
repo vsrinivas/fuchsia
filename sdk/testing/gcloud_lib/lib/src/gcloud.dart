@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
-import 'package:logging/logging.dart';
 import 'package:gcloud/storage.dart';
-import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:googleapis/speech/v1.dart' as gcloud;
 import 'package:googleapis/vision/v1.dart' as gcloud;
+import 'package:googleapis_auth/auth_io.dart' as auth;
+import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
 
 /// GCloud specific operations used in tests.
 class GCloud {

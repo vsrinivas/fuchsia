@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
+
 import 'package:fidl_fuchsia_test_ui/fidl_async.dart' as fidl_test_ui;
+import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 

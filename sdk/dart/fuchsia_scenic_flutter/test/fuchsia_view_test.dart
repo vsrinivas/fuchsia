@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
+import 'package:mockito/mockito.dart';
 
 void main() {
   testWidgets('FuchsiaView', (tester) async {

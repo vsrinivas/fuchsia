@@ -9,10 +9,10 @@ import 'dart:convert' show utf8;
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart' as fidl;
-import 'package:fidl_fuchsia_web/fidl_async.dart' as fidl_web;
 import 'package:fidl_fuchsia_net_http/fidl_async.dart' as fidl_net;
-import 'package:webview_flutter/platform_interface.dart';
+import 'package:fidl_fuchsia_web/fidl_async.dart' as fidl_web;
 import 'package:fuchsia_logger/logger.dart';
+import 'package:webview_flutter/platform_interface.dart';
 
 import 'fuchsia_web_services.dart';
 import 'utils.dart' as utils;

@@ -7,10 +7,9 @@ import 'dart:io' show File, Directory;
 
 import 'package:mockito/mockito.dart';
 import 'package:path/path.dart' as path;
+import 'package:sl4f/sl4f.dart';
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
-
-import 'package:sl4f/sl4f.dart';
 
 class MockSl4f extends Mock implements Sl4f {}
 

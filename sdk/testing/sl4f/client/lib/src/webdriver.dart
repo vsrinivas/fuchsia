@@ -6,8 +6,8 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:logging/logging.dart';
-import 'package:sl4f/sl4f.dart';
 import 'package:retry/retry.dart';
+import 'package:sl4f/sl4f.dart';
 import 'package:webdriver/sync_core.dart' show WebDriver, NoSuchWindowException;
 import 'package:webdriver/sync_io.dart' as sync_io;
 

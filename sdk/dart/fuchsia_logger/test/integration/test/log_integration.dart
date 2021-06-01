@@ -4,10 +4,10 @@
 
 import 'dart:async';
 
-import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_logger/fidl_async.dart' as fidl_log;
+import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:test/test.dart';
 
 const String testTag = 'log_integ';

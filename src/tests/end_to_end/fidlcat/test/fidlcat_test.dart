@@ -5,8 +5,8 @@
 import 'dart:io' show Directory, File, Platform, Process, ProcessResult, stderr;
 
 import 'package:logging/logging.dart';
-import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 const _timeout = Timeout(Duration(minutes: 5));
 

@@ -4,8 +4,8 @@
 
 import 'dart:io';
 
-import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:http/http.dart' as http;
+import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
 void main() {

@@ -5,8 +5,8 @@
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart';
-import 'package:test/test.dart';
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('unions', () {

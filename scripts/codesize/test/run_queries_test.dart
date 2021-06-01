@@ -4,12 +4,12 @@
 
 import 'dart:io';
 
-import 'package:test/test.dart';
 import 'package:codesize/queries/index.dart';
 import 'package:codesize/queries/mock_query.dart';
 import 'package:codesize/render/ast.dart';
 import 'package:codesize/run_queries.dart';
 import 'package:codesize/types.dart';
+import 'package:test/test.dart';
 
 import 'testing_util.dart';
 

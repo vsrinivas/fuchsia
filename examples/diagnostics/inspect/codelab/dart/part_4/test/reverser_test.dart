@@ -5,8 +5,8 @@
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_inspect/testing.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:test/test.dart';
 import 'package:inspect_dart_codelab_part_4_lib/reverser.dart';
+import 'package:test/test.dart';
 
 void main() {
   FakeVmoHolder vmo;

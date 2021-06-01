@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
-
 import 'package:codesize/queries/index.dart';
 import 'package:codesize/queries/mock_query.dart';
 import 'package:codesize/render/ast.dart';
 import 'package:codesize/render/terminal.dart';
+import 'package:test/test.dart';
 
 void main() {
   final renderer = TerminalRenderer(supportsControlCharacters: false);

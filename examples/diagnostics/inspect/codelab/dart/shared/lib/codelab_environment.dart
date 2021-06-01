@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+
+import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
-import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
 

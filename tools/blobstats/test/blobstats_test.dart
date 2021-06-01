@@ -4,10 +4,10 @@
 
 import 'dart:io';
 
-import 'package:test/test.dart';
 import 'package:blobstats/blob.dart';
 import 'package:blobstats/blobstats.dart';
 import 'package:blobstats/package.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('blobstats tests', () {

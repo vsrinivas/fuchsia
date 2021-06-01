@@ -4,10 +4,11 @@
 
 import 'package:args/args.dart';
 import 'package:async/async.dart';
-import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
 import 'package:mockito/mockito.dart';
+import 'package:test/test.dart';
+
 import 'fake_fx_env.dart';
 import 'helpers.dart';
 

@@ -4,10 +4,10 @@
 
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-import 'package:test/test.dart';
 import 'package:logging/logging.dart';
+import 'package:path/path.dart' as p;
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 const _timeout = Timeout(Duration(minutes: 1));
 

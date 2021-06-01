@@ -7,12 +7,11 @@
 import 'dart:convert' show Utf8Decoder;
 import 'dart:typed_data';
 
-import 'package:fidl_fuchsia_diagnostics_stream/fidl_async.dart';
 import 'package:fidl_fuchsia_diagnostics/fidl_async.dart';
-import 'package:test/test.dart';
-
+import 'package:fidl_fuchsia_diagnostics_stream/fidl_async.dart';
 import 'package:fuchsia_diagnostic_streams/src/internal/header.dart';
 import 'package:fuchsia_diagnostic_streams/src/write.dart';
+import 'package:test/test.dart';
 
 /// assert that buffer contains the serialized record.
 void assertRecord(Record record, ByteData buffer) {

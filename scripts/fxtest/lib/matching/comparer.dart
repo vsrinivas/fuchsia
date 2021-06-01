@@ -4,9 +4,10 @@
 
 import 'dart:math';
 
+import 'package:edit_distance/edit_distance.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
-import 'package:edit_distance/edit_distance.dart';
+
 import './comparison_result.dart';
 
 /// Comparison helper which allows other tools to easily assess whether items

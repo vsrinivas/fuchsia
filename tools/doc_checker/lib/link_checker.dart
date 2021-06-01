@@ -4,12 +4,12 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'package:doc_checker/graph.dart';
-import 'package:path/path.dart' as path;
 
 import 'package:doc_checker/errors.dart';
-import 'package:doc_checker/projects.dart';
+import 'package:doc_checker/graph.dart';
 import 'package:doc_checker/link_verifier.dart';
+import 'package:doc_checker/projects.dart';
+import 'package:path/path.dart' as path;
 
 /// Information about the document containing the link to check.
 class DocContext {

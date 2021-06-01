@@ -4,9 +4,9 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'package:io/ansi.dart';
 
 import 'package:fxtest/fxtest.dart';
+import 'package:io/ansi.dart';
 
 Future<Process> fxCommandRun(String fx, String cmd, [List<String> args]) {
   return Process.start(fx, [cmd, ...?args], mode: ProcessStartMode.inheritStdio)

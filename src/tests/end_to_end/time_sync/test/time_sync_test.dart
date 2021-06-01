@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 import 'dart:core';
-import 'package:test/test.dart';
+
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 const Duration pollPeriod = Duration(seconds: 1);
 const Duration maxHostDiff = Duration(minutes: 1);

@@ -5,15 +5,15 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'package:dart_strict_deps_lib/file_processor.dart' as file_processor;
-import 'package:meta/meta.dart';
-import 'package:dart_strict_deps_lib/dependency_check.dart' as dependency_check;
+
 import 'package:args/args.dart';
 import 'package:collection/collection.dart';
+import 'package:dart_strict_deps_lib/dependency_check.dart' as dependency_check;
+import 'package:dart_strict_deps_lib/file_processor.dart' as file_processor;
+import 'package:meta/meta.dart';
+import 'package:package_config/package_config.dart';
 import 'package:path/path.dart' as p;
 import 'package:tools.dart-strict-deps.dart_strict_deps_proto/protos/models.pb.dart';
-
-import 'package:package_config/package_config.dart';
 
 p.Context context = p.Context(style: p.Style.posix);
 

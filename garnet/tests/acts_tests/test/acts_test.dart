@@ -6,10 +6,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:args/args.dart';
 import 'package:test/test.dart';
-import 'package:archive/archive.dart';
-
 
 const String ipv4Env = 'FUCHSIA_IPV4_ADDR';
 const String outputEnv = 'FUCHSIA_TEST_OUTDIR';
@@ -18,7 +17,8 @@ const int deviceReadyTimeoutSec = 30;
 
 const String defaultActsZipAbsPath = '/etc/connectivity/acts.zip';
 const String actsConfigAbsPath = '/etc/connectivity/acts_config.json';
-const String actsBinRelPath = 'tools/test/connectivity/acts/framework/acts/bin/act.py';
+const String actsBinRelPath =
+    'tools/test/connectivity/acts/framework/acts/bin/act.py';
 const String actsFrameworkRelPath = 'tools/test/connectivity/acts/framework';
 const String actsOutputPath = '/tmp/logs/tb/latest';
 const String actsSummaryFileName = 'test_run_summary.json';
@@ -38,7 +38,7 @@ Future<void> waitDeviceReady(final String ip) async {
 String resolveActsPath() {
   final List entities = Directory.current.listSync(recursive: true);
   for (var entity in entities) {
-    if(entity.path.endsWith('acts.zip')) {
+    if (entity.path.endsWith('acts.zip')) {
       return entity.path;
     }
   }
@@ -71,8 +71,7 @@ void extractActsZip(final String tmpDirPath) {
 Future<Process> runActs(final String tmpDirPath, final String tests) {
   final actsBinAbsPath = '$tmpDirPath/$actsBinRelPath';
 
-  final actsArgs = ['-c', actsConfigAbsPath, '-tc']
-    ..addAll(tests.split(' '));
+  final actsArgs = ['-c', actsConfigAbsPath, '-tc']..addAll(tests.split(' '));
 
   // Set ACTS binary as executable
   Process.runSync('chmod', ['+x', actsBinAbsPath]);
@@ -109,17 +108,19 @@ void main(final List<String> args) {
     extractActsZip(tmpDir.path);
 
     // Wait for device to be online before running tests
-    for(var ip in ipStr.split(',')) {
+    for (var ip in ipStr.split(',')) {
       await waitDeviceReady(ip);
     }
 
     // Run ACTS tests
     final proc = await runActs(tmpDir.path, argResults['tests']);
-    await Future.wait([stdout.addStream(proc.stdout), stderr.addStream(proc.stderr)]);
+    await Future.wait(
+        [stdout.addStream(proc.stdout), stderr.addStream(proc.stderr)]);
     expect(await proc.exitCode, equals(0));
 
     // Assert that ACTS actually ran tests
-    final json = File('$actsOutputPath/$actsSummaryFileName').readAsStringSync();
+    final json =
+        File('$actsOutputPath/$actsSummaryFileName').readAsStringSync();
     final data = jsonDecode(json);
     expect(data, contains('Results'));
     expect(data['Summary']['Executed'], isNonZero);

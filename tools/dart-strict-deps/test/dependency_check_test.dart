@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
-import 'package:tools.dart-strict-deps.dart_strict_deps_proto/protos/models.pb.dart';
-import 'package:dart_strict_deps_lib/dependency_check.dart';
-import 'package:dart_strict_deps_lib/exceptions.dart';
-import 'package:mockito/mockito.dart';
 import 'package:analyzer/dart/analysis/utilities.dart' as analyzer;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/source/line_info.dart';
-import 'package:quiver/core.dart';
-
+import 'package:dart_strict_deps_lib/dependency_check.dart';
+import 'package:dart_strict_deps_lib/exceptions.dart';
+import 'package:mockito/mockito.dart';
 import 'package:package_config/package_config.dart';
+import 'package:quiver/core.dart';
+import 'package:test/test.dart';
+import 'package:tools.dart-strict-deps.dart_strict_deps_proto/protos/models.pb.dart';
 
 class MockResolver extends Mock implements PackageConfig {}
 

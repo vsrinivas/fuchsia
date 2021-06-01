@@ -3,15 +3,14 @@
 /// found in the LICENSE file.
 
 // ignore_for_file: implementation_imports
-
-import 'package:test/test.dart';
-import 'package:fuchsia_inspect_flutter/src/inspect_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fuchsia_inspect/inspect.dart';
-import 'package:fuchsia_inspect/testing.dart';
-import 'package:fuchsia_inspect/src/vmo/vmo_holder.dart';
 import 'package:fuchsia_inspect/src/inspect/internal/_inspect_impl.dart';
+import 'package:fuchsia_inspect/src/vmo/vmo_holder.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_writer.dart';
+import 'package:fuchsia_inspect/testing.dart';
+import 'package:fuchsia_inspect_flutter/src/inspect_flutter.dart';
+import 'package:test/test.dart';
 
 // This class was made to test the InspectFlutter class
 // The FakeDiagnosticsNode allows properties and children

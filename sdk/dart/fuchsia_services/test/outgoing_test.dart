@@ -5,10 +5,11 @@
 // ignore_for_file: implementation_imports
 import 'dart:async';
 import 'dart:convert' show utf8;
+
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
-import 'package:fuchsia_services/src/outgoing.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart' as io;
+import 'package:fuchsia_services/src/outgoing.dart';
 import 'package:fuchsia_vfs/vfs.dart';
 import 'package:test/test.dart';
 

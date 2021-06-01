@@ -4,11 +4,11 @@
 
 import 'dart:async';
 
-import 'package:fuchsia_modular/agent.dart';
-import 'package:fuchsia_logger/logger.dart';
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
+import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_modular/agent.dart';
 import 'package:fuchsia_modular/src/agent/internal/_agent_impl.dart'; // ignore: implementation_imports
 import 'package:fuchsia_modular/src/lifecycle/internal/_lifecycle_impl.dart'; // ignore: implementation_imports
 

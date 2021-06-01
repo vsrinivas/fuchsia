@@ -13,8 +13,8 @@ import 'package:net/curl.dart';
 import 'package:net/ports.dart';
 import 'package:path/path.dart' as path;
 import 'package:quiver/core.dart' show Optional;
-import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:retry/retry.dart';
+import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
 class PackageManagerRepo {

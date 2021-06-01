@@ -6,9 +6,9 @@ import 'dart:async';
 
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_examples/fidl_async.dart' as fidl_echo;
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:meta/meta.dart';
-import 'package:fuchsia_logger/logger.dart';
 
 // [START echo-impl]
 // Implementation of Echo that responds with a prefix prepended to each response

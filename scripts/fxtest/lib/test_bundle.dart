@@ -7,8 +7,8 @@ import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart' as fxutils;
-import 'package:path/path.dart' as p;
 import 'package:meta/meta.dart';
+import 'package:path/path.dart' as p;
 
 /// Container that holds enough information about a test to execute it and
 /// report back on output / events.

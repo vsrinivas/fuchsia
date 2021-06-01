@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
-import 'package:sl4f/trace_processing.dart';
 import 'helpers.dart';
 
 const _appName = 'flutter-test-app';

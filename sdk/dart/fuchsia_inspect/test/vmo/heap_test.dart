@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 // ignore_for_file: implementation_imports
-
-import 'package:fuchsia_inspect/testing.dart';
-import 'package:fuchsia_inspect/src/vmo/heap.dart';
 import 'package:fuchsia_inspect/src/vmo/block.dart';
+import 'package:fuchsia_inspect/src/vmo/heap.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_fields.dart';
+import 'package:fuchsia_inspect/testing.dart';
 import 'package:test/test.dart';
 
 import '../util.dart';

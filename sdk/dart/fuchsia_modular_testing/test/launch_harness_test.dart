@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: implementation_imports
-import 'package:test/test.dart';
-import 'package:fidl_fuchsia_modular_testing/fidl_async.dart' as fidl_testing;
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as fidl_modular;
+import 'package:fidl_fuchsia_modular_testing/fidl_async.dart' as fidl_testing;
 import 'package:fuchsia_logger/logger.dart';
+// ignore_for_file: implementation_imports
 import 'package:fuchsia_modular_testing/src/test_harness_fixtures.dart';
+import 'package:test/test.dart';
 
 void main() {
   setupLogger();

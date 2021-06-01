@@ -6,8 +6,8 @@ import 'dart:async';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
-import 'package:test/test.dart';
 import 'package:pedantic/pedantic.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('waits for test process to terminate before closing StreamController',

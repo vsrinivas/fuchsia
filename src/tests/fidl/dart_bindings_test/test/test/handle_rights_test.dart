@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl/fidl.dart';
 import 'package:server_test/server.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
-import 'package:fidl/fidl.dart';
 
 void main() async {
   TestServerInstance server;

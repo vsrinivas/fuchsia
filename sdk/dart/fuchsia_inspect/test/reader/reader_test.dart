@@ -4,10 +4,10 @@
 
 // @dart = 2.9
 
-import 'package:fuchsia_inspect/reader.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:fidl_fuchsia_diagnostics/fidl_async.dart' as diagnostics;
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
+import 'package:fuchsia_inspect/reader.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:pedantic/pedantic.dart';
 import 'package:test/test.dart';
 

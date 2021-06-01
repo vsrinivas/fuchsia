@@ -5,8 +5,8 @@
 import 'dart:io';
 
 import 'package:mockito/mockito.dart';
-import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart';
+import 'package:test/test.dart';
 
 class MockSl4f extends Mock implements Sl4f {}
 

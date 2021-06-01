@@ -4,18 +4,18 @@
 
 import 'dart:async';
 
-// ignore_for_file: implementation_imports
-import 'package:fuchsia_modular_testing/src/test_harness_spec_builder.dart';
-import 'package:fuchsia_modular_testing/test.dart';
-import 'package:test/test.dart';
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_modular_session/fidl_async.dart';
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart';
+import 'package:fidl_test_modular_dart/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_modular/service_connection.dart';
+// ignore_for_file: implementation_imports
 import 'package:fuchsia_modular_testing/src/agent_interceptor.dart';
 import 'package:fuchsia_modular_testing/src/test_harness_fixtures.dart';
-import 'package:fuchsia_modular/service_connection.dart';
-import 'package:fidl_test_modular_dart/fidl_async.dart';
+import 'package:fuchsia_modular_testing/src/test_harness_spec_builder.dart';
+import 'package:fuchsia_modular_testing/test.dart';
+import 'package:test/test.dart';
 
 void main() {
   setupLogger();

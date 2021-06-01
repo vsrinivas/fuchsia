@@ -4,9 +4,9 @@
 
 import 'dart:io';
 
-import 'package:test/test.dart';
-import 'package:doc_checker/yaml_checker.dart';
 import 'package:doc_checker/errors.dart';
+import 'package:doc_checker/yaml_checker.dart';
+import 'package:test/test.dart';
 
 void main() {
   // Clean up the yaml files after every test

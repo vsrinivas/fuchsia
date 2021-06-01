@@ -5,12 +5,12 @@
 import 'dart:convert' show utf8;
 import 'dart:math' show min;
 import 'dart:typed_data';
-import 'package:collection/collection.dart';
-import 'package:matcher/matcher.dart';
 
+import 'package:collection/collection.dart';
 import 'package:fuchsia_inspect/src/vmo/block.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_fields.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_holder.dart';
+import 'package:matcher/matcher.dart';
 
 abstract class _HasErrors {
   List<String> get errors;

@@ -4,8 +4,8 @@
 
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:test/test.dart';
 
 void main() {
   print('clone-test');

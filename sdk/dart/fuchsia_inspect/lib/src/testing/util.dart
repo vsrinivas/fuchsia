@@ -6,8 +6,8 @@
 
 import 'dart:typed_data';
 
-import 'package:zircon/zircon.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_holder.dart';
+import 'package:zircon/zircon.dart';
 
 /// A VmoHolder that simply wraps some ByteData.
 class FakeVmoHolder implements VmoHolder {

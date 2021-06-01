@@ -7,8 +7,8 @@ import 'dart:io';
 
 import 'package:meta/meta.dart';
 import 'package:sl4f/sl4f.dart';
-import 'package:test/test.dart';
 import 'package:sl4f/trace_processing.dart' as trace;
+import 'package:test/test.dart';
 
 import 'helpers.dart';
 

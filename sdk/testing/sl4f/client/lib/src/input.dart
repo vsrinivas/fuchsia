@@ -4,9 +4,9 @@
 
 import 'dart:math';
 
-import 'package:quiver/iterables.dart' show zip;
 import 'package:fidl_fuchsia_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' as input3;
+import 'package:quiver/iterables.dart' show zip;
 
 import 'sl4f_client.dart';
 

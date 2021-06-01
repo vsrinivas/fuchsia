@@ -14,10 +14,10 @@ import 'dart:async';
 // The fidl package contains general utility code for using FIDL in Dart.
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_examples/fidl_async.dart' as fidl_echo;
+import 'package:fuchsia_logger/logger.dart';
 // The fuchsia_services package interfaces with the Fuchsia system. In particular, it is used
 // to expose a service to other components
 import 'package:fuchsia_services/services.dart' as sys;
-import 'package:fuchsia_logger/logger.dart';
 // [END imports]
 
 // [START impl]

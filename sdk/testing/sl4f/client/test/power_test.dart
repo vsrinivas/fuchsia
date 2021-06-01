@@ -7,9 +7,8 @@ import 'dart:io' show File, Platform;
 
 import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
-import 'package:test/test.dart';
-
 import 'package:sl4f/sl4f.dart';
+import 'package:test/test.dart';
 
 class MockDump extends Mock implements Dump {}
 

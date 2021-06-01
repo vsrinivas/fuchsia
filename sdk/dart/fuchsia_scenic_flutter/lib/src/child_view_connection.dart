@@ -4,9 +4,9 @@
 
 import 'dart:io';
 import 'dart:ui';
-import 'package:flutter/services.dart';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:flutter/services.dart';
 
 // ignore_for_file: public_member_api_docs, unnecessary_null_comparison
 

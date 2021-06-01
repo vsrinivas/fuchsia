@@ -1,5 +1,6 @@
-import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:test/test.dart';
+
 import 'fake_fx_env.dart';
 
 void main() {

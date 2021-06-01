@@ -4,14 +4,13 @@
 
 import 'dart:io';
 
-import 'package:test/test.dart';
-
 import 'package:codesize/common_util.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/queries/unique_symbol.dart';
 import 'package:codesize/render/ast.dart';
 import 'package:codesize/report.pb.dart' as bloaty_report;
 import 'package:codesize/types.dart';
-import 'package:codesize/queries/index.dart';
-import 'package:codesize/queries/unique_symbol.dart';
+import 'package:test/test.dart';
 
 import '../testing_util.dart';
 

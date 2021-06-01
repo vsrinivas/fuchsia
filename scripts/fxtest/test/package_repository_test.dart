@@ -1,5 +1,5 @@
-import 'package:test/test.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('reads package repository information correctly', () {

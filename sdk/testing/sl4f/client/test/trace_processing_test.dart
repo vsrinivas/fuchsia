@@ -4,9 +4,8 @@
 
 import 'dart:io' show Platform;
 
-import 'package:test/test.dart';
-
 import 'package:sl4f/trace_processing.dart';
+import 'package:test/test.dart';
 
 Model _getTestModel() {
   final readEvent = DurationEvent()

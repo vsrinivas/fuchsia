@@ -4,8 +4,8 @@
 
 import 'dart:io';
 
-import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 const _timeout = Duration(seconds: 60);
 

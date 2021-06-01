@@ -6,9 +6,9 @@ import 'dart:io';
 
 import 'package:glob/glob.dart';
 import 'package:glob/list_local_fs.dart';
-import 'package:test/test.dart';
 // ignore: avoid_as
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 void main() {
   sl4f.Dump dump;

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/material.dart';
-
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:intl/intl.dart';
 

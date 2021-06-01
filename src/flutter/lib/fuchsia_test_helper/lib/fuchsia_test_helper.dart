@@ -6,17 +6,18 @@
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:test_api/src/backend/declarer.dart';
 import 'package:test_api/src/backend/group.dart';
-import 'package:test_api/src/backend/suite_platform.dart';
 import 'package:test_api/src/backend/operating_system.dart';
 import 'package:test_api/src/backend/runtime.dart';
+import 'package:test_api/src/backend/suite_platform.dart';
 import 'package:test_core/src/runner/configuration.dart';
-import 'package:test_core/src/runner/runner_suite.dart';
 import 'package:test_core/src/runner/engine.dart';
 import 'package:test_core/src/runner/plugin/environment.dart';
 import 'package:test_core/src/runner/reporter/expanded.dart';
+import 'package:test_core/src/runner/runner_suite.dart';
 import 'package:test_core/src/util/exit_codes.dart' as exit_codes;
 import 'package:test_core/src/util/io.dart';
 import 'package:test_core/src/util/print_sink.dart';

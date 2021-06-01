@@ -6,10 +6,10 @@
 
 import 'dart:typed_data';
 
-import 'package:fuchsia_inspect/testing.dart';
 import 'package:fuchsia_inspect/src/vmo/block.dart';
 import 'package:fuchsia_inspect/src/vmo/util.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_fields.dart';
+import 'package:fuchsia_inspect/testing.dart';
 import 'package:test/test.dart';
 
 import '../util.dart';

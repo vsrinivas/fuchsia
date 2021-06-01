@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:detect_api_changes/analyze.dart';
 import 'package:detect_api_changes/diff.dart';

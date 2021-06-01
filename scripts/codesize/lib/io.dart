@@ -9,9 +9,9 @@ import 'dart:async';
 import 'dart:io' as dart_io;
 import 'dart:mirrors';
 
-import 'package:fxutils/fxutils.dart' as fxutils;
 import 'package:file/file.dart';
 import 'package:file/local.dart';
+import 'package:fxutils/fxutils.dart' as fxutils;
 import 'package:process/process.dart';
 
 /// Abstract interface for doing I/O (console output, process creation, etc.).

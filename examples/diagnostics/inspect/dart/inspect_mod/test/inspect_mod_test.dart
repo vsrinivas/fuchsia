@@ -6,16 +6,17 @@
 
 import 'dart:io' as dartio;
 import 'dart:typed_data';
+
 import 'package:fidl_fuchsia_modular/fidl_async.dart';
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:fuchsia_inspect/testing.dart';
 import 'package:fuchsia_remote_debug_protocol/logging.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:glob/glob.dart';
 import 'package:glob/list_local_fs.dart';
 import 'package:test/test.dart';
-import 'package:fuchsia_inspect/testing.dart';
 
 const Pattern _testAppName = 'inspect_mod.cmx';
 const _testAppUrl = 'fuchsia-pkg://fuchsia.com/inspect_mod#meta/$_testAppName';

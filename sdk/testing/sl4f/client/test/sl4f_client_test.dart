@@ -6,11 +6,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:quiver/testing/async.dart';
-import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
-
+import 'package:quiver/testing/async.dart';
 import 'package:sl4f/sl4f.dart';
+import 'package:test/test.dart';
 
 class MockDump extends Mock implements Dump {}
 

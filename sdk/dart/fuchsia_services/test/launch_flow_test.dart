@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_test_fuchsia_service_foo/fidl_async.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:test/test.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
 
 const String server =
     'fuchsia-pkg://fuchsia.com/fuchsia-services-foo-test-server#meta/fuchsia-services-foo-test-server.cmx';

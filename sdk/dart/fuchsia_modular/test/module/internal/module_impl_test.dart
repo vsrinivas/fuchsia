@@ -6,11 +6,10 @@
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as fidl;
 import 'package:fuchsia_modular/lifecycle.dart';
+import 'package:fuchsia_modular/src/module/internal/_module_impl.dart'; // ignore: implementation_imports
 import 'package:fuchsia_services/services.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
-
-import 'package:fuchsia_modular/src/module/internal/_module_impl.dart'; // ignore: implementation_imports
 
 // Mock classes
 class MockLifecycle extends Mock implements Lifecycle {}

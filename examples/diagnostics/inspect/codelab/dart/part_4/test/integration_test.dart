@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+
 import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
-import 'package:test/test.dart';
 import 'package:inspect_codelab_shared/codelab_environment.dart';
+import 'package:test/test.dart';
 
 void main() {
   CodelabEnvironment env;

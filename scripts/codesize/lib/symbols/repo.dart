@@ -10,9 +10,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:gcloud/storage.dart';
 import 'package:googleapis_auth/auth_io.dart' as auth;
 import 'package:http/http.dart' as http;
-import 'package:gcloud/storage.dart';
 
 import '../build.dart';
 import '../common_util.dart';

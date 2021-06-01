@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// ignore_for_file: implementation_imports
-
-import 'package:fuchsia_inspect/testing.dart';
 import 'package:fuchsia_inspect/src/vmo/block.dart';
 import 'package:fuchsia_inspect/src/vmo/heap.dart';
 import 'package:fuchsia_inspect/src/vmo/little_big_slab.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_fields.dart';
+// ignore_for_file: implementation_imports
+
+import 'package:fuchsia_inspect/testing.dart';
 import 'package:test/test.dart';
 
 import '../util.dart';

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_test_fuchsia_flutter/fidl_async.dart' as fidl_ping;
 import 'package:fidl/fidl.dart';
+import 'package:fidl_test_fuchsia_flutter/fidl_async.dart' as fidl_ping;
 import 'package:flutter/material.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart';
 
 void main() {
   setupLogger(name: 'pingable-flutter-component');

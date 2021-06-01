@@ -8,11 +8,11 @@ import 'dart:convert' show utf8;
 import 'dart:math' show min, max;
 import 'dart:typed_data';
 
+import 'package:fuchsia_inspect/src/inspect/inspect.dart';
 import 'package:fuchsia_inspect/src/vmo/block.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_fields.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_holder.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_writer.dart';
-import 'package:fuchsia_inspect/src/inspect/inspect.dart';
 
 String _utf8ToString(ByteData bytes) {
   return utf8.decode(bytes.buffer

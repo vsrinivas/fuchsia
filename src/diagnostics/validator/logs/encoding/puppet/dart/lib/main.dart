@@ -5,9 +5,9 @@
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_validate_logs/fidl_async.dart' as fidl_validate;
 import 'package:fidl_fuchsia_diagnostics_stream/fidl_async.dart' as fidl_stream;
 import 'package:fidl_fuchsia_mem/fidl_async.dart' as fidl_mem;
+import 'package:fidl_fuchsia_validate_logs/fidl_async.dart' as fidl_validate;
 import 'package:fuchsia_diagnostic_streams/streams.dart' as streams;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';

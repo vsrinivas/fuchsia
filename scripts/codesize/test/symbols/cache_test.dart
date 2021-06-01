@@ -4,8 +4,8 @@
 
 import 'dart:io';
 
-import 'package:test/test.dart';
 import 'package:codesize/symbols/cache.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Cache', () {

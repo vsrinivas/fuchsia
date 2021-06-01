@@ -6,9 +6,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:mockito/mockito.dart';
-import 'package:test/test.dart';
-
 import 'package:sl4f/sl4f.dart';
+import 'package:test/test.dart';
 
 class MockSl4f extends Mock implements Sl4f {}
 
@@ -18,8 +17,8 @@ void main(List<String> args) {
   test('put file base64s and calls sl4f', () async {
     final sl4f = MockSl4f();
     final file = MockFile();
-    when(file.readAsBytes()).thenAnswer((_) => Future.value(
-        Uint8List.fromList(<int>[0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x77, 0x6f, 0x72, 0x6c, 0x64])));
+    when(file.readAsBytes()).thenAnswer((_) => Future.value(Uint8List.fromList(
+        <int>[0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x77, 0x6f, 0x72, 0x6c, 0x64])));
     when(sl4f.request('file_facade.WriteFile'))
         .thenAnswer((_) => Future.value('Success'));
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:dart_strict_deps_lib/file_processor.dart';
 import 'package:test/test.dart';
 import 'package:tools.dart-strict-deps.dart_strict_deps_proto/protos/models.pb.dart';
-import 'package:dart_strict_deps_lib/file_processor.dart';
 
 void main() {
   test('Read empty json to BuildInfo succeeds', () {

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl_fuchsia_fibonacci/fidl_async.dart' as fidl_fib;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_modular/service_connection.dart';
-import 'package:fidl_fuchsia_fibonacci/fidl_async.dart' as fidl_fib;
 
 import '../blocs/bloc_provider.dart';
 import '../blocs/fibonacci_bloc.dart';

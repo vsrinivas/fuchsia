@@ -4,8 +4,8 @@
 
 import 'dart:io';
 
-import 'package:meta/meta.dart';
 import 'package:fxutils/fxutils.dart';
+import 'package:meta/meta.dart';
 
 const String analyticsScript = 'tools/devshell/lib/metrics_custom_report.sh';
 

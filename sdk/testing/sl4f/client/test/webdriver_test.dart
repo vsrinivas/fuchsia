@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 import 'package:mockito/mockito.dart';
+import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 import 'package:webdriver/sync_core.dart';
-
-import 'package:sl4f/sl4f.dart';
 
 class MockPortForwarder extends Mock implements PortForwarder {}
 

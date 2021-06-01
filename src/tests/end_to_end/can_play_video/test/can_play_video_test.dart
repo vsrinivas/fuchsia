@@ -5,8 +5,8 @@
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 void main() {
   sl4f.Sl4f sl4fDriver;

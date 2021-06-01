@@ -34,6 +34,7 @@ import '{{ .AsyncURL }}' as {{ .LocalName }};
 // ignore_for_file: avoid_returning_null
 // ignore_for_file: cascade_invocations
 // ignore_for_file: constant_identifier_names
+// ignore_for_file: directives_ordering
 // ignore_for_file: one_member_abstracts
 // ignore_for_file: prefer_constructors_over_static_methods
 // ignore_for_file: prefer_single_quotes
@@ -105,6 +106,7 @@ import './fidl_async.dart';
 
 // ignore_for_file: always_specify_types
 // ignore_for_file: constant_identifier_names
+// ignore_for_file: directives_ordering
 // ignore_for_file: one_member_abstracts
 // ignore_for_file: public_member_api_docs
 // ignore_for_file: unused_import

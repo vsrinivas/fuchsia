@@ -10,15 +10,14 @@ import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart' show sha256;
-import 'package:pool/pool.dart';
-import 'package:path/path.dart' as path;
-import 'package:googleapis/discovery/v1.dart' as discovery;
-
+import 'package:codesize/cli.dart' as cli;
 import 'package:codesize/codesize.dart';
 import 'package:codesize/crash_handling.dart' as crash_handling;
-import 'package:codesize/cli.dart' as cli;
 import 'package:codesize/io.dart' as io;
+import 'package:crypto/crypto.dart' show sha256;
+import 'package:googleapis/discovery/v1.dart' as discovery;
+import 'package:path/path.dart' as path;
+import 'package:pool/pool.dart';
 
 import 'progress_bar.dart';
 

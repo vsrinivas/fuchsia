@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:test/test.dart';
 
 const _timeout = Timeout(Duration(minutes: 1));
 

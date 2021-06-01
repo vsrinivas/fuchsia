@@ -8,11 +8,11 @@ import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fidl_io;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as fidl_web;
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:zircon/zircon.dart';
-import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_vfs/vfs.dart';
+import 'package:zircon/zircon.dart';
 
 import 'utils.dart' as utils;
 

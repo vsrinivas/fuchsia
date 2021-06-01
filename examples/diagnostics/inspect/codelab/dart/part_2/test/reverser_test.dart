@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
 import 'package:inspect_dart_codelab_part_2_lib/reverser.dart';
+import 'package:test/test.dart';
 
 void main() {
   ReverserImpl openReverser() {

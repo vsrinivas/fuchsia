@@ -14,6 +14,8 @@ const _touchInputLatencyMetricsRegistry = {
   'touch_input_latency': touchInputLatencyMetricsProcessor,
 };
 
+// TODO(fxbug.dev/76494): Reenable with independent test.
+// ignore: unused_element
 void _addTest(String testName) {
   test(testName, () async {
     final helper = await PerfTestHelper.make();

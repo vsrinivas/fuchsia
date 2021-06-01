@@ -6,8 +6,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:io/ansi.dart';
 import 'package:fxtest/fxtest.dart';
+import 'package:io/ansi.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 

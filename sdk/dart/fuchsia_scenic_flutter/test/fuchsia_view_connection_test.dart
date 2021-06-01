@@ -10,11 +10,10 @@ import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
-import 'package:mockito/mockito.dart';
-import 'package:zircon/zircon.dart';
-
 // ignore: implementation_imports
 import 'package:fuchsia_scenic_flutter/src/pointer_injector.dart';
+import 'package:mockito/mockito.dart';
+import 'package:zircon/zircon.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

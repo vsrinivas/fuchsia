@@ -4,8 +4,8 @@
 
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
 import 'package:fidl/fidl.dart' as fidl;
+import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
 
 import 'handles.dart';

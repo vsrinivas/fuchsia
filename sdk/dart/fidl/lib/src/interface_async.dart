@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 
-import 'package:zircon/zircon.dart';
 import 'package:meta/meta.dart';
+import 'package:zircon/zircon.dart';
 
 import 'error.dart';
 import 'interface.dart';

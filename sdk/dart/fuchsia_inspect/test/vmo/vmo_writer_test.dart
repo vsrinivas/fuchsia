@@ -8,7 +8,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:fuchsia_inspect/testing.dart';
 import 'package:fuchsia_inspect/src/vmo/bitfield64.dart';
 import 'package:fuchsia_inspect/src/vmo/block.dart';
 import 'package:fuchsia_inspect/src/vmo/heap.dart';
@@ -17,6 +16,7 @@ import 'package:fuchsia_inspect/src/vmo/util.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_fields.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_holder.dart';
 import 'package:fuchsia_inspect/src/vmo/vmo_writer.dart';
+import 'package:fuchsia_inspect/testing.dart';
 import 'package:test/test.dart';
 
 import '../util.dart';

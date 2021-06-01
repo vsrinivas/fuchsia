@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'package:analyzer/dart/analysis/utilities.dart' as analyzer;
-import 'package:analyzer/file_system/file_system.dart';
+
 import 'package:analyzer/dart/analysis/features.dart';
+import 'package:analyzer/dart/analysis/utilities.dart' as analyzer;
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/source/line_info.dart';
 import 'package:dart_strict_deps_lib/exceptions.dart';
 import 'package:meta/meta.dart';

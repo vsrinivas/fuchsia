@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:sl4f/trace_processing.dart' as trace_processing;
+import 'package:test/test.dart';
 
 final _log = Logger('encode-camera');
 const _timeout = Duration(seconds: 60);

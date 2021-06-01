@@ -6,8 +6,8 @@ import 'dart:async';
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
-import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 
 class _FizzBuzzImpl extends fidl_codelab.FizzBuzz {

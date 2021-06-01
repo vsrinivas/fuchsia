@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:test/test.dart';
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('unknown-bits', () {

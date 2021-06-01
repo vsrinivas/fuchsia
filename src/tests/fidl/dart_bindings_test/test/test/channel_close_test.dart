@@ -4,8 +4,8 @@
 
 import 'dart:async';
 
-import 'package:test/test.dart';
 import 'package:fidl/fidl.dart';
+import 'package:test/test.dart';
 
 class TestAsyncBinding extends AsyncBinding<EmptyImpl> {
   // ignore: empty_constructor_bodies

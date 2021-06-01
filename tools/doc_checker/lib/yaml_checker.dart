@@ -5,11 +5,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:path/path.dart' as path;
-import 'package:yaml/yaml.dart';
-
 import 'package:doc_checker/errors.dart';
 import 'package:doc_checker/link_verifier.dart';
+import 'package:path/path.dart' as path;
+import 'package:yaml/yaml.dart';
 
 /// Verify yaml files.
 /// _toc.yaml files are verified for fuchsia.dev hosting compliance,
