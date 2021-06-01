@@ -43,9 +43,6 @@ group("deprecated_package") {
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
   visibility = [
-    "//sdk/dart/fuchsia_inspect/test/integration/*",
-    "//sdk/dart/fuchsia_inspect/test/validator_puppet/*",
-    "//src/intl/intl_services/tests/*",
     "//src/sys/pkg/bin/pkgctl/*",
     "//src/sys/pkg/bin/update/*",
     "//src/sys/pkg/tests/pkgctl/*",
