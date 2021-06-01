@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 rustc_test("bin") {
   name = "kms_test_client"
   edition = "2018"
   source_root = "src/main.rs"
+  sources = [ "src/main.rs" ]
   deps = [
     "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
@@ -28,12 +29,8 @@ rustc_test("bin") {
   ]
 }
 
-test_package("kms_test_client_pkg") {
+fuchsia_unittest_package("kms_test_client_pkg") {
+  component_name = "kms_test_client"
+  manifest = "meta/kms_test_client.cmx"
   deps = [ ":bin" ]
-
-  tests = [
-    {
-      name = "kms_test_client"
-    },
-  ]
 }

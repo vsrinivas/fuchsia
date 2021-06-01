@@ -9,7 +9,7 @@
         }
     },
     "program": {
-        "binary": "test/kms_test_client"
+        "binary": "bin/kms_test_client"
     },
     "sandbox": {
         "features": [
