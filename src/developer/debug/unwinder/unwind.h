@@ -38,8 +38,8 @@ struct Frame {
 };
 
 // Unwind with given memory, modules and registers.
-std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules, Registers registers,
-                          int max_depth = 50);
+std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules,
+                          const Registers& registers, size_t max_depth = 50);
 
 }  // namespace unwinder
 

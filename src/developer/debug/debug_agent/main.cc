@@ -32,6 +32,7 @@ namespace {
 // Valid options for the --unwind flag.
 const char kAospUnwinder[] = "aosp";
 const char kNgUnwinder[] = "ng";
+const char kFuchsiaUnwinder[] = "fuchsia";
 
 struct CommandLineOptions {
   int port = 0;
@@ -66,8 +67,8 @@ const char kChannelModeHelp[] = R"(  --channel-mode
       Run the agent on in channel mode. The agent will listen for channels through the
       fuchsia.debugger.DebugAgent API. This is necessary for overnet.)";
 
-const char kUnwindHelp[] = R"(  --unwind=[aosp|ng]
-      Force using either the AOSP or NG unwinder for generating stack traces.)";
+const char kUnwindHelp[] = R"(  --unwind=[aosp|ng|fuchsia]
+      Force using a specific unwinder for generating stack traces.)";
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options) {
   cmdline::ArgsParser<CommandLineOptions> parser;
@@ -111,6 +112,8 @@ int main(int argc, const char* argv[]) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kAndroid);
   } else if (options.unwind == debug_agent::kNgUnwinder) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kNgUnwind);
+  } else if (options.unwind == debug_agent::kFuchsiaUnwinder) {
+    debug_agent::SetUnwinderType(debug_agent::UnwinderType::kFuchsia);
   } else {
     fprintf(stderr, "Invalid option for --unwind. See debug_agent --help.\n");
     return 1;

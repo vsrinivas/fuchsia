@@ -48,11 +48,11 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
     return Error("no value");
   }
 
-  switch (enc & 0xF0) {
+  switch (enc & 0x70) {
     case 0x00:  // DW_EH_PE_absptr  Absolute value should only work for non-ptr types.
       res = 0;
       break;
-    case 0x10:  // DW_EH_PE_pcrel  Value is relative to the current program counter.
+    case 0x10:  // DW_EH_PE_pcrel  Value is relative to the current program counter (addr).
       res = addr;
       break;
     // case 0x20:  // DW_EH_PE_textrel  Value is relative to the beginning of the .text section.
@@ -143,6 +143,15 @@ Error Memory::ReadEncoded(uint64_t& addr, uint64_t& res, uint8_t enc, uint64_t d
     }
     default:
       return Error("unsupported encoding: %#x", enc);
+  }
+
+  // It's an extension not documented in the spec.
+  if (enc & 0x80) {  // DW_EH_PE_indirect  indirect read from the pointer.
+    int64_t val;
+    if (auto err = Read(res, val); err.has_err()) {
+      return err;
+    }
+    res = val;
   }
 
   return Success();

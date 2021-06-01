@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include "src/developer/debug/unwinder/dwarf_cfi.h"
+#include "src/developer/debug/unwinder/error.h"
 #include "src/developer/debug/unwinder/registers.h"
 
 namespace unwinder {
@@ -63,32 +64,27 @@ class CFIUnwinder {
 
 }  // namespace
 
-std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules, Registers registers,
-                          int max_depth) {
-  std::vector<Frame> res;
-  // Trust level for the current framea
-  auto trust = Frame::Trust::kContext;
-
+std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules,
+                          const Registers& registers, size_t max_depth) {
+  std::vector<Frame> res = {{registers, Frame::Trust::kContext, Success()}};
   CFIUnwinder cfi_unwinder(memory, modules);
 
   while (max_depth--) {
-    auto next = registers.Clone();
+    Registers next(registers.arch());
 
-    auto err = cfi_unwinder.Step(registers, next, trust != Frame::Trust::kContext);
-    res.emplace_back(std::move(registers), trust, err);
+    Frame& current = res.back();
+    current.error = cfi_unwinder.Step(current.regs, next, current.trust != Frame::Trust::kContext);
 
-    // TODO(74320): add more unwinders
-    if (err.has_err()) {
-      printf("cfi_unwinder: %s\n", err.msg().c_str());
+    if (current.error.has_err()) {
+      // TODO(74320): add more unwinders
       break;
     }
+    res.emplace_back(std::move(next), Frame::Trust::kCFI, Success());
 
     // An undefined PC (e.g. on Linux) or 0 PC (e.g. on Fuchsia) marks the end of the unwinding.
-    if (uint64_t pc; next.GetPC(pc).has_err() || pc == 0) {
+    if (uint64_t pc; res.back().regs.GetPC(pc).has_err() || pc == 0) {
       break;
     }
-    registers = std::move(next);
-    trust = Frame::Trust::kCFI;
   }
 
   return res;

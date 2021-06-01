@@ -20,7 +20,12 @@ class ThreadHandle;
 
 // We're testing different unwinders, this specifies which one you want to use.
 // The unwinder type is a process-wide state.
-enum class UnwinderType { kNgUnwind, kAndroid };
+enum class UnwinderType {
+  kNgUnwind,
+  kAndroid,
+  kFuchsia,
+};
+
 void SetUnwinderType(UnwinderType unwinder_type);
 
 zx_status_t UnwindStack(const ProcessHandle& process, const ModuleList& modules,

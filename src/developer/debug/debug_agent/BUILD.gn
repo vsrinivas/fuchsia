@@ -99,7 +99,12 @@ static_library("lib") {
     assert(false, "Un-supported CPU: ${current_cpu}")
   }
 
-  deps = [ "//src/lib/elflib" ]
+  deps = [
+    "//src/developer/debug/third_party/libunwindstack",
+    "//src/developer/debug/unwinder",
+    "//src/lib/elflib",
+    "//zircon/third_party/ulib/ngunwind",
+  ]
 
   public_deps = [
     "//garnet/lib/process",
@@ -110,14 +115,12 @@ static_library("lib") {
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
-    "//src/developer/debug/third_party/libunwindstack",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//third_party/googletest:gtest_prod",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/third_party/ulib/ngunwind",
   ]
 }
 

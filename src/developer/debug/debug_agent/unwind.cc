@@ -19,6 +19,8 @@
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/MemoryFuchsia.h"
 #include "src/developer/debug/third_party/libunwindstack/fuchsia/RegsFuchsia.h"
 #include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
+#include "src/developer/debug/unwinder/fuchsia.h"
+#include "src/developer/debug/unwinder/unwind.h"
 #include "src/lib/containers/cpp/array_view.h"
 
 namespace debug_agent {
@@ -299,6 +301,111 @@ zx_status_t UnwindStackNgUnwind(const ProcessHandle& process, const ModuleList& 
   return ZX_OK;
 }
 
+// Convert from unwinder::RegisterID to debug_ipc::RegisterID.
+debug_ipc::RegisterID ConvertRegisterID(unwinder::RegisterID reg_id) {
+#if defined(__x86_64__)
+  static std::map<unwinder::RegisterID, debug_ipc::RegisterID> map = {
+      {unwinder::RegisterID::kX64_rax, debug_ipc::RegisterID::kX64_rax},
+      {unwinder::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rdx},
+      {unwinder::RegisterID::kX64_rcx, debug_ipc::RegisterID::kX64_rcx},
+      {unwinder::RegisterID::kX64_rbx, debug_ipc::RegisterID::kX64_rbx},
+      {unwinder::RegisterID::kX64_rsi, debug_ipc::RegisterID::kX64_rsi},
+      {unwinder::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rdi},
+      {unwinder::RegisterID::kX64_rbp, debug_ipc::RegisterID::kX64_rbp},
+      {unwinder::RegisterID::kX64_rsp, debug_ipc::RegisterID::kX64_rsp},
+      {unwinder::RegisterID::kX64_r8, debug_ipc::RegisterID::kX64_r8},
+      {unwinder::RegisterID::kX64_r9, debug_ipc::RegisterID::kX64_r9},
+      {unwinder::RegisterID::kX64_r10, debug_ipc::RegisterID::kX64_r10},
+      {unwinder::RegisterID::kX64_r11, debug_ipc::RegisterID::kX64_r11},
+      {unwinder::RegisterID::kX64_r12, debug_ipc::RegisterID::kX64_r12},
+      {unwinder::RegisterID::kX64_r13, debug_ipc::RegisterID::kX64_r13},
+      {unwinder::RegisterID::kX64_r14, debug_ipc::RegisterID::kX64_r14},
+      {unwinder::RegisterID::kX64_r15, debug_ipc::RegisterID::kX64_r15},
+      {unwinder::RegisterID::kX64_rip, debug_ipc::RegisterID::kX64_rip},
+  };
+#elif defined(__aarch64__)
+  static std::map<unwinder::RegisterID, debug_ipc::RegisterID> map = {
+      {unwinder::RegisterID::kArm64_x0, debug_ipc::RegisterID::kARMv8_x0},
+      {unwinder::RegisterID::kArm64_x1, debug_ipc::RegisterID::kARMv8_x1},
+      {unwinder::RegisterID::kArm64_x2, debug_ipc::RegisterID::kARMv8_x2},
+      {unwinder::RegisterID::kArm64_x3, debug_ipc::RegisterID::kARMv8_x3},
+      {unwinder::RegisterID::kArm64_x4, debug_ipc::RegisterID::kARMv8_x4},
+      {unwinder::RegisterID::kArm64_x5, debug_ipc::RegisterID::kARMv8_x5},
+      {unwinder::RegisterID::kArm64_x6, debug_ipc::RegisterID::kARMv8_x6},
+      {unwinder::RegisterID::kArm64_x7, debug_ipc::RegisterID::kARMv8_x7},
+      {unwinder::RegisterID::kArm64_x8, debug_ipc::RegisterID::kARMv8_x8},
+      {unwinder::RegisterID::kArm64_x9, debug_ipc::RegisterID::kARMv8_x9},
+      {unwinder::RegisterID::kArm64_x10, debug_ipc::RegisterID::kARMv8_x10},
+      {unwinder::RegisterID::kArm64_x11, debug_ipc::RegisterID::kARMv8_x11},
+      {unwinder::RegisterID::kArm64_x12, debug_ipc::RegisterID::kARMv8_x12},
+      {unwinder::RegisterID::kArm64_x13, debug_ipc::RegisterID::kARMv8_x13},
+      {unwinder::RegisterID::kArm64_x14, debug_ipc::RegisterID::kARMv8_x14},
+      {unwinder::RegisterID::kArm64_x15, debug_ipc::RegisterID::kARMv8_x15},
+      {unwinder::RegisterID::kArm64_x16, debug_ipc::RegisterID::kARMv8_x16},
+      {unwinder::RegisterID::kArm64_x17, debug_ipc::RegisterID::kARMv8_x17},
+      {unwinder::RegisterID::kArm64_x18, debug_ipc::RegisterID::kARMv8_x18},
+      {unwinder::RegisterID::kArm64_x19, debug_ipc::RegisterID::kARMv8_x19},
+      {unwinder::RegisterID::kArm64_x20, debug_ipc::RegisterID::kARMv8_x20},
+      {unwinder::RegisterID::kArm64_x21, debug_ipc::RegisterID::kARMv8_x21},
+      {unwinder::RegisterID::kArm64_x22, debug_ipc::RegisterID::kARMv8_x22},
+      {unwinder::RegisterID::kArm64_x23, debug_ipc::RegisterID::kARMv8_x23},
+      {unwinder::RegisterID::kArm64_x24, debug_ipc::RegisterID::kARMv8_x24},
+      {unwinder::RegisterID::kArm64_x25, debug_ipc::RegisterID::kARMv8_x25},
+      {unwinder::RegisterID::kArm64_x26, debug_ipc::RegisterID::kARMv8_x26},
+      {unwinder::RegisterID::kArm64_x27, debug_ipc::RegisterID::kARMv8_x27},
+      {unwinder::RegisterID::kArm64_x28, debug_ipc::RegisterID::kARMv8_x28},
+      {unwinder::RegisterID::kArm64_x29, debug_ipc::RegisterID::kARMv8_x29},
+      {unwinder::RegisterID::kArm64_x30, debug_ipc::RegisterID::kARMv8_lr},
+      {unwinder::RegisterID::kArm64_x31, debug_ipc::RegisterID::kARMv8_sp},
+      {unwinder::RegisterID::kArm64_pc, debug_ipc::RegisterID::kARMv8_pc},
+  };
+#else
+#error What platform?
+#endif
+  auto found = map.find(reg_id);
+  FX_CHECK(found != map.end());
+  return found->second;
+}
+
+zx_status_t UnwindStackFuchsia(const ProcessHandle& process, const ModuleList& modules,
+                               const ThreadHandle& thread, const GeneralRegisters& regs,
+                               size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
+  // Prepare arguments for unwinder::Unwind.
+  unwinder::FuchsiaMemory memory(process.GetNativeHandle().get());
+  std::vector<uint64_t> module_bases;
+  module_bases.reserve(modules.modules().size());
+  for (const auto& module : modules.modules()) {
+    module_bases.push_back(module.base);
+  }
+  auto registers = unwinder::FromFuchsiaRegisters(regs.GetNativeRegisters());
+
+  // Request one more frame for the CFA of the last frame.
+  auto frames = unwinder::Unwind(&memory, module_bases, registers, max_depth + 1);
+
+  // Convert from unwinder::Frame to debug_ipc::StackFrame.
+  stack->clear();
+  stack->reserve(frames.size());
+  for (unwinder::Frame& frame : frames) {
+    std::vector<debug_ipc::Register> frame_regs;
+    uint64_t ip = 0;
+    uint64_t sp = 0;
+    frame.regs.GetSP(sp);
+    frame.regs.GetPC(ip);
+    if (!stack->empty()) {
+      stack->back().cfa = sp;
+    }
+    if (stack->size() < max_depth) {
+      frame_regs.reserve(frame.regs.size());
+      for (auto& [reg_id, val] : frame.regs) {
+        frame_regs.emplace_back(ConvertRegisterID(reg_id), val);
+      }
+      stack->emplace_back(ip, sp, 0, frame_regs);
+      AddThreadRegs(regs, &stack->back());
+    }
+  }
+  return ZX_OK;
+}
+
 }  // namespace
 
 void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
@@ -311,6 +418,8 @@ zx_status_t UnwindStack(const ProcessHandle& process, const ModuleList& modules,
       return UnwindStackNgUnwind(process, modules, thread, regs, max_depth, stack);
     case UnwinderType::kAndroid:
       return UnwindStackAndroid(process, modules, thread, regs, max_depth, stack);
+    case UnwinderType::kFuchsia:
+      return UnwindStackFuchsia(process, modules, thread, regs, max_depth, stack);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

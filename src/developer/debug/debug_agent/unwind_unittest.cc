@@ -174,4 +174,9 @@ TEST(Unwind, NG) {
   DoUnwindTest();
 }
 
+TEST(Unwind, Fuchsia) {
+  SetUnwinderType(UnwinderType::kFuchsia);
+  DoUnwindTest();
+}
+
 }  // namespace debug_agent

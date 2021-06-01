@@ -12,12 +12,14 @@ static_library("unwinder") {
   sources = [
     "dwarf_cfi.cc",
     "dwarf_cfi.h",
+    "dwarf_cfi_parser.cc",
+    "dwarf_cfi_parser.h",
     "memory.cc",
     "registers.cc",
     "unwind.cc",
   ]
 
-  # UnwindLocal() is only supported on ELF systems.
+  # UnwindLocal() is only available on ELF systems.
   if (!is_mac) {
     public += [ "unwind_local.h" ]
     sources += [
@@ -27,6 +29,11 @@ static_library("unwinder") {
     if (current_cpu == "x64") {
       sources += [ "third_party/libunwindstack/context_x86_64.S" ]
     }
+  }
+
+  if (is_fuchsia) {
+    public += [ "fuchsia.h" ]
+    sources += [ "fuchsia.cc" ]
   }
 
   public_deps = [ "//src/lib/fxl" ]

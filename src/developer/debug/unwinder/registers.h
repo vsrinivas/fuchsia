@@ -73,8 +73,8 @@ enum class RegisterID : uint8_t {
   kArm64_pc = 32,
   kArm64_last,
 
-  kArm64_sp = kArm64_x31,
   kArm64_lr = kArm64_x30,
+  kArm64_sp = kArm64_x31,
 
   kInvalid = static_cast<uint8_t>(-1),
 };
@@ -89,23 +89,19 @@ class Registers {
   explicit Registers(Arch arch) : arch_(arch) {}
 
   Arch arch() const { return arch_; }
+
+  // Delegate size(), begin() and end() to regs_.
+  auto size() const { return regs_.size(); }
   auto begin() const { return regs_.begin(); }
   auto end() const { return regs_.end(); }
 
   Error Get(RegisterID reg_id, uint64_t& val) const;
   Error Set(RegisterID reg_id, uint64_t val);
-  Error Unset(RegisterID reg_id);
 
   Error GetSP(uint64_t& sp) const;
   Error SetSP(uint64_t sp);
   Error GetPC(uint64_t& pc) const;
   Error SetPC(uint64_t pc);
-
-  // Create new registers by keeping values in preserved registers during a call (callee-saved).
-  //
-  // This should be unnecessary if CFI could encode all registers with either DW_CFA_undefined or
-  // DW_CFA_same_value properly.
-  Registers Clone() const;
 
   // Return a string describing the value of all registers. Should be useful in debugging.
   std::string Describe() const;

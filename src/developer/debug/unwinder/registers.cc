@@ -32,14 +32,6 @@ Error Registers::Set(RegisterID reg_id, uint64_t val) {
   return Success();
 }
 
-Error Registers::Unset(RegisterID reg_id) {
-  if (reg_id >= (arch_ == Arch::kX64 ? RegisterID::kX64_last : RegisterID::kArm64_last)) {
-    return Error("invalid reg_id %hhu", reg_id);
-  }
-  regs_.erase(reg_id);
-  return Success();
-}
-
 Error Registers::GetSP(uint64_t& sp) const {
   return Get(arch_ == Arch::kX64 ? RegisterID::kX64_sp : RegisterID::kArm64_sp, sp);
 }
@@ -54,38 +46,6 @@ Error Registers::GetPC(uint64_t& pc) const {
 
 Error Registers::SetPC(uint64_t pc) {
   return Set(arch_ == Arch::kX64 ? RegisterID::kX64_pc : RegisterID::kArm64_pc, pc);
-}
-
-Registers Registers::Clone() const {
-  static RegisterID kX64Preserved[] = {
-      RegisterID::kX64_rbx, RegisterID::kX64_rsp, RegisterID::kX64_rbp, RegisterID::kX64_r12,
-      RegisterID::kX64_r13, RegisterID::kX64_r14, RegisterID::kX64_r15,
-  };
-  static RegisterID kARM64Preserved[] = {
-      RegisterID::kArm64_x19, RegisterID::kArm64_x20, RegisterID::kArm64_x21,
-      RegisterID::kArm64_x22, RegisterID::kArm64_x23, RegisterID::kArm64_x24,
-      RegisterID::kArm64_x25, RegisterID::kArm64_x26, RegisterID::kArm64_x27,
-      RegisterID::kArm64_x28, RegisterID::kArm64_x29, RegisterID::kArm64_x30,
-      RegisterID::kArm64_x31,
-  };
-
-  RegisterID* preserved;
-  size_t length;
-  if (arch_ == Arch::kX64) {
-    preserved = kX64Preserved;
-    length = sizeof(kX64Preserved) / sizeof(RegisterID);
-  } else {
-    preserved = kARM64Preserved;
-    length = sizeof(kARM64Preserved) / sizeof(RegisterID);
-  }
-
-  auto cloned = Registers(arch_);
-  for (size_t i = 0; i < length; i++) {
-    if (auto it = regs_.find(preserved[i]); it != regs_.end()) {
-      cloned.regs_.emplace(it->first, it->second);
-    }
-  }
-  return cloned;
 }
 
 std::string Registers::Describe() const {
