@@ -13,6 +13,8 @@ fidl("fuchsia.virtualization.hardware") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.scenic.allocation",
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.virtualization",
