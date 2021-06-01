@@ -275,7 +275,7 @@ impl<'a> Encoder<'a> {
             Symbol::NumberValue(_) => ValueType::Number,
             Symbol::StringValue(_) => ValueType::Str,
             Symbol::BoolValue(_) => ValueType::Bool,
-            Symbol::EnumValue => ValueType::Enum,
+            Symbol::EnumValue(_) => ValueType::Enum,
             _ => {
                 // The RHS value should not represent a key.
                 return Err(BindProgramEncodeError::IncorrectTypesInValueComparison);

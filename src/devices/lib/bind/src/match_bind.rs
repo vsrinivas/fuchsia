@@ -139,7 +139,7 @@ impl DeviceMatcher {
                 0x1 => Ok(Symbol::BoolValue(true)),
                 _ => Err(BytecodeError::InvalidBoolValue(value)),
             },
-            RawValueType::EnumValue => Ok(Symbol::EnumValue),
+            RawValueType::EnumValue => Ok(Symbol::EnumValue(self.lookup_symbol_table(value)?)),
         }
     }
 

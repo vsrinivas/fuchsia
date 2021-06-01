@@ -152,7 +152,7 @@ pub enum Symbol {
     NumberValue(u64),
     StringValue(String),
     BoolValue(bool),
-    EnumValue,
+    EnumValue(String),
 }
 
 /// Find the namespace of a qualified identifier from the library's includes. Or, if the identifier
@@ -264,7 +264,10 @@ fn construct_symbol_table(
                         symbol_table.insert(qualified_value, Symbol::BoolValue(*value));
                     }
                     bind_library::Value::Enum(_) => {
-                        symbol_table.insert(qualified_value, Symbol::EnumValue);
+                        symbol_table.insert(
+                            qualified_value.clone(),
+                            Symbol::EnumValue(qualified_value.to_string()),
+                        );
                     }
                 };
             }
@@ -707,6 +710,65 @@ mod test {
             assert_eq!(
                 st.get(&make_identifier!("test", "symbol", "x")),
                 Some(&Symbol::NumberValue(1))
+            );
+        }
+
+        #[test]
+        fn all_value_types() {
+            let libraries = vec![bind_library::Ast {
+                name: make_identifier!("hummingbird"),
+                using: vec![],
+                declarations: vec![
+                    bind_library::Declaration {
+                        identifier: make_identifier!["sunbeam"],
+                        value_type: bind_library::ValueType::Number,
+                        extends: false,
+                        values: vec![(bind_library::Value::Number("shining".to_string(), 1))],
+                    },
+                    bind_library::Declaration {
+                        identifier: make_identifier!["mountaingem"],
+                        value_type: bind_library::ValueType::Bool,
+                        extends: false,
+                        values: vec![
+                            (bind_library::Value::Bool("white-bellied".to_string(), false)),
+                        ],
+                    },
+                    bind_library::Declaration {
+                        identifier: make_identifier!["brilliant"],
+                        value_type: bind_library::ValueType::Enum,
+                        extends: false,
+                        values: vec![(bind_library::Value::Enum("black-throated".to_string()))],
+                    },
+                    bind_library::Declaration {
+                        identifier: make_identifier!["woodnymph"],
+                        value_type: bind_library::ValueType::Str,
+                        extends: false,
+                        values: vec![
+                            (bind_library::Value::Str(
+                                "fork-tailed".to_string(),
+                                "sabrewing".to_string(),
+                            )),
+                        ],
+                    },
+                ],
+            }];
+
+            let st = construct_symbol_table(libraries.iter()).unwrap();
+            assert_eq!(
+                st.get(&make_identifier!("hummingbird", "sunbeam", "shining")),
+                Some(&Symbol::NumberValue(1))
+            );
+            assert_eq!(
+                st.get(&make_identifier!("hummingbird", "mountaingem", "white-bellied")),
+                Some(&Symbol::BoolValue(false))
+            );
+            assert_eq!(
+                st.get(&make_identifier!("hummingbird", "brilliant", "black-throated")),
+                Some(&Symbol::EnumValue("hummingbird.brilliant.black-throated".to_string()))
+            );
+            assert_eq!(
+                st.get(&make_identifier!("hummingbird", "woodnymph", "fork-tailed")),
+                Some(&Symbol::StringValue("sabrewing".to_string()))
             );
         }
 

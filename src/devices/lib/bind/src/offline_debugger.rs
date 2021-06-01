@@ -508,7 +508,7 @@ fn value_symbol_string(symbol: &Symbol) -> Result<String, DebuggerError> {
         Symbol::NumberValue(n) => Ok(format!("0x{:x}", n)),
         Symbol::StringValue(s) => Ok(format!("\"{}\"", s)),
         Symbol::BoolValue(b) => Ok(b.to_string()),
-        Symbol::EnumValue => unimplemented!("Enum values are unsupported."),
+        Symbol::EnumValue(s) => Ok(format!("\"{}\"", s)),
     }
 }
 
