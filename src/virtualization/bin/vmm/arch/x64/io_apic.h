@@ -13,6 +13,10 @@
 class Guest;
 
 // Implements the IO APIC.
+//
+// See _82093AA (I/O APIC) datasheet_ for high-level details about the APIC,
+// and _Intel I/O Controller Hub 10 (ICH10) Family Datasheet (October 2008),
+// Section 13.5_ for extensions to the original specification.
 class IoApic : public IoHandler, public PlatformDevice {
  public:
   static constexpr uint64_t kPhysBase = 0xf8000000;

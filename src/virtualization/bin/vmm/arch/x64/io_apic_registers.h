@@ -20,7 +20,7 @@
 #define IO_APIC_REGISTER_ARBITRATION    0x02
 
 // IO APIC configuration constants.
-#define IO_APIC_VERSION                 0x11
+#define IO_APIC_VERSION                 0x20
 #define FIRST_REDIRECT_OFFSET           0x10
 #define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IoApic::kNumRedirectOffsets - 1)
 

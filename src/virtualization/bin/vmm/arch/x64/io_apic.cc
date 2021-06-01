@@ -55,7 +55,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   // register'. In x2APIC mode this register is read-only and is derived from
   // the local APIC ID.
   //
-  // See 82093AA (IOAPIC) Section 3.2.4.
+  // See Intel ICH10 Section 13.5.7.
   // See Intel Volume 3, Section 10.12.10
   uint32_t destmod = bit_shift(entry.lower, 11);
   if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
@@ -87,6 +87,10 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
       }
       return ReadRegister(select_register, value);
     }
+    case IO_APIC_EOIR: {
+      value->u32 = 0;
+      return ZX_OK;
+    }
     default:
       FX_LOGS(ERROR) << "Unhandled IO APIC read 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
@@ -108,6 +112,20 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       }
       return WriteRegister(select_register, value);
     }
+    case IO_APIC_EOIR: {
+      // End of interrupt.
+      //
+      // For level-triggered interrupts, the OS may indicate to the IO APIC
+      // the interrupt has finished, and if the level is still high it should
+      // be considered a new interrupt.
+      //
+      // We internally only use edge-triggered interrupts (the "edge" being
+      // when our `Interrupt` function is called), so we can ignore writes to
+      // this register.
+      //
+      // TODO(fxbug.dev/77786): Correctly support level-triggered interrupts.
+      return ZX_OK;
+    }
     default:
       FX_LOGS(ERROR) << "Unhandled IO APIC write 0x" << std::hex << addr;
       return ZX_ERR_NOT_SUPPORTED;
@@ -125,7 +143,7 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) const
       // There are two redirect offsets per redirection entry. We return
       // the maximum redirection entry index.
       //
-      // From Intel 82093AA, Section 3.2.2.
+      // From Intel ICH10, Section 13.5.6.
       value->u32 = (kNumRedirects - 1) << 16 | IO_APIC_VERSION;
       return ZX_OK;
     case IO_APIC_REGISTER_ARBITRATION:

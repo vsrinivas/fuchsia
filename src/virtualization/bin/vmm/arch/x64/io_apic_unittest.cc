@@ -74,7 +74,15 @@ TEST(IoApic, Version) {
   // Read the version register.
   IoValue value = IoValue::FromU32(0);
   ASSERT_EQ(io_apic.ReadRegister(IO_APIC_REGISTER_VER, &value), ZX_OK);
-  EXPECT_EQ(value.u32, 0x002f'0011u);  // 0x2f interrupts, APIC version 0x11.
+  EXPECT_EQ(value.u32, 0x002f'0020u);  // 0x2f interrupts, APIC version 0x20.
+}
+
+TEST(IoApic, EndOfInterrupt) {
+  Guest guest;
+  IoApic io_apic(&guest);
+
+  // Write to the EOI register. We don't expect any effect.
+  ASSERT_EQ(io_apic.Write(IO_APIC_EOIR, IoValue::FromU32(0x01)), ZX_OK);
 }
 
 }  // namespace
