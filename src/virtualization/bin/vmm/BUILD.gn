@@ -93,6 +93,7 @@ source_set("lib") {
       "arch/x64/i8250.h",
       "arch/x64/io_apic.cc",
       "arch/x64/io_apic.h",
+      "arch/x64/io_apic_registers.h",
       "arch/x64/io_port.cc",
       "arch/x64/io_port.h",
       "arch/x64/page_table.cc",
@@ -190,6 +191,7 @@ executable("vmm_unittests") {
   if (current_cpu == "x64") {
     sources += [
       "arch/x64/decode_unittest.cc",
+      "arch/x64/io_apic_unittest.cc",
       "arch/x64/page_table_unittest.cc",
     ]
   }

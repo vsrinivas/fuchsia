@@ -10,33 +10,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
 
+#include "src/virtualization/bin/vmm/arch/x64/io_apic_registers.h"
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
-
-// clang-format off
-
-// IO APIC register addresses.
-#define IO_APIC_IOREGSEL                0x00
-#define IO_APIC_IOWIN                   0x10
-
-// IO APIC register addresses.
-#define IO_APIC_REGISTER_ID             0x00
-#define IO_APIC_REGISTER_VER            0x01
-#define IO_APIC_REGISTER_ARBITRATION    0x02
-
-// IO APIC configuration constants.
-#define IO_APIC_VERSION                 0x11
-#define FIRST_REDIRECT_OFFSET           0x10
-#define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IoApic::kNumRedirectOffsets - 1)
-
-// DESTMOD register.
-#define IO_APIC_DESTMOD_PHYSICAL        0x00
-#define IO_APIC_DESTMOD_LOGICAL         0x01
-
-#define LOCAL_APIC_DFR_FLAT_MODEL       0xf
-
-// clang-format on
 
 static constexpr uint64_t kMemSize = 0x1000;
 
@@ -119,11 +96,8 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
 zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case IO_APIC_IOREGSEL: {
-      if (value.u32 > UINT8_MAX) {
-        return ZX_ERR_INVALID_ARGS;
-      }
       std::lock_guard<std::mutex> lock(mutex_);
-      select_ = value.u32;
+      select_ = value.u8;
       return ZX_OK;
     }
     case IO_APIC_IOWIN: {

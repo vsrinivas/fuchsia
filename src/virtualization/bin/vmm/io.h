@@ -22,6 +22,11 @@ struct IoValue {
     uint64_t u64;
     uint8_t data[8];
   };
+
+  // Convenience constructors.
+  static constexpr IoValue FromU8(uint8_t value) { return {.access_size = 1, .u8 = value}; }
+  static constexpr IoValue FromU16(uint16_t value) { return {.access_size = 2, .u16 = value}; }
+  static constexpr IoValue FromU32(uint32_t value) { return {.access_size = 4, .u32 = value}; }
 };
 
 // Callback interface to be implemented by devices.

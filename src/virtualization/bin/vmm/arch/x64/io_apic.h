@@ -40,6 +40,10 @@ class IoApic : public IoHandler, public PlatformDevice {
   // Signals the given global IRQ.
   zx_status_t Interrupt(uint32_t global_irq);
 
+  // Read or write indirect registers directly. Exposed for testing.
+  zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
+  zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
+
  private:
   Guest* guest_;
 
@@ -50,9 +54,6 @@ class IoApic : public IoHandler, public PlatformDevice {
   uint32_t id_ __TA_GUARDED(mutex_) = 0;
   // IO redirection table.
   RedirectEntry redirect_[kNumRedirects] __TA_GUARDED(mutex_) = {};
-
-  zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
-  zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_IO_APIC_H_
