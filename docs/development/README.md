@@ -54,12 +54,8 @@ and debugging Fuchsia and programs running on Fuchsia.
 
 This section covers Fuchsia development hardware targets.
 
- - [Acer Switch Alpha 12][acer_12]
  - [Intel NUC][intel-nuc]
- - [Pixelbook][pixelbook]
- - [Toulouse][toulouse]
- - [Khadas VIM2][khadas-vim]
- - [iMX8M EVK][imx8mevk]
+ - [Khadas VIM3][khadas-vim3]
 
 ## Drivers
 
@@ -103,11 +99,7 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Editor configurations](/docs/development/editors/README.md)
  - [Using the Fuchsia Installer](/docs/development/hardware/installer.md)
 
-[acer_12]: /docs/development/hardware/acer12.md "Acer 12"
-[pixelbook]: /docs/development/hardware/pixelbook.md "Pixelbook"
-[toulouse]: /docs/development/hardware/toulouse.md "Toulouse"
-[khadas-vim]: /docs/development/hardware/khadas-vim.md "Khadas VIM2"
-[imx8mevk]: /docs/development/hardware/imx8mevk.md "iMX8M EVK"
+[khadas-vim3]: /docs/development/hardware/khadas-vim3.md "Khadas VIM3"
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
 [fidl-api]: /docs/concepts/api/fidl.md
