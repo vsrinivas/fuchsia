@@ -142,6 +142,37 @@ where
     }
 }
 
+fn reduce_layers_is_unchanged<S: LayerStyles>(
+    segments: &[CompactSegment],
+    styles: &S,
+    skip: bool,
+) -> (usize, bool) {
+    fn l(segment: Option<&CompactSegment>) -> Option<u16> {
+        segment.map(|s| s.layer())
+    }
+
+    let first_layer = l(segments.first());
+    let last_layer = l(segments.last());
+
+    if first_layer == last_layer {
+        return (
+            if first_layer.is_some() && !skip { 1 } else { 0 },
+            first_layer.map(|l| skip || styles.is_unchanged(l)).unwrap_or(true),
+        );
+    }
+
+    let mid = segments.len() / 2;
+
+    let left = reduce_layers_is_unchanged(&segments[..mid], styles, skip);
+    let right = reduce_layers_is_unchanged(
+        &segments[mid..],
+        styles,
+        l(segments.get(mid - 1)) == l(segments.get(mid)),
+    );
+
+    (left.0 + right.0, left.1 && right.1)
+}
+
 #[derive(Clone, Copy, Debug)]
 struct CoverCarry {
     covers: [i8x16; TILE_SIZE / 16],
@@ -506,29 +537,7 @@ impl Painter {
     ) -> bool {
         let queue_layers = self.queue.len();
 
-        fn reduce_layers_is_unchanged<S: LayerStyles>(
-            segments: &[CompactSegment],
-            styles: &S,
-        ) -> (usize, bool) {
-            let first_layer = segments.first().map(|s| s.layer());
-            let last_layer = segments.last().map(|s| s.layer());
-
-            if first_layer == last_layer {
-                return (
-                    if first_layer.is_some() { 1 } else { 0 },
-                    first_layer.map(|l| styles.is_unchanged(l)).unwrap_or(true),
-                );
-            }
-
-            let mid = segments.len() / 2;
-
-            let left = reduce_layers_is_unchanged(&segments[..mid], styles);
-            let right = reduce_layers_is_unchanged(&segments[mid..], styles);
-
-            (left.0 + right.0, left.1 && right.1)
-        }
-
-        let (segment_layers, is_unchanged) = reduce_layers_is_unchanged(segments, styles);
+        let (segment_layers, is_unchanged) = reduce_layers_is_unchanged(segments, styles, false);
 
         let total_layers = queue_layers + segment_layers;
         let is_unchanged = is_unchanged
@@ -743,8 +752,10 @@ impl Painter {
                 }
 
                 for (layer, covers) in covers {
-                    if covers.iter().any(|&cover| !cover.eq(i8x16::splat(0)).all()) {
-                        self.next_queue.push_back(CoverCarry { covers, layer });
+                    let cover_carry = CoverCarry { covers, layer };
+
+                    if !cover_carry.is_empty(styles.get(layer).fill_rule) {
+                        self.next_queue.push_back(cover_carry);
                     }
                 }
             }
@@ -1137,5 +1148,16 @@ mod tests {
         );
 
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn count_segment_layers() {
+        fn segment_layer(layer: u16) -> CompactSegment {
+            CompactSegment::new(0, 0, 0, layer, 0, 0, 0, 0)
+        }
+
+        let segments = [segment_layer(0), segment_layer(0), segment_layer(0), segment_layer(1)];
+
+        assert_eq!(reduce_layers_is_unchanged(&segments, &|_| Style::default(), false).0, 2);
     }
 }
