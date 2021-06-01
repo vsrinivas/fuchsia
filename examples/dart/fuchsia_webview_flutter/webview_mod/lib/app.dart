@@ -110,7 +110,7 @@ class AppState extends State<App> {
     return ElevatedButton(
       child: const Text('Current'),
       style: ElevatedButton.styleFrom(
-        primary: Theme.of(context).accentColor,
+        primary: Theme.of(context).colorScheme.secondary,
         onPrimary: Colors.blueGrey,
         elevation: 4.0,
       ),
