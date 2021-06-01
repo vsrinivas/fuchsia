@@ -75,11 +75,13 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
   }
 
   std::string host;
-  uint16_t port;
-  zxdb::Err parse_err = zxdb::ParseHostPort(*(options.connect), &host, &port);
-  if (!parse_err.ok()) {
-    fprintf(stderr, "Could not parse host/port pair: %s", parse_err.msg().c_str());
-    exit(1);
+  uint16_t port = 0;
+  if (options.connect) {
+    zxdb::Err parse_err = zxdb::ParseHostPort(*(options.connect), &host, &port);
+    if (!parse_err.ok()) {
+      fprintf(stderr, "Could not parse host/port pair: %s", parse_err.msg().c_str());
+      exit(1);
+    }
   }
 
   auto attach = [workflow, process_koids, &options, params](const zxdb::Err& err) {
@@ -115,9 +117,14 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
     }
   };
 
-  auto connect = [workflow, attach = std::move(attach), host, port]() {
-    FX_LOGS(INFO) << "Connecting to port " << port << " on " << host << "...";
-    workflow->Connect(host, port, attach);
+  auto connect = [workflow, options, attach = std::move(attach), host, port]() {
+    if (options.connect) {
+      FX_LOGS(INFO) << "Connecting to port " << port << " on " << host << "...";
+      workflow->Connect(host, port, attach);
+    } else {
+      FX_LOGS(INFO) << "Connecting to " << *options.unix_connect << "...";
+      workflow->UnixConnect(*options.unix_connect, attach);
+    }
   };
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, connect);
 }

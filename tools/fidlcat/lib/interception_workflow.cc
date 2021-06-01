@@ -289,6 +289,12 @@ void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
   session_->Connect(connect_info, [and_then](const zxdb::Err& err) { and_then(err); });
 }
 
+void InterceptionWorkflow::UnixConnect(const std::string& unix_socket,
+                                       const SimpleErrorFunction& and_then) {
+  zxdb::SessionConnectionInfo connect_info = {zxdb::SessionConnectionType::kUnix, unix_socket, 0};
+  session_->Connect(connect_info, [and_then](const zxdb::Err& err) { and_then(err); });
+}
+
 // Helper function that finds a target for fidlcat to attach itself to. The
 // target with |process_koid| must already be running.
 zxdb::Target* InterceptionWorkflow::GetTarget(zx_koid_t process_koid) {

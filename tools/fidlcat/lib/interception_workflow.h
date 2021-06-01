@@ -125,6 +125,10 @@ class InterceptionWorkflow {
   // the loop on completion.
   void Connect(const std::string& host, uint16_t port, const SimpleErrorFunction& and_then);
 
+  // Connect the workflow to the unix socket given.  |and_then| is posted to
+  // the loop on completion.
+  void UnixConnect(const std::string& unix_socket, const SimpleErrorFunction& and_then);
+
   // Attach the workflow to the given koids.
   void Attach(const std::vector<zx_koid_t>& process_koids);
   // Using the process tree record, attach the workflow to all processes which belong to a job

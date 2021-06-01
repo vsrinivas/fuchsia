@@ -43,6 +43,9 @@ const char* const kRemoteHostHelp = R"(  --connect
       The host and port of the debug agent running on the target Fuchsia
       instance, of the form [<ipv6_addr>]:port.)";
 
+const char* const kUnixConnectHelp = R"(  --unix-connect=<filepath>
+      Attempts to connect to a debug_agent through a unix socket.)";
+
 const char* const kSymbolIndexHelp = R"(  --symbol-index=<path>
       Populates --ids-txt and --build-id-dir using the given symbol-index file,
       which defaults to ~/.fuchsia/debug/symbol-index. The file should be
@@ -323,6 +326,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   // Debug agent options:
   parser.AddSwitch("connect", 'r', kRemoteHostHelp, &CommandLineOptions::connect);
+  parser.AddSwitch("unix-connect", 0, kUnixConnectHelp, &CommandLineOptions::unix_connect);
   parser.AddSwitch("symbol-index", 0, kSymbolIndexHelp, &CommandLineOptions::symbol_index_files);
   parser.AddSwitch("build-id-dir", 0, kBuildIdDirHelp, &CommandLineOptions::build_id_dirs);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
@@ -395,6 +399,10 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   status = ProcessLogOptions(options);
   if (status.has_error()) {
     return status.error_message();
+  }
+
+  if (options->connect && options->unix_connect) {
+    return "Only one of '--connect' and '--unix-connect' can be specified";
   }
 
   bool device = options->from.empty() || (options->from == "device");
@@ -481,6 +489,10 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   if (!options->from.empty() && (options->from != "device")) {
     decode_options->input_mode = InputMode::kFile;
+  } else {
+    if (options->connect && options->unix_connect) {
+      return "'--connect' or '--unix-connect' options expected";
+    }
   }
 
   if ((!options->format.has_value() && options->extra_generation.empty()) ||

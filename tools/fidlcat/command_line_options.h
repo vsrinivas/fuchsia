@@ -22,6 +22,7 @@ struct CommandLineOptions {
  public:
   // debug agent options:
   std::optional<std::string> connect;
+  std::optional<std::string> unix_connect;
   std::vector<std::string> symbol_index_files;
   std::vector<std::string> build_id_dirs;
   std::vector<std::string> symbol_servers;
