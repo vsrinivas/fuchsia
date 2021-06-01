@@ -68,7 +68,7 @@
   .endif
 .endm  // .label
 
-/// Define a function that extends until `.end`.
+/// Define a function that extends until `.end_function`.
 ///
 /// Parameters
 ///
