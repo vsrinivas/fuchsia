@@ -24,7 +24,9 @@ zx_library("simple-codec") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zircon-internal",
 
     # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
     "//zircon/system/ulib/async-loop:async-loop-default",

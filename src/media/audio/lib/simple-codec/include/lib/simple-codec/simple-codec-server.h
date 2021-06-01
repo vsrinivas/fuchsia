@@ -116,7 +116,6 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   zx_status_t CreateInternal();
 
   DriverIds driver_ids_;
-  std::optional<fidl::Binding<::fuchsia::hardware::audio::Codec>> binding_;
   async::Loop loop_;
 
   inspect::Inspector inspect_;

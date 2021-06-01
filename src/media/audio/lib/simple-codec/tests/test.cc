@@ -170,4 +170,33 @@ TEST_F(SimpleCodecTest, Inspect) {
   codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
+TEST_F(SimpleCodecTest, MultipleClients) {
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  audio_fidl::CodecSyncPtr codec_clients[3];
+  for (auto& codec_client : codec_clients) {
+    zx::channel channel_remote, channel_local;
+    ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+    ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+    codec_client.Bind(std::move(channel_local));
+  }
+
+  audio_fidl::CodecInfo info;
+  ASSERT_OK(codec_clients[0]->GetInfo(&info));
+  EXPECT_EQ(info.unique_id, std::string(kTestId));
+
+  ASSERT_OK(codec_clients[1]->GetInfo(&info));
+  EXPECT_EQ(info.unique_id, std::string(kTestId));
+
+  ASSERT_OK(codec_clients[2]->GetInfo(&info));
+  EXPECT_EQ(info.unique_id, std::string(kTestId));
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
 }  // namespace audio

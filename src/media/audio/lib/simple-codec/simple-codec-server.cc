@@ -11,6 +11,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
 namespace audio {
 
@@ -61,8 +62,7 @@ zx_status_t SimpleCodecServer::CreateInternal() {
 }
 
 zx_status_t SimpleCodecServer::CodecConnect(zx::channel channel) {
-  binding_.emplace(this, std::move(channel), loop_.dispatcher());
-  return ZX_OK;
+  return BindClient(std::move(channel), loop_.dispatcher());
 }
 
 template <class T>
@@ -71,29 +71,54 @@ SimpleCodecServerInternal<T>::SimpleCodecServerInternal() {
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::Reset(ResetCallback callback) {
+zx_status_t SimpleCodecServerInternal<T>::BindClient(zx::channel channel,
+                                                     async_dispatcher_t* dispatcher) {
+  auto instance = std::make_unique<SimpleCodecServerInstance<SimpleCodecServer>>(std::move(channel),
+                                                                                 dispatcher, this);
+  fbl::AutoLock lock(&instances_lock_);
+  instances_.push_back(std::move(instance));
+  return ZX_OK;
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::OnUnbound(SimpleCodecServerInstance<T>* instance) {
+  fbl::AutoLock lock(&instances_lock_);
+  instances_.erase(*instance);
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::Reset(Codec::ResetCallback callback,
+                                         SimpleCodecServerInstance<T>* instance) {
   auto status = static_cast<T*>(this)->Reset();
   if (status != ZX_OK) {
-    static_cast<T*>(this)->binding_->Unbind();
+    instance->binding_.Unbind();
+    fbl::AutoLock lock(&instances_lock_);
+    instances_.erase(*instance);
   }
   callback();
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::Stop(StopCallback callback) {
+void SimpleCodecServerInternal<T>::Stop(Codec::StopCallback callback,
+                                        SimpleCodecServerInstance<T>* instance) {
   auto status = static_cast<T*>(this)->Stop();
   if (status != ZX_OK) {
-    static_cast<T*>(this)->binding_->Unbind();
+    instance->binding_.Unbind();
+    fbl::AutoLock lock(&instances_lock_);
+    instances_.erase(*instance);
   }
   static_cast<T*>(this)->state_.Set("stopped");
   callback();
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::Start(StartCallback callback) {
+void SimpleCodecServerInternal<T>::Start(Codec::StartCallback callback,
+                                         SimpleCodecServerInstance<T>* instance) {
   auto status = static_cast<T*>(this)->Start();
   if (status != ZX_OK) {
-    static_cast<T*>(this)->binding_->Unbind();
+    instance->binding_.Unbind();
+    fbl::AutoLock lock(&instances_lock_);
+    instances_.erase(*instance);
   }
   static_cast<T*>(this)->state_.Set("started");
   static_cast<T*>(this)->start_time_.Set(zx::clock::get_monotonic().get());
@@ -101,17 +126,17 @@ void SimpleCodecServerInternal<T>::Start(StartCallback callback) {
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::GetInfo(GetInfoCallback callback) {
+void SimpleCodecServerInternal<T>::GetInfo(Codec::GetInfoCallback callback) {
   callback(static_cast<T*>(this)->GetInfo());
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::IsBridgeable(IsBridgeableCallback callback) {
+void SimpleCodecServerInternal<T>::IsBridgeable(Codec::IsBridgeableCallback callback) {
   callback(static_cast<T*>(this)->IsBridgeable());
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::GetDaiFormats(GetDaiFormatsCallback callback) {
+void SimpleCodecServerInternal<T>::GetDaiFormats(Codec::GetDaiFormatsCallback callback) {
   auto formats = static_cast<T*>(this)->GetDaiFormats();
   std::vector<audio_fidl::DaiFrameFormat> frame_formats;
   for (FrameFormat i : formats.frame_formats) {
@@ -135,7 +160,7 @@ void SimpleCodecServerInternal<T>::GetDaiFormats(GetDaiFormatsCallback callback)
 
 template <class T>
 void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
-                                                SetDaiFormatCallback callback) {
+                                                Codec::SetDaiFormatCallback callback) {
   DaiFormat format2 = {};
   format2.number_of_channels = format.number_of_channels;
   format2.channels_to_use_bitmask = format.channels_to_use_bitmask;
@@ -177,7 +202,7 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::GetGainFormat(GetGainFormatCallback callback) {
+void SimpleCodecServerInternal<T>::GetGainFormat(Codec::GetGainFormatCallback callback) {
   auto format = static_cast<T*>(this)->GetGainFormat();
   audio_fidl::GainFormat format2;
   format2.set_type(audio_fidl::GainType::DECIBELS);  // Only decibels in simple codec.
@@ -190,19 +215,23 @@ void SimpleCodecServerInternal<T>::GetGainFormat(GetGainFormatCallback callback)
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::WatchGainState(WatchGainStateCallback callback) {
-  audio_fidl::GainState gain_state;
+void SimpleCodecServerInstance<T>::WatchGainState(Codec::WatchGainStateCallback callback) {
   // Only reply the first time, then don't reply anymore. In simple codecs gain must only be
   // changed by SetGainState and hence we don't expect any watch calls to determine gain changes.
-  static bool first_time = true;
-  if (first_time) {
-    auto state = static_cast<T*>(this)->GetGainState();
-    gain_state.set_muted(state.muted);
-    gain_state.set_agc_enabled(state.agc_enabled);
-    gain_state.set_gain_db(state.gain);
-    callback(std::move(gain_state));
-    first_time = false;
+  if (watch_gain_state_first_time_) {
+    parent_->WatchGainState(std::move(callback));
+    watch_gain_state_first_time_ = false;
   }
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::WatchGainState(Codec::WatchGainStateCallback callback) {
+  audio_fidl::GainState gain_state;
+  auto state = static_cast<T*>(this)->GetGainState();
+  gain_state.set_muted(state.muted);
+  gain_state.set_agc_enabled(state.agc_enabled);
+  gain_state.set_gain_db(state.gain);
+  callback(std::move(gain_state));
 }
 
 template <class T>
@@ -216,23 +245,27 @@ void SimpleCodecServerInternal<T>::SetGainState(audio_fidl::GainState state) {
 
 template <class T>
 void SimpleCodecServerInternal<T>::GetPlugDetectCapabilities(
-    GetPlugDetectCapabilitiesCallback callback) {
+    Codec::GetPlugDetectCapabilitiesCallback callback) {
   // Only hardwired in simple codec.
   callback(::fuchsia::hardware::audio::PlugDetectCapabilities::HARDWIRED);
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::WatchPlugState(WatchPlugStateCallback callback) {
-  audio_fidl::PlugState plug_state;
+void SimpleCodecServerInstance<T>::WatchPlugState(WatchPlugStateCallback callback) {
   // Only reply the first time, then don't reply anymore. Simple codec does not support changes to
   // plug state, also clients using simple codec do not issue WatchPlugState calls.
-  static bool first_time = true;
-  if (first_time) {
-    plug_state.set_plugged(true);
-    plug_state.set_plug_state_time(plug_time_);
-    callback(std::move(plug_state));
-    first_time = false;
+  if (watch_plug_state_first_time_) {
+    parent_->WatchPlugState(std::move(callback));
+    watch_plug_state_first_time_ = false;
   }
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::WatchPlugState(Codec::WatchPlugStateCallback callback) {
+  audio_fidl::PlugState plug_state;
+  plug_state.set_plugged(true);
+  plug_state.set_plug_state_time(plug_time_);
+  callback(std::move(plug_state));
 }
 
 template class SimpleCodecServerInternal<SimpleCodecServer>;
