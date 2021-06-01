@@ -767,7 +767,7 @@ action("elf_sizes.json") {
 action("check_vtables_in_rodata") {
   testonly = true
   hermetic_deps = false
-  script = "//scripts/clang/check-vtable-rodata.py"
+  script = "//scripts/clang/check_vtable_rodata.py"
   outputs = [ "$root_build_dir/$target_name" ]
   depfile = "$root_build_dir/$target_name.d"
 
