@@ -201,12 +201,11 @@ std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl::IncomingMessage&
   return txn.Dispatch(std::move(keep_alive_), std::move(msg));
 }
 
-std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_t* dispatcher,
-                                                               std::shared_ptr<ChannelRef> channel,
-                                                               std::shared_ptr<ClientBase> client,
-                                                               OnClientUnboundFn&& on_unbound_fn) {
+std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
+    async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
+    std::shared_ptr<ClientBase> client, std::shared_ptr<AsyncEventHandler>&& event_handler) {
   auto ret = std::shared_ptr<AsyncClientBinding>(new AsyncClientBinding(
-      dispatcher, std::move(channel), std::move(client), std::move(on_unbound_fn)));
+      dispatcher, std::move(channel), std::move(client), std::move(event_handler)));
   ret->keep_alive_ = ret;  // Keep the binding alive until an unbind operation or channel error.
   return ret;
 }
@@ -214,23 +213,24 @@ std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(async_dispatcher_
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<ChannelRef> channel,
                                        std::shared_ptr<ClientBase> client,
-                                       OnClientUnboundFn&& on_unbound_fn)
+                                       std::shared_ptr<AsyncEventHandler>&& event_handler)
     : AsyncBinding(dispatcher, zx::unowned_channel(channel->handle())),
       channel_(std::move(channel)),
       client_(std::move(client)),
-      on_unbound_fn_(std::move(on_unbound_fn)) {}
+      event_handler_(std::move(event_handler)) {}
 
 std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl::IncomingMessage& msg, bool*) {
-  return client_->Dispatch(msg);
+  return client_->Dispatch(msg, event_handler_.get());
 }
 
 void AsyncClientBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_ref,
                                       UnbindInfo info) {
-  auto binding = std::move(calling_ref);  // Move binding into scope.
+  // Move binding into scope.
+  std::shared_ptr<AsyncBinding> binding = std::move(calling_ref);
 
   // Stash state required after deleting the binding.
-  auto on_unbound_fn = std::move(on_unbound_fn_);
-  auto client = std::move(client_);
+  std::shared_ptr<AsyncEventHandler> event_handler = std::move(event_handler_);
+  std::shared_ptr<ClientBase> client = std::move(client_);
 
   // Delete the calling reference. Transient references don't access the channel, so don't wait.
   binding = nullptr;
@@ -241,8 +241,8 @@ void AsyncClientBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_re
   client = nullptr;
 
   // Execute the unbound hook if specified.
-  if (on_unbound_fn)
-    on_unbound_fn(info);
+  if (event_handler != nullptr)
+    event_handler->Unbound(info);
 }
 
 }  // namespace internal

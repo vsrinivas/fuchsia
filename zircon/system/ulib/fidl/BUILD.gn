@@ -84,6 +84,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/extract_resource_on_destruction.h",
                     "lib/fidl/llcpp/fidl_allocator.h",
+                    "lib/fidl/llcpp/internal/client_details.h",
                     "lib/fidl/llcpp/internal/server_details.h",
                     "lib/fidl/llcpp/message_storage.h",
                     "lib/fidl/llcpp/message.h",

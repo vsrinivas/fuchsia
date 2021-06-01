@@ -626,11 +626,10 @@ template <>
 class ::fidl::WireAsyncEventHandler<
     ::fidl_test_transitivedependenciescompose::Top>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_transitivedependenciescompose::Top> {
+          ::fidl_test_transitivedependenciescompose::Top>,
+      public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -849,27 +848,16 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>
   GetFoo_Sync(::fidl::BufferSpan _response_buffer);
 
-  ::fidl::WireAsyncEventHandler<::fidl_test_transitivedependenciescompose::Top>*
-  event_handler() const {
-    return event_handler_.get();
-  }
-
  private:
   friend class ::fidl::Client<::fidl_test_transitivedependenciescompose::Top>;
   friend class ::fidl::internal::ControlBlock<
       ::fidl_test_transitivedependenciescompose::Top>;
 
-  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
-                              ::fidl_test_transitivedependenciescompose::Top>>
-                              event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<::fidl::WireAsyncEventHandler<
-      ::fidl_test_transitivedependenciescompose::Top>>
-      event_handler_;
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
 };
 #endif  // __Fuchsia__
 

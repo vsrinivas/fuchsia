@@ -33,12 +33,12 @@ class TestProtocol {
 }  // namespace
 }  // namespace fidl
 template <>
-class ::fidl::WireAsyncEventHandler<fidl::TestProtocol> {
+class ::fidl::WireAsyncEventHandler<fidl::TestProtocol> : public fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-  virtual ~WireAsyncEventHandler() = default;
+  ~WireAsyncEventHandler() override = default;
 
-  virtual void Unbound(::fidl::UnbindInfo info) {}
+  void Unbound(::fidl::UnbindInfo info) override {}
 };
 
 template <>
@@ -84,25 +84,19 @@ class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::inter
     return txids_.size();
   }
 
-  fidl::WireAsyncEventHandler<fidl::TestProtocol>* event_handler() const {
-    return event_handler_.get();
-  }
-
  private:
   friend class Client<TestProtocol>;
   friend class internal::ControlBlock<TestProtocol>;
 
-  explicit WireClientImpl(
-      std::shared_ptr<fidl::WireAsyncEventHandler<fidl::TestProtocol>> event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  explicit WireClientImpl() = default;
 
   // For each event, increment the event count.
-  std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg) override {
+  std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
+                                          AsyncEventHandler* event_handler) override {
     event_count_++;
     return {};
   }
 
-  std::shared_ptr<fidl::WireAsyncEventHandler<fidl::TestProtocol>> event_handler_;
   std::mutex lock_;
   std::unordered_set<zx_txid_t> txids_;
   uint32_t event_count_ = 0;

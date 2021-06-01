@@ -4,6 +4,8 @@
 
 library fidl.test.coding.fuchsia;
 
+using zx;
+
 enum TestEnum : uint32 {
     ONE = 1;
 };
@@ -17,6 +19,7 @@ protocol Example {
     TwoWay(string in) -> (string out);
     OneWay(string in);
     -> OnEvent(string out);
+    -> OnResourceEvent(zx.handle h);
 };
 
 protocol Simple {

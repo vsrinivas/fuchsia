@@ -591,11 +591,10 @@ class ::fidl::internal::WireEventHandlerInterface<
 template <>
 class ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Super>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritance::Super> {
+          ::fidl_test_inheritance::Super>,
+      public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1259,11 +1258,10 @@ class ::fidl::internal::WireEventHandlerInterface<
 template <>
 class ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Sub>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritance::Sub> {
+          ::fidl_test_inheritance::Sub>,
+      public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1484,26 +1482,15 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Super> final
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
 
-  ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Super>* event_handler()
-      const {
-    return event_handler_.get();
-  }
-
  private:
   friend class ::fidl::Client<::fidl_test_inheritance::Super>;
   friend class ::fidl::internal::ControlBlock<::fidl_test_inheritance::Super>;
 
-  explicit WireClientImpl(
-      std::shared_ptr<
-          ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Super>>
-          event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Super>>
-      event_handler_;
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
 };
 #endif  // __Fuchsia__
 
@@ -1607,26 +1594,15 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub> final
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
       ::fidl::BufferSpan _response_buffer);
 
-  ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Sub>* event_handler()
-      const {
-    return event_handler_.get();
-  }
-
  private:
   friend class ::fidl::Client<::fidl_test_inheritance::Sub>;
   friend class ::fidl::internal::ControlBlock<::fidl_test_inheritance::Sub>;
 
-  explicit WireClientImpl(
-      std::shared_ptr<
-          ::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Sub>>
-          event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_inheritance::Sub>>
-      event_handler_;
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
 };
 #endif  // __Fuchsia__
 

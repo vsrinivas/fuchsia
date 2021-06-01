@@ -162,13 +162,9 @@ class Client final {
     }
 
     // Cannot use |std::make_shared| because the |ClientImpl| constructor is private.
-    client_.reset(new ClientImpl(event_handler));
+    client_.reset(new ClientImpl());
     client_->Bind(std::reinterpret_pointer_cast<internal::ClientBase>(client_),
-                  client_end.TakeChannel(), dispatcher, [event_handler](UnbindInfo unbind_info) {
-                    if (event_handler != nullptr) {
-                      event_handler->Unbound(unbind_info);
-                    }
-                  });
+                  client_end.TakeChannel(), dispatcher, std::move(event_handler));
     control_ = std::make_shared<internal::ControlBlock<Protocol>>(client_);
   }
 

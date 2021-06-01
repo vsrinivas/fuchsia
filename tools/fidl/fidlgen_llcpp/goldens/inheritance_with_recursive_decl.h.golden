@@ -402,11 +402,10 @@ template <>
 class ::fidl::WireAsyncEventHandler<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Parent> {
+          ::fidl_test_inheritancewithrecursivedecl::Parent>,
+      public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1180,11 +1179,10 @@ template <>
 class ::fidl::WireAsyncEventHandler<
     ::fidl_test_inheritancewithrecursivedecl::Child>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Child> {
+          ::fidl_test_inheritancewithrecursivedecl::Child>,
+      public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template <>
@@ -1428,28 +1426,16 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request);
 
-  ::fidl::WireAsyncEventHandler<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>*
-  event_handler() const {
-    return event_handler_.get();
-  }
-
  private:
   friend class ::fidl::Client<::fidl_test_inheritancewithrecursivedecl::Parent>;
   friend class ::fidl::internal::ControlBlock<
       ::fidl_test_inheritancewithrecursivedecl::Parent>;
 
-  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
-                              ::fidl_test_inheritancewithrecursivedecl::Parent>>
-                              event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<::fidl::WireAsyncEventHandler<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>>
-      event_handler_;
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -1542,28 +1528,16 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
           request);
 
-  ::fidl::WireAsyncEventHandler<
-      ::fidl_test_inheritancewithrecursivedecl::Child>*
-  event_handler() const {
-    return event_handler_.get();
-  }
-
  private:
   friend class ::fidl::Client<::fidl_test_inheritancewithrecursivedecl::Child>;
   friend class ::fidl::internal::ControlBlock<
       ::fidl_test_inheritancewithrecursivedecl::Child>;
 
-  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
-                              ::fidl_test_inheritancewithrecursivedecl::Child>>
-                              event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  WireClientImpl() = default;
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<::fidl::WireAsyncEventHandler<
-      ::fidl_test_inheritancewithrecursivedecl::Child>>
-      event_handler_;
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
 };
 #endif  // __Fuchsia__
 

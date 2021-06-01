@@ -94,18 +94,15 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{ "" }}
   {{- end }}
 
-  {{ .WireAsyncEventHandler }}* event_handler() const { return event_handler_.get(); }
-
  private:
   friend class ::fidl::Client<{{ . }}>;
   friend class ::fidl::internal::ControlBlock<{{ . }}>;
 
-  explicit WireClientImpl(std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler)
-      : event_handler_(std::move(event_handler)) {}
+  WireClientImpl() = default;
 
-  std::optional<::fidl::UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler_;
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
 };
 {{- EndifFuchsia -}}
 {{- end }}
@@ -114,25 +111,28 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 {{ EnsureNamespace ""}}
 {{- IfdefFuchsia -}}
 std::optional<::fidl::UnbindInfo>
-{{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl::IncomingMessage& msg) {
+{{ .WireClientImpl.NoLeading }}::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   {{- if .Events }}
-  if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr = msg.header();
-    switch (hdr->ordinal) {
-    {{- range .Events }}
-      case {{ .OrdinalName }}:
-      {
-        ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{decoded};
-        }
-        event_handler_->{{ .Name }}(decoded.PrimaryObject());
-        return std::nullopt;
+  auto* event_handler = static_cast<{{ .WireAsyncEventHandler }}*>(maybe_event_handler);
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+  {{- range .Events }}
+    case {{ .OrdinalName }}:
+    {
+      ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
       }
-    {{- end }}
-      default:
-        break;
+      if (event_handler) {
+        event_handler->{{ .Name }}(decoded.PrimaryObject());
+      }
+      return std::nullopt;
     }
+  {{- end }}
+    default:
+      break;
   }
   {{- end }}
   return ::fidl::UnbindInfo::UnknownOrdinal();

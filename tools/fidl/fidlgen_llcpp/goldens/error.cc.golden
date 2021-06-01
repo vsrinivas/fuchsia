@@ -168,8 +168,10 @@ fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawReply(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_error::Example>::DispatchEvent(fidl::IncomingMessage& msg) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::WireClientImpl<::fidl_test_error::Example>::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__

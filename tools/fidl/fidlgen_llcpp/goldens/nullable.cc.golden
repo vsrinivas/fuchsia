@@ -188,9 +188,10 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_nullable::SimpleProtocol>::DispatchEvent(fidl::IncomingMessage&
-                                                             msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_nullable::SimpleProtocol>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__

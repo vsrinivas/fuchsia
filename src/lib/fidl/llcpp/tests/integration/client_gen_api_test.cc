@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
 #include <string.h>
 #include <zircon/types.h>
 
@@ -143,6 +144,51 @@ TEST(GenAPITestCase, EventManaged) {
   ASSERT_OK(sync_completion_wait(&event_handler->done(), ZX_TIME_INFINITE));
 
   server_binding.Unbind();
+}
+
+TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerIsAbsent) {
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  fidl::Client<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireEventSender<Example> event_sender(std::move(remote));
+
+  // Send an unhandled event. The event should be silently discarded since
+  // the user did not provide an event handler.
+  zx::eventpair ep1, ep2;
+  ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
+  ASSERT_OK(event_sender.OnResourceEvent(std::move(ep1)));
+  zx_signals_t observed;
+  ASSERT_OK(zx_object_wait_one(ep2.get(), ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &observed));
+  ASSERT_EQ(ZX_EVENTPAIR_PEER_CLOSED, observed);
+}
+
+TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerMethodIsAbsent) {
+  auto endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  class EventHandler : public fidl::WireAsyncEventHandler<Example> {};
+
+  fidl::Client<Example> client(std::move(local), loop.dispatcher(),
+                               std::make_shared<EventHandler>());
+  fidl::WireEventSender<Example> event_sender(std::move(remote));
+
+  // Send an unhandled event. The event should be silently discarded since
+  // the user did not provide a handler method for |OnResourceEvent|.
+  zx::eventpair ep1, ep2;
+  ASSERT_OK(zx::eventpair::create(0, &ep1, &ep2));
+  ASSERT_OK(event_sender.OnResourceEvent(std::move(ep1)));
+  zx_signals_t observed;
+  ASSERT_OK(zx_object_wait_one(ep2.get(), ZX_EVENTPAIR_PEER_CLOSED, ZX_TIME_INFINITE, &observed));
+  ASSERT_EQ(ZX_EVENTPAIR_PEER_CLOSED, observed);
 }
 
 // This is test is almost identical to ClientBindingTestCase.Epitaph in llcpp_client_test.cc but

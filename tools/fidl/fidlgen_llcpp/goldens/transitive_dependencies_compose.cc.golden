@@ -181,7 +181,8 @@ zx_status_t fidl::WireResponseContext<
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
-    DispatchEvent(fidl::IncomingMessage& msg) {
+    DispatchEvent(fidl::IncomingMessage& msg,
+                  ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__

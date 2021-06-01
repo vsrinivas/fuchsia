@@ -56,25 +56,29 @@ fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_doccomments::Interface>::DispatchEvent(fidl::IncomingMessage&
-                                                           msg) {
-  if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr = msg.header();
-    switch (hdr->ordinal) {
-      case ::fidl_test_doccomments::kInterface_OnEvent_Ordinal: {
-        ::fidl::DecodedMessage<
-            ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
-            decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{decoded};
-        }
-        event_handler_->OnEvent(decoded.PrimaryObject());
-        return std::nullopt;
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_doccomments::Interface>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+  auto* event_handler = static_cast<
+      ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>*>(
+      maybe_event_handler);
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    case ::fidl_test_doccomments::kInterface_OnEvent_Ordinal: {
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
       }
-      default:
-        break;
+      if (event_handler) {
+        event_handler->OnEvent(decoded.PrimaryObject());
+      }
+      return std::nullopt;
     }
+    default:
+      break;
   }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }

@@ -8,6 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/internal/client_details.h>
 #include <lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/zx/channel.h>
@@ -166,7 +167,7 @@ class ClientBase {
   // Bind the channel to the dispatcher. Invoke on_unbound on error or unbinding.
   // NOTE: This is not thread-safe and must be called exactly once, before any other APIs.
   void Bind(std::shared_ptr<ClientBase> client, zx::channel channel, async_dispatcher_t* dispatcher,
-            OnClientUnboundFn on_unbound);
+            std::shared_ptr<AsyncEventHandler>&& event_handler);
 
   // Asynchronously unbind the client from the dispatcher. on_unbound will be invoked on a
   // dispatcher thread if provided.
@@ -208,6 +209,19 @@ class ClientBase {
 
   // Dispatches a generic incoming message.
   //
+  // ## Handling events
+  //
+  // If the incoming message is an event, the implementation should dispatch it
+  // using the optional |maybe_event_handler|.
+  //
+  // If |maybe_event_handler| is null, the implementation should perform all the
+  // checks that the message is valid and a recognized event, but not
+  // actually invoke the event handler.
+  //
+  // If |maybe_event_handler| is present, it should point to a event handler
+  // subclass which corresponds to the protocol of |ClientImpl|. This constraint
+  // is typically enforced when creating the client.
+  //
   // ## Message ownership
   //
   // If a matching response handler or event handler is found, |msg| is then
@@ -218,11 +232,22 @@ class ClientBase {
   // If errors occur during dispatching, the function will return an
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg);
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
+                                     AsyncEventHandler* maybe_event_handler);
 
   // Dispatches an incoming event.
   //
   // This should be implemented by the generated messaging layer.
+  //
+  // ## Handling events
+  //
+  // If |maybe_event_handler| is null, the implementation should perform all the
+  // checks that the message is valid and a recognized event, but not
+  // actually invoke the event handler.
+  //
+  // If |maybe_event_handler| is present, it should point to a event handler
+  // subclass which corresponds to the protocol of |ClientImpl|. This constraint
+  // is typically enforced when creating the client.
   //
   // ## Message ownership
   //
@@ -234,7 +259,8 @@ class ClientBase {
   // If errors occur during dispatching, the function will return an
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
-  virtual std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg) = 0;
+  virtual std::optional<UnbindInfo> DispatchEvent(fidl::IncomingMessage& msg,
+                                                  AsyncEventHandler* maybe_event_handler) = 0;
 
  private:
   ChannelRefTracker channel_tracker_;

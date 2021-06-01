@@ -15,12 +15,13 @@ namespace internal {
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 void ClientBase::Bind(std::shared_ptr<ClientBase> client, zx::channel channel,
-                      async_dispatcher_t* dispatcher, OnClientUnboundFn on_unbound) {
+                      async_dispatcher_t* dispatcher,
+                      std::shared_ptr<AsyncEventHandler>&& event_handler) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   channel_tracker_.Init(std::move(channel));
   auto binding = AsyncClientBinding::Create(dispatcher, channel_tracker_.Get(), std::move(client),
-                                            std::move(on_unbound));
+                                            std::move(event_handler));
   binding_ = binding;
   binding->BeginWait();
 }
@@ -74,7 +75,8 @@ void ClientBase::ReleaseResponseContextsWithError() {
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg) {
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
+                                               AsyncEventHandler* maybe_event_handler) {
   if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
     return UnbindInfo::PeerClosed((*epitaph)->error);
   }
@@ -82,7 +84,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg) {
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return DispatchEvent(msg);
+    return DispatchEvent(msg, maybe_event_handler);
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.

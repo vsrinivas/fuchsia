@@ -274,23 +274,27 @@ zx_status_t fidl::WireResponseContext<
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg) {
-  if (event_handler_ != nullptr) {
-    fidl_message_header_t* hdr = msg.header();
-    switch (hdr->ordinal) {
-      case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-        ::fidl::DecodedMessage<::fidl::WireResponse<
-            ::fidl_test_emptystruct::EmptyProtocol::Receive>>
-            decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{decoded};
-        }
-        event_handler_->Receive(decoded.PrimaryObject());
-        return std::nullopt;
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+  auto* event_handler = static_cast<
+      ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>*>(
+      maybe_event_handler);
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
       }
-      default:
-        break;
+      if (event_handler) {
+        event_handler->Receive(decoded.PrimaryObject());
+      }
+      return std::nullopt;
     }
+    default:
+      break;
   }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }

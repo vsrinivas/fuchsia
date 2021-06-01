@@ -492,9 +492,10 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_protocolrequest::Parent>::DispatchEvent(fidl::IncomingMessage&
-                                                            msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocolrequest::Parent>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -721,9 +722,10 @@ void ::fidl::WireRequest<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_protocolrequest::Child>::DispatchEvent(fidl::IncomingMessage&
-                                                           msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocolrequest::Child>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__

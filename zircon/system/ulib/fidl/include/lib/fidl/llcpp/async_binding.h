@@ -10,6 +10,7 @@
 #include <lib/async/wait.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
+#include <lib/fidl/llcpp/internal/client_details.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server_end.h>
@@ -292,9 +293,6 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
   AnyOnUnboundFn on_unbound_fn_ = {};
 };
 
-// Invoked from a dispatcher thread after the client end of a channel is unbound.
-using OnClientUnboundFn = fit::callback<void(UnbindInfo)>;
-
 // The async client binding. The client supports both synchronous and
 // asynchronous calls. Because the channel lifetime must outlast the duration
 // of any synchronous calls, and that synchronous calls do not yet support
@@ -303,10 +301,9 @@ using OnClientUnboundFn = fit::callback<void(UnbindInfo)>;
 // calls, using shared pointers.
 class AsyncClientBinding final : public AsyncBinding {
  public:
-  static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
-                                                    std::shared_ptr<ChannelRef> channel,
-                                                    std::shared_ptr<ClientBase> client,
-                                                    internal::OnClientUnboundFn&& on_unbound_fn);
+  static std::shared_ptr<AsyncClientBinding> Create(
+      async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
+      std::shared_ptr<ClientBase> client, std::shared_ptr<AsyncEventHandler>&& event_handler);
 
   virtual ~AsyncClientBinding() = default;
 
@@ -315,7 +312,7 @@ class AsyncClientBinding final : public AsyncBinding {
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
                      std::shared_ptr<ClientBase> client,
-                     internal::OnClientUnboundFn&& on_unbound_fn);
+                     std::shared_ptr<AsyncEventHandler>&& event_handler);
 
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 
@@ -323,7 +320,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   std::shared_ptr<ChannelRef> channel_ = nullptr;  // Strong reference to the channel.
   std::shared_ptr<ClientBase> client_;
-  internal::OnClientUnboundFn on_unbound_fn_;
+  std::shared_ptr<AsyncEventHandler> event_handler_;
 };
 
 }  // namespace internal

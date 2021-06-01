@@ -164,8 +164,10 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_inheritance::Super>::DispatchEvent(fidl::IncomingMessage& msg) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -412,8 +414,10 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_inheritance::Sub>::DispatchEvent(fidl::IncomingMessage& msg) {
+std::optional<::fidl::UnbindInfo>
+fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__

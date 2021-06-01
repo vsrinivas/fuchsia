@@ -24,11 +24,10 @@ public:
 };
 
 template<>
-class {{ .WireAsyncEventHandler }} : public {{ .WireEventHandlerInterface }} {
+class {{ .WireAsyncEventHandler }}
+    : public {{ .WireEventHandlerInterface }}, public ::fidl::internal::AsyncEventHandler {
  public:
  {{ .WireAsyncEventHandler.Self }}() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
 template<>
