@@ -221,7 +221,11 @@ action("kazoo-syscall-golden-test") {
     sources += [ "//zircon/vdso/" + fidl ]
   }
 
-  outputs = [ "$target_gen_dir/kazoo-golden-test" ]
+  _new_golden = "$target_out_dir/new-golden.txt"
+  outputs = [
+    "$target_gen_dir/kazoo-golden-test",
+    _new_golden,
+  ]
   depfile = "$target_gen_dir/kazoo-golden-test.d"
 
   args = [
@@ -236,6 +240,8 @@ action("kazoo-syscall-golden-test") {
     "--tmp-base",
     rebase_path("${target_gen_dir}/__untraced_kazoo_test_dir__",
                 root_build_dir),
+    "--new-golden",
+    rebase_path(_new_golden, root_build_dir),
     "--depfile",
     rebase_path(depfile, root_build_dir),
   ]
