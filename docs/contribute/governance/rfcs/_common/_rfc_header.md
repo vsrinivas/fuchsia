@@ -76,7 +76,7 @@ table {
 }
 
 .col-key {
-  width:1px;white-space:nowrap;
+  white-space:nowrap;
 }
 
 .note {
