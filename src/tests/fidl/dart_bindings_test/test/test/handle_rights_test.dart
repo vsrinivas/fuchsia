@@ -2,10 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:fidl/fidl.dart';
+import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
 import 'package:server_test/server.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
+
+class Ordinals {
+  static const int sendEvent = 0x4313c1541d0f2e86;
+  static const int sendChannel = 0x1c036ce2684ad5b2;
+}
+
+class HandleRightsTestServerImpl extends HandleRightsTestServer {
+  @override
+  Future<void> sendEvent(Handle h) {
+    throw FidlError('send event received');
+  }
+
+  @override
+  Future<void> sendChannel(Channel h) {
+    throw FidlError('send channel received');
+  }
+}
 
 void main() async {
   TestServerInstance server;
@@ -55,6 +76,74 @@ void main() async {
       } on FidlError catch (err) {/* expected */} // ignore: unused_catch_clause
       channelPair.first.close();
       channelPair.second.close();
+    });
+  });
+
+  // Tests that handle rights checks are happening on both send and receive side.
+  group('handle rights directionality', () {
+    Future<int> changeOrdinal(
+        Channel channelIn,
+        int ordinalIn,
+        Channel channelOut,
+        int ordinalOut,
+        int targetType,
+        int targetRights) async {
+      Completer completer = Completer();
+      channelIn.handle.asyncWait(Channel.READABLE | Channel.PEER_CLOSED,
+          (int a, int b) {
+        completer.complete();
+      });
+      await completer.future;
+      ReadEtcResult readEtcResult = channelIn.queryAndReadEtc();
+      ByteData bytes = readEtcResult.bytes;
+      int readOrdinal = Uint64List.sublistView(bytes, 8, 16).first;
+      expect(readOrdinal, equals(ordinalIn));
+
+      Uint64List.sublistView(bytes, 8, 16).first = ordinalOut;
+      List<HandleDisposition> handleDispositions = readEtcResult.handleInfos
+          .map((handleInfo) => HandleDisposition(
+              ZX.HANDLE_OP_MOVE, handleInfo.handle, targetType, targetRights))
+          .toList();
+      return channelOut.writeEtc(bytes, handleDispositions);
+    }
+
+    test('sending channel as event from client - send side error', () async {
+      ChannelPair payloadPair = ChannelPair();
+
+      final HandleRightsTestServerProxy proxy = HandleRightsTestServerProxy();
+      Channel clientChannel = proxy.ctrl.request().passChannel();
+
+      await proxy.sendEvent(payloadPair.first.handle);
+      clientChannel.close();
+      payloadPair.first.close();
+      payloadPair.second.close();
+    });
+
+    test('sending channel as event from client - receive side error', () async {
+      ChannelPair payloadPair = ChannelPair();
+      ChannelPair proxyPair = ChannelPair();
+
+      final HandleRightsTestServerProxy proxy = HandleRightsTestServerProxy();
+      Channel clientChannel = proxy.ctrl.request().passChannel();
+
+      HandleRightsTestServerBinding binding = HandleRightsTestServerBinding();
+      HandleRightsTestServerImpl server = HandleRightsTestServerImpl();
+      binding.bind(server, InterfaceRequest<Channel>(proxyPair.second));
+
+      await proxy.sendChannel(payloadPair.first);
+      int writeStatus = await changeOrdinal(
+          clientChannel,
+          Ordinals.sendChannel,
+          proxyPair.first,
+          Ordinals.sendEvent,
+          ZX.OBJ_TYPE_EVENT,
+          ZX.RIGHT_SAME_RIGHTS);
+      expect(writeStatus, equals(ZX.ERR_WRONG_TYPE));
+      clientChannel.close();
+      payloadPair.first.close();
+      payloadPair.second.close();
+      proxyPair.first.close();
+      proxyPair.second.close();
     });
   });
 }

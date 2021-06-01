@@ -119,6 +119,11 @@ protocol TestServer {
     EventEvent(zx.handle:EVENT h);
 };
 
+protocol HandleRightsTestServer {
+    SendEvent(zx.handle:EVENT h);
+    SendChannel(zx.handle:CHANNEL h);
+};
+
 strict enum EnumOne {
     ONE = 1;
     TWO = 2;

@@ -60,8 +60,8 @@ void main() async {
             0x01, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, // n1 + h
             0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // n2 + paddding
           ]));
-      expect(encoder.message.handles.length, equals(1));
-      encoder.message.handles[0].close();
+      expect(encoder.message.handleDispositions.length, equals(1));
+      encoder.message.handleDispositions[0].handle.close();
     });
 
     test('encode integer bounds', () {

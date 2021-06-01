@@ -71,9 +71,9 @@ class IncomingMessage extends _BaseMessage {
         super(result.bytes);
   @visibleForTesting
   IncomingMessage.fromOutgoingMessage(OutgoingMessage outgoingMessage)
-      : handleInfos = outgoingMessage.handles
-            .map((handle) =>
-                HandleInfo(handle, ZX.OBJ_TYPE_NONE, ZX.RIGHT_SAME_RIGHTS))
+      : handleInfos = outgoingMessage.handleDispositions
+            .map((handleDisposition) => HandleInfo(handleDisposition.handle,
+                handleDisposition.type, handleDisposition.rights))
             .toList(),
         super(outgoingMessage.data);
 
@@ -92,22 +92,22 @@ class IncomingMessage extends _BaseMessage {
 }
 
 class OutgoingMessage extends _BaseMessage {
-  OutgoingMessage(data, this.handles) : super(data);
+  OutgoingMessage(data, this.handleDispositions) : super(data);
 
   set txid(int value) =>
       data.setUint32(kMessageTxidOffset, value, Endian.little);
 
-  final List<Handle> handles;
+  final List<HandleDisposition> handleDispositions;
 
   void closeHandles() {
-    for (int i = 0; i < handles.length; ++i) {
-      handles[i].close();
+    for (int i = 0; i < handleDispositions.length; ++i) {
+      handleDispositions[i].handle.close();
     }
   }
 
   @override
   String toString() {
-    return 'OutgoingMessage(numBytes=${data.lengthInBytes}, numHandles=${handles.length})';
+    return 'OutgoingMessage(numBytes=${data.lengthInBytes}, numHandles=${handleDispositions.length})';
   }
 }
 

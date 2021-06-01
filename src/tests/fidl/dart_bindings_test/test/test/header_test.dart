@@ -73,7 +73,7 @@ void main() {
       final encoder = Encoder()
         ..encodeMessageHeader(0, 0)
         ..encodeUint8(0, kMessageMagicOffset);
-      client.write(encoder.message.data, encoder.message.handles);
+      client.writeEtc(encoder.message.data, encoder.message.handleDispositions);
     });
   });
 }

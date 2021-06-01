@@ -113,7 +113,8 @@ class EncodeSuccessCase<T, I extends Iterable<T>> {
     test('encode', () {
       final message = _encode(type, input);
       expect(_getMessageBodyBytes(message), equals(bytes));
-      expect(message.handles, equals(handles));
+      expect(message.handleDispositions.map((h) => h.handle).toList(),
+          equals(handles));
     });
   }
 }

@@ -328,7 +328,7 @@ abstract class Binding<T> {
       response.closeHandles();
       return;
     }
-    _reader.channel!.write(response.data, response.handles);
+    _reader.channel!.writeEtc(response.data, response.handleDispositions);
   }
 
   final ChannelReader _reader = ChannelReader();
@@ -559,7 +559,8 @@ class ProxyController<T> {
       proxyError('The proxy is closed.');
       return;
     }
-    final int status = _reader.channel!.write(message.data, message.handles);
+    final int status =
+        _reader.channel!.writeEtc(message.data, message.handleDispositions);
     if (status != ZX.OK)
       proxyError(
           'Failed to write to channel: ${_reader.channel} (status: $status)');
@@ -581,7 +582,8 @@ class ProxyController<T> {
     while (txid == 0 || _callbackMap.containsKey(txid))
       txid = _nextTxid++ & _kUserspaceTxidMask;
     message.txid = txid;
-    final int status = _reader.channel!.write(message.data, message.handles);
+    final int status =
+        _reader.channel!.writeEtc(message.data, message.handleDispositions);
 
     if (status != ZX.OK) {
       proxyError(

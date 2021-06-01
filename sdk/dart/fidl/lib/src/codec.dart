@@ -36,11 +36,11 @@ class Encoder {
 
   OutgoingMessage get message {
     final ByteData trimmed = ByteData.view(data.buffer, 0, _extent);
-    return OutgoingMessage(trimmed, _handles);
+    return OutgoingMessage(trimmed, _handleDispositions);
   }
 
   ByteData data = ByteData(_kInitialBufferSize);
-  final List<Handle> _handles = <Handle>[];
+  final List<HandleDisposition> _handleDispositions = <HandleDisposition>[];
   int _extent = 0;
 
   void _grow(int newSize) {
@@ -73,11 +73,11 @@ class Encoder {
   }
 
   int countHandles() {
-    return _handles.length;
+    return _handleDispositions.length;
   }
 
-  void addHandle(Handle value) {
-    _handles.add(value);
+  void addHandleDisposition(HandleDisposition value) {
+    _handleDispositions.add(value);
   }
 
   void encodeMessageHeader(int ordinal, int txid) {

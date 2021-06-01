@@ -261,7 +261,7 @@ abstract class AsyncBinding<T> extends _Stateful {
       response.closeHandles();
       return;
     }
-    _reader.channel?.write(response.data, response.handles);
+    _reader.channel?.writeEtc(response.data, response.handleDispositions);
   }
 
   final ChannelReader _reader = ChannelReader();
@@ -489,7 +489,8 @@ class AsyncProxyController<T> extends _Stateful {
           'AsyncProxyController<${$interfaceName}> is closed.'));
       return;
     }
-    final int status = _reader.channel!.write(message.data, message.handles);
+    final int status =
+        _reader.channel!.writeEtc(message.data, message.handleDispositions);
     if (status != ZX.OK) {
       proxyError(FidlError(
           'AsyncProxyController<${$interfaceName}> failed to write to channel: ${_reader.channel} (status: $status)'));
@@ -515,7 +516,8 @@ class AsyncProxyController<T> extends _Stateful {
       txid = _nextTxid++ & _userspaceTxidMask;
     message.txid = txid;
     _completerMap[message.txid] = completer;
-    final int status = _reader.channel!.write(message.data, message.handles);
+    final int status =
+        _reader.channel!.writeEtc(message.data, message.handleDispositions);
 
     if (status != ZX.OK) {
       proxyError(FidlError(
