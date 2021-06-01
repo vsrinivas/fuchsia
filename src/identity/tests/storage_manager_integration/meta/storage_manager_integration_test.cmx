@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/storage_manager_integration_test"
+        "binary": "bin/storage_manager_integration_test"
     },
     "sandbox": {
         "services": [
