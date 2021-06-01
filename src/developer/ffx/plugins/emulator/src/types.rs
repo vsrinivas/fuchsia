@@ -502,7 +502,7 @@ impl ImageFiles {
 }
 
 pub struct SSHKeys {
-    pub auth_key: PathBuf,
+    pub authorized_keys: PathBuf,
     pub private_key: PathBuf,
 }
 
@@ -510,7 +510,7 @@ impl SSHKeys {
     #[allow(dead_code)]
     pub fn print(&self) {
         println!("[fvdl] private_key {:?}", self.private_key);
-        println!("[fvdl] auth_key {:?}", self.auth_key);
+        println!("[fvdl] authorized_keys {:?}", self.authorized_keys);
     }
 
     /// Initialize SSH key files for in-tree usage.
@@ -522,8 +522,8 @@ impl SSHKeys {
         let mut lines = ssh_file.lines();
 
         let private_key = PathBuf::from(lines.next().unwrap()?);
-        let auth_key = PathBuf::from(lines.next().unwrap()?);
-        Ok(SSHKeys { auth_key: auth_key, private_key: private_key })
+        let authorized_keys = PathBuf::from(lines.next().unwrap()?);
+        Ok(SSHKeys { authorized_keys: authorized_keys, private_key: private_key })
     }
 
     /// Initialize SSH key files for GN SDK usage.
@@ -531,7 +531,7 @@ impl SSHKeys {
     /// Requires SSH keys to have been generated and stored in $HOME/.ssh/...
     pub fn from_sdk_env() -> Result<SSHKeys> {
         let keys = SSHKeys {
-            auth_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys"),
+            authorized_keys: home_dir().unwrap_or_default().join(".ssh/fuchsia_authorized_keys"),
             private_key: home_dir().unwrap_or_default().join(".ssh/fuchsia_ed25519"),
         };
         Ok(keys)
@@ -541,8 +541,8 @@ impl SSHKeys {
         if !self.private_key.exists() {
             ffx_bail!("private_key file at {:?} does not exist", self.private_key);
         }
-        if !self.auth_key.exists() {
-            ffx_bail!("public_key file at {:?} does not exist", self.auth_key);
+        if !self.authorized_keys.exists() {
+            ffx_bail!("authorized_keys file at {:?} does not exist", self.authorized_keys);
         }
         Ok(())
     }
@@ -553,10 +553,10 @@ impl SSHKeys {
         unix::fs::symlink(&vdl_priv_key_src, &vdl_priv_key_dest)?;
         self.private_key = vdl_priv_key_dest.to_path_buf();
 
-        let vdl_auth_key_dest = dir.join("id_ed25519.pub");
-        let vdl_auth_key_src = self.auth_key.as_path();
-        unix::fs::symlink(&vdl_auth_key_src, &vdl_auth_key_dest)?;
-        self.auth_key = vdl_auth_key_dest.to_path_buf();
+        let vdl_authorized_keys_dest = dir.join("fuchsia_authorized_keys");
+        let vdl_authorized_keys_src = self.authorized_keys.as_path();
+        unix::fs::symlink(&vdl_authorized_keys_src, &vdl_authorized_keys_dest)?;
+        self.authorized_keys = vdl_authorized_keys_dest.to_path_buf();
 
         Ok(())
     }
@@ -814,7 +814,7 @@ mod tests {
             "/usr/local/home/foo/.ssh/fuchsia_ed25519"
         );
         assert_eq!(
-            ssh_files.auth_key.to_str().unwrap(),
+            ssh_files.authorized_keys.to_str().unwrap(),
             "/usr/local/home/foo/.ssh/fuchsia_authorized_keys"
         );
         let tmp_dir = Builder::new().prefix("fvdl_test_ssh_").tempdir()?;

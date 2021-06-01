@@ -124,10 +124,13 @@ impl VDLFiles {
             .arg(&zbi_out)
             .arg(&self.image_files.zbi)
             .arg("--entry")
-            .arg(format!("data/ssh/authorized_keys={}", self.ssh_files.auth_key.display()))
+            .arg(format!("data/ssh/authorized_keys={}", self.ssh_files.authorized_keys.display()))
             .status()?;
         if status.success() {
-            return Ok(zbi_out);
+            if self.verbose {
+                println!("[fvdl] provisioned zbi {:?}", zbi_out);
+            }
+            Ok(zbi_out)
         } else {
             ffx_bail!("Cannot provision zbi. Exit status was {}", status.code().unwrap_or_default())
         }
@@ -135,22 +138,24 @@ impl VDLFiles {
 
     fn assemble_system_images(&self, sdk_version: &String) -> Result<String> {
         if sdk_version.is_empty() {
-            return Ok(format!(
+            // When SDK version is not specified, then all required files already exists locally (i.e in-tree)
+            Ok(format!(
                 "{},{},{},{},{},{},{}",
                 self.ssh_files.private_key.display(),
-                self.ssh_files.auth_key.display(),
+                self.ssh_files.authorized_keys.display(),
                 self.provision_zbi()?.display(),
                 self.image_files.kernel.display(),
                 self.image_files.fvm.as_ref().unwrap_or(&PathBuf::new()).display(),
                 self.image_files.build_args.display(),
                 self.image_files.amber_files.as_ref().unwrap_or(&PathBuf::new()).display(),
-            ));
+            ))
         } else {
-            return Ok(format!(
+            // Not specifying any image files will allow device_launcher to download from GCS.
+            Ok(format!(
                 "{},{}",
                 self.ssh_files.private_key.display(),
-                self.ssh_files.auth_key.display(),
-            ));
+                self.ssh_files.authorized_keys.display(),
+            ))
         }
     }
 
