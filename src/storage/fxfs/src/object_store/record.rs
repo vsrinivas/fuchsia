@@ -317,7 +317,10 @@ pub enum ObjectKind {
         /// The number of bytes allocated to all extents across all attributes for this file.
         allocated_size: u64,
     },
-    Directory,
+    Directory {
+        /// The number of sub-directories in this directory.
+        sub_dirs: u64,
+    },
     Graveyard,
 }
 

@@ -166,6 +166,7 @@ impl ObjectHandle for FakeObjectHandle {
             data_attribute_size: size,
             creation_time: Timestamp::zero(),
             modification_time: Timestamp::zero(),
+            sub_dirs: 0,
         })
     }
 

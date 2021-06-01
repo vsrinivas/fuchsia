@@ -307,6 +307,9 @@ impl FxNode for FxDirectory {
 #[async_trait]
 impl MutableDirectory for FxDirectory {
     async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+        if name.contains('/') {
+            return Err(Status::INVALID_ARGS);
+        }
         let store = self.store();
         let fs = store.filesystem().clone();
         let mut transaction = fs
@@ -394,7 +397,7 @@ impl MutableDirectory for FxDirectory {
             .await
             .map_err(map_to_status)?;
         self.directory
-            .update_timestamps(&mut transaction, crtime, mtime)
+            .update_attributes(&mut transaction, crtime, mtime, |_| {})
             .await
             .map_err(map_to_status)?;
         transaction.commit().await;
@@ -594,7 +597,8 @@ impl Directory for FxDirectory {
             id: self.directory.object_id(),
             content_size: props.data_attribute_size,
             storage_size: props.allocated_size,
-            link_count: props.refs,
+            // +1 for the '.' reference, and 1 for each sub-directory.
+            link_count: props.refs + 1 + props.sub_dirs,
             creation_time: props.creation_time.as_nanos(),
             modification_time: props.modification_time.as_nanos(),
         })

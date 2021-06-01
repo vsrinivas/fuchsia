@@ -63,7 +63,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
             Mutation::insert_object(
                 ObjectKey::object(object_id),
                 ObjectValue::Object {
-                    kind: ObjectKind::Directory,
+                    kind: ObjectKind::Directory { sub_dirs: 0 },
                     attributes: ObjectAttributes {
                         creation_time: now.clone(),
                         modification_time: now,
@@ -78,7 +78,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
         if let ObjectItem {
-            value: ObjectValue::Object { kind: ObjectKind::Directory, .. }, ..
+            value: ObjectValue::Object { kind: ObjectKind::Directory { .. }, .. },
+            ..
         } = store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
         {
             Ok(Directory::new(owner.clone(), object_id))
@@ -118,7 +119,18 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::Directory),
             ),
         );
-        self.update_timestamps(transaction, None, Some(current_time())).await?;
+        self.update_attributes(transaction, None, Some(current_time()), |item| {
+            if let ObjectItem {
+                value: ObjectValue::Object { kind: ObjectKind::Directory { sub_dirs }, .. },
+                ..
+            } = item
+            {
+                *sub_dirs = sub_dirs.saturating_add(1);
+            } else {
+                panic!("Expected directory");
+            }
+        })
+        .await?;
         Ok(handle)
     }
 
@@ -136,7 +148,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
             ),
         );
-        self.update_timestamps(transaction, None, Some(current_time())).await?;
+        self.update_attributes(transaction, None, Some(current_time()), |_| {}).await?;
         Ok(handle)
     }
 
@@ -153,7 +165,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(store_object_id, ObjectDescriptor::Volume),
             ),
         );
-        self.update_timestamps(transaction, None, Some(current_time())).await
+        self.update_attributes(transaction, None, Some(current_time()), |_| {}).await
     }
 
     /// Inserts a child into the directory.
@@ -173,20 +185,18 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(object_id, descriptor),
             ),
         );
-        self.update_timestamps(transaction, None, Some(current_time())).await
+        self.update_attributes(transaction, None, Some(current_time()), |_| {}).await
     }
 
-    /// Updates the timestamps for the object.  If either argument is None, that timestamp is not
-    /// modified.
-    pub async fn update_timestamps<'a>(
+    /// Updates attributes for the object.  `updater` is a callback that allows modifications to
+    /// the object's attributes beyond just creation time and modification time.
+    pub async fn update_attributes<'a>(
         &self,
         transaction: &mut Transaction<'a>,
         crtime: Option<Timestamp>,
         mtime: Option<Timestamp>,
+        updater: impl FnOnce(&mut ObjectItem),
     ) -> Result<(), Error> {
-        if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
-            return Ok(());
-        }
         let mut item = if let Some(ObjectStoreMutation { item, .. }) = transaction
             .get_object_mutation(self.store().store_object_id(), ObjectKey::object(self.object_id))
         {
@@ -208,6 +218,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         } else {
             bail!(FxfsError::Inconsistent);
         };
+        updater(&mut item);
         transaction.add(
             self.store().store_object_id(),
             Mutation::replace_or_insert_object(item.key, item.value),
@@ -224,14 +235,15 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
             .ok_or(anyhow!(FxfsError::NotFound))?;
         match item.value {
             ObjectValue::Object {
-                kind: ObjectKind::Directory,
+                kind: ObjectKind::Directory { sub_dirs },
                 attributes: ObjectAttributes { creation_time, modification_time },
             } => Ok(ObjectProperties {
-                refs: 0,
+                refs: 1,
                 allocated_size: 0,
                 data_attribute_size: 0,
                 creation_time,
                 modification_time,
+                sub_dirs,
             }),
             _ => bail!(FxfsError::Inconsistent),
         }
@@ -347,6 +359,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
     dst: (&'a Directory<S>, &str),
 ) -> Result<ReplacedChild, Error> {
     let deleted_id_and_descriptor = dst.0.lookup(dst.1).await?;
+    let mut sub_dirs_delta: i64 = 0;
     let result = match deleted_id_and_descriptor {
         Some((old_id, ObjectDescriptor::File)) => {
             let was_last_ref = dst.0.store().adjust_refs(transaction, old_id, -1).await?;
@@ -362,6 +375,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
                 bail!(FxfsError::NotEmpty);
             }
             remove(transaction, &dst.0.store(), old_id);
+            sub_dirs_delta -= 1;
             ReplacedChild::Directory(old_id)
         }
         Some((_, ObjectDescriptor::Volume)) => bail!(FxfsError::Inconsistent),
@@ -373,26 +387,66 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
             ReplacedChild::None
         }
     };
+    let store_id = dst.0.store().store_object_id();
     let now = current_time();
     let new_value = if let Some((src_dir, src_name)) = src {
+        assert_eq!(store_id, src_dir.store().store_object_id());
         transaction.add(
-            src_dir.store().store_object_id(),
+            store_id,
             Mutation::replace_or_insert_object(
                 ObjectKey::child(src_dir.object_id, src_name),
                 ObjectValue::None,
             ),
         );
-        src_dir.update_timestamps(transaction, None, Some(now.clone())).await?;
         let (id, descriptor) = src_dir.lookup(src_name).await?.ok_or(FxfsError::NotFound)?;
+        if src_dir.object_id() != dst.0.object_id() {
+            src_dir
+                .update_attributes(transaction, None, Some(now.clone()), |item| {
+                    if let ObjectDescriptor::Directory = descriptor {
+                        if let ObjectItem {
+                            value: ObjectValue::Object {
+                                kind: ObjectKind::Directory { sub_dirs },
+                                ..
+                            },
+                            ..
+                        } = item
+                        {
+                            *sub_dirs = sub_dirs.saturating_sub(1);
+                            sub_dirs_delta += 1;
+                        } else {
+                            panic!("Expected directory");
+                        }
+                    }
+                })
+                .await?;
+        }
         ObjectValue::child(id, descriptor)
     } else {
         ObjectValue::None
     };
     transaction.add(
-        dst.0.store().store_object_id(),
+        store_id,
         Mutation::replace_or_insert_object(ObjectKey::child(dst.0.object_id, dst.1), new_value),
     );
-    dst.0.update_timestamps(transaction, None, Some(now)).await?;
+    dst.0
+        .update_attributes(transaction, None, Some(now), |item| {
+            if sub_dirs_delta != 0 {
+                if let ObjectItem {
+                    value: ObjectValue::Object { kind: ObjectKind::Directory { sub_dirs }, .. },
+                    ..
+                } = item
+                {
+                    if sub_dirs_delta < 0 {
+                        *sub_dirs = sub_dirs.saturating_sub((-sub_dirs_delta) as u64);
+                    } else {
+                        *sub_dirs = sub_dirs.saturating_add(sub_dirs_delta as u64);
+                    }
+                } else {
+                    panic!("Expected directory");
+                }
+            }
+        })
+        .await?;
     Ok(result)
 }
 
@@ -877,5 +931,87 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         assert_eq!(&entries, &["ball", "cat", "dog"]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sub_dir_count() {
+        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
+        let child_dir =
+            dir.create_child_dir(&mut transaction, "foo").await.expect("create_child_dir failed");
+        transaction.commit().await;
+        assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
+
+        // Moving within the same directory should not change the sub_dir count.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"))
+            .await
+            .expect("replace_child failed");
+        transaction.commit().await;
+
+        assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
+        assert_eq!(child_dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
+
+        // Moving between two different directories should update source and destination.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let _second_child = child_dir
+            .create_child_dir(&mut transaction, "baz")
+            .await
+            .expect("create_child_dir failed");
+        transaction.commit().await;
+
+        assert_eq!(child_dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        replace_child(&mut transaction, Some((&child_dir, "baz")), (&dir, "foo"))
+            .await
+            .expect("replace_child failed");
+        transaction.commit().await;
+
+        assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 2);
+        assert_eq!(child_dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
+
+        // Moving over a directory.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        replace_child(&mut transaction, Some((&dir, "bar")), (&dir, "foo"))
+            .await
+            .expect("replace_child failed");
+        transaction.commit().await;
+
+        assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 1);
+
+        // Unlinking a directory.
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        replace_child(&mut transaction, None, (&dir, "foo")).await.expect("replace_child failed");
+        transaction.commit().await;
+
+        assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
     }
 }

@@ -1497,6 +1497,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                         .modification_time
                         .clone()
                         .unwrap_or(modification_time),
+                    sub_dirs: 0,
                 })
             }
             _ => bail!(FxfsError::NotFile),

@@ -42,6 +42,7 @@ use {
 //  + No child volumes in anything other than the root store.
 //  + The root parent object store ID and root object store ID must not conflict with any other
 //    stores or the allocator.
+//  + Checking the sub_dirs property on directories.
 //
 // TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
 // take a snapshot.
@@ -165,7 +166,7 @@ impl Fsck {
                 ) => {
                     let refs = match kind {
                         ObjectKind::File { refs, .. } => *refs,
-                        ObjectKind::Directory | ObjectKind::Graveyard => 1,
+                        ObjectKind::Directory { .. } | ObjectKind::Graveyard => 1,
                     };
                     match object_refs.entry(*object_id) {
                         Entry::Occupied(mut occupied) => {
