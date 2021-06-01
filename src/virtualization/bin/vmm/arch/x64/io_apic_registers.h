@@ -7,27 +7,27 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/io_apic.h"
 
-// clang-format off
-
-// IO APIC register addresses.
-#define IO_APIC_IOREGSEL                0x00
-#define IO_APIC_IOWIN                   0x10
-#define IO_APIC_EOIR                    0x40
+// IO APIC register offsets.
+enum IoApicOffset : size_t {
+  kIoApicIoRegSel = 0x00,  // I/O register select.
+  kIoApicIoWin = 0x10,     // I/O window.
+  kIoApicEOIR = 0x40,      // End of interrupt register.
+};
 
 // IO APIC indirect register addresses.
-#define IO_APIC_REGISTER_ID             0x00
-#define IO_APIC_REGISTER_VER            0x01
-#define IO_APIC_REGISTER_ARBITRATION    0x02
+enum IoApicRegister : uint8_t {
+  kIoApicRegisterId = 0x00,
+  kIoApicRegisterVer = 0x01,
+  kIoApicRegisterArbitration = 0x02,
+};
 
 // IO APIC configuration constants.
-#define IO_APIC_VERSION                 0x20
-#define FIRST_REDIRECT_OFFSET           0x10
-#define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IoApic::kNumRedirectOffsets - 1)
+constexpr uint8_t kIoApicVersion = 0x20;
+constexpr size_t kFirstRedirectOffset = 0x10;
+constexpr size_t kLastRedirectOffset = kFirstRedirectOffset + IoApic::kNumRedirectOffsets - 1;
 
 // DESTMOD register.
-#define IO_APIC_DESTMOD_PHYSICAL        0x00
-#define IO_APIC_DESTMOD_LOGICAL         0x01
-
-// clang-format on
+constexpr uint8_t kIoApicDestmodPhysical = 0x00;
+constexpr uint8_t kIoApicDestmodLogical = 0x01;
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_IO_APIC_REGISTERS_H_

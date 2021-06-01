@@ -45,15 +45,15 @@ class IoApic : public IoHandler, public PlatformDevice {
   zx_status_t Interrupt(uint32_t global_irq);
 
   // Read or write indirect registers directly. Exposed for testing.
-  zx_status_t ReadRegister(uint32_t select_register, IoValue* value) const;
-  zx_status_t WriteRegister(uint32_t select_register, const IoValue& value);
+  zx_status_t ReadRegister(uint8_t select_register, IoValue* value) const;
+  zx_status_t WriteRegister(uint8_t select_register, const IoValue& value);
 
  private:
   Guest* guest_;
 
   mutable std::mutex mutex_;
   // IO register-select register.
-  uint32_t select_ __TA_GUARDED(mutex_) = 0;
+  uint8_t select_ __TA_GUARDED(mutex_) = 0;
   // IO APIC identification register.
   uint32_t id_ __TA_GUARDED(mutex_) = 0;
   // IO redirection table.

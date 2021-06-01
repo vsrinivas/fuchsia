@@ -58,7 +58,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   // See Intel ICH10 Section 13.5.7.
   // See Intel Volume 3, Section 10.12.10
   uint32_t destmod = bit_shift(entry.lower, 11);
-  if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
+  if (destmod == kIoApicDestmodPhysical) {
     uint32_t dest = bits_shift(entry.upper, 27, 24);
     return guest_->Interrupt(1ul << dest, vector);
   }
@@ -74,12 +74,12 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
 
 zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
   switch (addr) {
-    case IO_APIC_IOREGSEL: {
+    case kIoApicIoRegSel: {
       std::lock_guard<std::mutex> lock(mutex_);
       value->u32 = select_;
       return ZX_OK;
     }
-    case IO_APIC_IOWIN: {
+    case kIoApicIoWin: {
       uint32_t select_register;
       {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -87,7 +87,7 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
       }
       return ReadRegister(select_register, value);
     }
-    case IO_APIC_EOIR: {
+    case kIoApicEOIR: {
       value->u32 = 0;
       return ZX_OK;
     }
@@ -99,12 +99,12 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
 
 zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
   switch (addr) {
-    case IO_APIC_IOREGSEL: {
+    case kIoApicIoRegSel: {
       std::lock_guard<std::mutex> lock(mutex_);
       select_ = value.u8;
       return ZX_OK;
     }
-    case IO_APIC_IOWIN: {
+    case kIoApicIoWin: {
       uint32_t select_register;
       {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -112,7 +112,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       }
       return WriteRegister(select_register, value);
     }
-    case IO_APIC_EOIR: {
+    case kIoApicEOIR: {
       // End of interrupt.
       //
       // For level-triggered interrupts, the OS may indicate to the IO APIC
@@ -132,28 +132,28 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) const {
+zx_status_t IoApic::ReadRegister(uint8_t select_register, IoValue* value) const {
   switch (select_register) {
-    case IO_APIC_REGISTER_ID: {
+    case kIoApicRegisterId: {
       std::lock_guard<std::mutex> lock(mutex_);
       value->u32 = id_;
       return ZX_OK;
     }
-    case IO_APIC_REGISTER_VER:
+    case kIoApicRegisterVer:
       // There are two redirect offsets per redirection entry. We return
       // the maximum redirection entry index.
       //
       // From Intel ICH10, Section 13.5.6.
-      value->u32 = (kNumRedirects - 1) << 16 | IO_APIC_VERSION;
+      value->u32 = (kNumRedirects - 1) << 16 | kIoApicVersion;
       return ZX_OK;
-    case IO_APIC_REGISTER_ARBITRATION:
+    case kIoApicRegisterArbitration:
       // Since we have a single I/O APIC, it is always the winner
       // of arbitration and its arbitration register is always 0.
       value->u32 = 0;
       return ZX_OK;
-    case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
+    case kFirstRedirectOffset ... kLastRedirectOffset: {
       std::lock_guard<std::mutex> lock(mutex_);
-      uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
+      uint32_t redirect_offset = select_ - kFirstRedirectOffset;
       const RedirectEntry& entry = redirect_[redirect_offset / 2];
       uint32_t redirect_register = redirect_offset % 2 == 0 ? entry.lower : entry.upper;
       value->u32 = redirect_register;
@@ -165,23 +165,23 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) const
   }
 }
 
-zx_status_t IoApic::WriteRegister(uint32_t select_register, const IoValue& value) {
+zx_status_t IoApic::WriteRegister(uint8_t select_register, const IoValue& value) {
   switch (select_register) {
-    case IO_APIC_REGISTER_ID: {
+    case kIoApicRegisterId: {
       std::lock_guard<std::mutex> lock(mutex_);
       id_ = value.u32;
       return ZX_OK;
     }
-    case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
+    case kFirstRedirectOffset ... kLastRedirectOffset: {
       std::lock_guard<std::mutex> lock(mutex_);
-      uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
+      uint32_t redirect_offset = select_ - kFirstRedirectOffset;
       RedirectEntry& entry = redirect_[redirect_offset / 2];
       uint32_t* redirect_register = redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
       *redirect_register = value.u32;
       return ZX_OK;
     }
-    case IO_APIC_REGISTER_VER:
-    case IO_APIC_REGISTER_ARBITRATION:
+    case kIoApicRegisterVer:
+    case kIoApicRegisterArbitration:
       // Read-only, ignore writes.
       return ZX_OK;
     default:

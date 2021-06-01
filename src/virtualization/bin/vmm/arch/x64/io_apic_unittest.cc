@@ -23,28 +23,28 @@ TEST(IoApic, IndirectRegisterSelect) {
   constexpr uint32_t kMultiplier = 0x04030201;
 
   // Write to all the redirection registers.
-  for (uint32_t i = FIRST_REDIRECT_OFFSET; i <= LAST_REDIRECT_OFFSET; i++) {
+  for (uint32_t i = kFirstRedirectOffset; i <= kLastRedirectOffset; i++) {
     // Select the register.
-    ASSERT_EQ(io_apic.Write(IO_APIC_IOREGSEL, IoValue::FromU8(i)), ZX_OK);
+    ASSERT_EQ(io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(i)), ZX_OK);
 
     // Read the selected register value back again.
     IoValue value = IoValue::FromU8(0);
-    ASSERT_EQ(io_apic.Read(IO_APIC_IOREGSEL, &value), ZX_OK);
+    ASSERT_EQ(io_apic.Read(kIoApicIoRegSel, &value), ZX_OK);
     EXPECT_EQ(value.u8, i);
 
     // Write a 32-bit value to it.
-    ASSERT_EQ(io_apic.Write(IO_APIC_IOWIN, IoValue{.access_size = 4, .u32 = i * kMultiplier}),
+    ASSERT_EQ(io_apic.Write(kIoApicIoWin, IoValue{.access_size = 4, .u32 = i * kMultiplier}),
               ZX_OK);
   }
 
   // Verify the values were retained.
-  for (uint32_t i = FIRST_REDIRECT_OFFSET; i <= LAST_REDIRECT_OFFSET; i++) {
+  for (uint32_t i = kFirstRedirectOffset; i <= kLastRedirectOffset; i++) {
     // Select the register.
-    ASSERT_EQ(io_apic.Write(IO_APIC_IOREGSEL, IoValue::FromU8(i)), ZX_OK);
+    ASSERT_EQ(io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(i)), ZX_OK);
 
     // Verify the 32-bit value to it.
     IoValue value = IoValue::FromU32(0);
-    ASSERT_EQ(io_apic.Read(IO_APIC_IOWIN, &value), ZX_OK);
+    ASSERT_EQ(io_apic.Read(kIoApicIoWin, &value), ZX_OK);
     EXPECT_EQ(value.u32, i * kMultiplier);
   }
 }
@@ -55,15 +55,15 @@ TEST(IoApic, ApicId) {
 
   // APIC ID should start as 0. (Intel ICH10, Section 13.5.5).
   IoValue value = IoValue::FromU32(0);
-  ASSERT_EQ(io_apic.ReadRegister(IO_APIC_REGISTER_ID, &value), ZX_OK);
+  ASSERT_EQ(io_apic.ReadRegister(kIoApicRegisterId, &value), ZX_OK);
   EXPECT_EQ(value.u32, 0u);
 
   // Write a value.
-  ASSERT_EQ(io_apic.WriteRegister(IO_APIC_REGISTER_ID, IoValue::FromU32(0x11223344)), ZX_OK);
+  ASSERT_EQ(io_apic.WriteRegister(kIoApicRegisterId, IoValue::FromU32(0x11223344)), ZX_OK);
 
   // Ensure the value persists.
   value = IoValue::FromU32(0);
-  ASSERT_EQ(io_apic.ReadRegister(IO_APIC_REGISTER_ID, &value), ZX_OK);
+  ASSERT_EQ(io_apic.ReadRegister(kIoApicRegisterId, &value), ZX_OK);
   EXPECT_EQ(value.u32, 0x11223344u);
 }
 
@@ -73,7 +73,7 @@ TEST(IoApic, Version) {
 
   // Read the version register.
   IoValue value = IoValue::FromU32(0);
-  ASSERT_EQ(io_apic.ReadRegister(IO_APIC_REGISTER_VER, &value), ZX_OK);
+  ASSERT_EQ(io_apic.ReadRegister(kIoApicRegisterVer, &value), ZX_OK);
   EXPECT_EQ(value.u32, 0x002f'0020u);  // 0x2f interrupts, APIC version 0x20.
 }
 
@@ -82,7 +82,7 @@ TEST(IoApic, EndOfInterrupt) {
   IoApic io_apic(&guest);
 
   // Write to the EOI register. We don't expect any effect.
-  ASSERT_EQ(io_apic.Write(IO_APIC_EOIR, IoValue::FromU32(0x01)), ZX_OK);
+  ASSERT_EQ(io_apic.Write(kIoApicEOIR, IoValue::FromU32(0x01)), ZX_OK);
 }
 
 }  // namespace
