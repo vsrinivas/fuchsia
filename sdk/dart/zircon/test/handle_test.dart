@@ -36,4 +36,16 @@ void main() {
 
     expect(pair.first.koid, duplicate.koid);
   });
+
+  test('cache koid and invalidate', () {
+    final HandleResult vmo = System.vmoCreate(0);
+    expect(vmo.status, equals(ZX.OK));
+    int originalKoid = vmo.handle.koid;
+    expect(originalKoid, isNot(equals(ZX.KOID_INVALID)));
+    // Cached koid should be same value.
+    expect(originalKoid, equals(vmo.handle.koid));
+    vmo.handle.close();
+    // koid should be invalidated.
+    expect(vmo.handle.koid, equals(ZX.KOID_INVALID));
+  });
 }
