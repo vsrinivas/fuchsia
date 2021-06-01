@@ -317,6 +317,8 @@ mod tests {
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
         let root_parent_store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(root_parent_store.clone());
+        fs.object_manager().set_root_parent_store_object_id(root_parent_store.store_object_id());
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())

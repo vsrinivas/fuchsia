@@ -9,6 +9,7 @@ use {
         journal::JournalCheckpoint,
         transaction::{
             LockKey, LockManager, Options, ReadGuard, Transaction, TransactionHandler, TxnMutation,
+            WriteGuard,
         },
         ObjectStore,
     },
@@ -42,10 +43,6 @@ impl FakeFilesystem {
 
 #[async_trait]
 impl Filesystem for FakeFilesystem {
-    fn register_store(&self, store: &Arc<ObjectStore>) {
-        self.object_manager.register_store(store);
-    }
-
     fn device(&self) -> Arc<dyn Device> {
         self.device.clone()
     }
@@ -104,6 +101,10 @@ impl TransactionHandler for FakeFilesystem {
 
     async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
         self.lock_manager.read_lock(lock_keys).await
+    }
+
+    async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a> {
+        self.lock_manager.write_lock(lock_keys).await
     }
 }
 

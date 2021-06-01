@@ -65,6 +65,10 @@ pub trait TransactionHandler: Send + Sync {
     /// observed size and extents are seen together or not at all.  Implementations should call
     /// through to LockManager's read_lock implementation.
     async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a>;
+
+    /// Acquires a write lock for the given keys.  Write locks provide exclusive access to the
+    /// requested lock keys.
+    async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a>;
 }
 
 /// The journal consists of these records which will be replayed at mount time.  Within a a

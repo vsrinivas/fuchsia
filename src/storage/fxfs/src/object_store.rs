@@ -138,7 +138,6 @@ impl ObjectStore {
             tree,
             store_info_handle: OnceCell::new(),
         });
-        filesystem.register_store(&store);
         store
     }
 
@@ -230,12 +229,10 @@ impl ObjectStore {
             HandleOptions::default(),
         )
         .await?;
-        let store = Self::new_empty(
-            Some(self.clone()),
-            handle.object_id(),
-            self.filesystem.upgrade().unwrap(),
-        );
-        let _ = store.store_info_handle.set(handle);
+        let fs = self.filesystem.upgrade().unwrap();
+        let store = Self::new_empty(Some(self.clone()), handle.object_id(), fs.clone());
+        assert!(store.store_info_handle.set(handle).is_ok());
+        fs.object_manager().register_store_strict(store.clone());
         Ok(store)
     }
 
@@ -248,13 +245,16 @@ impl ObjectStore {
         self: &Arc<ObjectStore>,
         store_object_id: u64,
     ) -> Arc<ObjectStore> {
-        Self::new(
-            Some(self.clone()),
-            store_object_id,
-            self.filesystem.upgrade().unwrap(),
-            None,
-            LSMTree::new(merge::merge),
-        )
+        let fs = self.filesystem.upgrade().unwrap();
+        fs.object_manager().get_or_register_store(store_object_id, || {
+            Self::new(
+                Some(self.clone()),
+                store_object_id,
+                fs.clone(),
+                None,
+                LSMTree::new(merge::merge),
+            )
+        })
     }
 
     pub async fn open_store(
@@ -462,15 +462,25 @@ impl ObjectStore {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
         }
-
-        self.open_impl().await
+        let fs = self.filesystem();
+        let _guard = fs
+            .write_lock(&[LockKey::object(
+                self.parent_store.as_ref().unwrap().store_object_id(),
+                self.store_object_id,
+            )])
+            .await;
+        if self.store_info_handle.get().is_some() {
+            // We lost the race.
+            Ok(())
+        } else {
+            self.open_impl().await
+        }
     }
 
     // This returns a BoxFuture because of the cycle: open_object -> ensure_open -> open_impl ->
     // open_object.
     fn open_impl<'a>(&'a self) -> BoxFuture<'a, Result<(), Error>> {
         async move {
-            // TODO(csuter): we need to introduce an async lock here.
             let parent_store = self.parent_store.as_ref().unwrap();
             let handle = ObjectStore::open_object(
                 &parent_store,
@@ -478,16 +488,22 @@ impl ObjectStore {
                 HandleOptions::default(),
             )
             .await?;
-            let need_store_info = self.store_info.lock().unwrap().is_none();
-            let layer_object_ids = if need_store_info && handle.get_size() > 0 {
+            let layer_object_ids = if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                let store_info: StoreInfo = deserialize_from(&serialized_info[..])?;
+                let store_info: StoreInfo = deserialize_from(&serialized_info[..])
+                    .context("Failed to deserialize StoreInfo")?;
                 let layer_object_ids = store_info.layers.clone();
                 self.update_last_object_id(store_info.last_object_id);
                 *self.store_info.lock().unwrap() = Some(store_info);
                 layer_object_ids
             } else {
-                self.store_info.lock().unwrap().as_ref().unwrap().layers.clone()
+                let mut store_info = self.store_info.lock().unwrap();
+                // The store_info might be absent for a newly created and empty object store, since
+                // there have been no StoreInfoMutations applied to it.
+                if store_info.is_none() {
+                    *store_info = Some(StoreInfo::default());
+                }
+                store_info.as_ref().unwrap().layers.clone()
             };
             let mut handles = Vec::new();
             for object_id in layer_object_ids {
@@ -1530,7 +1546,7 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
-                filesystem::{Filesystem, Mutations, SyncOptions},
+                filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
                 graveyard::Graveyard,
                 record::{ObjectKey, ObjectKeyData, Timestamp},
                 round_up,
@@ -1540,7 +1556,7 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
-        futures::{channel::oneshot::channel, join},
+        futures::{channel::oneshot::channel, future::join_all, join},
         matches::assert_matches,
         rand::Rng,
         std::{
@@ -1567,6 +1583,7 @@ mod tests {
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
         let parent_store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(parent_store.clone());
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -2252,6 +2269,72 @@ mod tests {
         assert!(sequences[0] <= sequences[1], "sequences: {:?}", sequences);
         // The last item came after a sync, so should be strictly greater.
         assert!(sequences[1] < sequences[2], "sequences: {:?}", sequences);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_create_and_open_store() {
+        // We use a real FxFilesystem in this test since the journal is the only place where a newly
+        // created, empty object store is persisted.  The object store is recreated on replay.
+        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
+            8192,
+            TEST_DEVICE_BLOCK_SIZE,
+        )))
+        .await
+        .expect("new_empty failed");
+        let store_id = {
+            let root_store = fs.root_store();
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let child_store = root_store
+                .create_child_store(&mut transaction)
+                .await
+                .expect("create_child_store failed");
+            transaction.commit().await;
+
+            child_store.store_object_id()
+        };
+
+        fs.close().await.expect("close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open(device).await.expect("open failed");
+
+        let root_store = fs.root_store();
+        root_store.open_store(store_id).await.expect("open_store failed");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_concurrent_store_opening() {
+        let (fs, _, store) = test_filesystem_and_store().await;
+        let store_id = {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let child_store = store
+                .create_child_store_with_id(&mut transaction, 555u64)
+                .await
+                .expect("create_child_store failed");
+            transaction.commit().await;
+            child_store.store_object_id()
+        };
+
+        fs.sync(SyncOptions::default()).await.expect("sync failed");
+
+        for _ in 0..100 {
+            fs.object_manager().forget_store(store_id);
+            join_all((0..4).map(|_| {
+                let store = store.clone();
+                fasync::Task::spawn(async move {
+                    store.open_store(store_id).await.expect("open_store failed");
+                })
+            }))
+            .await;
+        }
     }
 }
 

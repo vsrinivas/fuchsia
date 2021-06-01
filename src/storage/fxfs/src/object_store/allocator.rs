@@ -941,7 +941,8 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
-        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        let store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(store.clone());
         fs.object_manager().set_root_store_object_id(2);
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
@@ -972,7 +973,8 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
-        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        let store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(store.clone());
         fs.object_manager().set_root_store_object_id(2);
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
@@ -995,7 +997,8 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
-        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        let store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(store.clone());
         fs.object_manager().set_root_store_object_id(2);
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
@@ -1021,6 +1024,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(store.clone());
         fs.object_manager().set_root_store_object_id(2);
         allocator.ensure_open().await.expect("ensure_open failed");
         let mut transaction =
@@ -1062,7 +1066,8 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
-        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        let store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(store.clone());
         fs.object_manager().set_root_store_object_id(2);
         let allocated_range = {
             let mut transaction = fs
@@ -1093,7 +1098,8 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
-        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        let store = ObjectStore::new_empty(None, 2, fs.clone());
+        fs.object_manager().register_store_strict(store.clone());
         fs.object_manager().set_root_store_object_id(2);
         assert_eq!(allocator.get_allocated_bytes(), 0);
 

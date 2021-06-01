@@ -16,7 +16,7 @@ use {
             record::{
                 AttributeKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
             },
-            transaction::LockKey,
+            transaction::{LockKey, TransactionHandler},
             ObjectStore,
         },
     },

@@ -205,6 +205,7 @@ impl Journal {
 
         let root_parent =
             ObjectStore::new_empty(None, super_block.root_parent_store_object_id, filesystem);
+        self.objects.register_store_strict(root_parent.clone());
 
         while let Some(item) = reader.next_item().await? {
             root_parent
@@ -360,6 +361,7 @@ impl Journal {
 
         let root_parent =
             ObjectStore::new_empty(None, INIT_ROOT_PARENT_STORE_OBJECT_ID, filesystem.clone());
+        self.objects.register_store_strict(root_parent.clone());
         self.objects.set_root_parent_store_object_id(root_parent.store_object_id());
 
         let allocator =

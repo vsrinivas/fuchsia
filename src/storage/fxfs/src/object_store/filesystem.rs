@@ -30,10 +30,6 @@ use {
 
 #[async_trait]
 pub trait Filesystem: TransactionHandler {
-    /// Informs the journaling system that a new store has been created so that when a transaction
-    /// is committed or replayed, mutations can be routed to the correct store.
-    fn register_store(&self, store: &Arc<ObjectStore>);
-
     /// Returns access to the undeyling device.
     fn device(&self) -> Arc<dyn Device>;
 
@@ -100,10 +96,32 @@ impl ObjectManager {
         objects.root_parent_store_object_id = object_id;
     }
 
-    pub fn register_store(&self, store: &Arc<ObjectStore>) {
+    /// Asserts if the store's already registered.  Most callers will want |get_or_register_store|,
+    /// since this call is susceptible to races; it is only appropriate (and useful to catch bugs)
+    /// when we expect that only one call ought to happen to register the store (e.g. during
+    /// bootstrap, or creating a new store).
+    pub fn register_store_strict(&self, store: Arc<ObjectStore>) {
         let mut objects = self.objects.write().unwrap();
         assert_ne!(store.store_object_id(), objects.allocator_object_id);
-        assert!(objects.stores.insert(store.store_object_id(), store.clone()).is_none());
+        assert!(objects.stores.insert(store.store_object_id(), store).is_none());
+    }
+
+    /// Fetches the store, or invokes |create_fn| to install it and returns that object.
+    pub fn get_or_register_store(
+        &self,
+        store_object_id: u64,
+        create_fn: impl FnOnce() -> Arc<ObjectStore>,
+    ) -> Arc<ObjectStore> {
+        let mut objects = self.objects.write().unwrap();
+        assert_ne!(store_object_id, objects.allocator_object_id);
+        objects.stores.entry(store_object_id).or_insert_with(create_fn).clone()
+    }
+
+    #[cfg(test)]
+    pub fn forget_store(&self, store_object_id: u64) {
+        let mut objects = self.objects.write().unwrap();
+        assert_ne!(store_object_id, objects.allocator_object_id);
+        objects.stores.remove(&store_object_id);
     }
 
     pub fn store(&self, store_object_id: u64) -> Option<Arc<ObjectStore>> {
@@ -422,11 +440,6 @@ impl FxFilesystem {
         }
     }
 
-    /// Acquires a write lock for the given keys.
-    pub async fn write_lock(&self, lock_keys: &[LockKey]) -> WriteGuard<'_> {
-        self.lock_manager.write_lock(lock_keys).await
-    }
-
     /// Waits for filesystem to be dropped (so callers should ensure all direct and indirect
     /// references are dropped) and returns the device.  No attempt is made at a graceful shutdown.
     pub async fn take_device(self: Arc<FxFilesystem>) -> DeviceHolder {
@@ -454,10 +467,6 @@ impl Drop for FxFilesystem {
 
 #[async_trait]
 impl Filesystem for FxFilesystem {
-    fn register_store(&self, store: &Arc<ObjectStore>) {
-        self.objects.register_store(store);
-    }
-
     fn device(&self) -> Arc<dyn Device> {
         Arc::clone(self.device.get().unwrap())
     }
@@ -513,6 +522,10 @@ impl TransactionHandler for FxFilesystem {
 
     async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
         self.lock_manager.read_lock(lock_keys).await
+    }
+
+    async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a> {
+        self.lock_manager.write_lock(lock_keys).await
     }
 }
 
