@@ -6,7 +6,6 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_
 
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/sync/mutex.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
 #include <threads.h>

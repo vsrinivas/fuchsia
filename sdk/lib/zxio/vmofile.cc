@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define _ALL_SOURCE  // Expose the MTX_INIT extension.
+
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <sys/stat.h>
+#include <threads.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
@@ -32,7 +35,7 @@ typedef struct zxio_vmofile {
   // The current seek offset within the file.
   zx_off_t offset __TA_GUARDED(lock);
 
-  sync_mutex_t lock;
+  mtx_t lock;
 
   fidl::WireSyncClient<fio::File> control;
 } zxio_vmofile_t;
@@ -50,9 +53,9 @@ static zx_status_t zxio_vmofile_close(zxio_t* io) {
 static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->lock);
+  mtx_lock(&file->lock);
   uint64_t seek = file->offset;
-  sync_mutex_unlock(&file->lock);
+  mtx_unlock(&file->lock);
 
   auto result = file->control.Seek(seek, fio::wire::SeekOrigin::kStart);
   if (result.status() != ZX_OK) {
@@ -98,13 +101,13 @@ static zx_status_t zxio_vmofile_readv(zxio_t* io, const zx_iovec_t* vector, size
 
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->lock);
+  mtx_lock(&file->lock);
   zx_status_t status =
       zxio_vmo_do_vector(file->start, file->size, &file->offset, vector, vector_count, out_actual,
                          [&](void* buffer, zx_off_t offset, size_t capacity) {
                            return file->vmo.read(buffer, offset, capacity);
                          });
-  sync_mutex_unlock(&file->lock);
+  mtx_unlock(&file->lock);
   return status;
 }
 
@@ -127,7 +130,7 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, zxio_seek_origin_t start, int64
                                      size_t* out_offset) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->lock);
+  mtx_lock(&file->lock);
   zx_off_t origin;
   switch (start) {
     case ZXIO_SEEK_ORIGIN_START:
@@ -140,20 +143,20 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, zxio_seek_origin_t start, int64
       origin = file->size;
       break;
     default:
-      sync_mutex_unlock(&file->lock);
+      mtx_unlock(&file->lock);
       return ZX_ERR_INVALID_ARGS;
   }
   zx_off_t at;
   if (add_overflow(origin, offset, &at)) {
-    sync_mutex_unlock(&file->lock);
+    mtx_unlock(&file->lock);
     return ZX_ERR_INVALID_ARGS;
   }
   if (at > file->size) {
-    sync_mutex_unlock(&file->lock);
+    mtx_unlock(&file->lock);
     return ZX_ERR_INVALID_ARGS;
   }
   file->offset = at;
-  sync_mutex_unlock(&file->lock);
+  mtx_unlock(&file->lock);
 
   *out_offset = at;
   return ZX_OK;
@@ -264,7 +267,7 @@ zx_status_t zxio_vmofile_init(zxio_storage_t* storage, fidl::WireSyncClient<fio:
       .start = offset,
       .size = length,
       .offset = std::min(seek, length),
-      .lock = {},
+      .lock = MTX_INIT,
       .control = std::move(control),
   };
   zxio_init(&file->io, &zxio_vmofile_ops);
