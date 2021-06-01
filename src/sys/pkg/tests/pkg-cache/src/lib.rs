@@ -70,7 +70,7 @@ async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
     res
 }
 
-async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
+async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) -> DirectoryProxy {
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
 
@@ -115,11 +115,12 @@ async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
 
     let () = get_fut.await.unwrap().unwrap();
     let () = pkg.verify_contents(&dir).await.unwrap();
+    dir
 }
 
 async fn verify_fetches_succeed(proxy: &PackageCacheProxy, packages: &[Package]) {
     let () = futures::stream::iter(packages)
-        .for_each_concurrent(None, move |pkg| do_fetch(proxy, pkg))
+        .for_each_concurrent(None, move |pkg| do_fetch(proxy, pkg).map(|_| {}))
         .await;
 }
 trait PkgFs {

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv};
+use crate::{do_fetch, get_missing_blobs, verify_fetches_succeed, write_blob, TestEnv};
 use fidl_fuchsia_io::{DirectoryMarker, FileMarker};
 use fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker};
 use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_pkg_testing::PackageBuilder;
 use fuchsia_zircon::Status;
 use futures::prelude::*;
+use matches::assert_matches;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn get_multiple_packages_with_no_content_blobs() {
@@ -108,4 +109,46 @@ async fn get_multiple_packages_with_content_blobs() {
     let () = verify_fetches_succeed(&env.proxies.package_cache, &packages).await;
 
     let () = env.stop().await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_and_hold_directory() {
+    let env = TestEnv::builder().build().await;
+
+    let package = PackageBuilder::new("pkg-a").build().await.unwrap();
+
+    // Request and write a package, hold the package directory.
+    let dir = do_fetch(&env.proxies.package_cache, &package).await;
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*package.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+
+    let (dir_2, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    // Request same package again.
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    // `OpenMetaBlob()` for already cached package closes the channel with with a `ZX_OK` epitaph.
+    let (_meta_blob, meta_blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
+    assert_matches!(
+        needed_blobs.open_meta_blob(meta_blob_server_end).await,
+        Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. })
+    );
+
+    let () = get_fut.await.unwrap().unwrap();
+
+    // Verify package directories from both requests.
+    let () = package.verify_contents(&dir).await.unwrap();
+    let () = package.verify_contents(&dir_2).await.unwrap();
 }
