@@ -91,6 +91,9 @@ impl PartialEq for Invocation {
 /// Blueprint defines an interface provided to the authority for constructing
 /// a given agent.
 pub trait Blueprint {
+    /// Returns a debug id that can be used during error reporting.
+    fn debug_id(&self) -> &'static str;
+
     /// Uses the supplied context to create agent.
     fn create(&self, context: Context) -> BoxFuture<'static, ()>;
 }
@@ -142,7 +145,7 @@ impl Context {
 
 #[macro_export]
 macro_rules! blueprint_definition {
-    ($component:expr, $create:expr) => {
+    ($component:literal, $create:expr) => {
         pub mod blueprint {
             #[allow(unused_imports)]
             use super::*;
@@ -157,6 +160,10 @@ macro_rules! blueprint_definition {
             struct BlueprintImpl;
 
             impl Blueprint for BlueprintImpl {
+                fn debug_id(&self) -> &'static str {
+                    $component
+                }
+
                 fn create(&self, context: Context) -> BoxFuture<'static, ()> {
                     Box::pin(async move {
                         $create(context).await;

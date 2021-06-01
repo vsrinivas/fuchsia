@@ -25,6 +25,10 @@ impl Blueprint {
 }
 
 impl agent::Blueprint for Blueprint {
+    fn debug_id(&self) -> &'static str {
+        "TestAgent"
+    }
+
     fn create(&self, context: agent::Context) -> BoxFuture<'static, ()> {
         match &self.generate {
             Generate::Sync(func) => {

@@ -60,6 +60,10 @@ impl<T> agent::Blueprint for Blueprint<T>
 where
     T: DeviceStorageFactory + Send + Sync + 'static,
 {
+    fn debug_id(&self) -> &'static str {
+        "StorageAgent"
+    }
+
     fn create(&self, context: Context) -> BoxFuture<'static, ()> {
         let storage_factory = Arc::clone(&self.storage_factory);
         Box::pin(async move {

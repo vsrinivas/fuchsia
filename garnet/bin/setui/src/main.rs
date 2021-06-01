@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, fx_log_info},
@@ -96,4 +96,5 @@ fn main() -> Result<(), Error> {
         .configuration(configuration)
         .agent_mapping(<AgentBlueprintHandle as From<AgentType>>::from)
         .spawn(executor)
+        .context("Failed to spawn environment for setui")
 }

@@ -509,33 +509,27 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory,
         )
         .await
-        .map_err(|err| format_err!("could not create environment: {:?}", err))?;
+        .context("Could not create environment")?;
 
         Ok((fs, delegate, job_seeder, entities))
     }
 
     pub fn spawn(self, mut executor: fasync::LocalExecutor) -> Result<(), Error> {
-        match executor.run_singlethreaded(self.prepare_env(Runtime::Service)) {
-            Ok((mut fs, ..)) => {
-                fs.take_and_serve_directory_handle().expect("could not service directory handle");
-                let () = executor.run_singlethreaded(fs.collect());
-
-                Ok(())
-            }
-            Err(error) => Err(error),
-        }
+        let (mut fs, ..) = executor
+            .run_singlethreaded(self.prepare_env(Runtime::Service))
+            .context("Failed to prepare env")?;
+        fs.take_and_serve_directory_handle().expect("could not service directory handle");
+        executor.run_singlethreaded(fs.collect::<()>());
+        Ok(())
     }
 
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
-        match self.prepare_env(Runtime::Nested(env_name)).await {
-            Ok((mut fs, delegate, job_seeder, entities)) => {
-                let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
-                fasync::Task::spawn(fs.collect()).detach();
+        let (mut fs, delegate, job_seeder, entities) =
+            self.prepare_env(Runtime::Nested(env_name)).await.context("Failed to prepare env")?;
+        let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
+        fasync::Task::spawn(fs.collect()).detach();
 
-                Ok(Environment::new(nested_environment, delegate, job_seeder, entities))
-            }
-            Err(error) => Err(error),
-        }
+        Ok(Environment::new(nested_environment, delegate, job_seeder, entities))
     }
 
     /// Spawns a nested environment and returns the associated
@@ -791,7 +785,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     agent_authority
         .execute_lifespan(Lifespan::Service, Arc::clone(&service_context), false)
         .await
-        .ok();
+        .context("Agent service start failed")?;
 
     Ok(entities)
 }

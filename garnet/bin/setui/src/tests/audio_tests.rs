@@ -144,16 +144,27 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
 ) -> (NestedEnvironment, Arc<DeviceStorage>) {
+    create_environment_with_agent(true, service_registry).await
+}
+
+async fn create_environment_with_agent(
+    with_agent: bool,
+    service_registry: Arc<Mutex<ServiceRegistry>>,
+) -> (NestedEnvironment, Arc<DeviceStorage>) {
     let storage_factory =
         Arc::new(InMemoryStorageFactory::with_initial_data(&default_audio_info()));
 
-    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
+    let env_builder = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry))
-        .fidl_interfaces(&[Interface::Audio])
-        .agents(&[AgentType::MediaButtons.into()])
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
+        .fidl_interfaces(&[Interface::Audio]);
+    let env = if with_agent {
+        env_builder.agents(&[AgentType::MediaButtons.into()])
+    } else {
+        env_builder
+    }
+    .spawn_and_get_nested_environment(ENV_NAME)
+    .await
+    .unwrap();
     let store = storage_factory.get_device_storage().await;
     (env, store)
 }
@@ -375,7 +386,7 @@ async fn test_volume_restore() {
     assert_eq!(stored_info, expected_info);
 }
 
-// Test to ensure mic input change events are received.
+// Test to ensure the audio protocol still works without device input.
 // TODO(fxbug.dev/56537): Remove with switchover to input interface.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bringup_without_input_registry() {
@@ -383,7 +394,9 @@ async fn test_bringup_without_input_registry() {
     let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
-    let (env, _) = create_environment(service_registry).await;
+    // Create an environment without the media_buttons_agent since it will fail environment creation
+    // without the input registry.
+    let (env, _) = create_environment_with_agent(false, service_registry).await;
 
     // At this point we should not crash.
     assert!(env.connect_to_protocol::<AudioMarker>().is_ok());
