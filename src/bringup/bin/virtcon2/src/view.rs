@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::colors::ColorScheme,
     anyhow::{anyhow, Error},
     carnelian::{
-        color::Color,
         render::{rive::load_rive, Context as RenderContext},
         scene::{
             facets::RiveFacet,
@@ -20,7 +20,8 @@ use {
 };
 
 pub struct VirtualConsoleViewAssistant {
-    background_color: Color,
+    color_scheme: ColorScheme,
+    round_scene_corners: bool,
     // Artboard has weak references to data owned by file.
     _logo: rive::File,
     artboard: rive::Object<rive::Artboard>,
@@ -29,13 +30,13 @@ pub struct VirtualConsoleViewAssistant {
     scene: Option<Scene>,
 }
 
-// TODO(reveman): Read from boot arguments and configuration file.
-const BACKGROUND_COLOR: &'static str = "#000000";
 const LOGO: &'static str = "/pkg/data/logo.riv";
 
 impl VirtualConsoleViewAssistant {
-    pub fn new() -> Result<ViewAssistantPtr, Error> {
-        let background_color = Color::from_hash_code(BACKGROUND_COLOR)?;
+    pub fn new(
+        color_scheme: ColorScheme,
+        round_scene_corners: bool,
+    ) -> Result<ViewAssistantPtr, Error> {
         let logo = load_rive(PathBuf::from(LOGO))?;
         let artboard = logo.artboard().ok_or_else(|| anyhow!("missing artboard"))?;
         let first_animation =
@@ -45,7 +46,8 @@ impl VirtualConsoleViewAssistant {
         let scene = None;
 
         Ok(Box::new(VirtualConsoleViewAssistant {
-            background_color,
+            color_scheme,
+            round_scene_corners,
             _logo: logo,
             artboard,
             animation,
@@ -68,7 +70,9 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene = self.scene.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new().background_color(self.background_color);
+            let mut builder = SceneBuilder::new()
+                .background_color(self.color_scheme.back)
+                .round_scene_corners(self.round_scene_corners);
             builder.facet(Box::new(RiveFacet::new(context.size, self.artboard.clone())));
             builder.build()
         });
@@ -110,7 +114,7 @@ mod tests {
 
     #[test]
     fn can_create_view() -> Result<(), Error> {
-        let _ = VirtualConsoleViewAssistant::new()?;
+        let _ = VirtualConsoleViewAssistant::new(ColorScheme::default(), false)?;
         Ok(())
     }
 }

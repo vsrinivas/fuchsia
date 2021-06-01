@@ -33,7 +33,7 @@ struct Args {
     use_spinel: bool,
 
     /// display rotatation
-    #[argh(option, from_str_fn(display_rotation_from_str))]
+    #[argh(option)]
     rotation: Option<DisplayRotation>,
 
     /// rive file to load (default is juice.riv)
@@ -47,16 +47,6 @@ struct Args {
     /// artboard name (default is first artboard found)
     #[argh(option)]
     artboard: Option<String>,
-}
-
-fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
-    match s {
-        "0" => Ok(DisplayRotation::Deg0),
-        "90" => Ok(DisplayRotation::Deg90),
-        "180" => Ok(DisplayRotation::Deg180),
-        "270" => Ok(DisplayRotation::Deg270),
-        _ => Err(format!("Invalid DisplayRotation {}", s)),
-    }
 }
 
 fn color_from_str(value: &str) -> Result<Color, String> {

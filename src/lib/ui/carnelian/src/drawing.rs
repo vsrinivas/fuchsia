@@ -12,13 +12,13 @@ use crate::{
     geometry::{Coord, Corners, Point, Rect, Size},
     render::{Context as RenderContext, Path, PathBuilder, Raster, RasterBuilder},
 };
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 use euclid::{
     default::{Box2D, Size2D, Transform2D, Vector2D},
     point2, vec2, Angle,
 };
 use fuchsia_zircon::{self as zx};
-use std::{collections::BTreeMap, fs::File, path::PathBuf, slice};
+use std::{collections::BTreeMap, fs::File, path::PathBuf, slice, str::FromStr};
 use ttf_parser::Face;
 
 /// Some Fuchsia device displays are mounted rotated. This value represents
@@ -74,6 +74,20 @@ impl From<DisplayRotation> for Angle<Coord> {
             DisplayRotation::Deg270 => 270.0,
         };
         Angle::degrees(degrees)
+    }
+}
+
+impl FromStr for DisplayRotation {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "0" => Ok(DisplayRotation::Deg0),
+            "90" => Ok(DisplayRotation::Deg90),
+            "180" => Ok(DisplayRotation::Deg180),
+            "270" => Ok(DisplayRotation::Deg270),
+            _ => Err(anyhow!("Invalid DisplayRotation {}", s)),
+        }
     }
 }
 

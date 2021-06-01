@@ -21,6 +21,7 @@
         },
         {
             protocol: [
+                "fuchsia.boot.Arguments",
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.hardware.pty.Device",

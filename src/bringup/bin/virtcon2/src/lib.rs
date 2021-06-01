@@ -5,7 +5,10 @@
 #![recursion_limit = "4096"]
 
 mod app;
+mod args;
+mod colors;
 mod session_manager;
 mod view;
 
 pub use app::VirtualConsoleAppAssistant;
+pub use args::VirtualConsoleArgs;

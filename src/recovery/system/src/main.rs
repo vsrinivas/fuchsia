@@ -52,16 +52,6 @@ mod storage;
 mod fdr;
 use fdr::{FactoryResetState, ResetEvent};
 
-fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
-    match s {
-        "0" => Ok(DisplayRotation::Deg0),
-        "90" => Ok(DisplayRotation::Deg90),
-        "180" => Ok(DisplayRotation::Deg180),
-        "270" => Ok(DisplayRotation::Deg270),
-        _ => Err(format!("Invalid DisplayRotation {}", s)),
-    }
-}
-
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
@@ -74,7 +64,7 @@ fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderCo
 #[argh(name = "recovery")]
 struct Args {
     /// rotate
-    #[argh(option, from_str_fn(display_rotation_from_str))]
+    #[argh(option)]
     rotation: Option<DisplayRotation>,
 }
 

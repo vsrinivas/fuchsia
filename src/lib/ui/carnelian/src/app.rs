@@ -189,7 +189,7 @@ pub(crate) enum MessageInternal {
 /// Future that returns an application assistant.
 pub type AssistantCreator<'a> = LocalBoxFuture<'a, Result<AppAssistantPtr, Error>>;
 /// Function that creates an AssistantCreator future.
-pub type AssistantCreatorFunc = Box<dyn Fn(&AppContext) -> AssistantCreator<'_>>;
+pub type AssistantCreatorFunc = Box<dyn FnOnce(&AppContext) -> AssistantCreator<'_>>;
 
 impl App {
     fn new(sender: InternalSender, strategy: AppStrategyPtr, assistant: AppAssistantPtr) -> App {

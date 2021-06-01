@@ -40,7 +40,7 @@ struct Args {
     use_spinel: bool,
 
     /// display rotatation
-    #[argh(option, from_str_fn(display_rotation_from_str))]
+    #[argh(option)]
     rotation: Option<DisplayRotation>,
 
     /// text file to load (default is nyancat.txt)
@@ -62,16 +62,6 @@ struct Args {
     /// cell padding (default is 2)
     #[argh(option, default = "2.0")]
     cell_padding: f32,
-}
-
-fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
-    match s {
-        "0" => Ok(DisplayRotation::Deg0),
-        "90" => Ok(DisplayRotation::Deg90),
-        "180" => Ok(DisplayRotation::Deg180),
-        "270" => Ok(DisplayRotation::Deg270),
-        _ => Err(format!("Invalid DisplayRotation {}", s)),
-    }
 }
 
 fn color_from_str(value: &str) -> Result<Color, String> {
