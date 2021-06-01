@@ -103,6 +103,10 @@ struct MessageParam {
     struct {
       uint64_t identifier;
     } file_system_object;
+    struct {
+      uint64_t command;
+      uint64_t key;
+    } wait_queue;
   };
 
   uint64_t attribute;
@@ -462,6 +466,41 @@ class RpmbRpcMessage : public RpcMessage {
   uint64_t rx_frame_mem_id_;
   size_t rx_frame_mem_size_;
   zx_paddr_t rx_frame_mem_paddr_;
+};
+
+// WaitQueueRpcMessage
+//
+// A `RpcMessage` that should be interpreted with the command of WaitQueue
+class WaitQueueRpcMessage : public RpcMessage {
+ public:
+  enum Command : uint64_t {
+    kSleep = 0,
+    kWakeUp = 1,
+  };
+
+  // WaitQueueRpcMessage
+  //
+  // Move constructor for `WaitQueueRpcMessage`. Uses the default implicit implementation.
+  WaitQueueRpcMessage(WaitQueueRpcMessage&&) = default;
+
+  // WaitQueueRpcMessage
+  //
+  // Attempts to create a `WaitQueueRpcMessage` from a moved-in `RpcMessage`.
+  static fit::result<WaitQueueRpcMessage, zx_status_t> CreateFromRpcMessage(
+      RpcMessage&& rpc_message);
+
+  uint64_t command() const { return command_; }
+  uint32_t key() const { return key_; }
+
+ protected:
+  explicit WaitQueueRpcMessage(RpcMessage&& rpc_message) : RpcMessage(std::move(rpc_message)) {}
+
+  static constexpr size_t kNumParams = 1;
+  static constexpr size_t kParamIndex = 0;
+
+ private:
+  uint64_t command_;
+  uint64_t key_;
 };
 
 // GetTimeRpcMessage
