@@ -231,21 +231,31 @@ impl FilesystemRename for FxVolume {
         // have to unwind it if something fails before then.
         moved_node.set_parent(dst_dir.clone());
 
+        src_dir.did_remove(src);
+
         match replace_result {
-            ReplacedChild::None | ReplacedChild::FileWithRemainingLinks(..) => {
+            ReplacedChild::None => {
+                dst_dir.did_add(dst);
+                transaction.commit().await
+            }
+            ReplacedChild::FileWithRemainingLinks(..) => {
+                dst_dir.did_remove(dst);
+                dst_dir.did_add(dst);
                 transaction.commit().await
             }
             ReplacedChild::File(id) => {
+                dst_dir.did_remove(dst);
+                dst_dir.did_add(dst);
                 transaction.commit().await;
                 self.maybe_purge_file(id).await.map_err(map_to_status)?;
             }
             ReplacedChild::Directory(id) => {
+                dst_dir.did_remove(dst);
+                dst_dir.did_add(dst);
                 transaction.commit_with_callback(|| self.mark_directory_deleted(id, dst)).await
             }
         };
 
-        src_dir.did_remove(src);
-        dst_dir.did_add(dst);
         Ok(())
     }
 }

@@ -215,8 +215,8 @@ impl FxDirectory {
                             self.volume().cache().get_or_reserve(node.object_id()).await
                         {
                             p.commit(&node);
-                            transaction.commit().await;
                             current_dir.did_add(name);
+                            transaction.commit().await;
                         } else {
                             // We created a node, but the object ID was already used in the cache,
                             // which suggests a object ID was reused (which would either be a bug or
@@ -340,6 +340,7 @@ impl MutableDirectory for FxDirectory {
             .await
             .map_err(map_to_status)?;
         store.adjust_refs(&mut transaction, entry_info.inode(), 1).await.map_err(map_to_status)?;
+        self.did_add(&name);
         transaction.commit().await;
         Ok(())
     }
@@ -357,18 +358,22 @@ impl MutableDirectory for FxDirectory {
             .map_err(map_to_status)?
         {
             ReplacedChild::None => return Err(Status::NOT_FOUND),
-            ReplacedChild::FileWithRemainingLinks(..) => transaction.commit().await,
+            ReplacedChild::FileWithRemainingLinks(..) => {
+                self.did_remove(name);
+                transaction.commit().await;
+            }
             ReplacedChild::File(id) => {
+                self.did_remove(name);
                 transaction.commit().await;
                 self.volume().maybe_purge_file(id).await.map_err(map_to_status)?;
             }
             ReplacedChild::Directory(id) => {
+                self.did_remove(name);
                 transaction
                     .commit_with_callback(|| self.volume().mark_directory_deleted(id, name))
                     .await
             }
         };
-        self.did_remove(name);
         Ok(())
     }
 
