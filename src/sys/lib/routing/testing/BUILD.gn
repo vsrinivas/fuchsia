@@ -39,5 +39,6 @@ rustc_library("routing_test_helpers") {
     "src/component_id_index.rs",
     "src/lib.rs",
     "src/policy.rs",
+    "src/rights.rs",
   ]
 }

@@ -4,6 +4,7 @@
 
 pub mod component_id_index;
 pub mod policy;
+pub mod rights;
 
 use {
     async_trait::async_trait,

@@ -13,7 +13,7 @@ use {
             testing::routing_test_helpers::*,
         },
     },
-    ::routing_test_helpers::RoutingTestModel,
+    ::routing_test_helpers::{rights::CommonRightsTest, RoutingTestModel},
     async_trait::async_trait,
     cm_rust::*,
     cm_rust_testing::*,
@@ -29,336 +29,39 @@ use {
 
 #[fuchsia::test]
 async fn offer_increasing_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "bar_data".into(),
-                    target_name: "baz_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(
-                    DirectoryDeclBuilder::new("foo_data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
-                        .build(),
-                )
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "baz_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    CommonRightsTest::<RoutingTestBuilder>::new().test_offer_increasing_rights().await
 }
 
 #[fuchsia::test]
 async fn offer_incompatible_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "bar_data".into(),
-                    target_name: "baz_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::WRITE_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(
-                    DirectoryDeclBuilder::new("foo_data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
-                        .build(),
-                )
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "baz_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
-    )
-    .await;
+    CommonRightsTest::<RoutingTestBuilder>::new().test_offer_incompatible_rights().await
 }
 
 #[fuchsia::test]
 async fn expose_increasing_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "bar_data".into(),
-                    target_name: "baz_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(
-                    DirectoryDeclBuilder::new("foo_data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
-                        .build(),
-                )
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "baz_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    CommonRightsTest::<RoutingTestBuilder>::new().test_expose_increasing_rights().await
 }
 
 #[fuchsia::test]
 async fn expose_incompatible_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "bar_data".into(),
-                    target_name: "baz_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(
-                    DirectoryDeclBuilder::new("foo_data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
-                        .build(),
-                )
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::WRITE_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "baz_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
-    )
-    .await;
+    CommonRightsTest::<RoutingTestBuilder>::new().test_expose_incompatible_rights().await
 }
 
 #[fuchsia::test]
 async fn capability_increasing_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "bar_data".into(),
-                    target_name: "baz_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(
-                    DirectoryDeclBuilder::new("foo_data")
-                        .rights(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS)
-                        .build(),
-                )
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "baz_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["c:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+    CommonRightsTest::<RoutingTestBuilder>::new().test_capability_increasing_rights().await
 }
 
 #[fuchsia::test]
 async fn capability_incompatible_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "bar_data".into(),
-                    target_name: "baz_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(
-                    DirectoryDeclBuilder::new("foo_data").rights(*rights::WRITE_RIGHTS).build(),
-                )
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::READ_RIGHTS | *rights::WRITE_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "baz_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
-    )
-    .await;
+    CommonRightsTest::<RoutingTestBuilder>::new().test_capability_incompatible_rights().await
+}
+
+#[fuchsia::test]
+async fn offer_from_component_manager_namespace_directory_incompatible_rights() {
+    CommonRightsTest::<RoutingTestBuilder>::new()
+        .test_offer_from_component_manager_namespace_directory_incompatible_rights()
+        .await
 }
 
 struct MockFrameworkDirectoryProvider {
@@ -505,63 +208,6 @@ async fn framework_directory_incompatible_rights() {
             Arc::downgrade(&directory_host) as Weak<dyn Hook>,
         )])
         .await;
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
-    )
-    .await;
-}
-
-///  component manager's namespace
-///   |
-///   a
-///    \
-///     b
-///
-/// a: offers directory /offer_from_cm_namespace/data/foo from realm as bar_data
-/// b: uses directory bar_data as /data/hippo, but the rights don't match
-#[fuchsia::test]
-async fn offer_from_component_manager_namespace_directory_incompatible_rights() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Parent,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: OfferTarget::Child("b".to_string()),
-                    rights: None,
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "bar_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let namespace_capabilities = vec![CapabilityDecl::Directory(
-        DirectoryDeclBuilder::new("foo_data")
-            .path("/offer_from_cm_namespace/data/foo")
-            .rights(*rights::WRITE_RIGHTS)
-            .build(),
-    )];
-    let test = RoutingTestBuilder::new("a", components)
-        .set_namespace_capabilities(namespace_capabilities)
-        .build()
-        .await;
-    let _ns_dir = ScopedNamespaceDir::new(&test, "/offer_from_cm_namespace");
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),

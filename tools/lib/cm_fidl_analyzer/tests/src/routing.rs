@@ -31,11 +31,11 @@ use {
 
 const TEST_URL_PREFIX: &str = "test:///";
 
-struct RoutingTestForAnalyzer {
+pub struct RoutingTestForAnalyzer {
     model: Arc<ComponentModelForAnalyzer>,
 }
 
-struct RoutingTestBuilderForAnalyzer {
+pub struct RoutingTestBuilderForAnalyzer {
     root_url: String,
     decls_by_url: HashMap<String, ComponentDecl>,
     namespace_capabilities: Vec<CapabilityDecl>,
