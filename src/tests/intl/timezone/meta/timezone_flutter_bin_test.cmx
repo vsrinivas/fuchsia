@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/timezone_flutter_bin_test"
+        "binary": "bin/timezone_flutter_bin_test"
     },
     "sandbox": {
         "features": [
@@ -12,7 +12,6 @@
         "services": [
             "fidl.examples.echo.EchoService",
             "fuchsia.accessibility.semantics.SemanticsManager",
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.posix.socket.Provider",
@@ -22,6 +21,7 @@
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic",

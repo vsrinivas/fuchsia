@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 group("timezone") {
   testonly = true
@@ -80,21 +80,13 @@ rustc_test("timezone_bin_test") {
   ]
 }
 
-test_package("timezone-test") {
-  public_deps = [
+fuchsia_unittest_package("timezone-test") {
+  component_name = "timezone_bin_test"
+  manifest = "meta/timezone_bin_test.cmx"
+  deps = [
     ":timezone_bin_test",
     "../timestamp-server-dart:timestamp-server-dart",
-  ]
-  tests = [
-    {
-      name = "timezone_bin_test"
-    },
-  ]
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+    "//src/intl:icudtl",
   ]
 }
 
@@ -131,20 +123,12 @@ rustc_test("timezone_flutter_bin_test") {
   ]
 }
 
-test_package("timezone-flutter-test") {
-  public_deps = [
+fuchsia_unittest_package("timezone-flutter-test") {
+  component_name = "timezone_flutter_bin_test"
+  manifest = "meta/timezone_flutter_bin_test.cmx"
+  deps = [
     ":timezone_flutter_bin_test",
     "../timestamp-server-dart:timestamp-server-flutter",
-  ]
-  tests = [
-    {
-      name = "timezone_flutter_bin_test"
-    },
-  ]
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+    "//src/intl:icudtl",
   ]
 }

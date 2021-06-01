@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/timezone_bin_test"
+        "binary": "bin/timezone_bin_test"
     },
     "sandbox": {
         "features": [
