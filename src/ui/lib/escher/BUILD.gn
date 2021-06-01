@@ -2,14 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/layers.gni")
-
-import("//src/ui/examples/escher/common/assets/assets.gni")
 import("//src/ui/lib/escher/build_args.gni")
-import("//src/ui/lib/escher/shaders/shaders.gni")
 
 config("use_runtime_glsl_config") {
   defines = [ "ESCHER_USE_RUNTIME_GLSL=1" ]
@@ -19,35 +15,37 @@ config("test_for_glsl_spirv_mismatch_config") {
   defines = [ "ESCHER_TEST_FOR_GLSL_SPIRV_MISMATCH=1" ]
 }
 
-test_package("escher_tests") {
+fuchsia_test_component("escher_unittests") {
+  manifest = "meta/escher_unittests.cmx"
+  deps = [ "test:escher_unittests" ]
+}
+
+fuchsia_test_component("escher_renderer_tests") {
+  manifest = "meta/escher_renderer_tests.cmx"
+  deps = [ "test:escher_renderer_tests" ]
+}
+
+fuchsia_test_component("escher_examples_test") {
+  manifest = "meta/escher_examples_test.cmx"
+  deps = [ "//src/ui/examples/escher/test:escher_examples_test" ]
+}
+
+fuchsia_test_package("escher_tests") {
+  test_components = [
+    ":escher_unittests",
+    ":escher_renderer_tests",
+    ":escher_examples_test",
+  ]
   deps = [
-    "test:escher_renderer_tests",
-    "test:escher_unittests",
-    "//src/ui/examples/escher/test:escher_examples_test",
+    "shaders:escher_shaders_resources",
+    "shaders:escher_shaders_spirv_resources",
+    "shaders:escher_test_shaders_spirv_resources",
+    "//src/lib/vulkan:vulkan_validation_layers",
+    "//src/ui/examples/escher/common/assets:escher_examples_assets",
   ]
-
-  tests = [
-    {
-      name = "escher_unittests"
-      environments = basic_envs + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "escher_renderer_tests"
-      environments = basic_envs + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "escher_examples_test"
-      environments = basic_envs + magma_libvulkan_hardware_envs
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-  resources += escher_shaders_resources
-  resources += escher_shaders_spirv_resources
-  resources += escher_test_shaders_spirv_resources
-  resources += escher_examples_assets
+  test_specs = {
+    environments = basic_envs + magma_libvulkan_hardware_envs
+  }
 }
 
 config("thread_safety_warning") {
@@ -470,35 +468,4 @@ group("unittests") {
     "//src/ui/lib/escher/test:escher_renderer_tests",
     "//src/ui/lib/escher/test:escher_unittests",
   ]
-}
-
-escher_examples_assets_targets = []
-foreach(asset, asset_files) {
-  resource(asset) {
-    # TODO(jayzhuang): Move `asset_files` here when it's no longer referenced
-    # anywhere else.
-    sources = [ rebase_path(asset, ".", "../../examples/escher/common/assets") ]
-    outputs = [ "data/assets/$asset" ]
-  }
-  escher_examples_assets_targets += [ ":$asset" ]
-}
-
-group("escher_examples_assets") {
-  deps = escher_examples_assets_targets
-}
-
-escher_shaders_resources_targets = []
-foreach(shader, shader_files) {
-  resource_target_name = get_path_info(shader, "file")
-  resource(resource_target_name) {
-    # TODO(jayzhuang): Move `asset_files` here when it's no longer referenced
-    # anywhere else.
-    sources = [ rebase_path(shader, ".", "shaders") ]
-    outputs = [ "data/shaders/$shader" ]
-  }
-  escher_shaders_resources_targets += [ ":$resource_target_name" ]
-}
-
-group("escher_shaders_resources") {
-  deps = escher_shaders_resources_targets
 }

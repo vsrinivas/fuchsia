@@ -2,36 +2,48 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
-assert(is_host,
-       "shaders need only be copied to the build directory for host tests")
-
-# Copies shaders needed for escher linux tests to a specific test data
-# directory near the test binary.
-group_deps = []
-foreach(shader, escher_shaders_resources) {
-  shader_target_name = "shader_" + get_path_info(shader.path, "file")
-  host_test_data(shader_target_name) {
-    sources = [ shader.path ]
-    outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
+if (is_host) {
+  # Copies shaders needed for escher linux tests to a specific test data
+  # directory near the test binary.
+  group_deps = []
+  foreach(shader, escher_shaders_resources) {
+    shader_target_name = "shader_" + get_path_info(shader.path, "file")
+    host_test_data(shader_target_name) {
+      sources = [ shader.path ]
+      outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
+    }
+    group_deps += [ ":$shader_target_name" ]
   }
-  group_deps += [ ":$shader_target_name" ]
+
+  spirv_resources =
+      escher_shaders_spirv_resources + escher_test_shaders_spirv_resources
+  foreach(shader, spirv_resources) {
+    shader_target_name = "shader_" + get_path_info(shader.path, "file")
+    host_test_data(shader_target_name) {
+      sources = [ shader.path ]
+      outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
+    }
+    group_deps += [ ":$shader_target_name" ]
+  }
+
+  group("host_shader_data") {
+    testonly = true
+    deps = group_deps
+  }
 }
 
-spirv_resources =
-    escher_shaders_spirv_resources + escher_test_shaders_spirv_resources
-foreach(shader, spirv_resources) {
-  shader_target_name = "shader_" + get_path_info(shader.path, "file")
-  host_test_data(shader_target_name) {
-    sources = [ shader.path ]
-    outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
-  }
-  group_deps += [ ":$shader_target_name" ]
+resource_group("escher_shaders_resources") {
+  files = escher_shaders_files
 }
 
-group("host_shader_data") {
-  testonly = true
-  deps = group_deps
+resource_group("escher_shaders_spirv_resources") {
+  files = escher_shaders_spirv_files
+}
+
+resource_group("escher_test_shaders_spirv_resources") {
+  files = escher_test_shaders_spirv_files
 }

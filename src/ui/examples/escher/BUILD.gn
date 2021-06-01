@@ -26,8 +26,8 @@ fuchsia_package_with_single_component("escher_waterfall") {
     ":waterfall_bin",
     "//src/lib/vulkan:vulkan_validation_layers",
     "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
-    "//src/ui/lib/escher:escher_examples_assets",
-    "//src/ui/lib/escher:escher_shaders_resources",
+    "//src/ui/examples/escher/common/assets:escher_examples_assets",
+    "//src/ui/lib/escher/shaders:escher_shaders_resources",
   ]
 }
 

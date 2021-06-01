@@ -2,26 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/testing/host_test_data.gni")
-import("//src/ui/examples/escher/common/assets/assets.gni")
 
-assert(
-    is_host,
-    "assets need only be copied to the build directory for linux tests/examples")
-
-# Copies shaders needed for escher linux tests to a specific test data
-# directory near the test binary.
-group_deps = []
-foreach(asset, escher_examples_assets) {
-  asset_target_name = "asset_" + get_path_info(asset.path, "file")
-  host_test_data(asset_target_name) {
-    sources = [ asset.path ]
-    outputs = [ "$root_out_dir/test_data/escher/" + asset.dest ]
+if (is_host) {
+  # Copies shaders needed for escher linux tests to a specific test data
+  # directory near the test binary.
+  host_test_data("host_assets") {
+    sources = [ "bbb_frame.yuv" ]
+    outputs = [ "$root_out_dir/test_data/escher/assets/bbb_frame.yuv" ]
   }
-  group_deps += [ ":$asset_target_name" ]
 }
 
-group("host_assets") {
-  testonly = true
-  deps = group_deps
+resource("escher_examples_assets") {
+  sources = [ "bbb_frame.yuv" ]
+  outputs = [ "data/assets/bbb_frame.yuv" ]
 }

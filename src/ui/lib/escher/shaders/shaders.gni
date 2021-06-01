@@ -23,7 +23,7 @@ shader_files = [
   "compute/pose_buffer_latching.comp",
 ]
 
-_shader_files_spirv = [
+shader_files_spirv = [
   # Flatland renderer.
   "shaders_flatland_flat_main_frag14695981039346656037.spirv",
   "shaders_flatland_flat_main_vert14695981039346656037.spirv",
@@ -48,7 +48,7 @@ _shader_files_spirv = [
   "shaders_test_main_frag4304586084079301274.spirv",
 ]
 
-_test_shader_files_spirv = [
+test_shader_files_spirv = [
   # shader_program_unittest.cc
 ]
 
@@ -70,7 +70,7 @@ foreach(shader, shader_files) {
   ]
 }
 
-foreach(spirv, _shader_files_spirv) {
+foreach(spirv, shader_files_spirv) {
   escher_shaders_spirv_resources += [
     {
       path = rebase_path("spirv/$spirv")
@@ -79,7 +79,7 @@ foreach(spirv, _shader_files_spirv) {
   ]
 }
 
-foreach(spirv, _test_shader_files_spirv) {
+foreach(spirv, test_shader_files_spirv) {
   escher_test_shaders_spirv_resources += [
     {
       path = rebase_path("spirv/$spirv")
@@ -98,6 +98,8 @@ escher_shaders_files = []
 
 escher_shaders_spirv_files = []
 
+escher_test_shaders_spirv_files = []
+
 foreach(shader, shader_files) {
   escher_shaders_files += [
     {
@@ -107,8 +109,17 @@ foreach(shader, shader_files) {
   ]
 }
 
-foreach(spirv, _shader_files_spirv) {
+foreach(spirv, shader_files_spirv) {
   escher_shaders_spirv_files += [
+    {
+      source = rebase_path("spirv/$spirv")
+      dest = "data/shaders/$spirv"
+    },
+  ]
+}
+
+foreach(spirv, test_shader_files_spirv) {
+  escher_test_shaders_spirv_files += [
     {
       source = rebase_path("spirv/$spirv")
       dest = "data/shaders/$spirv"

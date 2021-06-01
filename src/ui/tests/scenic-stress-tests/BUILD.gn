@@ -7,9 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
-import("//src/ui/lib/escher/shaders/shaders.gni")
 
 rustc_test("scenic-stressor-bin") {
   name = "scenic_stressor"
@@ -53,14 +51,6 @@ rustc_test("scenic-stressor-bin") {
   ]
 }
 
-resource_group("escher_shaders_resource_group") {
-  files = escher_shaders_files
-}
-
-resource_group("escher_shaders_spirv_resource_group") {
-  files = escher_shaders_spirv_files
-}
-
 fuchsia_component("scenic-for-stress-tests") {
   manifest = "meta/scenic-for-stress-tests.cml"
   deps = [ "//src/ui/scenic/bin" ]
@@ -76,9 +66,9 @@ fuchsia_unittest_package("scenic-stress-tests") {
   ]
 
   if (escher_use_runtime_glsl) {
-    deps += [ ":escher_shaders_resource_group" ]
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
   } else {
-    deps += [ ":escher_shaders_spirv_resource_group" ]
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
   }
 
   test_specs = {

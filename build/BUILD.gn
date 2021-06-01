@@ -48,7 +48,6 @@ group("deprecated_package") {
     "//src/sys/pkg/tests/pkgctl/*",
     "//src/sys/pkg/tests/update/*",
     "//src/tests/intl/timezone/*",
-    "//src/ui/lib/escher/*",
     "//src/ui/scenic/*",
   ]
 }
