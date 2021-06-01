@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syslog/cpp/macros.h>
-
 #include "src/developer/memory/monitor/debugger.h"
+
+#include <lib/syslog/cpp/macros.h>
 
 namespace monitor {
 
@@ -12,8 +12,7 @@ MemoryDebugger::MemoryDebugger(sys::ComponentContext* context, PressureNotifier*
     : notifier_(notifier) {
   FX_CHECK(notifier_);
   FX_CHECK(context);
-  zx_status_t status = context->outgoing()->debug_dir()->AddEntry(
-      fuchsia::memory::Debugger::Name_, std::make_unique<vfs::Service>(bindings_.GetHandler(this)));
+  zx_status_t status = context->outgoing()->AddPublicService(bindings_.GetHandler(this));
   FX_CHECK(status == ZX_OK);
 }
 

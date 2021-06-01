@@ -7,12 +7,12 @@
     },
     "sandbox": {
         "features": [
-            "config-data",
-            "hub"
+            "config-data"
         ],
         "services": [
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
+            "fuchsia.memory.Debugger",
             "fuchsia.tracing.provider.Provider"
         ]
     }

@@ -23,6 +23,7 @@
 #include <mutex>
 #include <utility>
 
+#include "lib/fidl/llcpp/connect_service.h"
 #include "src/developer/memory/metrics/bucket_match.h"
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"
@@ -59,18 +60,7 @@ void SignalMemoryPressure(fuchsia::memorypressure::Level level) {
   fuchsia::memory::DebuggerSyncPtr memdebug;
   auto context = sys::ComponentContext::Create();
 
-  if (!std::filesystem::exists("/hub/c/memory_monitor.cmx")) {
-    FX_LOGS(ERROR) << "No memory_monitor component found.";
-    return;
-  }
-
-  // Taking the first path in the component directory is sufficient here because there's only a
-  // single instance of memory_monitor on a running system.
-  std::string component_instance_path =
-      std::filesystem::directory_iterator("/hub/c/memory_monitor.cmx")->path();
-
-  std::string service_path =
-      component_instance_path + "/out/debug/" + fuchsia::memory::Debugger::Name_;
+  std::string service_path = std::string("/svc/") + fuchsia::memory::Debugger::Name_;
 
   zx_status_t status =
       fdio_service_connect(service_path.c_str(), memdebug.NewRequest().TakeChannel().release());
