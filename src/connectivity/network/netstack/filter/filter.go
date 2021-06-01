@@ -43,7 +43,7 @@ type Filter struct {
 }
 
 func New(s *stack.Stack) *Filter {
-	defaultTables := stack.DefaultTables()
+	defaultTables := stack.DefaultTables(s.Seed())
 	defaultV4Table := defaultTables.GetTable(stack.FilterID, false /* ipv6 */)
 	defaultV6Table := defaultTables.GetTable(stack.FilterID, true /* ipv6 */)
 

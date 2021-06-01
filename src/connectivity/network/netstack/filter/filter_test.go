@@ -36,7 +36,7 @@ func TestFilterUpdates(t *testing.T) {
 		cmpopts.IgnoreUnexported(filterDisabledNICMatcher{}),
 	}
 
-	defaultTables := stack.DefaultTables()
+	defaultTables := stack.DefaultTables(0x5eed)
 	defaultV4Table := defaultTables.GetTable(stack.FilterID, false /* ipv6 */)
 	defaultV6Table := defaultTables.GetTable(stack.FilterID, true /* ipv6 */)
 
