@@ -117,6 +117,20 @@ class GainControlTest : public HermeticAudioTest {
     EXPECT_EQ(received_mute_2, expected_mute);
   }
 
+  void ExpectNoGainCallback() {
+    gain_control_2_.events().OnGainMuteChanged =
+        AddCallback("GainControl2::OnGainMuteChanged", [](float gain_db, bool muted) {
+          ADD_FAILURE() << "unexpected GainControl2::OnGainMuteChanged callback";
+        });
+    gain_control_1_.events().OnGainMuteChanged =
+        AddCallback("GainControl1::OnGainMuteChanged", [](float gain_db, bool muted) {
+          ADD_FAILURE() << "unexpected GainControl1::OnGainMuteChanged callback";
+        });
+    // If audio_core is not buggy, the above callbacks won't fire.
+    // Wait 1s to ensure that does not happen.
+    ExpectNoCallbacks(zx::sec(1), "while expecting no OnGainMuteChanged callbacks");
+  }
+
   void ExpectParentDisconnect() {
     // Disconnecting the parent should also disconnnect the GainControls.
     ExpectDisconnects({ErrorHandlerFor(parent_), ErrorHandlerFor(gain_control_1_),
@@ -168,9 +182,9 @@ TYPED_TEST(GainControlTest, DuplicateSetGain) {
   this->ExpectGainCallback(expect_gain_db, false);
 
   this->SetGain(expect_gain_db);
+  this->ExpectNoGainCallback();
+
   this->SetMute(true);
-  // Rather than waiting for "no gain callback", we set an (independent) mute
-  // value and expect only a single callback that includes the more recent mute.
   this->ExpectGainCallback(expect_gain_db, true);
 }
 
@@ -181,9 +195,9 @@ TYPED_TEST(GainControlTest, DuplicateSetMute) {
   this->ExpectGainCallback(kUnityGainDb, true);
 
   this->SetMute(true);
+  this->ExpectNoGainCallback();
+
   this->SetGain(expect_gain_db);
-  // Rather than waiting for "no mute callback", we set an (independent) gain
-  // value and expect only a single callback that includes the more recent gain.
   this->ExpectGainCallback(expect_gain_db, true);
 }
 

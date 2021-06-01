@@ -75,6 +75,12 @@ void TestFixture::ExpectCallbacks() {
   }
 }
 
+void TestFixture::ExpectNoCallbacks(zx::duration timeout, const std::string& msg_for_failure) {
+  RunLoopWithTimeout(timeout);
+  ExpectNoUnexpectedErrors(msg_for_failure);
+  pending_callbacks_.clear();
+}
+
 void TestFixture::ExpectErrors(const std::vector<std::shared_ptr<ErrorHandler>>& errors) {
   std::string names = "{";
   std::string sep;

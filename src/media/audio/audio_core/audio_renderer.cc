@@ -346,11 +346,19 @@ void AudioRenderer::SetMute(bool mute) {
 
 void AudioRenderer::NotifyGainMuteChanged() {
   TRACE_DURATION("audio", "AudioRenderer::NotifyGainMuteChanged");
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (notified_gain_db_ == stream_gain_db_ && notified_mute_ == mute_) {
+    return;
+  }
+  notified_gain_db_ = stream_gain_db_;
+  notified_mute_ = mute_;
+
   // TODO(mpuryear): consider whether GainControl events should be disable-able, like MinLeadTime.
-  FX_LOGS(DEBUG) << " (" << stream_gain_db_ << " dB, mute: " << mute_ << ")";
+  FX_LOGS(DEBUG) << " (" << notified_gain_db_.value() << " dB, mute: " << notified_mute_.value()
+                 << ")";
 
   for (auto& gain_binding : gain_control_bindings_.bindings()) {
-    gain_binding->events().OnGainMuteChanged(stream_gain_db_, mute_);
+    gain_binding->events().OnGainMuteChanged(notified_gain_db_.value(), notified_mute_.value());
   }
 }
 

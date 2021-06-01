@@ -104,8 +104,15 @@ class TestFixture : public ::gtest::RealLoopFixture {
   // Wait until all pending callbacks are drained. Fails if an error is encountered.
   // Callbacks are expected to occur in the order they are added. After this method
   // returns, the pending callback set is emptied and new callbacks may be added for
-  // a future call to ExpectCallbacks.
+  // a future call to ExpectCallback or ExpectNoCallbacks.
   void ExpectCallbacks();
+
+  // Run loop with specified timeout, expecting to reach the timeout. Fails if an error is
+  // encountered, with `msg_for_failure`. The callbacks themselves should include failures
+  // such that if they trigger, they register as unexpected errors. After this method returns,
+  // the pending callback set is emptied and new callbacks may be added for a future call to
+  // ExpectCallback or ExpectNoCallbacks.
+  void ExpectNoCallbacks(zx::duration timeout, const std::string& msg_for_failure);
 
   // Wait for the given ErrorHandlers to trigger with their expected errors. Fails if
   // different errors are found or if errors are triggered in different ErrorHandlers.

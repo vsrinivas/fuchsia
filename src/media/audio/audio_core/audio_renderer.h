@@ -94,6 +94,8 @@ class AudioRenderer : public BaseRenderer,
 
   std::mutex mutex_;
   bool reference_clock_is_set_ FXL_GUARDED_BY(mutex_) = false;
+  std::optional<float> notified_gain_db_ FXL_GUARDED_BY(mutex_);
+  std::optional<bool> notified_mute_ FXL_GUARDED_BY(mutex_);
 
   class GainControlBinding : public fuchsia::media::audio::GainControl {
    public:
