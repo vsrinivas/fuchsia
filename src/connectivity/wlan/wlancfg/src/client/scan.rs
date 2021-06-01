@@ -81,16 +81,17 @@ async fn sme_scan(
                     return Ok(scanned_networks);
                 }
                 fidl_sme::ScanTransactionEvent::OnError { error } => {
-                    error!("Scan error from SME: {:?}", error);
-                    return Err(
-                        if error.code == fidl_sme::ScanErrorCode::ShouldWait
-                            || error.code == fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware
-                        {
-                            SmeScanError::ShouldRetryLater
-                        } else {
-                            SmeScanError::Other
-                        },
-                    );
+                    return match error.code {
+                        fidl_sme::ScanErrorCode::ShouldWait
+                        | fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware => {
+                            info!("Scan cancelled by SME, retry indicated: {:?}", error);
+                            Err(SmeScanError::ShouldRetryLater)
+                        }
+                        _ => {
+                            error!("Scan error from SME: {:?}", error);
+                            Err(SmeScanError::Other)
+                        }
+                    }
                 }
             };
         }
