@@ -3,7 +3,6 @@ fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx
 fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent_channel.cmx
 fuchsia-pkg://fuchsia.com/debug_agent#meta/limbo_caller.cmx
 fuchsia-pkg://fuchsia.com/ktrace_provider#meta/ktrace_provider.cmx
-fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester_fidl.cmx
 # Component Tests
@@ -16,8 +15,6 @@ fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-manager-test.cmx
 fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/run_simplest_app_benchmark.cmx
 fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/run_yuv_to_image_pipe_benchmark.cmx
 fuchsia-pkg://fuchsia.com/josh-tests#meta/josh_tests_bin.cmx
-fuchsia-pkg://fuchsia.com/memory_metrics_tests#meta/memory_metrics_systemtests.cmx
-fuchsia-pkg://fuchsia.com/memory_monitor_tests#meta/memory_monitor_unittests.cmx
 fuchsia-pkg://fuchsia.com/process-builder-tests#meta/process-builder-tests.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester_tests#meta/system_monitor_harvester_test.cmx
 fuchsia-pkg://fuchsia.com/trace_tests#meta/nested_environment_test.cmx
