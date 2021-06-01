@@ -2,19 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/zx_library.gni")
+import("//build/cpp/library_headers.gni")
 
-zx_library("zxio") {
-  sdk = "static"
-  sdk_headers = [
+library_headers("headers") {
+  headers = [
+    "lib/zxio/cpp/inception.h",
+    "lib/zxio/cpp/vector.h",
     "lib/zxio/extensions.h",
     "lib/zxio/inception.h",
     "lib/zxio/null.h",
     "lib/zxio/ops.h",
     "lib/zxio/types.h",
     "lib/zxio/zxio.h",
-    "lib/zxio/cpp/vector.h",
   ]
+
+  public_deps = [
+    # <lib/zxio/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+  ]
+}
+
+static_library("zxio") {
   sources = [
     "debuglog.cc",
     "extensions.cc",
@@ -29,19 +37,19 @@ zx_library("zxio") {
     "vmofile.cc",
     "zxio.cc",
   ]
-  public_deps = [
-    "//zircon/public/lib/sync",
-
-    # <lib/zxio/inception.h> has #include <fuchsia/io/llcpp/fidl.h>.
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-  ]
+  public_deps = [ ":headers" ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+static_library("zxio_complete") {
+  complete_static_lib = true
+
+  deps = [ ":zxio" ]
 }
 
 group("tests") {

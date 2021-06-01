@@ -150,7 +150,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//sdk/lib/fit-promise/*",
     "//sdk/lib/fit/*",
     "//sdk/lib/stdcompat/*",
-    "//sdk/lib/zxio/*",
     "//src/bringup/bin/svchost/*",
     "//src/connectivity/bluetooth/lib/device-protocol-bt-gatt-svc/*",
     "//src/connectivity/openthread/lib/ot-radio/*",
