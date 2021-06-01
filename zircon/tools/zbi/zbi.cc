@@ -1618,7 +1618,11 @@ Extracted items use the file names shown below:\n\
     if (!compress) {
       // Compute the checksum now so the item is ready to write out.
       Checksummer crc;
-      crc.Write(file->View());
+
+      // Explicit size because if size was limited by |input_size_limit| only calculate the CRC of
+      // the first N bytes, not the entire file.
+      crc.Write(file->View(0, size - (null_terminate ? 1 : 0)));
+
       if (null_terminate) {
         crc.Write(Iovec("", 1));
       }
