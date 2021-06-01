@@ -813,12 +813,12 @@ config("static-libc++") {
   }
 }
 
+# This config is used for code that needs to be purely position-independent
+# without using dynamic relocation.  Since the compiler doesn't generally make
+# guarantees about this, it's sometimes necessary to disable specific optimizations
+# to ensure the code with this requirement doesn't get compiled in ways that won't
+# work.  This config can be changed to add switches when those needs arise.
 config("pure") {
-  if (!is_gcc) {
-    # TODO(fxbug.dev/48501): This disables the SwitchToLookupTable optimization,
-    # which is not PIC-friendly.
-    cflags = [ "-fno-jump-tables" ]
-  }
 }
 
 config("rodso") {
