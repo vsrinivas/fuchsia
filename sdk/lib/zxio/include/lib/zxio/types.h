@@ -69,6 +69,29 @@ typedef uint32_t zxio_signals_t;
    ZXIO_SIGNAL_WRITE_DISABLED | ZXIO_SIGNAL_READ_THRESHOLD | ZXIO_SIGNAL_WRITE_THRESHOLD | \
    ZXIO_SIGNAL_OUT_OF_BAND | ZXIO_SIGNAL_ERROR | ZXIO_SIGNAL_PEER_CLOSED)
 
+// Objects ---------------------------------------------------------------------
+
+// A zxio object. See zxio.h for documentation on the behaviors and operations
+// on zxio objects.
+typedef struct zxio_tag {
+  uint64_t reserved[4];
+} zxio_t;
+
+// Storage for the |zxio_ops_t| implementation.
+// All |zxio_t| implementations must fit within this space.
+typedef struct zxio_private {
+  uint64_t reserved[6];
+} zxio_private_t;
+
+// See extensions.h
+typedef struct zxio_extensions zxio_extensions_t;
+
+// The storage backing a |zxio_t|.
+typedef struct zxio_storage {
+  zxio_t io;
+  zxio_private_t reserved;
+} zxio_storage_t;
+
 // File and directory access ---------------------------------------------------
 
 // The set of supported representations of a node.

@@ -25,12 +25,12 @@
 //
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
-typedef struct zxio_remote {
+using zxio_remote_t = struct zxio_remote {
   zxio_t io;
   zx_handle_t control;
   zx_handle_t event;
   zx_handle_t stream;
-} zxio_remote_t;
+};
 
 static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
               "zxio_remote_t must fit inside zxio_storage_t.");
@@ -51,12 +51,12 @@ zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handl
 //
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
-typedef struct zxio_remote_v2 {
+using zxio_remote_v2_t = struct zxio_remote_v2 {
   zxio_t io;
   zx_handle_t control;
   zx_handle_t observer;
   zx_handle_t stream;
-} zxio_remote_v2_t;
+};
 
 static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
               "zxio_remote_v2_t must fit inside zxio_storage_t.");
@@ -100,10 +100,10 @@ zx_status_t zxio_vmofile_init(zxio_storage_t* file, fidl::WireSyncClient<fuchsia
 //
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
-typedef struct zxio_pipe {
+using zxio_pipe_t = struct zxio_pipe {
   zxio_t io;
   zx::socket socket;
-} zxio_pipe_t;
+};
 
 static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
               "zxio_pipe_t must fit inside zxio_storage_t.");

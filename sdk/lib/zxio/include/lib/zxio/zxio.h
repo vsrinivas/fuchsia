@@ -11,25 +11,25 @@
 
 __BEGIN_CDECLS
 
-// An IO object.
+// Overview
 //
-// Provides an ergonomic C interface to the fuchsia.io family of protocols.
-// These protocols are optimized for efficiency at the cost of ergonomics. This
-// object provides a more ergonomic interface to the same underlying protocol
-// without sacrificing (much) performance.
+// The zxio library provides an ergonomic C interface to the fuchsia.io family
+// of protocols.  These protocols are optimized for efficiency at the cost of
+// ergonomics. This library provides a more ergonomic interface to the same
+// underlying protocol without sacrificing (much) performance.
 //
-// A zxio_t also abstracts over several related protocols (e.g., vmofile,
-// file, and directory) to provide a uniform interface. Advanced clients can
-// also provide their own implementation of the underlying ops table to
-// provide drop-in replacements for zxio_t with different backends.
-//
-// # Threading model
-//
-// Most operations on zxio_t objects can be called concurrently from any thread.
+// This library is organized around a zxio object type |zxio_t| defined in
+// types.h.  A zxio object abstracts over several related protocols (e.g.,
+// vmofile, file, and directory) to provide a uniform interface. Advanced
+// clients can also provide their own implementation of the underlying ops table
+// to provide drop-in replacements for zxio objects with different backends.
+
+// Threading model
+
+// Most operations on zxio objects can be called concurrently from any thread.
 // However, the caller needs to synchronize |zxio_close| with other operations.
 // Specifically, no operations may be called concurrently with |zxio_close| on
-// the same |zxio_t|.
-typedef struct zxio_tag zxio_t;
+// the same zxio object.
 
 // Node
 
