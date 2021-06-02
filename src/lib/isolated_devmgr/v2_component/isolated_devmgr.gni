@@ -103,6 +103,13 @@ template("isolated_devmgr_v2_component") {
           directory = "dev"
           from = "#driver-manager-test"
         },
+        {
+          protocol = [
+            "fuchsia.hardware.pci.DeviceWatcher",
+            "fuchsia.hardware.usb.DeviceWatcher",
+          ]
+          from = "#driver-manager-test"
+        },
       ]
     }
     outputs = [ "$manifest_path" ]

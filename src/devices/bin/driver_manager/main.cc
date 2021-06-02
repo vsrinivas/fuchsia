@@ -39,6 +39,8 @@
 #include "driver_host_loader_service.h"
 #include "driver_runner.h"
 #include "fdio.h"
+#include "fuchsia/io/llcpp/fidl.h"
+#include "src/devices/bin/driver_manager/device_watcher.h"
 #include "src/devices/bin/driver_manager/fake_driver_index.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -458,6 +460,25 @@ int main(int argc, char** argv) {
   } else {
     coordinator.BindFallbackDrivers();
   }
+
+  outgoing.svc_dir()->AddEntry(
+      "fuchsia.hardware.pci.DeviceWatcher",
+      fbl::MakeRefCounted<fs::Service>(
+          [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
+            auto watcher =
+                std::make_unique<DeviceWatcher>("/dev/class/pciroot", loader_loop.dispatcher());
+            fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
+            return ZX_OK;
+          }));
+  outgoing.svc_dir()->AddEntry(
+      "fuchsia.hardware.usb.DeviceWatcher",
+      fbl::MakeRefCounted<fs::Service>(
+          [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
+            auto watcher =
+                std::make_unique<DeviceWatcher>("/dev/class/usb-device", loader_loop.dispatcher());
+            fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
+            return ZX_OK;
+          }));
 
   outgoing.root_dir()->AddEntry("dev",
                                 fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));

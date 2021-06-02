@@ -51,7 +51,8 @@ class FXL_EXPORT DeviceWatcher {
   // |exists_callback| gets called with each existing or new filename, or with
   // an empty string after existing files if empty_after_existing is true.
   static std::unique_ptr<DeviceWatcher> Create(const std::string& directory_path,
-                                               ExistsCallback exists_callback);
+                                               ExistsCallback exists_callback,
+                                               async_dispatcher_t* dispatcher = nullptr);
 
   // Creates a device watcher associated with the current message loop.
   //
@@ -74,13 +75,17 @@ class FXL_EXPORT DeviceWatcher {
   // any subsequently-added devices.
   // |idle_callback| will be deleted after it is called, so captured context
   // is guaranteed to not be retained.
-  static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(const std::string& directory_path,
-                                                               ExistsCallback exists_callback,
-                                                               IdleCallback idle_callback);
+  static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(
+      const std::string& directory_path, ExistsCallback exists_callback, IdleCallback idle_callback,
+      async_dispatcher_t* dispatcher = nullptr);
+
+  static std::unique_ptr<DeviceWatcher> CreateWithIdleCallback(
+      fbl::unique_fd dir_fd, ExistsCallback exists_callback, IdleCallback idle_callback,
+      async_dispatcher_t* dispatcher = nullptr);
 
  private:
-  DeviceWatcher(fbl::unique_fd dir_fd, zx::channel dir_watch, ExistsCallback exists_callback,
-                IdleCallback idle_callback);
+  DeviceWatcher(async_dispatcher_t* dispatcher, fbl::unique_fd dir_fd, zx::channel dir_watch,
+                ExistsCallback exists_callback, IdleCallback idle_callback);
 
   static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 

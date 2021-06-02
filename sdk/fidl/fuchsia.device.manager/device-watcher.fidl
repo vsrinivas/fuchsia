@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.manager;
+
+using zx;
+
+/// This protocol represents watching a specific class of devices. Each client
+/// that connects will be able to poll `NextDevice` to be able to get all devices.
+protocol DeviceWatcher {
+    /// A Hanging-Get API that returns the next device. This will not return until
+    /// there is a new device available. Call this repeatedly to get all devices.
+    /// If there is already an outstanding request then calling this again will return
+    /// ZX_ERR_ALREADY_BOUND.
+    NextDevice() -> (zx.handle:CHANNEL device) error zx.status;
+};

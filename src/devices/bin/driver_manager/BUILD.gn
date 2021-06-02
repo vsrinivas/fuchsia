@@ -110,6 +110,7 @@ source_set("lib") {
     "//src/devices/lib/log",
     "//src/lib/ddk",
     "//src/lib/files",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/loader_service",
     "//src/lib/pkg_url",

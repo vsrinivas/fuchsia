@@ -14,6 +14,8 @@
                 "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.registrar.DriverRegistrar",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
             ],
         },
 
@@ -80,6 +82,8 @@
                 "fuchsia.device.manager.DriverHostDevelopment",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.registrar.DriverRegistrar",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
             ],
             from: "self",
         },

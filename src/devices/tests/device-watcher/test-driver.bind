@@ -1,0 +1,3 @@
+using fuchsia.test;
+
+fuchsia.BIND_PROTOCOL == fuchsia.test.BIND_PROTOCOL.PARENT;

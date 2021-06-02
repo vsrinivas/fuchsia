@@ -18,7 +18,11 @@
             path: "/dev",
         },
         {
-            protocol: [ "fuchsia.device.manager.Administrator" ],
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
         },
     ],
     use: [
@@ -49,7 +53,11 @@
             from: "self",
         },
         {
-            protocol: [ "fuchsia.device.manager.Administrator" ],
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
             from: "self",
         },
     ],

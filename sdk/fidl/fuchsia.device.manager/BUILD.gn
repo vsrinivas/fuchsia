@@ -14,6 +14,7 @@ fidl("fuchsia.device.manager") {
     "administrator.fidl",
     "coordinator.fidl",
     "debug.fidl",
+    "device-watcher.fidl",
     "driver-host-development.fidl",
     "system-state-transition.fidl",
   ]
