@@ -5,6 +5,7 @@
 #include "tas58xx.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/simple-codec/simple-codec-helper.h>
@@ -12,7 +13,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
@@ -20,6 +20,7 @@
 
 namespace {
 // clang-format off
+// Book 0
 constexpr uint8_t kRegSelectPage  = 0x00;
 constexpr uint8_t kRegReset       = 0x01;
 constexpr uint8_t kRegDeviceCtrl1 = 0x02;
@@ -28,7 +29,7 @@ constexpr uint8_t kRegSapCtrl1    = 0x33;
 constexpr uint8_t kRegSapCtrl2    = 0x34;
 constexpr uint8_t kRegDigitalVol  = 0x4c;
 constexpr uint8_t kRegClearFault  = 0x78;
-constexpr uint8_t kRegSelectbook  = 0x7f;
+constexpr uint8_t kRegSelectBook  = 0x7f;
 
 constexpr uint8_t kRegResetRegsAndModulesCtrl  = 0x11;
 constexpr uint8_t kRegDeviceCtrl1BitsPbtlMode  = 0x04;
@@ -40,6 +41,10 @@ constexpr uint8_t kRegDeviceCtrl2BitsHiZ       = 0x02;
 constexpr uint8_t kRegDeviceCtrl2BitsPlay      = 0x03;
 constexpr uint8_t kRegDieId                    = 0x67;
 constexpr uint8_t kRegClearFaultBitsAnalog     = 0x80;
+
+// Book 0x8c
+constexpr uint8_t kRegAgl = 0x68;
+constexpr uint8_t kRegAglEnableBitByte0 = 0x80;
 // clang-format on
 
 }  // namespace
@@ -111,7 +116,7 @@ zx_status_t Tas58xx::Reset() {
     } else {
       constexpr uint8_t kDefaultsStart[][2] = {
           {kRegSelectPage, 0x00},
-          {kRegSelectbook, 0x00},
+          {kRegSelectBook, 0x00},
           {kRegDeviceCtrl2, kRegDeviceCtrl2BitsHiZ},  // Enables DSP.
           {kRegReset, kRegResetRegsAndModulesCtrl},
       };
@@ -138,14 +143,14 @@ zx_status_t Tas58xx::Reset() {
 
     const uint8_t kDefaultsEnd[][2] = {
         {kRegSelectPage, 0x00},
-        {kRegSelectbook, 0x00},
+        {kRegSelectBook, 0x00},
         {kRegDeviceCtrl1,
          static_cast<uint8_t>((metadata_.bridged ? kRegDeviceCtrl1BitsPbtlMode : 0) |
                               kRegDeviceCtrl1Bits1SpwMode)},
 
         {kRegDeviceCtrl2, kRegDeviceCtrl2BitsPlay},
         {kRegSelectPage, 0x00},
-        {kRegSelectbook, 0x00},
+        {kRegSelectBook, 0x00},
         {kRegClearFault, kRegClearFaultBitsAnalog}};
     for (auto& i : kDefaultsEnd) {
       auto status = WriteReg(i[0], i[1]);
@@ -249,7 +254,7 @@ GainFormat Tas58xx::GetGainFormat() {
       .max_gain = kMaxGain,
       .gain_step = kGainStep,
       .can_mute = true,
-      .can_agc = false,
+      .can_agc = true,
   };
 }
 
@@ -261,9 +266,33 @@ void Tas58xx::SetGainState(GainState gain_state) {
   if (status != ZX_OK) {
     return;
   }
-  if (gain_state.agc_enabled) {
-    zxlogf(ERROR, "AGC enable not supported");
-    gain_state.agc_enabled = false;
+  if (gain_state.agc_enabled != last_agc_) {
+    // TODO(77042): Move to the signal processing API, for now use the AGC bit.
+    uint8_t agl_change[] = {kRegAgl, 0x40, 0x00, 0x00, 0x00};
+    if (gain_state.agc_enabled) {
+      agl_change[1] |= kRegAglEnableBitByte0;
+    }
+    status = WriteReg(kRegSelectBook, 0x8c);
+    if (status != ZX_OK) {
+      return;
+    }
+    status = WriteReg(kRegSelectPage, 0x2c);
+    if (status != ZX_OK) {
+      return;
+    }
+    status = WriteRegs(agl_change, countof(agl_change));
+    if (status != ZX_OK) {
+      return;
+    }
+    status = WriteReg(kRegSelectPage, 0);
+    if (status != ZX_OK) {
+      return;
+    }
+    status = WriteReg(kRegSelectBook, 0);
+    if (status != ZX_OK) {
+      return;
+    }
+    last_agc_ = gain_state.agc_enabled;
   }
   gain_state_ = gain_state;
   static_cast<void>(UpdateReg(kRegDeviceCtrl2, 0x08, gain_state.muted ? 0x08 : 0x00));
@@ -278,27 +307,29 @@ zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
 //#define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
-  auto status = i2c_.WriteSync(write_buf, 2);
-  if (status != ZX_OK) {
-    printf("Could not I2C write %d\n", status);
-    return status;
-  }
-  return ZX_OK;
-#else
+#endif
+  return WriteRegs(write_buf, countof(write_buf));
+}
+
+zx_status_t Tas58xx::WriteRegs(uint8_t* regs, size_t count) {
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
-  auto ret = i2c_.WriteSyncRetries(write_buf, countof(write_buf), kNumberOfRetries, kRetryDelay);
+  auto ret = i2c_.WriteSyncRetries(regs, count, kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
-    zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
+    if (count == 2) {
+      zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", regs[0], ret.status, ret.retries);
+    } else {
+      zxlogf(ERROR, "I2C write error %d, %d retries", ret.status, ret.retries);
+    }
   }
   return ret.status;
-#endif
 }
 
 zx_status_t Tas58xx::ReadReg(uint8_t reg, uint8_t* value) {
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
-  auto ret = i2c_.WriteReadSyncRetries(&reg, 1, value, 1, kNumberOfRetries, kRetryDelay);
+  ddk::I2cChannel::StatusRetries ret =
+      i2c_.WriteReadSyncRetries(&reg, 1, value, 1, kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
     zxlogf(ERROR, "I2C read reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }
