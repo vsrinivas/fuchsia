@@ -659,7 +659,7 @@ impl InputReportHandler {
                 modifiers.caps_lock,
             );
             let keyboard_event =
-                keyboard::Event { phase, code_point, hid_usage, modifiers: Modifiers::default() };
+                keyboard::Event { phase, code_point, hid_usage, modifiers: *modifiers };
             Event {
                 event_time,
                 device_id: device_id.clone(),
