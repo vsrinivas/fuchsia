@@ -68,7 +68,7 @@ class MockScreenReaderActionRegistryImpl : public a11y::ScreenReaderActionRegist
     return this;
   }
 
-  void Run(ActionData process_data) override {}
+  void Run(a11y::GestureContext gesture_context) override {}
 
   std::vector<std::string>& invoked_actions() { return invoked_actions_; }
 

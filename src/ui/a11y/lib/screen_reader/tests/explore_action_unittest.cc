@@ -85,17 +85,17 @@ class ExploreActionTest : public gtest::TestLoopFixture {
 
 TEST_F(ExploreActionTest, SuccessfulExploreActionReadsNode) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = kLocalCoordForTesting;
-  action_data.local_point.y = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.x = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.y = kLocalCoordForTesting;
 
   semantic_provider_.SetHitTestResult(0);
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
 
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   // Checks that a new a11y focus was set.
@@ -111,17 +111,17 @@ TEST_F(ExploreActionTest, SuccessfulExploreActionReadsNode) {
 
 TEST_F(ExploreActionTest, HitTestFails) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
+  gesture_context.current_pointer_locations[0].local_point.x = 10;
+  gesture_context.current_pointer_locations[0].local_point.y = 10;
 
   // No node will be hit.
   semantic_provider_.SetHitTestResult(std::nullopt);
 
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -131,17 +131,17 @@ TEST_F(ExploreActionTest, HitTestFails) {
 
 TEST_F(ExploreActionTest, SetA11yFocusFails) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
+  gesture_context.current_pointer_locations[0].local_point.x = 10;
+  gesture_context.current_pointer_locations[0].local_point.y = 10;
 
   semantic_provider_.SetHitTestResult(0);
   a11y_focus_manager_ptr_->set_should_set_a11y_focus_fail(true);
 
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -156,17 +156,17 @@ TEST_F(ExploreActionTest, SetA11yFocusFails) {
 
 TEST_F(ExploreActionTest, GettingA11yFocusFails) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
+  gesture_context.current_pointer_locations[0].local_point.x = 10;
+  gesture_context.current_pointer_locations[0].local_point.y = 10;
 
   semantic_provider_.SetHitTestResult(0);
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
 
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -184,16 +184,16 @@ TEST_F(ExploreActionTest, GettingA11yFocusFails) {
 
 TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
+  gesture_context.current_pointer_locations[0].local_point.x = 10;
+  gesture_context.current_pointer_locations[0].local_point.y = 10;
 
   semantic_provider_.SetHitTestResult(100);
 
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -202,16 +202,16 @@ TEST_F(ExploreActionTest, HitTestNodeIDResultIsNotPresentInTheTree) {
 
 TEST_F(ExploreActionTest, HitTestNodeNotDescribable) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = 10;
-  action_data.local_point.y = 10;
+  gesture_context.current_pointer_locations[0].local_point.x = 10;
+  gesture_context.current_pointer_locations[0].local_point.y = 10;
 
   semantic_provider_.SetHitTestResult(1u);
 
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -222,18 +222,18 @@ TEST_F(ExploreActionTest, HitTestNodeNotDescribable) {
 
 TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = kLocalCoordForTesting;
-  action_data.local_point.y = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.x = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.y = kLocalCoordForTesting;
 
   semantic_provider_.SetHitTestResult(0);
 
   screen_reader_context_->set_mode(
       a11y::ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   // Checks that a new a11y focus was set.
@@ -249,19 +249,19 @@ TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
 
 TEST_F(ExploreActionTest, ContinuousExploreDropsWhenA11yFocusIsTheSame) {
   a11y::ExploreAction explore_action(&action_context_, screen_reader_context_.get());
-  a11y::ExploreAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   // Note that x and y are set just for completeness of the data type. the semantic provider is
   // responsible for returning what was the hit based on these numbers.
-  action_data.local_point.x = kLocalCoordForTesting;
-  action_data.local_point.y = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.x = kLocalCoordForTesting;
+  gesture_context.current_pointer_locations[0].local_point.y = kLocalCoordForTesting;
 
   semantic_provider_.SetHitTestResult(0);
 
   screen_reader_context_->set_mode(
       a11y::ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
   a11y_focus_manager_ptr_->SetA11yFocus(semantic_provider_.koid(), 0, [](auto...) {});
-  explore_action.Run(action_data);
+  explore_action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_FALSE(mock_speaker_ptr_->ReceivedSpeak());
   ASSERT_TRUE(mock_speaker_ptr_->node_ids().empty());

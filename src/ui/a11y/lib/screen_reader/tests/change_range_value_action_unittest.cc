@@ -107,14 +107,14 @@ TEST_F(ChangeRangeValueActionTest, NoTreeInFocus) {
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
                                                   ChangeRangeValueActionType::kIncrementAction);
-  a11y::ChangeRangeValueAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Update A11y Focus Manager to return invalid a11y focus.
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
 
   // Call ChangeRangeValueAction Run()
-  range_value_action.Run(action_data);
+  range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
@@ -127,8 +127,8 @@ TEST_F(ChangeRangeValueActionTest, FocusedNodeNotFound) {
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
                                                   ChangeRangeValueActionType::kIncrementAction);
-  a11y::ChangeRangeValueAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Update focused node to an invalid node_id.
   uint32_t invalid_node_id = 100;
@@ -136,7 +136,7 @@ TEST_F(ChangeRangeValueActionTest, FocusedNodeNotFound) {
                                         [](bool result) { EXPECT_TRUE(result); });
 
   // Call ChangeRangeValueAction Run()
-  range_value_action.Run(action_data);
+  range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
@@ -149,14 +149,14 @@ TEST_F(ChangeRangeValueActionTest, OnAccessibilityActionRequestedFailed) {
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
                                                   ChangeRangeValueActionType::kIncrementAction);
-  a11y::ChangeRangeValueAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Update semantic provider so that a call to OnAccessibilityActionRequested() results in failure.
   semantic_provider_.SetOnAccessibilityActionCallbackStatus(false);
 
   // Call ChangeRangeValueAction Run()
-  range_value_action.Run(action_data);
+  range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
@@ -171,11 +171,11 @@ TEST_F(ChangeRangeValueActionTest, RangeControlIncremented) {
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
                                                   ChangeRangeValueActionType::kIncrementAction);
-  a11y::ChangeRangeValueAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call ChangeRangeValueAction Run()
-  range_value_action.Run(action_data);
+  range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
@@ -193,11 +193,11 @@ TEST_F(ChangeRangeValueActionTest, RangeControlDecremented) {
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::ChangeRangeValueAction range_value_action(&action_context_, context,
                                                   ChangeRangeValueActionType::kDecrementAction);
-  a11y::ChangeRangeValueAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call ChangeRangeValueAction Run()
-  range_value_action.Run(action_data);
+  range_value_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());

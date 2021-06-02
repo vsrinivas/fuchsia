@@ -28,12 +28,13 @@ ScreenReaderAction::ScreenReaderAction(ActionContext* context,
 ScreenReaderAction::~ScreenReaderAction() = default;
 
 void ScreenReaderAction::ExecuteHitTesting(
-    ActionContext* context, ActionData process_data,
+    ActionContext* context, GestureContext gesture_context,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
   FX_DCHECK(context);
   FX_DCHECK(context->semantics_source);
-  context->semantics_source->ExecuteHitTesting(process_data.current_view_koid,
-                                               process_data.local_point, std::move(callback));
+  context->semantics_source->ExecuteHitTesting(
+      gesture_context.view_ref_koid, gesture_context.CurrentCentroid(true /* local coordinates */),
+      std::move(callback));
 }
 
 fit::promise<> ScreenReaderAction::ExecuteAccessibilityActionPromise(

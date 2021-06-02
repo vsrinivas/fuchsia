@@ -25,9 +25,9 @@ ExploreAction::ExploreAction(ActionContext* context, ScreenReaderContext* screen
     : ScreenReaderAction(context, screen_reader_context) {}
 ExploreAction::~ExploreAction() = default;
 
-fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const ActionData& process_data) {
+fit::promise<Hit> ExploreAction::ExecuteHitTestingPromise(const GestureContext& gesture_context) {
   fit::bridge<Hit> bridge;
-  ExecuteHitTesting(action_context_, process_data,
+  ExecuteHitTesting(action_context_, gesture_context,
                     [completer = std::move(bridge.completer)](Hit hit) mutable {
                       if (!hit.has_node_id()) {
                         return completer.complete_error();
@@ -85,13 +85,13 @@ fit::promise<> ExploreAction::SetA11yFocusOrStopPromise(ScreenReaderContext::Scr
   });
 }
 
-void ExploreAction::Run(ActionData process_data) {
-  auto promise = ExecuteHitTestingPromise(process_data)
-                     .and_then([this, view_koid = process_data.current_view_koid](
+void ExploreAction::Run(GestureContext gesture_context) {
+  auto promise = ExecuteHitTestingPromise(gesture_context)
+                     .and_then([this, view_koid = gesture_context.view_ref_koid](
                                    Hit& hit) mutable -> fit::result<uint32_t> {
                        return SelectDescribableNodePromise(view_koid, hit);
                      })
-                     .and_then([this, view_koid = process_data.current_view_koid,
+                     .and_then([this, view_koid = gesture_context.view_ref_koid,
                                 mode = screen_reader_context_->mode()](
                                    uint32_t& node_id) mutable -> fit::promise<> {
                        return SetA11yFocusOrStopPromise(mode, view_koid, node_id);

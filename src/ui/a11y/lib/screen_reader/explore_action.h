@@ -26,13 +26,13 @@ class ExploreAction : public ScreenReaderAction {
 
   // This method will be implementing the actual sequence of events that should
   // happen when an element is "explored".
-  void Run(ActionData process_data) override;
+  void Run(GestureContext gesture_context) override;
 
  private:
   // Returns a promise which performs hit testing. An error is thrown if the hit test result has no
   // node ID.
   fit::promise<fuchsia::accessibility::semantics::Hit> ExecuteHitTestingPromise(
-      const ActionData& process_data);
+      const GestureContext& gesture_context);
 
   // Returns a promise that sets the A11y Focus. If the screen reader is in a continuous
   // exploration and the new focus determined by [|view_koid|, |node_id|], is the same as the

@@ -49,6 +49,7 @@ source_set("screen_reader") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/ui/a11y/lib/gesture_manager",
+    "//src/ui/a11y/lib/gesture_manager/gesture_util",
     "//src/ui/a11y/lib/screen_reader/util",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/tts",

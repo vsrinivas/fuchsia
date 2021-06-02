@@ -62,7 +62,7 @@ ChangeSemanticLevelAction::ChangeSemanticLevelAction(Direction direction,
 
 ChangeSemanticLevelAction::~ChangeSemanticLevelAction() = default;
 
-void ChangeSemanticLevelAction::Run(ActionData process_data) {
+void ChangeSemanticLevelAction::Run(GestureContext gesture_context) {
   bool is_slider_focused = false;
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
   if (a11y_focus) {

@@ -22,7 +22,7 @@ ThreeFingerSwipeAction::ThreeFingerSwipeAction(ActionContext* action_context,
 
 ThreeFingerSwipeAction ::~ThreeFingerSwipeAction() = default;
 
-void ThreeFingerSwipeAction::Run(ActionData process_data) {
+void ThreeFingerSwipeAction::Run(GestureContext gesture_context) {
   if (!gesture_listener_registry_->listener().is_bound()) {
     FX_LOGS(INFO) << "Listener is not registered with Gesture listener registry.";
     return;

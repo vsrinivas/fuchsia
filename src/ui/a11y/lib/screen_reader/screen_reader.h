@@ -67,7 +67,7 @@ class ScreenReader : public SemanticsEventListener {
   // for the matched Action.
   // Functions returns false, if no action matches the provided "action_name",
   // returns true if Run() is called.
-  bool ExecuteAction(const std::string& action_name, ScreenReaderAction::ActionData action_data);
+  bool ExecuteAction(const std::string& action_name, GestureContext gesture_context);
 
   // Speaks the message represented by |message_id|.
   void SpeakMessage(fuchsia::intl::l10n::MessageIds message_id);

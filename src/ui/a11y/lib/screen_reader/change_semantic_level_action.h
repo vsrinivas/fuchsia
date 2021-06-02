@@ -23,7 +23,7 @@ class ChangeSemanticLevelAction : public ScreenReaderAction {
                                      ScreenReaderContext* screen_reader_context);
   ~ChangeSemanticLevelAction() override;
 
-  void Run(ActionData process_data) override;
+  void Run(GestureContext gesture_context) override;
 
  private:
   // Returns a promise that speaks the |semantic_level|.

@@ -45,8 +45,7 @@ TEST_F(ThreeFingerSwipeActionTest, ListenerNotRegistered) {
       &action_context_, screen_reader_context_.get(), &gesture_listener_registry_,
       Type::THREE_FINGER_SWIPE_UP);
 
-  a11y::ScreenReaderAction::ActionData action_data;
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   EXPECT_FALSE(mock_gesture_listener_.is_registered());
@@ -65,8 +64,7 @@ TEST_F(ThreeFingerSwipeActionTest, UpSwipeListenerReturnsFalseStatus) {
   mock_gesture_listener_.SetOnGestureCallbackStatus(false);
   mock_gesture_listener_.SetUtterance(kListenerUtterance);
   mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_DOWN);
-  a11y::ScreenReaderAction::ActionData action_data;
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   EXPECT_TRUE(mock_gesture_listener_.is_registered());
@@ -85,8 +83,7 @@ TEST_F(ThreeFingerSwipeActionTest, UpSwipeListenerReturnsEmptyUtterance) {
 
   mock_gesture_listener_.SetOnGestureCallbackStatus(true);
   mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_DOWN);
-  a11y::ScreenReaderAction::ActionData action_data;
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_UP);
@@ -106,9 +103,8 @@ TEST_F(ThreeFingerSwipeActionTest, UpSwipePerformed) {
   // Set GestureType in the mock to something other than UP_SWIPE, so that when OnGesture() is
   // called, we can confirm it's called with the correct gesture type.
   mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_DOWN);
-  a11y::ScreenReaderAction::ActionData action_data;
 
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_UP);
@@ -130,9 +126,8 @@ TEST_F(ThreeFingerSwipeActionTest, DownSwipePerformed) {
   // Set GestureType in the mock to something other than DOWN_SWIPE, so that when OnGesture() is
   // called, we can confirm it's called with the correct gesture type.
   mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_UP);
-  a11y::ScreenReaderAction::ActionData action_data;
 
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_DOWN);
@@ -154,9 +149,8 @@ TEST_F(ThreeFingerSwipeActionTest, LeftSwipePerformed) {
   // Set GestureType in the mock to something other than LEFT_SWIPE, so that when OnGesture() is
   // called, we can confirm it's called with the correct gesture type.
   mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_DOWN);
-  a11y::ScreenReaderAction::ActionData action_data;
 
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_LEFT);
@@ -178,9 +172,8 @@ TEST_F(ThreeFingerSwipeActionTest, RightSwipePerformed) {
   // Set GestureType in the mock to something other than RIGHT_SWIPE, so that when OnGesture() is
   // called, we can confirm it's called with the correct gesture type.
   mock_gesture_listener_.SetGestureType(Type::THREE_FINGER_SWIPE_DOWN);
-  a11y::ScreenReaderAction::ActionData action_data;
 
-  three_finger_swipe_action.Run(action_data);
+  three_finger_swipe_action.Run({});
   RunLoopUntilIdle();
 
   ASSERT_EQ(mock_gesture_listener_.gesture_type(), Type::THREE_FINGER_SWIPE_RIGHT);

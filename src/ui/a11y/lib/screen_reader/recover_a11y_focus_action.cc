@@ -16,7 +16,7 @@ RecoverA11YFocusAction::RecoverA11YFocusAction(ActionContext* action_context,
 
 RecoverA11YFocusAction::~RecoverA11YFocusAction() = default;
 
-void RecoverA11YFocusAction::Run(ActionData process_data) {
+void RecoverA11YFocusAction::Run(GestureContext gesture_context) {
   auto a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
   FX_DCHECK(a11y_focus_manager);
 

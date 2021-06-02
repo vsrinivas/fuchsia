@@ -9,6 +9,7 @@
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <lib/fit/promise.h>
 
+#include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
@@ -25,12 +26,6 @@ namespace a11y {
 // through the context, which is passed in the constructor.
 class ScreenReaderAction {
  public:
-  // Struct for holding data which is required to perform any action.
-  struct ActionData {
-    zx_koid_t current_view_koid;
-    ::fuchsia::math::PointF local_point;
-  };
-
   // Struct to hold pointers to various services, which will be required to
   // complete an action.
   struct ActionContext {
@@ -42,15 +37,16 @@ class ScreenReaderAction {
 
   // Action implementations override this method with the necessary method parameters to perform
   // that action.
-  virtual void Run(ActionData process_data) = 0;
+  virtual void Run(GestureContext gesture_context) = 0;
 
  protected:
   // Constructor for mocks.
   ScreenReaderAction() = default;
 
-  // Helper function to call hit testing based on ActionContext and ActionData.
+  // Helper function to call hit testing based on ActionContext and
+  // GestureContext.
   void ExecuteHitTesting(
-      ActionContext* context, ActionData process_data,
+      ActionContext* context, GestureContext gesture_context,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
   // Returns a promise that executes an accessibility action targeting the semantic tree

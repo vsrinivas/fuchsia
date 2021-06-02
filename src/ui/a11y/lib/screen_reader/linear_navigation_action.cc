@@ -23,7 +23,7 @@ LinearNavigationAction::LinearNavigationAction(ActionContext* action_context,
 
 LinearNavigationAction::~LinearNavigationAction() = default;
 
-void LinearNavigationAction::Run(ActionData process_data) {
+void LinearNavigationAction::Run(GestureContext gesture_context) {
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
   if (!a11y_focus || a11y_focus->view_ref_koid == ZX_KOID_INVALID) {
     auto* speaker = screen_reader_context_->speaker();

@@ -97,10 +97,9 @@ class LinearNavigationActionTest : public gtest::TestLoopFixture {
 TEST_F(LinearNavigationActionTest, NoTreeInFocus) {
   a11y::LinearNavigationAction next_action(&action_context_, screen_reader_context_.get(),
                                            kNextAction);
-  a11y::LinearNavigationAction::ActionData action_data;
 
   // Call NextAction Run().
-  next_action.Run(action_data);
+  next_action.Run({});
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
@@ -124,11 +123,11 @@ TEST_F(LinearNavigationActionTest, NextNodeNotFound) {
 
   a11y::LinearNavigationAction next_action(&action_context_, screen_reader_context_.get(),
                                            kNextAction);
-  a11y::LinearNavigationAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call NextAction Run().
-  next_action.Run(action_data);
+  next_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetNextNodeCalled());
@@ -151,11 +150,11 @@ TEST_F(LinearNavigationActionTest, PreviousNodeNotFound) {
 
   a11y::LinearNavigationAction previous_action(&action_context_, screen_reader_context_.get(),
                                                kPreviousAction);
-  a11y::LinearNavigationAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call PreviousAction Run().
-  previous_action.Run(action_data);
+  previous_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(factory_ptr_->semantic_tree()->IsGetPreviousNodeCalled());
@@ -185,11 +184,11 @@ TEST_F(LinearNavigationActionTest, SetA11yFocusFailed) {
 
   a11y::LinearNavigationAction next_action(&action_context_, screen_reader_context_.get(),
                                            kNextAction);
-  a11y::LinearNavigationAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call NextAction Run().
-  next_action.Run(action_data);
+  next_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(a11y_focus_manager_ptr_->IsSetA11yFocusCalled());
@@ -216,11 +215,11 @@ TEST_F(LinearNavigationActionTest, NextActionPerformed) {
 
   a11y::LinearNavigationAction next_action(&action_context_, screen_reader_context_.get(),
                                            kNextAction);
-  a11y::LinearNavigationAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call NextAction Run().
-  next_action.Run(action_data);
+  next_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_EQ(semantic_provider_.GetRequestedAction(),
@@ -251,11 +250,11 @@ TEST_F(LinearNavigationActionTest, PreviousActionPerformed) {
 
   a11y::LinearNavigationAction previous_action(&action_context_, screen_reader_context_.get(),
                                                kPreviousAction);
-  a11y::LinearNavigationAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   // Call PreviousAction Run().
-  previous_action.Run(action_data);
+  previous_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_EQ(semantic_provider_.GetRequestedAction(),

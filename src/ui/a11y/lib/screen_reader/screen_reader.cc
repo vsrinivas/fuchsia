@@ -127,10 +127,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // swipe.
   bool gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kThreeFingerRightSwipeActionLabel, action_data);
+        ExecuteAction(kThreeFingerRightSwipeActionLabel, std::move(context));
       },
       GestureHandler::kThreeFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -139,10 +136,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kThreeFingerLeftSwipeActionLabel, action_data);
+        ExecuteAction(kThreeFingerLeftSwipeActionLabel, std::move(context));
       },
       GestureHandler::kThreeFingerDownSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -150,10 +144,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add a three finger Left swipe recognizer. This corresponds to a physical three finger Up swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kThreeFingerUpSwipeActionLabel, action_data);
+        ExecuteAction(kThreeFingerUpSwipeActionLabel, std::move(context));
       },
       GestureHandler::kThreeFingerLeftSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -162,10 +153,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kThreeFingerDownSwipeActionLabel, action_data);
+        ExecuteAction(kThreeFingerDownSwipeActionLabel, std::move(context));
       },
       GestureHandler::kThreeFingerRightSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -173,11 +161,8 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add one finger Down swipe recognizer. This corresponds to a physical one finger Left swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
         auto action_name = PreviousActionFromSemanticLevel(context_->semantic_level());
-        ExecuteAction(action_name, action_data);
+        ExecuteAction(action_name, std::move(context));
       },
       GestureHandler::kOneFingerDownSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -185,11 +170,8 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add one finger Up swipe recognizer. This corresponds to a physical one finger Right swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
         auto action_name = NextActionFromSemanticLevel(context_->semantic_level());
-        ExecuteAction(action_name, action_data);
+        ExecuteAction(action_name, std::move(context));
       },
       GestureHandler::kOneFingerUpSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -197,10 +179,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add one finger Left swipe recognizer. This corresponds to a physical one finger Up swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kPreviousSemanticLevelActionLabel, action_data);
+        ExecuteAction(kPreviousSemanticLevelActionLabel, std::move(context));
       },
       GestureHandler::kOneFingerLeftSwipe);
   FX_DCHECK(gesture_bind_status);
@@ -208,32 +187,19 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add one finger Right swipe recognizer. This corresponds to a physical one finger Down swipe.
   gesture_bind_status = gesture_handler->BindSwipeAction(
       [this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kNextSemanticLevelActionLabel, action_data);
+        ExecuteAction(kNextSemanticLevelActionLabel, std::move(context));
       },
       GestureHandler::kOneFingerRightSwipe);
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerDoubleTap recognizer.
-  gesture_bind_status =
-      gesture_handler->BindOneFingerDoubleTapAction([this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kDefaultActionLabel, action_data);
-      });
+  gesture_bind_status = gesture_handler->BindOneFingerDoubleTapAction(
+      [this](GestureContext context) { ExecuteAction(kDefaultActionLabel, std::move(context)); });
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerSingleTap recognizer.
-  gesture_bind_status =
-      gesture_handler->BindOneFingerSingleTapAction([this](GestureContext context) {
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kExploreActionLabel, action_data);
-      });
+  gesture_bind_status = gesture_handler->BindOneFingerSingleTapAction(
+      [this](GestureContext context) { ExecuteAction(kExploreActionLabel, std::move(context)); });
   FX_DCHECK(gesture_bind_status);
 
   // Add OneFingerDrag recognizer.
@@ -244,10 +210,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
       [this](GestureContext context) {
         FX_DCHECK(context_->mode() ==
                   ScreenReaderContext::ScreenReaderMode::kContinuousExploration);
-        ScreenReaderAction::ActionData action_data;
-        action_data.current_view_koid = context.view_ref_koid;
-        action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-        ExecuteAction(kExploreActionLabel, action_data);
+        ExecuteAction(kExploreActionLabel, std::move(context));
       }, /*on_update*/
       [this](GestureContext context) {
         FX_DCHECK(context_->mode() ==
@@ -256,10 +219,7 @@ void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
         // At the end of an explore action, if a virtual keyboard is in focus, activate the last
         // touched key.
         if (context_->IsVirtualKeyboardFocused()) {
-          ScreenReaderAction::ActionData action_data;
-          action_data.current_view_koid = context.view_ref_koid;
-          action_data.local_point = context.CurrentCentroid(true /* local coordinates */);
-          ExecuteAction(kDefaultActionLabel, action_data);
+          ExecuteAction(kDefaultActionLabel, std::move(context));
         }
       } /*on_complete*/);
 
@@ -332,13 +292,12 @@ void ScreenReader::InitializeActions() {
       std::make_unique<RecoverA11YFocusAction>(action_context_.get(), context_.get()));
 }
 
-bool ScreenReader::ExecuteAction(const std::string& action_name,
-                                 ScreenReaderAction::ActionData action_data) {
+bool ScreenReader::ExecuteAction(const std::string& action_name, GestureContext gesture_context) {
   auto* action = action_registry_->GetActionByName(action_name);
   if (!action) {
     return false;
   }
-  action->Run(action_data);
+  action->Run(gesture_context);
   return true;
 }
 
@@ -366,11 +325,11 @@ void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
   // Process internal semantic events.
   switch (event_info.event_type) {
     case SemanticsEventType::kSemanticTreeUpdated: {
-      ScreenReaderAction::ActionData action_data;
+      GestureContext gesture_context;
       if (event_info.view_ref_koid) {
-        action_data.current_view_koid = *event_info.view_ref_koid;
+        gesture_context.view_ref_koid = *event_info.view_ref_koid;
       }
-      ExecuteAction(kRecoverA11YFocusActionLabel, action_data);
+      ExecuteAction(kRecoverA11YFocusActionLabel, std::move(gesture_context));
       break;
     }
     case SemanticsEventType::kUnknown:

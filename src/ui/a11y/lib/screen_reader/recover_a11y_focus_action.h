@@ -21,7 +21,7 @@ class RecoverA11YFocusAction : public ScreenReaderAction {
                                   ScreenReaderContext* screen_reader_context);
   ~RecoverA11YFocusAction() override;
 
-  void Run(ActionData process_data) override;
+  void Run(GestureContext gesture_context) override;
 
  private:
   fit::scope scope_;

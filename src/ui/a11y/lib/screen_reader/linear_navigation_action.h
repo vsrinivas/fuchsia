@@ -26,7 +26,7 @@ class LinearNavigationAction : public ScreenReaderAction {
 
   // Invokes the linear navigation action, navigating to the node following |direction_| to select
   // next / previous.
-  void Run(ActionData process_data) override;
+  void Run(GestureContext gesture_context) override;
 
  private:
   // Direction of the linear navigation.

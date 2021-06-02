@@ -79,13 +79,13 @@ TEST_F(ChangeSemanticLevelAction, NoChangeForNonSliderNode) {
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
                                          &action_context_, screen_reader_context_.get());
-  a11y::ScreenReaderAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  action.Run(action_data);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
@@ -100,16 +100,16 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesForwardThroughLevelsForNonSlide
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
                                          &action_context_, screen_reader_context_.get());
-  a11y::ScreenReaderAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  action.Run(action_data);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kCharacter);
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
@@ -124,16 +124,16 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesBackwardThroughLevelsForNonSlid
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kBackward,
                                          &action_context_, screen_reader_context_.get());
-  a11y::ScreenReaderAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  action.Run(action_data);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kCharacter);
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
@@ -145,9 +145,9 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesBackwardThroughLevelsForNonSlid
 TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
                                          &action_context_, screen_reader_context_.get());
-  a11y::ScreenReaderAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
-  action.Run(action_data);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kAdjustValue);
@@ -160,7 +160,7 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
   */
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
@@ -172,8 +172,8 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
 TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kBackward,
                                          &action_context_, screen_reader_context_.get());
-  a11y::ScreenReaderAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
   /* TODO(fxb/63293): Uncomment when word and character navigation exist.
 action.Run(action_data);
 RunLoopUntilIdle();
@@ -183,11 +183,11 @@ RunLoopUntilIdle();
 EXPECT_EQ(screen_reader_context_->semantic_level(),
         ScreenReaderContext::SemanticLevel::kCharacter);
   */
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kAdjustValue);
-  action.Run(action_data);
+  action.Run(gesture_context);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);

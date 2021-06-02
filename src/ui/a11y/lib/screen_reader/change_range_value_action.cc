@@ -22,7 +22,7 @@ ChangeRangeValueAction::ChangeRangeValueAction(ActionContext* action_context,
 
 ChangeRangeValueAction::~ChangeRangeValueAction() = default;
 
-void ChangeRangeValueAction::Run(ActionData process_data) {
+void ChangeRangeValueAction::Run(GestureContext gesture_context) {
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
   if (!a11y_focus) {
     FX_LOGS(INFO) << "Change Range Value Action: No view is in focus.";

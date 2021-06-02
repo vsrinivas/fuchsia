@@ -13,7 +13,7 @@ DefaultAction::DefaultAction(ActionContext* action_context,
     : ScreenReaderAction(action_context, screen_reader_context) {}
 DefaultAction::~DefaultAction() = default;
 
-void DefaultAction::Run(ActionData process_data) {
+void DefaultAction::Run(GestureContext gesture_context) {
   auto a11y_focus = screen_reader_context_->GetA11yFocusManager()->GetA11yFocus();
   if (!a11y_focus) {
     FX_LOGS(INFO) << "No view is in focus.";
@@ -22,7 +22,7 @@ void DefaultAction::Run(ActionData process_data) {
 
   // Call OnAccessibilityActionRequested.
   action_context_->semantics_source->PerformAccessibilityAction(
-      process_data.current_view_koid, a11y_focus.value().node_id,
+      a11y_focus->view_ref_koid, a11y_focus->node_id,
       fuchsia::accessibility::semantics::Action::DEFAULT,
       [](bool result) { FX_LOGS(INFO) << "Default Action completed with status:" << result; });
 }

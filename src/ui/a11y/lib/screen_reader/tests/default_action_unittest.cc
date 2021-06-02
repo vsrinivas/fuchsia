@@ -77,8 +77,8 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {
   RunLoopUntilIdle();
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::DefaultAction default_action(&action_context_, context);
-  a11y::DefaultAction::ActionData action_data;
-  action_data.current_view_koid = semantic_provider_.koid();
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_.koid();
 
   semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_FOCUS);
 
@@ -87,7 +87,7 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {
                                         [](bool result) { EXPECT_TRUE(result); });
 
   // Call DefaultAction Run()
-  default_action.Run(action_data);
+  default_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
@@ -115,7 +115,7 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedNotCalled) {
 
   a11y::ScreenReaderContext* context = screen_reader_context_.get();
   a11y::DefaultAction default_action(&action_context_, context);
-  a11y::DefaultAction::ActionData action_data;
+  a11y::GestureContext gesture_context;
 
   // Update focused node.
   a11y_focus_manager_ptr_->SetA11yFocus(ZX_KOID_INVALID, node_id, [](bool result) {});
@@ -123,7 +123,7 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedNotCalled) {
   semantic_provider_.SetRequestedAction(fuchsia::accessibility::semantics::Action::SET_VALUE);
 
   // Call DefaultAction Run()
-  default_action.Run(action_data);
+  default_action.Run(gesture_context);
   RunLoopUntilIdle();
 
   ASSERT_TRUE(a11y_focus_manager_ptr_->IsGetA11yFocusCalled());
