@@ -83,7 +83,7 @@ use internet_checksum::Checksum;
 use net_types::ip::{IpAddress, Ipv4Addr, Ipv6Addr};
 use packet::SerializeBuffer;
 
-use crate::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
+use crate::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 
 // The "sealed trait" pattern.
 //
@@ -152,7 +152,7 @@ impl IpAddressExt for Ipv6Addr {
         checksum: &mut Checksum,
         src_ip: Ipv6Addr,
         dst_ip: Ipv6Addr,
-        proto: Ipv6NextHeader,
+        proto: Ipv6Proto,
         transport_len: usize,
     ) -> Result<(), core::num::TryFromIntError> {
         let pseudo_header = {

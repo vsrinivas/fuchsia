@@ -24,7 +24,7 @@ use packet_formats::icmp::mld::{
     MulticastListenerReport,
 };
 use packet_formats::icmp::{mld::MldPacket, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::Ipv6NextHeader;
+use packet_formats::ip::Ipv6Proto;
 use packet_formats::ipv6::ext_hdrs::{
     ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData,
 };
@@ -418,7 +418,7 @@ fn send_mld_packet<D: LinkDevice, C: MldContext<D>, B: ByteSlice, M: IcmpMldv1Me
         .encapsulate(IcmpPacketBuilder::new(src_ip, dst_ip.get(), IcmpUnusedCode, msg))
         .encapsulate(
             Ipv6PacketBuilderWithHbhOptions::new(
-                Ipv6PacketBuilder::new(src_ip, dst_ip.get(), 1, Ipv6NextHeader::Icmpv6),
+                Ipv6PacketBuilder::new(src_ip, dst_ip.get(), 1, Ipv6Proto::Icmpv6),
                 &[HopByHopOption {
                     action: ExtensionHeaderOptionAction::SkipAndContinue,
                     mutable: false,

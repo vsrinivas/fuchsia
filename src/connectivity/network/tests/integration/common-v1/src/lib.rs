@@ -32,7 +32,7 @@ use packet::serialize::{InnerPacketBuilder, Serializer};
 use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
 use packet_formats::icmp::ndp::{self, options::NdpOption, RouterAdvertisement};
 use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::Ipv6NextHeader;
+use packet_formats::ip::Ipv6Proto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
 use zerocopy::ByteSlice;
 
@@ -116,12 +116,7 @@ pub async fn write_ndp_message<
     let ser = ndp::OptionsSerializer::<_>::new(options.iter())
         .into_serializer()
         .encapsulate(IcmpPacketBuilder::<_, B, _>::new(src_ip, dst_ip, IcmpUnusedCode, message))
-        .encapsulate(Ipv6PacketBuilder::new(
-            src_ip,
-            dst_ip,
-            NDP_MESSAGE_TTL,
-            Ipv6NextHeader::Icmpv6,
-        ))
+        .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, NDP_MESSAGE_TTL, Ipv6Proto::Icmpv6))
         .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, EtherType::Ipv6))
         .serialize_vec_outer()
         .map_err(|e| anyhow::anyhow!("failed to serialize NDP packet: {:?}", e))?

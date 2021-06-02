@@ -39,7 +39,7 @@ use packet_formats::icmp::ndp::{
     RouterSolicitation,
 };
 use packet_formats::icmp::{ndp::NdpPacket, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::Ipv6NextHeader;
+use packet_formats::ip::Ipv6Proto;
 use packet_formats::ipv6::Ipv6PacketBuilder;
 use rand::{thread_rng, Rng};
 use zerocopy::ByteSlice;
@@ -2604,7 +2604,7 @@ where
                 src_ip,
                 dst_ip,
                 REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
             )),
     )
     .map_err(|_| ())
@@ -4349,7 +4349,7 @@ mod tests {
             local_ip().get(),
             remote_ip().get(),
             remote_ip().into_specified(),
-            Ipv6NextHeader::Icmpv6,
+            Ipv6Proto::Icmpv6,
             body,
             None,
         )

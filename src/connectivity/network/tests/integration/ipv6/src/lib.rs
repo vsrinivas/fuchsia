@@ -41,7 +41,7 @@ use packet_formats::icmp::ndp::{
     NeighborAdvertisement, NeighborSolicitation, RouterAdvertisement, RouterSolicitation,
 };
 use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
-use packet_formats::ip::Ipv6NextHeader;
+use packet_formats::ip::Ipv6Proto;
 use packet_formats::testutil::{parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet};
 
 /// The expected number of Router Solicitations sent by the netstack when an
@@ -907,7 +907,7 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
                     parse_ip_packet::<net_types_ip::Ipv6>(&data)
                         .context("error parsing IPv6 packet")?;
 
-                if proto != Ipv6NextHeader::Icmpv6 {
+                if proto != Ipv6Proto::Icmpv6 {
                     // Ignore non-ICMPv6 packets.
                     return Ok(None);
                 }

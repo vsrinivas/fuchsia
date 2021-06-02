@@ -34,7 +34,7 @@ impl<'a> std::fmt::Debug for Ipv6PacketDebug<'a> {
         let dst_ip = packet.dst_ip();
 
         let (src_port, dst_port) = match packet.proto() {
-            Ipv6NextHeader::Proto(IpProto::Tcp) => {
+            Ipv6Proto::Proto(IpProto::Tcp) => {
                 let args = TcpParseArgs::new(packet.src_ip(), packet.dst_ip());
                 write!(f, "TCP;")?;
                 match TcpSegment::parse(&mut packet_bytes, args) {
@@ -45,7 +45,7 @@ impl<'a> std::fmt::Debug for Ipv6PacketDebug<'a> {
                     }
                 }
             }
-            Ipv6NextHeader::Proto(IpProto::Udp) => {
+            Ipv6Proto::Proto(IpProto::Udp) => {
                 let args = UdpParseArgs::new(packet.src_ip(), packet.dst_ip());
                 write!(f, "UDP;")?;
                 match UdpPacket::parse(&mut packet_bytes, args) {
@@ -56,7 +56,7 @@ impl<'a> std::fmt::Debug for Ipv6PacketDebug<'a> {
                     }
                 }
             }
-            Ipv6NextHeader::Icmpv6 => {
+            Ipv6Proto::Icmpv6 => {
                 write!(f, "ICMPv6;")?;
                 (None, None)
             }
@@ -88,7 +88,7 @@ impl<'a> std::fmt::Debug for Ipv6PacketDebug<'a> {
 /// It is used by Ipv6PacketMatcher for implementing a small firewall.
 #[derive(Debug, Default, Hash, Clone, Eq, PartialEq)]
 pub struct Ipv6PacketMatcherRule {
-    pub proto: Option<Ipv6NextHeader>,
+    pub proto: Option<Ipv6Proto>,
 
     pub local_port: Option<NonZeroU16>,
     pub local_address: Subnet,
@@ -116,7 +116,7 @@ impl Ipv6PacketMatcherRule {
     /// destination port
     fn decode_packet(
         mut packet_bytes: &[u8],
-    ) -> Result<(Ipv6NextHeader, Ipv6Addr, Ipv6Addr, Option<NonZeroU16>, Option<NonZeroU16>), Error>
+    ) -> Result<(Ipv6Proto, Ipv6Addr, Ipv6Addr, Option<NonZeroU16>, Option<NonZeroU16>), Error>
     {
         let packet =
             Ipv6Packet::parse(&mut packet_bytes, ()).context("failed to parse IPv6 packet")?;
@@ -126,13 +126,13 @@ impl Ipv6PacketMatcherRule {
         let dst_ip = packet.dst_ip().ipv6_bytes().into();
 
         let (src_port, dst_port) = match packet.proto() {
-            Ipv6NextHeader::Proto(IpProto::Tcp) => {
+            Ipv6Proto::Proto(IpProto::Tcp) => {
                 let args = TcpParseArgs::new(packet.src_ip(), packet.dst_ip());
                 let tcp = TcpSegment::parse(&mut packet_bytes, args)
                     .context("failed to parse TCP segment")?;
                 (Some(tcp.src_port()), Some(tcp.dst_port()))
             }
-            Ipv6NextHeader::Proto(IpProto::Udp) => {
+            Ipv6Proto::Proto(IpProto::Udp) => {
                 let args = UdpParseArgs::new(packet.src_ip(), packet.dst_ip());
                 let udp = UdpPacket::parse(&mut packet_bytes, args)
                     .context("failed to parse UDP packet")?;
@@ -148,7 +148,7 @@ impl Ipv6PacketMatcherRule {
     /// to the values associated with the rule.
     fn match_parts(
         &self,
-        proto: Ipv6NextHeader,
+        proto: Ipv6Proto,
         local_addr: Ipv6Addr,
         remote_addr: Ipv6Addr,
         local_port: Option<NonZeroU16>,

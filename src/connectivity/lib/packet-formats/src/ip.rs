@@ -52,11 +52,9 @@ impl<B: ByteSlice, I: Ip, ParseArgs> ParsablePacket<B, ParseArgs> for NeverPacke
 pub trait IpExt: Ip {
     /// An IP packet builder type for the IP version.
     type PacketBuilder: IpPacketBuilder<Self> + Eq;
-    /// The type representing an IPv4 protocol number or IPv6 next header
-    /// number.
+    /// The type representing an IPv4 or IPv6 protocol number.
     ///
-    /// For IPv4, this is [`Ipv4Proto`], and for IPv6, this is
-    /// [`Ipv6NextHeader`].
+    /// For IPv4, this is [`Ipv4Proto`], and for IPv6, this is [`Ipv6Proto`].
     type Proto: IpProtocol + Copy + Clone + Debug + Display + PartialEq;
 }
 
@@ -74,7 +72,7 @@ impl IpExt for Ipv4 {
 
 impl IpExt for Ipv6 {
     type PacketBuilder = Ipv6PacketBuilder;
-    type Proto = Ipv6NextHeader;
+    type Proto = Ipv6Proto;
 }
 
 /// An extension trait to the `IpExt` trait adding an associated `Packet` type.
@@ -163,7 +161,7 @@ pub trait IpPacket<B: ByteSlice, I: IpExt>:
     /// The destination IP address.
     fn dst_ip(&self) -> I::Addr;
 
-    /// The protocol (IPv4) or next header (IPv6) field.
+    /// The protocol number.
     fn proto(&self) -> I::Proto;
 
     /// The Time to Live (TTL) (IPv4) or Hop Limit (IPv6) field.
@@ -227,7 +225,7 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
     fn dst_ip(&self) -> Ipv6Addr {
         Ipv6Header::dst_ip(self)
     }
-    fn proto(&self) -> Ipv6NextHeader {
+    fn proto(&self) -> Ipv6Proto {
         Ipv6Packet::proto(self)
     }
     fn ttl(&self) -> u8 {
@@ -277,7 +275,7 @@ impl<B: ByteSlice, I: IpExt> IpPacket<B, I> for NeverPacket<I> {
 pub trait IpPacketBuilder<I: IpExt>: PacketBuilder + Clone + Debug {
     /// Returns a new packet builder for an associated IP version with the given
     /// given source and destination IP addresses, TTL (IPv4)/Hop Limit (IPv4)
-    /// and Protocol (IPv4)/Next Header (IPv6).
+    /// and Protocol Number.
     fn new(src_ip: I::Addr, dst_ip: I::Addr, ttl: u8, proto: I::Proto) -> Self;
 }
 
@@ -288,12 +286,7 @@ impl IpPacketBuilder<Ipv4> for Ipv4PacketBuilder {
 }
 
 impl IpPacketBuilder<Ipv6> for Ipv6PacketBuilder {
-    fn new(
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
-        ttl: u8,
-        proto: Ipv6NextHeader,
-    ) -> Ipv6PacketBuilder {
+    fn new(src_ip: Ipv6Addr, dst_ip: Ipv6Addr, ttl: u8, proto: Ipv6Proto) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder::new(src_ip, dst_ip, ttl, proto)
     }
 }
@@ -304,18 +297,17 @@ impl<I: IpExt> IpPacketBuilder<I> for Never {
     }
 }
 
-/// An IPv4 protocol number or IPv6 next header number.
+/// An IPv4 or IPv6 protocol number.
 pub trait IpProtocol: From<IpProto> + Sealed {}
 
 impl IpProtocol for Never {}
 impl Sealed for Never {}
 
 create_protocol_enum!(
-    /// An IPv4 protocol number or IPv6 next header number.
+    /// An IPv4 or IPv6 protocol number.
     ///
     /// `IpProto` encodes the protocol numbers whose values are the same for
-    /// both the IPv4 protocol number field and the IPv6 next header number
-    /// field.
+    /// both IPv4 and IPv6.
     ///
     /// The protocol numbers are maintained [by IANA][protocol-numbers].
     ///
@@ -354,23 +346,23 @@ impl IpProtocol for Ipv4Proto {}
 impl Sealed for Ipv4Proto {}
 
 create_protocol_enum!(
-    /// An IPv6 next header number.
+    /// An IPv6 protocol number.
     ///
     /// The protocol numbers are maintained [by IANA][protocol-numbers].
     ///
     /// [protocol-numbers]: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
     #[allow(missing_docs)]
     #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-    pub enum Ipv6NextHeader: u8 {
+    pub enum Ipv6Proto: u8 {
         Icmpv6, 58, "ICMPv6";
         NoNextHeader, 59, "NO NEXT HEADER";
         + Proto(IpProto);
-        _, "IPv6 next header {}";
+        _, "IPv6 protocol {}";
     }
 );
 
-impl IpProtocol for Ipv6NextHeader {}
-impl Sealed for Ipv6NextHeader {}
+impl IpProtocol for Ipv6Proto {}
+impl Sealed for Ipv6Proto {}
 
 create_protocol_enum!(
     /// An IPv6 extension header.

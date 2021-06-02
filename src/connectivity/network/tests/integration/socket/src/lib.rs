@@ -431,7 +431,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 let mut bv = &frame_data[..];
                 let ipv6 = Ipv6Packet::parse(&mut bv, ())
                     .with_context(|| format!("failed to parse IPv6 packet {:?}", frame_data))?;
-                if ipv6.proto() == packet_formats::ip::Ipv6NextHeader::Icmpv6 {
+                if ipv6.proto() == packet_formats::ip::Ipv6Proto::Icmpv6 {
                     let parse_args =
                         packet_formats::icmp::IcmpParseArgs::new(ipv6.src_ip(), ipv6.dst_ip());
                     match Icmpv6Packet::parse(&mut bv, parse_args)
@@ -588,7 +588,7 @@ async fn test_ip_endpoint_packets() -> Result {
             src_ip,
             dst_ip,
             1,
-            packet_formats::ip::Ipv6NextHeader::Icmpv6,
+            packet_formats::ip::Ipv6Proto::Icmpv6,
         ))
         .serialize_vec_outer()
         .expect("serialization failed")
@@ -619,7 +619,7 @@ async fn test_ip_endpoint_packets() -> Result {
     let ipv6_packet = Ipv6Packet::parse(&mut bv, ()).context("failed to parse IPv6 packet")?;
     assert_eq!(ipv6_packet.src_ip(), dst_ip);
     assert_eq!(ipv6_packet.dst_ip(), src_ip);
-    assert_eq!(ipv6_packet.proto(), packet_formats::ip::Ipv6NextHeader::Icmpv6);
+    assert_eq!(ipv6_packet.proto(), packet_formats::ip::Ipv6Proto::Icmpv6);
 
     let parse_args =
         packet_formats::icmp::IcmpParseArgs::new(ipv6_packet.src_ip(), ipv6_packet.dst_ip());

@@ -11,7 +11,7 @@ use core::num::NonZeroU8;
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{BufferMut, Serializer};
-use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
+use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 
 use crate::device::{AddressEntry, DeviceId};
@@ -364,7 +364,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
         &mut self,
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         remote_ip: SpecifiedAddr<Ipv6Addr>,
-        proto: Ipv6NextHeader,
+        proto: Ipv6Proto,
         unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv6SocketBuilder>,
     ) -> Result<IpSock<Ipv6, DeviceId>, NoRouteError> {
@@ -891,14 +891,14 @@ mod tests {
         let template = IpSock {
             remote_ip: DUMMY_CONFIG_V6.remote_ip,
             local_ip: DUMMY_CONFIG_V6.local_ip,
-            proto: Ipv6NextHeader::Icmpv6,
+            proto: Ipv6Proto::Icmpv6,
             unroutable_behavior: UnroutableBehavior::Close,
             cached: CachedInfo::Routable {
                 builder: Ipv6PacketBuilder::new(
                     DUMMY_CONFIG_V6.local_ip,
                     DUMMY_CONFIG_V6.remote_ip,
                     crate::ip::DEFAULT_TTL.get(),
-                    Ipv6NextHeader::Icmpv6,
+                    Ipv6Proto::Icmpv6,
                 ),
                 device: DeviceId::new_ethernet(0),
                 next_hop: DUMMY_CONFIG_V6.remote_ip,
@@ -911,7 +911,7 @@ mod tests {
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V6.remote_ip,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             )
@@ -927,7 +927,7 @@ mod tests {
                 &mut ctx,
                 None,
                 DUMMY_CONFIG_V6.remote_ip,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
                 UnroutableBehavior::Close,
                 Some(builder),
             )
@@ -940,7 +940,7 @@ mod tests {
                             DUMMY_CONFIG_V6.local_ip,
                             DUMMY_CONFIG_V6.remote_ip,
                             1,
-                            Ipv6NextHeader::Icmpv6,
+                            Ipv6Proto::Icmpv6,
                         ),
                         device: DeviceId::new_ethernet(0),
                         next_hop: DUMMY_CONFIG_V6.remote_ip,
@@ -955,7 +955,7 @@ mod tests {
                 &mut ctx,
                 Some(DUMMY_CONFIG_V6.local_ip),
                 DUMMY_CONFIG_V6.remote_ip,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             )
@@ -969,7 +969,7 @@ mod tests {
                 &mut ctx,
                 Some(DUMMY_CONFIG_V6.remote_ip),
                 DUMMY_CONFIG_V6.remote_ip,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             ) == Err(NoRouteError)
@@ -981,7 +981,7 @@ mod tests {
                 &mut ctx,
                 None,
                 Ipv6::LOOPBACK_ADDRESS,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
                 UnroutableBehavior::Close,
                 None,
             ) == Err(NoRouteError)
@@ -1073,7 +1073,7 @@ mod tests {
             &mut ctx,
             None,
             DUMMY_CONFIG_V6.remote_ip,
-            Ipv6NextHeader::Icmpv6,
+            Ipv6Proto::Icmpv6,
             UnroutableBehavior::Close,
             Some(builder),
         )
@@ -1099,7 +1099,7 @@ mod tests {
         assert_eq!(dst_mac, DUMMY_CONFIG_V6.remote_mac);
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
-        assert_eq!(proto, Ipv6NextHeader::Icmpv6);
+        assert_eq!(proto, Ipv6Proto::Icmpv6);
         assert_eq!(ttl, 1);
 
         // Try sending a packet which will be larger than the device's MTU,

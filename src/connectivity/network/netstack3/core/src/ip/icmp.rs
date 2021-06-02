@@ -23,7 +23,7 @@ use packet_formats::icmp::{
     Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
     MessageBody, OriginalPacket,
 };
-use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
+use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Header};
 use packet_formats::ipv6::{Ipv6Header, UndefinedBodyBoundsError};
 use zerocopy::ByteSlice;
@@ -1455,7 +1455,7 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: BufferIcmpv6Context<B
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6NextHeader,
+    proto: Ipv6Proto,
     original_packet: B,
     header_len: usize,
 ) {
@@ -1549,7 +1549,7 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: BufferIcmpv6Context<B>>(
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6NextHeader,
+    proto: Ipv6Proto,
     original_packet: B,
     header_len: usize,
 ) {
@@ -1604,7 +1604,7 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: BufferIcmpv6Context<B>
     frame_dst: FrameDestination,
     src_ip: UnicastAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6NextHeader,
+    proto: Ipv6Proto,
     mtu: u32,
     original_packet: B,
     header_len: usize,
@@ -2093,7 +2093,7 @@ fn new_icmpv6_connection_inner<C: Icmpv6SocketContext>(
     let ip = ctx.new_ip_socket(
         local_addr,
         remote_addr,
-        Ipv6NextHeader::Icmpv6,
+        Ipv6Proto::Icmpv6,
         UnroutableBehavior::Close,
         None,
     )?;
@@ -2341,9 +2341,9 @@ mod tests {
             // as a valid parsing but then replying with a parameter problem
             // error message). We should a) fix this and, b) expand this test to
             // ensure we don't regress.
-            let v6proto = Ipv6NextHeader::from(proto);
+            let v6proto = Ipv6Proto::from(proto);
             match v6proto {
-                Ipv6NextHeader::Proto(IpProto::Tcp) => {
+                Ipv6Proto::Proto(IpProto::Tcp) => {
                     test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
                         |_| {},
                         |_| {},
@@ -2360,10 +2360,10 @@ mod tests {
                         |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
                     );
                 }
-                Ipv6NextHeader::Icmpv6
-                | Ipv6NextHeader::NoNextHeader
-                | Ipv6NextHeader::Proto(IpProto::Udp)
-                | Ipv6NextHeader::Other(_) => {}
+                Ipv6Proto::Icmpv6
+                | Ipv6Proto::NoNextHeader
+                | Ipv6Proto::Proto(IpProto::Udp)
+                | Ipv6Proto::Other(_) => {}
             }
         }
     }
@@ -3561,7 +3561,7 @@ mod tests {
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
             ))
             .serialize_vec_outer()
             .unwrap();
@@ -3649,7 +3649,7 @@ mod tests {
                 DUMMY_CONFIG_V6.local_ip,
                 DUMMY_CONFIG_V6.remote_ip,
                 64,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
             ))
             .serialize_vec_outer()
             .unwrap();

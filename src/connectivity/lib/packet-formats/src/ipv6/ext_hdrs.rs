@@ -17,7 +17,7 @@ use packet::records::{
 };
 use packet::BufferView;
 
-use crate::ip::{IpProto, Ipv6ExtHdrType, Ipv6NextHeader};
+use crate::ip::{IpProto, Ipv6ExtHdrType, Ipv6Proto};
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
@@ -1073,12 +1073,12 @@ pub(super) fn is_valid_next_header(next_header: u8, for_fixed_header: bool) -> b
 /// Make sure a Next Header is a valid upper layer protocol in an IPv6 packet. Note,
 /// we intentionally are not allowing ICMP(v4) since we are working on IPv6 packets.
 pub(super) fn is_valid_next_header_upper_layer(next_header: u8) -> bool {
-    match Ipv6NextHeader::from(next_header) {
-        Ipv6NextHeader::Proto(IpProto::Tcp)
-        | Ipv6NextHeader::Proto(IpProto::Udp)
-        | Ipv6NextHeader::Icmpv6
-        | Ipv6NextHeader::NoNextHeader => true,
-        Ipv6NextHeader::Other(_) => false,
+    match Ipv6Proto::from(next_header) {
+        Ipv6Proto::Proto(IpProto::Tcp)
+        | Ipv6Proto::Proto(IpProto::Udp)
+        | Ipv6Proto::Icmpv6
+        | Ipv6Proto::NoNextHeader => true,
+        Ipv6Proto::Other(_) => false,
     }
 }
 
@@ -1783,7 +1783,7 @@ mod tests {
     #[test]
     fn test_no_next_header_ext_hdr() {
         // Test parsing of just a single NoNextHeader Extension Header.
-        let context = Ipv6ExtensionHeaderParsingContext::new(Ipv6NextHeader::NoNextHeader.into());
+        let context = Ipv6ExtensionHeaderParsingContext::new(Ipv6Proto::NoNextHeader.into());
         #[rustfmt::skip]
         let buffer = [0, 0, 0, 0,];
         let ext_hdrs =

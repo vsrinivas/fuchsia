@@ -32,7 +32,7 @@ use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
 use packet_formats::error::IpParseError;
 use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use packet_formats::ip::{IpPacket, IpPacketBuilder, IpProto, Ipv4Proto, Ipv6NextHeader};
+use packet_formats::ip::{IpPacket, IpPacketBuilder, IpProto, Ipv4Proto, Ipv6Proto};
 use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Packet};
 use packet_formats::ipv6::Ipv6Packet;
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
@@ -742,7 +742,7 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     frame_dst: FrameDestination,
     src_ip: Ipv6SourceAddr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6NextHeader,
+    proto: Ipv6Proto,
     buffer: B,
     parse_metadata: Option<ParseMetadata>,
 ) {
@@ -751,12 +751,12 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
     macro_rules! mtch {
         ($($cond:pat => $ty:ident),*) => {
             match proto {
-                Ipv6NextHeader::Icmpv6 => <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>
+                Ipv6Proto::Icmpv6 => <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
-                // A value of `Ipv6NextHeader::NoNextHeader` tells us that there
+                // A value of `Ipv6Proto::NoNextHeader` tells us that there
                 // is no header whatsoever following the last lower-level header
                 // so we stop processing here.
-                Ipv6NextHeader::NoNextHeader => Ok(()),
+                Ipv6Proto::NoNextHeader => Ok(()),
                 $($cond => <<Context<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP Next Header numbers are covered,
@@ -771,8 +771,8 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
 
     #[rustfmt::skip]
     let res = mtch!(
-        Ipv6NextHeader::Proto(IpProto::Tcp) => Proto6,
-        Ipv6NextHeader::Proto(IpProto::Udp) => Proto17
+        Ipv6Proto::Proto(IpProto::Tcp) => Proto6,
+        Ipv6Proto::Proto(IpProto::Udp) => Proto17
     );
 
     if let Err((mut buffer, err)) = res {
@@ -1698,7 +1698,7 @@ pub(crate) fn send_ipv6_packet<
 >(
     ctx: &mut Context<D>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6NextHeader,
+    proto: Ipv6Proto,
     get_body: F,
 ) -> Result<(), S> {
     trace!("send_ipv6_packet({}, {})", dst_ip, proto);
@@ -1961,7 +1961,7 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
         &mut self,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv6Addr>,
-        original_next_header: Ipv6NextHeader,
+        original_next_header: Ipv6Proto,
         original_body: &[u8],
         err: Icmpv6ErrorCode,
     ) {
@@ -1971,7 +1971,7 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
         macro_rules! mtch {
             ($($cond:pat => $ty:ident),*) => {
                 match original_next_header {
-                    Ipv6NextHeader::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _>>
+                    Ipv6Proto::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _>>
                     ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),
                     $($cond => <<Context<D> as Ipv6TransportLayerContext>::$ty as IpTransportContext<Ipv6, _>>
                                 ::receive_icmp_error(self, original_src_ip, original_dst_ip, original_body, err),)*
@@ -1984,8 +1984,8 @@ impl<D: EventDispatcher> IcmpContext<Ipv6> for Context<D> {
 
         #[rustfmt::skip]
         mtch!(
-            Ipv6NextHeader::Proto(IpProto::Tcp) => Proto6,
-            Ipv6NextHeader::Proto(IpProto::Udp) => Proto17
+            Ipv6Proto::Proto(IpProto::Tcp) => Proto6,
+            Ipv6Proto::Proto(IpProto::Udp) => Proto17
         );
     }
 }
@@ -2002,7 +2002,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv6, B> for Contex
         self.increment_counter("send_icmp_reply");
 
         // TODO(joshlf): Use `dst_ip` for anything?
-        send_ipv6_packet(self, src_ip, Ipv6NextHeader::Icmpv6, get_body)
+        send_ipv6_packet(self, src_ip, Ipv6Proto::Icmpv6, get_body)
     }
 
     fn send_icmp_error_message<
@@ -2034,7 +2034,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv6, B> for Contex
                 local_ip.get(),
                 src_ip.get(),
                 next_hop,
-                Ipv6NextHeader::Icmpv6,
+                Ipv6Proto::Icmpv6,
                 get_body(local_ip),
                 ip_mtu,
             )?;
@@ -2178,7 +2178,7 @@ mod tests {
         let (src_ip, dst_ip, proto, _) = packet.into_metadata();
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip.get());
-        assert_eq!(proto, Ipv6NextHeader::Icmpv6);
+        assert_eq!(proto, Ipv6Proto::Icmpv6);
         let icmp =
             buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)).unwrap();
         if let Icmpv6Packet::ParameterProblem(icmp) = icmp {
@@ -2855,7 +2855,7 @@ mod tests {
                 IcmpUnusedCode,
                 Icmpv6PacketTooBig::new(u32::from(mtu)),
             ))
-            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, Ipv6NextHeader::Icmpv6))
+            .encapsulate(Ipv6PacketBuilder::new(src_ip, dst_ip, 64, Ipv6Proto::Icmpv6))
             .serialize_vec_outer()
             .unwrap();
 
@@ -3125,7 +3125,7 @@ mod tests {
             ip_config.remote_ip,
             ip_config.local_ip,
             64,
-            Ipv6NextHeader::Other(Ipv4Proto::Icmp.into()),
+            Ipv6Proto::Other(Ipv4Proto::Icmp.into()),
         );
 
         let buf = Buf::new(Vec::new(), ..)
@@ -3167,7 +3167,7 @@ mod tests {
             ip_config.remote_ip,
             ip_config.local_ip,
             64,
-            Ipv4Proto::Other(Ipv6NextHeader::Icmpv6.into()),
+            Ipv4Proto::Other(Ipv6Proto::Icmpv6.into()),
         );
 
         let buf = Buf::new(Vec::new(), ..)

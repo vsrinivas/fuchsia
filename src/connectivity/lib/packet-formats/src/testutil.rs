@@ -363,7 +363,7 @@ mod tests {
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 
     use crate::icmp::{IcmpDestUnreachable, IcmpEchoReply, Icmpv4DestUnreachableCode};
-    use crate::ip::Ipv6NextHeader;
+    use crate::ip::Ipv6Proto;
 
     use super::*;
 
@@ -394,7 +394,7 @@ mod tests {
         assert_eq!(body, &REQUEST_IP_PACKET_BYTES[40..]);
         assert_eq!(src_ip, Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
         assert_eq!(dst_ip, Ipv6Addr::new([0xFE, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
-        assert_eq!(proto, Ipv6NextHeader::Icmpv6);
+        assert_eq!(proto, Ipv6Proto::Icmpv6);
         assert_eq!(ttl, 64);
     }
 

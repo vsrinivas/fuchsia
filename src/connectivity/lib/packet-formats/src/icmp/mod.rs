@@ -38,7 +38,7 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
+use crate::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 use crate::ipv4::{self, Ipv4PacketRaw};
 use crate::ipv6::Ipv6PacketRaw;
 use crate::U16;
@@ -168,7 +168,7 @@ impl IcmpIpExt for Ipv4 {
 impl IcmpIpExt for Ipv6 {
     type IcmpMessageType = Icmpv6MessageType;
 
-    const ICMP_IP_PROTO: Ipv6NextHeader = Ipv6NextHeader::Icmpv6;
+    const ICMP_IP_PROTO: Ipv6Proto = Ipv6Proto::Icmpv6;
 
     // TODO: Re-implement this in terms of partial parsing, and then get rid of
     // the `header_len` method.
@@ -534,7 +534,7 @@ fn compute_checksum_fragmented<
         NetworkEndian::write_u32(&mut len_bytes, icmpv6_len.try_into().ok()?);
         c.add_bytes(&len_bytes[..]);
         c.add_bytes(&[0, 0, 0]);
-        c.add_bytes(&[Ipv6NextHeader::Icmpv6.into()]);
+        c.add_bytes(&[Ipv6Proto::Icmpv6.into()]);
     }
     c.add_bytes(&[header.prefix.msg_type, header.prefix.code]);
     c.add_bytes(&header.prefix.checksum);
