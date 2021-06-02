@@ -3,6 +3,15 @@
 # found in the LICENSE file.
 
 - Audio
+- Block
+- Board
+- Clock
+- Firmware
+- Gpio
+- Graphics
+- Kernel
 - Media
+- Power
 - Testing
+- Uart
 - Usb

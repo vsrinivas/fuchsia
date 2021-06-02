@@ -44,9 +44,6 @@ declare_args() {
   # Targets that will be built as verisilicon vulkan ICDS.
   build_libvulkan_vsi_vip = []
 
-  # Targets that will be built as qualcomm vulkan ICDS.
-  build_libvulkan_qcom_adreno = []
-
   # Targets that will be built as IMG vulkan ICDS.
   build_libvulkan_img_rgx = []
 
@@ -55,8 +52,7 @@ declare_args() {
 }
 
 have_prebuilt_libvulkan_img = prebuilt_libvulkan_img_path != ""
-build_libvulkan = build_libvulkan_vsi_vip + build_libvulkan_qcom_adreno +
-                  build_libvulkan_img_rgx
+build_libvulkan = build_libvulkan_vsi_vip + build_libvulkan_img_rgx
 have_libvulkan = build_libvulkan != [] || have_prebuilt_libvulkan_img
 
 # Target environments with an Intel GPU.

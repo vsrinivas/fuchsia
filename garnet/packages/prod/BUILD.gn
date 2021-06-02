@@ -40,7 +40,6 @@ group("all") {
     "//garnet/packages/prod:magma-arm-mali-config",
     "//garnet/packages/prod:magma-arm-mali-system",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
-    "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:run",
@@ -305,13 +304,6 @@ if (target_cpu == "x64") {
       "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma-vulkan-config",
     ]
   }
-}
-
-group("magma-qcom-adreno") {
-  public_deps = [
-    "//src/devices/sysmem/bin/sysmem_connector",
-    "//src/graphics/lib/magma/gnbuild/magma-qcom-adreno:magma-vulkan",
-  ]
 }
 
 group("magma-vsi-vip") {

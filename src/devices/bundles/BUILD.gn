@@ -15,7 +15,6 @@ group("drivers") {
     "//src/devices/bus:drivers",
     "//src/devices/clock:drivers",
     "//src/devices/cpu:drivers",
-    "//src/devices/fw:drivers",
     "//src/devices/gpio:drivers",
     "//src/devices/i2c:drivers",
     "//src/devices/internal/drivers/fragment:fragment",

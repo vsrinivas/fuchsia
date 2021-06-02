@@ -7,7 +7,6 @@ group("drivers") {
     "drivers/amlogic-clk",
     "drivers/as370-clk",
     "drivers/clock",
-    "drivers/msm8x53-clk",
     "drivers/mtk-clk",
     "drivers/vs680-clk",
   ]

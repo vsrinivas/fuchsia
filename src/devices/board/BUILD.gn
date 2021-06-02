@@ -9,8 +9,6 @@ group("drivers") {
     "drivers/c18",
     "drivers/integration-test",
     "drivers/machina",
-    "drivers/msm8998",
-    "drivers/msm8x53-som",
     "drivers/mt8167s_ref",
     "drivers/nelson",
     "drivers/qemu-arm64",

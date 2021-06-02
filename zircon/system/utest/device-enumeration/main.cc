@@ -641,17 +641,6 @@ TEST_F(DeviceEnumerationTest, Mt8167sRefTest) {
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
 }
 
-TEST_F(DeviceEnumerationTest, Msm8x53SomTest) {
-  static const char* kDevicePaths[] = {"sys/platform/msm8x53",
-                                       "sys/platform/13:01:1",
-                                       "sys/platform/13:00:3/msm8x53-sdhci",
-                                       "sys/platform/13:00:2/qcom-pil",
-                                       "sys/platform/13:01:4/msm-clk",
-                                       "sys/platform/13:01:5/msm8x53-power"};
-
-  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-}
-
 TEST_F(DeviceEnumerationTest, As370Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/as370",

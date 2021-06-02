@@ -7,7 +7,6 @@ group("drivers") {
   deps = [
     "drivers/aml-meson-power",
     "drivers/as370-power",
-    "drivers/msm8x53-power",
     "drivers/mtk-power",
     "drivers/power",
     "drivers/silergy:sy-buck",

@@ -1,9 +1,0 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-using fuchsia.qualcomm.platform;
-
-fuchsia.BIND_COMPOSITE == 1;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_VID.QUALCOMM;
-fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.qualcomm.platform.BIND_PLATFORM_DEV_DID.PIL;

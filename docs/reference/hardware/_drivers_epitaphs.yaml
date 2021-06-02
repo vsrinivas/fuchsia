@@ -1,0 +1,83 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file lists drivers that have been deleted including a git hash
+# that can be used to recoved the driver. To add new entries, extend
+# the `deleted_drivers` list below including a `short_description` of
+# the driver, `deletion_reason`, `gerrit_change_id` used to delete the
+# driver, the last known git still including the driver in
+# `available_in_git` and the `path` of the driver.
+
+- short_description: 'Qualcomm MSM8998 board driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Board']
+  path: '/src/devices/board/drivers/msm8998'
+- short_description: 'Qualcomm MSM8x53 board driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Board']
+  path: '/src/devices/board/drivers/msm8x53-som'
+- short_description: 'Qualcomm MSM8x53 SDHCI driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Block']
+  path: '/src/devices/block/drivers/msm8x53-sdhci'
+- short_description: 'Qualcomm MSM8x53 clock driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Clock']
+  path: '/src/devices/clock/drivers/msm8x53-clk'
+- short_description: 'Qualcomm Peripheral Image Loading driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Firmware']
+  path: '/src/devices/fw/drivers/qcom-pil'
+- short_description: 'Qualcomm GPIO driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Gpio']
+  path: '/src/devices/gpio/drivers/qcom-gpio'
+- short_description: 'Qualcomm MSM9x53 power driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Power']
+  path: '/src/devices/power/drivers/msm8x53-power'
+- short_description: 'Magma System Driver for the Qualcomm Adreno GPU'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Graphics']
+  path: '/src/graphics/drivers/msd-qcom-adreno'
+- short_description: 'Qualcomm MSM kernel power driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Kernel', 'Power']
+  path: '/zircon/kernel/dev/power/msm'
+- short_description: 'Qualcomm MSM kernel UART driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Kernel', 'Uart']
+  path: '/zircon/kernel/dev/uart/msm'
+- short_description: 'Qualcomm MSM8998 kernel board definition'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Kernel', 'Board']
+  path: '/zircon/kernel/target/arm64/board/msm8998'
+- short_description: 'Qualcomm MSM8x53 kernel board definition'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '506858'
+  available_in_git: 'f441460db6b70ba38150c3437f42ff3d045d2b71'
+  areas: ['Kernel', 'Board']
+  path: '/zircon/kernel/target/arm64/board/msm8x53-som'

@@ -12,6 +12,5 @@ group("tests") {
     "gpio:tests",
     "gpio-test:tests",
     "mt-8167:tests",
-    "qcom-gpio:tests",
   ]
 }
