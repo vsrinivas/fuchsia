@@ -1282,7 +1282,7 @@ mod test {
     async fn test_target_expiry() {
         let mut daemon = Daemon::new();
         let target = Target::new_named("goodbye-world");
-        let then = Instant::now() - Duration::from_secs(600);
+        let then = Instant::now() - Duration::from_secs(10);
         target.update_connection_state(|_| ConnectionState::Mdns(then));
         daemon.target_collection.merge_insert(target.clone());
 
