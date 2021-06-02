@@ -235,8 +235,7 @@ mod tests {
             .message(
                 service::Payload::Event(event::Payload::Event(event::Event::ConfigLoad(
                     config::base::Event::Load(expected_inspect_info.clone()),
-                )))
-                .into(),
+                ))),
                 Audience::Role(role::Signature::role(Role::Event(event::Role::Sink))),
             )
             .send();
@@ -248,7 +247,7 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             config_loads: {
                 "/config/data/input_device_config.json": {
-                    "count": 1 as i64,
+                    "count": 1i64,
                     "timestamp": "0.444444444",
                     "value": format!("{:#?}", expected_inspect_info),
                 }

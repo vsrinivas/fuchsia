@@ -376,10 +376,7 @@ impl ContextBuilder {
 
     /// Adds the settings to given environment.
     pub fn add_settings(mut self, settings: &[SettingType]) -> Self {
-        for setting in settings {
-            self.settings.insert(setting.clone());
-        }
-
+        self.settings.extend(settings.iter().copied());
         self
     }
 

@@ -465,7 +465,7 @@ mod tests {
             let handler = Arc::new(Mutex::new(TestSettingHandler {
                 id_to_send,
                 listener: None,
-                always_fail: always_fail,
+                always_fail,
             }));
 
             let (_, mut receptor) = delegate
@@ -570,6 +570,8 @@ mod tests {
         }
     }
 
+    // Direct float comparisons are ok for testing here.
+    #[allow(clippy::float_cmp)]
     fn verify_id(event: Event, id: f32) {
         if let Event::Data(data) = event {
             assert_eq!(data.id, id);
@@ -893,13 +895,16 @@ mod tests {
             HangingGetController::new(Box::new(|_old: &TestStruct, _new: &TestStruct| true));
 
         // Should send change on launch
-        assert_eq!(controller.on_watch(), true);
-        assert_eq!(controller.on_change(&TestStruct { id: 1.0 }), true);
+        assert!(controller.on_watch());
+        assert!(controller.on_change(&TestStruct { id: 1.0 }));
         controller.on_send(TestStruct { id: 1.0 });
 
         // After sent, without change, shouldn't send
-        assert_eq!(controller.on_watch(), false);
-        assert_eq!(controller.on_change(&TestStruct { id: 2.0 }), true);
+        #[allow(clippy::bool_assert_comparison)]
+        {
+            assert_eq!(controller.on_watch(), false);
+        }
+        assert!(controller.on_change(&TestStruct { id: 2.0 }));
         controller.on_send(TestStruct { id: 2.0 });
     }
 
@@ -911,16 +916,19 @@ mod tests {
             })));
 
         // Should send change on launch.
-        assert_eq!(controller.on_watch(), true);
-        assert_eq!(controller.on_change(&TestStruct { id: 1.0 }), true);
+        assert!(controller.on_watch());
+        assert!(controller.on_change(&TestStruct { id: 1.0 }));
         controller.on_send(TestStruct { id: 1.0 });
 
         // Won't send if change function not triggered.
-        assert_eq!(controller.on_change(&TestStruct { id: 1.0 }), false);
-        assert_eq!(controller.on_watch(), false);
+        #[allow(clippy::bool_assert_comparison)]
+        {
+            assert_eq!(controller.on_change(&TestStruct { id: 1.0 }), false);
+            assert_eq!(controller.on_watch(), false);
+        }
 
         // Will send once we get a change.
-        assert_eq!(controller.on_change(&TestStruct { id: 2.0 }), true);
-        assert_eq!(controller.on_watch(), true);
+        assert!(controller.on_change(&TestStruct { id: 2.0 }));
+        assert!(controller.on_watch());
     }
 }

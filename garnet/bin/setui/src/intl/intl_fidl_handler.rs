@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_request_from_settings() {
-        const TIME_ZONE_ID: &'static str = "PDT";
+        const TIME_ZONE_ID: &str = "PDT";
 
         let intl_settings = IntlSettings {
             locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: "blah".into() }]),

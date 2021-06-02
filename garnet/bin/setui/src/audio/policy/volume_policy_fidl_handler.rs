@@ -152,8 +152,13 @@ mod tests {
 
         let mut property_list: Vec<fidl_fuchsia_settings_policy::Property> = response.into();
         // Sort so the result is guaranteed to be in a consistent order.
-        property_list
-            .sort_by_key(|p| p.available_transforms.as_ref().unwrap().first().unwrap().clone());
+        property_list.sort_by_key(|p| {
+            *p.available_transforms
+                .as_ref()
+                .expect("test should have transforms")
+                .first()
+                .expect("test should have at least one transform")
+        });
 
         assert_eq!(property_list, vec![property1.into(), property2.into()])
     }

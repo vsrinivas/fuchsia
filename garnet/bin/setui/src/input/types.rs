@@ -531,7 +531,7 @@ mod tests {
     ) -> InputDeviceConfiguration {
         InputDeviceConfiguration {
             device_name: device_name.to_string(),
-            device_type: device_type,
+            device_type,
             source_states: vec![
                 SourceState { source: DeviceStateSource::SOFTWARE, state: sw_state },
                 SourceState { source: DeviceStateSource::HARDWARE, state: hw_state },

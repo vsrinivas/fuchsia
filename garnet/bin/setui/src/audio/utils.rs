@@ -17,6 +17,8 @@ mod tests {
 
     /// Various tests to verify rounding works as expected.
     #[test]
+    // We're testing rounding so we want explicit float comparisons.
+    #[allow(clippy::float_cmp)]
     fn test_round_volume() {
         assert_eq!(round_volume_level(1.0), 1.0);
         assert_eq!(round_volume_level(0.0), 0.0);
@@ -28,6 +30,8 @@ mod tests {
 
     /// Verifies that values below 0.0 round to 0.0.
     #[test]
+    // We're testing rounding so we want explicit float comparisons.
+    #[allow(clippy::float_cmp)]
     fn test_round_volume_below_range() {
         assert_eq!(round_volume_level(-1.0), 0.0);
         assert_eq!(round_volume_level(-0.1), 0.0);
@@ -37,6 +41,8 @@ mod tests {
 
     /// Verifies that values above 1.0 round to 1.0.
     #[test]
+    // We're testing rounding so we want explicit float comparisons.
+    #[allow(clippy::float_cmp)]
     fn test_round_volume_above_range() {
         assert_eq!(round_volume_level(2.0), 1.0);
         assert_eq!(round_volume_level(1.1), 1.0);

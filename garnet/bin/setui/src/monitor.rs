@@ -195,7 +195,7 @@ mod tests {
         // Receive command.
         if let Ok((payload, client)) = monitor_receptor.next_payload().await {
             assert_eq!(payload, request_payload);
-            client.reply(data_payload.clone().into()).send().ack();
+            client.reply(data_payload.clone()).send().ack();
         } else {
             panic!("expected payload");
         }

@@ -356,7 +356,6 @@ mod tests {
     use matches::assert_matches;
     use std::collections::{HashMap, HashSet};
     use std::convert::TryFrom;
-    use std::iter::FromIterator;
 
     /// Verifies that adding a max volume transform with the given volume limit results in a
     /// transform being added with the expected volume limit.
@@ -437,7 +436,7 @@ mod tests {
         let mut builder = StateBuilder::new();
 
         for (property, value) in properties.iter() {
-            builder = builder.add_property(property.clone(), value.clone());
+            builder = builder.add_property(*property, *value);
         }
 
         let state = builder.build();
@@ -448,7 +447,10 @@ mod tests {
         for property in retrieved_properties.iter().cloned() {
             let target = property.target;
             // Make sure only unique targets are encountered.
-            assert!(!seen_targets.contains(&target));
+            #[allow(clippy::bool_assert_comparison)]
+            {
+                assert_eq!(seen_targets.contains(&target), false);
+            }
             seen_targets.insert(target);
             // Ensure the specified transforms are present.
             assert_eq!(
@@ -538,7 +540,7 @@ mod tests {
         assert_eq!(property2.active_policies.len(), transforms.len());
 
         let mut retrieved_ids: HashSet<PolicyId> =
-            HashSet::from_iter(property.active_policies.iter().map(|policy| policy.id));
+            property.active_policies.iter().map(|policy| policy.id).collect();
         retrieved_ids.extend(property2.active_policies.iter().map(|policy| policy.id));
 
         // Verify transforms are present.

@@ -544,6 +544,7 @@ pub mod testing {
         Commit,
     }
 
+    #[derive(Default)]
     pub struct StashStats {
         actions: Vec<StashAction>,
     }
@@ -568,10 +569,17 @@ pub mod testing {
         device_storage_cache: Mutex<InitializationState>,
     }
 
-    const INITIALIZATION_ERROR: &'static str = "Cannot initialize an already accessed device \
-        storage. Make sure you're not retrieving a DeviceStorage before passing \
-        InMemoryStorageFactory to an EnvironmentBuilder. That must be done after. If you need \
-        initial data, use InMemoryStorageFactory::with_initial_data";
+    impl Default for InMemoryStorageFactory {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    const INITIALIZATION_ERROR: &str =
+        "Cannot initialize an already accessed device storage. Make \
+        sure you're not retrieving a DeviceStorage before passing InMemoryStorageFactory to an \
+        EnvironmentBuilder. That must be done after. If you need initial data, use \
+        InMemoryStorageFactory::with_initial_data";
 
     impl InMemoryStorageFactory {
         /// Constructs a new `InMemoryStorageFactory` with the ability to create a [`DeviceStorage`]
@@ -741,7 +749,7 @@ mod tests {
         value: i32,
     }
 
-    const STORE_KEY: &'static str = "settings_testkey";
+    const STORE_KEY: &str = "settings_testkey";
 
     impl DeviceStorageCompatible for TestStruct {
         const KEY: &'static str = "testkey";
@@ -824,6 +832,7 @@ mod tests {
         fasync::Task::spawn(async move {
             let value_to_get = TestStruct { value: VALUE1 };
 
+            #[allow(clippy::single_match)]
             while let Some(req) = stash_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -852,6 +861,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
         fasync::Task::spawn(async move {
+            #[allow(clippy::single_match)]
             while let Some(req) = stash_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
@@ -878,6 +888,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
 
         fasync::Task::spawn(async move {
+            #[allow(clippy::single_match)]
             while let Some(req) = stash_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {

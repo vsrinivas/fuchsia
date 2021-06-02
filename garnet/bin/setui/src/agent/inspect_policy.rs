@@ -325,11 +325,8 @@ mod tests {
                     // Wait until the policy inspect agent receives the message and writes to
                     // inspect.
                     while let Some(event) = receptor.next().await {
-                        match event {
-                            MessageEvent::Status(Status::Received) => {
-                                return;
-                            }
-                            _ => {}
+                        if let MessageEvent::Status(Status::Received) = event {
+                            return;
                         }
                     }
                 })
@@ -452,11 +449,8 @@ mod tests {
                     // Wait until the policy inspect agent receives the message and writes to
                     // inspect.
                     while let Some(event) = receptor.next().await {
-                        match event {
-                            MessageEvent::Status(Status::Received) => {
-                                return;
-                            }
-                            _ => {}
+                        if let MessageEvent::Status(Status::Received) = event {
+                            return;
                         }
                     }
                 })

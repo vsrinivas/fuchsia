@@ -267,7 +267,6 @@ mod tests {
     use super::*;
     use crate::service_context::ServiceContext;
     use futures::future;
-    use testing;
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_read_sensor() {

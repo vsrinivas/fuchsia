@@ -269,9 +269,9 @@ mod testing {
         }
     }
 
-    impl Into<SettingInfo> for UnknownInfo {
-        fn into(self) -> SettingInfo {
-            SettingInfo::Unknown(self)
+    impl From<UnknownInfo> for SettingInfo {
+        fn from(info: UnknownInfo) -> SettingInfo {
+            SettingInfo::Unknown(info)
         }
     }
 }
@@ -280,6 +280,7 @@ mod testing {
 mod tests {
     use super::*;
 
+    #[allow(clippy::bool_assert_comparison)]
     #[test]
     fn test_dependency_fulfillment() {
         let target_entity = Entity::Handler(SettingType::Unknown);
@@ -287,11 +288,11 @@ mod tests {
         let mut available_entities = HashSet::new();
 
         // Verify that an empty entity set does not fulfill dependency.
-        assert!(!dependency.is_fulfilled(&available_entities));
+        assert_eq!(dependency.is_fulfilled(&available_entities), false);
 
         // Verify an entity set without the target entity does not fulfill dependency.
         available_entities.insert(Entity::Handler(SettingType::FactoryReset));
-        assert!(!dependency.is_fulfilled(&available_entities));
+        assert_eq!(dependency.is_fulfilled(&available_entities), false);
 
         // Verify an entity set with target entity does fulfill dependency.
         available_entities.insert(target_entity);

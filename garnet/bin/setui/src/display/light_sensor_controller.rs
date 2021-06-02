@@ -317,14 +317,19 @@ mod tests {
         fasync::Timer::new(sleep_duration.after_now()).await;
 
         let next = receiver.try_next();
-        if let Ok(_) = next {
+        if next.is_ok() {
             panic!("No notifications should happen before value changes")
         };
 
         data_producer.lock().await.trigger();
 
         let data = receiver.next().await;
-        assert_eq!(data.unwrap().illuminance, 32.0);
+
+        // For verifying default that's directly converted from u32. Direct float comparison is ok.
+        #[allow(clippy::float_cmp)]
+        {
+            assert_eq!(data.unwrap().illuminance, 32.0);
+        }
 
         task.cancel().await;
         receiver.close();
@@ -411,7 +416,7 @@ mod tests {
         assert_eq!(notifier_receiver.next().await.unwrap(), SettingType::LightSensor);
 
         let next = notifier_receiver.try_next();
-        if let Ok(_) = next {
+        if next.is_ok() {
             panic!("Only one change should have happened")
         };
 
@@ -419,6 +424,6 @@ mod tests {
 
         let sleep_duration = zx::Duration::from_millis(5);
         fasync::Timer::new(sleep_duration.after_now()).await;
-        assert_eq!(light_sender.is_closed(), true);
+        assert!(light_sender.is_closed());
     }
 }
