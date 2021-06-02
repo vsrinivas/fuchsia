@@ -80,9 +80,8 @@ fuchsia-pkg://{{ '<strong>' }}<repository>{{ '</strong>' }}/<package-name>?hash=
 ## Package name {#package-name}
 
 A package name is a symbolic label that identifies a logical collection of
-software artifacts (files), independent of any particular variant or revision
-of those artifacts. The package name is used to locate package metadata within
-a repository. Package metadata must be signed by a role which is trusted by
+software artifacts (files). The package name is used to locate package metadata
+within a repository. Package metadata must be signed by a role which is trusted by
 the repository root.
 
 A package name consists of a sequence of up to 100 of the following latin-1
@@ -145,7 +144,7 @@ Must begin with the string `?hash=` followed by the [package hash](#package-hash
 
 #### Examples
 
-`fuchsia-pkg://google.com/chrome/stable{{ '<strong>' }}?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a#meta/webview.component{{ '</strong>' }}`
+`fuchsia-pkg://google.com/chrome{{ '<strong>' }}?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a#meta/webview.component{{ '</strong>' }}`
 
 ## Resource path {#resource-path}
 
@@ -157,9 +156,9 @@ characters not equal to `.`, `..`, or `/`. Must begin with single `#` character.
 This must be relative to the root of the package.
 
 Note: The scheme, [repository hostname](#repository-hostname),
-[package name](#package-name), [package variant](#package-variant), and [package
-hash](#package-hash) components are all defined to use a restricted subset of
-characters, none of which require encoding, unlike the resource path.
+[package name](#package-name), and [package hash](#package-hash) components are
+all defined to use a restricted subset of characters, none of which require
+encoding, unlike the resource path.
 
 URL components containing reserved characters are percent-encoded according to
 [RFC 3986]. This definition is compatible with the definition of [Fuchsia filesystem paths]
@@ -180,9 +179,9 @@ fuchsia-pkg://<repository>/<package-name>?hash=<package-hash>{{ '<strong>' }}#<r
 
 #### Examples
 
-* `fuchsia-pkg://fuchsia.com/fuchsia-shell-utils/stable{{ '<strong>' }}#bin/ls{{ '</strong>' }}`
-* `fuchsia-pkg://google.com/chrome/stable{{ '<strong>' }}#meta/webview.component{{ '</strong>' }}`
-* `fuchsia-pkg://google.com/chrome/stable{{ '<strong>' }}#lib/mylibrary.so{{ '</strong>' }}`
+* `fuchsia-pkg://fuchsia.com/fuchsia-shell-utils{{ '<strong>' }}#bin/ls{{ '</strong>' }}`
+* `fuchsia-pkg://google.com/chrome{{ '<strong>' }}#meta/webview.component{{ '</strong>' }}`
+* `fuchsia-pkg://google.com/chrome{{ '<strong>' }}#lib/mylibrary.so{{ '</strong>' }}`
 
 <!--xrefs-->
 [TUF Specification]: https://github.com/theupdateframework/specification/blob/HEAD/tuf-spec.md#4-document-formats
