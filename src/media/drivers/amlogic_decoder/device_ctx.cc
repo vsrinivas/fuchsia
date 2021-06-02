@@ -105,7 +105,9 @@ zx_status_t DeviceCtx::Bind() {
   SetThreadProfile(zx::unowned_thread(thrd_get_zx_handle(driver_->shared_fidl_thread())),
                    ThreadRole::kSharedFidl);
 
-  return DdkAdd("amlogic_video");
+  zx_status_t status = DdkAdd("amlogic_video");
+  zxlogf(INFO, "amlogic-video finished initialization with status %d", status);
+  return status;
 }
 
 void DeviceCtx::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
