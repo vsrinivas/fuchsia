@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
+use assembly_fvm::FilesystemAttributes;
 use serde::{Deserialize, Serialize};
 use std::io::Read;
 use std::path::PathBuf;
@@ -191,33 +192,23 @@ fn default_fvm_reserved_slices() -> u64 {
 
 /// A filesystem to add to the FVM.
 #[derive(Deserialize, Serialize)]
-pub struct FvmFilesystemEntry {
-    /// The type of the filesystem (typically minfs or blobfs).
-    /// TODO(fxbug.dev/76473): Make this an enum.
-    #[serde(rename = "type")]
-    pub filesystem_type: String,
+pub enum FvmFilesystemEntry {
+    /// A BlobFS filesystem.
+    BlobFS {
+        /// The filesystem attributes of blobfs.
+        #[serde(flatten)]
+        attributes: FilesystemAttributes,
+    },
 
-    /// The name of the filesystem (typically data or blobfs).
-    pub name: String,
+    /// A MinFS filesystem.
+    MinFS {
+        /// The path to a prebuilt minfs to add to the FVM.
+        path: PathBuf,
 
-    #[serde(default)]
-    pub minimum_inodes: u64,
-
-    #[serde(default)]
-    pub minimum_data_size: u64,
-
-    #[serde(default)]
-    pub maximum_bytes: u64,
-
-    /// The format BlobFS should store blobs.
-    /// This field is ignored for `filesystem_type`s other than blobfs, and can only be either
-    /// "padded" or "compact".
-    #[serde(default = "default_fvm_filesystem_layout_format")]
-    pub layout_format: String,
-}
-
-fn default_fvm_filesystem_layout_format() -> String {
-    "compact".to_string()
+        /// The filesystem attributes of minfs.
+        #[serde(flatten)]
+        attributes: FilesystemAttributes,
+    },
 }
 
 /// The information required to update and flash recovery.
@@ -316,19 +307,21 @@ mod tests {
                 "reserved_slices": 100,
                 "filesystems": [
                   {
-                    "type": "minfs",
-                    "name": "data",
-                    "minimum_inodes": 100,
-                    "minimum_data_size": 100,
-                    "maximum_bytes": 100
+                    "MinFS": {
+                      "path": "path/to/data.blk",
+                      "name": "data",
+                      "minimum_inodes": 100,
+                      "minimum_data_size": 100,
+                      "maximum_bytes": 100
+                    }
                   },
                   {
-                    "type": "blobfs",
-                    "name": "blobfs",
-                    "minimum_inodes": 100,
-                    "minimum_data_size": 100,
-                    "maximum_bytes": 100,
-                    "layout_format": "padded|compact"
+                    "BlobFS": {
+                      "name": "blob",
+                      "minimum_inodes": 100,
+                      "minimum_data_size": 100,
+                      "maximum_bytes": 100
+                    }
                   }
                 ]
               },

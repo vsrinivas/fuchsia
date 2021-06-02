@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
+
+if (is_host) {
+  rustc_library("fvm") {
+    name = "assembly_fvm"
+    version = "0.1.0"
+    with_unit_tests = true
+    deps = [
+      "//src/lib/assembly/util",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:serde",
+    ]
+    sources = [
+      "src/fvm.rs",
+      "src/lib.rs",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fvm_test($host_toolchain)" ]
+}

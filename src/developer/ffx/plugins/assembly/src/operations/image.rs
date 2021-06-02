@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::{from_reader, BoardConfig, ProductConfig, VBMetaConfig};
+use crate::config::{from_reader, BoardConfig, FvmFilesystemEntry, ProductConfig, VBMetaConfig};
 use crate::vfs::RealFilesystemProvider;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use assembly_blobfs::BlobFSBuilder;
+use assembly_fvm::{Filesystem, FvmBuilder};
 use assembly_update_package::UpdatePackageBuilder;
 use ffx_assembly_args::ImageArgs;
 use fuchsia_hash::Hash;
@@ -65,13 +66,16 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         base_package.as_ref(),
     )?;
 
-    let _blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
+    let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
         Some(construct_blobfs(&outdir, &gendir, &product, &base_package, &update_package)?)
     } else {
         info!("Skipping blobfs creation");
         None
     };
+
+    info!("Creating the fvm");
+    let _fvm_path: PathBuf = construct_fvm(&outdir, &board, blobfs_path.as_ref())?;
 
     Ok(())
 }
@@ -361,4 +365,38 @@ fn construct_blobfs(
     let blobfs_path = outdir.as_ref().join("blob.blk");
     blobfs_builder.build(gendir, &blobfs_path).context("Failed to build the blobfs")?;
     Ok(blobfs_path)
+}
+
+fn construct_fvm(
+    outdir: impl AsRef<Path>,
+    board: &BoardConfig,
+    blobfs_path: Option<impl AsRef<Path>>,
+) -> Result<PathBuf> {
+    // Create the builder.
+    let fvm_path = outdir.as_ref().join("fvm.blk");
+    let mut fvm_builder =
+        FvmBuilder::new(&fvm_path, board.fvm.slice_size, board.fvm.reserved_slices);
+
+    // Add all the filesystems.
+    for entry in &board.fvm.filesystems {
+        let (path, attributes) = match entry {
+            FvmFilesystemEntry::BlobFS { attributes } => {
+                let path = match &blobfs_path {
+                    Some(path) => path.as_ref(),
+                    None => {
+                        anyhow::bail!("BlobFS configuration exists, but BlobFS was not generated");
+                    }
+                };
+                (path.to_path_buf(), attributes.clone())
+            }
+            FvmFilesystemEntry::MinFS { path, attributes } => {
+                (path.to_path_buf(), attributes.clone())
+            }
+        };
+        fvm_builder.filesystem(Filesystem { path, attributes });
+    }
+
+    // Construct the FVM.
+    fvm_builder.build()?;
+    Ok(fvm_path)
 }

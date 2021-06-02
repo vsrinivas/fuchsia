@@ -579,8 +579,6 @@ generated_file(labels.board_config) {
     }
     fvm = {
       partition = "stub"
-      slice_size = 0
-      reserved_slices = 0
     }
   }
 
