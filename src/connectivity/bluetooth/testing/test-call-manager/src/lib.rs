@@ -13,7 +13,7 @@ use fidl_fuchsia_bluetooth_hfp::{
     NextCall, PeerHandlerRequest, PeerHandlerRequestStream,
     PeerHandlerWatchNetworkInformationResponder, PeerHandlerWatchNextCallResponder, SignalStrength,
 };
-use fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy};
+use fidl_fuchsia_bluetooth_hfp_test::{ConnectionBehavior, HfpTestMarker, HfpTestProxy};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 // TODO (fxbug.dev/72691): Replace usage with `log` macros.
@@ -1028,6 +1028,24 @@ impl TestCallManager {
     ///     `status`: The simulated result value for `number`.
     pub async fn set_dial_result(&self, number: Number, status: zx::Status) {
         let _ = self.inner.lock().await.manager.dialer.dial_result.insert(number, status);
+    }
+
+    /// Configure the connection behavior when the component receives new search results from
+    /// the bredr.Profile protocol.
+    ///
+    /// Arguments:
+    ///     `autoconnect`: determine whether the component should automatically attempt to
+    ///                    make a new RFCOMM connection.
+    pub async fn set_connection_behavior(&self, autoconnect: bool) -> Result<(), Error> {
+        let inner = self.inner.lock().await;
+        let proxy = inner.test_proxy.as_ref().ok_or_else(|| {
+            format_err!("Cannot set slc connection behavior on command without HfpTest proxy")
+        })?;
+        let () = proxy.set_connection_behavior(ConnectionBehavior {
+            autoconnect: Some(autoconnect),
+            ..ConnectionBehavior::EMPTY
+        })?;
+        Ok(())
     }
 
     /// Cleanup any HFP related objects.

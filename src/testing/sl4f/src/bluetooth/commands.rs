@@ -933,6 +933,11 @@ impl Facade for HfpFacade {
                 let result = self.get_state().await;
                 Ok(to_value(result)?)
             }
+            "SetConnectionBehavior" => {
+                let autoconnect = parse_arg!(args, as_bool, "autoconnect")?;
+                self.set_connection_behavior(autoconnect).await?;
+                Ok(to_value(())?)
+            }
             _ => bail!("Invalid Hfp FIDL method: {:?}", method),
         }
     }
