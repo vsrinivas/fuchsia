@@ -6,7 +6,7 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_hwinfo::{BoardMarker, DeviceMarker, ProductMarker},
+    fidl_fuchsia_hwinfo::{Architecture, BoardMarker, DeviceMarker, ProductMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
 };
@@ -28,6 +28,11 @@ async fn request_board_info() -> Result<(), Error> {
     let response = board_info_provider.get_info().await?;
     assert_eq!(response.name.unwrap().to_string(), "dummy_board_name".to_string());
     assert_eq!(response.revision.unwrap().to_string(), "dummy_board_revision".to_string());
+    match std::env::consts::ARCH {
+        "x86_64" => assert_eq!(response.cpu_architecture, Some(Architecture::X64)),
+        "aarch64" => assert_eq!(response.cpu_architecture, Some(Architecture::Arm64)),
+        _ => assert_eq!(response.cpu_architecture, None),
+    }
     Ok(())
 }
 

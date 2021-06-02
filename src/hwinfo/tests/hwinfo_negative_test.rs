@@ -28,6 +28,7 @@ async fn request_board_info() -> Result<(), Error> {
     let response = board_info_provider.get_info().await?;
     assert!(response.name.is_none());
     assert!(response.revision.is_none());
+    assert!(response.cpu_architecture.is_none());
     Ok(())
 }
 

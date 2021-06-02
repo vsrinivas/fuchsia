@@ -7,6 +7,11 @@ using fuchsia.intl;
 
 const uint8 MAX_VALUE_SIZE = 255;
 
+flexible enum Architecture {
+    X64 = 1;
+    ARM64 = 2;
+};
+
 /// Collection of properties that is unique per device.
 table DeviceInfo {
     1: string:MAX_VALUE_SIZE serial_number;
@@ -40,6 +45,7 @@ table ProductInfo {
 table BoardInfo {
     1: string name;
     2: string revision;
+    3: Architecture cpu_architecture;
 };
 
 /// Device provides an interface to retrieve device-specific properties.

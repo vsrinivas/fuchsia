@@ -86,14 +86,36 @@ impl Into<fidl_fuchsia_hwinfo::DeviceInfo> for DeviceInfo {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum Architecture {
+    X64,
+    ARM64,
+}
+
+impl Into<fidl_fuchsia_hwinfo::Architecture> for Architecture {
+    fn into(self) -> fidl_fuchsia_hwinfo::Architecture {
+        match self {
+            Architecture::X64 => fidl_fuchsia_hwinfo::Architecture::X64,
+            Architecture::ARM64 => fidl_fuchsia_hwinfo::Architecture::Arm64,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BoardInfo {
     pub name: Option<String>,
     pub revision: Option<String>,
+    pub cpu_architecture: Option<Architecture>,
 }
 
 impl BoardInfo {
     fn read_config(path: &str) -> Result<Self, Error> {
-        let board_info: BoardInfo = serde_json::from_reader(io::BufReader::new(File::open(path)?))?;
+        let mut board_info: BoardInfo =
+            serde_json::from_reader(io::BufReader::new(File::open(path)?))?;
+        match std::env::consts::ARCH {
+            "x86_64" => board_info.cpu_architecture = Some(Architecture::X64),
+            "aarch64" => board_info.cpu_architecture = Some(Architecture::ARM64),
+            _ => board_info.cpu_architecture = None,
+        }
         Ok(board_info)
     }
 
@@ -102,7 +124,7 @@ impl BoardInfo {
             fx_log_err!("Failed to read board_config.json due to {}", err);
             BoardInfo::read_config(DEFAULT_BOARD_CONFIG_JSON_FILE).unwrap_or_else(|err| {
                 fx_log_err!("Failed to read default_board_config.json due to {}", err);
-                BoardInfo { name: None, revision: None }
+                BoardInfo { name: None, revision: None, cpu_architecture: None }
             })
         });
         board_info
@@ -114,6 +136,10 @@ impl Into<fidl_fuchsia_hwinfo::BoardInfo> for BoardInfo {
         fidl_fuchsia_hwinfo::BoardInfo {
             name: self.name,
             revision: self.revision,
+            cpu_architecture: match self.cpu_architecture {
+                Some(val) => Some(Architecture::into(val)),
+                _ => None,
+            },
             ..fidl_fuchsia_hwinfo::BoardInfo::EMPTY
         }
     }
