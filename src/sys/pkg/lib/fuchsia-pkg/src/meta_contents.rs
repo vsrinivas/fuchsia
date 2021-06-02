@@ -2,11 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::MetaContentsError;
-use fuchsia_merkle::Hash;
-use std::collections::{btree_map, BTreeMap};
-use std::io::{self, BufRead};
-use std::str::FromStr;
+use {
+    crate::errors::MetaContentsError,
+    fuchsia_merkle::Hash,
+    std::{
+        collections::{btree_map, BTreeMap},
+        io,
+        str::FromStr,
+    },
+};
 
 /// A `MetaContents` represents the "meta/contents" file of a Fuchsia archive
 /// file of a Fuchsia package.
@@ -108,26 +112,30 @@ impl MetaContents {
     /// };
     /// assert_eq!(meta_contents.contents(), &expected_contents);
     /// ```
-    pub fn deserialize(reader: impl io::Read) -> Result<Self, MetaContentsError> {
-        let reader = io::BufReader::new(reader);
+    pub fn deserialize(mut reader: impl io::BufRead) -> Result<Self, MetaContentsError> {
         let mut contents = BTreeMap::new();
-        for line in reader.lines() {
-            let line = line?;
-            let i = line
-                .rfind('=')
-                .ok_or_else(|| MetaContentsError::EntryHasNoEqualsSign { entry: line.clone() })?;
+        let mut buf = String::new();
+        while reader.read_line(&mut buf)? > 0 {
+            let line = buf.trim_end();
+            let i = line.rfind('=').ok_or_else(|| MetaContentsError::EntryHasNoEqualsSign {
+                entry: line.to_string(),
+            })?;
 
             let hash = Hash::from_str(&line[i + 1..])?;
             let path = line[..i].to_string();
 
             match contents.entry(path) {
-                btree_map::Entry::Vacant(entry) => entry.insert(hash),
+                btree_map::Entry::Vacant(entry) => {
+                    entry.insert(hash);
+                }
                 btree_map::Entry::Occupied(entry) => {
                     return Err(MetaContentsError::DuplicateResourcePath {
                         path: entry.key().clone(),
                     });
                 }
-            };
+            }
+
+            buf.clear();
         }
         Ok(MetaContents { contents })
     }

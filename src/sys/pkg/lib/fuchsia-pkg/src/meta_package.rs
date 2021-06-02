@@ -68,7 +68,7 @@ impl MetaPackage {
     ///         "package-name",
     ///         "package-variant").unwrap());
     /// ```
-    pub fn deserialize(reader: impl io::Read) -> Result<Self, MetaPackageError> {
+    pub fn deserialize(reader: impl io::BufRead) -> Result<Self, MetaPackageError> {
         MetaPackage::from_v0(serde_json::from_reader(reader)?)
     }
 

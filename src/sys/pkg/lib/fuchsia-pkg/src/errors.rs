@@ -84,6 +84,15 @@ pub enum CreationManifestError {
 
     #[error("package far content must be in 'meta/' directory: {}", path)]
     FarContentNotInMetaDirectory { path: String },
+
+    #[error("entry has no '=': '{}'", entry)]
+    EntryHasNoEqualsSign { entry: String },
+
+    #[error("duplicate resource path: '{}'", path)]
+    DuplicateResourcePath { path: String },
+
+    #[error("io error: '{}'", _0)]
+    IoError(#[from] io::Error),
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]

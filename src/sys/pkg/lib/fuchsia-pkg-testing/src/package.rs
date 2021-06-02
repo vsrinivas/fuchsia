@@ -86,7 +86,8 @@ impl Package {
     /// Builds and returns the package located at the given path in the current namespace.
     pub async fn from_dir(root: impl AsRef<Path>) -> Result<Self, Error> {
         let root = root.as_ref();
-        let meta_package = MetaPackage::deserialize(File::open(root.join("meta/package"))?)?;
+        let file = File::open(root.join("meta/package"))?;
+        let meta_package = MetaPackage::deserialize(io::BufReader::new(file))?;
         let mut pkg = PackageBuilder::new(meta_package.name());
 
         fn is_generated_file(path: &Path) -> bool {
