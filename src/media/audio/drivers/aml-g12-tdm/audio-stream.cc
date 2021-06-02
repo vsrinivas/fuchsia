@@ -104,6 +104,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   }
 
   ZX_ASSERT(metadata_.codecs.number_of_codecs <= 8);
+  codecs_.reserve(metadata_.codecs.number_of_codecs);
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     codecs_.push_back(SimpleCodecClient());
     char fragment_name[32] = {};

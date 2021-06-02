@@ -44,16 +44,18 @@ struct TestCodec : public SimpleCodecServer {
     return {.unique_id = kTestId, .manufacturer = kTestManufacturer, .product_name = kTestProduct};
   }
   zx_status_t Stop() override { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t Start() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx_status_t SetDaiFormat(const DaiFormat& format) override { return ZX_ERR_NOT_SUPPORTED; }
   GainFormat GetGainFormat() override { return {}; }
-  GainState GetGainState() override { return {}; }
-  void SetGainState(GainState state) override {}
+  GainState GetGainState() override { return gain_state; }
+  void SetGainState(GainState state) override { gain_state = state; }
   codec_protocol_t proto_ = {};
   inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
+
+  GainState gain_state = {};
 };
 
 TEST_F(SimpleCodecTest, ChannelConnection) {
@@ -61,7 +63,7 @@ TEST_F(SimpleCodecTest, ChannelConnection) {
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
+  ASSERT_OK(client.SetProtocol(&codec_proto));
 
   auto info = client.GetInfo();
   ASSERT_TRUE(info.is_ok());
@@ -79,7 +81,7 @@ TEST_F(SimpleCodecTest, GainState) {
   ASSERT_NOT_NULL(codec);
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
+  ASSERT_OK(client.SetProtocol(&codec_proto));
 
   // Defaults to false/0db.
   {
@@ -176,23 +178,186 @@ TEST_F(SimpleCodecTest, MultipleClients) {
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
-  audio_fidl::CodecSyncPtr codec_clients[3];
+  SimpleCodecClient codec_clients[3];
   for (auto& codec_client : codec_clients) {
-    zx::channel channel_remote, channel_local;
-    ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-    ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-    codec_client.Bind(std::move(channel_local));
+    ASSERT_OK(codec_client.SetProtocol(codec_proto2));
   }
 
-  audio_fidl::CodecInfo info;
-  ASSERT_OK(codec_clients[0]->GetInfo(&info));
-  EXPECT_EQ(info.unique_id, std::string(kTestId));
+  {
+    auto state = codec_clients[0].GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, false);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 0.f);
+  }
 
-  ASSERT_OK(codec_clients[1]->GetInfo(&info));
-  EXPECT_EQ(info.unique_id, std::string(kTestId));
+  codec_clients[1].SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
 
-  ASSERT_OK(codec_clients[2]->GetInfo(&info));
-  EXPECT_EQ(info.unique_id, std::string(kTestId));
+  // Wait for client 0 to be notified of the new gain state.
+  for (;;) {
+    auto state = codec_clients[0].GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    if (state->muted) {
+      break;
+    }
+  }
+
+  {
+    auto state = codec_clients[0].GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 1.23f);
+  }
+
+  codec_clients[0].SetGainState({.gain = 5.67f, .muted = true, .agc_enabled = true});
+
+  for (;;) {
+    auto state = codec_clients[2].GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    if (state->agc_enabled) {
+      break;
+    }
+  }
+
+  {
+    auto state = codec_clients[2].GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, true);
+    EXPECT_EQ(state->gain, 5.67f);
+  }
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
+TEST_F(SimpleCodecTest, MoveClient) {
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  SimpleCodecClient codec_client1;
+  ASSERT_OK(codec_client1.SetProtocol(codec_proto2));
+
+  codec_client1.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
+  EXPECT_OK(codec_client1.Start());
+
+  SimpleCodecClient codec_client2(std::move(codec_client1));
+
+  EXPECT_NOT_OK(codec_client1.Start());  // The client was unbound, this should return an error.
+
+  {
+    auto state = codec_client2.GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 1.23f);
+  }
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
+TEST_F(SimpleCodecTest, CloseChannel) {
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  SimpleCodecClient codec_client;
+  ASSERT_OK(codec_client.SetProtocol(codec_proto2));
+
+  codec_client.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
+
+  {
+    auto state = codec_client.GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 1.23f);
+  }
+
+  EXPECT_OK(codec_client.Start());
+
+  // TestCodec doesn't support this, so calling it should cause the server to unbind.
+  EXPECT_NOT_OK(codec_client.Stop());
+
+  // This should fail now that our channel has been closed.
+  EXPECT_NOT_OK(codec_client.Start());
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
+TEST_F(SimpleCodecTest, RebindClient) {
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  SimpleCodecClient codec_client;
+  ASSERT_OK(codec_client.SetProtocol(codec_proto2));
+
+  codec_client.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
+
+  {
+    auto state = codec_client.GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 1.23f);
+  }
+
+  // Do a synchronous FIDL call to flush messages on the channel and force the server to update the
+  // gain state.
+  EXPECT_OK(codec_client.Start());
+
+  ASSERT_OK(codec_client.SetProtocol(codec_proto2));
+
+  {
+    auto state = codec_client.GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 1.23f);
+  }
+
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(ddk_.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
+}
+
+TEST_F(SimpleCodecTest, MoveClientWithDispatcherProvided) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  ASSERT_OK(loop.StartThread("SimpleCodecClient test thread"));
+
+  auto codec = SimpleCodecServer::Create<TestCodec>();
+  ASSERT_NOT_NULL(codec);
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  SimpleCodecClient codec_client1(loop.dispatcher());
+  ASSERT_OK(codec_client1.SetProtocol(codec_proto2));
+
+  codec_client1.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
+  EXPECT_OK(codec_client1.Start());
+
+  SimpleCodecClient codec_client2(std::move(codec_client1));
+
+  EXPECT_NOT_OK(codec_client1.Start());  // The client was unbound, this should return an error.
+
+  {
+    auto state = codec_client2.GetGainState();
+    ASSERT_TRUE(state.is_ok());
+    EXPECT_EQ(state->muted, true);
+    EXPECT_EQ(state->agc_enabled, false);
+    EXPECT_EQ(state->gain, 1.23f);
+  }
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(ddk_.Ok());

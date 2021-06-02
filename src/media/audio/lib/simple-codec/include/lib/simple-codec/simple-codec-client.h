@@ -6,13 +6,22 @@
 #define SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_CLIENT_H_
 
 #include <fuchsia/hardware/audio/cpp/banjo.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/client.h>
 #include <lib/simple-codec/simple-codec-types.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
+#include <threads.h>
 
 #include <string>
+#include <thread>
 #include <vector>
+
+#include <fbl/mutex.h>
 
 namespace audio {
 
@@ -22,8 +31,20 @@ namespace audio {
 // SetTimeout() method). This class is thread hostile.
 class SimpleCodecClient {
  public:
+  // If dispatcher is not specified, this object will start its own dispatcher thread for handling
+  // async calls. Otherwise, dispatcher must remain valid while this object exists, and will be
+  // passed to SimpleCodecClients that are move constructed from this one.
+  explicit SimpleCodecClient(async_dispatcher_t* dispatcher = nullptr)
+      : loop_(&kAsyncLoopConfigNeverAttachToThread),
+        created_with_dispatcher_(dispatcher != nullptr),
+        dispatcher_(created_with_dispatcher_ ? dispatcher : loop_.dispatcher()) {}
+  ~SimpleCodecClient();
+
+  SimpleCodecClient(SimpleCodecClient&& other) noexcept;
+
   // Convenience methods not part of the audio codec protocol.
-  // Initialize the client using the DDK codec protocol object.
+  // Initialize the client using the DDK codec protocol object. Other methods must not be called
+  // until after SetProtocol() has been called and returned ZX_OK.
   zx_status_t SetProtocol(ddk::CodecProtocolClient proto_client);
 
   // Sync C++ methods to communicate with codecs, for descriptions see
@@ -33,8 +54,6 @@ class SimpleCodecClient {
   //   //sdk/fidl/fuchsia.hardware.audio/dai_format.fidl).
   // - GetDaiFormats returns one DaiSupportedFormats instead of a vector (still allows supported
   //   formats with multiple frame rates, number of channels, etc. just not overly complex ones).
-  // - No direct calls to WatchGainState. GetGainState queries the last gain set, the gain is to be
-  //   changed only via SetGainState.
   // - No direct calls to WatchPlugState, the library only expects "hardwired" codecs.
   zx_status_t Reset();
   zx::status<Info> GetInfo();
@@ -65,9 +84,20 @@ class SimpleCodecClient {
   };
 
   zx::unowned_channel Connect();
+  void UpdateGainState(
+      fidl::WireResponse<::fuchsia_hardware_audio::Codec::WatchGainState>* response);
 
-  ::fuchsia::hardware::audio::CodecSyncPtr codec_;
-  GainState gain_state_;
+  void Unbind();
+
+  async::Loop loop_;
+  const bool created_with_dispatcher_;
+  async_dispatcher_t* const dispatcher_;
+  bool thread_started_ = false;
+
+  fidl::Client<fuchsia_hardware_audio::Codec> codec_;
+
+  fbl::Mutex gain_state_lock_;
+  zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_BAD_STATE);
 };
 
 }  // namespace audio

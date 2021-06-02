@@ -20,6 +20,7 @@ zx_library("simple-codec") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.audio",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",

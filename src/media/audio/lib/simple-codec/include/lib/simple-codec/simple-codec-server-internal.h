@@ -9,6 +9,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
+#include <optional>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -45,7 +46,8 @@ class SimpleCodecServerInternal {
   void SetDaiFormat(::fuchsia::hardware::audio::DaiFormat format,
                     Codec::SetDaiFormatCallback callback);
   void GetGainFormat(Codec::GetGainFormatCallback callback);
-  void WatchGainState(Codec::WatchGainStateCallback callback);
+  void WatchGainState(Codec::WatchGainStateCallback callback,
+                      SimpleCodecServerInstance<T>* instance);
   void SetGainState(::fuchsia::hardware::audio::GainState state);
   void GetPlugDetectCapabilities(Codec::GetPlugDetectCapabilitiesCallback callback);
   void WatchPlugState(Codec::WatchPlugStateCallback callback);
@@ -55,6 +57,8 @@ class SimpleCodecServerInternal {
   fbl::Mutex instances_lock_;
   fbl::DoublyLinkedList<std::unique_ptr<SimpleCodecServerInstance<SimpleCodecServer>>> instances_
       TA_GUARDED(instances_lock_);
+  bool load_gain_state_first_time_ = true;
+  GainState gain_state_ = {};
 };
 
 template <class T>
@@ -72,6 +76,7 @@ class SimpleCodecServerInstance
   friend class SimpleCodecServerInternal<T>;
 
   void OnUnbound() { parent_->OnUnbound(this); }
+  void GainStateUpdated(::fuchsia::hardware::audio::GainState gain_state);
 
   void Reset(ResetCallback callback) override { parent_->Reset(std::move(callback), this); }
   void Stop(StopCallback callback) override { parent_->Stop(std::move(callback), this); }
@@ -93,7 +98,9 @@ class SimpleCodecServerInstance
   void GetGainFormat(GetGainFormatCallback callback) override {
     parent_->GetGainFormat(std::move(callback));
   }
-  void WatchGainState(WatchGainStateCallback callback) override;
+  void WatchGainState(WatchGainStateCallback callback) override {
+    parent_->WatchGainState(std::move(callback), this);
+  }
   void SetGainState(::fuchsia::hardware::audio::GainState state) override {
     parent_->SetGainState(std::move(state));
   }
@@ -104,8 +111,9 @@ class SimpleCodecServerInstance
 
   SimpleCodecServerInternal<T>* parent_;
   fidl::Binding<::fuchsia::hardware::audio::Codec> binding_;
-  bool watch_gain_state_first_time_ = true;
   bool watch_plug_state_first_time_ = true;
+  bool gain_state_updated_ = true;  // Return the current gain state on the first call.
+  std::optional<WatchGainStateCallback> gain_state_callback_;
 };
 
 }  // namespace audio
