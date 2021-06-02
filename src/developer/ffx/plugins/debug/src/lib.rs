@@ -5,6 +5,7 @@
 use {
     anyhow::{anyhow, Error, Result},
     async_net::unix::UnixListener,
+    ffx_config::sdk::SdkVersion,
     futures_util::future::FutureExt,
     futures_util::io::{AsyncReadExt, AsyncWriteExt},
     std::fs,
@@ -17,7 +18,7 @@ use {
 pub async fn debug(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_plugin_args::DebugCommand,
-) -> Result<(), Error> {
+) -> Result<()> {
     let result = execute_debug(debugger_proxy, &cmd).await;
     // Removes the Unix socket file to be able to connect again.
     let _ = fs::remove_file(&cmd.socket_location);
@@ -29,7 +30,59 @@ pub async fn execute_debug(
     cmd: &ffx_debug_plugin_args::DebugCommand,
 ) -> Result<(), Error> {
     let sdk = ffx_config::get_sdk().await?;
-    let zxdb_path = sdk.get_host_tool("zxdb")?;
+
+    let mut arguments: Vec<String> = Vec::new();
+    let mut needs_debug_agent = true;
+
+    let command_path = match &cmd.sub_command {
+        Some(ffx_debug_plugin_args::DebugSubCommand::Fidlcat(options)) => {
+            if let Some(from) = &options.from {
+                if from != "device" {
+                    needs_debug_agent = false;
+                    arguments.push("--from".to_string());
+                    arguments.push(from.to_string());
+                }
+            }
+
+            if needs_debug_agent {
+                // Processes to monitor.
+                for remote_name in options.remote_name.iter() {
+                    arguments.push("--remote-name".to_string());
+                    arguments.push(remote_name.to_string());
+                }
+            }
+
+            if let SdkVersion::InTree = sdk.get_version() {
+                // When ffx is used in tree, uses the JSON IR files listed in all_fidl_json.txt.
+                let ir_file =
+                    format!("@{}/all_fidl_json.txt", sdk.get_path_prefix().to_str().unwrap());
+                arguments.push("--fidl-ir-path".to_string());
+                arguments.push(ir_file);
+            }
+            sdk.get_host_tool("fidlcat")?
+        }
+        Some(ffx_debug_plugin_args::DebugSubCommand::Zxdb(_options)) => {
+            sdk.get_host_tool("zxdb")?
+        }
+        None => {
+            // If no sub command is specified, launches zxdb.
+            sdk.get_host_tool("zxdb")?
+        }
+    };
+
+    if !needs_debug_agent {
+        // Start fidlcat locally.
+        let child = std::process::Command::new(&command_path).args(&arguments).spawn();
+        if let Err(error) = child {
+            return Err(anyhow!("Can't launch {:?}: {:?}", command_path, error));
+        }
+        let mut child = child.unwrap();
+
+        // When the debug agent is not needed, the process (fidlcat) doesn't communicate with the
+        // device. In that case, just wait for the process to terminate.
+        let _ = child.wait();
+        return Ok(());
+    }
 
     // Connect to the debug_agent on the device.
     let (sock_server, sock_client) =
@@ -43,18 +96,21 @@ pub async fn execute_debug(
     // Create our Unix socket.
     let listener = UnixListener::bind(&cmd.socket_location)?;
 
-    // Start the local debugger. It will connect to the Unix socket.
-    let child = std::process::Command::new(&zxdb_path)
-        .args(&[
-            "--unix-connect",
-            &cmd.socket_location,
-            "--symbol-server",
-            "gs://fuchsia-artifacts-release/debug",
-            "--quit-agent-on-exit",
-        ])
-        .spawn();
+    // Connect to the Unix socket.
+    arguments.push("--unix-connect".to_string());
+    arguments.push(cmd.socket_location.to_string());
+
+    // Use the symbol server.
+    arguments.push("--symbol-server".to_string());
+    arguments.push("gs://fuchsia-artifacts-release/debug".to_string());
+
+    // Terminate the debug agent when exiting.
+    arguments.push("--quit-agent-on-exit".to_string());
+
+    // Start fidlcat or zxdb locally.
+    let child = std::process::Command::new(&command_path).args(&arguments).spawn();
     if let Err(error) = child {
-        return Err(anyhow!("Can't launch {:?}: {:?}", zxdb_path, error));
+        return Err(anyhow!("Can't launch {:?}: {:?}", command_path, error));
     }
 
     // Wait for a connection on the unix socket (connection from zxdb).

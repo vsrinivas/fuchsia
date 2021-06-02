@@ -244,6 +244,10 @@ impl Sdk {
         )
     }
 
+    pub fn get_path_prefix(&self) -> &PathBuf {
+        &self.path_prefix
+    }
+
     pub fn get_version(&self) -> &SdkVersion {
         &self.version
     }
