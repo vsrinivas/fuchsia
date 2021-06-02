@@ -292,6 +292,29 @@ Channel endpoint:
     `enqueued_as_request`.  This will be empty if the endpoint has an
     associated MsgQueue.
 
+## A note on terminology: "caller" and "callee"
+
+We are using the terms "caller" and "callee" to emphasise that these
+roles are relative to a particular interaction.  The "caller" is the
+process that sends a request and may later receive a reply.  The
+"callee" is the process that receives a request and may send a reply.
+We can't use the terms "sender" and "receiver" for these two roles
+because the caller and callee may both send and receive messages.
+
+An alternative pair of terms would be "client" and "server".  We are
+avoiding those terms, for two reasons:
+
+*   Firstly, a process that is a server in one interaction can be the
+    client in another interaction.
+*   Secondly, a server process may send callback messages to its
+    clients (e.g. send-only request messages).  In such cases, we
+    choose to say that the server remains a server but acts as a
+    caller when sending a message to its clients.
+
+The terms "caller" and "callee" are commonly used in the context of
+programming languages and compilers where it is clear that a function
+may be a callee in one case and a caller in another case.
+
 ## Acknowledgements
 
 The concept of MBOs, with the MBO acting as both a reusable message
