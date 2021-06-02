@@ -70,6 +70,8 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
 
   void GetInfo(GetInfoCallback callback) override { puppet_->GetInfo(std::move(callback)); }
 
+  void StopInterestListener(StopInterestListenerCallback callback) override { callback(); }
+
   void EmitLog(fuchsia::validate::logs::RecordSpec spec, EmitLogCallback callback) override {
     puppet_->EmitLog(std::move(spec), std::move(callback));
   }

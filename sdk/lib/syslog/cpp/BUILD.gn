@@ -33,7 +33,7 @@ sdk_source_set("cpp") {
     "macros.h",
   ]
 
-  public_deps = [ "//sdk/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit-promise" ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -62,7 +62,7 @@ sdk_source_set("cpp-macros") {
     "macros.h",
   ]
 
-  public_deps = [ "//sdk/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit-promise" ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -144,6 +144,10 @@ sdk_static_library("backend_fuchsia_lib_rust") {
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
@@ -176,6 +180,10 @@ sdk_source_set("backend_fuchsia_lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/syslog",
   ]
 
@@ -205,9 +213,13 @@ sdk_source_set("backend_fuchsia_compat") {
     "//sdk/fidl/fuchsia.diagnostics.stream",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//sdk/lib/fdio",
-    "//sdk/lib/fit",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 
   data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]

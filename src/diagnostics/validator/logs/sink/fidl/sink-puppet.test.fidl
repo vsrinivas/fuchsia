@@ -46,4 +46,7 @@ protocol LogSinkPuppet {
 
     /// Logs a printf record.
     EmitPrintfLog(PrintfRecordSpec spec) -> ();
+
+    /// Disables the interest listener
+    StopInterestListener() -> ();
 };

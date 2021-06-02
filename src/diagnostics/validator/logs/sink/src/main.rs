@@ -5,6 +5,8 @@
 use anyhow::Error;
 use argh::FromArgs;
 use diagnostics_log_encoding::{parse::parse_record, Argument, Record, Severity, Value};
+use fidl::endpoints::RequestStream;
+use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::{MAX_ARGS, MAX_ARG_NAME_LENGTH};
 use fidl_fuchsia_logger::{LogSinkRequest, LogSinkRequestStream, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
@@ -13,6 +15,7 @@ use fidl_fuchsia_validate_logs::{
 };
 use fuchsia_async::{Socket, Task};
 use fuchsia_component::server::ServiceFs;
+use fuchsia_component::server::ServiceObj;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use proptest::{
@@ -39,13 +42,20 @@ struct Opt {
     /// true if you want to test structured printf
     #[argh(switch)]
     test_printf: bool,
+    /// true if you want to test interest listeners
+    #[argh(switch)]
+    test_interest_listener: bool,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
-    let Opt { puppet_url, new_file_line_rules, test_printf } = argh::from_env();
-    Puppet::launch(&puppet_url, new_file_line_rules, test_printf).await?.test().await
+    let Opt { puppet_url, new_file_line_rules, test_printf, test_interest_listener } =
+        argh::from_env();
+    Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_interest_listener)
+        .await?
+        .test()
+        .await
 }
 
 struct Puppet {
@@ -63,6 +73,7 @@ impl Puppet {
         puppet_url: &str,
         new_file_line_rules: bool,
         has_structured_printf: bool,
+        has_interest_listener: bool,
     ) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(|s: LogSinkRequestStream| s);
@@ -88,10 +99,8 @@ impl Puppet {
 
         info!("Waiting for LogSink connection.");
         let mut stream = fs.next().await.unwrap();
-
         info!("Requesting info from the puppet.");
         let info = proxy.get_info().await?;
-
         info!("Waiting for LogSink.Connect call.");
         if let LogSinkRequest::ConnectStructured { socket, control_handle: _ } =
             stream.next().await.unwrap()?
@@ -103,7 +112,7 @@ impl Puppet {
             );
 
             info!("Ensuring we received the init message.");
-            let puppet = Self {
+            let mut puppet = Self {
                 socket: Socket::from_socket(socket)?,
                 proxy,
                 info,
@@ -120,7 +129,11 @@ impl Puppet {
                     .build(puppet.start_time..zx::Time::get_monotonic())
             );
             if has_structured_printf {
-                assert_printf_record(&puppet, new_file_line_rules).await?;
+                assert_printf_record(&mut puppet, new_file_line_rules).await?;
+            }
+            if has_interest_listener {
+                assert_interest_listener(&mut puppet, new_file_line_rules, &mut stream, &mut fs)
+                    .await?;
             }
             Ok(puppet)
         } else {
@@ -132,6 +145,17 @@ impl Puppet {
         let mut buf: Vec<u8> = vec![];
         let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
         TestRecord::parse(&buf[0..bytes_read], new_file_line_rules)
+    }
+
+    // For the CPP puppet it's necessary to strip out the TID from the comparison
+    // as interest events happen outside the main thread due to HLCPP.
+    async fn read_record_no_tid(&self, expected_tid: u64) -> Result<TestRecord, Error> {
+        let mut buf: Vec<u8> = vec![];
+        let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
+        let mut record = TestRecord::parse(&buf[0..bytes_read], self.new_file_line_rules)?;
+        record.arguments.remove("tid");
+        record.arguments.insert("tid".to_string(), Value::UnsignedInt(expected_tid));
+        return Ok(record);
     }
 
     async fn test(&self) -> Result<(), Error> {
@@ -199,7 +223,71 @@ impl Puppet {
     }
 }
 
-async fn assert_printf_record(puppet: &Puppet, new_file_line_rules: bool) -> Result<(), Error> {
+async fn assert_interest_listener(
+    puppet: &mut Puppet,
+    new_file_line_rules: bool,
+    stream: &mut LogSinkRequestStream,
+    fs: &mut ServiceFs<ServiceObj<'_, LogSinkRequestStream>>,
+) -> Result<(), Error> {
+    macro_rules! send_log_with_severity {
+        ($severity:ident) => {
+            let mut record = RecordSpec {
+                file: "test_file.cc".to_string(),
+                line: 9001,
+                record: Record {
+                    arguments: vec![Argument {
+                        name: "message".to_string(),
+                        value: diagnostics_log_encoding::Value::Text(
+                            stringify!($severity).to_string(),
+                        ),
+                    }],
+                    severity: Severity::$severity,
+                    timestamp: 0,
+                },
+            };
+            puppet.proxy.emit_log(&mut record).await?;
+        };
+    }
+    let interest = Interest { min_severity: Some(Severity::Warn), ..Interest::EMPTY };
+    let handle = stream.control_handle();
+    handle.send_on_register_interest(interest)?;
+    info!("Waiting for interest....");
+    assert_eq!(
+        puppet.read_record_no_tid(puppet.info.tid).await?,
+        RecordAssertion::new(&puppet.info, Severity::Warn, new_file_line_rules)
+            .add_string("message", "Changed severity")
+            .build(puppet.start_time..zx::Time::get_monotonic())
+    );
+
+    send_log_with_severity!(Debug);
+    send_log_with_severity!(Info);
+    send_log_with_severity!(Warn);
+    send_log_with_severity!(Error);
+    assert_eq!(
+        puppet.read_record_no_tid(puppet.info.tid).await?,
+        RecordAssertion::new(&puppet.info, Severity::Warn, new_file_line_rules)
+            .add_string("message", "Warn")
+            .build(puppet.start_time..zx::Time::get_monotonic())
+    );
+    assert_eq!(
+        puppet.read_record_no_tid(puppet.info.tid).await?,
+        RecordAssertion::new(&puppet.info, Severity::Error, new_file_line_rules)
+            .add_string("message", "Error")
+            .build(puppet.start_time..zx::Time::get_monotonic())
+    );
+    info!("Got interest");
+    puppet.proxy.stop_interest_listener().await.unwrap();
+    // We're restarting the logging system in the child process so we should expect a re-connection.
+    *stream = fs.next().await.unwrap();
+    if let LogSinkRequest::ConnectStructured { socket, control_handle: _ } =
+        stream.next().await.unwrap()?
+    {
+        puppet.socket = Socket::from_socket(socket)?;
+    }
+    Ok(())
+}
+
+async fn assert_printf_record(puppet: &mut Puppet, new_file_line_rules: bool) -> Result<(), Error> {
     let args = vec![
         PrintfValue::IntegerValue(5),
         PrintfValue::StringValue("test".to_string()),

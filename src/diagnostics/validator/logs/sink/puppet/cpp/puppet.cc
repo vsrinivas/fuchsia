@@ -10,6 +10,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "lib/syslog/cpp/log_level.h"
+#include "lib/syslog/cpp/log_settings.h"
+#include "lib/syslog/cpp/logging_backend.h"
 
 namespace syslog_backend {
 void BeginRecordPrintf(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
@@ -27,6 +29,23 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
  public:
   explicit Puppet(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {
     context_->outgoing()->AddPublicService(sink_bindings_.GetHandler(this));
+    syslog_backend::SetInterestChangedListener(
+        +[](void* context, syslog::LogSeverity severity) {
+          syslog_backend::LogBuffer buffer;
+          syslog_backend::BeginRecord(&buffer, severity, __FILE__, __LINE__, "Changed severity",
+                                      nullptr);
+          syslog_backend::EndRecord(&buffer);
+          syslog_backend::FlushRecord(&buffer);
+        },
+        nullptr);
+  }
+
+  void StopInterestListener(StopInterestListenerCallback callback) override {
+    syslog::LogSettings settings;
+    settings.disable_interest_listener = true;
+    settings.min_log_level = syslog::LOG_TRACE;
+    syslog_backend::SetLogSettings(settings);
+    callback();
   }
 
   void GetInfo(GetInfoCallback callback) override {

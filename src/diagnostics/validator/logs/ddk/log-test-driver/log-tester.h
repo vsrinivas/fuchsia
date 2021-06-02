@@ -31,6 +31,8 @@ class LogTester : public LogTesterType, public ddk::EmptyProtocol<ZX_PROTOCOL_VI
   void EmitLog(EmitLogRequestView request, EmitLogCompleter::Sync& completer) override;
   void EmitPrintfLog(EmitPrintfLogRequestView request,
                      EmitPrintfLogCompleter::Sync& completer) override;
+  void StopInterestListener(StopInterestListenerRequestView request,
+                            StopInterestListenerCompleter::Sync& completer) override;
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

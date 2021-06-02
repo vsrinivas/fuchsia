@@ -52,6 +52,11 @@ void LogTester::EmitPrintfLog(EmitPrintfLogRequestView request,
   completer.Reply();
 }
 
+void LogTester::StopInterestListener(StopInterestListenerRequestView request,
+                                     StopInterestListenerCompleter::Sync& completer) {
+  completer.Reply();
+}
+
 zx_koid_t GetKoid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
   zx_status_t status =

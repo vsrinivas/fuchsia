@@ -28,6 +28,10 @@ async fn main() {
 async fn run_puppet(mut requests: LogSinkPuppetRequestStream) {
     while let Some(next) = requests.try_next().await.unwrap() {
         match next {
+            LogSinkPuppetRequest::StopInterestListener { responder } => {
+                // TODO (https://fxbug.dev/77781): Rust should support StopInterestListener.
+                responder.send().unwrap();
+            }
             LogSinkPuppetRequest::GetInfo { responder } => {
                 let mut info = PuppetInfo {
                     tag: None,

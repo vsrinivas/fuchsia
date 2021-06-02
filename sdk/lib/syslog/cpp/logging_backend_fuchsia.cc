@@ -6,10 +6,14 @@
 #include <fcntl.h>
 #include <fuchsia/diagnostics/stream/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/stdcompat/variant.h>
+#include <lib/sync/completion.h>
 #include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/cpp/logging_backend_fuchsia_globals.h>
@@ -315,7 +319,12 @@ class LogState {
   static void Set(const syslog::LogSettings& settings);
   static void Set(const syslog::LogSettings& settings,
                   const std::initializer_list<std::string>& tags);
-  static const LogState& Get();
+  void set_severity_handler(void (*callback)(void* context, syslog::LogSeverity severity),
+                            void* context) {
+    handler_ = callback;
+    handler_context_ = context;
+  }
+  static LogState& Get();
 
   syslog::LogSeverity min_severity() const { return min_severity_; }
 
@@ -328,21 +337,129 @@ class LogState {
   cpp17::variant<zx::socket, std::ofstream>& descriptor() const { return descriptor_; }
 
   cpp17::optional<int> fd() const { return fd_; }
+  void Connect();
+  void ConnectAsync();
+  struct Task : public async_task_t {
+    LogState* context;
+    sync_completion_t completion;
+  };
+  static void RunTask(async_dispatcher_t* dispatcher, async_task_t* task, zx_status_t status) {
+    Task* callback = static_cast<Task*>(task);
+    callback->context->ConnectAsync();
+    sync_completion_signal(&callback->completion);
+  }
+
+  // Thunk to initialize logging and allocate HLCPP objects
+  // which are "thread-hostile" and cannot be allocated on a remote thread.
+  void InitializeAsyncTask() {
+    Task task = {};
+    task.deadline = 0;
+    task.handler = RunTask;
+    task.context = this;
+    async_post_task(executor_->dispatcher(), &task);
+    sync_completion_wait(&task.completion, ZX_TIME_INFINITE);
+  }
 
  private:
   LogState(const syslog::LogSettings& settings, const std::initializer_list<std::string>& tags);
   bool WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
                       syslog::LogSeverity severity, const char* file_name, unsigned int line,
                       const char* tag, const char* condition, const std::string& msg) const;
-
-  syslog::LogSeverity min_severity_;
+  fuchsia::logger::LogSinkPtr log_sink_;
+  void (*handler_)(void* context, syslog::LogSeverity severity);
+  void* handler_context_;
+  async::Loop loop_;
+  std::optional<async::Executor> executor_;
+  std::atomic<syslog::LogSeverity> min_severity_;
   cpp17::optional<int> fd_;
   zx_koid_t pid_;
   mutable cpp17::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
   std::string tags_[kMaxTags];
   std::string tag_str_;
   size_t num_tags_ = 0;
+  async_dispatcher_t* interest_listener_dispatcher_;
+  bool serve_interest_listener_;
 };
+
+static syslog::LogSeverity IntoLogSeverity(fuchsia::diagnostics::Severity severity) {
+  switch (severity) {
+    case fuchsia::diagnostics::Severity::TRACE:
+      return syslog::LOG_TRACE;
+    case fuchsia::diagnostics::Severity::DEBUG:
+      return syslog::LOG_DEBUG;
+    case fuchsia::diagnostics::Severity::INFO:
+      return syslog::LOG_INFO;
+    case fuchsia::diagnostics::Severity::WARN:
+      return syslog::LOG_WARNING;
+    case fuchsia::diagnostics::Severity::ERROR:
+      return syslog::LOG_ERROR;
+    case fuchsia::diagnostics::Severity::FATAL:
+      return syslog::LOG_FATAL;
+  }
+}
+
+void LogState::ConnectAsync() {
+  zx::channel logger, logger_request;
+  if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
+    return;
+  }
+  // TODO(https://fxbug.dev/75214): Support for custom names.
+  if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
+    return;
+  }
+  if (log_sink_.Bind(std::move(logger), loop_.dispatcher()) != ZX_OK) {
+    return;
+  }
+  zx::socket local, remote;
+  if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
+    return;
+  }
+  log_sink_.events().OnRegisterInterest = [=](::fuchsia::diagnostics::Interest interest) {
+    if (!interest.has_min_severity()) {
+      return;
+    }
+    min_severity_ = IntoLogSeverity(interest.min_severity());
+    handler_(handler_context_, min_severity_);
+  };
+  log_sink_->ConnectStructured(std::move(remote));
+  descriptor_ = std::move(local);
+}
+void LogState::Connect() {
+  if (this->serve_interest_listener_) {
+    if (!interest_listener_dispatcher_) {
+      loop_.StartThread("log-interest-listener-thread");
+    } else {
+      executor_.emplace(interest_listener_dispatcher_);
+    }
+    handler_ = [](void* ctx, syslog::LogSeverity severity) {};
+    InitializeAsyncTask();
+  } else {
+    zx::channel logger, logger_request;
+    if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
+      return;
+    }
+    ::fuchsia::logger::LogSink_SyncProxy logger_client(std::move(logger));
+    // TODO(https://fxbug.dev/75214): Support for custom names.
+    if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
+      return;
+    }
+    zx::socket local, remote;
+    if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
+      return;
+    }
+    if (logger_client.ConnectStructured(std::move(remote))) {
+      return;
+    }
+
+    descriptor_ = std::move(local);
+  }
+}
+
+void SetInterestChangedListener(void (*callback)(void* context, syslog::LogSeverity severity),
+                                void* context) {
+  auto& log_state = LogState::Get();
+  log_state.set_severity_handler(callback, context);
+}
 
 void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
                          unsigned int line, const char* msg, const char* condition, bool is_printf,
@@ -518,6 +635,9 @@ bool FlushRecord(LogBuffer* buffer) {
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
+  if (state->log_severity < log_state.min_severity()) {
+    return true;
+  }
   auto status = zx_socket_write(state->socket, 0, slice.data(),
                                 slice.slice().ToByteOffset().unsafe_get(), nullptr);
   if (status != ZX_OK) {
@@ -580,7 +700,7 @@ bool LogState::WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t
   return severity != syslog::LOG_FATAL;
 }
 
-const LogState& LogState::Get() {
+LogState& LogState::Get() {
   auto state = GetState();
 
   if (!state) {
@@ -602,8 +722,15 @@ void LogState::Set(const syslog::LogSettings& settings,
 
 LogState::LogState(const syslog::LogSettings& in_settings,
                    const std::initializer_list<std::string>& tags)
-    : min_severity_(in_settings.min_log_level), fd_(in_settings.log_fd), pid_(pid) {
+    : loop_(&kAsyncLoopConfigNeverAttachToThread),
+      executor_(loop_.dispatcher()),
+      min_severity_(in_settings.min_log_level),
+      fd_(in_settings.log_fd),
+      pid_(pid) {
   syslog::LogSettings settings = in_settings;
+  interest_listener_dispatcher_ =
+      static_cast<async_dispatcher_t*>(settings.single_threaded_dispatcher);
+  serve_interest_listener_ = !settings.disable_interest_listener;
   min_severity_ = in_settings.min_log_level;
 
   std::ostringstream tag_str;
@@ -630,25 +757,7 @@ LogState::LogState(const syslog::LogSettings& in_settings,
   if (file.is_open()) {
     descriptor_ = std::move(file);
   } else {
-    zx::channel logger, logger_request;
-    if (zx::channel::create(0, &logger, &logger_request) != ZX_OK) {
-      return;
-    }
-    ::fuchsia::logger::LogSink_SyncProxy logger_client(std::move(logger));
-    if (fdio_service_connect("/svc/fuchsia.logger.LogSink", logger_request.release()) != ZX_OK) {
-      return;
-    }
-    zx::socket local, remote;
-    if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
-      return;
-    }
-
-    auto result = logger_client.ConnectStructured(std::move(remote));
-    if (result != ZX_OK) {
-      return;
-    }
-
-    descriptor_ = std::move(local);
+    Connect();
   }
 }
 
