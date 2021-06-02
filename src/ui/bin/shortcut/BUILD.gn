@@ -12,7 +12,8 @@ group("tests") {
 
   deps = [
     ":shortcut",
-    ":shortcut_test",
+    ":shortcut_integration_test_pkg",
+    ":shortcut_test_pkg",
   ]
 }
 
@@ -56,6 +57,16 @@ rustc_binary("bin") {
   ]
 }
 
+# Unit tests for the shortcut manager binary.
+fuchsia_unittest_component("shortcut_bin_test") {
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("shortcut_test_pkg") {
+  test_components = [ ":shortcut_bin_test" ]
+}
+
+# The shortcut manager component and package.
 fuchsia_component("shortcut_manager") {
   deps = [ ":bin" ]
   manifest = "meta/shortcut_manager.cmx"
@@ -65,6 +76,7 @@ fuchsia_package("shortcut") {
   deps = [ ":shortcut_manager" ]
 }
 
+# The integration test for the shortcut manager.
 rustc_test("shortcut_integration_test_bin") {
   output_name = "shortcut_integration_test"
   edition = "2018"
@@ -94,10 +106,7 @@ rustc_test("shortcut_integration_test_bin") {
   ]
 }
 
-fuchsia_unittest_component("shortcut_bin_test") {
-  deps = [ ":bin_test" ]
-}
-
+# The component and package for the integration test above.
 fuchsia_component("shortcut_integration_test") {
   testonly = true
   deps = [
@@ -107,9 +116,6 @@ fuchsia_component("shortcut_integration_test") {
   manifest = "meta/shortcut_integration_test.cmx"
 }
 
-fuchsia_test_package("shortcut_test") {
-  test_components = [
-    ":shortcut_bin_test",
-    ":shortcut_integration_test",
-  ]
+fuchsia_test_package("shortcut_integration_test_pkg") {
+  test_components = [ ":shortcut_integration_test" ]
 }

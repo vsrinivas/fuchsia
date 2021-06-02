@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.ui.shortcut.Manager": "fuchsia-pkg://fuchsia.com/shortcut_test#meta/shortcut_manager.cmx",
-                "fuchsia.ui.shortcut.Registry": "fuchsia-pkg://fuchsia.com/shortcut_test#meta/shortcut_manager.cmx"
+                "fuchsia.ui.shortcut.Manager": "fuchsia-pkg://fuchsia.com/shortcut_integration_test_pkg#meta/shortcut_manager.cmx",
+                "fuchsia.ui.shortcut.Registry": "fuchsia-pkg://fuchsia.com/shortcut_integration_test_pkg#meta/shortcut_manager.cmx"
             }
         }
     },

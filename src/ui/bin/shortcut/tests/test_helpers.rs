@@ -9,10 +9,36 @@ use {
     fidl_fuchsia_ui_views as ui_views,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic as scenic,
-    std::sync::Once,
+    fuchsia_syslog::fx_log_debug,
+    std::sync::{self, Once},
 };
 
 static START: Once = Once::new();
+
+/// A reference-counted boolean value that can be latched to the value of "true" once.
+#[derive(Clone, Debug)]
+pub struct Latch {
+    inner: sync::Arc<std::cell::RefCell<bool>>,
+}
+
+impl Latch {
+    pub fn new() -> Self {
+        Latch { inner: sync::Arc::new(std::cell::RefCell::new(false)) }
+    }
+
+    /// Returns the current value stored in the [LatchUp].
+    pub fn value(&self) -> bool {
+        *self.inner.borrow()
+    }
+
+    /// Latches the value if it is "true".  Any subsequent calls to [LatchUp::value] will return
+    /// `true`
+    pub fn latch_if_set(&self, value: bool) {
+        if value {
+            self.inner.replace(value);
+        }
+    }
+}
 
 /// Creates instances of FIDL fuchsia.ui.shortcut.Shortcut.
 pub struct ShortcutBuilder {
@@ -155,6 +181,7 @@ impl ManagerService {
         let mut was_handled = false;
         let mut iter = keys.into_iter().peekable();
         while let Some(key) = iter.next() {
+            fx_log_debug!("TestCase::press_multiple_keys: processing key: {:?}", &key);
             let event = ui_input3::KeyEvent {
                 timestamp: None,
                 type_: Some(ui_input3::KeyEventType::Pressed),
@@ -168,6 +195,7 @@ impl ManagerService {
                 panic!("Shortcuts activated, but unused keys remained in the sequence!");
             }
             was_handled = was_handled || key_handled;
+            fx_log_debug!("TestCase::press_multiple_keys: was handled: {:?}", &was_handled);
         }
         Ok(was_handled)
     }

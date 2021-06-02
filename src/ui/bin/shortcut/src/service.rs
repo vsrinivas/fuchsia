@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_async::TimeoutExt,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{lock::Mutex, stream, StreamExt},
     std::collections::HashSet,
@@ -42,7 +42,7 @@ impl RegistryService {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Abstraction wrapper for a key event.
 pub struct KeyEvent {
     pub key: input::Key,
@@ -65,13 +65,19 @@ impl KeyEvent {
 
 /// Handles requests to `fuchsia.ui.shortcut.Manager` interface.
 pub struct ManagerService {
+    /// A collection of all shortcut registries.
     store: RegistryStore,
+    /// The set of keys that are known to be actuated at this time.  This set is
+    /// updated *after* a key event is processed, so during the processing it
+    /// contains the known actuated set as of just prior to this event.
     keys_pressed: HashSet<input::Key>,
+    /// The last key event that has been observed by this.
+    last_key_event_observed: Option<KeyEvent>,
 }
 
 impl ManagerService {
     pub fn new(store: RegistryStore) -> Self {
-        Self { store, keys_pressed: HashSet::new() }
+        Self { store, keys_pressed: HashSet::new(), last_key_event_observed: None }
     }
 
     /// Handles a key event:
@@ -87,6 +93,11 @@ impl ManagerService {
             _ => return Ok(false),
         };
         match type_ {
+            // SYNC and CANCEL events should probably not be included in
+            // `last_key_event_observed`, since they are emitted in response to
+            // focus loss and regain, and not key actuation.  This has a
+            // consequence of disallowing shortcut event propagation across
+            // focus loss, which is likely a good thing.
             ui_input3::KeyEventType::Sync => {
                 self.keys_pressed.insert(event.key);
                 Ok(true)
@@ -96,15 +107,19 @@ impl ManagerService {
                 Ok(true)
             }
             ui_input3::KeyEventType::Pressed => {
+                let event_2 = event.clone();
                 let key = event.key;
                 let was_handled = self.trigger_matching_shortcuts(event).await;
                 self.keys_pressed.insert(key);
+                self.last_key_event_observed = Some(event_2);
                 was_handled
             }
             ui_input3::KeyEventType::Released => {
+                let event_2 = event.clone();
                 let key = event.key;
                 let was_handled = self.trigger_matching_shortcuts(event).await;
                 self.keys_pressed.remove(&key);
+                self.last_key_event_observed = Some(event_2);
                 was_handled
             }
         }
@@ -119,7 +134,7 @@ impl ManagerService {
         let (key, pressed) = (event.key, event.pressed);
         let handler = |use_priority| {
             move |registry| async move {
-                let event = KeyEvent { key: key, pressed: pressed, inner: None };
+                let event = KeyEvent { key, pressed, inner: None };
                 match self.process_client_registry(registry, event, use_priority).await {
                     Ok(true) => Some(()),
                     Ok(false) => None,
@@ -161,11 +176,12 @@ impl ManagerService {
     ) -> Result<bool, Error> {
         let registry = registry.lock().await;
 
-        let shortcuts = self.get_matching_shortuts(&registry, event, use_priority)?;
+        let shortcuts = self.get_matching_shortcuts(&registry, event, use_priority)?;
 
         if let Some(ref subscriber) = registry.subscriber {
             self.trigger_shortcuts(&subscriber, shortcuts).await
         } else {
+            fx_log_debug!("process_client_registry: no subscribers to notify");
             Ok(false)
         }
     }
@@ -180,7 +196,13 @@ impl ManagerService {
             let was_handled = subscriber
                 .listener
                 .on_shortcut(id)
-                .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || Ok(false))
+                .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || {
+                    fx_log_debug!(
+                        "trigger_shortcuts: timeout trying to deliver shortcut: {:?}",
+                        &id
+                    );
+                    Ok(false)
+                })
                 .await;
             match was_handled {
                 // Stop processing client registry on successful handling.
@@ -196,16 +218,19 @@ impl ManagerService {
         Ok(false)
     }
 
-    fn get_matching_shortuts<'a>(
+    /// From the set of all registered shortcuts, filter out only the ones which have
+    /// a matching shortcut trigger pattern.
+    fn get_matching_shortcuts<'a>(
         &self,
         registry: &'a ClientRegistry,
         event: KeyEvent,
         use_priority: bool,
     ) -> Result<Vec<&'a Shortcut>, Error> {
-        let shortcuts = registry
+        let matching_shortcuts = registry
             .shortcuts
             .iter()
             .filter(|shortcut| {
+                // Filter out all shortcuts with mismatching priority.
                 match shortcut.use_priority {
                     Some(shortcut_use_priority) if use_priority != shortcut_use_priority => {
                         return false
@@ -218,6 +243,8 @@ impl ManagerService {
                     Some(key) => key,
                     None => return false,
                 };
+                // Filter out any key releases if a shortcut is pressed, and also all
+                // press-release triggers when a key is being pressed.
                 match (shortcut.trigger, event.pressed) {
                     (Some(ui_shortcut::Trigger::KeyPressed), Some(true))
                     | (Some(ui_shortcut::Trigger::KeyPressedAndReleased), Some(false)) => {
@@ -225,20 +252,75 @@ impl ManagerService {
                     }
                     _ => return false,
                 }
-                match &shortcut.keys_required_hash {
-                    Some(keys_required) if &self.keys_pressed == keys_required => {
+                // Filter out all key presses that don't match the set of needed 'armed' keys.  The
+                // procedure for doing so differs, however, in case of a key press, and key
+                // release.  When a key press is processed, it is not present in the set of
+                // keys_pressed.  However, when a key release is processed, it is present in the
+                // set of keys_pressed, since we already observed its key press event.  Not only
+                // that, but no intervening key events involving *other* keys may happen between
+                // the press and the release in order to register the press.
+                match (&event.pressed, &shortcut.required_armed_keys) {
+                    // Match arms corresponding to key presses.
+                    (Some(true), Some(keys_armed)) if &self.keys_pressed == keys_armed => {
                         // continue filtering
                     }
-                    None if self.keys_pressed.is_empty() => {
+                    (Some(true), None) if self.keys_pressed.is_empty() => {
                         // continue filtering
+                    }
+
+                    // Observation: perhaps a good alternative way to achieve this in a different
+                    // way would be to normalize a "pressed and released" shortcut as one that
+                    // requires the shortcut itself to be armed.  This way we'd not need the
+                    // elaborate workaround such as this one.  However, the issue here is that if
+                    // the keyboard protocol is ever breached, we could have a wrong deliberation.
+
+                    // Match arms corresponding to key releases.  Since we already filtered
+                    // for either pressed key on pressed trigger, or released key on
+                    // press-and-release trigger, just one of the two is needed.
+                    (Some(false), Some(keys_armed)) => {
+                        // Key shortcut release while other keys need to be armed.  This means
+                        // the set of armed keys need to be pressed, but also the current key needs
+                        // to be pressed, and also no intervening different keypresses need to
+                        // have been pressed.
+                        let mut keys_armed = keys_armed.clone();
+                        keys_armed.insert(shortcut_key.clone());
+                        if self.keys_pressed != keys_armed {
+                            return false;
+                        }
+                    }
+                    (Some(false), None) => {
+                        // Key release without any other armed keys needed.
+                        if let Some(ref last_observed) = &self.last_key_event_observed {
+                            // There were no intervening key events, and the list of actuated keys
+                            // only contains the key that is currently being released.
+                            if shortcut_key == last_observed.key
+                                && self.keys_pressed.contains(&shortcut_key)
+                                && self.keys_pressed.len() == 1
+                            {
+                                // continue filtering
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
                     }
                     _ => return false,
                 }
-                event.key == shortcut_key
+                // Trigger if the key in the event matches the corresponding shortcut key.
+                let matches = event.key == shortcut_key;
+                fx_log_debug!(
+                    "get_matching_shortcut: {}: event: {:?}, key:{:?}, last: {:?}",
+                    matches,
+                    &event,
+                    &shortcut_key,
+                    &self.last_key_event_observed
+                );
+                matches
             })
             .collect();
 
-        Ok(shortcuts)
+        Ok(matching_shortcuts)
     }
 }
 
