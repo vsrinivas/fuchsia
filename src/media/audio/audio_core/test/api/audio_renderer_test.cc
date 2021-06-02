@@ -913,25 +913,25 @@ TEST_F(AudioRendererPtsLeadTimeTest, SetPtsContThresholdNegativeValueCausesDisco
 }
 
 // SetPtsContinuityThreshold parameter must be a normal number
-TEST_F(AudioRendererPtsLeadTimeTest, DISABLED_SetPtsContThresholdNanCausesDisconnect) {
+TEST_F(AudioRendererPtsLeadTimeTest, SetPtsContThresholdNanCausesDisconnect) {
   audio_renderer_->SetPtsContinuityThreshold(NAN);
   ExpectDisconnect(audio_renderer_);
 }
 
 // SetPtsContinuityThreshold parameter must be a finite number
-TEST_F(AudioRendererPtsLeadTimeTest, DISABLED_SetPtsContThresholdInfinityCausesDisconnect) {
+TEST_F(AudioRendererPtsLeadTimeTest, SetPtsContThresholdInfinityCausesDisconnect) {
   audio_renderer_->SetPtsContinuityThreshold(INFINITY);
   ExpectDisconnect(audio_renderer_);
 }
 
 // SetPtsContinuityThreshold parameter must be a number within the finite range
-TEST_F(AudioRendererPtsLeadTimeTest, DISABLED_SetPtsContThresholdHugeValCausesDisconnect) {
+TEST_F(AudioRendererPtsLeadTimeTest, SetPtsContThresholdHugeValCausesDisconnect) {
   audio_renderer_->SetPtsContinuityThreshold(HUGE_VALF);
   ExpectDisconnect(audio_renderer_);
 }
 
 // SetPtsContinuityThreshold parameter must be a normal (not sub-normal) number
-TEST_F(AudioRendererPtsLeadTimeTest, DISABLED_SetPtsContThresholdSubNormalValCausesDisconnect) {
+TEST_F(AudioRendererPtsLeadTimeTest, SetPtsContThresholdSubNormalValCausesDisconnect) {
   audio_renderer_->SetPtsContinuityThreshold(FLT_MIN / 2);
   ExpectDisconnect(audio_renderer_);
 }

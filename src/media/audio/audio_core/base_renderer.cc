@@ -331,6 +331,11 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
     return;
   }
 
+  if (!isnormal(threshold_seconds) && threshold_seconds != 0.0) {
+    FX_LOGS(ERROR) << "PTS continuity threshold (" << threshold_seconds << ") must be normal or 0";
+    return;
+  }
+
   if (threshold_seconds < 0.0) {
     FX_LOGS(ERROR) << "Invalid PTS continuity threshold (" << threshold_seconds << ")";
     return;
@@ -362,7 +367,7 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
   // Lookup our payload buffer.
   auto it = payload_buffers_.find(packet.payload_buffer_id);
   if (it == payload_buffers_.end()) {
-    FX_LOGS(ERROR) << "Invalid payload_buffer_id";
+    FX_LOGS(ERROR) << "Invalid payload_buffer_id (" << packet.payload_buffer_id << ")";
     return;
   }
   auto payload_buffer = it->second;
@@ -486,8 +491,9 @@ void BaseRenderer::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
 
 void BaseRenderer::EndOfStream() {
   TRACE_DURATION("audio", "BaseRenderer::EndOfStream");
-  ReportStop();
-  // Does nothing.
+
+  // Today we do nothing, but in the future this could be used by clients to indicate intentional
+  // gaps in a sequence of packets.
 }
 
 void BaseRenderer::DiscardAllPackets(DiscardAllPacketsCallback callback) {

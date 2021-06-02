@@ -55,12 +55,12 @@ void TestFixture::ExpectCallbacks() {
         if (callback->sequence_num <= prev_callback.sequence_num) {
           std::ostringstream out_stream;
           auto format_cb_entry = [&out_stream](const PendingCallback callback_entry) {
-            out_stream << std::right << std::setw(20)
+            out_stream << std::right << std::setw(23)
                        << (std::string("'") + callback_entry.name + "'  [")
                        << callback_entry.sequence_num << "]" << std::endl;
           };
 
-          out_stream << "   Expected order  [Actual order]" << std::endl;
+          out_stream << "      Expected order  [Actual order]" << std::endl;
           std::for_each(retired_callbacks.begin(), retired_callbacks.end(), format_cb_entry);
           format_cb_entry(*callback);
 
