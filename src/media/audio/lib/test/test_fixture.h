@@ -104,7 +104,7 @@ class TestFixture : public ::gtest::RealLoopFixture {
   // Wait until all pending callbacks are drained. Fails if an error is encountered.
   // Callbacks are expected to occur in the order they are added. After this method
   // returns, the pending callback set is emptied and new callbacks may be added for
-  // a future call to ExpectCallback or ExpectNoCallbacks.
+  // a future call to ExpectCallbacks().
   void ExpectCallbacks();
 
   // Run loop with specified timeout, expecting to reach the timeout. Fails if an error is
