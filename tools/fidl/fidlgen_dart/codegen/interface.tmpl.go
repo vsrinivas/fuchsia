@@ -217,26 +217,18 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
   {{- if .HasResponse }}
       case {{ .OrdinalName }}:
         final String _name = {{ .TypeSymbol }}.name;
-        try {
-          Timeline.startSync(_name);
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
           final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
           _{{ .Name }}EventStreamController.add(
             {{- template "DecodeResponse" . -}}
           );
-        } catch(_e) {
-          ctrl.proxyError($fidl.FidlError('Exception handling event $_name: $_e'));
-          ctrl.close();
-          rethrow;
-        } finally {
-          Timeline.finishSync();
-        }
+        }, 'event');
         break;
   {{- end }}
 {{- end }}
 {{- end }}
       default:
-        ctrl.proxyError($fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        ctrl.close();
+        $fidl.handleCtrlError(ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
         break;
     }
   }
@@ -258,8 +250,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     {{- if .HasResponse }}
       case {{ .OrdinalName }}:
         final String _name = {{ .TypeSymbol }}.name;
-        try {
-          Timeline.startSync(_name);
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
           final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
           // ignore: prefer_const_declarations
           final $response = {{- template "DecodeResponse" . -}};
@@ -285,20 +276,13 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
           {{ else }}
             $completer.complete($response);
           {{ end }}
-        } catch(_e) {
-          ctrl.proxyError($fidl.FidlError('Exception handling method response $_name: $_e'));
-          ctrl.close();
-          rethrow;
-        } finally {
-          Timeline.finishSync();
-        }
+        }, 'method response');
         break;
     {{- end }}
   {{- end }}
 {{- end }}
       default:
-        ctrl.proxyError($fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
-        ctrl.close();
+        $fidl.handleCtrlError(ctrl,'Unexpected message ordinal: ${$message.ordinal}');
         break;
     }
   }
@@ -392,8 +376,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
       {{- if .HasRequest }}
           case {{ .OrdinalName }}:
             final String _name = {{ .TypeSymbol }}.name;
-            try {
-              Timeline.startSync(_name);
+            $fidl.performWithExceptionHandling(_name, () {
               final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
 							// ignore: prefer_const_declarations
 							final _impl = impl!;
@@ -445,17 +428,10 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                   {{- end }}
                   $respond($encoder.message);
                 }, onError: (_e) {
-                  close();
-                  print('Exception handling method call $_name: $_e');
+                  $fidl.handleException(_name, _e, close);
                 });
               {{- end }}
-            } catch(_e) {
-              close();
-              print('Exception handling method call $_name: $_e');
-              rethrow;
-            } finally {
-              Timeline.finishSync();
-            }
+          }, close);
             break;
       {{- end }}
     {{- end }}

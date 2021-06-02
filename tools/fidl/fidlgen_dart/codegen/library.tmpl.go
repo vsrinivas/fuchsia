@@ -75,9 +75,6 @@ import '{{ .AsyncURL }}' as {{ .LocalName }};
 {{ template "TableDeclaration" $table }}
 {{ end -}}
 
-// ignore: unused_element, avoid_private_typedef_functions
-typedef _VoidCallback = void Function();
-
 {{ range $protocol := .Protocols -}}
 {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
 {{ template "ProtocolAsyncDeclaration" $protocol }}
