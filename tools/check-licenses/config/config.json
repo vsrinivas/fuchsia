@@ -6,6 +6,7 @@
     "prebuilt/media/firmware/amlogic_encoder/h264_enc.bin"
   ],
   "skipDirs": [
+    "prebuilt/third_party/cmake/linux-x64"
   ],
   "stopLicensePropagation": [
     "third_party",
@@ -70,10 +71,6 @@
     "redhat"
   ],
   "customProjectLicenses" : [
-    {
-      "projectRoot": "prebuilt/third_party/cmake/linux-x64",
-      "licenseLocation": "doc/cmake-3.10/Copyright.txt"
-    },
     {
       "projectRoot": "third_party/crashpad/third_party/lss",
       "licenseLocation": "lss/linux_syscall_support.h"
