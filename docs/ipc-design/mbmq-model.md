@@ -319,6 +319,18 @@ recycles MBOs across requests or not:
     this ability to recycle MBOs between requests or to implement flow
     control.
 
+For fire-and-forget requests, a well-behaved callee should release the
+MBO after it has read or processed the message by writing an empty
+reply message into the MBO and calling `zx_cmh_send_reply()` (or,
+equivalently, by closing the CMH handle).  Unfortunately that has the
+problem of requiring an extra syscall invocation, so we might want to
+introduce a way of releasing the callee's MBO reference implicitly
+when the message is read.
+
+Note that a badly-behaved callee could hold into the MBO indefinitely,
+but that is not very different from behaving badly by never unqueuing
+requests.
+
 ## A note on terminology: "caller" and "callee"
 
 We are using the terms "caller" and "callee" to emphasise that these
