@@ -280,8 +280,7 @@ impl Calls {
     }
 
     /// Return true if at least one call is in the Active state.
-    #[cfg(test)]
-    fn is_call_active(&self) -> bool {
+    pub fn is_call_active(&self) -> bool {
         self.calls().any(|c| c.1.state == CallState::OngoingActive)
     }
 

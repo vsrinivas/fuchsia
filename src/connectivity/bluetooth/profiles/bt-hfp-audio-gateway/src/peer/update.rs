@@ -13,7 +13,8 @@ use super::{
         subscriber_number_information::build_cnum_response, ProcedureRequest,
     },
 };
-use crate::features::AgFeatures;
+
+use crate::features::{AgFeatures, CodecId};
 
 // TODO (fxbug.dev/74091): Add multiparty support.
 // TODO (fxbug.dev/74093): Add Explicit Call Transfer support.
@@ -69,6 +70,10 @@ pub enum AgUpdate {
     SpeakerVolumeControl(Gain),
     /// The volume to set the HF speaker to.
     MicrophoneVolumeControl(Gain),
+    /// Start the codec connection procedure.
+    /// CodecId should only be None to initiate CodecNegotiation, and will be
+    /// filled in by the CodecConnectionSetupProcedure.
+    CodecSetup(Option<CodecId>),
 }
 
 impl From<AgUpdate> for ProcedureRequest {
@@ -150,6 +155,10 @@ impl From<AgUpdate> for ProcedureRequest {
             }
             AgUpdate::MicrophoneVolumeControl(gain) => {
                 vec![at::success(at::Success::Vgm { level: gain.into() })]
+            }
+            AgUpdate::CodecSetup(selected) => {
+                let codec = selected.expect("must be selected when sent").into();
+                vec![at::success(at::Success::Bcs { codec })]
             }
         }
         .into()

@@ -47,6 +47,18 @@ response { +CLCC:
     ty: Integer,
 }
 
+# Bluetooth Codec Connection
+# HFP 1.8 4.35.1
+command { AT+BCC }
+
+# Bluetooth Codec Selection
+# HFP 1.8 4.35.1
+command { AT+BCS=codec: Integer }
+
+# Bluetooth Codec Selection
+# HFP 1.8 4.35.1
+response { +BCS: codec: Integer }
+
 # Bluetooth Available Codecs command
 # HFP 1.8 4.35.1
 command { AT+BAC=codecs: List<Integer> }

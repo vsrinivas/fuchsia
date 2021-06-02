@@ -74,13 +74,12 @@ impl From<&AudioGatewayFeatureSupport> for AgFeatures {
 }
 
 /// Codec IDs. See HFP 1.8, Section 10 / Appendix B.
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct CodecId(u8);
 
 impl CodecId {
-    #[cfg(test)]
     pub const CVSD: CodecId = CodecId(0x01);
-    pub const _MSBC: CodecId = CodecId(0x02);
+    pub const MSBC: CodecId = CodecId(0x02);
 }
 
 impl From<u8> for CodecId {

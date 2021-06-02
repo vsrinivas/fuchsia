@@ -36,7 +36,12 @@ use super::{
     ConnectionBehavior, PeerRequest,
 };
 
-use crate::{config::AudioGatewayFeatureSupport, error::Error};
+use crate::{
+    config::AudioGatewayFeatureSupport,
+    error::Error,
+    features::CodecId,
+    sco_connector::{ScoConnection, ScoConnector},
+};
 
 pub(super) struct PeerTask {
     id: PeerId,
@@ -53,6 +58,8 @@ pub(super) struct PeerTask {
     calls: Calls,
     gain_control: GainControl,
     connection: ServiceLevelConnection,
+    sco_connector: ScoConnector,
+    sco_connection: Option<ScoConnection>,
     ringer: Ringer,
 }
 
@@ -63,6 +70,7 @@ impl PeerTask {
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
     ) -> Result<Self, Error> {
+        let sco_connector = ScoConnector::build(profile_proxy.clone());
         Ok(Self {
             id,
             _local_config: local_config,
@@ -76,6 +84,8 @@ impl PeerTask {
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
             connection: ServiceLevelConnection::new(),
+            sco_connector,
+            sco_connection: None,
             ringer: Ringer::default(),
         })
     }
@@ -312,6 +322,19 @@ impl PeerTask {
                 };
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
+            SlcRequest::SynchronousConnectionSetup { selected, response } => {
+                // TODO(fxbug.dev/72681): Because we must send an OK response to the just before
+                // setting up the synchronous connection, we send it here by routing through the
+                // procedure.
+                if selected.is_some() {
+                    self.connection.receive_ag_request(marker, AgUpdate::Ok).await;
+                }
+                let result = self
+                    .setup_audio_connection(selected)
+                    .await
+                    .map_err(|e| warn!("Error setting up audio connection: {:?}", e));
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
         };
     }
 
@@ -335,6 +358,7 @@ impl PeerTask {
                        self.connection.receive_ag_request(ProcedureMarker::VolumeControl, request.into()).await,
                 // A new call state has been received from the call service
                 update = self.calls.select_next_some() => {
+                    // TODO(fxbug.dev/75538): for in-band ring  setup audio if should_ring is true
                     self.ringer.ring(self.calls.should_ring());
                     if update.callwaiting {
                         if let Some(call) = self.calls.waiting() {
@@ -343,6 +367,10 @@ impl PeerTask {
                     }
                     for status in update.to_vec() {
                         self.phone_status_update(status).await;
+                    }
+                    // If any call is in the active state, then ensure we have an audio connection
+                    if self.calls.is_call_active() {
+                        self.ensure_audio_connection().await;
                     }
                 }
                 request = self.connection.next() => {
@@ -396,6 +424,21 @@ impl PeerTask {
                 }
             }
         }
+    }
+
+    async fn ensure_audio_connection(&mut self) {
+        if self.sco_connection.is_some() {
+            return;
+        }
+        self.connection
+            .receive_ag_request(ProcedureMarker::CodecConnectionSetup, AgUpdate::CodecSetup(None))
+            .await;
+    }
+
+    async fn setup_audio_connection(&mut self, codec_id: Option<CodecId>) -> Result<(), Error> {
+        let try_codecs = codec_id.map_or(vec![CodecId::MSBC, CodecId::CVSD], |c| vec![c]);
+        self.sco_connection = Some(self.sco_connector.connect(self.id.clone(), try_codecs).await?);
+        Ok(())
     }
 
     /// Request to send the phone `status` by initiating the Phone Status Indicator

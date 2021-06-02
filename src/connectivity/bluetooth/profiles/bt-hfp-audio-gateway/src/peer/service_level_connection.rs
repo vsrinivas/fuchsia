@@ -103,7 +103,6 @@ impl SlcState {
 
     /// Returns the codecs that are known to be supported by the peer.
     /// May be inaccurate if initialization has not completed.
-    #[cfg(test)]
     pub fn codecs_supported(&self) -> Vec<CodecId> {
         // All HFs are required to support CVSD, even if they don't support Codec Negotiation.
         // See HFP v1.8, Sec 5.7 for more information.
@@ -298,12 +297,6 @@ impl ServiceLevelConnection {
     /// or in testing scenarios.
     fn set_initialized(&mut self) {
         self.state.initialized = true;
-    }
-
-    /// Returns the codecs supported by the by the peer.
-    #[cfg(test)]
-    pub fn codecs_supported(&self) -> Vec<CodecId> {
-        self.state.codecs_supported()
     }
 
     pub fn network_operator_name_format(&self) -> &Option<at::NetworkOperatorNameFormat> {
@@ -1005,9 +998,6 @@ pub(crate) mod tests {
 
         // The SLC should be considered initialized and the SLCI Procedure is done.
         assert!(slc.initialized());
-
-        // Without Codec Negotiation, only CVSD is supported.
-        assert_eq!(vec![CodecId::CVSD], slc.codecs_supported());
 
         assert!(!slc.is_active(&slci_marker));
     }

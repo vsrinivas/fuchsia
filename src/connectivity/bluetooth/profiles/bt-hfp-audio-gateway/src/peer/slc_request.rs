@@ -5,7 +5,7 @@
 use std::fmt;
 
 use crate::{
-    features::AgFeatures,
+    features::{AgFeatures, CodecId},
     peer::{
         calls::{Call, CallAction},
         gain_control::Gain,
@@ -19,33 +19,74 @@ use crate::{
 /// HFP component.
 // TODO(fxbug.dev/70591): Add to this list once more procedures are implemented.
 pub enum SlcRequest {
-    GetAgFeatures { response: Box<dyn FnOnce(AgFeatures) -> AgUpdate> },
+    GetAgFeatures {
+        response: Box<dyn FnOnce(AgFeatures) -> AgUpdate>,
+    },
 
-    GetAgIndicatorStatus { response: Box<dyn FnOnce(AgIndicators) -> AgUpdate> },
+    GetAgIndicatorStatus {
+        response: Box<dyn FnOnce(AgIndicators) -> AgUpdate>,
+    },
 
-    GetNetworkOperatorName { response: Box<dyn FnOnce(Option<String>) -> AgUpdate> },
+    GetNetworkOperatorName {
+        response: Box<dyn FnOnce(Option<String>) -> AgUpdate>,
+    },
 
-    GetSubscriberNumberInformation { response: Box<dyn FnOnce(Vec<String>) -> AgUpdate> },
+    GetSubscriberNumberInformation {
+        response: Box<dyn FnOnce(Vec<String>) -> AgUpdate>,
+    },
 
-    SetNrec { enable: bool, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+    SetNrec {
+        enable: bool,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
 
-    SendHfIndicator { indicator: HfIndicator, response: Box<dyn FnOnce() -> AgUpdate> },
+    SendHfIndicator {
+        indicator: HfIndicator,
+        response: Box<dyn FnOnce() -> AgUpdate>,
+    },
 
-    SendDtmf { code: DtmfCode, response: Box<dyn FnOnce() -> AgUpdate> },
+    SendDtmf {
+        code: DtmfCode,
+        response: Box<dyn FnOnce() -> AgUpdate>,
+    },
 
-    SpeakerVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
+    SpeakerVolumeSynchronization {
+        level: Gain,
+        response: Box<dyn FnOnce() -> AgUpdate>,
+    },
 
-    MicrophoneVolumeSynchronization { level: Gain, response: Box<dyn FnOnce() -> AgUpdate> },
+    MicrophoneVolumeSynchronization {
+        level: Gain,
+        response: Box<dyn FnOnce() -> AgUpdate>,
+    },
 
-    QueryCurrentCalls { response: Box<dyn FnOnce(Vec<Call>) -> AgUpdate> },
+    QueryCurrentCalls {
+        response: Box<dyn FnOnce(Vec<Call>) -> AgUpdate>,
+    },
 
-    Answer { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+    Answer {
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
 
-    HangUp { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+    HangUp {
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
 
-    Hold { command: CallHoldAction, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+    InitiateCall {
+        call_action: CallAction,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
 
-    InitiateCall { call_action: CallAction, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+    Hold {
+        command: CallHoldAction,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
+
+    /// Setup the Sco connection, as requested by the CodecConnectionSetup
+    SynchronousConnectionSetup {
+        selected: Option<CodecId>,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
 }
 
 impl From<&SlcRequest> for ProcedureMarker {
@@ -66,6 +107,7 @@ impl From<&SlcRequest> for ProcedureMarker {
             HangUp { .. } => Self::HangUp,
             Hold { .. } => Self::Hold,
             InitiateCall { .. } => Self::InitiateCall,
+            SynchronousConnectionSetup { .. } => Self::CodecConnectionSetup,
         }
     }
 }
@@ -102,6 +144,7 @@ impl fmt::Debug for SlcRequest {
                 s = format!("InitiateCall({:?})", call_action);
                 &s
             }
+            Self::SynchronousConnectionSetup { .. } => "SynchronousConnectionSetup",
         }
         .to_string();
         write!(f, "{}", output)

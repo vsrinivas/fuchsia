@@ -23,6 +23,7 @@ mod fidl_service;
 mod hfp;
 mod peer;
 mod profile;
+mod sco_connector;
 mod service_definitions;
 
 #[fasync::run_singlethreaded]

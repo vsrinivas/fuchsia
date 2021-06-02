@@ -14,6 +14,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp.test:fuchsia.bluetooth.hfp.test-rustc",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/profile-client",
@@ -62,6 +63,7 @@ rustc_binary("bin") {
     "src/peer/procedure/answer.rs",
     "src/peer/procedure/call_line_ident_notifications.rs",
     "src/peer/procedure/call_waiting_notifications.rs",
+    "src/peer/procedure/codec_connection_setup.rs",
     "src/peer/procedure/dtmf.rs",
     "src/peer/procedure/extended_errors.rs",
     "src/peer/procedure/hang_up.rs",
@@ -84,6 +86,7 @@ rustc_binary("bin") {
     "src/peer/task.rs",
     "src/peer/update.rs",
     "src/profile.rs",
+    "src/sco_connector.rs",
     "src/service_definitions.rs",
   ]
 }

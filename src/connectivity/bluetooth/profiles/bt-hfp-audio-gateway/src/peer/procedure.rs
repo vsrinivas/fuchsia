@@ -61,6 +61,9 @@ pub mod transfer_hf_indicator;
 /// Defines the implementation of the Volume Level Synchronization Procedure.
 pub mod volume_synchronization;
 
+/// Implements the Codec Connection Setup Procedure.
+pub mod codec_connection_setup;
+
 use answer::AnswerProcedure;
 
 /// Defines the implementation of the the Audio Volume Control Procedure.
@@ -71,6 +74,7 @@ pub mod initiate_call;
 
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
+use codec_connection_setup::CodecConnectionSetupProcedure;
 use dtmf::DtmfProcedure;
 use extended_errors::ExtendedErrorsProcedure;
 use hang_up::HangUpProcedure;
@@ -172,6 +176,8 @@ pub enum ProcedureMarker {
     VolumeControl,
     /// Procedures for HF initiated calls defined in HFP v1.8 Sections 4.18-4.20
     InitiateCall,
+    /// The Codec Connection Setup procedure as defined in HFP v1.8 Section 4.11.3.
+    CodecConnectionSetup,
 }
 
 impl ProcedureMarker {
@@ -201,6 +207,7 @@ impl ProcedureMarker {
             Self::Hold => Box::new(HoldProcedure::new()),
             Self::VolumeControl => Box::new(VolumeControlProcedure::new()),
             Self::InitiateCall => Box::new(InitiateCallProcedure::new()),
+            Self::CodecConnectionSetup => Box::new(CodecConnectionSetupProcedure::new()),
         }
     }
 
@@ -238,6 +245,7 @@ impl ProcedureMarker {
             at::Command::AtdNumber { .. }
             | at::Command::AtdMemory { .. }
             | at::Command::Bldn { .. } => Ok(Self::InitiateCall),
+            at::Command::Bcc { .. } | at::Command::Bcs { .. } => Ok(Self::CodecConnectionSetup),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -249,7 +257,7 @@ pub enum ProcedureRequest {
     /// AT messages to be sent to the peer (HF) - requires no response.
     SendMessages(Vec<at::Response>),
 
-    /// Request for information from the HFP component.
+    /// Request for an action or information from the HFP component.
     Request(SlcRequest),
 
     /// Error from processing an update.
