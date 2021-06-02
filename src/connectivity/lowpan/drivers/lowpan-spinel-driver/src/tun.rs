@@ -116,7 +116,7 @@ impl NetworkInterface for TunNetworkInterface {
             .context("Error calling read_frame")?;
 
         if let Some(packet) = frame.data.as_ref() {
-            fx_log_info!(
+            fx_log_trace!(
                 "TunNetworkInterface: Packet arrived from stack: {:?}",
                 Ipv6PacketDebug(packet)
             );
@@ -126,7 +126,7 @@ impl NetworkInterface for TunNetworkInterface {
     }
 
     async fn inbound_packet_to_stack(&self, packet: &[u8]) -> Result<(), Error> {
-        fx_log_info!("TunNetworkInterface: Packet sent to stack: {:?}", Ipv6PacketDebug(packet));
+        fx_log_trace!("TunNetworkInterface: Packet sent to stack: {:?}", Ipv6PacketDebug(packet));
 
         Ok(self
             .tun_dev
