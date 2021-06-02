@@ -27,15 +27,14 @@ import 'dart:convert';
 import 'dart:io' hide exit;
 import 'dart:typed_data';
 
+import 'package:fidl/fidl.dart';
+import 'package:fidl_benchmarkfidl/fidl_async.dart';
 import 'package:fuchsia/fuchsia.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 {{- if .UsesHandles }}
 import 'package:topaz.lib.gidl/handles.dart';
 {{- end }}
-
-import 'package:fidl/fidl.dart';
-import 'package:fidl_benchmarkfidl/fidl_async.dart';
 
 typedef _CallbackSetter = void Function(void Function());
 typedef _DefinitionBlock = void Function(

@@ -24,13 +24,12 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
 import 'package:fidl/fidl.dart' as fidl;
+import 'package:fidl_conformance/fidl_async.dart';
+import 'package:test/test.dart';
 import 'package:topaz.lib.gidl/gidl.dart';
 import 'package:topaz.lib.gidl/handles.dart';
 import 'package:zircon/zircon.dart';
-
-import 'package:fidl_conformance/fidl_async.dart';
 
 void main() {
 	group('conformance', () {
