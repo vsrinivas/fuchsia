@@ -50,6 +50,8 @@ namespace arch {
 // the Intel manuals.  The generated header <lib/arch/x86/msr-asm.h> contains
 // macros for `MSR_<name>` so these constants can be used in assembly code.
 enum class X86Msr : uint32_t {
+  IA32_EFER = 0xc000'0080,  // Extended Feature Enable Register
+
   IA32_FS_BASE = 0xc000'0100,         // Current %fs.base value.
   IA32_GS_BASE = 0xc000'0101,         // Current %gs.base value.
   IA32_KERNEL_GS_BASE = 0xc000'0102,  // %gs.base value after `swapgs`.
@@ -84,8 +86,8 @@ enum class X86Msr : uint32_t {
 
 // A convenience class to inherit from in defining MSR register types. Gives a
 // cleaner and more compact definition.
-template <typename ValueType, X86Msr Msr>
-struct X86MsrBase : public hwreg::RegisterBase<ValueType, uint64_t> {
+template <typename ValueType, X86Msr Msr, class PrinterState = void>
+struct X86MsrBase : public hwreg::RegisterBase<ValueType, uint64_t, PrinterState> {
   static auto Get() { return hwreg::RegisterAddr<ValueType>(static_cast<uint32_t>(Msr)); }
 };
 

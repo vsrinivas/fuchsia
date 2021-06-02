@@ -21,8 +21,13 @@ struct X86MsrIo {
   void Write(IntType value, uint32_t msr) const {
     static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
     uint64_t v = static_cast<uint64_t>(value);
-    // The high-order 32 bits of each register are ignored.
-    __asm__ volatile("wrmsr" : : "c"(msr), "a"(v), "d"(v >> 32));
+    // The high-order 32 bits of each register are ignored so they need not be
+    // cleared.  uintptr_t is 32 bits on x86-32 so that values will match the
+    // register size, but 64 bits on x86-64 so that the compiler doesn't think
+    // it needs to add an instruction to clear the high bits.
+    uintptr_t lo = static_cast<uintptr_t>(v);
+    uintptr_t hi = static_cast<uintptr_t>(v >> 32);
+    __asm__ volatile("wrmsr" : : "c"(msr), "a"(lo), "d"(hi));
   }
 
   template <typename IntType>

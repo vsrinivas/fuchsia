@@ -111,6 +111,36 @@ struct AmdHardwareConfigurationMsr
   DEF_BIT(0, smm_lock);
 };
 
+// [intel/vol3]: 2.2.1 Extended Feature Enable Register
+// [amd/vol2]: 3.1.7 Extended Feature Enable Register (EFER)
+//
+// IA32_EFER
+//
+struct X86ExtendedFeatureEnableRegisterMsr
+    : public X86MsrBase<X86ExtendedFeatureEnableRegisterMsr, X86Msr::IA32_EFER,
+                        hwreg::EnablePrinter> {
+  DEF_RSVDZ_FIELD(63, 19);
+  // Bits [18:12] are reserved in Intel docs, but further specified by AMD.
+  // AMD documents the reserved bits among [63:9] as MBZ while Intel simply
+  // says "reserved".
+
+  DEF_BIT(17, mcommit);  // (AMD only) Enable mcommit instruction.
+  DEF_RSVDZ_BIT(16);     // Reserved, MBZ in AMD.
+  DEF_BIT(15, tce);      // (AMD only) Translation Cache Extension.
+  DEF_BIT(14, ffxsr);    // (AMD only) Fast fxsave/fxrstor.
+  DEF_BIT(13, lmsle);    // (AMD only) Long Mode Segment Limit Enable
+  DEF_BIT(12, svme);     // (AMD only) Secure Virtual Machine Enable
+  DEF_BIT(11, nxe);      // Enable non-execute bit in page tables.
+  DEF_BIT(10, lma);      // IA-32e (x86-64) mode active.
+  DEF_RSVDZ_BIT(9);      // Reserved, MBZ in AMD.
+  DEF_BIT(8, lme);       // IA-32e (x86-64) mode enable.
+
+  // Bits [7:1] are reserved.  AMD documents them as R(ead)A(s)Z(ero) while
+  // Intel simply says "reserved".
+
+  DEF_BIT(0, sce);  // Enable syscall/sysret instructions.
+};
+
 }  // namespace arch
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_FEATURE_H_

@@ -12,6 +12,9 @@
 
 #if defined(__x86_64__) || defined(__i386__)
 #include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/feature.h>
+
+#include <hwreg/x86msr.h>
 #endif
 
 const char Symbolize::kProgramName_[] = "hello-world-test";
@@ -46,6 +49,12 @@ int TestMain(void*, arch::EarlyTicks) {
   arch::BootCpuid<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
   // TODO(fxbug.dev/68404): Print when we can afford to.
   // arch::BootCpuid<arch::CpuidAmdFeatureFlagsC>().ForEachField(print_feature);
+
+  printf("Extended features enabled:\n");
+  hwreg::X86MsrIo msr;
+  arch::X86ExtendedFeatureEnableRegisterMsr::Get()  //
+      .ReadFrom(&msr)
+      .ForEachField(print_feature);
 #endif
 
   return 0;
