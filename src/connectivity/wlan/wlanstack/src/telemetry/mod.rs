@@ -810,6 +810,13 @@ pub async fn log_disconnect(
             channel_band_dim as u32,
         ],
     );
+    log_cobalt_1dot1!(
+        cobalt_1dot1_proxy,
+        log_occurrence,
+        metrics::DISCONNECT_REASON_METRIC_ID,
+        1,
+        &[info.disconnect_source.unflattened_reason_code() as u32, disconnect_source_dim as u32,],
+    );
 }
 
 #[cfg(test)]
@@ -1262,7 +1269,7 @@ mod tests {
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::User(
-                fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
+                fidl_sme::UserDisconnectReason::FailedToConnect,
             ),
             ..fake_disconnect_info()
         };
@@ -1290,7 +1297,7 @@ mod tests {
             ]);
         });
 
-        assert_eq!(cobalt_1dot1_events.len(), 1);
+        assert_eq!(cobalt_1dot1_events.len(), 2);
         assert_eq!(
             cobalt_1dot1_events[0].0,
             metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID
@@ -1304,6 +1311,14 @@ mod tests {
                 metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
                 metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
                 metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]
+        );
+        assert_eq!(cobalt_1dot1_events[1].0, metrics::DISCONNECT_REASON_METRIC_ID);
+        assert_eq!(
+            cobalt_1dot1_events[1].1,
+            vec![
+                fidl_sme::UserDisconnectReason::FailedToConnect as u32,
+                metrics::ConnectivityWlanMetricDimensionDisconnectSource::User as u32,
             ]
         );
     }
@@ -1347,7 +1362,7 @@ mod tests {
             ]);
         });
 
-        assert_eq!(cobalt_1dot1_events.len(), 1);
+        assert_eq!(cobalt_1dot1_events.len(), 2);
         assert_eq!(
             cobalt_1dot1_events[0].0,
             metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID
@@ -1363,6 +1378,14 @@ mod tests {
                 metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
             ]
         );
+        assert_eq!(cobalt_1dot1_events[1].0, metrics::DISCONNECT_REASON_METRIC_ID);
+        assert_eq!(
+            cobalt_1dot1_events[1].1,
+            vec![
+                fidl_ieee80211::ReasonCode::NoMoreStas as u32,
+                metrics::ConnectivityWlanMetricDimensionDisconnectSource::Ap as u32,
+            ]
+        );
     }
 
     #[test]
@@ -1375,7 +1398,7 @@ mod tests {
         let inspect_tree = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::Mlme(DisconnectCause {
-                reason_code: fidl_ieee80211::ReasonCode::UnspecifiedReason,
+                reason_code: fidl_ieee80211::ReasonCode::MlmeLinkFailed,
                 mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
             }),
             ..fake_disconnect_info()
@@ -1407,7 +1430,7 @@ mod tests {
             ]);
         });
 
-        assert_eq!(cobalt_1dot1_events.len(), 1);
+        assert_eq!(cobalt_1dot1_events.len(), 2);
         assert_eq!(
             cobalt_1dot1_events[0].0,
             metrics::DISCONNECT_COUNT_BREAKDOWN_MIGRATED_METRIC_ID
@@ -1421,6 +1444,15 @@ mod tests {
                 metrics::DisconnectCountBreakdownMetricDimensionSnr::From1To10 as u32,
                 metrics::DisconnectCountBreakdownMetricDimensionRecentChannelSwitch::No as u32,
                 metrics::DisconnectCountBreakdownMetricDimensionChannelBand::Band2Dot4Ghz as u32
+            ]
+        );
+
+        assert_eq!(cobalt_1dot1_events[1].0, metrics::DISCONNECT_REASON_METRIC_ID);
+        assert_eq!(
+            cobalt_1dot1_events[1].1,
+            vec![
+                fidl_ieee80211::ReasonCode::MlmeLinkFailed as u32,
+                metrics::ConnectivityWlanMetricDimensionDisconnectSource::Mlme as u32,
             ]
         );
     }

@@ -423,6 +423,19 @@ impl DisconnectSource {
         }
     }
 
+    /// Get the reason code of the disconnect, without the bit set based on disconnect source
+    pub fn unflattened_reason_code(&self) -> u16 {
+        match self {
+            DisconnectSource::Ap(DisconnectCause { reason_code: ap_reason_code, .. }) => {
+                ap_reason_code.into_primitive() as u16
+            }
+            DisconnectSource::Mlme(DisconnectCause { reason_code: mlme_reason_code, .. }) => {
+                mlme_reason_code.into_primitive() as u16
+            }
+            DisconnectSource::User(reason) => *reason as u16,
+        }
+    }
+
     pub fn locally_initiated(&self) -> bool {
         match self {
             DisconnectSource::Ap(_) => false,
