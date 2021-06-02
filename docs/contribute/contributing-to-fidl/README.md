@@ -566,7 +566,9 @@ useful for debugging issues that prevent boot of the device.
 | dart bindings tests      | `fx test dart-bindings-test`<br>(_see note below_) | //sdk/dart/fidl                                                  |
 | rust bindings tests      | `fx test //src/lib/fidl/rust`           | //src/lib/fidl/rust |
 
-Note: While `fx test dart-bindings-test` prints test names as they run, it does not show stack traces for test failures. To see those, look at the `fx qemu` or `fx log` output.
+Note: `fx test dart-bindings-test` needs `--with //src/dart:dart_jit_runner` or it will fail.
+While `fx test dart-bindings-test` prints test names as they run, it does not show stack traces
+for test failures. To see those, look at the `fx qemu` or `fx log` output.
 
 ##### Host
 
