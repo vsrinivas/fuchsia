@@ -35,8 +35,6 @@ use std::{
 pub struct LocalExecutor {
     /// The inner executor state.
     inner: Arc<Inner>,
-    // A packet that has been dequeued but not processed. This is used by `run_one_step`.
-    next_packet: Option<zx::Packet>,
     // Synthetic main task, representing the main futures during the executor's lifetime.
     main_task: Arc<MainTask>,
     // Waker for the main task, cached for performance reasons.
@@ -57,7 +55,7 @@ impl LocalExecutor {
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
         let main_waker = futures::task::waker(main_task.clone());
-        Ok(Self { inner, next_packet: None, main_task, main_waker })
+        Ok(Self { inner, main_task, main_waker })
     }
 
     /// Run a single future to completion on a single thread, also polling other active tasks.
@@ -68,9 +66,6 @@ impl LocalExecutor {
         self.inner
             .require_real_time()
             .expect("Error: called `run_singlethreaded` on an executor using fake time");
-        if let Some(_) = self.next_packet {
-            panic!("Error: called `run_singlethreaded` on an executor with a packet waiting");
-        }
         let mut local_collector = self.inner.collector.create_local_collector();
 
         pin_mut!(main_future);
@@ -143,12 +138,18 @@ impl Drop for LocalExecutor {
 
 /// A single-threaded executor for testing. Exposes additional APIs for manipulating executor state
 /// and validating behavior of executed tasks.
-pub struct TestExecutor(LocalExecutor);
+pub struct TestExecutor {
+    /// LocalExecutor used under the hood, since most of the logic is shared.
+    local: LocalExecutor,
+
+    // A packet that has been dequeued but not processed. This is used by `run_one_step`.
+    next_packet: Option<zx::Packet>,
+}
 
 impl TestExecutor {
     /// Create a new executor for testing.
     pub fn new() -> Result<Self, zx::Status> {
-        Ok(Self(LocalExecutor::new()?))
+        Ok(Self { local: LocalExecutor::new()?, next_packet: None })
     }
 
     /// Create a new single-threaded executor running with fake time.
@@ -160,12 +161,12 @@ impl TestExecutor {
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
         let main_waker = futures::task::waker(main_task.clone());
-        Ok(Self(LocalExecutor { inner, next_packet: None, main_task, main_waker }))
+        Ok(Self { local: LocalExecutor { inner, main_task, main_waker }, next_packet: None })
     }
 
     /// Return the current time according to the executor.
     pub fn now(&self) -> Time {
-        self.0.inner.now()
+        self.local.inner.now()
     }
 
     /// Set the fake time to a given value.
@@ -174,7 +175,7 @@ impl TestExecutor {
     ///
     /// If the executor was not created with fake time
     pub fn set_fake_time(&self, t: Time) {
-        self.0.inner.set_fake_time(t)
+        self.local.inner.set_fake_time(t)
     }
 
     /// Run a single future to completion on a single thread, also polling other active tasks.
@@ -182,7 +183,7 @@ impl TestExecutor {
     where
         F: Future,
     {
-        self.0.run_singlethreaded(main_future)
+        self.local.run_singlethreaded(main_future)
     }
 
     /// PollResult the future. If it is not ready, dispatch available packets and possibly try again.
@@ -199,7 +200,7 @@ impl TestExecutor {
     where
         F: Future + Unpin,
     {
-        let inner = self.0.inner.clone();
+        let inner = self.local.inner.clone();
         let mut local_collector = inner.collector.create_local_collector();
         self.wake_main_future();
         while let NextStep::NextPacket =
@@ -218,7 +219,7 @@ impl TestExecutor {
     /// Schedule the main future for being woken up. This is useful in conjunction with
     /// `run_one_step`.
     pub fn wake_main_future(&mut self) {
-        ArcWake::wake_by_ref(&self.0.main_task);
+        ArcWake::wake_by_ref(&self.local.main_task);
     }
 
     /// Run one iteration of the loop: dispatch the first available packet or timer. Returns `None`
@@ -239,7 +240,7 @@ impl TestExecutor {
     where
         F: Future + Unpin,
     {
-        let inner = self.0.inner.clone();
+        let inner = self.local.inner.clone();
         let mut local_collector = inner.collector.create_local_collector();
         match self.next_step(/*fire_timers:*/ true, &mut local_collector) {
             NextStep::WaitUntil(_) => None,
@@ -271,23 +272,23 @@ impl TestExecutor {
         F: Future + Unpin,
     {
         let packet =
-            self.0.next_packet.take().expect("consume_packet called but no packet available");
+            self.next_packet.take().expect("consume_packet called but no packet available");
         match packet.key() {
             EMPTY_WAKEUP_ID => {
-                let res = self.0.main_task.poll(main_future, &self.0.main_waker);
+                let res = self.local.main_task.poll(main_future, &self.local.main_waker);
                 local_collector.task_polled(
                     MAIN_TASK_ID,
                     /* complete */ false,
-                    /* pending_tasks */ self.0.inner.ready_tasks.len(),
+                    /* pending_tasks */ self.local.inner.ready_tasks.len(),
                 );
                 res
             }
             TASK_READY_WAKEUP_ID => {
-                self.0.inner.poll_ready_tasks(&mut local_collector);
+                self.local.inner.poll_ready_tasks(&mut local_collector);
                 Poll::Pending
             }
             receiver_key => {
-                self.0.inner.deliver_packet(receiver_key as usize, packet);
+                self.local.inner.deliver_packet(receiver_key as usize, packet);
                 Poll::Pending
             }
         }
@@ -299,26 +300,26 @@ impl TestExecutor {
         local_collector: &mut LocalCollector<'_>,
     ) -> NextStep {
         // If a packet is queued from a previous call to next_step, it must be executed first.
-        if let Some(_) = self.0.next_packet {
+        if let Some(_) = self.next_packet {
             return NextStep::NextPacket;
         }
         // If we are past a deadline, run the corresponding timer.
         let next_deadline = with_local_timer_heap(|timer_heap| {
             next_deadline(timer_heap).map(|t| t.time).unwrap_or(Time::INFINITE)
         });
-        if fire_timers && next_deadline <= self.0.inner.now() {
+        if fire_timers && next_deadline <= self.local.inner.now() {
             NextStep::NextTimer
         } else {
             local_collector.will_wait();
             // Try to unqueue a packet from the port.
-            match self.0.inner.port.wait(zx::Time::INFINITE_PAST) {
+            match self.local.inner.port.wait(zx::Time::INFINITE_PAST) {
                 Ok(packet) => {
                     let reason = match packet.key() {
                         TASK_READY_WAKEUP_ID | EMPTY_WAKEUP_ID => WakeupReason::Notification,
                         _ => WakeupReason::Io,
                     };
                     local_collector.woke_up(reason);
-                    self.0.next_packet = Some(packet);
+                    self.next_packet = Some(packet);
                     NextStep::NextPacket
                 }
                 Err(zx::Status::TIMED_OUT) => {
@@ -338,7 +339,7 @@ impl TestExecutor {
     /// If this returns `Ready`, `run_one_step` will return `Some(_)`. If there is no pending packet
     /// or timer, `Waiting(Time::INFINITE)` is returned.
     pub fn is_waiting(&mut self) -> WaitState {
-        let inner = self.0.inner.clone();
+        let inner = self.local.inner.clone();
         let mut local_collector = inner.collector.create_local_collector();
         match self.next_step(/*fire_timers:*/ true, &mut local_collector) {
             NextStep::NextPacket | NextStep::NextTimer => WaitState::Ready,
@@ -389,7 +390,7 @@ impl TestExecutor {
 
     #[cfg(test)]
     pub(crate) fn snapshot(&self) -> super::instrumentation::Snapshot {
-        self.0.inner.collector.snapshot()
+        self.local.inner.collector.snapshot()
     }
 }
 
