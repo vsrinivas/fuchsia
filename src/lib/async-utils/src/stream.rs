@@ -44,6 +44,22 @@ pub struct StreamWithEpitaph<S, E> {
     epitaph: Option<E>,
 }
 
+impl<S, E> StreamWithEpitaph<S, E> {
+    /// Provide immutable access to the inner stream.
+    /// This is safe as if the stream were being polled, we would not be able to access a
+    /// reference to self to pass to this method.
+    pub fn inner(&self) -> &S {
+        &self.inner
+    }
+
+    /// Provide mutable access to the inner stream.
+    /// This is safe as if the stream were being polled, we would not be able to access a mutable
+    /// reference to self to pass to this method.
+    pub fn inner_mut(&mut self) -> &mut S {
+        &mut self.inner
+    }
+}
+
 // The `Unpin` bounds are not strictly necessary, but make for a more convenient
 // implementation. The bounds can be relaxed if !Unpin support is desired.
 impl<S, T, E> Stream for StreamWithEpitaph<S, E>
