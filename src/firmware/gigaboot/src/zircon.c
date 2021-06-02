@@ -9,6 +9,7 @@
 #include <string.h>
 #include <xefi.h>
 #include <zircon/boot/image.h>
+#include <zircon/limits.h>
 #include <zircon/pixelformat.h>
 
 #include <efi/protocol/graphics-output.h>
@@ -33,6 +34,19 @@ static size_t get_last_crashlog(efi_system_table* sys, void* ptr, size_t max) {
     sz = 0;
   }
   return sz;
+}
+
+// Converts an EFI memory type to a zbi_mem_range_t type.
+uint32_t to_mem_range_type(uint32_t efi_mem_type) {
+  switch (efi_mem_type) {
+    case EfiLoaderCode:
+    case EfiLoaderData:
+    case EfiBootServicesCode:
+    case EfiBootServicesData:
+    case EfiConventionalMemory:
+      return ZBI_MEM_RANGE_RAM;
+  }
+  return ZBI_MEM_RANGE_RESERVED;
 }
 
 static unsigned char scratch[32768];
@@ -286,12 +300,12 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   // Obtain the system memory map
   size_t msize, dsize;
   for (int attempts = 0;; attempts++) {
-    efi_memory_descriptor* mmap = (efi_memory_descriptor*)(scratch + sizeof(uint64_t));
     uint32_t dversion = 0;
     size_t mkey = 0;
-    msize = sizeof(scratch) - sizeof(uint64_t);
+    msize = sizeof(scratch);
     dsize = 0;
-    efi_status r = sys->BootServices->GetMemoryMap(&msize, mmap, &mkey, &dsize, &dversion);
+    efi_status r = sys->BootServices->GetMemoryMap(&msize, (efi_memory_descriptor*)scratch, &mkey,
+                                                   &dsize, &dversion);
     if (r != EFI_SUCCESS) {
       printf("boot: cannot GetMemoryMap()\n");
       goto fail;
@@ -314,11 +328,32 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     printf("boot: cannot ExitBootServices(): %s\n", xefi_strerror(r));
     goto fail;
   }
-  memcpy(scratch, &dsize, sizeof(uint64_t));
 
-  // install memory map
-  result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_EFI_MEMORY_MAP, 0, 0, scratch,
-                                         msize + sizeof(uint64_t));
+  // Past this block, we can assume that sizeof(zbi_mem_range_t) <= dsize.
+  if (dsize < sizeof(efi_memory_descriptor)) {
+    printf("boot: bad descriptor size: %zu\n", dsize);
+    goto fail;
+  }
+  _Static_assert(sizeof(zbi_mem_range_t) <= sizeof(efi_memory_descriptor),
+                 "Cannot assume that sizeof(zbi_mem_range_t) <= dsize");
+
+  // Convert the memory map in place to a range of zbi_mem_range_t, the
+  // preferred ZBI memory format. In-place conversion can safely be done
+  // one-by-one, given that zbi_mem_range_t is smaller than a descriptor.
+  const size_t num_ranges = msize / dsize;
+  zbi_mem_range_t* ranges = (zbi_mem_range_t*)scratch;
+  for (size_t i = 0; i < num_ranges; ++i) {
+    const efi_memory_descriptor* desc = (const efi_memory_descriptor*)&scratch[i * dsize];
+    const zbi_mem_range_t range = {
+        .paddr = desc->PhysicalStart,
+        .length = desc->NumberOfPages * ZX_PAGE_SIZE,
+        .type = to_mem_range_type(desc->Type),
+    };
+    memcpy(&ranges[i], &range, sizeof(range));
+  }
+
+  result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_MEM_CONFIG, 0, 0, ranges,
+                                         num_ranges * sizeof(zbi_mem_range_t));
   if (result != ZBI_RESULT_OK) {
     goto fail;
   }
