@@ -19,7 +19,7 @@ use std::convert::TryFrom;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ast<'a> {
     pub using: Vec<Include>,
-    pub statements: Vec<Statement<'a>>,
+    pub statements: StatementBlock<'a>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,8 +49,8 @@ pub enum Statement<'a> {
     },
     If {
         span: Span<'a>,
-        blocks: Vec<(Condition<'a>, Vec<Statement<'a>>)>,
-        else_block: Vec<Statement<'a>>,
+        blocks: Vec<(Condition<'a>, StatementBlock<'a>)>,
+        else_block: StatementBlock<'a>,
     },
     False {
         span: Span<'a>,
@@ -59,6 +59,8 @@ pub enum Statement<'a> {
         span: Span<'a>,
     },
 }
+
+pub type StatementBlock<'a> = Vec<Statement<'a>>;
 
 impl<'a> Statement<'a> {
     pub fn get_span(&'a self) -> &'a Span<'a> {

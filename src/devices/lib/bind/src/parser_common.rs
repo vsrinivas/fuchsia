@@ -118,6 +118,8 @@ pub enum BindParserError {
     Eof(String),
     CompositeKeyword(String),
     NodeKeyword(String),
+    PrimaryKeyword(String),
+    OnePrimaryNode(String),
     UnterminatedComment,
     Unknown(String, ErrorKind),
 }

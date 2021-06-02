@@ -138,11 +138,20 @@ impl From<BindParserError> for UserError {
                 UserError::new("E025", "Expected end of file.", Some(span), false)
             }
             BindParserError::CompositeKeyword(span) => {
-                UserError::new("E029", "Expected 'fragment' keyword.", Some(span), false)
+                UserError::new("E029", "Expected 'composite' keyword.", Some(span), false)
             }
             BindParserError::NodeKeyword(span) => {
-                UserError::new("E030", "Expected 'fragment' keyword.", Some(span), false)
+                UserError::new("E030", "Expected 'node' keyword.", Some(span), false)
             }
+            BindParserError::PrimaryKeyword(span) => {
+                UserError::new("E031", "Expected 'primary' keyword.", Some(span), false)
+            }
+            BindParserError::OnePrimaryNode(span) => UserError::new(
+                "E032",
+                "Composite bind rules must contain exactly one primary node.",
+                Some(span),
+                false,
+            ),
             BindParserError::UnterminatedComment => {
                 UserError::new("E023", "Found an unterminated multiline comment.", None, false)
             }
