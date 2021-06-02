@@ -24,7 +24,7 @@ use packet_formats::icmp::{
     MessageBody, OriginalPacket,
 };
 use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6NextHeader};
-use packet_formats::ipv4::Ipv4Header;
+use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Header};
 use packet_formats::ipv6::{Ipv6Header, UndefinedBodyBoundsError};
 use zerocopy::ByteSlice;
 
@@ -75,6 +75,23 @@ pub enum Icmpv6ErrorCode {
     PacketTooBig,
     TimeExceeded(Icmpv6TimeExceededCode),
     ParameterProblem(Icmpv6ParameterProblemCode),
+}
+
+/// Information used by ICMPv4 to decide whether an ICMP error message should
+/// be sent.
+#[derive(Copy, Clone)]
+pub struct ShouldSendIcmpv4ErrorInfo {
+    /// Whether the IPv4 packet received was the initial fragment or not.
+    pub fragment_type: Ipv4FragmentType,
+}
+
+/// Information used by ICMPv6 to decide whether an ICMP error message should
+/// be sent.
+#[derive(Copy, Clone)]
+pub struct ShouldSendIcmpv6ErrorInfo {
+    /// Whether ICMPv6 should send an error message even if the destination
+    /// address is a multicast address.
+    pub allow_dst_multicast: bool,
 }
 
 pub(crate) struct IcmpState<A: IpAddress, Instant, S> {
@@ -296,14 +313,20 @@ pub trait IcmpIpExt: packet_formats::icmp::IcmpIpExt {
     /// The type of error code for this version of ICMP - [`Icmpv4ErrorCode`] or
     /// [`Icmpv6ErrorCode`].
     type ErrorCode: Debug;
+
+    /// Information used to decide whether ICMP should reply with an error
+    /// message.
+    type ShouldSendIcmpErrorInfo;
 }
 
 impl IcmpIpExt for Ipv4 {
     type ErrorCode = Icmpv4ErrorCode;
+    type ShouldSendIcmpErrorInfo = ShouldSendIcmpv4ErrorInfo;
 }
 
 impl IcmpIpExt for Ipv6 {
     type ErrorCode = Icmpv6ErrorCode;
+    type ShouldSendIcmpErrorInfo = ShouldSendIcmpv6ErrorInfo;
 }
 
 /// An event dispatcher for the ICMP layer.
@@ -574,15 +597,10 @@ pub(crate) trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>:
     /// address, probably for exactly this reason).
     ///
     /// `send_icmp_error_message` is responsible for calling
-    /// [`should_send_icmpv4_error`] or [`should_send_icmpv6_error`]. If those
-    /// return `false`, then it must not send the message regardless of whatever
-    /// other logic is used.
-    ///
-    /// If the encapsulated error message is an ICMPv6 Packet Too Big Message or
-    /// a Parameter Problem Message, Code 2 reporting an unrecognized IPv6
-    /// option that has the Option Type highest-order two bits set to 10,
-    /// `allow_dst_multicast` must be set to `true`. See
-    /// [`should_send_icmpv6_error`] for more details.
+    /// [`should_send_icmpv4_error`] or [`should_send_icmpv6_error`], and `info`
+    /// contains information that is used by these functions. If they return
+    /// `false`, then it must not send the message regardless of whatever other
+    /// logic is used.
     ///
     /// get_body` returns a `Serializer` with the bytes of the ICMP packet, and,
     /// when called, is given the source IP address chosen for the outbound
@@ -597,7 +615,7 @@ pub(crate) trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>:
         dst_ip: SpecifiedAddr<I::Addr>,
         get_body: F,
         ip_mtu: Option<u32>,
-        allow_dst_multicast: bool,
+        info: I::ShouldSendIcmpErrorInfo,
     ) -> Result<(), S>;
 }
 
@@ -1232,8 +1250,8 @@ fn receive_icmpv6_error<
 /// with a "protocol unreachable" code.
 ///
 /// `original_packet` contains the contents of the entire original packet,
-/// including the IP header. `header_len` is the length of the header including
-/// all options.
+/// including the IP header. This must be a whole packet, not a packet fragment.
+/// `header_len` is the length of the header including all options.
 pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: BufferIcmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -1254,6 +1272,12 @@ pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: BufferIcmpv4Cont
         Icmpv4DestUnreachableCode::DestProtocolUnreachable,
         original_packet,
         header_len,
+        // If we are sending a protocol unreachable error it is correct to assume that, if the
+        // packet was initially fragmented, it has been successfully reassembled by now. It
+        // guarantees that we won't send more than one ICMP Destination Unreachable message for
+        // different fragments of the same original packet, so we should behave as if we are
+        // handling an initial fragment.
+        Ipv4FragmentType::InitialFragment,
     );
 }
 
@@ -1312,8 +1336,8 @@ pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: BufferIcmpv6Cont
 /// "destination unreachable" message with a "port unreachable" code.
 ///
 /// `original_packet` contains the contents of the entire original packet,
-/// including the IP packet header. `header_len` is the length of the entire
-/// header, including options.
+/// including the IP header. This must be a whole packet, not a packet fragment.
+/// `header_len` is the length of the header including all options.
 pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: BufferIcmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
@@ -1334,6 +1358,12 @@ pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: BufferIcmpv4Context<
         Icmpv4DestUnreachableCode::DestPortUnreachable,
         original_packet,
         header_len,
+        // If we are sending a port unreachable error it is correct to assume that, if the packet
+        // was initially fragmented, it has been successfully reassembled by now. It guarantees that
+        // we won't send more than one ICMP Destination Unreachable message for different fragments
+        // of the same original packet, so we should behave as if we are handling an initial
+        // fragment.
+        Ipv4FragmentType::InitialFragment,
     );
 }
 
@@ -1386,6 +1416,7 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: BufferIcmpv4Context<B
     proto: Ipv4Proto,
     original_packet: B,
     header_len: usize,
+    fragment_type: Ipv4FragmentType,
 ) {
     ctx.increment_counter("send_icmpv4_net_unreachable");
 
@@ -1404,6 +1435,7 @@ pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: BufferIcmpv4Context<B
         Icmpv4DestUnreachableCode::DestNetworkUnreachable,
         original_packet,
         header_len,
+        fragment_type,
     );
 }
 
@@ -1466,6 +1498,7 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: BufferIcmpv4Context<B>>(
     proto: Ipv4Proto,
     mut original_packet: B,
     header_len: usize,
+    fragment_type: Ipv4FragmentType,
 ) {
     ctx.increment_counter("send_icmpv4_ttl_expired");
 
@@ -1495,7 +1528,7 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: BufferIcmpv4Context<B>>(
                 ))
             },
             None,
-            false,
+            ShouldSendIcmpv4ErrorInfo { fragment_type },
         )
     );
 }
@@ -1551,7 +1584,7 @@ pub(crate) fn send_icmpv6_ttl_expired<B: BufferMut, C: BufferIcmpv6Context<B>>(
                     .encapsulate(icmp_builder)
             },
             Some(Ipv6::MINIMUM_LINK_MTU.into()),
-            false,
+            ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: false },
         )
     );
 }
@@ -1613,7 +1646,7 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: BufferIcmpv6Context<B>
             // Section 2.4.e explicitly allows sending an ICMP response if the
             // original packet was sent to a multicast IP or link layer if the
             // ICMP response message will be a Packet Too Big Message.
-            true,
+            ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: true },
         )
     );
 }
@@ -1628,6 +1661,7 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: BufferIcmpv4Context
     parameter_problem: Icmpv4ParameterProblem,
     mut original_packet: B,
     header_len: usize,
+    fragment_type: Ipv4FragmentType,
 ) {
     ctx.increment_counter("send_icmpv4_parameter_problem");
 
@@ -1651,7 +1685,7 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: BufferIcmpv4Context
                 ))
             },
             None,
-            false,
+            ShouldSendIcmpv4ErrorInfo { fragment_type },
         )
     );
 }
@@ -1675,13 +1709,13 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: BufferIcmpv6Context
     code: Icmpv6ParameterProblemCode,
     parameter_problem: Icmpv6ParameterProblem,
     original_packet: B,
-    allow_multicast_dst: bool,
+    allow_dst_multicast: bool,
 ) {
-    // Only allow the `allow_multicast_dst` parameter to be set if the code is
+    // Only allow the `allow_dst_multicast` parameter to be set if the code is
     // the unrecognized IPv6 option as that is one of the few exceptions where
     // we can send an ICMP packet in response to a packet that was destined for
     // a multicast address.
-    assert!(!allow_multicast_dst || code == Icmpv6ParameterProblemCode::UnrecognizedIpv6Option);
+    assert!(!allow_dst_multicast || code == Icmpv6ParameterProblemCode::UnrecognizedIpv6Option);
 
     ctx.increment_counter("send_icmpv6_parameter_problem");
 
@@ -1707,7 +1741,7 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: BufferIcmpv6Context
                     .encapsulate(icmp_builder)
             },
             Some(Ipv6::MINIMUM_LINK_MTU.into()),
-            allow_multicast_dst,
+            ShouldSendIcmpv6ErrorInfo { allow_dst_multicast },
         )
     );
 }
@@ -1721,6 +1755,7 @@ fn send_icmpv4_dest_unreachable<B: BufferMut, C: BufferIcmpv4Context<B>>(
     code: Icmpv4DestUnreachableCode,
     mut original_packet: B,
     header_len: usize,
+    fragment_type: Ipv4FragmentType,
 ) {
     ctx.increment_counter("send_icmpv4_dest_unreachable");
 
@@ -1744,7 +1779,7 @@ fn send_icmpv4_dest_unreachable<B: BufferMut, C: BufferIcmpv4Context<B>>(
                 ))
             },
             None,
-            false,
+            ShouldSendIcmpv4ErrorInfo { fragment_type },
         )
     );
 }
@@ -1780,7 +1815,7 @@ fn send_icmpv6_dest_unreachable<B: BufferMut, C: BufferIcmpv6Context<B>>(
                     .encapsulate(icmp_builder)
             },
             Some(Ipv6::MINIMUM_LINK_MTU.into()),
-            false,
+            ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: false },
         )
     );
 }
@@ -1806,13 +1841,13 @@ pub(crate) fn should_send_icmpv4_error(
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv4Addr>,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
+    info: ShouldSendIcmpv4ErrorInfo,
 ) -> bool {
     // NOTE: We do not explicitly implement the "unspecified address" check, as
     // it is enforced by the types of the arguments.
 
     // TODO(joshlf): Implement the rest of the rules:
     // - a packet destined to a subnet broadcast address
-    // - a non-initial fragment
     // - a packet whose source address is a subnet broadcast address
 
     // NOTE: The FrameDestination type has variants for unicast, multicast, and
@@ -1827,13 +1862,14 @@ pub(crate) fn should_send_icmpv4_error(
     // TODO(joshlf): Should we filter incoming multicast IP traffic to make sure
     // that it matches the multicast MAC address of the frame it was
     // encapsulated in?
-    !(dst_ip.is_multicast()
-        || dst_ip.is_global_broadcast()
-        || frame_dst.is_broadcast()
-        || src_ip.is_loopback()
-        || src_ip.is_global_broadcast()
-        || src_ip.is_multicast()
-        || src_ip.is_class_e())
+    info.fragment_type == Ipv4FragmentType::InitialFragment
+        && !(dst_ip.is_multicast()
+            || dst_ip.is_global_broadcast()
+            || frame_dst.is_broadcast()
+            || src_ip.is_loopback()
+            || src_ip.is_global_broadcast()
+            || src_ip.is_multicast()
+            || src_ip.is_class_e())
 }
 
 /// Should we send an ICMPv6 response?
@@ -1855,8 +1891,8 @@ pub(crate) fn should_send_icmpv4_error(
 ///
 /// If an ICMP response will be a Packet Too Big Message or a Parameter Problem
 /// Message, Code 2 reporting an unrecognized IPv6 option that has the Option
-/// Type highest-order two bits set to 10, `allow_dst_multicast` must be set to
-/// `true` so this function will allow the exception mentioned above.
+/// Type highest-order two bits set to 10, `info.allow_dst_multicast` must be
+/// set to `true` so this function will allow the exception mentioned above.
 ///
 /// Note that `should_send_icmpv6_error` does NOT check whether the incoming
 /// packet contained an ICMP error message. This is because that check is
@@ -1866,11 +1902,11 @@ pub(crate) fn should_send_icmpv6_error(
     frame_dst: FrameDestination,
     src_ip: SpecifiedAddr<Ipv6Addr>,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
-    allow_dst_multicast: bool,
+    info: ShouldSendIcmpv6ErrorInfo,
 ) -> bool {
     // NOTE: We do not explicitly implement the "unspecified address" check, as
     // it is enforced by the types of the arguments.
-    !((!allow_dst_multicast
+    !((!info.allow_dst_multicast
         && (dst_ip.is_multicast() || frame_dst.is_multicast() || frame_dst.is_broadcast()))
         || src_ip.is_loopback()
         || src_ip.is_multicast())
@@ -2123,6 +2159,9 @@ mod tests {
     /// given function `f` on the packet. Otherwise, if it is `None`, expect
     /// that no response was sent.
     ///
+    /// `modify_packet_builder` is invoked on the `PacketBuilder` before the
+    /// packet is serialized.
+    ///
     /// `modify_stack_state_builder` is invoked on the `StackStateBuilder`
     /// before it is used to build the context.
     ///
@@ -2132,28 +2171,25 @@ mod tests {
         I: TestIpExt + IcmpIpExt,
         C: PartialEq + Debug,
         M: for<'a> IcmpMessage<I, &'a [u8], Code = C> + PartialEq + Debug,
-        F: FnOnce(&mut StackStateBuilder),
-        FF: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),
+        PBF: FnOnce(&mut <I as IpExt>::PacketBuilder),
+        SSBF: FnOnce(&mut StackStateBuilder),
+        F: for<'a> FnOnce(&IcmpPacket<I, &'a [u8], M>),
     >(
-        modify_stack_state_builder: F,
+        modify_packet_builder: PBF,
+        modify_stack_state_builder: SSBF,
         body: &mut [u8],
         dst_ip: SpecifiedAddr<I::Addr>,
         ttl: u8,
         proto: I::Proto,
         assert_counters: &[&str],
         expect_message_code: Option<(M, C)>,
-        f: FF,
+        f: F,
     ) {
         crate::testutil::set_logger_for_test();
-        let buffer = Buf::new(body, ..)
-            .encapsulate(<I as IpExt>::PacketBuilder::new(
-                *I::DUMMY_CONFIG.remote_ip,
-                dst_ip.get(),
-                ttl,
-                proto,
-            ))
-            .serialize_vec_outer()
-            .unwrap();
+        let mut pb =
+            <I as IpExt>::PacketBuilder::new(*I::DUMMY_CONFIG.remote_ip, dst_ip.get(), ttl, proto);
+        modify_packet_builder(&mut pb);
+        let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
         let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
             .build_with_modifications::<DummyEventDispatcher, _>(modify_stack_state_builder);
@@ -2221,7 +2257,8 @@ mod tests {
                 ))
                 .serialize_vec_outer()
                 .unwrap();
-            test_receive_ip_packet::<I, _, _, _, _>(
+            test_receive_ip_packet::<I, _, _, _, _, _>(
+                |_| {},
                 |_| {},
                 buffer.as_mut(),
                 I::DUMMY_CONFIG.local_ip,
@@ -2251,7 +2288,8 @@ mod tests {
             ))
             .serialize_vec_outer()
             .unwrap();
-        test_receive_ip_packet::<Ipv4, _, _, _, _>(
+        test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
+            |_| {},
             |builder| {
                 builder.ipv4_builder().icmpv4_builder().send_timestamp_reply(true);
             },
@@ -2279,7 +2317,8 @@ mod tests {
             let v4proto = Ipv4Proto::from(proto);
             match v4proto {
                 Ipv4Proto::Proto(IpProto::Tcp) | Ipv4Proto::Other(_) => {
-                    test_receive_ip_packet::<Ipv4, _, _, _, _>(
+                    test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
+                        |_| {},
                         |_| {},
                         &mut [0u8; 128],
                         DUMMY_CONFIG_V4.local_ip,
@@ -2305,7 +2344,8 @@ mod tests {
             let v6proto = Ipv6NextHeader::from(proto);
             match v6proto {
                 Ipv6NextHeader::Proto(IpProto::Tcp) => {
-                    test_receive_ip_packet::<Ipv6, _, _, _, _>(
+                    test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
+                        |_| {},
                         |_| {},
                         &mut [0u8; 128],
                         DUMMY_CONFIG_V6.local_ip,
@@ -2354,7 +2394,8 @@ mod tests {
                 ))
                 .serialize_vec_outer()
                 .unwrap();
-            test_receive_ip_packet::<I, _, _, _, _>(
+            test_receive_ip_packet::<I, _, _, _, _, _>(
+                |_| {},
                 // Enable the `send_port_unreachable` feature.
                 |builder| {
                     builder.transport_builder().udp_builder().send_port_unreachable(true);
@@ -2368,7 +2409,8 @@ mod tests {
                 // Ensure packet is truncated to the right length.
                 |packet| assert_eq!(packet.original_packet().bytes().len(), original_packet_len),
             );
-            test_receive_ip_packet::<I, C, IcmpDestUnreachable, _, _>(
+            test_receive_ip_packet::<I, C, IcmpDestUnreachable, _, _, _>(
+                |_| {},
                 // Leave the `send_port_unreachable` feature disabled.
                 |_| {},
                 buffer.as_mut(),
@@ -2397,7 +2439,8 @@ mod tests {
     fn test_net_unreachable() {
         // Receive an IP packet for an unreachable destination address. Check to
         // make sure that we respond with the appropriate ICMP message.
-        test_receive_ip_packet::<Ipv4, _, _, _, _>(
+        test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
+            |_| {},
             |sb| {
                 sb.ipv4_builder().forward(true);
             },
@@ -2413,7 +2456,8 @@ mod tests {
             // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
-        test_receive_ip_packet::<Ipv6, _, _, _, _>(
+        test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
+            |_| {},
             |sb| {
                 sb.ipv6_builder().forward(true);
             },
@@ -2427,13 +2471,29 @@ mod tests {
             // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
         );
+        // Same test for IPv4 but with a non-initial fragment. No ICMP error
+        // should be sent.
+        test_receive_ip_packet::<Ipv4, _, IcmpDestUnreachable, _, _, _>(
+            |pb| pb.fragment_offset(64),
+            |sb| {
+                sb.ipv4_builder().forward(true);
+            },
+            &mut [0u8; 128],
+            SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
+            64,
+            IpProto::Udp.into(),
+            &[],
+            None,
+            |_| {},
+        );
     }
 
     #[test]
     fn test_ttl_expired() {
         // Receive an IP packet with an expired TTL. Check to make sure that we
         // respond with the appropriate ICMP message.
-        test_receive_ip_packet::<Ipv4, _, _, _, _>(
+        test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
+            |_| {},
             |builder| {
                 builder.ipv4_builder().forward(true);
             },
@@ -2446,7 +2506,8 @@ mod tests {
             // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
         );
-        test_receive_ip_packet::<Ipv6, _, _, _, _>(
+        test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
+            |_| {},
             |builder| {
                 builder.ipv6_builder().forward(true);
             },
@@ -2459,6 +2520,21 @@ mod tests {
             // Ensure packet is truncated to the right length.
             |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
         );
+        // Same test for IPv4 but with a non-initial fragment. No ICMP error
+        // should be sent.
+        test_receive_ip_packet::<Ipv4, _, IcmpTimeExceeded, _, _, _>(
+            |pb| pb.fragment_offset(64),
+            |sb| {
+                sb.ipv4_builder().forward(true);
+            },
+            &mut [0u8; 128],
+            SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
+            64,
+            IpProto::Udp.into(),
+            &[],
+            None,
+            |_| {},
+        );
     }
 
     #[test]
@@ -2468,33 +2544,101 @@ mod tests {
         let frame_dst = FrameDestination::Unicast;
         let multicast_ip_1 = SpecifiedAddr::new(Ipv4Addr::new([224, 0, 0, 1])).unwrap();
         let multicast_ip_2 = SpecifiedAddr::new(Ipv4Addr::new([224, 0, 0, 2])).unwrap();
+        let is_initial_fragment =
+            ShouldSendIcmpv4ErrorInfo { fragment_type: Ipv4FragmentType::InitialFragment };
+        let is_not_initial_fragment =
+            ShouldSendIcmpv4ErrorInfo { fragment_type: Ipv4FragmentType::NonInitialFragment };
 
-        // Should Send.
-        assert!(should_send_icmpv4_error(frame_dst, src_ip, dst_ip));
+        // Should Send, unless non initial fragment.
+        assert!(should_send_icmpv4_error(frame_dst, src_ip, dst_ip, is_initial_fragment));
+        assert!(!should_send_icmpv4_error(frame_dst, src_ip, dst_ip, is_not_initial_fragment));
 
         // Should not send because destined for IP broadcast addr
-        assert!(!should_send_icmpv4_error(frame_dst, src_ip, Ipv4::GLOBAL_BROADCAST_ADDRESS));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            src_ip,
+            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            is_initial_fragment
+        ));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            src_ip,
+            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            is_not_initial_fragment
+        ));
 
         // Should not send because destined for multicast addr
-        assert!(!should_send_icmpv4_error(frame_dst, src_ip, multicast_ip_1));
+        assert!(!should_send_icmpv4_error(frame_dst, src_ip, multicast_ip_1, is_initial_fragment));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            src_ip,
+            multicast_ip_1,
+            is_not_initial_fragment
+        ));
 
         // Should not send because Link Layer Broadcast.
-        assert!(!should_send_icmpv4_error(FrameDestination::Broadcast, src_ip, dst_ip));
+        assert!(!should_send_icmpv4_error(
+            FrameDestination::Broadcast,
+            src_ip,
+            dst_ip,
+            is_initial_fragment
+        ));
+        assert!(!should_send_icmpv4_error(
+            FrameDestination::Broadcast,
+            src_ip,
+            dst_ip,
+            is_not_initial_fragment
+        ));
 
         // Should not send because from loopback addr
-        assert!(!should_send_icmpv4_error(frame_dst, Ipv4::LOOPBACK_ADDRESS, dst_ip));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            Ipv4::LOOPBACK_ADDRESS,
+            dst_ip,
+            is_initial_fragment
+        ));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            Ipv4::LOOPBACK_ADDRESS,
+            dst_ip,
+            is_not_initial_fragment
+        ));
 
         // Should not send because from global broadcast addr
-        assert!(!should_send_icmpv4_error(frame_dst, Ipv4::GLOBAL_BROADCAST_ADDRESS, dst_ip));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            dst_ip,
+            is_initial_fragment
+        ));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            Ipv4::GLOBAL_BROADCAST_ADDRESS,
+            dst_ip,
+            is_not_initial_fragment
+        ));
 
         // Should not send because from multicast addr
-        assert!(!should_send_icmpv4_error(frame_dst, multicast_ip_2, dst_ip));
+        assert!(!should_send_icmpv4_error(frame_dst, multicast_ip_2, dst_ip, is_initial_fragment));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            multicast_ip_2,
+            dst_ip,
+            is_not_initial_fragment
+        ));
 
         // Should not send because from class E addr
         assert!(!should_send_icmpv4_error(
             frame_dst,
             SpecifiedAddr::new(Ipv4Addr::new([240, 0, 0, 1])).unwrap(),
-            dst_ip
+            dst_ip,
+            is_initial_fragment
+        ));
+        assert!(!should_send_icmpv4_error(
+            frame_dst,
+            SpecifiedAddr::new(Ipv4Addr::new([240, 0, 0, 1])).unwrap(),
+            dst_ip,
+            is_not_initial_fragment
         ));
     }
 
@@ -2509,28 +2653,60 @@ mod tests {
         let multicast_ip_2 =
             SpecifiedAddr::new(Ipv6Addr::new([255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]))
                 .unwrap();
+        let allow_dst_multicast = ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: true };
+        let disallow_dst_multicast = ShouldSendIcmpv6ErrorInfo { allow_dst_multicast: false };
 
         // Should Send.
-        assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, false));
-        assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, true));
+        assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, disallow_dst_multicast));
+        assert!(should_send_icmpv6_error(frame_dst, src_ip, dst_ip, allow_dst_multicast));
 
         // Should not send because destined for multicast addr, unless exception
         // applies.
-        assert!(!should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, false));
-        assert!(should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, true));
+        assert!(!should_send_icmpv6_error(
+            frame_dst,
+            src_ip,
+            multicast_ip_1,
+            disallow_dst_multicast
+        ));
+        assert!(should_send_icmpv6_error(frame_dst, src_ip, multicast_ip_1, allow_dst_multicast));
 
         // Should not send because Link Layer Broadcast, unless exception
         // applies.
-        assert!(!should_send_icmpv6_error(FrameDestination::Broadcast, src_ip, dst_ip, false));
-        assert!(should_send_icmpv6_error(FrameDestination::Broadcast, src_ip, dst_ip, true));
+        assert!(!should_send_icmpv6_error(
+            FrameDestination::Broadcast,
+            src_ip,
+            dst_ip,
+            disallow_dst_multicast
+        ));
+        assert!(should_send_icmpv6_error(
+            FrameDestination::Broadcast,
+            src_ip,
+            dst_ip,
+            allow_dst_multicast
+        ));
 
         // Should not send because from loopback addr.
-        assert!(!should_send_icmpv6_error(frame_dst, Ipv6::LOOPBACK_ADDRESS, dst_ip, false));
-        assert!(!should_send_icmpv6_error(frame_dst, Ipv6::LOOPBACK_ADDRESS, dst_ip, true));
+        assert!(!should_send_icmpv6_error(
+            frame_dst,
+            Ipv6::LOOPBACK_ADDRESS,
+            dst_ip,
+            disallow_dst_multicast
+        ));
+        assert!(!should_send_icmpv6_error(
+            frame_dst,
+            Ipv6::LOOPBACK_ADDRESS,
+            dst_ip,
+            allow_dst_multicast
+        ));
 
         // Should not send because from multicast addr.
-        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, false));
-        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, true));
+        assert!(!should_send_icmpv6_error(
+            frame_dst,
+            multicast_ip_2,
+            dst_ip,
+            disallow_dst_multicast
+        ));
+        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, dst_ip, allow_dst_multicast));
 
         // Should not send becuase from multicast addr, even though dest
         // multicast exception applies.
@@ -2538,16 +2714,26 @@ mod tests {
             FrameDestination::Broadcast,
             multicast_ip_2,
             dst_ip,
-            false
+            disallow_dst_multicast
         ));
         assert!(!should_send_icmpv6_error(
             FrameDestination::Broadcast,
             multicast_ip_2,
             dst_ip,
-            true
+            allow_dst_multicast
         ));
-        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, false));
-        assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, true));
+        assert!(!should_send_icmpv6_error(
+            frame_dst,
+            multicast_ip_2,
+            multicast_ip_1,
+            disallow_dst_multicast
+        ));
+        assert!(!should_send_icmpv6_error(
+            frame_dst,
+            multicast_ip_2,
+            multicast_ip_1,
+            allow_dst_multicast
+        ));
     }
 
     #[specialize_ip]
@@ -2632,13 +2818,13 @@ mod tests {
 
     // The arguments to `IcmpContext::send_icmp_error_message`.
     #[derive(Debug, PartialEq)]
-    struct SendIcmpErrorMessageArgs<A: IpAddress> {
+    struct SendIcmpErrorMessageArgs<I: IcmpIpExt> {
         frame_dst: FrameDestination,
-        src_ip: SpecifiedAddr<A>,
-        dst_ip: SpecifiedAddr<A>,
+        src_ip: SpecifiedAddr<I::Addr>,
+        dst_ip: SpecifiedAddr<I::Addr>,
         body: Vec<u8>,
         ip_mtu: Option<u32>,
-        allow_dst_multicast: bool,
+        info: I::ShouldSendIcmpErrorInfo,
         // Whether `should_send_icmpv{4,6}_error` returned true.
         sent: bool,
     }
@@ -2670,7 +2856,7 @@ mod tests {
         // All calls to `IcmpContext::send_icmp_reply`.
         send_icmp_reply: Vec<SendIcmpReplyArgs<I::Addr>>,
         // All calls to `IcmpContext::send_icmp_error_message`.
-        send_icmp_error_message: Vec<SendIcmpErrorMessageArgs<I::Addr>>,
+        send_icmp_error_message: Vec<SendIcmpErrorMessageArgs<I>>,
         // We store calls to `IcmpContext::receive_icmp_error` AND calls to
         // `IcmpSocketContext::receive_icmp_error`. Any call to
         // `IcmpContext::receive_icmp_error` with an IP proto of ICMP(v4|v6)
@@ -2758,7 +2944,7 @@ mod tests {
     /// Implement a number of traits and methods for the `$inner` and `$outer`
     /// context types.
     macro_rules! impl_context_traits {
-        ($ip:ident, $inner:ident, $outer:ident, $state:ident, $should_send:expr) => {
+        ($ip:ident, $inner:ident, $outer:ident, $state:ident, $info_type:ident, $should_send:expr) => {
             type $outer = DummyContext<$inner>;
 
             impl $inner {
@@ -2900,10 +3086,10 @@ mod tests {
                     dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
                     get_body: F,
                     ip_mtu: Option<u32>,
-                    allow_dst_multicast: bool,
+                    info: $info_type,
                 ) -> Result<(), S> {
                     self.increment_counter("IcmpContext::send_icmp_error_message");
-                    let sent = $should_send(frame_dst, src_ip, dst_ip, allow_dst_multicast);
+                    let sent = $should_send(frame_dst, src_ip, dst_ip, info);
                     self.get_mut().inner.send_icmp_error_message.push(SendIcmpErrorMessageArgs {
                         frame_dst,
                         src_ip,
@@ -2918,7 +3104,7 @@ mod tests {
                             .as_ref()
                             .to_vec(),
                         ip_mtu,
-                        allow_dst_multicast,
+                        info,
                         sent,
                     });
                     Ok(())
@@ -2927,12 +3113,22 @@ mod tests {
         };
     }
 
-    impl_context_traits!(Ipv4, DummyIcmpv4Context, Dummyv4Context, Icmpv4State, |f, s, d, _| {
-        should_send_icmpv4_error(f, s, d)
-    });
-    impl_context_traits!(Ipv6, DummyIcmpv6Context, Dummyv6Context, Icmpv6State, |f, s, d, a| {
-        should_send_icmpv6_error(f, s, d, a)
-    });
+    impl_context_traits!(
+        Ipv4,
+        DummyIcmpv4Context,
+        Dummyv4Context,
+        Icmpv4State,
+        ShouldSendIcmpv4ErrorInfo,
+        |f, s, d, i| { should_send_icmpv4_error(f, s, d, i) }
+    );
+    impl_context_traits!(
+        Ipv6,
+        DummyIcmpv6Context,
+        Dummyv6Context,
+        Icmpv6State,
+        ShouldSendIcmpv6ErrorInfo,
+        |f, s, d, i| { should_send_icmpv6_error(f, s, d, i) }
+    );
 
     impl NdpPacketHandler<DummyDeviceId> for Dummyv6Context {
         fn receive_ndp_packet<B: ByteSlice>(
@@ -3589,6 +3785,7 @@ mod tests {
                 IpProto::Udp.into(),
                 Buf::new(&mut [], ..),
                 0,
+                Ipv4FragmentType::InitialFragment,
             );
         }
 
@@ -3604,6 +3801,7 @@ mod tests {
                 Icmpv4ParameterProblem::new(0),
                 Buf::new(&mut [], ..),
                 0,
+                Ipv4FragmentType::InitialFragment,
             );
         }
 
@@ -3618,6 +3816,7 @@ mod tests {
                 Icmpv4DestUnreachableCode::DestNetworkUnreachable,
                 Buf::new(&mut [], ..),
                 0,
+                Ipv4FragmentType::InitialFragment,
             );
         }
 

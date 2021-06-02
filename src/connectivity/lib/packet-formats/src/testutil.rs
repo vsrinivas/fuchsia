@@ -17,7 +17,7 @@ use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
 use crate::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::ip::{IpExt, IpExtByteSlice, Ipv4Proto};
-use crate::ipv4::{Ipv4Header, Ipv4Packet};
+use crate::ipv4::{Ipv4FragmentType, Ipv4Header, Ipv4Packet};
 use crate::ipv6::{Ipv6Header, Ipv6Packet};
 use crate::tcp::options::TcpOption;
 use crate::tcp::TcpSegment;
@@ -43,6 +43,7 @@ pub struct Ipv4PacketMetadata {
     pub dont_fragment: bool,
     pub more_fragments: bool,
     pub fragment_offset: u16,
+    pub fragment_type: Ipv4FragmentType,
     pub ttl: u8,
     pub proto: Ipv4Proto,
     pub src_ip: Ipv4Addr,

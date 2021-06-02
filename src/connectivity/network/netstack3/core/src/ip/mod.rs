@@ -33,7 +33,7 @@ use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
 use packet_formats::error::IpParseError;
 use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use packet_formats::ip::{IpPacket, IpPacketBuilder, IpProto, Ipv4Proto, Ipv6NextHeader};
-use packet_formats::ipv4::Ipv4Packet;
+use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Packet};
 use packet_formats::ipv6::Ipv6Packet;
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
@@ -46,7 +46,7 @@ use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, BufferIcmpContext,
     BufferIcmpEventDispatcher, IcmpContext, IcmpEventDispatcher, IcmpIpExt, IcmpIpTransportContext,
     Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6State,
-    Icmpv6StateBuilder,
+    Icmpv6StateBuilder, ShouldSendIcmpv4ErrorInfo, ShouldSendIcmpv6ErrorInfo,
 };
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::path_mtu::{IpLayerPathMtuCache, PmtuTimerId};
@@ -982,6 +982,9 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
         // send back an ICMP response as it can be used as an attack vector for
         // DDoS attacks. We only send back an ICMP response if the RFC requires
         // that we MUST send one, as noted by `must_send_icmp` and `action`.
+        // TODO(https://fxbug.dev/77598): test this code path once
+        // `Ipv4Packet::parse` can return an `IpParseError::ParameterProblem`
+        // error.
         Err(IpParseError::ParameterProblem {
             src_ip,
             dst_ip,
@@ -990,8 +993,8 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
             must_send_icmp,
             header_len,
             action,
-        }) if action.should_send_icmp(&dst_ip) && must_send_icmp => {
-            // This should never return `true` for IPv4.
+        }) if must_send_icmp && action.should_send_icmp(&dst_ip) => {
+            // `should_send_icmp_to_multicast` should never return `true` for IPv4.
             assert!(!action.should_send_icmp_to_multicast());
             let dst_ip = try_unit!(SpecifiedAddr::new(dst_ip), debug!("receive_ipv4_packet: Received packet with unspecified destination IP address; dropping"));
             let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
@@ -1005,6 +1008,9 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 Icmpv4ParameterProblem::new(pointer),
                 buffer,
                 header_len,
+                // When the call to `action.should_send_icmp` returns true, it always means that
+                // the IPv4 packet that failed parsing is an initial fragment.
+                Ipv4FragmentType::InitialFragment,
             );
             return;
         }
@@ -1063,10 +1069,11 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                         debug!("failed to forward IPv4 packet: MTU exceeded");
                     }
                 } else {
-                    debug!("received IPv4 packet dropped due to expired TTL");
-
                     // TTL is 0 or would become 0 after decrement; see "TTL"
                     // section, https://tools.ietf.org/html/rfc791#page-14
+                    use packet_formats::ipv4::Ipv4Header;
+                    debug!("received IPv4 packet dropped due to expired TTL");
+                    let fragment_type = packet.fragment_type();
                     let (src_ip, _, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
                     let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
                     icmp::send_icmpv4_ttl_expired(
@@ -1078,12 +1085,15 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                         proto,
                         buffer,
                         meta.header_len(),
+                        fragment_type,
                     );
                 }
             }
             ForwardDestination::NoRouteToHost => {
-                let (src_ip, _, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
+                use packet_formats::ipv4::Ipv4Header;
                 debug!("received IPv4 packet with no known route to destination {}", dst_ip);
+                let fragment_type = packet.fragment_type();
+                let (src_ip, _, proto, meta) = drop_packet_and_undo_parse!(packet, buffer);
                 let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
                 icmp::send_icmpv4_net_unreachable(
                     ctx,
@@ -1094,6 +1104,7 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                     proto,
                     buffer,
                     meta.header_len(),
+                    fragment_type,
                 );
             }
             ForwardDestination::ForwardingDisabled => {
@@ -1138,7 +1149,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
             must_send_icmp,
             header_len: _,
             action,
-        }) if action.should_send_icmp(&dst_ip) && must_send_icmp => {
+        }) if must_send_icmp && action.should_send_icmp(&dst_ip) => {
             let dst_ip = try_unit!(SpecifiedAddr::new(dst_ip), debug!("receive_ipv6_packet: Received packet with unspecified destination IP address; dropping"));
             let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv6_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
             send_icmpv6_parameter_problem(
@@ -1917,12 +1928,12 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv4, B> for Contex
         dst_ip: SpecifiedAddr<Ipv4Addr>,
         get_body: F,
         ip_mtu: Option<u32>,
-        _allow_dst_multicast: bool,
+        should_send_info: ShouldSendIcmpv4ErrorInfo,
     ) -> Result<(), S> {
         trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
         self.increment_counter("send_icmp_error_message");
 
-        if !crate::ip::icmp::should_send_icmpv4_error(frame_dst, src_ip, dst_ip) {
+        if !crate::ip::icmp::should_send_icmpv4_error(frame_dst, src_ip, dst_ip, should_send_info) {
             return Ok(());
         }
 
@@ -2005,17 +2016,12 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIcmpContext<Ipv6, B> for Contex
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         get_body: F,
         ip_mtu: Option<u32>,
-        allow_dst_multicast: bool,
+        should_send_info: ShouldSendIcmpv6ErrorInfo,
     ) -> Result<(), S> {
         trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
         self.increment_counter("send_icmp_error_message");
 
-        if !crate::ip::icmp::should_send_icmpv6_error(
-            frame_dst,
-            src_ip,
-            dst_ip,
-            allow_dst_multicast,
-        ) {
+        if !crate::ip::icmp::should_send_icmpv6_error(frame_dst, src_ip, dst_ip, should_send_info) {
             return Ok(());
         }
 

@@ -11,6 +11,7 @@ use net_types::ip::{Ipv4Addr, Ipv6Addr};
 
 use crate::ethernet::EtherType;
 use crate::ip::{IpProto, Ipv4Proto};
+use crate::ipv4::Ipv4FragmentType;
 use crate::testutil::{
     EthernetFrameMetadata, Ipv4PacketMetadata, Ipv6PacketMetadata, TcpSegmentMetadata, TestPacket,
     UdpPacketMetadata,
@@ -82,6 +83,7 @@ pub mod dns_request_v4 {
             dont_fragment: false,
             more_fragments: false,
             fragment_offset: 0,
+            fragment_type: Ipv4FragmentType::InitialFragment,
             id: 0x17f1,
             ttl: 64,
             proto: Ipv4Proto::Proto(IpProto::Udp),
@@ -220,6 +222,7 @@ pub mod tls_client_hello_v4 {
             dont_fragment: true,
             more_fragments: false,
             fragment_offset: 0,
+            fragment_type: Ipv4FragmentType::InitialFragment,
             ttl: 64,
             proto: Ipv4Proto::Proto(IpProto::Tcp),
             src_ip: Ipv4Addr::new([192, 168, 1, 15]),

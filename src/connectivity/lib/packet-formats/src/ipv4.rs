@@ -36,6 +36,14 @@ const MAX_OPTIONS_LEN: usize = IPV4_MAX_HDR_LEN - HDR_PREFIX_LEN;
 /// The range of bytes within an IPv4 header buffer that the fragment data fields uses.
 const IPV4_FRAGMENT_DATA_BYTE_RANGE: Range<usize> = 4..8;
 
+/// The type of an IPv4 packet fragment.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[allow(missing_docs)]
+pub enum Ipv4FragmentType {
+    InitialFragment,
+    NonInitialFragment,
+}
+
 #[allow(missing_docs)]
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -158,6 +166,18 @@ pub trait Ipv4Header {
             | u16::from(self.get_header_prefix().flags_frag_off[1])
     }
 
+    /// The fragment type.
+    ///
+    /// `p.fragment_type()` returns [`Ipv4FragmentType::InitialFragment`] if
+    /// `p.fragment_offset() == 0` and [`Ipv4FragmentType::NonInitialFragment`]
+    /// otherwise.
+    fn fragment_type(&self) -> Ipv4FragmentType {
+        match self.fragment_offset() {
+            0 => Ipv4FragmentType::InitialFragment,
+            _ => Ipv4FragmentType::NonInitialFragment,
+        }
+    }
+
     /// The Time To Live (TTL).
     fn ttl(&self) -> u8 {
         self.get_header_prefix().ttl
@@ -219,6 +239,8 @@ impl<B: ByteSlice> FromRaw<Ipv4PacketRaw<B>, ()> for Ipv4Packet<B> {
     type Error = IpParseError<Ipv4>;
 
     fn try_from_raw_with(raw: Ipv4PacketRaw<B>, _args: ()) -> Result<Self, Self::Error> {
+        // TODO(https://fxbug.dev/77598): Some of the errors below should return an
+        // `IpParseError::ParameterProblem` instead of a `ParseError`.
         let hdr_prefix = raw.hdr_prefix;
         let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
 
@@ -1056,6 +1078,26 @@ mod tests {
     }
 
     #[test]
+    fn test_fragment_type() {
+        fn test_fragment_type_helper(fragment_offset: u16, expect_fragment_type: Ipv4FragmentType) {
+            let mut builder = new_builder();
+            builder.fragment_offset(fragment_offset);
+
+            let mut buf = [0; IPV4_MIN_HDR_LEN]
+                .into_serializer()
+                .encapsulate(builder)
+                .serialize_vec_outer()
+                .unwrap();
+
+            let packet = buf.parse::<Ipv4Packet<_>>().unwrap();
+            assert_eq!(packet.fragment_type(), expect_fragment_type);
+        }
+
+        test_fragment_type_helper(0x0000, Ipv4FragmentType::InitialFragment);
+        test_fragment_type_helper(0x0008, Ipv4FragmentType::NonInitialFragment);
+    }
+
+    #[test]
     fn test_serialize() {
         let mut builder = new_builder();
         builder.dscp(0x12);
@@ -1084,6 +1126,7 @@ mod tests {
         assert!(packet.df_flag());
         assert!(packet.mf_flag());
         assert_eq!(packet.fragment_offset(), 0x0607);
+        assert_eq!(packet.fragment_type(), Ipv4FragmentType::NonInitialFragment);
     }
 
     #[test]

@@ -96,27 +96,45 @@ impl IpParseErrorAction {
 pub enum IpParseError<I: IcmpIpTypes> {
     #[error("Parsing Error")]
     Parse { error: ParseError },
-    /// For errors where an ICMP Parameter Problem error needs to be
-    /// sent to the source of a packet.
-    ///
-    /// `src_ip` and `dst_ip` are the source and destination IP addresses of the
-    /// original packet. `header_len` is the length of the header up to the point
-    /// of the parameter problem error. `action` is the action IP nodes should take
-    /// after encountering the error. If `must_send_icmp` is `true`, IP nodes MUST
-    /// send an ICMP response if `action` specifies it; otherwise, the node MAY
-    /// choose to discard the packet and do nothing further. `code` is the ICMP
-    /// (ICMPv4 or ICMPv6) specific parameter problem code that provides more
-    /// granular information about the parameter problem encountered. `pointer`
-    /// is the offset of the erroneous value within the IP packet, calculated
-    /// from the beginning of the IP packet.
+    /// For errors where an ICMP Parameter Problem error needs to be sent to the
+    /// source of a packet.
     #[error("Parameter Problem")]
     ParameterProblem {
+        /// The packet's source IP address.
         src_ip: I::Addr,
+
+        /// The packet's destination IP address.
         dst_ip: I::Addr,
+
+        /// The ICMPv4 or ICMPv6 parameter problem code that provides more
+        /// granular information about the parameter problem encountered.
         code: I::ParameterProblemCode,
+
+        /// The offset of the erroneous value within the IP packet.
         pointer: I::ParameterProblemPointer,
+
+        /// Whether an IP node MUST send an ICMP response if [`action`]
+        /// specifies it.
+        ///
+        /// See [`action`] for more details.
+        ///
+        /// [`action`]: crate::error::IpParseError::ParameterProblem::action
         must_send_icmp: bool,
+
+        /// The length of the header up to the point of the parameter problem
+        /// error.
         header_len: I::HeaderLen,
+
+        /// The action IP nodes should take upon encountering this error.
+        ///
+        /// If [`must_send_icmp`] is `true`, IP nodes MUST send an ICMP response
+        /// if `action` specifies it. Otherwise, the node MAY choose to discard
+        /// the packet and do nothing further.
+        ///
+        /// If the packet was an IPv4 non-initial fragment, `action` will be
+        /// [`IpParseErrorAction::DiscardPacket`].
+        ///
+        /// [`must_send_icmp`]: crate::error::IpParseError::ParameterProblem::must_send_icmp
         action: IpParseErrorAction,
     },
 }
