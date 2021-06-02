@@ -39,7 +39,7 @@ impl HardwarePowerStatecontrolService {
 
 impl Service for HardwarePowerStatecontrolService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == fidl_fuchsia_hardware_power_statecontrol::AdminMarker::NAME;
+        service_name == fidl_fuchsia_hardware_power_statecontrol::AdminMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
@@ -54,13 +54,9 @@ impl Service for HardwarePowerStatecontrolService {
         let recorded_actions_clone = self.recorded_actions.clone();
         fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
-                        recorded_actions_clone.write().push(Action::Reboot);
-                        responder.send(&mut Ok(())).unwrap();
-                    }
-                    _ => {}
+                if let AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } = req {
+                    recorded_actions_clone.write().push(Action::Reboot);
+                    responder.send(&mut Ok(())).unwrap();
                 }
             }
         })

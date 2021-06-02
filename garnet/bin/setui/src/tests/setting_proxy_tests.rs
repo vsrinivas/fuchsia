@@ -162,7 +162,7 @@ struct FakeFactory {
 
 impl FakeFactory {
     pub fn new(delegate: service::message::Delegate) -> Self {
-        FakeFactory { handlers: HashMap::new(), request_counts: HashMap::new(), delegate: delegate }
+        FakeFactory { handlers: HashMap::new(), request_counts: HashMap::new(), delegate }
     }
 
     pub async fn create(
@@ -238,7 +238,7 @@ impl TestEnvironmentBuilder {
             delegate.clone(),
             SETTING_PROXY_MAX_ATTEMPTS,
             TEARDOWN_TIMEOUT,
-            self.timeout.map_or(None, |(duration, _)| Some(duration)),
+            self.timeout.map(|(duration, _)| duration),
             self.timeout.map_or(true, |(_, retry)| retry),
         )
         .await
@@ -1029,8 +1029,8 @@ fn verify_handler_event(
 async fn get_response(mut receptor: service::message::Receptor) -> Option<Response> {
     if let Ok((HandlerPayload::Response(response), _)) = receptor.next_of::<HandlerPayload>().await
     {
-        return Some(response);
+        Some(response)
     } else {
-        return None;
+        None
     }
 }

@@ -101,6 +101,8 @@ async fn test_manual_brightness_with_storage_controller() {
 // Tests that the FIDL calls for manual brightness result in appropriate
 // commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
+// Comparisons are just checking that set values are returned the same.
+#[allow(clippy::float_cmp)]
 async fn test_manual_brightness_with_brightness_controller() {
     let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
 
@@ -511,6 +513,8 @@ async fn test_display_restore_with_brightness_controller() {
     .await;
 }
 
+// Float comparisons are checking that set values are the same when retrieved.
+#[allow(clippy::float_cmp)]
 async fn validate_restore_with_brightness_controller(
     manual_brightness: f32,
     auto_brightness_value: f32,
@@ -569,11 +573,12 @@ async fn test_display_failure() {
                         .into_stream();
 
                 if manager_stream_result.is_err() {
-                    return Box::pin(async {
+                    Box::pin(async {
                         Err(format_err!("could not move brightness channel into stream"))
-                    });
+                    })
+                } else {
+                    Box::pin(async { Ok(()) })
                 }
-                return Box::pin(async { Ok(()) });
             }
             fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME => {
                 let timezone_stream_result =
@@ -588,18 +593,16 @@ async fn test_display_failure() {
                 let mut timezone_stream = timezone_stream_result.unwrap();
                 fasync::Task::spawn(async move {
                     while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                        match req {
-                            fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
-                                responder,
-                            } => {
-                                responder.send("PDT").unwrap();
-                            }
-                            _ => {}
+                        if let fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
+                            responder,
+                        } = req
+                        {
+                            responder.send("PDT").unwrap();
                         }
                     }
                 })
                 .detach();
-                return Box::pin(async { Ok(()) });
+                Box::pin(async { Ok(()) })
             }
             _ => Box::pin(async { Err(format_err!("unsupported")) }),
         }
@@ -671,9 +674,9 @@ async fn test_set_multiple_fields_brightness(
 
     let settings = DisplaySettings {
         auto_brightness,
-        adjusted_auto_brightness,
         brightness_value,
         screen_enabled,
+        adjusted_auto_brightness,
         ..DisplaySettings::EMPTY
     };
     let result = display_proxy.set(settings).await.expect("set completed");

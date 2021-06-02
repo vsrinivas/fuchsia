@@ -63,7 +63,7 @@ impl HardwareLightService {
 
 impl Service for HardwareLightService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == LightMarker::NAME;
+        service_name == LightMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: Channel) -> Result<(), Error> {
@@ -92,28 +92,21 @@ impl Service for HardwareLightService {
                             .clone()))
                         .expect("get num lights"),
                     LightRequest::GetCurrentBrightnessValue { index, responder } => responder
-                        .send(&mut Ok(brightness_values
+                        .send(&mut Ok(*brightness_values
                             .lock()
                             .await
                             .get(&index)
-                            .expect("unknown light")
-                            .clone()))
+                            .expect("unknown light")))
                         .expect("get brightness value"),
                     LightRequest::GetCurrentSimpleValue { index, responder } => responder
-                        .send(&mut Ok(simple_values
+                        .send(&mut Ok(*simple_values
                             .lock()
                             .await
                             .get(&index)
-                            .expect("unknown light")
-                            .clone()))
+                            .expect("unknown light")))
                         .expect("get simple value"),
                     LightRequest::GetCurrentRgbValue { index, responder } => responder
-                        .send(&mut Ok(rgb_values
-                            .lock()
-                            .await
-                            .get(&index)
-                            .expect("unknown light")
-                            .clone()))
+                        .send(&mut Ok(*rgb_values.lock().await.get(&index).expect("unknown light")))
                         .expect("get rgb value"),
                     LightRequest::SetBrightnessValue { index, value, responder } => {
                         brightness_values.lock().await.insert(index, value).expect("unknown light");

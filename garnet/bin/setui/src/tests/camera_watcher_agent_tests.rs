@@ -64,11 +64,12 @@ async fn test_camera_agent_proxy() {
     let mut reply_receptor = agent_messenger
         .message(Payload::Invocation(invocation).into(), Audience::Messenger(signature))
         .send();
-    let mut completion_result = None;
-    while let Ok((Payload::Complete(result), _)) = reply_receptor.next_of::<Payload>().await {
-        completion_result = Some(result);
-        break;
-    }
+    let completion_result =
+        if let Ok((Payload::Complete(result), _)) = reply_receptor.next_of::<Payload>().await {
+            Some(result)
+        } else {
+            None
+        };
 
     // Validate that the setup is complete.
     assert!(

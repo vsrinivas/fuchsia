@@ -45,6 +45,7 @@ impl Service for RecoveryPolicy {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 // Support future expansion of FIDL.
                 #[allow(unreachable_patterns)]
+                #[allow(clippy::single_match)]
                 match req {
                     fidl_fuchsia_recovery_policy::DeviceRequest::SetIsLocalResetAllowed {
                         allowed,

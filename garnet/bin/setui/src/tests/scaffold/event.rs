@@ -18,7 +18,7 @@ pub mod subscriber {
 
     impl Blueprint {
         pub fn create(generate: Generate) -> event::subscriber::BlueprintHandle {
-            Arc::new(Self { generate: generate })
+            Arc::new(Self { generate })
         }
     }
 

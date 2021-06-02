@@ -143,11 +143,11 @@ async fn test_error_propagation() {
             SettingType::FactoryReset,
             create_setting_handler(Box::new(move |request| {
                 if request == Request::Get {
-                    return Box::pin(async {
+                    Box::pin(async {
                         Err(ControllerError::UnhandledType(SettingType::FactoryReset))
-                    });
+                    })
                 } else {
-                    return Box::pin(async { Ok(None) });
+                    Box::pin(async { Ok(None) })
                 }
             })),
         )

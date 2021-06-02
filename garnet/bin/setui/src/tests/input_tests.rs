@@ -249,7 +249,7 @@ async fn get_and_check_mic_mute(input_proxy: &InputProxy, expected_muted_state: 
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
 
     assert_eq!(settings.microphone.unwrap().muted, Some(expected_muted_state));
-    verify_muted_state(settings2, expected_muted_state, DeviceType::Microphone);
+    verify_muted_state(&settings2, expected_muted_state, DeviceType::Microphone);
 }
 
 // Perform a watch2 and check that the camera disabled state matches [expected_camera_disabled_state].
@@ -258,7 +258,7 @@ async fn get_and_check_camera_disable(
     expected_camera_disabled_state: bool,
 ) {
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
-    verify_muted_state(settings2, expected_camera_disabled_state, DeviceType::Camera);
+    verify_muted_state(&settings2, expected_camera_disabled_state, DeviceType::Camera);
 }
 
 // Creates a broker to listen in on media buttons events.
@@ -277,11 +277,10 @@ fn create_broker(
         })),
     ))));
     pin_mut!(message_hub_future);
-    let receptor = match executor.run_until_stalled(&mut message_hub_future) {
+    match executor.run_until_stalled(&mut message_hub_future) {
         Poll::Ready(Ok((_, receptor))) => receptor,
         _ => panic!("Could not create broker on service message hub"),
-    };
-    receptor
+    }
 }
 
 // Waits for the media buttons receptor to receive an update, so that
@@ -307,10 +306,7 @@ fn is_attr_onbutton(message: &Message<Payload, Address, Role>) -> bool {
         };
 
     // Filter by the attribution message's payload. It should be an OnButton request.
-    match attr_msg.payload() {
-        Payload::Setting(HandlerPayload::Request(Request::OnButton(_))) => true,
-        _ => false,
-    }
+    matches!(attr_msg.payload(), Payload::Setting(HandlerPayload::Request(Request::OnButton(_))))
 }
 
 // Perform a watch2 and check that the mic mute state matches [expected_mic_mute_state]
@@ -321,20 +317,21 @@ async fn get_and_check_state(
     expected_camera_disabled_state: bool,
 ) {
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
-    verify_muted_state(settings2.clone(), expected_camera_disabled_state, DeviceType::Camera);
-    verify_muted_state(settings2.clone(), expected_mic_mute_state, DeviceType::Microphone);
+    verify_muted_state(&settings2, expected_camera_disabled_state, DeviceType::Camera);
+    verify_muted_state(&settings2, expected_mic_mute_state, DeviceType::Microphone);
 }
 
 // Helper for checking the returned muted state for a given
 // device type in the watch2 results.
 fn verify_muted_state(
-    settings: InputSettings,
+    settings: &InputSettings,
     expected_muted_state: bool,
     device_type: DeviceType,
 ) {
     assert_eq!(
         settings
             .devices
+            .as_ref()
             .unwrap()
             .iter()
             .find(|x| x.device_type == Some(device_type))
@@ -581,7 +578,10 @@ fn test_camera3_hw_change() {
         _ => panic!("Could not acquire camera3 service lock"),
     };
 
-    assert_eq!(camera3_proxy.camera_sw_muted(), false);
+    #[allow(clippy::bool_assert_comparison)]
+    {
+        assert_eq!(camera3_proxy.camera_sw_muted(), false);
+    }
 }
 
 // Test to ensure camera sw state is changed on camera3 api
@@ -595,7 +595,7 @@ async fn test_camera3_sw_change() {
     let input_proxy = env.input_service.clone();
 
     set_camera_disable(&input_proxy, true).await;
-    assert_eq!(env.camera3_service.lock().await.camera_sw_muted(), true);
+    assert!(env.camera3_service.lock().await.camera_sw_muted());
 }
 
 // Test that when either hardware or software is muted, the service
@@ -872,5 +872,8 @@ async fn test_device_listener_failure() {
         Arc::new(ServiceContext::new(Some(ServiceRegistry::serve(service_registry.clone())), None));
 
     let (input_tx, _input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
-    assert!(!monitor_media_buttons(service_context, input_tx).await.is_ok());
+    #[allow(clippy::bool_assert_comparison)]
+    {
+        assert_eq!(monitor_media_buttons(service_context, input_tx).await.is_ok(), false);
+    }
 }

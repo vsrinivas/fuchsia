@@ -78,10 +78,10 @@ impl TestAgent {
         callback: CallbackSender,
     ) -> (Arc<Mutex<TestAgent>>, BlueprintHandle) {
         let agent = Arc::new(Mutex::new(TestAgent {
-            id: id,
+            id,
             last_invocation: None,
-            lifespan_target: lifespan_target,
-            callback: callback,
+            lifespan_target,
+            callback,
         }));
 
         let agent_clone = agent.clone();
@@ -105,11 +105,11 @@ impl TestAgent {
             }),
         )));
 
-        (agent.clone(), blueprint)
+        (agent, blueprint)
     }
 
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
-        match invocation.lifespan.clone() {
+        match invocation.lifespan {
             Lifespan::Initialization => {
                 if self.lifespan_target != LifespanTarget::Initialization {
                     return Err(AgentError::UnhandledLifespan);
@@ -125,26 +125,18 @@ impl TestAgent {
         self.last_invocation = Some(invocation.clone());
         let (tx, rx) = futures::channel::oneshot::channel::<InvocationResult>();
         self.callback.unbounded_send((self.id, invocation.clone(), tx)).unwrap();
-        if let Ok(result) = rx.await {
-            return result;
-        } else {
-            return Err(AgentError::UnexpectedError);
-        }
+        rx.await.map_err(|_| AgentError::UnexpectedError).and_then(|result| result)
     }
 
     /// Returns the id specified at construction time.
     pub fn id(&self) -> u32 {
-        return self.id;
+        self.id
     }
 
     /// Returns the last encountered, unprocessed invocation. None will be
     /// returned if such invocation does not exist.
-    pub fn last_invocation(&self) -> Option<Invocation> {
-        if let Some(last_invocation) = &self.last_invocation {
-            return Some(last_invocation.clone());
-        }
-
-        return None;
+    pub fn last_invocation(&self) -> &Option<Invocation> {
+        &self.last_invocation
     }
 }
 
@@ -338,12 +330,12 @@ async fn create_agents(
     let mut return_agents = Vec::new();
     let mut rng = rand::thread_rng();
 
-    for _i in 0..count {
+    for _ in 0..count {
         let id = rng.gen();
         return_agents.push(id);
         TestAgent::create_and_register(id, lifespan_target.clone(), authority, sender.clone())
             .await;
     }
 
-    return return_agents;
+    return_agents
 }

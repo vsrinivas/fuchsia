@@ -8,6 +8,9 @@ use crate::message::receptor::Receptor;
 use futures::future::BoxFuture;
 use futures::StreamExt;
 
+pub(crate) type ClientFn<P, A, R> =
+    Box<dyn FnOnce(MessageClient<P, A, R>) -> BoxFuture<'static, ()> + Send + Sync + 'static>;
+
 /// Ensures the payload matches expected value and invokes an action closure.
 /// If a client_fn is not provided, the message is acknowledged.
 pub(crate) async fn verify_payload<
@@ -17,9 +20,7 @@ pub(crate) async fn verify_payload<
 >(
     payload: P,
     receptor: &mut Receptor<P, A, R>,
-    client_fn: Option<
-        Box<dyn FnOnce(MessageClient<P, A, R>) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
-    >,
+    client_fn: Option<ClientFn<P, A, R>>,
 ) {
     while let Some(message_event) = receptor.next().await {
         if let MessageEvent::Message(incoming_payload, mut client) = message_event {

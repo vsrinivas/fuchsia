@@ -47,7 +47,7 @@ where
         request: Request<S>,
         exit_tx: ExitSender,
     ) -> RequestResultCreator<'static, S> {
-        return (self.callback)(request, exit_tx);
+        (self.callback)(request, exit_tx)
     }
 }
 

@@ -142,22 +142,24 @@ impl PolicyHandler for FakePolicyHandler {
     }
 
     async fn handle_setting_request(&mut self, request: Request) -> Option<RequestTransform> {
-        self.setting_request_transform.clone().or(self
-            .setting_request_mapping
-            .iter()
-            .find(|(key, _)| *key == request)
-            .map(|x| x.1.clone()))
+        self.setting_request_transform.clone().or_else(|| {
+            self.setting_request_mapping
+                .iter()
+                .find(|(key, _)| *key == request)
+                .map(|x| x.1.clone())
+        })
     }
 
     async fn handle_setting_response(
         &mut self,
         response: SettingResponse,
     ) -> Option<ResponseTransform> {
-        self.setting_response_transform.clone().or(self
-            .setting_response_mapping
-            .iter()
-            .find(|(key, _)| *key == response)
-            .map(|x| x.1.clone()))
+        self.setting_response_transform.clone().or_else(|| {
+            self.setting_response_mapping
+                .iter()
+                .find(|(key, _)| *key == response)
+                .map(|x| x.1.clone())
+        })
     }
 }
 
@@ -391,7 +393,7 @@ async fn test_setting_message_payload_replacement() {
     let setting_handler_address = service::Address::Handler(SETTING_TYPE);
 
     let (_, mut setting_proxy_receptor) = delegate
-        .create(MessengerType::Addressable(setting_handler_address.clone()))
+        .create(MessengerType::Addressable(setting_handler_address))
         .await
         .expect("setting proxy messenger created");
 
@@ -414,10 +416,7 @@ async fn test_setting_message_payload_replacement() {
 
     // Send a setting request from the client to the setting handler.
     let mut settings_send_receptor = messenger
-        .message(
-            setting_request_1_payload.into(),
-            Audience::Address(setting_handler_address.clone()),
-        )
+        .message(setting_request_1_payload.into(), Audience::Address(setting_handler_address))
         .send();
 
     // Verify the setting handler receives the payload that the policy handler specifies, not the

@@ -86,7 +86,7 @@ async fn set_stream(env: &TestEnvironment, stream: AudioStream) {
 /// Sets the stream volume to the given volume level using the audio service.
 async fn set_stream_volume(env: &TestEnvironment, stream_type: AudioStreamType, volume_level: f32) {
     let stream = AudioStream {
-        stream_type: stream_type,
+        stream_type,
         source: AudioSettingSource::User,
         user_volume_level: volume_level,
         user_volume_muted: false,
@@ -427,7 +427,10 @@ async fn test_policy_add_min_policy_adjusts_volume() {
     // Add a min policy transform.
     add_policy(&env, expected_policy_target, Transform::Min(expected_user_volume)).await;
 
-    assert_eq!(expected_user_volume, get_stream_volume(&env, expected_policy_target).await);
+    assert!(
+        (expected_user_volume - get_stream_volume(&env, expected_policy_target).await).abs()
+            < f32::EPSILON
+    );
 }
 
 // Tests that adding a new min policy transform unmutes a stream.
@@ -451,7 +454,13 @@ async fn test_policy_add_min_policy_unmutes_stream() {
 
     // Verify the stream is unmuted.
     let stream = get_stream_from_proxy(&env.setui_audio_service, policy_target).await;
-    assert_eq!(stream.user_volume.expect("no user volume").muted.expect("no muted state"), false);
+    #[allow(clippy::bool_assert_comparison)]
+    {
+        assert_eq!(
+            stream.user_volume.expect("no user volume").muted.expect("no muted state"),
+            false
+        );
+    }
 }
 
 // Tests that adding a new max policy transform does not initially affect the audio output from the
@@ -472,13 +481,19 @@ async fn test_policy_add_max_policy_adjusts_volume_after_removal() {
         add_policy(&env, expected_policy_target, Transform::Max(expected_user_volume)).await;
 
     // Volume should stay at max from the point of view of the client.
-    assert_eq!(initial_volume, get_stream_volume(&env, expected_policy_target).await);
+    assert!(
+        (initial_volume - get_stream_volume(&env, expected_policy_target).await).abs()
+            < f32::EPSILON
+    );
 
     // Remove the added policy.
     remove_policy(&env, added_policy_id).await;
 
     // After the policy is removed, the volume now reflects its clamped value.
-    assert_eq!(expected_user_volume, get_stream_volume(&env, expected_policy_target).await);
+    assert!(
+        (expected_user_volume - get_stream_volume(&env, expected_policy_target).await).abs()
+            < f32::EPSILON
+    );
 }
 
 // Tests that incoming sets are clamped when a min policy is present.
@@ -500,7 +515,10 @@ async fn test_policy_min_policy_clamps_sets() {
     set_stream_volume(&env, expected_policy_target, 0.0).await;
 
     // The volume remains at 20%, the minimum set by policy.
-    assert_eq!(expected_user_volume, get_stream_volume(&env, expected_policy_target).await);
+    assert!(
+        (expected_user_volume - get_stream_volume(&env, expected_policy_target).await).abs()
+            < f32::EPSILON
+    );
 
     // Remove the min volume policy.
     remove_policy(&env, policy_id).await;
@@ -510,9 +528,11 @@ async fn test_policy_min_policy_clamps_sets() {
     let audio_connection = env.nested_environment.connect_to_protocol::<AudioMarker>().unwrap();
 
     // The volume remains at 20% after the policy is removed.
-    assert_eq!(
-        expected_user_volume,
-        get_stream_volume_from_proxy(&audio_connection, expected_policy_target).await
+    assert!(
+        (expected_user_volume
+            - get_stream_volume_from_proxy(&audio_connection, expected_policy_target).await)
+            .abs()
+            < f32::EPSILON
     );
 }
 
@@ -534,21 +554,29 @@ async fn test_policy_max_policy_scales_sets() {
         add_policy(&env, expected_policy_target, Transform::Max(max_volume_limit)).await;
 
     // The volume is 50% when retrieved, since the initial 40% is half of the max of 80%.
-    assert_eq!(
-        initial_volume / max_volume_limit,
-        get_stream_volume(&env, expected_policy_target).await
+    assert!(
+        ((initial_volume / max_volume_limit)
+            - get_stream_volume(&env, expected_policy_target).await)
+            .abs()
+            < f32::EPSILON
     );
 
     // Attempt to set the volume to max.
     set_stream_volume(&env, expected_policy_target, max_volume).await;
 
     // The volume is 100% when retrieved since the max policy limit is transparent to clients.
-    assert_eq!(max_volume, get_stream_volume(&env, expected_policy_target).await);
+    #[allow(clippy::float_cmp)]
+    {
+        assert_eq!(max_volume, get_stream_volume(&env, expected_policy_target).await);
+    }
 
     // Remove the max volume policy.
     remove_policy(&env, policy_id).await;
 
     // The volume is 80% when retrieved after the policy is removed, since the internal volume was
     // 80% due to the policy.
-    assert_eq!(max_volume_limit, get_stream_volume(&env, expected_policy_target).await);
+    #[allow(clippy::float_cmp)]
+    {
+        assert_eq!(max_volume_limit, get_stream_volume(&env, expected_policy_target).await);
+    }
 }

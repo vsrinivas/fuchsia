@@ -886,7 +886,7 @@ async fn test_handler_min_volume_policy_prevents_mute() {
     set_media_volume_limit(&mut env, Transform::Min(0.1), starting_audio_info).await;
 
     // External client attempts to mute the volume.
-    let mut request = starting_stream.clone();
+    let mut request = starting_stream;
     request.user_volume_muted = true;
 
     // Mute state doesn't change

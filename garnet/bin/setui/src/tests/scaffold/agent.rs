@@ -20,7 +20,7 @@ pub struct Blueprint {
 
 impl Blueprint {
     pub fn new(generate: Generate) -> Self {
-        Self { generate: generate }
+        Self { generate }
     }
 }
 

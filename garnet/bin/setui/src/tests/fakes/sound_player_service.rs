@@ -47,10 +47,7 @@ impl SoundPlayerService {
 
     // Get the number of times the sound with the given id has played.
     pub async fn get_play_count(&self, id: u32) -> Option<u32> {
-        match self.play_counts.lock().await.get(&id) {
-            None => None,
-            Some(&val) => Some(val),
-        }
+        self.play_counts.lock().await.get(&id).copied()
     }
 
     // Creates a listener to notify when a sound is played.
@@ -65,7 +62,7 @@ impl SoundPlayerService {
 
 impl Service for SoundPlayerService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == PlayerMarker::NAME;
+        service_name == PlayerMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {

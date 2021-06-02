@@ -42,7 +42,7 @@ impl InputDeviceRegistryService {
 
 impl Service for InputDeviceRegistryService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker::NAME;
+        service_name == fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
@@ -63,12 +63,10 @@ impl Service for InputDeviceRegistryService {
 
         fasync::Task::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
-                #[allow(unreachable_patterns)]
-                match req {
-                    fidl_fuchsia_ui_policy::DeviceListenerRegistryRequest::RegisterMediaButtonsListener {
+                if let fidl_fuchsia_ui_policy::DeviceListenerRegistryRequest::RegisterMediaButtonsListener {
                         listener,
                         control_handle: _,
-                    } => {
+                    } = req {
                         if let Ok(proxy) = listener.into_proxy() {
                             if let Some(event) = &*last_event.read() {
                                 proxy.on_media_buttons_event(event.clone()).ok();
@@ -76,8 +74,6 @@ impl Service for InputDeviceRegistryService {
                             listeners_handle.write().push(proxy);
                         }
                     }
-                    _ => {}
-                }
             }
         }).detach();
 

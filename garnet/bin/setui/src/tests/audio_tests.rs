@@ -105,18 +105,19 @@ async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
 }
 
 // Verifies that a stream equal to |stream| is inside of |settings|.
-fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
+fn verify_audio_stream(settings: &AudioSettings, stream: AudioStreamSettings) {
     settings
         .streams
+        .as_ref()
         .expect("audio settings contain streams")
-        .into_iter()
-        .find(|x| *x == stream)
+        .iter()
+        .find(|x| **x == stream)
         .expect("contains stream");
 }
 
 // Verify that |streams| contain |stream|.
 fn verify_contains_stream(streams: &[AudioStream; 5], stream: &AudioStream) {
-    streams.into_iter().find(|x| *x == stream).expect("contains changed media stream");
+    streams.iter().find(|x| *x == stream).expect("contains changed media stream");
 }
 
 // Returns a registry and audio related services it is populated with
@@ -178,13 +179,13 @@ async fn test_audio() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
@@ -205,13 +206,13 @@ async fn test_consecutive_volume_changes() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
@@ -220,7 +221,7 @@ async fn test_consecutive_volume_changes() {
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
 
     assert_eq!(
         (CHANGED_VOLUME_LEVEL_2, CHANGED_VOLUME_MUTED),
@@ -241,14 +242,14 @@ async fn test_multiple_changes_on_stream() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
     let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS_2);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
 
     // Check to make sure value wrote out to store correctly.
     let stored_streams = store.get::<AudioInfo>().await.streams;
@@ -264,13 +265,13 @@ async fn test_volume_overwritten() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
@@ -292,8 +293,8 @@ async fn test_volume_overwritten() {
     let settings = audio_proxy.watch().await.expect("watch completed");
 
     // Changing the background volume should not affect media volume.
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
-    verify_audio_stream(settings.clone(), CHANGED_BACKGROUND_STREAM_SETTINGS);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
+    verify_audio_stream(&settings, CHANGED_BACKGROUND_STREAM_SETTINGS);
 }
 
 // Tests that the volume level gets rounded to two decimal places.
@@ -307,7 +308,7 @@ async fn test_volume_rounding() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 
@@ -327,7 +328,7 @@ async fn test_volume_rounding() {
     .await;
 
     let settings = audio_proxy.watch().await.expect("watch completed");
-    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+    verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS);
 
     assert_eq!(
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
@@ -416,7 +417,7 @@ async fn test_bringup_without_audio_core() {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 }
@@ -491,7 +492,7 @@ async fn test_persisted_values_applied_at_start() {
     // Check that the stored values were returned from watch() and applied to the audio core
     // service.
     for stream in test_audio_info.streams.iter() {
-        verify_audio_stream(settings.clone(), AudioStreamSettings::from(*stream));
+        verify_audio_stream(&settings, AudioStreamSettings::from(*stream));
         assert_eq!(
             (stream.user_volume_level, stream.user_volume_muted),
             fake_services
@@ -570,7 +571,7 @@ async fn test_missing_input_returns_failed(setting: AudioStreamSettings) {
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
-        settings.clone(),
+        &settings,
         AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
     );
 

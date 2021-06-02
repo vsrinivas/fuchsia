@@ -35,7 +35,7 @@ impl Camera3Service {
 
 impl Service for Camera3Service {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == DeviceWatcherMarker::NAME;
+        service_name == DeviceWatcherMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
@@ -65,7 +65,6 @@ impl Service for Camera3Service {
                         fasync::Task::spawn(async move {
                             while let Some(req) = stream.try_next().await.unwrap() {
                                 // Support future expansion of FIDL.
-                                #[allow(unreachable_patterns)]
                                 match req {
                                     DeviceRequest::SetSoftwareMuteState { muted, responder } => {
                                         camera_sw_muted.swap(muted, Ordering::Relaxed);

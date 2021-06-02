@@ -76,7 +76,7 @@ impl AudioCoreService {
 
 impl Service for AudioCoreService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == fidl_fuchsia_media::AudioCoreMarker::NAME;
+        service_name == fidl_fuchsia_media::AudioCoreMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
@@ -107,23 +107,17 @@ impl Service for AudioCoreService {
                         if request.is_none() {
                             return;
                         }
-                        #[allow(unreachable_patterns)]
-                        match request.expect("request should be present") {
-                            fidl_fuchsia_media::AudioCoreRequest::BindUsageVolumeControl {
-                                usage,
+                        if let fidl_fuchsia_media::AudioCoreRequest::BindUsageVolumeControl {
+                            usage: Usage::RenderUsage(render_usage),
+                            volume_control,
+                            control_handle: _,
+                        } = request.expect("request should be present") {
+                            process_volume_control_stream(
                                 volume_control,
-                                control_handle: _,
-                            } => {
-                                if let Usage::RenderUsage(render_usage) = usage {
-                                    process_volume_control_stream(
-                                        volume_control,
-                                        render_usage,
-                                        streams_clone.clone(),
-                                        suppress_client_errors,
-                                    );
-                                }
-                            }
-                            _ => {}
+                                render_usage,
+                                streams_clone.clone(),
+                                suppress_client_errors,
+                            );
                         }
                     }
                 }

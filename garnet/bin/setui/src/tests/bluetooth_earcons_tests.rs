@@ -182,7 +182,13 @@ async fn test_oobe_connection() {
 
     // Add oobe bluetooth connection.
     fake_services.discovery.lock().await.update_session(ID_1, BLUETOOTH_DOMAIN).await;
-    assert!(!fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
+    #[allow(clippy::bool_assert_comparison)]
+    {
+        assert_eq!(
+            fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await,
+            false
+        );
+    }
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         None
@@ -190,9 +196,18 @@ async fn test_oobe_connection() {
 
     // Disconnect the oobe blueooth connection.
     fake_services.discovery.lock().await.remove_session(ID_1).await;
-    assert!(
-        !fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
-    );
+    #[allow(clippy::bool_assert_comparison)]
+    {
+        assert_eq!(
+            fake_services
+                .sound_player
+                .lock()
+                .await
+                .id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID)
+                .await,
+            false
+        );
+    }
     assert_eq!(
         fake_services
             .sound_player

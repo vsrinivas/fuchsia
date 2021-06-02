@@ -76,10 +76,7 @@ impl Workload {
 #[async_trait]
 impl job::work::Independent for Workload {
     async fn execute(self: Box<Self>, messenger: Messenger) {
-        messenger
-            .message(self.payload.clone().into(), Audience::Messenger(self.target.clone()))
-            .send()
-            .ack();
+        messenger.message(self.payload.into(), Audience::Messenger(self.target)).send().ack();
     }
 }
 
@@ -87,7 +84,7 @@ impl job::work::Independent for Workload {
 impl job::work::Sequential for Workload {
     async fn execute(self: Box<Self>, messenger: Messenger, _store: data::StoreHandle) {
         messenger
-            .message(self.payload.clone().into(), Audience::Messenger(self.target.clone()))
+            .message(self.payload.clone().into(), Audience::Messenger(self.target))
             .send()
             .ack();
     }

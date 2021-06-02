@@ -525,10 +525,7 @@ struct StubController {
 #[async_trait]
 impl controller::Handle for StubController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
-        self.request_mapping
-            .iter()
-            .find(|(key, _)| *key == request)
-            .map_or(None, |x| Some(x.1.clone()))
+        self.request_mapping.iter().find(|(key, _)| *key == request).map(|(_, x)| x.clone())
     }
 
     async fn change_state(&mut self, _: State) -> Option<ControllerStateResult> {

@@ -64,7 +64,7 @@ async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> I
                 }
             })
             .detach();
-            return Box::pin(async { Ok(()) });
+            Box::pin(async { Ok(()) })
         },
     );
 
@@ -207,7 +207,7 @@ async fn test_intl_e2e_idempotent_set() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_intl_invalid_timezone() {
-    const INITIAL_TIME_ZONE: &'static str = "GMT";
+    const INITIAL_TIME_ZONE: &str = "GMT";
 
     let factory = InMemoryStorageFactory::new();
     let intl_service = create_test_intl_env(Arc::new(factory)).await;

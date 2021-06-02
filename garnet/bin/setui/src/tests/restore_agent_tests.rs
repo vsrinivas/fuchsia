@@ -24,16 +24,18 @@ const ENV_NAME: &str = "restore_agent_test_environment";
 // Create an environment that includes Event handling.
 async fn create_event_environment() -> Arc<Mutex<Option<Receptor>>> {
     let event_receptor: Arc<Mutex<Option<Receptor>>> = Arc::new(Mutex::new(None));
-    let receptor_capture = event_receptor.clone();
 
     // Upon environment initialization, the subscriber will capture the event receptor.
-    let create_subscriber =
-        Arc::new(move |delegate: service::message::Delegate| -> BoxFuture<'static, ()> {
-            let event_receptor = receptor_capture.clone();
+    let create_subscriber = Arc::new({
+        let event_receptor = Arc::clone(&event_receptor);
+        move |delegate: service::message::Delegate| -> BoxFuture<'static, ()> {
+            let event_receptor = Arc::clone(&event_receptor);
             Box::pin(async move {
-                *event_receptor.lock().await = Some(service::build_event_listener(&delegate).await);
+                let mut event_receptor = event_receptor.lock().await;
+                *event_receptor = Some(service::build_event_listener(&delegate).await);
             })
-        });
+        }
+    });
 
     let _env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
@@ -65,13 +67,13 @@ async fn verify_restore_handling(
                     let counter = counter_clone.clone();
                     if request == Request::Restore {
                         let result = (response_generate)();
-                        return Box::pin(async move {
+                        Box::pin(async move {
                             let mut counter_lock = counter.lock().await;
                             *counter_lock += 1;
-                            return result;
-                        });
+                            result
+                        })
                     } else {
-                        return Box::pin(async { Ok(None) });
+                        Box::pin(async { Ok(None) })
                     }
                 })),
             )

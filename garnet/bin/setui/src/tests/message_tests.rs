@@ -121,10 +121,16 @@ async fn test_messenger_presence() {
     assert!(delegate.contains(receptor.get_signature()).await.expect("check should complete"));
 
     // Check for an address that shouldn't exist
-    assert!(!delegate
-        .contains(num_test::message::Signature::Address(1))
-        .await
-        .expect("check should complete"));
+    #[allow(clippy::bool_assert_comparison)]
+    {
+        assert_eq!(
+            delegate
+                .contains(num_test::message::Signature::Address(1))
+                .await
+                .expect("check should complete"),
+            false
+        );
+    }
 }
 
 /// Tests messenger creation and address space collision.
@@ -186,7 +192,6 @@ async fn test_end_to_end_messaging() {
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 let _ = client.reply(REPLY).send();
-                ()
             })
         })),
     )
@@ -219,7 +224,6 @@ async fn test_implicit_forward() {
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 let _ = client.reply(REPLY).send();
-                ()
             })
         })),
     )
@@ -248,20 +252,15 @@ async fn test_observe_addressable() {
         messenger_client_1.message(ORIGINAL, Audience::Address(TestAddress::Foo(3))).send();
 
     let observe_receptor = Arc::new(Mutex::new(None));
-
-    let observe_receptor_clone = observe_receptor.clone();
-    verify_payload(
-        ORIGINAL,
-        &mut receptor_2,
+    verify_payload(ORIGINAL, &mut receptor_2, {
+        let observe_receptor = observe_receptor.clone();
         Some(Box::new(move |mut client| -> BoxFuture<'_, ()> {
-            let observe_receptor = observe_receptor_clone.clone();
             Box::pin(async move {
                 let mut receptor = observe_receptor.lock().await;
                 *receptor = Some(client.spawn_observer());
-                ()
             })
-        })),
-    )
+        }))
+    })
     .await;
 
     verify_payload(
@@ -270,7 +269,6 @@ async fn test_observe_addressable() {
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 let _ = client.reply(REPLY).send();
-                ()
             })
         })),
     )
@@ -475,24 +473,17 @@ async fn verify_messenger_behavior(
     let captured_signature = Arc::new(Mutex::new(None));
 
     // Verify target messenger received message and capture Signature.
-    {
+    verify_payload(ORIGINAL, &mut target_receptor, {
         let captured_signature = captured_signature.clone();
-        verify_payload(
-            ORIGINAL,
-            &mut target_receptor,
-            Some(Box::new(move |client| -> BoxFuture<'_, ()> {
-                let captured_signature = captured_signature.clone();
-                Box::pin(async move {
-                    let captured_signature = captured_signature.clone();
-                    let mut author = captured_signature.lock().await;
-                    *author = Some(client.get_author());
-                    client.reply(REPLY).send().ack();
-                    ()
-                })
-            })),
-        )
-        .await;
-    }
+        Some(Box::new(move |client| -> BoxFuture<'_, ()> {
+            Box::pin(async move {
+                let mut author = captured_signature.lock().await;
+                *author = Some(client.get_author());
+                client.reply(REPLY).send().ack();
+            })
+        }))
+    })
+    .await;
 
     // Verify messenger received reply on the message receptor.
     verify_payload(REPLY, &mut reply_receptor, None).await;
@@ -528,7 +519,6 @@ async fn test_unbound_messenger() {
         Some(Box::new(move |client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
                 client.reply(REPLY).send().ack();
-                ()
             })
         })),
     )
@@ -1000,9 +990,8 @@ async fn test_broker_filter_caputring_closure() {
         .expect("broadcast messenger should be created");
     // Filter to target only the Foo message.
     let expected_payload = TestMessage::Foo;
-    let expected_payload_clone = expected_payload.clone();
     let filter = filter::Builder::single(filter::Condition::Custom(Arc::new(move |message| {
-        *message.payload() == expected_payload_clone
+        *message.payload() == expected_payload
     })));
     // Broker that should only target Foo messages.
     let (_, mut broker_receptor) = delegate
@@ -1184,9 +1173,10 @@ async fn test_audience_matching() {
     // An audience should contain itself.
     assert!(target_audience.contains(&target_audience));
     // An audience with only broadcast should not match.
+    #[allow(clippy::bool_assert_comparison)]
     {
         let audience = Audience::Group(group::Builder::new().add(Audience::Broadcast).build());
-        assert!(!audience.contains(&target_audience));
+        assert_eq!(audience.contains(&target_audience), false);
     }
     // An audience group with the target audience should match.
     {
@@ -1217,14 +1207,18 @@ async fn test_audience_matching() {
 
         let audience_set = Audience::Group(
             group::Builder::new()
-                .add(target_audience.clone())
-                .add(target_audience_2.clone())
-                .add(target_audience_3.clone())
+                .add(target_audience)
+                .add(target_audience_2)
+                .add(target_audience_3)
                 .build(),
         );
 
         assert!(audience_set.contains(&audience_subset));
-        assert!(!audience_subset.contains(&audience_set));
+
+        #[allow(clippy::bool_assert_comparison)]
+        {
+            assert_eq!(audience_subset.contains(&audience_set), false);
+        }
     }
 }
 

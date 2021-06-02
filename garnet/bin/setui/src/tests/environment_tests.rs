@@ -95,7 +95,6 @@ impl TestAgent {
                             .reply(Payload::Event(EventPayload::Event(Event::Custom(TEST_REPLY))))
                             .send()
                             .ack();
-                        ()
                     })
                 })),
             )
@@ -199,7 +198,7 @@ async fn test_dependency_generation() {
     let entity = Entity::Handler(SettingType::Unknown);
     let registrant =
         registration::Builder::new(registration::Registrar::Test(Box::new(move || {})))
-            .add_dependency(Dependency::Entity(entity.clone()))
+            .add_dependency(Dependency::Entity(entity))
             .build();
 
     let Environment { entities, .. } =

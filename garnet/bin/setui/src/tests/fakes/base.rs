@@ -29,7 +29,7 @@ pub fn create_setting_handler(
     >,
 ) -> GenerateHandler {
     let shared_handler = Arc::new(Mutex::new(request_handler));
-    return Box::new(move |mut context| {
+    Box::new(move |mut context| {
         let handler = shared_handler.clone();
         fasync::Task::spawn(async move {
             while let Ok((payload, client)) = context.receptor.next_of::<Payload>().await {
@@ -54,5 +54,5 @@ pub fn create_setting_handler(
         .detach();
 
         Box::pin(async move { Ok(()) })
-    });
+    })
 }

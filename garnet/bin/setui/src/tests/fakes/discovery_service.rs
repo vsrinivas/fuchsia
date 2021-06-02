@@ -32,7 +32,7 @@ impl DiscoveryService {
     pub async fn update_session(&self, id: SessionId, domain: &str) {
         for watcher in self.watchers.lock().await.iter() {
             watcher
-                .session_updated(id, create_delta_with_domain(domain.clone()))
+                .session_updated(id, create_delta_with_domain(domain))
                 .await
                 .expect("Failed to send update request to handler");
         }
@@ -47,7 +47,7 @@ impl DiscoveryService {
 
 impl Service for DiscoveryService {
     fn can_handle_service(&self, service_name: &str) -> bool {
-        return service_name == DiscoveryMarker::NAME;
+        service_name == DiscoveryMarker::NAME
     }
 
     fn process_stream(&mut self, service_name: &str, channel: zx::Channel) -> Result<(), Error> {
@@ -59,17 +59,15 @@ impl Service for DiscoveryService {
         let watchers = self.watchers.clone();
         fasync::Task::spawn(async move {
             while let Some(req) = bluetooth_stream.try_next().await.unwrap() {
-                match req {
-                    DiscoveryRequest::WatchSessions {
-                        watch_options: _,
-                        session_watcher,
-                        control_handle: _,
-                    } => {
-                        if let Ok(proxy) = session_watcher.into_proxy() {
-                            watchers.lock().await.push(proxy);
-                        }
+                if let DiscoveryRequest::WatchSessions {
+                    watch_options: _,
+                    session_watcher,
+                    control_handle: _,
+                } = req
+                {
+                    if let Ok(proxy) = session_watcher.into_proxy() {
+                        watchers.lock().await.push(proxy);
                     }
-                    _ => {}
                 }
             }
         })
@@ -81,7 +79,7 @@ impl Service for DiscoveryService {
 
 /// Create a fake SessionInfoDelta with the Domain set to |domain|.
 fn create_delta_with_domain(domain: &str) -> SessionInfoDelta {
-    return SessionInfoDelta {
+    SessionInfoDelta {
         domain: Some(domain.to_string()),
         is_local: Some(true),
         is_locally_active: Some(false),
@@ -90,5 +88,5 @@ fn create_delta_with_domain(domain: &str) -> SessionInfoDelta {
         media_images: None,
         player_capabilities: None,
         ..SessionInfoDelta::EMPTY
-    };
+    }
 }

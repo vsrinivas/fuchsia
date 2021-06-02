@@ -26,8 +26,9 @@ async fn test_device() {
 
     // The tag could be in different formats based on whether it's a release build or not,
     // just check that it is nonempty.
+    #[allow(clippy::bool_assert_comparison)]
     match settings.build_tag {
-        Some(tag) => assert!(tag.len() > 0),
+        Some(tag) => assert_eq!(tag.is_empty(), false),
         None => panic!("Build tag not loaded from file"),
     }
 }

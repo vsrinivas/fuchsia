@@ -19,7 +19,7 @@ pub struct ServiceRegistry {
 
 impl ServiceRegistry {
     pub fn create() -> ServiceRegistryHandle {
-        return Arc::new(Mutex::new(ServiceRegistry { services: Vec::new() }));
+        Arc::new(Mutex::new(ServiceRegistry { services: Vec::new() }))
     }
 
     pub fn register_service(&mut self, service: Arc<Mutex<dyn Service + Send + Sync>>) {
@@ -38,7 +38,7 @@ impl ServiceRegistry {
     }
 
     pub fn serve(registry_handle: ServiceRegistryHandle) -> GenerateService {
-        return Box::new(
+        Box::new(
             move |service_name: &str, channel: zx::Channel| -> BoxFuture<'_, Result<(), Error>> {
                 let registry_handle_clone = registry_handle.clone();
                 let service_name_clone = String::from(service_name);
@@ -51,6 +51,6 @@ impl ServiceRegistry {
                         .await;
                 })
             },
-        );
+        )
     }
 }
