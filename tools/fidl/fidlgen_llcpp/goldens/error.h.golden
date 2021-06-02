@@ -1079,7 +1079,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
 
  private:
   friend class ::fidl::Client<::fidl_test_error::Example>;
-  friend class ::fidl::internal::ControlBlock<::fidl_test_error::Example>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

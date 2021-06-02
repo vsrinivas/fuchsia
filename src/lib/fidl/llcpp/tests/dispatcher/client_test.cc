@@ -86,7 +86,7 @@ class ::fidl::internal::WireClientImpl<fidl::TestProtocol> : private fidl::inter
 
  private:
   friend class Client<TestProtocol>;
-  friend class internal::ControlBlock<TestProtocol>;
+  friend class internal::ControlBlock;
 
   explicit WireClientImpl() = default;
 

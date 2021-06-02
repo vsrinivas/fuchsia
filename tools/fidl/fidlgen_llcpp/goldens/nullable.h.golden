@@ -2102,8 +2102,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>
 
  private:
   friend class ::fidl::Client<::fidl_test_nullable::SimpleProtocol>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_nullable::SimpleProtocol>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

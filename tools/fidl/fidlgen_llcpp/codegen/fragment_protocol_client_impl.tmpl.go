@@ -96,7 +96,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
 
  private:
   friend class ::fidl::Client<{{ . }}>;
-  friend class ::fidl::internal::ControlBlock<{{ . }}>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

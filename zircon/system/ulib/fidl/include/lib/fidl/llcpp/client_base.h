@@ -151,7 +151,7 @@ class ChannelRefTracker {
 
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
 // handling and unbinding, and asynchronous transaction tracking. Users should not directly interact
-// with this class. ClientBase objects are expected to be managed via std::shared_ptr.
+// with this class. |ClientBase| objects must be managed via std::shared_ptr.
 class ClientBase {
  public:
   // Creates an unbound ClientBase. Bind() must be called before any other APIs are invoked.

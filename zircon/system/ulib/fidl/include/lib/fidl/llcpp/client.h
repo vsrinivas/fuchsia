@@ -13,30 +13,27 @@ namespace fidl {
 
 namespace internal {
 
-// |ControlBlock| controls the lifecycle of |ClientImpl|, such that
+// |ControlBlock| controls the lifecycle of a client binding, such that
 // unbinding will only happen after all clones of a |Client| managing
 // the same channel goes out of scope.
 //
 // Specifically, all clones of a |Client| will share the same |ControlBlock|
 // instance, which in turn references the |ClientImpl|, and is responsible
 // for its unbinding via RAII.
-template <typename Protocol>
 class ControlBlock final {
-  using ClientImpl = fidl::internal::WireClientImpl<Protocol>;
-
  public:
-  explicit ControlBlock(std::shared_ptr<ClientImpl> client) : client_(std::move(client)) {}
+  explicit ControlBlock(std::shared_ptr<ClientBase> client) : client_(std::move(client)) {}
 
   // Triggers unbinding, which will cause any strong references to the
   // |ClientBase| to be released.
   ~ControlBlock() {
     if (client_) {
-      client_->ClientBase::Unbind();
+      client_->Unbind();
     }
   }
 
  private:
-  std::shared_ptr<ClientImpl> client_;
+  std::shared_ptr<ClientBase> client_;
 };
 
 }  // namespace internal
@@ -162,10 +159,9 @@ class Client final {
     }
 
     // Cannot use |std::make_shared| because the |ClientImpl| constructor is private.
-    client_.reset(new ClientImpl());
-    client_->Bind(std::reinterpret_pointer_cast<internal::ClientBase>(client_),
-                  client_end.TakeChannel(), dispatcher, std::move(event_handler));
-    control_ = std::make_shared<internal::ControlBlock<Protocol>>(client_);
+    client_.reset(static_cast<internal::ClientBase*>(new ClientImpl()));
+    client_->Bind(client_, client_end.TakeChannel(), dispatcher, std::move(event_handler));
+    control_ = std::make_shared<internal::ControlBlock>(client_);
   }
 
   // Begins to unbind the channel from the dispatcher. May be called from any
@@ -217,15 +213,15 @@ class Client final {
   ClientImpl& operator*() const { return *get(); }
 
  private:
-  ClientImpl* get() const { return client_.get(); }
+  ClientImpl* get() const { return static_cast<ClientImpl*>(client_.get()); }
 
   // Used to clone a |Client|.
-  Client(std::shared_ptr<ClientImpl> client,
-         std::shared_ptr<internal::ControlBlock<Protocol>> control)
+  Client(std::shared_ptr<internal::ClientBase> client,
+         std::shared_ptr<internal::ControlBlock> control)
       : client_(std::move(client)), control_(std::move(control)) {}
 
-  std::shared_ptr<ClientImpl> client_;
-  std::shared_ptr<internal::ControlBlock<Protocol>> control_;
+  std::shared_ptr<internal::ClientBase> client_;
+  std::shared_ptr<internal::ControlBlock> control_;
 };
 
 }  // namespace fidl

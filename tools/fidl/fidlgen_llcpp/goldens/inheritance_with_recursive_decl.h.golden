@@ -1428,8 +1428,7 @@ class ::fidl::internal::WireClientImpl<
 
  private:
   friend class ::fidl::Client<::fidl_test_inheritancewithrecursivedecl::Parent>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -1530,8 +1529,7 @@ class ::fidl::internal::WireClientImpl<
 
  private:
   friend class ::fidl::Client<::fidl_test_inheritancewithrecursivedecl::Child>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_inheritancewithrecursivedecl::Child>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

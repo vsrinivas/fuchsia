@@ -1983,8 +1983,7 @@ class ::fidl::internal::WireClientImpl<
 
  private:
   friend class ::fidl::Client<::fidl_test_requestflexibleenvelope::Protocol>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_requestflexibleenvelope::Protocol>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

@@ -2357,8 +2357,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
 
  private:
   friend class ::fidl::Client<::fidl_test_protocolrequest::Parent>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_protocolrequest::Parent>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
@@ -2427,8 +2426,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Child> final
  public:
  private:
   friend class ::fidl::Client<::fidl_test_protocolrequest::Child>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_protocolrequest::Child>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 

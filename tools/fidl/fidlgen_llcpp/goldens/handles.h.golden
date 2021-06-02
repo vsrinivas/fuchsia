@@ -528,8 +528,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol> final
  public:
  private:
   friend class ::fidl::Client<::fidl_test_handles::SomeProtocol>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_handles::SomeProtocol>;
+  friend class ::fidl::internal::ControlBlock;
 
   WireClientImpl() = default;
 
