@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
@@ -52,33 +53,21 @@ rustc_library("lib") {
   ]
 }
 
-package("update-bin") {
-  deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
-  binaries = [
-    {
-      name = "update"
-      source = "multi_universal_tool"
-      shell = true
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/update.cmx")
-      dest = "update.cmx"
-    },
-  ]
+renamed_binary("update-binary") {
+  source = "$root_out_dir/multi_universal_tool"
+  source_deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
+  dest = "bin/update"
+  fuchsia_shell_package_name = "update-bin"
 }
 
-unittest_package("update-lib-tests") {
-  deps = [ ":lib_test" ]
+fuchsia_package_with_single_component("update-bin") {
+  component_name = "update"
+  deps = [ ":update-binary" ]
+  manifest = "meta/update.cmx"
+}
 
-  tests = [
-    {
-      name = "update_lib_test"
-      dest = "update-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_package("update-lib-tests") {
+  deps = [ ":lib_test" ]
 }
 
 group("tests") {

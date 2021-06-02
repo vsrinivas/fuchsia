@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/update-integration-test"
+        "binary": "bin/update_integration_test"
     },
     "sandbox": {
         "services": [

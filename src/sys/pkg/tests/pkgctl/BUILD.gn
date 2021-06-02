@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 rustc_test("driver") {
   name = "pkgctl_integration_test"
@@ -37,32 +38,27 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("pkgctl-integration-tests") {
-  deps = [
-    ":driver",
-    "//src/sys/pkg/bin/multi-universal-tool",
-  ]
+fuchsia_test_component("pkgctl_integration_test-component") {
+  component_name = "pkgctl-integration-test"
+  manifest = "meta/pkgctl-integration-test.cmx"
+  deps = [ ":driver" ]
+}
 
-  binaries = [
-    {
-      name = "pkgctl"
-      source = "multi_universal_tool"
-    },
-  ]
+renamed_binary("pkgctl-binary") {
+  dest = "bin/pkgctl"
+  source = "$root_out_dir/multi_universal_tool"
+  source_deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("//src/sys/pkg/bin/pkgctl/meta/pkgctl.cmx")
-      dest = "pkgctl.cmx"
-    },
-  ]
+fuchsia_component("pkgctl-component") {
+  component_name = "pkgctl"
+  manifest = "//src/sys/pkg/bin/pkgctl/meta/pkgctl.cmx"
+  deps = [ ":pkgctl-binary" ]
+}
 
-  tests = [
-    {
-      name = "pkgctl_integration_test"
-      dest = "pkgctl-integration-test"
-    },
-  ]
+fuchsia_test_package("pkgctl-integration-tests") {
+  test_components = [ ":pkgctl_integration_test-component" ]
+  deps = [ ":pkgctl-component" ]
 }
 
 group("tests") {

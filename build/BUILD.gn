@@ -42,13 +42,7 @@ group("deprecated_package") {
 
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
-  visibility = [
-    "//src/sys/pkg/bin/pkgctl/*",
-    "//src/sys/pkg/bin/update/*",
-    "//src/sys/pkg/tests/pkgctl/*",
-    "//src/sys/pkg/tests/update/*",
-    "//src/ui/scenic/*",
-  ]
+  visibility = [ "//src/ui/scenic/*" ]
 }
 
 group("non_hermetic_deps") {

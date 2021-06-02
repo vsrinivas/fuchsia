@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 rustc_test("driver") {
   name = "update_integration_test"
@@ -31,32 +32,27 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("update-integration-tests") {
-  deps = [
-    ":driver",
-    "//src/sys/pkg/bin/multi-universal-tool",
-  ]
+fuchsia_test_component("update-integration-test-component") {
+  component_name = "update-integration-test"
+  manifest = "meta/update-integration-test.cmx"
+  deps = [ ":driver" ]
+}
 
-  binaries = [
-    {
-      name = "update"
-      source = "multi_universal_tool"
-    },
-  ]
+renamed_binary("update-binary") {
+  source = "$root_out_dir/multi_universal_tool"
+  source_deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
+  dest = "bin/update"
+}
 
-  meta = [
-    {
-      path = rebase_path("//src/sys/pkg/bin/update/meta/update.cmx")
-      dest = "update.cmx"
-    },
-  ]
+fuchsia_component("update-component") {
+  component_name = "update"
+  manifest = "//src/sys/pkg/bin/update/meta/update.cmx"
+  deps = [ ":update-binary" ]
+}
 
-  tests = [
-    {
-      name = "update_integration_test"
-      dest = "update-integration-test"
-    },
-  ]
+fuchsia_test_package("update-integration-tests") {
+  test_components = [ ":update-integration-test-component" ]
+  deps = [ ":update-component" ]
 }
 
 group("tests") {

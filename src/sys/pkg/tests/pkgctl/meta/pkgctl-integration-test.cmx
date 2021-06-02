@@ -14,7 +14,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/pkgctl-integration-test"
+        "binary": "bin/pkgctl_integration_test"
     },
     "sandbox": {
         "features": [

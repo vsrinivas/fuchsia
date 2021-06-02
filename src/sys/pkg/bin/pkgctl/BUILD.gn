@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
@@ -54,35 +55,25 @@ rustc_library("lib") {
   ]
 }
 
-package("pkgctl-bin") {
-  package_name = "pkgctl"
-  deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
-
-  binaries = [
-    {
-      name = "pkgctl"
-      source = "multi_universal_tool"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/pkgctl.cmx")
-      dest = "pkgctl.cmx"
-    },
-  ]
+# Copy the multi_universal_tool as 'bin/pkgctl' as required
+# by the pkgctl package below. Note that the package must
+# still depend on //src/sys/pkg/bin/multi-universal-tool to
+# ensure its runtime dependencies are properly installed.
+renamed_binary("pkgctl-binary") {
+  source = "$root_out_dir/multi_universal_tool"
+  source_deps = [ "//src/sys/pkg/bin/multi-universal-tool" ]
+  dest = "bin/pkgctl"
+  fuchsia_shell_package_name = "pkgctl"
 }
 
-unittest_package("pkgctl-tests") {
-  deps = [ ":lib_test" ]
+fuchsia_package_with_single_component("pkgctl-bin") {
+  package_name = "pkgctl"
+  manifest = "meta/pkgctl.cmx"
+  deps = [ ":pkgctl-binary" ]
+}
 
-  tests = [
-    {
-      name = "pkgctl_lib_test"
-      dest = "pkgctl-test"
-    },
-  ]
+fuchsia_unittest_package("pkgctl-tests") {
+  deps = [ ":lib_test" ]
 }
 
 group("tests") {
