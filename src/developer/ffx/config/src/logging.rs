@@ -12,11 +12,16 @@ use {
 const LOG_DIR: &str = "log.dir";
 const LOG_ENABLED: &str = "log.enabled";
 pub const LOG_PREFIX: &str = "ffx";
+const TIME_FORMAT: &str = "%b %d %H:%M:%S";
 
 fn config() -> Config {
     // Sets the target level to "Error" so that all logs show their module
     // target in the logs.
-    ConfigBuilder::new().set_target_level(LevelFilter::Error).set_time_to_local(true).build()
+    ConfigBuilder::new()
+        .set_target_level(LevelFilter::Error)
+        .set_time_to_local(true)
+        .set_time_format_str(TIME_FORMAT)
+        .build()
 }
 
 pub async fn log_file(name: &str) -> Result<std::fs::File> {
