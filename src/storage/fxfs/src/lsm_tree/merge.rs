@@ -339,7 +339,15 @@ impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, 
     async fn seek(&mut self, bound: Bound<&K>) -> Result<(), Error> {
         match bound {
             Bound::Unbounded => self.advance_impl(None, Bound::Unbounded).await,
-            Bound::Included(key) => self.advance_impl(Some(key), bound).await,
+            Bound::Included(key) => loop {
+                self.advance_impl(Some(key), bound).await?;
+                // It's possible that after merging, the emitted key is less than the search
+                // key, so in that case we need to keep advancing.
+                match self.get() {
+                    Some(item) if item.key.cmp_upper_bound(key) == Ordering::Less => {}
+                    _ => return Ok(()),
+                }
+            },
             Bound::Excluded(_) => panic!("Excluded bounds not supported!"),
         }
     }
@@ -1237,5 +1245,27 @@ mod tests {
         });
         let iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_with_merged_key_less_than() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..8), 1), Item::new(TestKey(2..10), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |left, _right| {
+            if left.key() == &TestKey(1..8) {
+                MergeResult::Other {
+                    emit: None,
+                    left: Replace(Item::new(TestKey(1..2), 1)),
+                    right: Keep,
+                }
+            } else {
+                MergeResult::EmitLeft
+            }
+        });
+        let iter = merger.seek(Bound::Included(&TestKey(0..3))).await.expect("seek failed");
+        let ItemRef { key, value, .. } = iter.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
     }
 }

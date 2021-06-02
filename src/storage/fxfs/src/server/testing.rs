@@ -42,7 +42,7 @@ pub struct TestFixture {
 
 impl TestFixture {
     pub async fn new() -> Self {
-        Self::open(DeviceHolder::new(FakeDevice::new(4096, 512)), true).await
+        Self::open(DeviceHolder::new(FakeDevice::new(8192, 512)), true).await
     }
 
     pub async fn open(device: DeviceHolder, format: bool) -> Self {

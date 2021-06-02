@@ -30,11 +30,24 @@ use {
     },
 };
 
-#[derive(Default)]
-pub struct Options {
+#[derive(Clone, Default)]
+pub struct Options<'a> {
     /// If true, don't check for low journal space.  This should be true for any transactions that
     /// might alleviate journal space (i.e. compaction).
     pub skip_journal_checks: bool,
+
+    /// If false (the default), check for free space and fail creating the transaction with a
+    /// NoSpace error when low on space.  If skip_journal_checks is true, this setting is implied
+    /// (settting it to false will be ignored).  This setting should be set to true for any
+    /// transaction that will either not affect space usage after compaction (e.g. setting
+    /// attributes), or reduce space usage (e.g. unlinking).
+    pub skip_space_checks: bool,
+
+    /// If specified, a reservation to be used with the transaction.  If not set, any allocations
+    /// that are part of this transaction will have to take their chances, and will fail if there is
+    /// no free space.  The intention is that this should be used for things like the journal which
+    /// require guaranteed space.
+    pub allocator_reservation: Option<&'a Reservation>,
 }
 
 #[async_trait]
@@ -45,7 +58,7 @@ pub trait TransactionHandler: Send + Sync {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         lock_keys: &[LockKey],
-        options: Options,
+        options: Options<'a>,
     ) -> Result<Transaction<'a>, Error>;
 
     /// Implementations should perform any required journaling and then apply the mutations via
@@ -586,6 +599,8 @@ impl Locks {
                                 occupied.remove_entry();
                             } else {
                                 entry.state = LockState::ReadLock;
+                                self.sequence += 1;
+                                entry.sequence = self.sequence;
                             }
                         }
                         LockState::ReadLock => unreachable!(),
@@ -687,6 +702,7 @@ impl LockManager {
                                 entry.state = LockState::WriteLock;
                                 Poll::Ready(())
                             } else {
+                                entry.state = LockState::WantWrite(cx.waker().clone());
                                 Poll::Pending
                             }
                         } else {

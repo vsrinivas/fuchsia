@@ -111,7 +111,7 @@ impl FxVolume {
         let mut transaction = fs
             .new_transaction(
                 &[LockKey::object(self.store.store_object_id(), object_id)],
-                Options::default(),
+                Options { skip_space_checks: true, ..Default::default() },
             )
             .await?;
         self.store.tombstone(&mut transaction, object_id).await?;
@@ -159,7 +159,9 @@ impl FilesystemRename for FxVolume {
                             LockKey::object(self.store.store_object_id(), src_dir.object_id()),
                             LockKey::object(self.store.store_object_id(), dst_dir.object_id()),
                         ],
-                        Options::default(),
+                        // It's ok to skip space checks here since after compaction, it should be a
+                        // wash.
+                        Options { skip_space_checks: true, ..Default::default() },
                     )
                     .await
                     .map_err(map_to_status)?;

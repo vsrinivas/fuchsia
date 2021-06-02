@@ -8,7 +8,10 @@ pub mod skip_list_layer;
 pub mod types;
 
 use {
-    crate::object_handle::ObjectHandle,
+    crate::{
+        object_handle::{ObjectHandle, WriteBytes, Writer},
+        object_store::transaction,
+    },
     anyhow::Error,
     async_utils::event::Event,
     simple_persistent_layer::SimplePersistentLayerWriter,
@@ -129,8 +132,11 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         .unwrap_err(); // wait_or_dropped returns Result<(), Dropped>
     }
 
-    pub fn new_writer(object_handle: &dyn ObjectHandle) -> impl LayerWriter + '_ {
-        SimplePersistentLayerWriter::new(object_handle, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE)
+    pub fn new_writer<'a>(object_handle: &'a dyn ObjectHandle) -> impl LayerWriter + 'a {
+        SimplePersistentLayerWriter::new(
+            Writer::new(object_handle, transaction::Options::default()),
+            SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
+        )
     }
 
     // TODO(csuter): We should provide a way for the caller to skip compactions if there's nothing
@@ -139,10 +145,10 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
     pub async fn compact_with_iterator(
         &self,
         mut iterator: impl LayerIterator<K, V>,
-        object_handle: &impl ObjectHandle,
+        writer: impl WriteBytes + Send,
     ) -> Result<(), Error> {
         let mut writer =
-            SimplePersistentLayerWriter::new(object_handle, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE);
+            SimplePersistentLayerWriter::new(writer, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE);
         while let Some(item_ref) = iterator.get() {
             log::debug!("compact: writing {:?}", item_ref);
             writer.write(item_ref).await?;
@@ -156,7 +162,11 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         let layer_set = self.immutable_layer_set();
         let mut merger = layer_set.merger();
         let iter = merger.seek(Bound::Unbounded).await?;
-        self.compact_with_iterator(iter, object_handle).await
+        self.compact_with_iterator(
+            iter,
+            Writer::new(object_handle, transaction::Options::default()),
+        )
+        .await
     }
 
     /// Returns an empty layer-set for this tree.

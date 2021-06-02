@@ -65,7 +65,7 @@ impl TransactionHandler for FakeObject {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
-        _options: Options,
+        _options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
         Ok(Transaction::new(self, &[], locks).await)
     }
@@ -175,7 +175,10 @@ impl ObjectHandle for FakeObjectHandle {
         })
     }
 
-    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
-        self.object.clone().new_transaction(&[], Options::default()).await
+    async fn new_transaction_with_options<'a>(
+        &self,
+        options: Options<'a>,
+    ) -> Result<Transaction<'a>, Error> {
+        self.object.clone().new_transaction(&[], options).await
     }
 }

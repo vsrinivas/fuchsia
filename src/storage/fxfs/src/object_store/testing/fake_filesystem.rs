@@ -4,7 +4,7 @@
 
 use {
     crate::object_store::{
-        allocator::Allocator,
+        allocator::{Allocator, Reservation},
         filesystem::{Filesystem, ObjectManager, SyncOptions},
         journal::JournalCheckpoint,
         transaction::{
@@ -15,6 +15,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
+    once_cell::sync::OnceCell,
     std::sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -27,6 +28,7 @@ pub struct FakeFilesystem {
     object_manager: Arc<ObjectManager>,
     lock_manager: LockManager,
     num_syncs: AtomicU64,
+    flush_reservation: OnceCell<Reservation>,
 }
 
 impl FakeFilesystem {
@@ -37,6 +39,7 @@ impl FakeFilesystem {
             object_manager,
             lock_manager: LockManager::new(),
             num_syncs: AtomicU64::new(0),
+            flush_reservation: OnceCell::new(),
         })
     }
 }
@@ -63,6 +66,11 @@ impl Filesystem for FakeFilesystem {
         self.num_syncs.fetch_add(1u64, Ordering::Relaxed);
         Ok(())
     }
+
+    fn flush_reservation(&self) -> &Reservation {
+        self.flush_reservation
+            .get_or_init(|| self.object_manager.allocator().reserve(262144).unwrap())
+    }
 }
 
 #[async_trait]
@@ -70,7 +78,7 @@ impl TransactionHandler for FakeFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
-        _options: Options,
+        _options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
         Ok(Transaction::new(self, &[], locks).await)
     }

@@ -5,7 +5,9 @@
 use {
     crate::{
         object_handle::ObjectHandle,
-        object_store::{filesystem::SyncOptions, round_down, StoreObjectHandle, Timestamp},
+        object_store::{
+            filesystem::SyncOptions, round_down, transaction::Options, StoreObjectHandle, Timestamp,
+        },
         server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
     },
     anyhow::Error,
@@ -55,11 +57,13 @@ impl FxFile {
         offset: Option<u64>,
         content: &[u8],
     ) -> Result<(u64, u64), Error> {
+        // We must create the transaction first so that we lock the size in the case that this is
+        // append.
+        let mut transaction = self.handle.new_transaction().await?;
         let offset = offset.unwrap_or_else(|| self.handle.get_size());
         let start = round_down(offset, self.handle.block_size());
         let align = (offset - start) as usize;
         let mut buf = self.handle.allocate_buffer(align + content.len());
-        let mut transaction = self.handle.new_transaction().await?;
         buf.as_mut_slice()[align..].copy_from_slice(content);
         self.handle.txn_write(&mut transaction, offset, buf.subslice(align..)).await?;
         transaction.commit().await;
@@ -156,7 +160,13 @@ impl File for FxFile {
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
-        let mut transaction = self.handle.new_transaction().await.map_err(map_to_status)?;
+        // It's safe to skip the space checks even if we're growing the file here because it won't
+        // actually use any data on disk (either for data or metadata).
+        let mut transaction = self
+            .handle
+            .new_transaction_with_options(Options { skip_space_checks: true, ..Default::default() })
+            .await
+            .map_err(map_to_status)?;
         self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
         transaction.commit().await;
         Ok(())
@@ -208,7 +218,15 @@ impl File for FxFile {
         let mut transaction = if may_defer {
             None
         } else {
-            Some(self.handle.new_transaction().await.map_err(map_to_status)?)
+            Some(
+                self.handle
+                    .new_transaction_with_options(Options {
+                        skip_space_checks: true,
+                        ..Default::default()
+                    })
+                    .await
+                    .map_err(map_to_status)?,
+            )
         };
         self.handle
             .update_timestamps(transaction.as_mut(), crtime, mtime)
@@ -372,7 +390,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_writes_persist() {
-        let mut device = DeviceHolder::new(FakeDevice::new(4096, 512));
+        let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
         for i in 0..2 {
             let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
             let root = fixture.root();

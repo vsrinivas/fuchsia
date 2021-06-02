@@ -14,7 +14,7 @@ use {
                 JournalCheckpoint,
             },
             record::{ObjectItem, Timestamp},
-            transaction::Transaction,
+            transaction::{self, Transaction},
             ObjectStore,
         },
     },
@@ -183,7 +183,10 @@ impl ObjectHandle for SuperBlockHandle {
         unreachable!();
     }
 
-    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
+    async fn new_transaction_with_options<'a>(
+        &self,
+        _options: transaction::Options<'a>,
+    ) -> Result<Transaction<'a>, Error> {
         unreachable!();
     }
 }

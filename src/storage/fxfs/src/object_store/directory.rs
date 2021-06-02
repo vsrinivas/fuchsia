@@ -752,7 +752,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_replace_child_overwrites_dst() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let mut transaction = fs
             .clone()

@@ -128,7 +128,12 @@ impl FxDirectory {
             };
             lock_keys.extend_from_slice(extra_keys);
             let fs = store.filesystem().clone();
-            let transaction = fs.new_transaction(&lock_keys, Options::default()).await?;
+            let transaction = fs
+                .new_transaction(
+                    &lock_keys,
+                    Options { skip_space_checks: true, ..Default::default() },
+                )
+                .await?;
 
             let (object_id, object_descriptor) =
                 self.directory.lookup(name).await?.ok_or(FxfsError::NotFound)?;
@@ -365,6 +370,8 @@ impl MutableDirectory for FxDirectory {
             ReplacedChild::File(id) => {
                 self.did_remove(name);
                 transaction.commit().await;
+                // TODO(jfsulliv): This might return failure but the unlink has actually succeeded
+                // by this point.  Consider if this is the right thing to do.
                 self.volume().maybe_purge_file(id).await.map_err(map_to_status)?;
             }
             ReplacedChild::Directory(id) => {
@@ -397,7 +404,7 @@ impl MutableDirectory for FxDirectory {
             .clone()
             .new_transaction(
                 &[LockKey::object(self.store().store_object_id(), self.directory.object_id())],
-                Options::default(),
+                Options { skip_space_checks: true, ..Default::default() },
             )
             .await
             .map_err(map_to_status)?;
@@ -785,7 +792,10 @@ mod tests {
 
         close_file_checked(file).await;
 
-        root.unlink("foo").await.expect("unlink failed");
+        root.unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
 
         assert_eq!(
             open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
@@ -826,7 +836,10 @@ mod tests {
         .await;
         close_file_checked(file).await;
 
-        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
+        root.unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
 
         assert_eq!(
             open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
@@ -857,7 +870,10 @@ mod tests {
         let buf = vec![0xaa as u8; 512];
         write_file_bytes(&file, buf.as_slice()).await.expect("write failed");
 
-        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
+        root.unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
 
         // The child should immediately appear unlinked...
         assert_eq!(
@@ -897,12 +913,23 @@ mod tests {
         close_file_checked(f).await;
 
         assert_eq!(
-            Status::from_raw(root.unlink("foo").await.expect("FIDL call failed")),
+            Status::from_raw(
+                root.unlink2("foo", UnlinkOptions::EMPTY)
+                    .await
+                    .expect("FIDL call failed")
+                    .expect_err("unlink succeeded")
+            ),
             Status::NOT_EMPTY
         );
 
-        Status::ok(dir.unlink("bar").await.expect("FIDL call failed")).expect("unlink failed");
-        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
+        dir.unlink2("bar", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
+        root.unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
 
         close_dir_checked(dir).await;
 
@@ -922,7 +949,10 @@ mod tests {
         )
         .await;
 
-        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
+        root.unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
 
         assert_eq!(
             open_file(&dir, OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE, MODE_TYPE_FILE, "bar")
@@ -1031,7 +1061,10 @@ mod tests {
                         close_file_checked(grandchild).await;
                         // We added the child before the directory was deleted; go ahead and
                         // clean up.
-                        Status::ok(child.unlink(GRANDCHILD).await.expect("FIDL call failed"))
+                        child
+                            .unlink2(GRANDCHILD, UnlinkOptions::EMPTY)
+                            .await
+                            .expect("FIDL call failed")
                             .expect("unlink failed");
                     }
                     Err(e) => {
@@ -1107,10 +1140,11 @@ mod tests {
         assert_eq!(expected_entries, readdir(Arc::clone(&parent)).await);
 
         // Remove an entry.
-        Status::ok(
-            parent.unlink(&expected_entries.pop().unwrap().name).await.expect("FIDL call failed"),
-        )
-        .expect("unlink failed");
+        parent
+            .unlink2(&expected_entries.pop().unwrap().name, UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
+            .expect("unlink failed");
 
         assert_eq!(expected_entries, readdir(Arc::clone(&parent)).await);
 

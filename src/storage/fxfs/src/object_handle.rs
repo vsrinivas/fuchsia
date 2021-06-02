@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::{transaction::Transaction, Timestamp},
+    crate::object_store::{
+        transaction::{self, Transaction},
+        Timestamp,
+    },
     anyhow::{bail, Error},
     async_trait::async_trait,
     std::ops::Range,
@@ -94,7 +97,15 @@ pub trait ObjectHandle: Send + Sync + 'static {
     async fn get_properties(&self) -> Result<ObjectProperties, Error>;
 
     /// Returns a new transaction including a lock for this handle.
-    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error>;
+    async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
+        self.new_transaction_with_options(transaction::Options::default()).await
+    }
+
+    /// Returns a new transaction including a lock for this handle and the given options.
+    async fn new_transaction_with_options<'a>(
+        &self,
+        options: transaction::Options<'a>,
+    ) -> Result<Transaction<'a>, Error>;
 
     /// Sets tracing for this object.
     fn set_trace(&self, _v: bool) {}
@@ -126,3 +137,48 @@ pub trait ObjectHandleExt: ObjectHandle {
 
 #[async_trait]
 impl<T: ObjectHandle + ?Sized> ObjectHandleExt for T {}
+
+#[async_trait]
+pub trait WriteBytes {
+    async fn write_bytes(&mut self, buf: &[u8]) -> Result<(), Error>;
+
+    fn skip(&mut self, amount: u64);
+}
+
+const BUFFER_SIZE: usize = 131_072;
+
+pub struct Writer<'a> {
+    handle: &'a dyn ObjectHandle,
+    options: transaction::Options<'a>,
+    buffer: Buffer<'a>,
+    offset: u64,
+}
+
+impl<'a> Writer<'a> {
+    pub fn new(handle: &'a dyn ObjectHandle, options: transaction::Options<'a>) -> Self {
+        Self { handle, options, buffer: handle.allocate_buffer(BUFFER_SIZE), offset: 0 }
+    }
+}
+
+#[async_trait]
+impl WriteBytes for Writer<'_> {
+    async fn write_bytes(&mut self, mut buf: &[u8]) -> Result<(), Error> {
+        while buf.len() > 0 {
+            let to_do = std::cmp::min(buf.len(), BUFFER_SIZE);
+            self.buffer.subslice_mut(..to_do).as_mut_slice().copy_from_slice(&buf[..to_do]);
+            let mut transaction =
+                self.handle.new_transaction_with_options(self.options.clone()).await?;
+            self.handle
+                .txn_write(&mut transaction, self.offset, self.buffer.subslice(..to_do))
+                .await?;
+            transaction.commit().await;
+            self.offset += to_do as u64;
+            buf = &buf[to_do..];
+        }
+        Ok(())
+    }
+
+    fn skip(&mut self, amount: u64) {
+        self.offset += amount;
+    }
+}

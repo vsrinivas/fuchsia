@@ -4,9 +4,10 @@
 
 use {
     crate::{
+        errors::FxfsError,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
-            allocator::Allocator,
+            allocator::{Allocator, Reservation},
             graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
             transaction::{
@@ -16,7 +17,7 @@ use {
             ObjectStore,
         },
     },
-    anyhow::Error,
+    anyhow::{bail, Error},
     async_trait::async_trait,
     fuchsia_async as fasync,
     futures::channel::oneshot::{channel, Sender},
@@ -27,6 +28,8 @@ use {
     },
     storage_device::{Device, DeviceHolder},
 };
+
+const FLUSH_RESERVATION_SIZE: u64 = 524288;
 
 #[async_trait]
 pub trait Filesystem: TransactionHandler {
@@ -44,6 +47,9 @@ pub trait Filesystem: TransactionHandler {
 
     /// Flushes buffered data to the underlying device.
     async fn sync(&self, options: SyncOptions) -> Result<(), Error>;
+
+    /// Returns a reservation to be used for flushing in-memory data.
+    fn flush_reservation(&self) -> &Reservation;
 }
 
 pub struct ObjectManager {
@@ -335,6 +341,7 @@ pub struct FxFilesystem {
     lock_manager: LockManager,
     compaction: Mutex<Compaction>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
+    flush_reservation: OnceCell<Reservation>,
 }
 
 enum Compaction {
@@ -349,14 +356,16 @@ impl FxFilesystem {
         let journal = Journal::new(objects.clone());
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
-            objects: objects.clone(),
+            objects,
             journal,
             lock_manager: LockManager::new(),
             compaction: Mutex::new(Compaction::Idle),
             device_sender: OnceCell::new(),
+            flush_reservation: OnceCell::new(),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
+        let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve(0).unwrap());
         Ok(filesystem)
     }
 
@@ -369,14 +378,16 @@ impl FxFilesystem {
         journal.set_trace(trace);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
-            objects: objects.clone(),
+            objects,
             journal,
             lock_manager: LockManager::new(),
             compaction: Mutex::new(Compaction::Idle),
             device_sender: OnceCell::new(),
+            flush_reservation: OnceCell::new(),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
+        let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve(0).unwrap());
         Ok(filesystem)
     }
 
@@ -420,11 +431,11 @@ impl FxFilesystem {
         loop {
             log::debug!("Compaction starting");
             if let Err(e) = self.objects.flush().await {
-                log::error!("Compaction encountered error: {}", e);
+                log::error!("Compaction encountered error: {:?}", e);
                 return;
             }
             if let Err(e) = self.journal.write_super_block().await {
-                log::error!("Error writing journal super-block: {}", e);
+                log::error!("Error writing journal super-block: {:?}", e);
                 return;
             }
             let mut compaction = self.compaction.lock().unwrap();
@@ -453,6 +464,13 @@ impl FxFilesystem {
 
     pub fn super_block(&self) -> SuperBlock {
         self.journal.super_block()
+    }
+
+    // Returns the reservation, and a bool where true means the reservation is at its target size
+    // and false means it's not (i.e. we are in a low space condition).
+    fn update_flush_reservation(&self) -> (&Reservation, bool) {
+        let flush_reservation = self.flush_reservation.get().unwrap();
+        (flush_reservation, flush_reservation.try_top_up(FLUSH_RESERVATION_SIZE))
     }
 }
 
@@ -486,6 +504,10 @@ impl Filesystem for FxFilesystem {
     async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
         self.journal.sync(options).await
     }
+
+    fn flush_reservation(&self) -> &Reservation {
+        self.update_flush_reservation().0
+    }
 }
 
 #[async_trait]
@@ -493,15 +515,22 @@ impl TransactionHandler for FxFilesystem {
     async fn new_transaction<'a>(
         self: Arc<Self>,
         locks: &[LockKey],
-        options: Options,
+        options: Options<'a>,
     ) -> Result<Transaction<'a>, Error> {
         if !options.skip_journal_checks {
             // TODO(csuter): for now, we don't allow for transactions that might be inflight but
             // not committed.  In theory, if there are a large number of them, it would be possible
             // to run out of journal space.  We should probably have an in-flight limit.
             self.journal.check_journal_space().await;
+            if options.allocator_reservation.is_none() {
+                if !self.update_flush_reservation().1 && !options.skip_space_checks {
+                    bail!(FxfsError::NoSpace);
+                }
+            }
         }
-        Ok(Transaction::new(self, &[LockKey::Filesystem], locks).await)
+        let mut transaction = Transaction::new(self, &[LockKey::Filesystem], locks).await;
+        transaction.allocator_reservation = options.allocator_reservation;
+        Ok(transaction)
     }
 
     async fn commit_transaction(self: Arc<Self>, transaction: &mut Transaction<'_>) {
@@ -558,7 +587,7 @@ mod tests {
 
     #[fasync::run(10, test)]
     async fn test_compaction() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
         // If compaction is not working correctly, this test will run out of space.
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");

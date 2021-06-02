@@ -32,14 +32,6 @@ impl FakeAllocator {
     pub fn new() -> Self {
         FakeAllocator(Mutex::new(Inner { next_offset: 0, alloc_bytes: 0, dealloc_bytes: 0 }))
     }
-
-    pub fn allocated(&self) -> usize {
-        self.0.lock().unwrap().alloc_bytes
-    }
-
-    pub fn deallocated(&self) -> usize {
-        self.0.lock().unwrap().dealloc_bytes
-    }
 }
 
 #[async_trait]
@@ -101,7 +93,16 @@ impl Allocator for FakeAllocator {
         panic!("Not supported");
     }
 
+    fn reserve_at_most(self: Arc<Self>, _amount: u64) -> Reservation {
+        panic!("Not supported");
+    }
+
     fn release_reservation(&self, _reservation: &mut Reservation) {}
+
+    fn get_allocated_bytes(&self) -> u64 {
+        let inner = self.0.lock().unwrap();
+        (inner.alloc_bytes - inner.dealloc_bytes) as u64
+    }
 }
 
 #[async_trait]

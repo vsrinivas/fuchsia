@@ -183,6 +183,7 @@ impl<K: Key, V: Value> SkipListLayer<K, V> {
                 log::warn!("Attempt to erase key not present!");
             }
         }
+        iter.commit_and_wait().await;
     }
 }
 

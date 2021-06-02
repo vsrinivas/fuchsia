@@ -9,7 +9,9 @@ use {
             types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
         },
         object_store::{
-            allocator::{self, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator},
+            allocator::{
+                self, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
+            },
             constants::SUPER_BLOCK_OBJECT_ID,
             filesystem::{Filesystem, FxFilesystem},
             graveyard::Graveyard,
@@ -113,7 +115,7 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
     if let Some(item) = expected.get() {
         bail!("missing allocation {:?}", item);
     }
-    if allocated_bytes != allocator.get_allocated_bytes() {
+    if allocated_bytes as u64 != allocator.get_allocated_bytes() {
         bail!(
             "allocated-bytes mismatch: actual: {} != expected: {}",
             allocator.get_allocated_bytes(),

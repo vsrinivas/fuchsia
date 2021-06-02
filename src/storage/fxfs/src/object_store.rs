@@ -23,7 +23,9 @@ use {
     crate::{
         errors::FxfsError,
         lsm_tree::{layers_from_handles, types::LayerIterator, LSMTree},
-        object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties, INVALID_OBJECT_ID},
+        object_handle::{
+            ObjectHandle, ObjectHandleExt, ObjectProperties, Writer, INVALID_OBJECT_ID,
+        },
         object_store::{
             filesystem::{Filesystem, Mutations, ObjectFlush},
             record::{
@@ -628,9 +630,17 @@ impl Mutations for ObjectStore {
         let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;
 
         let object_sync = ObjectFlush::new(object_manager, self.store_object_id);
+        let reservation = filesystem.flush_reservation();
         let mut transaction = filesystem
             .clone()
-            .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
+            .new_transaction(
+                &[],
+                Options {
+                    skip_journal_checks: true,
+                    allocator_reservation: Some(reservation),
+                    ..Default::default()
+                },
+            )
             .await?;
         let object_handle = ObjectStore::create_object(
             parent_store,
@@ -673,14 +683,34 @@ impl Mutations for ObjectStore {
 
         let mut merger = layer_set.merger();
         let iter = merger.seek(Bound::Unbounded).await?;
-        self.tree.compact_with_iterator(iter, &object_handle).await?;
+        self.tree
+            .compact_with_iterator(
+                iter,
+                Writer::new(
+                    &object_handle,
+                    transaction::Options {
+                        skip_journal_checks: true,
+                        allocator_reservation: Some(reservation),
+                        ..Default::default()
+                    },
+                ),
+            )
+            .await
+            .context("ObjectStore::flush")?;
 
         let mut serialized_info = Vec::new();
         let mut new_store_info = self.store_info();
 
         let mut transaction = filesystem
             .clone()
-            .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
+            .new_transaction(
+                &[],
+                Options {
+                    skip_journal_checks: true,
+                    allocator_reservation: Some(reservation),
+                    ..Default::default()
+                },
+            )
             .await?;
 
         // Move the existing layers we're compacting to the graveyard.
@@ -1521,6 +1551,17 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     }
 
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
+        self.new_transaction_with_options(Options {
+            skip_journal_checks: self.options.skip_journal_checks,
+            ..Default::default()
+        })
+        .await
+    }
+
+    async fn new_transaction_with_options<'a>(
+        &self,
+        options: Options<'a>,
+    ) -> Result<Transaction<'a>, Error> {
         Ok(self
             .store()
             .filesystem()
@@ -1530,10 +1571,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                     self.object_id,
                     self.attribute_id,
                 )],
-                Options {
-                    skip_journal_checks: self.options.skip_journal_checks,
-                    ..Default::default()
-                },
+                options,
             )
             .await?)
     }
@@ -1546,11 +1584,10 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
+                allocator::Allocator,
                 filesystem::{Filesystem, FxFilesystem, Mutations, SyncOptions},
-                graveyard::Graveyard,
                 record::{ObjectKey, ObjectKeyData, Timestamp},
                 round_up,
-                testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
@@ -1576,33 +1613,14 @@ mod tests {
     const TEST_OBJECT_SIZE: u64 = 913;
     const TEST_OBJECT_ALLOCATED_SIZE: u64 = 512;
 
-    async fn test_filesystem_and_store(
-    ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, Arc<ObjectStore>) {
-        let device = DeviceHolder::new(FakeDevice::new(1024, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(FakeAllocator::new());
-        fs.object_manager().set_allocator(allocator.clone());
-        let parent_store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(parent_store.clone());
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        let store = parent_store
-            .create_child_store_with_id(&mut transaction, 3)
-            .await
-            .expect("create_child_store failed");
-        let graveyard =
-            Arc::new(Graveyard::create(&mut transaction, &store).await.expect("create failed"));
-        fs.object_manager().register_graveyard(graveyard);
-        transaction.commit().await;
-        (fs.clone(), allocator, store)
+    async fn test_filesystem() -> Arc<FxFilesystem> {
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+        FxFilesystem::new_empty(device).await.expect("new_empty failed")
     }
 
-    async fn test_filesystem_and_object(
-    ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, StoreObjectHandle<ObjectStore>) {
-        let (fs, allocator, store) = test_filesystem_and_store().await;
+    async fn test_filesystem_and_object() -> (Arc<FxFilesystem>, StoreObjectHandle<ObjectStore>) {
+        let fs = test_filesystem().await;
+        let store = fs.root_store();
         let object;
         let mut transaction = fs
             .clone()
@@ -1623,19 +1641,19 @@ mod tests {
         }
         object.truncate(&mut transaction, TEST_OBJECT_SIZE).await.expect("truncate failed");
         transaction.commit().await;
-        (fs, allocator, object)
+        (fs, object)
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_zero_buf_len_read() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(0);
         assert_eq!(object.read(0u64, buf.as_mut()).await.expect("read failed"), 0);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_beyond_eof_read() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         let offset = TEST_OBJECT_SIZE as usize - 2;
         let align = offset % TEST_DEVICE_BLOCK_SIZE as usize;
         let len: usize = 2;
@@ -1651,7 +1669,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sparse() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         // Deliberately read not right to eof.
         let len = TEST_OBJECT_SIZE as usize - 1;
         let mut buf = object.allocate_buffer(len);
@@ -1665,7 +1683,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_after_writes_interspersed_with_flush() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
 
         object.owner().flush().await.expect("flush failed");
 
@@ -1688,7 +1706,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_after_truncate_and_extend() {
-        let (fs, _, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
 
         // Arrange for there to be <extent><deleted-extent><extent>.
         let mut buf = object.allocate_buffer(TEST_DATA.len());
@@ -1727,7 +1745,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_whole_blocks_with_multiple_objects() {
-        let (fs, _, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let mut buffer = object.allocate_buffer(512);
         buffer.as_mut_slice().fill(0xaf);
         object.write(0, buffer.as_ref()).await.expect("write failed");
@@ -1765,10 +1783,10 @@ mod tests {
     }
 
     async fn test_preallocate_common(
-        allocator: &FakeAllocator,
+        allocator: &dyn Allocator,
         object: StoreObjectHandle<ObjectStore>,
     ) {
-        let allocated_before = allocator.allocated();
+        let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object.preallocate_range(&mut transaction, 0..512).await.expect("preallocate_range failed");
         transaction.commit().await;
@@ -1781,8 +1799,8 @@ mod tests {
         transaction.commit().await;
         assert_eq!(object.get_size(), 1048576);
         // Check that it didn't reallocate the space for the existing extent
-        let allocated_after = allocator.allocated();
-        assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as usize);
+        let allocated_after = allocator.get_allocated_bytes();
+        assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as u64);
 
         // Reopen the object in overwrite mode.
         let object = ObjectStore::open_object(
@@ -1800,7 +1818,7 @@ mod tests {
         object.write(offset, buf.as_ref()).await.expect("write failed");
 
         // Make sure there were no more allocations.
-        assert_eq!(allocator.allocated(), allocated_after);
+        assert_eq!(allocator.get_allocated_bytes(), allocated_after);
 
         // Read back the data and make sure it is what we expect.
         let mut buf = object.allocate_buffer(104876);
@@ -1815,23 +1833,24 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_range() {
-        let (_fs, allocator, object) = test_filesystem_and_object().await;
-        test_preallocate_common(&allocator, object).await;
+        let (fs, object) = test_filesystem_and_object().await;
+        test_preallocate_common(fs.allocator().as_ref(), object).await;
     }
 
     // This is identical to the previous test except that we flush so that extents end up in
     // different layers.
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
-        let (_fs, allocator, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         object.owner().flush().await.expect("flush failed");
-        test_preallocate_common(&allocator, object).await;
+        test_preallocate_common(fs.allocator().as_ref(), object).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_already_preallocated() {
-        let (_fs, allocator, object) = test_filesystem_and_object().await;
-        let allocated_before = allocator.allocated();
+        let (fs, object) = test_filesystem_and_object().await;
+        let allocator = fs.allocator();
+        let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         let offset = TEST_DATA_OFFSET - TEST_DATA_OFFSET % TEST_DEVICE_BLOCK_SIZE as u64;
         object
@@ -1840,12 +1859,12 @@ mod tests {
             .expect("preallocate_range failed");
         transaction.commit().await;
         // Check that it didn't reallocate any new space.
-        assert_eq!(allocator.allocated(), allocated_before);
+        assert_eq!(allocator.get_allocated_bytes(), allocated_before);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_overwrite_fails_if_not_preallocated() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
 
         let object = ObjectStore::open_object(
             &object.owner,
@@ -1862,13 +1881,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_extend() {
-        let (fs, _allocator, store) = test_filesystem_and_store().await;
+        let fs = test_filesystem().await;
         let handle;
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
+        let store = fs.root_store();
         handle = ObjectStore::create_object(
             &store,
             &mut transaction,
@@ -1891,12 +1911,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_truncate_deallocates_old_extents() {
-        let (fs, allocator, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(5 * TEST_DEVICE_BLOCK_SIZE as usize);
         buf.as_mut_slice().fill(0xaa);
         object.write(0, buf.as_ref()).await.expect("write failed");
 
-        let deallocated_before = allocator.deallocated();
+        let allocator = fs.allocator();
+        let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -1907,18 +1928,18 @@ mod tests {
             .await
             .expect("truncate failed");
         transaction.commit().await;
-        let deallocated_after = allocator.deallocated();
+        let allocated_after = allocator.get_allocated_bytes();
         assert!(
-            deallocated_before < deallocated_after,
+            allocated_after < allocated_before,
             "before = {} after = {}",
-            deallocated_before,
-            deallocated_after
+            allocated_before,
+            allocated_after
         );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_adjust_refs() {
-        let (fs, allocator, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -1934,7 +1955,8 @@ mod tests {
         );
         transaction.commit().await;
 
-        let deallocated_before = allocator.deallocated();
+        let allocator = fs.allocator();
+        let allocated_before = allocator.get_allocated_bytes();
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -1949,7 +1971,7 @@ mod tests {
         );
         transaction.commit().await;
 
-        assert_eq!(allocator.deallocated(), deallocated_before);
+        assert_eq!(allocator.get_allocated_bytes(), allocated_before);
 
         let mut transaction = fs
             .clone()
@@ -1959,7 +1981,10 @@ mod tests {
         store.tombstone(&mut transaction, object.object_id).await.expect("purge failed");
         transaction.commit().await;
 
-        assert_eq!(allocator.deallocated() - deallocated_before, TEST_DEVICE_BLOCK_SIZE as usize);
+        assert_eq!(
+            allocated_before - allocator.get_allocated_bytes(),
+            TEST_DEVICE_BLOCK_SIZE as u64
+        );
 
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
@@ -1979,7 +2004,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_locks() {
-        let (_fs, _allocator, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let (send3, recv3) = channel();
@@ -2026,13 +2051,14 @@ mod tests {
 
     #[fasync::run(10, test)]
     async fn test_racy_reads() {
-        let (fs, _allocator, store) = test_filesystem_and_store().await;
+        let fs = test_filesystem().await;
         let object;
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
+        let store = fs.root_store();
         object = Arc::new(
             ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
                 .await
@@ -2072,7 +2098,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocated_size() {
-        let (_fs, _allocator, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
 
         let before = object.get_allocated_size().await.expect("get_allocated_size failed");
         let mut buf = object.allocate_buffer(5);
@@ -2123,7 +2149,7 @@ mod tests {
 
     #[fasync::run(10, test)]
     async fn test_zero() {
-        let (_fs, _allocator, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         let expected_size = object.get_size();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object
@@ -2142,7 +2168,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_properties() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         const CRTIME: Timestamp = Timestamp::from_nanos(1234);
         const MTIME: Timestamp = Timestamp::from_nanos(5678);
 
@@ -2169,7 +2195,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_pending_properties() {
-        let (_fs, _, object) = test_filesystem_and_object().await;
+        let (_fs, object) = test_filesystem_and_object().await;
         let crtime = Timestamp::from_nanos(1234u64);
         let mtime = Timestamp::from_nanos(5678u64);
 
@@ -2210,7 +2236,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_item_sequences() {
-        let (fs, _allocator, store) = test_filesystem_and_store().await;
+        let fs = test_filesystem().await;
         let object1;
         let object2;
         let object3;
@@ -2219,6 +2245,7 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
+        let store = fs.root_store();
         object1 = Arc::new(
             ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
                 .await
@@ -2273,14 +2300,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_and_open_store() {
-        // We use a real FxFilesystem in this test since the journal is the only place where a newly
-        // created, empty object store is persisted.  The object store is recreated on replay.
-        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
-            8192,
-            TEST_DEVICE_BLOCK_SIZE,
-        )))
-        .await
-        .expect("new_empty failed");
+        let fs = test_filesystem().await;
         let store_id = {
             let root_store = fs.root_store();
             let mut transaction = fs
@@ -2308,8 +2328,9 @@ mod tests {
 
     #[fasync::run(10, test)]
     async fn test_concurrent_store_opening() {
-        let (fs, _, store) = test_filesystem_and_store().await;
+        let fs = test_filesystem().await;
         let store_id = {
+            let store = fs.root_store();
             let mut transaction = fs
                 .clone()
                 .new_transaction(&[], Options::default())
@@ -2323,12 +2344,18 @@ mod tests {
             child_store.store_object_id()
         };
 
-        fs.sync(SyncOptions::default()).await.expect("sync failed");
-
-        for _ in 0..100 {
-            fs.object_manager().forget_store(store_id);
+        let mut fs = Some(fs);
+        for _ in 0..20 {
+            let device = {
+                let fs = fs.unwrap();
+                fs.close().await.expect("close failed");
+                let device = fs.take_device().await;
+                device.reopen();
+                device
+            };
+            fs = Some(FxFilesystem::open(device).await.expect("open failed"));
             join_all((0..4).map(|_| {
-                let store = store.clone();
+                let store = fs.as_ref().unwrap().root_store();
                 fasync::Task::spawn(async move {
                     store.open_store(store_id).await.expect("open_store failed");
                 })

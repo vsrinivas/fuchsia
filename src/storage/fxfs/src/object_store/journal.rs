@@ -436,7 +436,6 @@ impl Journal {
         // Initialize the journal writer.
         let _ = self.handle_and_reservation.set((journal_handle, allocator_reservation));
 
-        // self.reserve_space(filesystem).await()?;
         Ok(())
     }
 
@@ -469,8 +468,8 @@ impl Journal {
             }
         }
         self.apply_mutations(transaction, journal_file_checkpoint).await;
-        let mut inner = self.inner.lock().unwrap();
-        inner.journal_file_offset = writer.journal_file_checkpoint().file_offset;
+        self.inner.lock().unwrap().journal_file_offset =
+            writer.journal_file_checkpoint().file_offset;
     }
 
     async fn maybe_extend_journal_file(&self, writer: &mut JournalWriter) -> Result<(), Error> {
@@ -484,8 +483,13 @@ impl Journal {
         if file_offset + self.chunk_size() <= size {
             return Ok(());
         }
-        let mut transaction = handle.new_transaction().await?;
-        transaction.allocator_reservation = Some(reservation);
+        let mut transaction = handle
+            .new_transaction_with_options(Options {
+                skip_journal_checks: true,
+                allocator_reservation: Some(reservation),
+                ..Default::default()
+            })
+            .await?;
         handle.preallocate_range(&mut transaction, size..size + self.chunk_size()).await?;
         let journal_file_checkpoint = writer.journal_file_checkpoint();
 
@@ -611,6 +615,7 @@ impl Journal {
         new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(journal_file_checkpoint);
         new_super_block.journal_file_offsets = journal_file_offsets;
 
+        // TODO(csuter); the super-block needs space reserved for it.
         new_super_block
             .write(
                 &root_parent_store,
@@ -627,9 +632,6 @@ impl Journal {
             let mut inner = self.inner.lock().unwrap();
             inner.super_block = new_super_block;
             inner.needs_super_block = false;
-            if let Some(event) = inner.reclaim_event.take() {
-                event.signal();
-            }
         }
 
         sync.commit();
@@ -641,8 +643,14 @@ impl Journal {
             let mut writer = self.writer.lock().await;
 
             if old_checkpoint_offset >= BLOCK_SIZE {
-                let (handle, _reservation) = self.handle_and_reservation.get().unwrap();
-                let mut transaction = handle.new_transaction().await?;
+                let (handle, reservation) = self.handle_and_reservation.get().unwrap();
+                let mut transaction = handle
+                    .new_transaction_with_options(Options {
+                        skip_journal_checks: true,
+                        allocator_reservation: Some(reservation),
+                        ..Default::default()
+                    })
+                    .await?;
                 let mut offset = old_checkpoint_offset;
                 offset -= offset % BLOCK_SIZE;
                 handle.zero(&mut transaction, 0..offset).await?;
@@ -651,6 +659,10 @@ impl Journal {
                 std::mem::drop(transaction);
                 writer.write_mutations(cloned_mutations);
             }
+        }
+
+        if let Some(event) = self.inner.lock().unwrap().reclaim_event.take() {
+            event.signal();
         }
 
         Ok(())
@@ -694,6 +706,7 @@ impl Journal {
                 let mut inner = self.inner.lock().unwrap();
                 if inner.journal_file_offset - inner.super_block.journal_checkpoint.file_offset
                     < RECLAIM_SIZE
+                    && self.handle_and_reservation.get().unwrap().1.amount() >= RECLAIM_SIZE
                 {
                     break;
                 }
@@ -746,7 +759,7 @@ mod tests {
     async fn test_replay() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
 
@@ -793,7 +806,7 @@ mod tests {
     async fn test_reset() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = DeviceHolder::new(FakeDevice::new(6144, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
 
         let mut object_ids = Vec::new();
 
