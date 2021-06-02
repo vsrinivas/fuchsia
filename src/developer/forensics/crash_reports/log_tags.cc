@@ -9,6 +9,11 @@
 
 namespace forensics {
 namespace crash_reports {
+namespace {
+
+static constexpr const char* kEmptyTags = "";
+
+}
 
 void LogTags::Register(const ReportId report_id, const std::vector<std::string>& tags) {
   tags_[report_id] = fxl::StringPrintf("%s, %zu", fxl::JoinStrings(tags, ", ").c_str(), report_id);
@@ -17,7 +22,7 @@ void LogTags::Register(const ReportId report_id, const std::vector<std::string>&
 void LogTags::Unregister(const ReportId report_id) { tags_.erase(report_id); }
 
 const char* LogTags::Get(const ReportId report_id) {
-  return (tags_.find(report_id) != tags_.end()) ? tags_[report_id].c_str() : nullptr;
+  return (tags_.find(report_id) != tags_.end()) ? tags_[report_id].c_str() : kEmptyTags;
 }
 
 }  // namespace crash_reports
