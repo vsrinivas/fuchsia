@@ -1,7 +1,7 @@
 <table class="responsive">
   <tbody>
     <tr>
-      <th colspan=2>{{ rfc.name }}: {{ rfc.title }}</th>
+      <th class="table-header" colspan=2>{{ rfc.name }}: {{ rfc.title }}</th>
     </tr>
     {% if rfc.status != "" %}
     <tr>

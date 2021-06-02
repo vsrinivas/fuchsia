@@ -36,6 +36,10 @@
 {% endif %}
 
 <style>
+:root {
+    --sm: 576px;
+}
+
 .comma-list {
   display: inline;
   list-style: none;
@@ -58,6 +62,10 @@ table {
   text-overflow: ellipsis;
 }
 
+.table-header {
+    height: initial;
+    font-weight: bold;
+}
 
 .checkbox-div {
   display:inline-block;
@@ -77,25 +85,21 @@ table {
 
 .col-key {
   white-space:nowrap;
+  font-weight: bold;
 }
 
-.note {
-
-}
 .edit-buttons {
-  display:inline-block;
-  width:100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: column;
 }
 
-.edit-buttons-left {
-  float: left;
-  margin-left: 20%;
-}
-
-.edit-buttons-right {
-  float: right;
-  margin-right: 20%;
-}
+@media (min-width: var(--sm)) { 
+    .edit-buttons {
+        flex-direction: row;
+    }
+ }
 
 .see-rfcs {
   display:inline-block;
