@@ -534,48 +534,43 @@ impl VDLFiles {
 
     /// SSH into the emulator and wait for exit signal.
     fn ssh_and_wait(&self, tuntap: bool, ssh_port: Port) -> Result<Output, std::io::Error> {
+        // Ref to SSH flags: http://man.openbsd.org/ssh_config
+        let mut ssh_options = vec![
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "CheckHostIP=no",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-o",
+            "ConnectTimeout=10",
+            "-o",
+            "ServerAliveInterval=1",
+            "-o",
+            "ServerAliveCountMax=5",
+            "-o",
+            "LogLevel=ERROR",
+        ];
         if tuntap {
             let device_addr = Command::new(&self.host_tools.device_finder)
                 .args(&["resolve", "-ipv4=false", "fuchsia-5254-0063-5e7a"])
                 .output()?;
-            // Ref to SSH flags: http://man.openbsd.org/ssh_config
-            return Command::new("ssh")
-                .args(&[
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "CheckHostIP=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-o",
-                    "ConnectTimeout=10",
-                    "-o",
-                    "ServerAliveInterval=1",
-                    "-o",
-                    "ServerAliveCountMax=5",
-                    "-i",
-                    &self.ssh_files.private_key.to_str().unwrap(),
-                    str::from_utf8(&device_addr.stdout).unwrap().trim_end_matches('\n'),
-                ])
-                .spawn()?
-                .wait_with_output();
+            ssh_options.append(&mut vec![
+                "-i",
+                &self.ssh_files.private_key.to_str().unwrap(),
+                str::from_utf8(&device_addr.stdout).unwrap().trim_end_matches('\n'),
+            ]);
+            Command::new("ssh").args(&ssh_options).spawn()?.wait_with_output()
         } else {
-            return Command::new("ssh")
-                .args(&[
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "CheckHostIP=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-i",
-                    &self.ssh_files.private_key.to_str().unwrap(),
-                    "fuchsia@localhost",
-                    "-p",
-                    &ssh_port.to_string(),
-                ])
-                .spawn()?
-                .wait_with_output();
+            let port = &ssh_port.to_string();
+            ssh_options.append(&mut vec![
+                "-i",
+                &self.ssh_files.private_key.to_str().unwrap(),
+                "fuchsia@localhost",
+                "-p",
+                port,
+            ]);
+            Command::new("ssh").args(&ssh_options).spawn()?.wait_with_output()
         }
     }
 
