@@ -49,8 +49,8 @@ template("parsing_test") {
 all_test_deps = []
 foreach(info, fidl_testdata_info) {
   parsing_test(info.target_name) {
-    deps = [ info.fidl_target ]
-    ir = info.fidl_ir_file
+    deps = [ "${info.target}($fidl_toolchain)" ]
+    ir = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
   }
   all_test_deps += [ ":${info.target_name}" ]
 }

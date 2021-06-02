@@ -41,14 +41,8 @@ import("//build/fidl/toolchain.gni")
 #   library (computed)
 #     Name of the FIDL library (same as `target_name`).
 #
-#   fidl_target (computed)
-#     Label of the library in the FIDL toolchain.
-#
 #   fidl_gen_dir (computed)
 #     The target's `target_gen_dir` in `fidl_toolchain`.
-#
-#   fidl_ir_file (computed)
-#     Path to the generated IR file relatively to the root build directory.
 #
 # Please keep sorted by name.
 fidl_testdata_info = [
@@ -501,9 +495,8 @@ fidl_testdata_info = []
 foreach(info, _fidl_testdata_info) {
   info.target_name = get_label_info(info.target, "name")
   info.library = info.target_name
-  info.fidl_target = "${info.target}($fidl_toolchain)"
-  info.fidl_gen_dir = get_label_info(info.fidl_target, "target_gen_dir")
-  info.fidl_ir_file = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+  info.fidl_gen_dir =
+      get_label_info("${info.target}($fidl_toolchain)", "target_gen_dir")
 
   if (!defined(info.denylist)) {
     info.denylist = []
