@@ -4,6 +4,13 @@
 
 library fuchsia.bluetooth.hfp.test;
 
+/// Configure behavior for connections to remote peers.
+table ConnectionBehavior {
+    /// When true, HFP will immediately conenct to peers when they are
+    /// discovered. Defaults to true if missing.
+    1: bool autoconnect;
+};
+
 /// Provides additional methods not in `Hfp` that are strictly for testing.
 [Discoverable]
 protocol HfpTest {
@@ -12,4 +19,7 @@ protocol HfpTest {
     /// `level` must be within the range 0-5 inclusive. Values outside of this
     /// range cause the channel to close.
     BatteryIndicator(uint8 level);
+
+    /// Configure the connection behavior when the component discovers new peers.
+    SetConnectionBehavior(ConnectionBehavior behavior);
 };

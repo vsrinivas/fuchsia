@@ -33,7 +33,7 @@ use super::{
     service_level_connection::ServiceLevelConnection,
     slc_request::SlcRequest,
     update::AgUpdate,
-    PeerRequest,
+    ConnectionBehavior, PeerRequest,
 };
 
 use crate::{config::AudioGatewayFeatureSupport, error::Error};
@@ -41,6 +41,7 @@ use crate::{config::AudioGatewayFeatureSupport, error::Error};
 pub(super) struct PeerTask {
     id: PeerId,
     _local_config: AudioGatewayFeatureSupport,
+    connection_behavior: ConnectionBehavior,
     profile_proxy: bredr::ProfileProxy,
     handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
@@ -60,10 +61,12 @@ impl PeerTask {
         id: PeerId,
         profile_proxy: bredr::ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
+        connection_behavior: ConnectionBehavior,
     ) -> Result<Self, Error> {
         Ok(Self {
             id,
             _local_config: local_config,
+            connection_behavior,
             profile_proxy,
             handler: None,
             network: NetworkInformation::EMPTY,
@@ -81,9 +84,10 @@ impl PeerTask {
         id: PeerId,
         profile_proxy: bredr::ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
+        connection_behavior: ConnectionBehavior,
     ) -> Result<(Task<()>, mpsc::Sender<PeerRequest>), Error> {
         let (sender, receiver) = mpsc::channel(0);
-        let peer = Self::new(id, profile_proxy, local_config)?;
+        let peer = Self::new(id, profile_proxy, local_config, connection_behavior)?;
         let task = Task::local(peer.run(receiver).map(|_| ()));
         Ok((task, sender))
     }
@@ -98,29 +102,32 @@ impl PeerTask {
         self.connection.connect(channel);
     }
 
-    async fn on_search_result(
-        &mut self,
-        _protocol: Option<Vec<ProtocolDescriptor>>,
-        _attributes: Vec<Attribute>,
-    ) {
-        // TODO (fxbug.dev/64566): improve connection handling
-        info!("connecting to peer {:?} from search results", self.id);
-        let result = self
-            .profile_proxy
-            .connect(
-                &mut self.id.into(),
-                &mut bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
-                    channel: Some(1),
-                    ..bredr::RfcommParameters::EMPTY
-                }),
-            )
-            .await;
+    async fn connect(&mut self, mut params: bredr::ConnectParameters) {
+        let result = self.profile_proxy.connect(&mut self.id.into(), &mut params).await;
 
         match result {
             Ok(Ok(channel)) => {
                 self.connection.connect(channel.try_into().expect("Channel to be valid"))
             }
-            r => info!("Error connecting to peer {:?} from search results: {:?}", self.id, r),
+            r => info!("Error connecting to peer {:?}: {:?}", self.id, r),
+        }
+    }
+
+    async fn on_search_result(
+        &mut self,
+        _protocol: Option<Vec<ProtocolDescriptor>>,
+        _attributes: Vec<Attribute>,
+    ) {
+        info!("search results received for peer {:?}", self.id);
+
+        // TODO (fxbug.dev/77178): Don't hardcode channel.
+        let params = bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters {
+            channel: Some(1),
+            ..bredr::RfcommParameters::EMPTY
+        });
+
+        if self.connection_behavior.autoconnect {
+            self.connect(params).await;
         }
     }
 
@@ -181,6 +188,9 @@ impl PeerTask {
                 self.battery_level = level;
                 let status = AgIndicator::BatteryLevel(self.battery_level);
                 self.phone_status_update(status).await;
+            }
+            PeerRequest::Behavior(behavior) => {
+                self.connection_behavior = behavior;
             }
         }
         Ok(())
@@ -467,6 +477,7 @@ mod tests {
         super::*,
         async_utils::PollExt,
         at_commands::{self as at, SerDe},
+        core::task::Poll,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{
             CallDirection, CallState, NextCall, PeerHandlerMarker, PeerHandlerRequest,
@@ -530,8 +541,13 @@ mod tests {
     {
         let (sender, receiver) = mpsc::channel(1);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
-        let mut task = PeerTask::new(PeerId(1), proxy, AudioGatewayFeatureSupport::default())
-            .expect("Could not create PeerTask");
+        let mut task = PeerTask::new(
+            PeerId(1),
+            proxy,
+            AudioGatewayFeatureSupport::default(),
+            ConnectionBehavior::default(),
+        )
+        .expect("Could not create PeerTask");
         if let Some(conn) = connection {
             task.connection = conn;
         }
@@ -1038,5 +1054,49 @@ mod tests {
         // Drop the peer task sender to force the PeerTask's run future to complete
         drop(sender);
         exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+    }
+
+    #[test]
+    fn connection_behavior_request_updates_state() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (peer, mut sender, receiver, mut profile) = setup_peer_task(None);
+
+        let _peer_task = fasync::Task::local(peer.run(receiver));
+
+        // First check that a connection is made when search results are received.
+        // Send search results.
+        let event =
+            ProfileEvent::SearchResult { id: PeerId(1), protocol: None, attributes: vec![] };
+        exec.run_singlethreaded(sender.send(PeerRequest::Profile(event))).expect("Send to succeed");
+
+        // Get a connection request on the `profile` stream.
+        let result = exec.run_until_stalled(&mut profile.next());
+        let (_c, _r) = match result {
+            Poll::Ready(Some(Ok(bredr::ProfileRequest::Connect {
+                connection, responder, ..
+            }))) => {
+                let (local, remote) = Channel::create();
+                let local = local.try_into().unwrap();
+                responder.send(&mut Ok(local)).unwrap();
+                (connection, remote)
+            }
+            x => panic!("unexpected result: {:?}", x),
+        };
+
+        // Disable auto connect behavior
+        exec.run_singlethreaded(
+            sender.send(PeerRequest::Behavior(ConnectionBehavior { autoconnect: false })),
+        )
+        .expect("Send to succeed");
+
+        // Connection is not made after autoconnect is disabled
+        // Send search results.
+        let event =
+            ProfileEvent::SearchResult { id: PeerId(1), protocol: None, attributes: vec![] };
+        exec.run_singlethreaded(sender.send(PeerRequest::Profile(event))).expect("Send to succeed");
+
+        // No request is received on stream.
+        let result = exec.run_until_stalled(&mut profile.next());
+        assert!(result.is_pending());
     }
 }

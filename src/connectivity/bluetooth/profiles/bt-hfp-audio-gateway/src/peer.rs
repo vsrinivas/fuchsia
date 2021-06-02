@@ -39,6 +39,25 @@ pub enum PeerRequest {
     Profile(ProfileEvent),
     Handle(PeerHandlerProxy),
     BatteryLevel(u8),
+    Behavior(ConnectionBehavior),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ConnectionBehavior {
+    pub autoconnect: bool,
+}
+
+impl Default for ConnectionBehavior {
+    fn default() -> Self {
+        Self { autoconnect: true }
+    }
+}
+
+impl From<fidl_fuchsia_bluetooth_hfp_test::ConnectionBehavior> for ConnectionBehavior {
+    fn from(value: fidl_fuchsia_bluetooth_hfp_test::ConnectionBehavior) -> Self {
+        let autoconnect = value.autoconnect.unwrap_or_else(|| Self::default().autoconnect);
+        Self { autoconnect }
+    }
 }
 
 /// Manages the Service Level Connection, Audio Connection, and FIDL APIs for a peer device.
@@ -59,6 +78,9 @@ pub trait Peer: Future<Output = PeerId> + Unpin + Send {
     /// Provide the `Peer` with the battery level of this device.
     /// `level` should be a value between 0-5 inclusive.
     async fn battery_level(&mut self, level: u8);
+
+    /// Set the behavior used when connecting to remote peers.
+    async fn set_connection_behavior(&mut self, behavior: ConnectionBehavior);
 }
 
 /// Concrete implementation for `Peer`.
@@ -66,8 +88,9 @@ pub struct PeerImpl {
     id: PeerId,
     local_config: AudioGatewayFeatureSupport,
     profile_proxy: ProfileProxy,
+    connection_behavior: ConnectionBehavior,
     task: Task<()>,
-    // A queue of all possible fidl requests destined for the peer.
+    // A queue of all events destined for the peer.
     // Peer exposes methods for dealing with these various fidl requests in an easier fashion.
     // Under the hood, a queue is used to send these messages to the `task` which represents the
     // Peer.
@@ -79,15 +102,21 @@ impl PeerImpl {
         id: PeerId,
         profile_proxy: ProfileProxy,
         local_config: AudioGatewayFeatureSupport,
+        connection_behavior: ConnectionBehavior,
     ) -> Result<PeerImpl, Error> {
-        let (task, queue) = PeerTask::spawn(id, profile_proxy.clone(), local_config)?;
-        Ok(Self { id, local_config, profile_proxy, task, queue })
+        let (task, queue) =
+            PeerTask::spawn(id, profile_proxy.clone(), local_config, connection_behavior)?;
+        Ok(Self { id, local_config, profile_proxy, task, queue, connection_behavior })
     }
 
     /// Spawn a new peer task.
     fn spawn_task(&mut self) -> Result<(), Error> {
-        let (task, queue) =
-            PeerTask::spawn(self.id, self.profile_proxy.clone(), self.local_config)?;
+        let (task, queue) = PeerTask::spawn(
+            self.id,
+            self.profile_proxy.clone(),
+            self.local_config,
+            self.connection_behavior,
+        )?;
         self.task = task;
         self.queue = queue;
         Ok(())
@@ -138,6 +167,11 @@ impl Peer for PeerImpl {
 
     async fn battery_level(&mut self, level: u8) {
         let _ = self.queue.try_send_fut(PeerRequest::BatteryLevel(level)).await;
+    }
+
+    async fn set_connection_behavior(&mut self, behavior: ConnectionBehavior) {
+        self.connection_behavior = behavior;
+        let _ = self.queue.try_send_fut(PeerRequest::Behavior(behavior)).await;
     }
 }
 
@@ -190,8 +224,9 @@ pub(crate) mod fake {
             self.id
         }
 
-        async fn profile_event(&mut self, _: ProfileEvent) -> Result<(), Error> {
-            unimplemented!("Not needed for any currently written tests");
+        async fn profile_event(&mut self, event: ProfileEvent) -> Result<(), Error> {
+            self.expect_send_request(PeerRequest::Profile(event)).await;
+            Ok(())
         }
 
         async fn build_handler(&mut self) -> Result<ServerEnd<PeerHandlerMarker>, Error> {
@@ -200,6 +235,10 @@ pub(crate) mod fake {
 
         async fn battery_level(&mut self, level: u8) {
             self.expect_send_request(PeerRequest::BatteryLevel(level)).await;
+        }
+
+        async fn set_connection_behavior(&mut self, behavior: ConnectionBehavior) {
+            self.expect_send_request(PeerRequest::Behavior(behavior)).await;
         }
     }
 
@@ -226,7 +265,13 @@ mod tests {
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let peer = PeerImpl::new(id, proxy, AudioGatewayFeatureSupport::default()).unwrap();
+        let peer = PeerImpl::new(
+            id,
+            proxy,
+            AudioGatewayFeatureSupport::default(),
+            ConnectionBehavior::default(),
+        )
+        .unwrap();
         assert_eq!(peer.id(), id);
     }
 
@@ -236,7 +281,13 @@ mod tests {
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let mut peer = PeerImpl::new(id, proxy, AudioGatewayFeatureSupport::default()).unwrap();
+        let mut peer = PeerImpl::new(
+            id,
+            proxy,
+            AudioGatewayFeatureSupport::default(),
+            ConnectionBehavior::default(),
+        )
+        .unwrap();
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.
@@ -268,7 +319,13 @@ mod tests {
 
         let id = PeerId(1);
         let proxy = fidl::endpoints::create_proxy::<ProfileMarker>().unwrap().0;
-        let mut peer = PeerImpl::new(id, proxy, AudioGatewayFeatureSupport::default()).unwrap();
+        let mut peer = PeerImpl::new(
+            id,
+            proxy,
+            AudioGatewayFeatureSupport::default(),
+            ConnectionBehavior::default(),
+        )
+        .unwrap();
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.

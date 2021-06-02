@@ -5,9 +5,9 @@
 use {
     async_utils::stream::FutureMap,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_bluetooth_bredr::ProfileProxy,
+    fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
-    fidl_fuchsia_bluetooth_hfp_test::HfpTestRequest,
+    fidl_fuchsia_bluetooth_hfp_test as hfp_test,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc::Receiver, select, stream::StreamExt},
     profile_client::{ProfileClient, ProfileEvent},
@@ -17,7 +17,7 @@ use {
 use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
-    peer::{Peer, PeerImpl},
+    peer::{ConnectionBehavior, Peer, PeerImpl},
 };
 
 /// Manages operation of the HFP functionality.
@@ -26,24 +26,25 @@ pub struct Hfp {
     /// The `profile_client` provides Hfp with a means to drive the fuchsia.bluetooth.bredr related APIs.
     profile_client: ProfileClient,
     /// The client connection to the `fuchsia.bluetooth.bredr.Profile` protocol.
-    profile_svc: ProfileProxy,
+    profile_svc: bredr::ProfileProxy,
     /// The `call_manager` provides Hfp with a means to interact with clients of the
     /// fuchsia.bluetooth.hfp.Hfp and fuchsia.bluetooth.hfp.CallManager protocols.
     call_manager: Option<CallManagerProxy>,
     call_manager_registration: Receiver<CallManagerProxy>,
     /// A collection of Bluetooth peers that support the HFP profile.
     peers: FutureMap<PeerId, Box<dyn Peer>>,
-    test_requests: Receiver<HfpTestRequest>,
+    test_requests: Receiver<hfp_test::HfpTestRequest>,
+    connection_behavior: ConnectionBehavior,
 }
 
 impl Hfp {
     /// Create a new `Hfp` with the provided `profile`.
     pub fn new(
         profile_client: ProfileClient,
-        profile_svc: ProfileProxy,
+        profile_svc: bredr::ProfileProxy,
         call_manager_registration: Receiver<CallManagerProxy>,
         config: AudioGatewayFeatureSupport,
-        test_requests: Receiver<HfpTestRequest>,
+        test_requests: Receiver<hfp_test::HfpTestRequest>,
     ) -> Self {
         Self {
             profile_client,
@@ -53,6 +54,7 @@ impl Hfp {
             peers: FutureMap::new(),
             config,
             test_requests,
+            connection_behavior: ConnectionBehavior::default(),
         }
     }
 
@@ -88,12 +90,24 @@ impl Hfp {
         Ok(())
     }
 
-    async fn handle_test_request(&mut self, request: HfpTestRequest) -> Result<(), Error> {
+    async fn handle_test_request(
+        &mut self,
+        request: hfp_test::HfpTestRequest,
+    ) -> Result<(), Error> {
+        log::info!("Handling test request: {:?}", request);
+        use hfp_test::HfpTestRequest::*;
         match request {
-            HfpTestRequest::BatteryIndicator { level, .. } => {
+            BatteryIndicator { level, .. } => {
                 for peer in self.peers.inner().values_mut() {
                     peer.battery_level(level).await;
                 }
+            }
+            SetConnectionBehavior { behavior, .. } => {
+                let behavior = behavior.into();
+                for peer in self.peers.inner().values_mut() {
+                    peer.set_connection_behavior(behavior).await;
+                }
+                self.connection_behavior = behavior;
             }
         }
         Ok(())
@@ -104,7 +118,12 @@ impl Hfp {
         let id = event.peer_id();
         let peer = match self.peers.inner().entry(id) {
             Entry::Vacant(entry) => {
-                let mut peer = Box::new(PeerImpl::new(id, self.profile_svc.clone(), self.config)?);
+                let mut peer = Box::new(PeerImpl::new(
+                    id,
+                    self.profile_svc.clone(),
+                    self.config,
+                    self.connection_behavior,
+                )?);
                 if let Some(proxy) = self.call_manager.clone() {
                     let server_end = peer.build_handler().await?;
                     if Self::send_peer_connected(&proxy, peer.id(), server_end).await.is_err() {
@@ -115,7 +134,8 @@ impl Hfp {
             }
             Entry::Occupied(entry) => entry.into_mut(),
         };
-        peer.profile_event(event).await
+        peer.profile_event(event).await?;
+        Ok(())
     }
 
     /// Handle a single `CallManagerEvent` from `call_manager`.
@@ -161,14 +181,13 @@ mod tests {
     use {
         super::*,
         crate::{
-            peer::{fake::PeerFake, PeerRequest},
+            peer::{fake::PeerFake, ConnectionBehavior, PeerRequest},
             profile::test_server::{setup_profile_and_test_server, LocalProfileTestServer},
         },
         fidl_fuchsia_bluetooth as bt,
         fidl_fuchsia_bluetooth_hfp::{
             CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
         },
-        fidl_fuchsia_bluetooth_hfp_test::HfpTestMarker,
         fuchsia_async as fasync,
         futures::{channel::mpsc, SinkExt, TryStreamExt},
     };
@@ -279,18 +298,67 @@ mod tests {
 
         // Make a new fidl request by creating a channel and sending the request over the channel.
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<HfpTestMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<hfp_test::HfpTestMarker>().unwrap();
         let fidl_request = {
             proxy.battery_indicator(1).unwrap();
             stream.next().await.unwrap().unwrap()
         };
 
         // Send the battery level request to `hfp`.
-        test_tx.send(fidl_request).await.expect("Hfp to receive the battery request");
+        test_tx.send(fidl_request).await.expect("Hfp received the battery request");
 
         // Check that the expected request was passed into the peer via `hfp`.
         let peer_request =
-            peer_receiver.receiver.next().await.expect("Peer to receive BatteryLevel request");
+            peer_receiver.receiver.next().await.expect("Peer received the BatteryLevel request");
         matches::assert_matches!(peer_request, PeerRequest::BatteryLevel(1));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn connection_behavior_request_is_propagated() {
+        let (profile, profile_svc, _server) = setup_profile_and_test_server();
+        let (_call_mgr_tx, call_mgr_rx) = mpsc::channel(1);
+        let (mut test_tx, test_rx) = mpsc::channel(1);
+
+        // Run hfp in a background task since we are testing that the correct behavior is
+        // propagated to the `peer_receiver`.
+        let mut hfp = Hfp::new(
+            profile,
+            profile_svc,
+            call_mgr_rx,
+            AudioGatewayFeatureSupport::default(),
+            test_rx,
+        );
+
+        let id = PeerId(0);
+        let (mut peer_receiver, peer) = PeerFake::new(id);
+
+        hfp.peers.insert(id, Box::new(peer));
+        let _hfp_task = fasync::Task::local(hfp.run());
+
+        // Make a new fidl request by creating a channel and sending the request over the channel.
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<hfp_test::HfpTestMarker>().unwrap();
+        let fidl_request = {
+            let behavior = hfp_test::ConnectionBehavior {
+                autoconnect: Some(false),
+                ..hfp_test::ConnectionBehavior::EMPTY
+            };
+            proxy.set_connection_behavior(behavior).unwrap();
+            stream.next().await.unwrap().unwrap()
+        };
+
+        // Send the behavior request to `hfp`.
+        test_tx.send(fidl_request).await.expect("Hfp received the behavior request");
+
+        // Check that the expected request was passed into the peer via `hfp`.
+        let peer_request = peer_receiver
+            .receiver
+            .next()
+            .await
+            .expect("Peer received the ConnectionBehavior request");
+        matches::assert_matches!(
+            peer_request,
+            PeerRequest::Behavior(ConnectionBehavior { autoconnect: false })
+        );
     }
 }
