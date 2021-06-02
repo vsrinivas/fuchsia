@@ -120,6 +120,10 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
     callback(fuchsia::netstack::NetErr{.status = fuchsia::netstack::Status::OK}, /*nicid=*/0);
   }
 
+  void SetInterfaceStatus(uint32_t nicid, bool enabled) override {
+    // Ignored as our fake netstack does not track interface status.
+  }
+
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: Netstack::%s\n", name.data());
   }
