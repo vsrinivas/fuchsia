@@ -72,6 +72,8 @@ llcpp_wavl_tree_headers = [
 if (is_fuchsia) {
   zx_library("fidl-llcpp") {
     sdk = "source"
+    sdk_publishable = true
+    sdk_name = "fidl-llcpp-experimental-driver-only"
     sdk_headers = [
                     "lib/fidl/llcpp/array.h",
                     "lib/fidl/llcpp/async_binding.h",

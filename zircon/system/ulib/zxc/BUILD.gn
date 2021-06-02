@@ -4,7 +4,9 @@
 
 import("//build/zircon/migrated_targets.gni")
 
-source_set("fitx") {
+sdk_source_set("fitx") {
+  category = "partner"
+  sdk_name = "fitx-experimental-driver-only"
   sources = [
     "include/lib/fitx/internal/compiler.h",
     "include/lib/fitx/internal/result.h",
@@ -16,13 +18,17 @@ source_set("fitx") {
   public_configs = [ "//build/config/zircon:Wno-conversion" ]
 }
 
-source_set("zx") {
+sdk_source_set("zx") {
+  category = "partner"
+  sdk_name = "zx-experimental-driver-only"
   sources = [ "include/lib/zx/status.h" ]
   public_deps = [ ":fitx" ]
 }
 
 zx_library("zxc") {
   sdk = "source"
+  sdk_publishable = true
+  sdk_name = "zxc-experimental-driver-only"
   sdk_headers = [
     "lib/fitx/internal/compiler.h",
     "lib/fitx/internal/result.h",
