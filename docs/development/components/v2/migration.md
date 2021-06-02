@@ -9,7 +9,7 @@ in a [sysmgr configuration file][sysmgr-config].
 
 To migrate your system component from v1 to v2, do the following:
 
--   [Prerequisites](#prerequisites)
+-   [Background](#background)
 -   [Migrate the component manifest](#create-component-manifest)
 -   [Migrate the tests](#migrate-tests)
 
@@ -23,13 +23,9 @@ following sections for additional guidance:
 For more details on the components migration effort, see
 [State of the Components v2 Migration][components-migration-status].
 
-## Prerequisites {#prerequisites}
+## Background {#background}
 
-Before you begin, ensure that your component uses the latest build templates.
-If your component still uses the legacy `package()` in your `BUILD.gn`,
-[migrate your package templates][build-migration] before continuing.
-
-You should also familiarize yourself with the following topics:
+You should familiarize yourself with the following topics:
 
 -   [Introduction to the Fuchsia Component Framework][components-intro]:
     Components v2 comprises a set of concepts and APIs that are
@@ -1797,7 +1793,6 @@ using the directory capability `build-info` and path `/config/build-info`.
 [archive-dart]: /sdk/dart/fuchsia_inspect/lib/src/reader
 [archivist]: /docs/reference/diagnostics/inspect/tree.md#archivist
 [build-info-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.buildinfo#Provider
-[build-migration]: /docs/development/components/package_migration.md
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
 [cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [code-search]: https://cs.opensource.google/fuchsia
