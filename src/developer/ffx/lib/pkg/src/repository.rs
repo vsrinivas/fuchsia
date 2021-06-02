@@ -6,8 +6,15 @@ use {
     anyhow::Context,
     bytes::Bytes,
     futures::{future::ready, stream::once, AsyncReadExt, Stream},
+    parking_lot::Mutex,
     serde::{Deserialize, Serialize},
-    std::{convert::TryFrom, io, path::PathBuf, pin::Pin},
+    std::{
+        convert::TryFrom,
+        io,
+        path::PathBuf,
+        pin::Pin,
+        sync::atomic::{AtomicUsize, Ordering},
+    },
     tuf::{
         client::{Client, Config},
         crypto::KeyType,
@@ -26,6 +33,17 @@ pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
 pub use manager::{RepositoryManager, RepositorySpec};
 pub use server::{RepositoryServer, RepositoryServerBuilder};
+
+/// A unique ID which is given to every repository.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RepositoryId(usize);
+
+impl RepositoryId {
+    fn new() -> Self {
+        static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
+        RepositoryId(NEXT_ID.fetch_add(1, Ordering::Relaxed))
+    }
+}
 
 /// The below types exist to provide definitions with Serialize.
 /// TODO(fxbug.dev/76041) They should be removed in favor of the
@@ -115,11 +133,16 @@ pub struct Repository {
     /// The name of the repository.
     name: String,
 
+    /// A unique ID for the repository, scoped to this instance of the daemon.
+    id: RepositoryId,
+
     /// The TUF metadata for this repository
     metadata: RepositoryMetadata,
 
     /// Backend for this repository
     backend: Box<dyn RepositoryBackend + Send + Sync>,
+
+    drop_handlers: Mutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
 }
 
 impl Repository {
@@ -129,7 +152,22 @@ impl Repository {
         backend: Box<dyn RepositoryBackend + Sync + Send>,
         metadata: RepositoryMetadata,
     ) -> Self {
-        Self { name: name.to_string(), backend, metadata }
+        Self {
+            name: name.to_string(),
+            id: RepositoryId::new(),
+            backend,
+            metadata,
+            drop_handlers: Mutex::new(Vec::new()),
+        }
+    }
+
+    pub fn id(&self) -> RepositoryId {
+        self.id
+    }
+
+    /// Stores the given function to be run when the repository is dropped.
+    pub fn on_drop<F: FnOnce() + Send + Sync + 'static>(&self, f: F) {
+        self.drop_handlers.lock().push(Box::new(f));
     }
 
     pub async fn new(
@@ -137,7 +175,13 @@ impl Repository {
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
         let metadata = Self::get_metadata(backend.get_tuf_repo()?).await?;
-        Ok(Self { name: name.to_string(), backend, metadata: metadata })
+        Ok(Self {
+            name: name.to_string(),
+            id: RepositoryId::new(),
+            backend,
+            metadata,
+            drop_handlers: Mutex::new(Vec::new()),
+        })
     }
 
     pub fn name(&self) -> &str {
@@ -198,6 +242,14 @@ impl Repository {
         let root_version = client.root_version();
 
         Ok(RepositoryMetadata::new(root_keys, root_version))
+    }
+}
+
+impl Drop for Repository {
+    fn drop(&mut self) {
+        for handler in std::mem::take(&mut *self.drop_handlers.lock()) {
+            (handler)()
+        }
     }
 }
 

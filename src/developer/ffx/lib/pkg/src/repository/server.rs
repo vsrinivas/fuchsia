@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, RepositoryManager},
-    anyhow::Result,
+    super::{Error, Repository, RepositoryId, RepositoryManager},
+    anyhow::{anyhow, Result},
     async_net::{TcpListener, TcpStream},
     chrono::Utc,
+    fuchsia_async as fasync,
     futures::{prelude::*, AsyncRead, AsyncWrite, TryStreamExt},
+    http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{
         body::Body,
         server::{accept::from_stream, Server},
@@ -15,15 +17,31 @@ use {
         Request, Response, StatusCode,
     },
     log::{error, info, warn},
+    parking_lot::RwLock,
+    serde::{Deserialize, Serialize},
     std::{
+        collections::HashMap,
         convert::{Infallible, TryInto},
+        future::Future,
         io,
         net::SocketAddr,
         pin::Pin,
         sync::Arc,
         task::{Context, Poll},
+        time::Duration,
     },
 };
+
+// FIXME: This value was chosen basically at random.
+const AUTO_BUFFER_SIZE: usize = 10;
+
+// FIXME: This value was chosen basically at random.
+const MAX_PARSE_RETRIES: usize = 5000;
+
+// FIXME: This value was chosen basically at random.
+const PARSE_RETRY_DELAY: Duration = Duration::from_micros(100);
+
+type SseResponseCreatorMap = RwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
 
 /// RepositoryManager represents the web server that serves [Repositories](Repository) to a target.
 pub struct RepositoryServer {
@@ -61,12 +79,18 @@ impl RepositoryServer {
 pub struct RepositoryServerBuilder {
     addr: SocketAddr,
     repo_manager: Arc<RepositoryManager>,
+    auto_wait: bool,
 }
 
 impl RepositoryServerBuilder {
     /// Create a new RepositoryServerBuilder.
     pub fn new(addr: SocketAddr, repo_manager: Arc<RepositoryManager>) -> Self {
-        Self { addr, repo_manager }
+        Self { addr, repo_manager, auto_wait: true }
+    }
+
+    pub fn without_auto_wait(mut self) -> Self {
+        self.auto_wait = false;
+        self
     }
 
     /// Construct a web server future, and return a [RepositoryServer] to manage the server.
@@ -74,12 +98,15 @@ impl RepositoryServerBuilder {
     pub async fn start(self) -> Result<(impl Future<Output = ()>, RepositoryServer)> {
         let listener = TcpListener::bind(&self.addr).await?;
         let local_addr = listener.local_addr()?;
+        let sse_response_creators = Arc::new(RwLock::new(HashMap::new()));
 
         let repo_manager = Arc::clone(&self.repo_manager);
         let make_svc = make_service_fn(move |_socket| {
             // Each connection to the server receives a separate service_fn
             // instance, and so needs its own copy of the repository manager.
             let repo_manager = Arc::clone(&repo_manager);
+            let sse_response_creators = Arc::clone(&sse_response_creators);
+            let auto_wait = self.auto_wait;
 
             async move {
                 Ok::<_, Infallible>(service_fn(move |req| {
@@ -89,7 +116,29 @@ impl RepositoryServerBuilder {
                     let method = req.method().to_string();
                     let path = req.uri().path().to_string();
 
-                    handle_request(Arc::clone(&repo_manager), req, local_addr.clone())
+                    // TODO: Drive waiting with filesystem notifications when we have a crate for
+                    // those.
+                    let response = if auto_wait {
+                        handle_request(
+                            Arc::clone(&repo_manager),
+                            req,
+                            local_addr.clone(),
+                            Arc::clone(&sse_response_creators),
+                            || fasync::Timer::new(Duration::from_secs(5)),
+                        )
+                        .boxed()
+                    } else {
+                        handle_request(
+                            Arc::clone(&repo_manager),
+                            req,
+                            local_addr.clone(),
+                            Arc::clone(&sse_response_creators),
+                            || futures::future::ready(()),
+                        )
+                        .boxed()
+                    };
+
+                    response
                         .inspect(move |resp| {
                             info!(
                                 "{} [ffx] {} {} => {}",
@@ -124,10 +173,12 @@ impl RepositoryServerBuilder {
     }
 }
 
-async fn handle_request(
+async fn handle_request<W: 'static + Fn() -> F, F: Future<Output = ()>>(
     repo_manager: Arc<RepositoryManager>,
     req: Request<Body>,
     local_addr: SocketAddr,
+    sse_response_creators: Arc<SseResponseCreatorMap>,
+    waiter: W,
 ) -> Response<Body> {
     let mut path = req.uri().path();
 
@@ -183,6 +234,34 @@ async fn handle_request(
                 }
             }
         }
+        "auto" => {
+            let id = repo.id();
+            let response_creator = sse_response_creators.read().get(&id).map(Arc::clone);
+            return match response_creator {
+                Some(response_creator) => response_creator.create().await,
+                None => {
+                    let response_creator =
+                        Arc::clone(sse_response_creators.write().entry(id).or_insert_with(|| {
+                            let (response_creator, sender) =
+                                SseResponseCreator::with_additional_buffer_size(AUTO_BUFFER_SIZE);
+                            spawn_timestamp_watcher(Arc::clone(&repo), sender, waiter);
+
+                            let weak_sse_response_creators = Arc::downgrade(&sse_response_creators);
+                            let id = repo.id();
+                            repo.on_drop(move || {
+                                if let Some(sse_response_creators) =
+                                    weak_sse_response_creators.upgrade()
+                                {
+                                    sse_response_creators.write().remove(&id);
+                                }
+                            });
+
+                            Arc::new(response_creator)
+                        }));
+                    response_creator.create().await
+                }
+            };
+        }
         _ => match repo.fetch(resource_path).await {
             Ok(file) => file,
             Err(Error::NotFound) => {
@@ -205,6 +284,72 @@ async fn handle_request(
         .header("Content-Length", resource.len)
         .body(Body::wrap_stream(resource.stream))
         .unwrap()
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimestampFile {
+    version: i32,
+}
+
+fn spawn_timestamp_watcher<W: 'static + Fn() -> F, F: Future<Output = ()>>(
+    repo: Arc<Repository>,
+    sender: EventSender,
+    waiter: W,
+) {
+    let repo = Arc::downgrade(&repo);
+    let mut old_version = None;
+    let mut retries = 0;
+    fasync::Task::local(async move {
+        while let Some(repo) = repo.upgrade() {
+            if let Ok(file) = get_file(repo, "timestamp.json").await {
+                let timestamp_file: TimestampFile = match serde_json::from_reader(&*file) {
+                    Ok(timestamp_file) => timestamp_file,
+                    Err(e) => {
+                        // We might see the file change when it's half-written, so we need to retry
+                        // the parse if it fails.
+                        if retries == MAX_PARSE_RETRIES {
+                            error!("error parsing timestamp.json: {:?}", e);
+                            break;
+                        }
+
+                        retries += 1;
+                        fasync::Timer::new(PARSE_RETRY_DELAY).await;
+                        continue;
+                    }
+                };
+
+                retries = 0;
+
+                if old_version
+                    .replace(timestamp_file.version)
+                    .filter(|&x| x == timestamp_file.version)
+                    .is_none()
+                {
+                    sender
+                        .send(
+                            &Event::from_type_and_data(
+                                "timestamp.json",
+                                timestamp_file.version.to_string(),
+                            )
+                            .expect("Could not assemble timestamp event"),
+                        )
+                        .await;
+                }
+            }
+
+            (&waiter)().await;
+        }
+    })
+    .detach();
+}
+
+async fn get_file(repo: Arc<Repository>, path: &str) -> Result<Vec<u8>> {
+    let mut resource = repo.fetch(path).await.map_err(|x| anyhow!("{:?}", x))?;
+    let mut ret = Vec::with_capacity(resource.len as usize);
+    while let Some(bytes) = resource.stream.next().await.transpose()? {
+        ret.extend_from_slice(&bytes);
+    }
+    Ok(ret)
 }
 
 fn status_response(status_code: StatusCode) -> Response<Body> {
@@ -253,9 +398,10 @@ mod tests {
         anyhow::Result,
         bytes::Bytes,
         fuchsia_async as fasync,
+        http_sse::Client as SseClient,
         matches::assert_matches,
         std::{
-            fs::{create_dir, File},
+            fs::{create_dir, remove_file},
             io::Write as _,
             net::Ipv4Addr,
             path::Path,
@@ -276,8 +422,9 @@ mod tests {
     }
 
     fn write_file(path: &Path, body: &[u8]) {
-        let mut f = File::create(path).unwrap();
-        f.write(body).unwrap();
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write(body).unwrap();
+        tmp.persist(path).unwrap();
     }
 
     async fn verify_repo_json(devhost: &str, server_url: &str, keys: Vec<RepositoryKeyConfig>) {
@@ -304,8 +451,11 @@ mod tests {
         R: Future<Output = ()>,
     {
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
-        let (server_fut, server) =
-            RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
+        let (server_fut, server) = RepositoryServer::builder(addr, Arc::clone(&manager))
+            .without_auto_wait()
+            .start()
+            .await
+            .unwrap();
 
         // Run the server in the background.
         let task = fasync::Task::local(server_fut);
@@ -381,6 +531,56 @@ mod tests {
                     assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == &body[..]);
                 }
                 verify_repo_json(devhost, &server_url, key_vec.to_vec()).await;
+            }
+        })
+        .await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_auto() {
+        let manager = RepositoryManager::new();
+
+        let d = tempfile::tempdir().unwrap();
+        let d = d.path();
+
+        let timestamp_file = d.join("timestamp.json");
+        write_file(
+            &timestamp_file,
+            serde_json::to_string(&TimestampFile { version: 0 }).unwrap().as_bytes(),
+        );
+
+        let keys = vec![RepositoryKeyConfig::Ed25519Key(vec![1, 2, 3, 4])];
+        let repo = Repository::new_with_metadata(
+            "devhost",
+            Box::new(FileSystemRepository::new(d.to_path_buf())),
+            RepositoryMetadata::new(keys, 1),
+        );
+        manager.add(Arc::new(repo));
+
+        run_test(manager, |server_url| {
+            let timestamp_file = timestamp_file.clone();
+            async move {
+                let url = format!("{}/devhost/auto", server_url);
+                let mut client =
+                    SseClient::connect(fuchsia_hyper::new_https_client(), url).await.unwrap();
+
+                assert_eq!(client.next().await.unwrap().unwrap().data(), "0");
+                write_file(
+                    &timestamp_file,
+                    serde_json::to_string(&TimestampFile { version: 1 }).unwrap().as_bytes(),
+                );
+                assert_eq!(client.next().await.unwrap().unwrap().data(), "1");
+                write_file(
+                    &timestamp_file,
+                    serde_json::to_string(&TimestampFile { version: 2 }).unwrap().as_bytes(),
+                );
+                assert_eq!(client.next().await.unwrap().unwrap().data(), "2");
+                remove_file(&timestamp_file).unwrap();
+                write_file(
+                    &timestamp_file,
+                    serde_json::to_string(&TimestampFile { version: 3 }).unwrap().as_bytes(),
+                );
+                assert_eq!(client.next().await.unwrap().unwrap().data(), "3");
             }
         })
         .await
