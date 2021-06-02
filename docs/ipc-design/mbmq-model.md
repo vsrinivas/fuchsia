@@ -292,6 +292,33 @@ Channel endpoint:
     `enqueued_as_request`.  This will be empty if the endpoint has an
     associated MsgQueue.
 
+## "Fire-and-forget" requests: requests without replies
+
+At the FIDL level, some request messages are "fire-and-forget": they
+have no corresponding reply message.
+
+In the MBMQ model, each request generally has an associated reply
+message, but it may be an empty or automatic reply, and the caller may
+choose to ignore it.
+
+For fire-and-forget requests, a caller has a choice of whether it
+recycles MBOs across requests or not:
+
+*   Non-recycled MBOs: This is the simplest for a caller to do, so it
+    is likely to be the common case.  The caller allocates a new MBO
+    for each fire-and-forget message.  The caller closes the MBO
+    handle after sending the MBO, without ever setting a `reply_queue`
+    on the MBO.  The MBO will get freed automatically after the callee
+    has received the message and dropped its reference to the MBO.
+
+*   Recycled MBOs: A callee has the option of detecting when the
+    callee has dropped its reference to the MBO.  It can exercise that
+    option by setting a `reply_queue` on the MBO in order to receive a
+    reply, just as with MBOs where non-trivial replies are expected.
+    This may be useful for a resource-conscious caller, which can use
+    this ability to recycle MBOs between requests or to implement flow
+    control.
+
 ## A note on terminology: "caller" and "callee"
 
 We are using the terms "caller" and "callee" to emphasise that these
