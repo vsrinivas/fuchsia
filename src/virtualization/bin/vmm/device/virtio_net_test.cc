@@ -85,7 +85,10 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::
       ASSERT_EQ(ZX_OK, status);
       eth_started = true;
     });
-    RunLoopUntil([&] { return eth_started; });
+    bool ready_signal = false;
+    net_->Ready(0, [&ready_signal]() { ready_signal = true; });
+    // Wait until both the eth and net device have replied that they are ready.
+    RunLoopUntil([&] { return eth_started && ready_signal; });
   }
 
   // Fake |fuchsia.netstack.Netstack| implementation.

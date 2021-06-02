@@ -70,6 +70,10 @@ class VirtioBlockTest : public TestWithDevice {
       status = block_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
+
+    // Finish negotiating features.
+    status = block_->Ready(0);
+    ASSERT_EQ(ZX_OK, status);
   }
 
   fbl::unique_fd fd_;

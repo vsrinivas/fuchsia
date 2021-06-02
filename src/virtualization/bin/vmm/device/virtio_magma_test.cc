@@ -186,6 +186,10 @@ class VirtioMagmaTest : public TestWithDevice {
     magma_->ConfigureQueue(0, out_queue_.size(), out_queue_.desc(), out_queue_.avail(),
                            out_queue_.used(), [&] { QuitLoop(); });
     RunLoop();
+
+    // Finish negotiating features.
+    magma_->Ready(0, [&] { QuitLoop(); });
+    RunLoop();
   }
 
   std::optional<VirtioQueueFake::UsedElement> NextUsed(VirtioQueueFake* queue) {

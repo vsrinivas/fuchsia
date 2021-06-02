@@ -196,6 +196,10 @@ class VirtioWlTest : public TestWithDevice {
       status = wl_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
+
+    // Finish negotiating features.
+    status = wl_->Ready(0);
+    ASSERT_EQ(ZX_OK, status);
   }
 
   zx_status_t CreateNew(uint32_t vfd_id, uint8_t byte) {

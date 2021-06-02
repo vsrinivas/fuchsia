@@ -49,6 +49,10 @@ class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing
       status = gpu_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
+
+    // Finish negotiating features.
+    status = gpu_->Ready(0);
+    ASSERT_EQ(ZX_OK, status);
   }
 
   void NotImplemented_(const std::string& name) override {

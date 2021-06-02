@@ -29,6 +29,10 @@ class VirtioRngTest : public TestWithDevice {
     queue_.Configure(PAGE_SIZE * 0, PAGE_SIZE);
     status = rng_->ConfigureQueue(0, queue_.size(), queue_.desc(), queue_.avail(), queue_.used());
     ASSERT_EQ(ZX_OK, status);
+
+    // Finish negotiating features.
+    status = rng_->Ready(0);
+    ASSERT_EQ(ZX_OK, status);
   }
 
   // Note: use of sync can be problematic here if the test environment needs to handle

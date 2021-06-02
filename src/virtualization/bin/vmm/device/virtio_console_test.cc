@@ -41,6 +41,10 @@ class VirtioConsoleTest : public TestWithDevice {
       status = console_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
+
+    // Finish negotiating features.
+    status = console_->Ready(0);
+    ASSERT_EQ(ZX_OK, status);
   }
 
   // Note: use of sync can be problematic here if the test environment needs to handle
