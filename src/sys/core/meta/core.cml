@@ -933,12 +933,6 @@
             to: "#dhcpd",
         },
         {
-            directory: "config-data",
-            from: "parent",
-            to: "#dhcpd",
-            subdir: "dhcpd",
-        },
-        {
             protocol: "fuchsia.net.dhcp.Server",
             from: "#dhcpd",
             to: "#appmgr",
