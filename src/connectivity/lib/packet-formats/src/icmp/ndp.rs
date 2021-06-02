@@ -270,12 +270,15 @@ impl_icmp_message!(Ipv6, Redirect, Redirect, IcmpUnusedCode, Options<B>);
 /// Parsing and serialization of NDP options.
 pub mod options {
     use core::convert::TryFrom;
+    use core::num::NonZeroUsize;
     use core::time::Duration;
 
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{AddrSubnet, AddrSubnetError, Ipv6Addr};
     use net_types::{UnicastAddr, UnicastAddress};
-    use packet::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
+    use packet::records::options::{
+        LengthEncoding, OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
+    };
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::utils::NonZeroDuration;
@@ -533,7 +536,9 @@ pub mod options {
         type Error = ();
 
         // For NDP options the length should be multiplied by 8.
-        const OPTION_LEN_MULTIPLIER: usize = 8;
+        const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
+            option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(8) },
+        };
 
         // NDP options don't have END_OF_OPTIONS or NOP.
         const END_OF_OPTIONS: Option<u8> = None;

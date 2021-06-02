@@ -1406,7 +1406,12 @@ mod test {
 ///
 /// [type-length-value]: https://en.wikipedia.org/wiki/Type-length-value
 pub mod options {
+    use core::num::NonZeroUsize;
+
     use super::*;
+
+    /// The number of bytes consumed by the kind and length fields combined.
+    const KIND_LEN_BYTES: usize = 2;
 
     /// A parsed sequence of options.
     ///
@@ -1497,15 +1502,11 @@ pub mod options {
     {
         type Record = O::Option;
 
-        fn record_length(record: &Self::Record) -> usize {
-            let base = 2 + O::option_length(record);
-
-            // Pad up to option_len_multiplier:
-            (base + O::OPTION_LEN_MULTIPLIER - 1) / O::OPTION_LEN_MULTIPLIER
-                * O::OPTION_LEN_MULTIPLIER
+        fn record_length(option: &O::Option) -> usize {
+            O::LENGTH_ENCODING.record_length(O::option_length(option)).unwrap()
         }
 
-        fn serialize(data: &mut [u8], record: &Self::Record) {
+        fn serialize(data: &mut [u8], option: &O::Option) {
             // NOTE(brunodalbo) we don't currently support serializing the two
             //  single-byte options used in TCP and IP: NOP and END_OF_OPTIONS.
             //  If it is necessary to support those as part of TLV options
@@ -1513,25 +1514,22 @@ pub mod options {
 
             // Data not having enough space is a contract violation, so we panic
             // in that case.
-            data[0] = O::option_kind(record);
-            let length = Self::record_length(record) / O::OPTION_LEN_MULTIPLIER;
+            data[0] = O::option_kind(option);
+            let body_len = O::option_length(option);
+            let encoded_len = O::LENGTH_ENCODING.encode_length(body_len).unwrap();
             // Option length not fitting in u8 is a contract violation. Without
             // debug assertions on, this will cause the packet to be malformed.
-            debug_assert!(length <= std::u8::MAX.into());
-            // The fact that we subtract after dividing by
-            // O::OPTION_LEN_MULTIPLIER doesn't matter since LENGTH_ENCODING
-            // cannot be ValueOnly when OPTION_LEN_MULTIPLIER is greater than
-            // one, and thus byte_offset() cannot return a non-zero value when
-            // OPTION_LEN_MULTIPLIER is greater than one. If we ever lift this
-            // restriction, we may need to change this code.
-            data[1] = (length - O::LENGTH_ENCODING.byte_offset()) as u8;
+            debug_assert!(encoded_len <= std::u8::MAX.into());
+            data[1] = encoded_len as u8;
+            let body_and_padding = &mut data[KIND_LEN_BYTES..];
             // SECURITY: Because padding may have occurred, we zero-fill data
             // before passing it along in order to prevent leaking information
             // from packets previously stored in the buffer.
-            for b in data[2..].iter_mut() {
+            for b in body_and_padding.iter_mut() {
                 *b = 0;
             }
-            O::serialize(&mut data[2..], record)
+            // Pass exactly `body_len` bytes even if there is padding.
+            O::serialize(&mut body_and_padding[..body_len], option)
         }
     }
 
@@ -1572,25 +1570,87 @@ pub mod options {
     /// Whether the length field of an option encodes the length of the entire
     /// option (including type and length fields) or only of the value field.
     ///
-    /// Note that a `LengthEncoding` of `TypeLengthValue` must not be combined
-    /// with a greater-than-one value for the
-    /// [`OptionsImplLayout::OPTION_LEN_MULTIPLIER`] constant.
+    /// For the `TypeLengthValue` variant, an `option_len_multiplier` may also
+    /// be specified. Some formats (such as NDP) do not directly encode the
+    /// length in bytes of each option, but instead encode a number which must
+    /// be multiplied by `option_len_multiplier` in order to get the length in
+    /// bytes.
     #[derive(Copy, Clone, Eq, PartialEq)]
     pub enum LengthEncoding {
-        TypeLengthValue,
+        TypeLengthValue { option_len_multiplier: NonZeroUsize },
         ValueOnly,
     }
 
     impl LengthEncoding {
-        /// The offset (in bytes) to subtract from the length of an option (when
-        /// that length includes the type and length bytes) in order to get the
-        /// value that should be encoded for the length byte.
-        fn byte_offset(self) -> usize {
+        /// Computes the length of an entire option record - including kind and
+        /// length fields - from the length of an option body.
+        ///
+        /// `record_length` takes into account the length of the kind and length
+        /// fields and also adds any padding required to reach a multiple of
+        /// `option_len_multiplier`, returning `None` if the value cannot be
+        /// stored in a `usize`.
+        fn record_length(self, option_body_len: usize) -> Option<usize> {
+            let unpadded_len = option_body_len.checked_add(KIND_LEN_BYTES)?;
             match self {
-                LengthEncoding::TypeLengthValue => 0,
-                LengthEncoding::ValueOnly => 2,
+                LengthEncoding::TypeLengthValue { option_len_multiplier } => {
+                    round_up(unpadded_len, option_len_multiplier)
+                }
+                LengthEncoding::ValueOnly => Some(unpadded_len),
             }
         }
+
+        /// Encodes the length of an option's body.
+        ///
+        /// `option_body_len` is the length in bytes of the body option as
+        /// returned from [`OptionsSerializerImpl::option_length`]. This value
+        /// does not include the kind, length, or padding bytes.
+        ///
+        /// `encode_length` computes the value which should be stored in the
+        /// length field, returning `None` if the value cannot be stored in a
+        /// `usize`.
+        fn encode_length(self, option_body_len: usize) -> Option<usize> {
+            match self {
+                LengthEncoding::TypeLengthValue { option_len_multiplier } => {
+                    let unpadded_len = KIND_LEN_BYTES.checked_add(option_body_len)?;
+                    let padded_len = round_up(unpadded_len, option_len_multiplier)?;
+                    Some(padded_len / option_len_multiplier.get())
+                }
+                LengthEncoding::ValueOnly => Some(option_body_len),
+            }
+        }
+
+        /// Decode the length of an option's body.
+        ///
+        /// `length_field` is the value of the length field. `decode_length`
+        /// computes the length of the option's body which this value encodes,
+        /// returning an error if `length_field` is invalid. `length_field` is
+        /// invalid if it encodes a total length smaller than the two-byte
+        /// header (specifically, if `self == LengthEncoding::TypeLengthValue`
+        /// and `length_field * self.option_len_multiplier() < 2`).
+        fn decode_length(self, length_field: usize) -> Result<usize, ()> {
+            match self {
+                LengthEncoding::TypeLengthValue { option_len_multiplier } => length_field
+                    .checked_mul(option_len_multiplier.get())
+                    .and_then(|product| product.checked_sub(KIND_LEN_BYTES))
+                    .ok_or(()),
+                LengthEncoding::ValueOnly => Ok(length_field),
+            }
+        }
+    }
+
+    /// Rounds up `x` to the next multiple of `mul` unless `x` is already a
+    /// multiple of `mul`.
+    fn round_up(x: usize, mul: NonZeroUsize) -> Option<usize> {
+        let mul = mul.get();
+        // - Subtracting 1 can't underflow because we just added `mul`, which is
+        //   at least 1, and the addition didn't overflow
+        // - Dividing by `mul` can't overflow (and can't divide by 0 because
+        //   `mul` is nonzero)
+        // - Multiplying by `mul` can't overflow because division rounds down,
+        //   so the result of the multiplication can't be any larger than the
+        //   numerator in `(x.checked_add(mul)? - 1) / mul`, which we already
+        //   know didn't overflow
+        Some(((x.checked_add(mul)? - 1) / mul) * mul)
     }
 
     /// Basic associated type and constants used by an [`OptionsImpl`].
@@ -1602,15 +1662,6 @@ pub mod options {
         /// The type of errors that may be returned by a call to
         /// [`OptionsImpl::parse`].
         type Error;
-
-        /// The value to multiply read lengths by.
-        ///
-        /// Some formats (such as NDP) do not directly encode the length in
-        /// bytes of each option, but instead encode a number which must be
-        /// multiplied by a constant in order to get the length in bytes.
-        ///
-        /// By default, this constant has the value 1.
-        const OPTION_LEN_MULTIPLIER: usize = 1;
 
         /// The End of options type (if one exists).
         const END_OF_OPTIONS: Option<u8> = Some(END_OF_OPTIONS);
@@ -1626,31 +1677,16 @@ pub mod options {
         /// length of only the value. This constant specifies which encoding is
         /// used.
         ///
-        /// Note that if `LENGTH_ENCODING == ValueOnly`, then
-        /// [`OPTION_LEN_MULTIPLIER`] must be 1. This invariant is checked by a
-        /// link-time assertion; if it is not upheld, linking will fail due to
-        /// the missing symbol
-        /// `packet_records_options_impl_layout_length_encoding_option_len_multiplier`.
+        /// Additionally, some formats (such as NDP) do not directly encode the
+        /// length in bytes of each option, but instead encode a number which
+        /// must be multiplied by a constant in order to get the length in
+        /// bytes. This is set using the [`TypeLengthValue`] variant's
+        /// `option_len_multiplier` field, and it defaults to 1.
         ///
-        /// [`OPTION_LEN_MULTIPLIER`]: crate::records::options::OptionsImplLayout::OPTION_LEN_MULTIPLIER
-        const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue;
-
-        // TODO(joshlf): Once const generics are stable, turn this link-time
-        // assertion into a compile-time assertion using the `static_assertions`
-        // crate.
-
-        #[doc(hidden)]
-        fn __assert_length_encoding_option_len_multiplier() {
-            if Self::LENGTH_ENCODING == LengthEncoding::ValueOnly && Self::OPTION_LEN_MULTIPLIER > 1
-            {
-                extern "C" {
-                    fn packet_records_options_impl_layout_length_encoding_option_len_multiplier();
-                }
-                unsafe {
-                    packet_records_options_impl_layout_length_encoding_option_len_multiplier()
-                };
-            }
-        }
+        /// [`TypeLengthValue`]: LengthEncoding::TypeLengthValue
+        const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
+            option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(1) },
+        };
     }
 
     /// An implementation of an options parser.
@@ -1668,31 +1704,6 @@ pub mod options {
         ///
         /// [`parse`]: crate::records::options::OptionsImpl::parse
         type Option;
-
-        /// Parses a record with some context.
-        ///
-        /// `parse_with_context` takes a variable-length `data` and a `context` to
-        /// maintain state, and returns `Ok(Some(Some(o)))` if the record is
-        /// successfully parsed as `o`, `Ok(Some(None))` if the record is
-        /// well-formed but the implementer can't extract a concrete object (e.g.
-        /// the record is an unimplemented enumeration, but it can be safely
-        /// "skipped"), `Ok(None)` if `parse_with_context` is unable to parse more
-        /// records, and `Err(err)` if the `data` is malformed for the attempted
-        /// record parsing.
-        ///
-        /// `data` may be empty. It is up to the implementer to handle an exhausted
-        /// `data`.
-        ///
-        /// When returning `Ok(Some(None))` it's the implementer's responsibility to
-        /// consume the bytes of the record from `data`. If this doesn't happen,
-        /// then `parse_with_context` will be called repeatedly on the same `data`,
-        /// and the program will be stuck in an infinite loop. If the implementation
-        /// is unable to know how many bytes to consume from `data` in order to skip
-        /// the record, `parse_with_context` must return `Err`.
-        ///
-        /// `parse_with_context` must be deterministic, or else
-        /// [`Records::parse_with_context`] cannot guarantee that future iterations
-        /// will not produce errors (and panic).
 
         /// Parses an option.
         ///
@@ -1733,10 +1744,10 @@ pub mod options {
         /// Implementers must return the length, in bytes, of the **data***
         /// portion of the option field (not counting the type and length
         /// bytes). The internal machinery of options serialization takes care
-        /// of aligning options to their [`OPTION_LEN_MULTIPLIER`] boundaries,
+        /// of aligning options to their [`option_len_multiplier`] boundaries,
         /// adding padding bytes if necessary.
         ///
-        /// [`OPTION_LEN_MULTIPLIER`]: crate::records::options::OptionsImplLayout::OPTION_LEN_MULTIPLIER
+        /// [`option_len_multiplier`]: LengthEncoding::TypeLengthValue::option_len_multiplier
         fn option_length(option: &Self::Option) -> usize;
 
         /// Returns the wire value for this option kind.
@@ -1796,18 +1807,14 @@ pub mod options {
                     k
                 }
             };
-            let len = match bytes.take_byte_front() {
+            let body_len = match bytes.take_byte_front() {
                 None => return Err(OptionParseErr::Internal),
-                Some(len) => (len as usize) * O::OPTION_LEN_MULTIPLIER,
+                Some(len) => O::LENGTH_ENCODING
+                    .decode_length(len.into())
+                    .map_err(|_: ()| OptionParseErr::Internal)?,
             };
 
-            if len < 2 || (len - 2) > bytes.len() {
-                return Err(OptionParseErr::Internal);
-            }
-
-            // We can safely unwrap here since we verified the correct length
-            // above.
-            let option_data = bytes.take_front(len - 2).unwrap();
+            let option_data = bytes.take_front(body_len).ok_or(OptionParseErr::Internal)?;
             match O::parse(kind, option_data) {
                 Ok(Some(o)) => return Ok(ParsedRecord::Parsed(o)),
                 Ok(None) => {}
@@ -1850,6 +1857,7 @@ pub mod options {
             }
 
             fn serialize(data: &mut [u8], option: &Self::Option) {
+                assert_eq!(data.len(), Self::option_length(option));
                 data.copy_from_slice(&option.1);
             }
         }
@@ -1900,7 +1908,9 @@ pub mod options {
         impl OptionsImplLayout for DummyNdpOptionsImpl {
             type Error = ();
 
-            const OPTION_LEN_MULTIPLIER: usize = 8;
+            const LENGTH_ENCODING: LengthEncoding = LengthEncoding::TypeLengthValue {
+                option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(8) },
+            };
 
             const END_OF_OPTIONS: Option<u8> = None;
 
@@ -1929,8 +1939,243 @@ pub mod options {
             }
 
             fn serialize(data: &mut [u8], option: &Self::Option) {
+                assert_eq!(data.len(), Self::option_length(option));
                 data.copy_from_slice(&option.1)
             }
+        }
+
+        #[test]
+        fn test_length_encoding() {
+            const TLV_1: LengthEncoding = LengthEncoding::TypeLengthValue {
+                option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(1) },
+            };
+            const TLV_2: LengthEncoding = LengthEncoding::TypeLengthValue {
+                option_len_multiplier: unsafe { NonZeroUsize::new_unchecked(2) },
+            };
+
+            // Test LengthEncoding::record_length
+
+            // For `ValueOnly`, `record_length` should always add 2 for the kind
+            // and length bytes, but never add padding.
+            assert_eq!(LengthEncoding::ValueOnly.record_length(0), Some(2));
+            assert_eq!(LengthEncoding::ValueOnly.record_length(1), Some(3));
+            assert_eq!(LengthEncoding::ValueOnly.record_length(2), Some(4));
+            assert_eq!(LengthEncoding::ValueOnly.record_length(3), Some(5));
+
+            // For `TypeLengthValue` with `option_len_multiplier = 1`,
+            // `record_length` should always add 2 for the kind and length
+            // bytes, but never add padding.
+            assert_eq!(TLV_1.record_length(0), Some(2));
+            assert_eq!(TLV_1.record_length(1), Some(3));
+            assert_eq!(TLV_1.record_length(2), Some(4));
+            assert_eq!(TLV_1.record_length(3), Some(5));
+
+            // For `TypeLengthValue` with `option_len_multiplier = 2`,
+            // `record_length` should always add 2 for the kind and length
+            // bytes, and add padding if necessary to reach a multiple of 2.
+            assert_eq!(TLV_2.record_length(0), Some(2)); // (0 + 2)
+            assert_eq!(TLV_2.record_length(1), Some(4)); // (1 + 2 + 1)
+            assert_eq!(TLV_2.record_length(2), Some(4)); // (2 + 2)
+            assert_eq!(TLV_2.record_length(3), Some(6)); // (3 + 2 + 1)
+
+            // Test LengthEncoding::encode_length
+
+            // For `ValueOnly`, `encode_length` should always return the
+            // argument unmodified.
+            assert_eq!(LengthEncoding::ValueOnly.encode_length(0), Some(0));
+            assert_eq!(LengthEncoding::ValueOnly.encode_length(1), Some(1));
+            assert_eq!(LengthEncoding::ValueOnly.encode_length(2), Some(2));
+            assert_eq!(LengthEncoding::ValueOnly.encode_length(3), Some(3));
+
+            // For `TypeLengthValue` with `option_len_multiplier = 1`,
+            // `encode_length` should always add 2 for the kind and length
+            // bytes.
+            assert_eq!(TLV_1.encode_length(0), Some(2));
+            assert_eq!(TLV_1.encode_length(1), Some(3));
+            assert_eq!(TLV_1.encode_length(2), Some(4));
+            assert_eq!(TLV_1.encode_length(3), Some(5));
+
+            // For `TypeLengthValue` with `option_len_multiplier = 2`,
+            // `encode_length` should always add 2 for the kind and length
+            // bytes, add padding if necessary to reach a multiple of 2, and
+            // then divide by 2.
+            assert_eq!(TLV_2.encode_length(0), Some(1)); // (0 + 2)     / 2
+            assert_eq!(TLV_2.encode_length(1), Some(2)); // (1 + 2 + 1) / 2
+            assert_eq!(TLV_2.encode_length(2), Some(2)); // (2 + 2)     / 2
+            assert_eq!(TLV_2.encode_length(3), Some(3)); // (3 + 2 + 1) / 2
+
+            // Test LengthEncoding::decode_length
+
+            // For `ValueOnly`, `decode_length` should always return the
+            // argument unmodified.
+            assert_eq!(LengthEncoding::ValueOnly.decode_length(0), Ok(0));
+            assert_eq!(LengthEncoding::ValueOnly.decode_length(1), Ok(1));
+            assert_eq!(LengthEncoding::ValueOnly.decode_length(2), Ok(2));
+            assert_eq!(LengthEncoding::ValueOnly.decode_length(3), Ok(3));
+
+            // For `TypeLengthValue` with `option_len_multiplier = 1`,
+            // `decode_length` should always subtract 2 for the kind and length
+            // bytes.
+            assert_eq!(TLV_1.decode_length(0), Err(()));
+            assert_eq!(TLV_1.decode_length(1), Err(()));
+            assert_eq!(TLV_1.decode_length(2), Ok(0));
+            assert_eq!(TLV_1.decode_length(3), Ok(1));
+
+            // For `TypeLengthValue` with `option_len_multiplier = 2`,
+            // `decode_length` should always multiply by 2 and then subtract 2
+            // for the kind and length bytes.
+            assert_eq!(TLV_2.decode_length(0), Err(()));
+            assert_eq!(TLV_2.decode_length(1), Ok(0));
+            assert_eq!(TLV_2.decode_length(2), Ok(2));
+            assert_eq!(TLV_2.decode_length(3), Ok(4));
+
+            // Test end-to-end by creating options implementation with different
+            // length encodings.
+
+            /// Declare a new options impl type with a custom `LENGTH_ENCODING`.
+            macro_rules! declare_options_impl {
+                ($name:ident, $encoding:expr) => {
+                    #[derive(Debug)]
+                    struct $name;
+
+                    impl OptionsImplLayout for $name {
+                        type Error = ();
+                        const LENGTH_ENCODING: LengthEncoding = $encoding;
+                    }
+
+                    impl<'a> OptionsImpl<'a> for $name {
+                        type Option = (u8, Vec<u8>);
+
+                        fn parse(
+                            kind: u8,
+                            data: &'a [u8],
+                        ) -> Result<Option<Self::Option>, Self::Error> {
+                            let mut v = Vec::new();
+                            v.extend_from_slice(data);
+                            Ok(Some((kind, v)))
+                        }
+                    }
+
+                    impl<'a> OptionsSerializerImpl<'a> for $name {
+                        type Option = (u8, Vec<u8>);
+
+                        fn option_length(option: &Self::Option) -> usize {
+                            option.1.len()
+                        }
+
+                        fn option_kind(option: &Self::Option) -> u8 {
+                            option.0
+                        }
+
+                        fn serialize(data: &mut [u8], option: &Self::Option) {
+                            assert_eq!(data.len(), Self::option_length(option));
+                            data.copy_from_slice(&option.1);
+                        }
+                    }
+                };
+            }
+
+            declare_options_impl!(DummyImplValueOnly, LengthEncoding::ValueOnly);
+            declare_options_impl!(DummyImplTlv1, TLV_1);
+            declare_options_impl!(DummyImplTlv2, TLV_2);
+
+            /// Tests that a given option is parsed from different byte
+            /// sequences for different options layouts.
+            ///
+            /// Since some options cannot be parsed from any byte sequence using
+            /// the `DummyImplTlv2` layout (namely, those whose lengths are not
+            /// a multiple of 2), `tlv_2` may be `None`.
+            fn test_parse(
+                expect: (u8, Vec<u8>),
+                value_only: &[u8],
+                tlv_1: &[u8],
+                tlv_2: Option<&[u8]>,
+            ) {
+                let expect = [expect];
+                let options = Options::<_, DummyImplValueOnly>::parse(value_only)
+                    .unwrap()
+                    .iter()
+                    .collect::<Vec<_>>();
+                assert_eq!(options, expect);
+
+                let options =
+                    Options::<_, DummyImplTlv1>::parse(tlv_1).unwrap().iter().collect::<Vec<_>>();
+                assert_eq!(options, expect);
+
+                if let Some(tlv_2) = tlv_2 {
+                    let options = Options::<_, DummyImplTlv2>::parse(tlv_2)
+                        .unwrap()
+                        .iter()
+                        .collect::<Vec<_>>();
+                    assert_eq!(options, expect);
+                }
+            }
+
+            // 0-byte body
+            test_parse((0xFF, vec![]), &[0xFF, 0], &[0xFF, 2], Some(&[0xFF, 1]));
+            // 1-byte body
+            test_parse((0xFF, vec![0]), &[0xFF, 1, 0], &[0xFF, 3, 0], None);
+            // 2-byte body
+            test_parse(
+                (0xFF, vec![0, 1]),
+                &[0xFF, 2, 0, 1],
+                &[0xFF, 4, 0, 1],
+                Some(&[0xFF, 2, 0, 1]),
+            );
+            // 3-byte body
+            test_parse((0xFF, vec![0, 1, 2]), &[0xFF, 3, 0, 1, 2], &[0xFF, 5, 0, 1, 2], None);
+            // 4-byte body
+            test_parse(
+                (0xFF, vec![0, 1, 2, 3]),
+                &[0xFF, 4, 0, 1, 2, 3],
+                &[0xFF, 6, 0, 1, 2, 3],
+                Some(&[0xFF, 3, 0, 1, 2, 3]),
+            );
+
+            /// Tests that an option can be serialized and then parsed in each
+            /// option layout.
+            ///
+            /// In some cases (when the body length is not a multiple of 2), the
+            /// `DummyImplTlv2` layout will parse a different option than was
+            /// originally serialized. In this case, `expect_tlv_2` can be used
+            /// to provide a different value to expect as the result of parsing.
+            fn test_serialize_parse(opt: (u8, Vec<u8>), expect_tlv_2: Option<(u8, Vec<u8>)>) {
+                let opts = [opt.clone()];
+
+                fn test_serialize_parse_inner<
+                    O: for<'a> OptionsImpl<'a, Error = (), Option = (u8, Vec<u8>)>
+                        + for<'a> OptionsSerializerImpl<'a, Option = (u8, Vec<u8>)>
+                        + std::fmt::Debug,
+                >(
+                    opts: &[(u8, Vec<u8>)],
+                    expect: &[(u8, Vec<u8>)],
+                ) {
+                    let ser = OptionsSerializer::<O, _, _>::new(opts.iter());
+                    let serialized =
+                        ser.into_serializer().serialize_vec_outer().unwrap().as_ref().to_vec();
+                    let options = Options::<_, O>::parse(serialized.as_slice())
+                        .unwrap()
+                        .iter()
+                        .collect::<Vec<_>>();
+                    assert_eq!(options, expect);
+                }
+
+                test_serialize_parse_inner::<DummyImplValueOnly>(&opts, &opts);
+                test_serialize_parse_inner::<DummyImplTlv1>(&opts, &opts);
+                let expect = if let Some(expect) = expect_tlv_2 { expect } else { opt };
+                test_serialize_parse_inner::<DummyImplTlv2>(&opts, &[expect]);
+            }
+
+            // 0-byte body
+            test_serialize_parse((0xFF, vec![]), None);
+            // 1-byte body
+            test_serialize_parse((0xFF, vec![0]), Some((0xFF, vec![0, 0])));
+            // 2-byte body
+            test_serialize_parse((0xFF, vec![0, 1]), None);
+            // 3-byte body
+            test_serialize_parse((0xFF, vec![0, 1, 2]), Some((0xFF, vec![0, 1, 2, 0])));
+            // 4-byte body
+            test_serialize_parse((0xFF, vec![0, 1, 2, 3]), None);
         }
 
         #[test]
