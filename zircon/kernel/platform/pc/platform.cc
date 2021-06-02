@@ -430,29 +430,6 @@ void platform_init_crashlog(void) {
   platform_enable_crashlog_uptime_updates = [](bool) {};
 }
 
-static fbl::Array<e820entry_t> ConvertMemoryRanges(ktl::span<zbi_mem_range_t> ranges) {
-  // Allocate memory to store physical memory range information.
-  ktl::span<zbi_mem_range_t> memory_ranges = bootloader.memory_ranges;
-  fbl::AllocChecker ac;
-  fbl::Array<e820entry_t> e820_ranges(new (&ac) e820entry_t[memory_ranges.size()],
-                                      memory_ranges.size());
-  if (!ac.check()) {
-    return nullptr;
-  }
-
-  // Convert ranges to E820 format.
-  for (size_t i = 0; i < memory_ranges.size(); i++) {
-    e820_ranges[i].addr = memory_ranges[i].paddr;
-    e820_ranges[i].size = memory_ranges[i].length;
-    // Hack: When we first parse this map we normalize each section to either
-    // memory or not-memory. When we pass it to the next kernel, we lose
-    // information about the type of "not memory" in each region.
-    e820_ranges[i].type = (memory_ranges[i].type == ZBI_MEM_RANGE_RAM ? E820_RAM : E820_RESERVED);
-  }
-
-  return e820_ranges;
-}
-
 zx_status_t platform_append_mexec_data(ktl::span<std::byte> data_zbi) {
   zbitl::Image image(data_zbi);
   // The only possible storage error that can result from a span-backed Image
@@ -463,15 +440,10 @@ zx_status_t platform_append_mexec_data(ktl::span<std::byte> data_zbi) {
 
   // Append physical memory ranges.
   if (!bootloader.memory_ranges.empty()) {
-    fbl::Array<e820entry_t> memory_ranges = ConvertMemoryRanges(bootloader.memory_ranges);
-    if (memory_ranges.data() == nullptr) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    if (auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_E820_TABLE},
-                                   zbitl::AsBytes(ktl::span<e820entry_t>{memory_ranges}));
+    if (auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG},
+                                   zbitl::AsBytes(bootloader.memory_ranges));
         result.is_error()) {
-      printf("mexec: failed to append E820 map to data ZBI: ");
+      printf("mexec: failed to append memory range metadata to data ZBI: ");
       zbitl::PrintViewError(result.error_value());
       return error(result.error_value());
     }
