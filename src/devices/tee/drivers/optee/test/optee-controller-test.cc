@@ -7,19 +7,12 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
-#include <zircon/time.h>
-
-#include <functional>
 
 #include <ddktl/suspend-txn.h>
 #include <zxtest/zxtest.h>
@@ -35,12 +28,6 @@ struct SharedMemoryInfo {
 // This will be populated once the FakePdev creates the fake contiguous vmo so we can use the
 // physical addresses within it.
 static SharedMemoryInfo gSharedMemory = {};
-
-constexpr uuid_t kOpteeOsUuid = {
-    0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
-
-using SmcCb = std::function<void(const zx_smc_parameters_t*, zx_smc_result_t*)>;
-SmcCb call_with_arg_handler;
 
 zx_status_t zx_smc_call(zx_handle_t handle, const zx_smc_parameters_t* parameters,
                         zx_smc_result_t* out_smc_result) {
@@ -70,13 +57,6 @@ zx_status_t zx_smc_call(zx_handle_t handle, const zx_smc_parameters_t* parameter
       out_smc_result->arg0 = optee::kReturnOk;
       out_smc_result->arg1 = gSharedMemory.address;
       out_smc_result->arg2 = gSharedMemory.size;
-      break;
-    case optee::kCallWithArgFuncId:
-      if (call_with_arg_handler) {
-        call_with_arg_handler(parameters, out_smc_result);
-      } else {
-        out_smc_result->arg0 = optee::kReturnOk;
-      }
       break;
     default:
       return ZX_ERR_NOT_SUPPORTED;
@@ -176,10 +156,6 @@ class FakeRpmb : public ddk::RpmbProtocol<FakeRpmb> {
 
 class FakeDdkOptee : public zxtest::Test {
  public:
-  FakeDdkOptee() : clients_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    ASSERT_OK(clients_loop_.StartThread());
-    ASSERT_OK(clients_loop_.StartThread());
-  };
   void SetUp() override {
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
     fragments[0].name = "fuchsia.hardware.platform.device.PDev";
@@ -209,7 +185,6 @@ class FakeDdkOptee : public zxtest::Test {
   // Fake ddk must be destroyed before optee because it may be executing messages against optee on
   // another thread.
   fake_ddk::Bind ddk_;
-  async::Loop clients_loop_;
 };
 
 TEST_F(FakeDdkOptee, PmtUnpinned) {
@@ -242,128 +217,6 @@ TEST_F(FakeDdkOptee, RpmbTest) {
 
   EXPECT_EQ(optee_.RpmbConnectServer(std::move(server_end)), ZX_OK);
   EXPECT_EQ(rpmb_.get_call_count(), 1);
-}
-
-TEST_F(FakeDdkOptee, MultiThreadTest) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
-  zx::channel tee_app_client[2];
-  sync_completion_t completion1;
-  sync_completion_t completion2;
-  sync_completion_t smc_completion;
-  sync_completion_t smc_completion1;
-  bool wait;
-  int call_count = 0;
-  zx_status_t status;
-
-  for (auto& i : tee_app_client) {
-    zx::channel tee_app_server;
-    ASSERT_OK(zx::channel::create(0, &i, &tee_app_server));
-    zx::channel provider_server;
-    zx::channel provider_client;
-    ASSERT_OK(zx::channel::create(0, &provider_client, &provider_server));
-
-    optee_.TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
-                                   std::move(provider_client));
-  }
-
-  auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
-  fidl::Client fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
-  auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
-  fidl::Client fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
-  call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-    if (wait) {
-      sync_completion_signal(&smc_completion1);
-      sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-    }
-    out->arg0 = optee::kReturnOk;
-    call_count++;
-  };
-  {
-    wait = true;
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion1);
-        });
-    status = sync_completion_wait(&completion1, ZX_SEC(1));
-    EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
-  }
-  {
-    sync_completion_wait(&smc_completion1, ZX_TIME_INFINITE);
-    wait = false;
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client2->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion2);
-        });
-    sync_completion_wait(&completion2, ZX_TIME_INFINITE);
-  }
-  sync_completion_signal(&smc_completion);
-  sync_completion_wait(&completion1, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 2);
-}
-
-TEST_F(FakeDdkOptee, OpteeTheadLimitTest) {
-  EXPECT_EQ(optee_.Bind(), ZX_OK);
-  zx::channel tee_app_client[2];
-  sync_completion_t completion1;
-  sync_completion_t completion2;
-  sync_completion_t smc_completion;
-  bool return_thread_limit;
-  int call_count = 0;
-  zx_status_t status;
-
-  for (auto& i : tee_app_client) {
-    zx::channel tee_app_server;
-    ASSERT_OK(zx::channel::create(0, &i, &tee_app_server));
-    zx::channel provider_server;
-    zx::channel provider_client;
-    ASSERT_OK(zx::channel::create(0, &provider_client, &provider_server));
-
-    optee_.TeeConnectToApplication(&kOpteeOsUuid, std::move(tee_app_server),
-                                   std::move(provider_client));
-  }
-
-  auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
-  fidl::Client fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
-  auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
-  fidl::Client fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
-  call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-    call_count++;
-    if (return_thread_limit) {
-      sync_completion_signal(&smc_completion);
-      out->arg0 = optee::kReturnEThreadLimit;
-    } else {
-      out->arg0 = optee::kReturnOk;
-    }
-  };
-  {
-    return_thread_limit = true;
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion1);
-        });
-    status = sync_completion_wait(&completion1, ZX_SEC(1));
-    EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
-    EXPECT_EQ(call_count, 1);
-  }
-  {
-    sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-    return_thread_limit = false;
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client2->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
-          sync_completion_signal(&completion2);
-        });
-    sync_completion_wait(&completion2, ZX_TIME_INFINITE);
-  }
-  sync_completion_wait(&completion1, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 3);
 }
 
 }  // namespace

@@ -22,15 +22,10 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
-#include <zircon/types.h>
-
-#include <cstdint>
 
 #include <ddktl/suspend-txn.h>
-#include <tee-client-api/tee-client-types.h>
 #include <zxtest/zxtest.h>
 
-#include "optee-message.h"
 #include "src/devices/tee/drivers/optee/optee-controller.h"
 #include "src/devices/tee/drivers/optee/optee-rpmb.h"
 #include "src/devices/tee/drivers/optee/optee-smc.h"
@@ -54,8 +49,7 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   };
 
   OpteeClientTestBase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    ASSERT_OK(loop_.StartThread("thread-id-1"));
-    ASSERT_OK(loop_.StartThread("thread-id-2"));
+    ASSERT_OK(loop_.StartThread());
 
     // Allocate memory for shared memory buffer
     constexpr size_t kSharedMemorySize = 0x20000;
@@ -74,6 +68,14 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     shared_memory_vaddr_ = reinterpret_cast<zx_vaddr_t>(mmio.vaddr);
     EXPECT_OK(SharedMemoryManager::Create(ddk::MmioBuffer(mmio), shared_memory_paddr_,
                                           &shared_memory_manager_));
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_tee::Application>();
+    ASSERT_TRUE(endpoints.is_ok());
+    auto [client_end, server_end] = std::move(endpoints.value());
+    optee_client_.reset(new OpteeClient(this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(),
+                                        optee::Uuid{kOpteeOsUuid}));
+    fidl::BindServer(loop_.dispatcher(), std::move(server_end), optee_client_.get());
+    optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client_end));
   }
 
   SharedMemoryManager::DriverMemoryPool *driver_pool() const override {
@@ -95,31 +97,6 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   void TearDown() override {}
 
  protected:
-  void AllocMemory(size_t size, uint64_t *paddr, uint64_t *mem_id, RpcHandler &rpc_handler) {
-    RpcFunctionArgs args;
-    RpcFunctionResult result;
-    args.generic.status = kReturnRpcPrefix | kRpcFunctionIdAllocateMemory;
-    args.allocate_memory.size = size;
-
-    EXPECT_OK(rpc_handler(args, &result));
-
-    *paddr = result.allocate_memory.phys_addr_upper32;
-    *paddr = (*paddr << 32) | result.allocate_memory.phys_addr_lower32;
-    *mem_id = result.allocate_memory.mem_id_upper32;
-    *mem_id = (*mem_id << 32) | result.allocate_memory.mem_id_lower32;
-    EXPECT_TRUE(*paddr > shared_memory_paddr_);
-  }
-
-  void FreeMemory(uint64_t &mem_id, RpcHandler &rpc_handler) {
-    RpcFunctionArgs args;
-    RpcFunctionResult result;
-    args.generic.status = kReturnRpcPrefix | kRpcFunctionIdFreeMemory;
-    args.free_memory.mem_id_upper32 = mem_id >> 32;
-    args.free_memory.mem_id_lower32 = mem_id & 0xFFFFFFFF;
-
-    EXPECT_OK(rpc_handler(args, &result));
-  }
-
   std::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 
   zx::bti fake_bti_;
@@ -127,6 +104,9 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
   zx::pmt pmt_;
   zx_paddr_t shared_memory_paddr_;
   zx_vaddr_t shared_memory_vaddr_;
+
+  std::unique_ptr<OpteeClient> optee_client_;
+  fidl::WireSyncClient<fuchsia_tee::Application> optee_client_fidl_;
   async::Loop loop_;
 };
 
@@ -249,14 +229,6 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
   OpteeClientTestRpmb() : rpmb_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ASSERT_OK(rpmb_loop_.StartThread());
 
-    auto endpoints = fidl::CreateEndpoints<fuchsia_tee::Application>();
-    ASSERT_TRUE(endpoints.is_ok());
-    auto [client_end, server_end] = std::move(endpoints.value());
-    optee_client_.reset(new OpteeClient(this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(),
-                                        optee::Uuid{kOpteeOsUuid}));
-    fidl::BindServer(loop_.dispatcher(), std::move(server_end), optee_client_.get());
-    optee_client_fidl_ = fidl::WireSyncClient<fuchsia_tee::Application>(std::move(client_end));
-
     // Create fake RPMB
     fake_rpmb_.reset(new FakeRpmb());
   }
@@ -349,6 +321,31 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
   }
 
  protected:
+  void AllocMemory(size_t size, uint64_t *paddr, uint64_t *mem_id, RpcHandler &rpc_handler) {
+    RpcFunctionArgs args;
+    RpcFunctionResult result;
+    args.generic.status = kReturnRpcPrefix | kRpcFunctionIdAllocateMemory;
+    args.allocate_memory.size = size;
+
+    EXPECT_OK(rpc_handler(args, &result));
+
+    *paddr = result.allocate_memory.phys_addr_upper32;
+    *paddr = (*paddr << 32) | result.allocate_memory.phys_addr_lower32;
+    *mem_id = result.allocate_memory.mem_id_upper32;
+    *mem_id = (*mem_id << 32) | result.allocate_memory.mem_id_lower32;
+    EXPECT_TRUE(*paddr > shared_memory_paddr_);
+  }
+
+  void FreeMemory(uint64_t &mem_id, RpcHandler &rpc_handler) {
+    RpcFunctionArgs args;
+    RpcFunctionResult result;
+    args.generic.status = kReturnRpcPrefix | kRpcFunctionIdFreeMemory;
+    args.free_memory.mem_id_upper32 = mem_id >> 32;
+    args.free_memory.mem_id_lower32 = mem_id & 0xFFFFFFFF;
+
+    EXPECT_OK(rpc_handler(args, &result));
+  }
+
   uint8_t *GetTxBuffer() const {
     size_t offset = tx_frames_paddr_ - shared_memory_paddr_;
     return reinterpret_cast<uint8_t *>(shared_memory_vaddr_ + offset);
@@ -370,9 +367,6 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
 
   std::unique_ptr<FakeRpmb> fake_rpmb_;
   async::Loop rpmb_loop_;
-
-  std::unique_ptr<OpteeClient> optee_client_;
-  fidl::WireSyncClient<fuchsia_tee::Application> optee_client_fidl_;
 };
 
 TEST_F(OpteeClientTestRpmb, InvalidRequestCommand) {
@@ -749,218 +743,6 @@ TEST_F(OpteeClientTestRpmb, RequestWriteInvalid) {
   EXPECT_OK(res.status());
   EXPECT_EQ(res->op_result.return_code(), TEEC_ERROR_BAD_PARAMETERS);
   EXPECT_EQ(req_cnt, 0);
-}
-
-class OpteeClientTestWaitQueue : public OpteeClientTestBase {
- public:
-  const int kInitSessionId = 0;
-  static constexpr int kSleepCommand = 1;
-  static constexpr int kWakeUpCommand = 2;
-  static constexpr int kNopeCommand = 3;
-
-  OpteeClientTestWaitQueue() : clients_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    ASSERT_OK(clients_loop_.StartThread());
-  };
-
-  CallResult CallWithMessage(const optee::Message &message, RpcHandler rpc_handler) override {
-    size_t offset = message.paddr() - shared_memory_paddr_;
-
-    MessageHeader *hdr = reinterpret_cast<MessageHeader *>(shared_memory_vaddr_ + offset);
-    hdr->return_origin = TEEC_ORIGIN_TEE;
-    hdr->return_code = TEEC_SUCCESS;
-
-    switch (hdr->command) {
-      case Message::Command::kOpenSession: {
-        hdr->session_id = ++cur_sid_;
-        break;
-      }
-      case Message::Command::kInvokeCommand: {
-        EXPECT_LE(hdr->session_id, cur_sid_);
-        switch (hdr->app_function) {
-          case kSleepCommand:
-            sleep_sid_ = hdr->session_id;
-            hdr->return_code = handle_wq_message(rpc_handler, hdr->session_id,
-                                                 WaitQueueRpcMessage::Command::kSleep);
-            break;
-          case kWakeUpCommand:
-            hdr->return_code =
-                handle_wq_message(rpc_handler, sleep_sid_ != -1 ? sleep_sid_ : hdr->session_id,
-                                  WaitQueueRpcMessage::Command::kWakeUp);
-            break;
-          case kNopeCommand:
-            // do nothing
-            break;
-          default:
-            EXPECT_TRUE(false);
-        }
-        invoke_done_cnt_++;
-        break;
-      }
-      case Message::Command::kCloseSession: {
-        break;
-      }
-      default:
-        hdr->return_code = TEEC_ERROR_NOT_IMPLEMENTED;
-    }
-
-    return CallResult{.return_code = kReturnOk};
-  };
-
-  uint32_t handle_wq_message(RpcHandler &rpc_handler, uint32_t sid, uint16_t cmd) {
-    uint64_t message_paddr = 0;
-    uint64_t message_mem_id = 0;
-    uint32_t ret = TEEC_SUCCESS;
-
-    AllocMemory(sizeof(MessageRaw), &message_paddr, &message_mem_id, rpc_handler);
-    uint64_t offset = message_paddr - shared_memory_paddr_;
-
-    MessageRaw *wq_msg = reinterpret_cast<MessageRaw *>(shared_memory_vaddr_ + offset);
-    wq_msg->hdr.command = RpcMessage::Command::kWaitQueue;
-    wq_msg->hdr.num_params = 1;
-
-    wq_msg->params[0].attribute = MessageParam::kAttributeTypeValueInput;
-    wq_msg->params[0].payload.value.wait_queue.key = sid;
-    wq_msg->params[0].payload.value.wait_queue.command = cmd;
-
-    RpcFunctionArgs args;
-    RpcFunctionResult result;
-    args.generic.status = kReturnRpcPrefix | kRpcFunctionIdExecuteCommand;
-    args.execute_command.msg_mem_id_upper32 = message_mem_id >> 32;
-    args.execute_command.msg_mem_id_lower32 = message_mem_id & 0xFFFFFFFF;
-
-    zx_status_t status = rpc_handler(args, &result);
-    if (status != ZX_OK) {
-      ret = wq_msg->hdr.return_code;
-    }
-
-    FreeMemory(message_mem_id, rpc_handler);
-    return ret;
-  }
-
-  void SetUp() override {
-    cur_sid_ = kInitSessionId;
-    sleep_sid_ = -1;
-    invoke_done_cnt_ = 0;
-  }
-
-  void TearDown() override {}
-
- protected:
-  int cur_sid_{kInitSessionId};
-  int sleep_sid_{-1};
-  int invoke_done_cnt_{0};
-
-  async::Loop clients_loop_;
-};
-
-TEST_F(OpteeClientTestWaitQueue, WakeUpWithoutSleep) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_tee::Application>();
-  ASSERT_TRUE(endpoints.is_ok());
-  auto [client_end, server_end] = std::move(endpoints.value());
-  auto optee_client = std::make_unique<OpteeClient>(
-      this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(), optee::Uuid{kOpteeOsUuid});
-
-  sync_completion_t unbound = {};
-
-  fidl::BindServer(
-      loop_.dispatcher(), std::move(server_end), optee_client.get(),
-      [&unbound](OpteeClient *, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_tee::Application>) {
-        sync_completion_signal(&unbound);
-      });
-
-  {
-    fidl::WireSyncClient<fuchsia_tee::Application> fidl_client(std::move(client_end));
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto sres = fidl_client.OpenSession2(std::move(parameter_set));
-    EXPECT_OK(sres.status());
-    EXPECT_EQ(sres->session_id, cur_sid_);
-
-    auto cres =
-        fidl_client.InvokeCommand(sres->session_id, kWakeUpCommand, std::move(parameter_set));
-    EXPECT_OK(cres.status());
-    EXPECT_EQ(cres->op_result.return_code(), TEEC_SUCCESS);
-    EXPECT_EQ(invoke_done_cnt_, 1);
-  }
-
-  sync_completion_wait(&unbound, ZX_TIME_INFINITE);
-  optee_client = nullptr;
-}
-
-TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
-  auto endpoints1 = fidl::CreateEndpoints<fuchsia_tee::Application>();
-  auto endpoints2 = fidl::CreateEndpoints<fuchsia_tee::Application>();
-  ASSERT_TRUE(endpoints1.is_ok());
-  ASSERT_TRUE(endpoints2.is_ok());
-  auto [client1_end, server1_end] = std::move(endpoints1.value());
-  auto [client2_end, server2_end] = std::move(endpoints2.value());
-  auto optee1_client = std::make_unique<OpteeClient>(
-      this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(), optee::Uuid{kOpteeOsUuid});
-  auto optee2_client = std::make_unique<OpteeClient>(
-      this, fidl::ClientEnd<fuchsia_tee_manager::Provider>(), optee::Uuid{kOpteeOsUuid});
-
-  fidl::BindServer(loop_.dispatcher(), std::move(server1_end), optee1_client.get());
-  fidl::BindServer(loop_.dispatcher(), std::move(server2_end), optee2_client.get());
-
-  fidl::Client fidl_client1(std::move(client1_end), clients_loop_.dispatcher());
-  fidl::WireSyncClient<fuchsia_tee::Application> fidl_client2(std::move(client2_end));
-  sync_completion_t completion;
-  zx_status_t status;
-
-  uint32_t sid1;
-  uint32_t sid2;
-  {
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->OpenSession2(
-        std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2> *resp) {
-          EXPECT_EQ(resp->session_id, cur_sid_);
-          sid1 = resp->session_id;
-          sync_completion_signal(&completion);
-        });
-  }
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-
-  {
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.OpenSession2(std::move(parameter_set));
-    EXPECT_OK(res.status());
-    EXPECT_EQ(res->session_id, cur_sid_);
-    sid2 = res->session_id;
-  }
-
-  sync_completion_reset(&completion);
-  {
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    fidl_client1->InvokeCommand(
-        sid1, kSleepCommand, std::move(parameter_set),
-        [&](::fidl::WireResponse<::fuchsia_tee::Application::InvokeCommand> *resp) {
-          EXPECT_EQ(resp->op_result.return_code(), TEEC_SUCCESS);
-          sync_completion_signal(&completion);
-        });
-  }
-
-  EXPECT_EQ(invoke_done_cnt_, 0);
-
-  {
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kNopeCommand, std::move(parameter_set));
-    EXPECT_OK(res.status());
-    EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
-  }
-  EXPECT_EQ(invoke_done_cnt_, 1);
-  EXPECT_FALSE(sync_completion_signaled(&completion));
-
-  {
-    fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
-    auto res = fidl_client2.InvokeCommand(sid2, kWakeUpCommand, std::move(parameter_set));
-    EXPECT_OK(res.status());
-    EXPECT_EQ(res->op_result.return_code(), TEEC_SUCCESS);
-  }
-
-  status = sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  EXPECT_OK(status);
-  EXPECT_EQ(invoke_done_cnt_, 3);
-  EXPECT_EQ(this->WaitQueueSize(), 0);
 }
 
 }  // namespace

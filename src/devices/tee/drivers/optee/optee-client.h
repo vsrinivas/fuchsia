@@ -202,7 +202,6 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
                                RpcFunctionExecuteCommandsResult* out_result);
   zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
   zx_status_t HandleRpcCommandAccessRpmb(RpmbRpcMessage* message);
-  zx_status_t HandleRpcCommandWaitQueue(WaitQueueRpcMessage* message);
   zx_status_t HandleRpcCommandGetTime(GetTimeRpcMessage* message);
   zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
   zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);

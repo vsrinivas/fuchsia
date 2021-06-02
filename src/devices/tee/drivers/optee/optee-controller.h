@@ -19,14 +19,11 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 
-#include <map>
 #include <memory>
-#include <queue>
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/condition_variable.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -40,26 +37,6 @@ namespace optee {
 
 class OpteeClient;
 class OpteeDeviceInfo;
-
-class WaitCtx {
- public:
-  explicit WaitCtx() = default;
-  WaitCtx(const WaitCtx&) = delete;
-  WaitCtx& operator=(const WaitCtx*) = delete;
-
-  void Wait() {
-    fbl::AutoLock _(&lock_);
-    cv_.Wait(&lock_);
-  }
-  void Signal() {
-    fbl::AutoLock _(&lock_);
-    cv_.Signal();
-  }
-
- private:
-  fbl::Mutex lock_;
-  fbl::ConditionVariable cv_ TA_GUARDED(lock_);
-};
 
 class OpteeControllerBase {
  public:
@@ -78,23 +55,9 @@ class OpteeControllerBase {
   virtual CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) = 0;
   virtual SharedMemoryManager::DriverMemoryPool* driver_pool() const = 0;
   virtual SharedMemoryManager::ClientMemoryPool* client_pool() const = 0;
-
-  void WaitQueueWait(uint64_t key);
-  void WaitQueueSignal(uint64_t key);
-  size_t WaitQueueSize() const;
-  void CommandQueueWait();
-  void CommandQueueSignal();
-  size_t CommandQueueSize() const;
-
   virtual zx_status_t RpmbConnectServer(
       fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const = 0;
   virtual zx_device_t* GetDevice() const = 0;
-
- private:
-  fbl::Mutex wq_lock_;
-  fbl::Mutex cq_lock_;
-  std::map<uint64_t, WaitCtx> wait_queue_;
-  std::queue<WaitCtx*> command_queue_;
 };
 
 class OpteeController;
@@ -106,12 +69,9 @@ class OpteeController : public OpteeControllerBase,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
                         public fidl::WireServer<fuchsia_tee::DeviceInfo> {
  public:
-  explicit OpteeController(zx_device_t* parent, uint32_t thread_count = 3)
-      : DeviceType(parent),
-        loop_(&kAsyncLoopConfigNeverAttachToThread),
-        thread_count_(thread_count) {}
+  explicit OpteeController(zx_device_t* parent)
+      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
-  ~OpteeController() override;
   OpteeController(const OpteeController&) = delete;
   OpteeController& operator=(const OpteeController&) = delete;
 
@@ -184,7 +144,6 @@ class OpteeController : public OpteeControllerBase,
 
   ddk::PDev pdev_;
   async::Loop loop_;
-  uint32_t thread_count_;
   ddk::SysmemProtocolClient sysmem_;
   ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;

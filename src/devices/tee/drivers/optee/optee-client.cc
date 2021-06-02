@@ -26,7 +26,6 @@
 #include <zircon/types.h>
 
 #include <algorithm>
-#include <cstdint>
 #include <ctime>
 #include <memory>
 #include <string>
@@ -594,8 +593,6 @@ bool OpteeClient::UntrackFileSystemObject(uint64_t identifier) {
 zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResult* out_result) {
   zx_status_t status;
   uint32_t func_code = GetRpcFunctionCode(args.generic.status);
-  // save current OPTEE's thread id
-  uint32_t thread_id = args.generic.arg3;
 
   switch (func_code) {
     case kRpcFunctionIdAllocateMemory:
@@ -617,8 +614,6 @@ zx_status_t OpteeClient::HandleRpc(const RpcFunctionArgs& args, RpcFunctionResul
       break;
   }
 
-  // restore saved OPTEE's thread id
-  out_result->generic.arg3 = thread_id;
   // Set the function to return from RPC
   out_result->generic.func_id = optee::kReturnFromRpcFuncId;
 
@@ -702,14 +697,9 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       }
       return HandleRpcCommandGetTime(&get_time_result.value());
     }
-    case RpcMessage::Command::kWaitQueue: {
+    case RpcMessage::Command::kWaitQueue:
       LOG(DEBUG, "RPC command wait queue recognized but not implemented");
-      auto wait_queue_result = WaitQueueRpcMessage::CreateFromRpcMessage(std::move(message));
-      if (!wait_queue_result.is_ok()) {
-        return wait_queue_result.error();
-      }
-      return HandleRpcCommandWaitQueue(&wait_queue_result.value());
-    }
+      return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kSuspend:
       LOG(DEBUG, "RPC command to suspend recognized but not implemented");
       return ZX_ERR_NOT_SUPPORTED;
@@ -1656,28 +1646,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     LOG(ERROR, "failed to rename file (IO status: %d)", rename_result->result.err());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return rename_result->result.err();
-  }
-
-  message->set_return_code(TEEC_SUCCESS);
-  return ZX_OK;
-}
-
-zx_status_t OpteeClient::HandleRpcCommandWaitQueue(WaitQueueRpcMessage* message) {
-  ZX_DEBUG_ASSERT(message != nullptr);
-
-  switch (message->command()) {
-    case WaitQueueRpcMessage::Command::kSleep: {
-      controller_->WaitQueueWait(message->key());
-      break;
-    }
-    case WaitQueueRpcMessage::Command::kWakeUp: {
-      controller_->WaitQueueSignal(message->key());
-      break;
-    }
-    default:
-      LOG(ERROR, "Unknown WaitQueue request command: %ld", message->command());
-      message->set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-      return ZX_ERR_INVALID_ARGS;
   }
 
   message->set_return_code(TEEC_SUCCESS);
