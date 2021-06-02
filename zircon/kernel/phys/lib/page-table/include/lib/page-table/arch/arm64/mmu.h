@@ -38,10 +38,10 @@ enum class GranuleSize {
 };
 
 // Return the number of bits of address in the given granule size.
-constexpr uint64_t GranuleSizeShift(GranuleSize size) { return static_cast<uint64_t>(size); }
+constexpr size_t GranuleSizeShift(GranuleSize size) { return static_cast<size_t>(size); }
 
 // Return the number of bytes spanned by a granule of the given size.
-constexpr uint64_t GranuleBytes(GranuleSize size) { return uint64_t{1} << GranuleSizeShift(size); }
+constexpr size_t GranuleBytes(GranuleSize size) { return size_t{1} << GranuleSizeShift(size); }
 
 // Supported page sizes.
 //
@@ -65,10 +65,10 @@ enum class PageSize {
 };
 
 // Return the number of bits of address in the given page size.
-constexpr uint64_t PageBits(PageSize size) { return static_cast<uint64_t>(size); }
+constexpr size_t PageBits(PageSize size) { return static_cast<size_t>(size); }
 
 // Return the number of bytes spanned by the given page size.
-constexpr uint64_t PageBytes(PageSize size) { return uint64_t{1} << PageBits(size); }
+constexpr size_t PageBytes(PageSize size) { return size_t{1} << PageBits(size); }
 
 // Return the granule size associated with the given page size.
 //

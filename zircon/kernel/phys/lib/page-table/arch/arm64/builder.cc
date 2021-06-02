@@ -22,9 +22,9 @@ using internal::IsAligned;
 // Get the largest page size from the given list that can be used to map the
 // beginning of the region `[vaddr, vaddr+size)` to `paddr`.
 constexpr PageSize GetLargestPageSize(std::initializer_list<PageSize> sizes, Vaddr vaddr,
-                                      Paddr paddr, size_t size) {
+                                      Paddr paddr, uint64_t size) {
   // Get the maximum alignment of vaddr and paddr.
-  size_t alignment = internal::MaxAlignmentBits(paddr.value() | vaddr.value());
+  uint64_t alignment = internal::MaxAlignmentBits(paddr.value() | vaddr.value());
 
   // Select the first page size that can be used.
   for (PageSize page_size : sizes) {
@@ -34,7 +34,7 @@ constexpr PageSize GetLargestPageSize(std::initializer_list<PageSize> sizes, Vad
   }
 
   // Unaligned page.
-  ZX_PANIC("Unaligned to any page size: vaddr=%" PRIx64 ", paddr=%" PRIx64 ", size=%zu",
+  ZX_PANIC("Unaligned to any page size: vaddr=%" PRIx64 ", paddr=%" PRIx64 ", size=%" PRIu64,
            vaddr.value(), paddr.value(), size);
 }
 
@@ -43,7 +43,7 @@ constexpr PageSize GetLargestPageSize(std::initializer_list<PageSize> sizes, Vad
 //
 // All arguments must be aligned to at least the smallest page size.
 constexpr PageSize GetLargestPageSize(PageTableLayout layout, Vaddr vaddr, Paddr paddr,
-                                      size_t size) {
+                                      uint64_t size) {
   switch (layout.granule_size) {
     case GranuleSize::k4KiB:
       return GetLargestPageSize({PageSize::k1GiB, PageSize::k2MiB, PageSize::k4KiB}, vaddr, paddr,

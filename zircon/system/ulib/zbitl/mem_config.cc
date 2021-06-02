@@ -131,8 +131,6 @@ zbi_mem_range_t ToMemRange(const efi_memory_descriptor& range) {
 
 }  // namespace internal
 
-MemRangeTable::MemRangeTable() = default;
-
 fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromView(View<ByteView> view) {
   // Find the last memory table in the ZBI.
   View<ByteView>::iterator table = view.end();
@@ -163,18 +161,21 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromItem(View<ByteV
 
 fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t zbi_type,
                                                                       ByteView payload) {
+  MemRangeTable result;
   switch (zbi_type) {
     case ZBI_TYPE_E820_TABLE:
       if (payload.size() % sizeof(e820entry_t) != 0) {
         return fitx::error("Invalid size for E820 table");
       };
-      return fitx::ok(MemRangeTable(E820Table{AsSpan<const e820entry_t>(payload)}));
+      result.table_ = E820Table{AsSpan<const e820entry_t>(payload)};
+      break;
 
     case ZBI_TYPE_MEM_CONFIG:
       if (payload.size() % sizeof(zbi_mem_range_t) != 0) {
         return fitx::error("Invalid size for MemConfig table");
       }
-      return fitx::ok(MemRangeTable(MemConfigTable{AsSpan<const zbi_mem_range_t>(payload)}));
+      result.table_ = internal::MemConfigTable{AsSpan<const zbi_mem_range_t>(payload)};
+      break;
 
     case ZBI_TYPE_EFI_MEMORY_MAP: {
       size_t num_entries;
@@ -182,15 +183,17 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t z
       if (!ParseEfiPayload(payload, &num_entries, &entry_size)) {
         return fitx::error("Could not parse EFI memory map");
       }
-      return fitx::ok(MemRangeTable(EfiTable{
+      result.table_ = EfiTable{
           .num_entries = num_entries,
           .entry_size = entry_size,
           .payload = payload,
-      }));
+      };
+      break;
     }
     default:
       return fitx::error("Unknown memory table type");
   }
+  return fitx::ok(result);
 }
 
 zbi_mem_range_t MemRangeTable::operator[](size_t n) const {

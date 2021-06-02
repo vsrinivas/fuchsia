@@ -8,10 +8,12 @@
 
 #include <inttypes.h>
 #include <lib/memalloc/allocator.h>
+#include <lib/zbitl/items/mem_config.h>
 #include <zircon/assert.h>
 
 #include <ktl/limits.h>
 #include <phys/allocation.h>
+#include <phys/arch.h>
 #include <phys/symbolize.h>
 #include <pretty/sizes.h>
 
@@ -91,4 +93,11 @@ void InitMemoryFromRanges() {
     constexpr uint64_t size = ktl::numeric_limits<uint64_t>::max() - start + 1;
     remove_range(start, size, "unreachable address space");
   }
+}
+
+void EnablePaging() {
+  auto mem_config = cpp20::as_bytes(gLegacyBoot.mem_config);
+  auto table = zbitl::MemRangeTable::FromSpan(ZBI_TYPE_MEM_CONFIG, mem_config);
+  ZX_ASSERT(table.is_ok());
+  ArchSetUpAddressSpace(Allocation::GetAllocator(), table.value());
 }

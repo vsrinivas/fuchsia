@@ -33,8 +33,6 @@ namespace zbitl {
 // ```
 class MemRangeTable {
  public:
-  MemRangeTable();
-
   // Create a MemRangeTable from the given ZBI view.
   //
   // If the View contains multiple memory range tables, the last is used.
@@ -46,10 +44,6 @@ class MemRangeTable {
   // Create a MemRangeTable from the given memory range, assumed to be of type `zbi_type`.
   static fitx::result<std::string_view, MemRangeTable> FromSpan(uint32_t zbi_type,
                                                                 ByteView payload);
-
-  // Copy and move constructors.
-  MemRangeTable(const MemRangeTable&) noexcept = default;
-  MemRangeTable(MemRangeTable&&) noexcept = default;
 
   // begin/end iterators over the items in the table.
   class iterator;
@@ -104,9 +98,6 @@ class MemRangeTable {
   };
 
  private:
-  explicit MemRangeTable(internal::MemConfigTable table) : table_(table) {}
-  explicit MemRangeTable(internal::E820Table table) : table_(table) {}
-  explicit MemRangeTable(internal::EfiTable table) : table_(table) {}
   std::variant<internal::MemConfigTable, internal::E820Table, internal::EfiTable> table_;
 };
 

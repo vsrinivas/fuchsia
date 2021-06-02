@@ -31,4 +31,9 @@ extern LegacyBoot gLegacyBoot;
 // ranges based on the data in gLegacyBoot.
 void InitMemoryFromRanges();
 
+// Set up 64-bit identity-mapping page tables and enable them in the CPU.
+// This uses the allocator and so must be done only after all necessary
+// memory reservations have been made.
+void EnablePaging();
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_LEGACY_BOOT_H_
