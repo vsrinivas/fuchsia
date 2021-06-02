@@ -62,7 +62,7 @@ class ScreenReaderContext {
                                TtsManager* tts_manager, SemanticsSource* semantics_source,
                                std::string locale_id = "en-US");
 
-  virtual ~ScreenReaderContext() = default;
+  virtual ~ScreenReaderContext();
 
   // Returns pointer to A11yFocusManager which stores a11y focus information for screen reader.
   virtual A11yFocusManager* GetA11yFocusManager();
@@ -96,6 +96,10 @@ class ScreenReaderContext {
   // Stores A11yFocusManager pointer.
   // A11yFocusManager pointer should never be nullptr.
   std::unique_ptr<A11yFocusManager> a11y_focus_manager_;
+
+  // We need to keep a pointer to the TTS manager so that we can close the
+  // engine we opened in the constructor.
+  TtsManager* tts_manager_ = nullptr;
 
   // Interface used to obtain semantic data.
   SemanticsSource* const semantics_source_ = nullptr;

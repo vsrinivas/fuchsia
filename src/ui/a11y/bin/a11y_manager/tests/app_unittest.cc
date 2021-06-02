@@ -571,7 +571,7 @@ TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
   ASSERT_EQ(2, mock_property_provider_.get_profile_count());
 }
 
-TEST_F(AppUnitTest, ScreenReaderReceivesLocaleWhenItChanges) {
+TEST_F(AppUnitTest, ScreenReaderReinitializesWhenLocaleChanges) {
   auto app = GetApp();
   fuchsia::settings::AccessibilitySettings accessibilitySettings;
   accessibilitySettings.set_screen_reader(true);
@@ -581,7 +581,9 @@ TEST_F(AppUnitTest, ScreenReaderReceivesLocaleWhenItChanges) {
   mock_setui_.Set(std::move(accessibilitySettings), [](auto) {});
   RunLoopUntilIdle();
   EXPECT_TRUE(app->state().screen_reader_enabled());
-  EXPECT_EQ(app->screen_reader()->context()->locale_id(), "en");
+  auto old_screen_reader_ptr = app->screen_reader();
+  ASSERT_TRUE(old_screen_reader_ptr);
+  EXPECT_EQ(old_screen_reader_ptr->context()->locale_id(), "en");
   mock_property_provider_.SetLocale("en-US");
   mock_property_provider_.SendOnChangeEvent();
   RunLoopUntilIdle();
@@ -591,7 +593,10 @@ TEST_F(AppUnitTest, ScreenReaderReceivesLocaleWhenItChanges) {
   // Sends a reply.
   mock_property_provider_.ReplyToGetProfile();
   RunLoopUntilIdle();
-  EXPECT_EQ(app->screen_reader()->context()->locale_id(), "en-US");
+  auto new_screen_reader_ptr = app->screen_reader();
+  ASSERT_TRUE(new_screen_reader_ptr);
+  EXPECT_EQ(new_screen_reader_ptr->context()->locale_id(), "en-US");
+  EXPECT_NE(new_screen_reader_ptr, old_screen_reader_ptr);
 }
 
 TEST_F(AppUnitTest, ScreenReaderUsesDefaultLocaleIfPropertyProviderDisconnectsOrIsNotAvailable) {

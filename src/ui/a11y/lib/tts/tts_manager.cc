@@ -32,6 +32,12 @@ void TtsManager::OpenEngine(
   CheckIfTtsEngineIsReadyAndRunCallback();
 }
 
+void TtsManager::CloseEngine() {
+  if (engine_binding_.is_bound()) {
+    engine_binding_.Unbind();
+  }
+}
+
 void TtsManager::RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine,
                                 RegisterEngineCallback callback) {
   fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result;

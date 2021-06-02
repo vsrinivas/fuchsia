@@ -14,6 +14,7 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
                                          std::string locale_id)
     : executor_(async_get_default_dispatcher()),
       a11y_focus_manager_(std::move(a11y_focus_manager)),
+      tts_manager_(tts_manager),
       semantics_source_(semantics_source),
       locale_id_(std::move(locale_id)) {
   FX_DCHECK(tts_manager);
@@ -35,6 +36,12 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
 }
 
 ScreenReaderContext::ScreenReaderContext() : executor_(async_get_default_dispatcher()) {}
+
+ScreenReaderContext::~ScreenReaderContext() {
+  if (tts_manager_) {
+    tts_manager_->CloseEngine();
+  }
+}
 
 A11yFocusManager* ScreenReaderContext::GetA11yFocusManager() {
   FX_DCHECK(a11y_focus_manager_.get());

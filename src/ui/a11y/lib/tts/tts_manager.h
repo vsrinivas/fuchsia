@@ -34,6 +34,10 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
   void OpenEngine(fidl::InterfaceRequest<fuchsia::accessibility::tts::Engine> engine_request,
                   OpenEngineCallback callback) override;
 
+  // Unbinds |engine_binding_| if it's bound. Once this call returns, it's safe to call
+  // OpenEngine() to open a new engine.
+  void CloseEngine();
+
   // |fuchsia.accessibility.tts.EngineRegistry|
   void RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine,
                       RegisterEngineCallback callback) override;

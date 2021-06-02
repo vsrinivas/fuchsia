@@ -280,10 +280,13 @@ void App::PropertyProviderOnChangeHandler() {
   property_provider_->GetProfile([this](fuchsia::intl::Profile profile) {
     this->i18n_profile_ = std::move(profile);
     if (state_.screen_reader_enabled()) {
-      if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {
-        const auto& locale_id = i18n_profile_->locales()[0].id;
-        screen_reader_->context()->set_locale_id(locale_id);
-      }
+      // Reset screen_reader_ to force re-initialization.
+      screen_reader_.reset();
+      UpdateScreenReaderState();
+
+      // Clear screen reader gesture state to force update.
+      gesture_state_.screen_reader_gestures = false;
+      UpdateGestureManagerState();
     }
   });
 }
