@@ -308,7 +308,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:54
+From //src/graphics/lib/magma/gnbuild/magma.gni:51
 
 ### board_name
 Board name used for paving and amber updates.
@@ -528,13 +528,6 @@ From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:13
 
 ### build_libvulkan_img_rgx
 Targets that will be built as IMG vulkan ICDS.
-
-**Current value (from the default):** `[]`
-
-From //src/graphics/lib/magma/gnbuild/magma.gni:51
-
-### build_libvulkan_qcom_adreno
-Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
