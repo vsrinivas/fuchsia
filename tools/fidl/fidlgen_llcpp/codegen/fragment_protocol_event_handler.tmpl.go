@@ -27,7 +27,7 @@ template<>
 class {{ .WireAsyncEventHandler }}
     : public {{ .WireEventHandlerInterface }}, public ::fidl::internal::AsyncEventHandler {
  public:
- {{ .WireAsyncEventHandler.Self }}() = default;
+  {{ .WireAsyncEventHandler.Self }}() = default;
 };
 
 template<>

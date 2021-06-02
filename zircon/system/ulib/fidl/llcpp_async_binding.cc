@@ -240,6 +240,12 @@ void AsyncClientBinding::FinishUnbind(std::shared_ptr<AsyncBinding>&& calling_re
   client->ReleaseResponseContextsWithError();
   client = nullptr;
 
+  // Execute the error hook if specified.
+  if (info.reason() != fidl::Reason::kUnbind) {
+    if (event_handler != nullptr)
+      event_handler->on_fidl_error(info);
+  }
+
   // Execute the unbound hook if specified.
   if (event_handler != nullptr)
     event_handler->Unbound(info);
