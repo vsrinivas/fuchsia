@@ -22,18 +22,21 @@ mod writer;
 use {
     crate::{
         errors::FxfsError,
+        lsm_tree::LSMTree,
         object_handle::ObjectHandle,
         object_store::{
             allocator::{Allocator, Reservation, SimpleAllocator},
             constants::SUPER_BLOCK_OBJECT_ID,
             directory::Directory,
-            filesystem::{Filesystem, Mutations, ObjectFlush, ObjectManager, SyncOptions},
+            filesystem::{Filesystem, Mutations, SyncOptions},
             graveyard::Graveyard,
             journal::{
                 reader::{JournalReader, ReadResult},
                 super_block::SuperBlock,
                 writer::JournalWriter,
             },
+            merge::{self},
+            object_manager::{ObjectFlush, ObjectManager},
             record::{ObjectItem, ObjectKey},
             transaction::{
                 AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
@@ -190,6 +193,10 @@ impl Journal {
         self.trace.store(v, atomic::Ordering::Relaxed);
     }
 
+    pub fn journal_file_offset(&self) -> u64 {
+        self.inner.lock().unwrap().super_block.super_block_journal_file_offset
+    }
+
     /// Reads a super-block and then replays journaled records.
     pub async fn replay(&self, filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
         let device = filesystem.device();
@@ -203,9 +210,11 @@ impl Journal {
         ));
         self.objects.set_allocator(allocator.clone());
 
-        let root_parent =
-            ObjectStore::new_empty(None, super_block.root_parent_store_object_id, filesystem);
-        self.objects.register_store_strict(root_parent.clone());
+        let root_parent = ObjectStore::new_empty(
+            None,
+            super_block.root_parent_store_object_id,
+            filesystem.clone(),
+        );
 
         while let Some(item) = reader.next_item().await? {
             root_parent
@@ -223,12 +232,18 @@ impl Journal {
             inner.needs_super_block = false;
             inner.super_block = super_block.clone();
         }
-        self.objects.set_root_parent_store_object_id(root_parent.store_object_id());
+        self.objects.set_root_parent_store(root_parent.clone());
         let mut mutations = Vec::new();
         let mut journal_file_checkpoint = None;
         let mut end_block = false;
-        root_parent.lazy_open_store(super_block.root_store_object_id);
-        self.objects.set_root_store_object_id(super_block.root_store_object_id);
+        let root_store = ObjectStore::new(
+            Some(root_parent.clone()),
+            super_block.root_store_object_id,
+            filesystem,
+            None,
+            LSMTree::new(merge::merge),
+        );
+        self.objects.set_root_store(root_store);
         let mut reader = JournalReader::new(
             ObjectStore::open_object(
                 &root_parent,
@@ -331,14 +346,14 @@ impl Journal {
 
         let root_store = self.objects.root_store();
         root_store.ensure_open().await?;
-        self.objects.register_graveyard(Arc::new(
+        self.objects.register_graveyard(
             Graveyard::open(&self.objects.root_store(), root_store.graveyard_directory_object_id())
                 .await
                 .context(format!(
                     "failed to open graveyard (object_id: {})",
                     root_store.graveyard_directory_object_id()
                 ))?,
-        ));
+        );
 
         log::info!("replay done");
         Ok(())
@@ -361,8 +376,7 @@ impl Journal {
 
         let root_parent =
             ObjectStore::new_empty(None, INIT_ROOT_PARENT_STORE_OBJECT_ID, filesystem.clone());
-        self.objects.register_store_strict(root_parent.clone());
-        self.objects.set_root_parent_store_object_id(root_parent.store_object_id());
+        self.objects.set_root_parent_store(root_parent.clone());
 
         let allocator =
             Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID, true));
@@ -378,7 +392,7 @@ impl Journal {
             .create_child_store_with_id(&mut transaction, INIT_ROOT_STORE_OBJECT_ID)
             .await
             .context("create root store")?;
-        self.objects.set_root_store_object_id(root_store.store_object_id());
+        self.objects.set_root_store(root_store.clone());
 
         // Create the super-block object...
         super_block_handle = ObjectStore::create_object_with_id(
@@ -405,7 +419,7 @@ impl Journal {
             .context("preallocate journal")?;
 
         // the root store's graveyard and root directory...
-        let graveyard = Arc::new(Graveyard::create(&mut transaction, &root_store).await?);
+        let graveyard = Graveyard::create(&mut transaction, &root_store).await?;
         root_store.set_graveyard_directory_object_id(&mut transaction, graveyard.object_id());
         self.objects.register_graveyard(graveyard);
 
@@ -790,7 +804,10 @@ mod tests {
         };
 
         {
-            let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
+            fs.close().await.expect("Close failed");
+            let device = fs.take_device().await;
+            device.reopen();
+            let fs = FxFilesystem::open(device).await.expect("open failed");
             let handle =
                 ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
                     .await
@@ -799,6 +816,7 @@ mod tests {
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             fsck(&fs).await.expect("fsck failed");
+            fs.close().await.expect("Close failed");
         }
     }
 
@@ -852,8 +870,10 @@ mod tests {
                 object_ids.push(handle.object_id());
             }
         }
-
-        let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open(device).await.expect("open failed");
         fsck(&fs).await.expect("fsck failed");
         {
             let root_store = fs.root_store();
@@ -893,9 +913,10 @@ mod tests {
             object_ids.push(handle.object_id());
         }
 
-        let fs = FxFilesystem::open_with_trace(fs.take_device().await, false)
-            .await
-            .expect("open failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open_with_trace(device, false).await.expect("open failed");
         {
             fsck(&fs).await.expect("fsck failed");
 
@@ -913,5 +934,6 @@ mod tests {
                 assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             }
         }
+        fs.close().await.expect("Close failed");
     }
 }

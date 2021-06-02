@@ -75,8 +75,7 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
         {
             continue;
         }
-        let store = object_manager.store(store_id).expect("store disappeared!");
-        store.ensure_open().await?;
+        let store = object_manager.open_store(store_id).await?;
         fsck.scan_store(&store, &store.root_objects(), &graveyard).await?;
         let mut parent_objects = store.parent_objects();
         root_store_root_objects.append(&mut parent_objects);
@@ -146,7 +145,7 @@ impl Fsck {
         let layer_set = graveyard.store().tree().layer_set();
         let mut merger = layer_set.merger();
         let mut iter = graveyard.iter_from(&mut merger, (store.store_object_id(), 0)).await?;
-        while let Some((store_object_id, object_id)) = iter.get() {
+        while let Some((store_object_id, object_id, _)) = iter.get() {
             if store_object_id != store.store_object_id() {
                 break;
             }

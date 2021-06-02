@@ -10,6 +10,7 @@ pub mod fsck;
 mod graveyard;
 mod journal;
 mod merge;
+pub mod object_manager;
 mod record;
 #[cfg(test)]
 mod testing;
@@ -27,7 +28,8 @@ use {
             ObjectHandle, ObjectHandleExt, ObjectProperties, Writer, INVALID_OBJECT_ID,
         },
         object_store::{
-            filesystem::{Filesystem, Mutations, ObjectFlush},
+            filesystem::{Filesystem, Mutations},
+            object_manager::ObjectFlush,
             record::{
                 ExtentKey, ExtentValue, ObjectAttributes, ObjectItem, ObjectKey, ObjectKind,
                 ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
@@ -234,37 +236,7 @@ impl ObjectStore {
         let fs = self.filesystem.upgrade().unwrap();
         let store = Self::new_empty(Some(self.clone()), handle.object_id(), fs.clone());
         assert!(store.store_info_handle.set(handle).is_ok());
-        fs.object_manager().register_store_strict(store.clone());
-        Ok(store)
-    }
-
-    // When replaying the journal, we need to replay mutation records into the LSM tree, but we
-    // cannot properly open the store until all the records have been replayed since some of the
-    // records we replay might affect how we open, e.g. they might pertain to new layer files
-    // backing this store.  The store will get properly opened whenever an action is taken that
-    // needs the store to be opened (via ensure_open).
-    pub(super) fn lazy_open_store(
-        self: &Arc<ObjectStore>,
-        store_object_id: u64,
-    ) -> Arc<ObjectStore> {
-        let fs = self.filesystem.upgrade().unwrap();
-        fs.object_manager().get_or_register_store(store_object_id, || {
-            Self::new(
-                Some(self.clone()),
-                store_object_id,
-                fs.clone(),
-                None,
-                LSMTree::new(merge::merge),
-            )
-        })
-    }
-
-    pub async fn open_store(
-        self: &Arc<ObjectStore>,
-        store_object_id: u64,
-    ) -> Result<Arc<ObjectStore>, Error> {
-        let store = self.lazy_open_store(store_object_id);
-        store.ensure_open().await?;
+        fs.object_manager().add_store(store.clone());
         Ok(store)
     }
 
@@ -1646,14 +1618,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_zero_buf_len_read() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let mut buf = object.allocate_buffer(0);
         assert_eq!(object.read(0u64, buf.as_mut()).await.expect("read failed"), 0);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_beyond_eof_read() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let offset = TEST_OBJECT_SIZE as usize - 2;
         let align = offset % TEST_DEVICE_BLOCK_SIZE as usize;
         let len: usize = 2;
@@ -1665,11 +1638,12 @@ mod tests {
         );
         assert_eq!(&buf.as_slice()[align..align + len], &vec![0u8; len]);
         assert_eq!(&buf.as_slice()[align + len..], &vec![123u8; buf.len() - align - len]);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sparse() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         // Deliberately read not right to eof.
         let len = TEST_OBJECT_SIZE as usize - 1;
         let mut buf = object.allocate_buffer(len);
@@ -1679,11 +1653,12 @@ mod tests {
         let offset = TEST_DATA_OFFSET as usize;
         &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
         assert_eq!(buf.as_slice()[..len], expected[..]);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_after_writes_interspersed_with_flush() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
 
         object.owner().flush().await.expect("flush failed");
 
@@ -1702,6 +1677,7 @@ mod tests {
         &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
         &mut expected[..TEST_DATA.len()].copy_from_slice(TEST_DATA);
         assert_eq!(buf.as_slice(), &expected);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1741,6 +1717,7 @@ mod tests {
         buf.as_mut_slice().fill(123u8);
         assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed"), LEN2);
         assert_eq!(buf.as_slice(), &expected[..LEN2]);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1780,6 +1757,7 @@ mod tests {
         assert_eq!(&buffer.as_slice()[1024..1536], &[0; 512]);
         assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 1024);
         assert_eq!(&buffer.as_slice()[..1024], &[0xef; 1024]);
+        fs.close().await.expect("Close failed");
     }
 
     async fn test_preallocate_common(
@@ -1835,6 +1813,7 @@ mod tests {
     async fn test_preallocate_range() {
         let (fs, object) = test_filesystem_and_object().await;
         test_preallocate_common(fs.allocator().as_ref(), object).await;
+        fs.close().await.expect("Close failed");
     }
 
     // This is identical to the previous test except that we flush so that extents end up in
@@ -1844,6 +1823,7 @@ mod tests {
         let (fs, object) = test_filesystem_and_object().await;
         object.owner().flush().await.expect("flush failed");
         test_preallocate_common(fs.allocator().as_ref(), object).await;
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1860,11 +1840,12 @@ mod tests {
         transaction.commit().await;
         // Check that it didn't reallocate any new space.
         assert_eq!(allocator.get_allocated_bytes(), allocated_before);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_overwrite_fails_if_not_preallocated() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
 
         let object = ObjectStore::open_object(
             &object.owner,
@@ -1877,6 +1858,7 @@ mod tests {
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE).unwrap();
         object.write(offset, buf.as_ref()).await.expect_err("write suceceded");
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1907,6 +1889,7 @@ mod tests {
         buf.as_mut_slice().fill(67);
         handle.read(0, buf.as_mut()).await.expect("read failed");
         assert_eq!(buf.as_slice(), [123; 5 * TEST_DEVICE_BLOCK_SIZE as usize]);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1935,6 +1918,7 @@ mod tests {
             allocated_before,
             allocated_after
         );
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2000,11 +1984,12 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         assert!(found);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_locks() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
         let (send3, recv3) = channel();
@@ -2047,6 +2032,7 @@ mod tests {
                 assert_eq!(buf.as_slice(), b"hello");
             }
         );
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run(10, test)]
@@ -2094,11 +2080,12 @@ mod tests {
             object.truncate(&mut transaction, 0).await.expect("truncate failed");
             transaction.commit().await;
         }
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocated_size() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
 
         let before = object.get_allocated_size().await.expect("get_allocated_size failed");
         let mut buf = object.allocate_buffer(5);
@@ -2145,11 +2132,12 @@ mod tests {
         transaction.commit().await;
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
         assert_eq!(after, before + TEST_DEVICE_BLOCK_SIZE as u64);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run(10, test)]
     async fn test_zero() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let expected_size = object.get_size();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object
@@ -2164,11 +2152,12 @@ mod tests {
             &buf.as_slice()[0..expected_size as usize],
             vec![0u8; expected_size as usize].as_slice()
         );
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_properties() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         const CRTIME: Timestamp = Timestamp::from_nanos(1234);
         const MTIME: Timestamp = Timestamp::from_nanos(5678);
 
@@ -2191,11 +2180,12 @@ mod tests {
                 ..
             }
         );
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_pending_properties() {
-        let (_fs, object) = test_filesystem_and_object().await;
+        let (fs, object) = test_filesystem_and_object().await;
         let crtime = Timestamp::from_nanos(1234u64);
         let mtime = Timestamp::from_nanos(5678u64);
 
@@ -2232,6 +2222,7 @@ mod tests {
         let properties = object.get_properties().await.expect("get_properties failed");
         assert_eq!(properties.creation_time, crtime);
         assert_eq!(properties.modification_time, mtime);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2296,6 +2287,7 @@ mod tests {
         assert!(sequences[0] <= sequences[1], "sequences: {:?}", sequences);
         // The last item came after a sync, so should be strictly greater.
         assert!(sequences[1] < sequences[2], "sequences: {:?}", sequences);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2322,8 +2314,8 @@ mod tests {
         device.reopen();
         let fs = FxFilesystem::open(device).await.expect("open failed");
 
-        let root_store = fs.root_store();
-        root_store.open_store(store_id).await.expect("open_store failed");
+        fs.object_manager().open_store(store_id).await.expect("open_store failed");
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run(10, test)]
@@ -2355,13 +2347,14 @@ mod tests {
             };
             fs = Some(FxFilesystem::open(device).await.expect("open failed"));
             join_all((0..4).map(|_| {
-                let store = fs.as_ref().unwrap().root_store();
+                let manager = fs.as_ref().unwrap().object_manager();
                 fasync::Task::spawn(async move {
-                    store.open_store(store_id).await.expect("open_store failed");
+                    manager.open_store(store_id).await.expect("open_store failed");
                 })
             }))
             .await;
         }
+        fs.unwrap().close().await.expect("Close failed");
     }
 }
 

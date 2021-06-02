@@ -5,8 +5,9 @@
 use {
     crate::object_store::{
         allocator::{Allocator, Reservation},
-        filesystem::{Filesystem, ObjectManager, SyncOptions},
+        filesystem::{Filesystem, SyncOptions},
         journal::JournalCheckpoint,
+        object_manager::ObjectManager,
         transaction::{
             LockKey, LockManager, Options, ReadGuard, Transaction, TransactionHandler, TxnMutation,
             WriteGuard,

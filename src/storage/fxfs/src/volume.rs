@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         object_store::{
             directory::Directory,
-            filesystem::FxFilesystem,
+            filesystem::{Filesystem, FxFilesystem},
             transaction::{LockKey, Options, TransactionHandler},
             ObjectDescriptor, ObjectStore,
         },
@@ -63,11 +63,7 @@ impl RootVolume {
                 (object_id, ObjectDescriptor::Volume) => object_id,
                 _ => bail!(FxfsError::Inconsistent),
             };
-        Ok(if let Some(volume_store) = self.filesystem.store(object_id) {
-            volume_store
-        } else {
-            self.filesystem.root_store().open_store(object_id).await?
-        })
+        self.filesystem.object_manager().open_store(object_id).await
     }
 
     pub async fn open_or_create_volume(
@@ -144,18 +140,17 @@ mod tests {
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
             transaction::{Options, TransactionHandler},
         },
-        anyhow::Error,
         fuchsia_async as fasync,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_lookup_nonexistent_volume() -> Result<(), Error> {
+    async fn test_lookup_nonexistent_volume() {
         let device = DeviceHolder::new(FakeDevice::new(4096, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
+        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
-        Ok(())
+        filesystem.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -181,14 +176,17 @@ mod tests {
             filesystem.sync(SyncOptions::default()).await.expect("sync failed");
         };
         {
-            let filesystem =
-                FxFilesystem::open(filesystem.take_device().await).await.expect("open failed");
+            filesystem.close().await.expect("Close failed");
+            let device = filesystem.take_device().await;
+            device.reopen();
+            let filesystem = FxFilesystem::open(device).await.expect("open failed");
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let volume = root_volume.volume("vol").await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())
                 .await
                 .expect("open failed");
             root_directory.lookup("foo").await.expect("lookup failed").expect("not found");
+            filesystem.close().await.expect("Close failed");
         };
     }
 }

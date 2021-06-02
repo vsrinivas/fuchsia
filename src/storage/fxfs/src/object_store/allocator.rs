@@ -18,7 +18,8 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, Writer},
         object_store::{
-            filesystem::{Filesystem, Mutations, ObjectFlush},
+            filesystem::{Filesystem, Mutations},
+            object_manager::ObjectFlush,
             transaction::{
                 AllocatedBytesMutation, AllocatorMutation, AssocObj, AssociatedObject, Mutation,
                 Options, Transaction,
@@ -1005,8 +1006,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(store.clone());
-        fs.object_manager().set_root_store_object_id(2);
+        fs.object_manager().set_root_store(store.clone());
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
@@ -1037,8 +1037,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(store.clone());
-        fs.object_manager().set_root_store_object_id(2);
+        fs.object_manager().set_root_store(store.clone());
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let device_range1 =
@@ -1061,8 +1060,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(store.clone());
-        fs.object_manager().set_root_store_object_id(2);
+        fs.object_manager().set_root_store(store.clone());
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
@@ -1087,13 +1085,11 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(store.clone());
-        fs.object_manager().set_root_store_object_id(2);
+        fs.object_manager().set_root_store(store.clone());
         allocator.ensure_open().await.expect("ensure_open failed");
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
-        let graveyard =
-            Arc::new(Graveyard::create(&mut transaction, &store).await.expect("create failed"));
+        let graveyard = Graveyard::create(&mut transaction, &store).await.expect("create failed");
         fs.object_manager().register_graveyard(graveyard);
         let mut device_ranges = Vec::new();
         device_ranges
@@ -1130,8 +1126,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(store.clone());
-        fs.object_manager().set_root_store_object_id(2);
+        fs.object_manager().set_root_store(store.clone());
         let allocated_range = {
             let mut transaction = fs
                 .clone()
@@ -1162,8 +1157,7 @@ mod tests {
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().register_store_strict(store.clone());
-        fs.object_manager().set_root_store_object_id(2);
+        fs.object_manager().set_root_store(store.clone());
         assert_eq!(allocator.get_allocated_bytes(), 0);
 
         // Verify allocated_bytes reflects allocation changes.

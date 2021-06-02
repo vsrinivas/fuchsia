@@ -508,7 +508,10 @@ mod tests {
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()
         };
-        let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open(device).await.expect("open failed");
         {
             let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
             let (object_id, object_descriptor) =
@@ -540,6 +543,7 @@ mod tests {
 
             assert_eq!(dir.lookup("qux").await.expect("lookup failed"), None);
         }
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -571,6 +575,7 @@ mod tests {
         transaction.commit().await;
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -631,6 +636,7 @@ mod tests {
         transaction.commit().await;
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -670,6 +676,7 @@ mod tests {
         transaction.commit().await;
 
         dir.lookup("foo").await.expect("lookup failed");
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -706,9 +713,13 @@ mod tests {
             dir.object_id()
         };
 
-        let fs = FxFilesystem::open(fs.take_device().await).await.expect("new_empty failed");
+        fs.close().await.expect("Close failed");
+        let device = fs.take_device().await;
+        device.reopen();
+        let fs = FxFilesystem::open(device).await.expect("open failed");
         let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -748,6 +759,7 @@ mod tests {
 
         assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
         child_dir2.lookup("bar").await.expect("lookup failed");
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -811,6 +823,7 @@ mod tests {
         let mut buf = bar.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
         bar.read(0, buf.as_mut()).await.expect("read failed");
         assert_eq!(buf.as_slice(), vec![0xaa; TEST_DEVICE_BLOCK_SIZE as usize]);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -856,6 +869,7 @@ mod tests {
                 .expect("wrong error"),
             FxfsError::NotEmpty
         );
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -887,6 +901,7 @@ mod tests {
 
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
         dir.lookup("bar").await.expect("lookup new name failed");
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -931,6 +946,7 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         assert_eq!(&entries, &["ball", "cat", "dog"]);
+        fs.close().await.expect("Close failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1013,5 +1029,6 @@ mod tests {
         transaction.commit().await;
 
         assert_eq!(dir.get_properties().await.expect("get_properties failed").sub_dirs, 0);
+        fs.close().await.expect("Close failed");
     }
 }
