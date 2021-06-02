@@ -19,13 +19,16 @@
 
 // EFI functions and callbacks use the Microsoft Windows x86_64 ABI.
 //
-// This ABI is not supported on other targets. We allow such targets to
-// include this files to access types and headers, but prevent calls to the
-// functions.
+// This ABI is special for x86_64 (and possibly other architectures). Set the appropriate
+// attribute per architecture, or allow the header to be used for types only with no function
+// calls allowed.
 #if defined(__x86_64__)
 #define EFIAPI __attribute__((ms_abi))
+#elif defined(__aarch64__)
+// ARM64 doesn't need the ABI tag
+#define EFIAPI
 #else
-#define EFIAPI EFI_FUNCTION_UNAVAILABLE("EFI API functions only available on x86_64.")
+#define EFIAPI EFI_FUNCTION_UNAVAILABLE("EFI API functions undefined for this architecture.")
 #endif
 
 #define EFI_ERROR_MASK 0x8000000000000000
