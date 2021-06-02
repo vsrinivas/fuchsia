@@ -174,7 +174,7 @@ __BEGIN_CDECLS
 
 void gpt_set_debug_output_enabled(bool enabled) { debug_out = enabled; }
 
-void gpt_sort_partitions(gpt_partition_t** partitions, size_t count) {
+void gpt_sort_partitions(const gpt_partition_t** partitions, size_t count) {
   qsort(partitions, count, sizeof(gpt_partition_t*), compare);
 }
 
@@ -244,8 +244,7 @@ zx::status<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capac
   size_t len = capacity;
   const uint16_t* utf16_name = reinterpret_cast<const uint16_t*>(entry.name);
   const uint16_t* utf16_name_end = utf16_name + (sizeof(entry.name) / sizeof(uint16_t));
-  const size_t utf16_name_len = std::distance(
-    utf16_name, std::find(utf16_name, utf16_name_end, 0));
+  const size_t utf16_name_len = std::distance(utf16_name, std::find(utf16_name, utf16_name_end, 0));
   if (zx_status_t status =
           utf16_to_utf8(utf16_name, utf16_name_len, reinterpret_cast<uint8_t*>(name), &len,
                         UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);

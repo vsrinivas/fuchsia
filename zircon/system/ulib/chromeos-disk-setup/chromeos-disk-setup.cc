@@ -94,7 +94,7 @@ gpt_partition_t* find_by_type_and_name(GptDevice* gpt, const uint8_t type_guid[G
 // contain the first free and last free blocks in a contiguous run.
 bool find_space(GptDevice* gpt, const uint64_t blocks_req, uint64_t* out_hole_start,
                 uint64_t* out_hole_end) {
-  gpt_partition_t* partitions[gpt::kPartitionCount] = {};
+  const gpt_partition_t* partitions[gpt::kPartitionCount] = {};
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
     partitions[i] = gpt->GetPartition(i).value_or(nullptr);
   }

@@ -51,7 +51,7 @@ void gpt_set_debug_output_enabled(bool enabled);
 
 // Sort an array of gpt_partition_t pointers in-place based on the values of
 // gpt_partition_t->first.
-void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);
+void gpt_sort_partitions(const gpt_partition_t** partitions, size_t count);
 
 __END_CDECLS
 #endif  // SRC_STORAGE_GPT_INCLUDE_GPT_C_GPT_H_
