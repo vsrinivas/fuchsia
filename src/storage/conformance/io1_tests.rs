@@ -16,6 +16,8 @@ use {
 
 const TEST_FILE: &str = "testing.txt";
 
+const TEST_FILE_CONTENTS: &[u8] = "abcdef".as_bytes();
+
 const EMPTY_NODE_ATTRS: io::NodeAttributes = io::NodeAttributes {
     mode: 0,
     id: 0,
@@ -49,18 +51,40 @@ fn convert_node_proxy<T: ServiceMarker>(proxy: io::NodeProxy) -> T::Proxy {
 
 /// Helper function to open the desired node in the root folder. Only use this
 /// if testing something other than the open call directly.
+/// Asserts that open_node_status succeeds.
 async fn open_node<T: ServiceMarker>(
     dir: &io::DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
 ) -> T::Proxy {
+    open_node_status::<T>(dir, flags, mode, path).await.expect("open_node_status failed!")
+}
+
+/// Helper function to open the desired node in the root folder. Only use this
+/// if testing something other than the open call directly.
+async fn open_node_status<T: ServiceMarker>(
+    dir: &io::DirectoryProxy,
+    flags: u32,
+    mode: u32,
+    path: &str,
+) -> Result<T::Proxy, zx::Status> {
     let flags = flags | io::OPEN_FLAG_DESCRIBE;
     let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
     dir.open(flags, mode, path, node_server).expect("Cannot open node");
+    let status = get_open_status(&node_proxy).await;
 
-    assert_eq!(get_open_status(&node_proxy).await, zx::Status::OK);
-    convert_node_proxy::<T>(node_proxy)
+    if status != zx::Status::OK {
+        Err(status)
+    } else {
+        Ok(convert_node_proxy::<T>(node_proxy))
+    }
+}
+
+/// Returns the specified node flags from the given NodeProxy.
+async fn get_node_flags(node_proxy: &io::NodeProxy) -> u32 {
+    let (_, node_flags) = node_proxy.node_get_flags().await.expect("Failed to get node flags!");
+    return node_flags;
 }
 
 /// Helper function to open a file with the given flags. Only use this if testing something other
@@ -118,6 +142,37 @@ async fn assert_file_not_found(dir: &io::DirectoryProxy, path: &str) {
     )
     .expect("Cannot open file");
     assert_eq!(get_open_status(&file_proxy).await, zx::Status::NOT_FOUND);
+}
+
+/// Returns the .name field from a given DirectoryEntry, otherwise panics.
+fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
+    use io_test::DirectoryEntry;
+    match dir_entry {
+        DirectoryEntry::Directory(entry) => entry.name.as_ref(),
+        DirectoryEntry::File(entry) => entry.name.as_ref(),
+        DirectoryEntry::VmoFile(entry) => entry.name.as_ref(),
+    }
+    .expect("DirectoryEntry name is None!")
+    .clone()
+}
+
+/// Creates a directory with the given DirectoryEntry, opening the file with the given
+/// file flags, and returning a Buffer object initialized with the given vmo_flags.
+async fn create_file_and_get_buffer(
+    dir_entry: io_test::DirectoryEntry,
+    test_harness: &TestHarness,
+    file_flags: u32,
+    vmo_flags: u32,
+) -> Result<(fidl_fuchsia_mem::Buffer, (io::DirectoryProxy, io::FileProxy)), zx::Status> {
+    let file_path = get_directory_entry_name(&dir_entry);
+    let root = root_directory(vec![dir_entry]);
+    let dir_proxy = test_harness.get_directory(root, file_flags);
+    let file_proxy =
+        open_node_status::<io::FileMarker>(&dir_proxy, file_flags, io::MODE_TYPE_FILE, &file_path)
+            .await?;
+    let (status, buffer) = file_proxy.get_buffer(vmo_flags).await.expect("Get buffer failed");
+    zx::Status::ok(status)?;
+    Ok((*buffer.expect("Buffer is missing"), (dir_proxy, file_proxy)))
 }
 
 fn root_directory(entries: Vec<io_test::DirectoryEntry>) -> io_test::Directory {
@@ -301,6 +356,44 @@ async fn open_child_dir_with_extra_rights() {
     assert_eq!(get_open_status(&child_dir_client).await, zx::Status::ACCESS_DENIED);
 }
 
+/// Creates a child directory and opens it with OPEN_FLAG_POSIX, ensuring that the requested
+/// rights are expanded to only those which the parent directory connection has.
+#[fasync::run_singlethreaded(test)]
+async fn open_child_dir_with_posix_flag() {
+    let harness = TestHarness::new().await;
+
+    for dir_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![directory("child", vec![])]);
+        let root_dir = harness.get_directory(root, dir_flags);
+        let readable = dir_flags & io::OPEN_RIGHT_READABLE;
+        let parent_dir =
+            open_node::<io::DirectoryMarker>(&root_dir, dir_flags, io::MODE_TYPE_DIRECTORY, ".")
+                .await;
+
+        let (child_dir_client, child_dir_server) =
+            create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+        parent_dir
+            .open(
+                io::OPEN_FLAG_POSIX | readable | io::OPEN_FLAG_DESCRIBE,
+                io::MODE_TYPE_DIRECTORY,
+                "child",
+                child_dir_server,
+            )
+            .expect("Cannot open directory");
+
+        assert_eq!(
+            get_open_status(&child_dir_client).await,
+            zx::Status::OK,
+            "Failed to open directory, flags = {}",
+            dir_flags
+        );
+        // Ensure expanded rights do not exceed those of the parent directory connection.
+        // TODO(fxb/37534): Add support for OPEN_RIGHT_EXECUTABLE.
+        let expected_rights = dir_flags & !(io::OPEN_RIGHT_ADMIN | io::OPEN_RIGHT_EXECUTABLE);
+        assert_eq!(get_node_flags(&child_dir_client).await & expected_rights, expected_rights);
+    }
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn open_dir_without_describe_flag() {
     let harness = TestHarness::new().await;
@@ -332,6 +425,51 @@ async fn open_file_without_describe_flag() {
         test_dir.open(file_flags, io::MODE_TYPE_FILE, TEST_FILE, server).expect("Cannot open file");
 
         assert_on_open_not_received(&client).await;
+    }
+}
+
+/// Ensures that opening a file with more rights than the directory connection fails
+/// with Status::ACCESS_DENIED.
+#[fasync::run_singlethreaded(test)]
+async fn open_file_with_extra_rights() {
+    let harness = TestHarness::new().await;
+
+    // Combinations to test of the form (directory flags, [file flag combinations]).
+    // All file flags should have more rights than those of the directory flags.
+    // TODO(fxb/37534): Ensure executable case is covered as well.
+    let test_right_combinations = [
+        (io::OPEN_RIGHT_READABLE, harness.writable_flag_combos()),
+        (io::OPEN_RIGHT_WRITABLE, harness.readable_flag_combos()),
+    ];
+
+    let root = root_directory(vec![file(TEST_FILE, vec![])]);
+    let root_dir = harness.get_directory(root, harness.all_rights);
+
+    for (dir_flags, file_flag_combos) in test_right_combinations.iter() {
+        let dir_proxy =
+            open_node::<io::DirectoryMarker>(&root_dir, *dir_flags, io::MODE_TYPE_DIRECTORY, ".")
+                .await;
+
+        for file_flags in file_flag_combos {
+            // Ensure the combination is valid (e.g. that file_flags is requesting more rights
+            // than those in dir_flags).
+            assert!(
+                (file_flags & harness.all_rights) != (dir_flags & harness.all_rights),
+                "Invalid test: file rights must exceed dir! (flags: dir = {}, file = {})",
+                *dir_flags,
+                *file_flags
+            );
+
+            let (client, server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
+
+            dir_proxy
+                .open(*file_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_FILE, TEST_FILE, server)
+                .expect("Cannot open file");
+
+            assert_eq!(get_open_status(&client).await, zx::Status::ACCESS_DENIED,
+                "Opened a file with more rights than the directory! (flags: dir = {}, file = {})",
+                *dir_flags, *file_flags);
+        }
     }
 }
 
@@ -564,22 +702,15 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
         return;
     }
 
-    let contents = "abcdef".as_bytes();
-
     for file_flags in harness.readable_flag_combos() {
-        let root = root_directory(vec![vmo_file(TEST_FILE, contents)]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
-
-        let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, buffer) = file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
+            .await
+            .expect("Failed to create file and obtain buffer");
         // Check contents of buffer.
-        let buffer = *buffer.expect("buffer is missing");
         let mut data = vec![0; buffer.size as usize];
         buffer.vmo.read(&mut data, 0).expect("vmo read failed");
-        assert_eq!(&data, contents);
+        assert_eq!(&data, TEST_FILE_CONTENTS);
     }
 }
 
@@ -591,14 +722,13 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
     }
 
     for file_flags in harness.non_readable_flag_combos() {
-        let root = root_directory(vec![vmo_file(TEST_FILE, "abcdef".as_bytes())]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
-
-        let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _buffer) =
-            file.get_buffer(io::VMO_FLAG_READ).await.expect("get_buffer failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        assert_eq!(
+            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
+                .await
+                .expect_err("Error was expected"),
+            zx::Status::ACCESS_DENIED
+        );
     }
 }
 
@@ -610,18 +740,11 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
     }
 
     for file_flags in harness.writable_flag_combos() {
-        let root = root_directory(vec![vmo_file(TEST_FILE, "aaaaa".as_bytes())]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
-
-        let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        // Get writable buffer.
-        let (status, buffer) =
-            file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
-
-        // Try to write to buffer.
-        let buffer = *buffer.expect("buffer is missing");
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        let (buffer, _) =
+            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_WRITE)
+                .await
+                .expect("Failed to create file and obtain buffer");
         buffer.vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
     }
 }
@@ -634,14 +757,13 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
     }
 
     for file_flags in harness.non_writable_flag_combos() {
-        let root = root_directory(vec![vmo_file(TEST_FILE, "abcdef".as_bytes())]);
-        let test_dir = harness.get_directory(root, harness.all_rights);
-
-        let file =
-            open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let (status, _buffer) =
-            file.get_buffer(io::VMO_FLAG_WRITE).await.expect("get_buffer failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        assert_eq!(
+            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_WRITE)
+                .await
+                .expect_err("Error was expected"),
+            zx::Status::ACCESS_DENIED
+        );
     }
 }
 

@@ -166,7 +166,10 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   if (open_options.flags.clone_same_rights) {
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
-  if (!open_options.flags.node_reference && !open_options.rights.any()) {
+  // Reject the Open() call if we haven't gotten OPEN_FLAG_NODE_REFERENCE,
+  // nor have any OPEN_RIGHT_* or OPEN_FLAG_POSIX.
+  if (!open_options.flags.node_reference && !open_options.rights.any() &&
+      !open_options.flags.posix) {
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
   if (request->path.empty() || (request->path.size() > PATH_MAX)) {
