@@ -123,8 +123,10 @@ bool ReadAttachment(const std::string& path, SizedData* attachment) {
   return files::ReadFileToVector(path, attachment);
 }
 
-bool ReadSnapshotUuid(const std::string& path, SnapshotUuid* snapshot_uuid) {
-  return files::ReadFileToString(path, snapshot_uuid);
+std::string ReadSnapshotUuid(const std::string& path) {
+  SnapshotUuid snapshot_uuid;
+  return (files::ReadFileToString(path, &snapshot_uuid)) ? snapshot_uuid
+                                                         : SnapshotManager::UuidForNoSnapshotUuid();
 }
 
 }  // namespace
@@ -241,9 +243,7 @@ Report Store::Get(const ReportId report_id) {
         continue;
       }
     } else if (attachment_files[i] == "snapshot_uuid.txt") {
-      if (!ReadSnapshotUuid(attachment_paths[i], &snapshot_uuid)) {
-        snapshot_uuid = SnapshotManager::UuidForNoSnapshotUuid();
-      }
+      snapshot_uuid = ReadSnapshotUuid(attachment_paths[i]);
     } else {
       SizedData attachment;
       if (!ReadAttachment(attachment_paths[i], &attachment)) {
@@ -271,10 +271,33 @@ std::vector<ReportId> Store::GetReports() const {
   return all_reports;
 }
 
+SnapshotUuid Store::GetSnapshotUuid(const ReportId id) {
+  if (!Contains(id)) {
+    return SnapshotManager::UuidForNoSnapshotUuid();
+  }
+
+  auto& root_metadata = RootFor(id);
+  auto attachment_files = root_metadata.ReportAttachments(id, /*absolute_paths=*/
+                                                          false);
+  auto attachment_paths = root_metadata.ReportAttachments(id, /*absolute_paths=*/true);
+
+  std::string snapshot_uuid;
+  for (size_t i = 0; i < attachment_files.size(); ++i) {
+    if (attachment_files[i] != kSnapshotUuidFilename) {
+      continue;
+    }
+
+    return ReadSnapshotUuid(attachment_paths[i]);
+  }
+
+  // This should not happen as we always expect a kSnapshotUuidFilename file to exist.
+  return SnapshotManager::UuidForNoSnapshotUuid();
+}
+
 bool Store::Contains(const ReportId report_id) {
   // Keep the in-memory and on-disk knowledge of the store in sync in case the
   // filesystem has deleted the report content. This is done here because it is a natural
-  // synchronization point and any operation acting on a report must call Contains in order to 
+  // synchronization point and any operation acting on a report must call Contains in order to
   // safely proceed.
   if (tmp_metadata_.Contains(report_id) &&
       !files::IsDirectory(tmp_metadata_.ReportDirectory(report_id))) {

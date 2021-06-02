@@ -55,15 +55,47 @@ class Queue {
   void StopUploading();
 
  private:
-  // Information about a report that needs to be uploaded, including its id and whether it's the
-  // sole hourly report.
+  // Information about a report that needs to be uploaded, including its id, its snapshot uuid, and
+  // whether it's the sole hourly report.
   struct PendingReport {
-    PendingReport(const ReportId report_id, const bool is_hourly_report)
-        : report_id(report_id), is_hourly_report(is_hourly_report) {}
+    explicit PendingReport(const Report& report)
+        : report_id(report.Id()),
+          snapshot_uuid(report.SnapshotUuid()),
+          is_hourly_report(report.IsHourlyReport()) {}
+
+    PendingReport(const ReportId report_id, const SnapshotUuid snapshot_uuid,
+                  const bool is_hourly_report)
+        : report_id(report_id),
+          snapshot_uuid(std::move(snapshot_uuid)),
+          is_hourly_report(is_hourly_report) {}
 
     ReportId report_id;
+    SnapshotUuid snapshot_uuid;
     bool is_hourly_report;
   };
+
+  // Why a report is being retired.
+  enum class RetireReason { kUpload, kDelete, kThrottled, kArchive, kGarbageCollected };
+
+  // Utility class for recording metrics about reports.
+  class UploadMetrics {
+   public:
+    explicit UploadMetrics(std::shared_ptr<InfoContext> info_context)
+        : info_(std::move(info_context)) {}
+
+    void IncrementUploadAttempts(ReportId report_id);
+
+    // Record |report_id| as being retired and erase any state associated with it.
+    void Retire(ReportId report_id, RetireReason retire_reason, std::string server_report_id = "");
+
+   private:
+    QueueInfo info_;
+    std::map<ReportId, size_t> upload_attempts_;
+  };
+
+  // Stop using the report associated with |pending_report| for the provided reason. Resources
+  // associated with the report will be cleaned up.
+  void Retire(PendingReport pending_report, RetireReason reason, std::string server_report_id = "");
 
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the
   // queue. Returns the number of reports successfully uploaded.
@@ -71,19 +103,11 @@ class Queue {
 
   // Deletes all of the reports in the queue and store.
   void DeleteAll();
-  void Delete(ReportId report_id);
 
   // Attempts to upload a report
   //
   // Returns false if another upload attempt should be made in the future.
   bool Upload(const Report& report);
-
-  void Archive(ReportId report_id);
-  void GarbageCollect(ReportId report_id);
-
-  // Free resources associated with a report, e.g., snapshot or log tags.
-  void FreeResources(ReportId report_id);
-  void FreeResources(const Report& report);
 
   // Schedules UploadAll() to run every 15 minutes.
   void UploadAllEveryFifteenMinutes();
@@ -94,18 +118,14 @@ class Queue {
   Store store_;
   CrashServer* crash_server_;
   SnapshotManager* snapshot_manager_;
-  QueueInfo info_;
-
-  ReportingPolicy reporting_policy_{ReportingPolicy::kUndecided};
+  UploadMetrics metrics_;
 
   std::deque<PendingReport> pending_reports_;
 
-  async::TaskClosure upload_all_every_fifteen_minutes_task_;
+  async::TaskClosureMethod<Queue, &Queue::UploadAllEveryFifteenMinutes>
+      upload_all_every_fifteen_minutes_task_{this};
 
-  // Number of upload attempts within the current instance of the component. These get reset across
-  // restarts and reboots.
-  std::unordered_map<ReportId, uint64_t> upload_attempts_;
-
+  ReportingPolicy reporting_policy_{ReportingPolicy::kUndecided};
   bool stop_uploading_{false};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Queue);

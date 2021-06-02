@@ -53,6 +53,7 @@ class Store {
   void RemoveAll();
 
   std::vector<ReportId> GetReports() const;
+  SnapshotUuid GetSnapshotUuid(ReportId id);
 
   bool Contains(ReportId id);
 
