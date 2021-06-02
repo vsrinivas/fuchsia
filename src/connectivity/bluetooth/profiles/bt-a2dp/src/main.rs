@@ -161,6 +161,8 @@ impl StreamsBuilder {
         })
     }
 
+    const BITPOOL_MAX: u8 = 53; // Maximum recommended bitpool value, from A2DP 1.3.2 Table 4.7
+
     fn build_sbc_sink_endpoint() -> avdtp::Result<avdtp::StreamEndpoint> {
         let sbc_codec_info = SbcCodecInfo::new(
             SbcSamplingFrequency::MANDATORY_SNK,
@@ -169,7 +171,7 @@ impl StreamsBuilder {
             SbcSubBands::MANDATORY_SNK,
             SbcAllocation::MANDATORY_SNK,
             SbcCodecInfo::BITPOOL_MIN,
-            SbcCodecInfo::BITPOOL_MAX,
+            Self::BITPOOL_MAX,
         )?;
         trace!("Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
@@ -236,7 +238,7 @@ impl StreamsBuilder {
             SbcSubBands::MANDATORY_SRC,
             SbcAllocation::MANDATORY_SRC,
             SbcCodecInfo::BITPOOL_MIN,
-            SbcCodecInfo::BITPOOL_MAX,
+            Self::BITPOOL_MAX,
         )?;
         trace!("Supported SBC codec parameters: {:?}.", sbc_codec_info);
 
