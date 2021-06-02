@@ -199,9 +199,9 @@ class NetworkDeviceImpl : public EndpointImpl,
     fuchsia::net::tun::DeviceConfig tun_config;
 
     tun_config.mutable_base()->set_mtu(config().mtu);
-    tun_config.mutable_base()->set_rx_types({fuchsia::hardware::network::FrameType::ETHERNET});
+    tun_config.mutable_base()->set_rx_types({Endpoint::kFrameType});
     tun_config.mutable_base()->set_tx_types({fuchsia::hardware::network::FrameTypeSupport{
-        .type = fuchsia::hardware::network::FrameType::ETHERNET,
+        .type = Endpoint::kFrameType,
         .features = fuchsia::hardware::network::FRAME_FEATURES_RAW,
         .supported_flags = fuchsia::hardware::network::TxFlags()}});
     if (config().mac) {
@@ -263,16 +263,6 @@ class NetworkDeviceImpl : public EndpointImpl,
 
     fuchsia::net::tun::Protocols protos;
     protos.set_network_device(std::move(device));
-    tun_device_->ConnectProtocols(std::move(protos));
-  }
-
-  void GetMacAddressing(
-      fidl::InterfaceRequest<fuchsia::hardware::network::MacAddressing> mac) override {
-    if (!tun_device_.is_bound()) {
-      return;
-    }
-    fuchsia::net::tun::Protocols protos;
-    protos.set_mac_addressing(std::move(mac));
     tun_device_->ConnectProtocols(std::move(protos));
   }
 

@@ -23,6 +23,7 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
+use fidl::endpoints::Proxy as _;
 use futures::future::{FutureExt as _, TryFutureExt as _};
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
@@ -542,13 +543,21 @@ impl<'a> TestEndpoint<'a> {
         fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
         fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
     )> {
+        // TODO(http://fxbug.dev/64310): Do not automatically connect to port 0 once Netstack
+        // exposes FIDL that is port-aware.
+        const PORT0: u8 = 0;
         let netdevice: fnetwork::DeviceInstanceProxy = netdevice.into_proxy()?;
         let (device, device_server_end) =
-            fidl::endpoints::create_endpoints::<fnetwork::DeviceMarker>()?;
+            fidl::endpoints::create_proxy::<fnetwork::DeviceMarker>()?;
+        let (port, port_server_end) = fidl::endpoints::create_proxy::<fnetwork::PortMarker>()?;
+        let () = device.get_port(PORT0, port_server_end)?;
         let (mac, mac_server_end) =
             fidl::endpoints::create_endpoints::<fnetwork::MacAddressingMarker>()?;
         let () = netdevice.get_device(device_server_end)?;
-        let () = netdevice.get_mac_addressing(mac_server_end)?;
+        let () = port.get_mac(mac_server_end)?;
+        // No other references exist, we just created this proxy, unwrap is safe.
+        let device =
+            fidl::endpoints::ClientEnd::new(device.into_channel().unwrap().into_zx_channel());
         Ok((device, mac))
     }
 

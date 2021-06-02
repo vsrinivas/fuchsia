@@ -39,12 +39,6 @@ class NetworkDeviceInterface {
   // dispatcher given to the device on creation.
   virtual zx_status_t Bind(fidl::ServerEnd<netdev::Device> req) = 0;
 
-  // Binds the request channel req to PORT 0 of this device. Requests will be handled on the
-  // dispatcher given to the device on creation.
-  //
-  // TODO(http://fxbug.dev/64310): Remove this method after multi-port is supported on FIDL.
-  virtual zx_status_t BindMac(fidl::ServerEnd<netdev::MacAddressing> req) = 0;
-
  protected:
   NetworkDeviceInterface() = default;
 };

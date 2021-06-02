@@ -50,14 +50,15 @@ class AttachedPort {
   }
 
   // Returns the Rx frame types we're subscribed to on this attached port.
-  fbl::Span<const uint8_t> frame_types() const {
+  fbl::Span<const netdev::wire::FrameType> frame_types() const {
     return fbl::Span(frame_types_.begin(), frame_type_count_);
   }
 
  protected:
   friend DeviceInterface;
 
-  AttachedPort(DeviceInterface* parent, DevicePort* port, fbl::Span<const uint8_t> frame_types)
+  AttachedPort(DeviceInterface* parent, DevicePort* port,
+               fbl::Span<const netdev::wire::FrameType> frame_types)
       : parent_(parent),
         port_(port),
         frame_types_([&frame_types]() {
@@ -74,7 +75,7 @@ class AttachedPort {
   DeviceInterface* parent_ = nullptr;
   // Attached port pointer, not owned;
   DevicePort* port_ = nullptr;
-  std::array<uint8_t, netdev::wire::kMaxFrameTypes> frame_types_{};
+  std::array<netdev::wire::FrameType, netdev::wire::kMaxFrameTypes> frame_types_{};
   uint32_t frame_type_count_ = 0;
 };
 
@@ -125,10 +126,11 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   }
 
   // FIDL interface implementation:
-  void SetPaused(SetPausedRequestView request, SetPausedCompleter::Sync& _completer) override;
+  void Attach(AttachRequestView request, AttachCompleter::Sync& _completer) override;
+  void Detach(DetachRequestView request, DetachCompleter::Sync& _completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override;
 
-  zx_status_t AttachPort(uint8_t port_id, fbl::Span<const uint8_t> frame_types);
+  zx_status_t AttachPort(uint8_t port_id, fbl::Span<const netdev::wire::FrameType> frame_types);
   zx_status_t DetachPort(uint8_t port_id);
 
   // Sets the return code for a tx descriptor.
@@ -161,11 +163,12 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   bool CompleteUnfulfilledRx() __TA_REQUIRES(parent_->rx_lock());
   // Copies data from a tx frame from another session into one of this session's available rx
   // buffers.
-  bool ListenFromTx(const Session& owner, uint16_t owner_index) __TA_REQUIRES(parent_->rx_lock());
+  bool ListenFromTx(const Session& owner, uint16_t owner_index) __TA_REQUIRES(parent_->rx_lock())
+      __TA_REQUIRES_SHARED(parent_->control_lock());
   // Commits pending rx buffers, sending them back to the session client.
   void CommitRx() __TA_REQUIRES(parent_->rx_lock());
   // Returns true iff the session is subscribed to frame_type on port.
-  bool IsSubscribedToFrameType(uint8_t port, uint8_t frame_type)
+  bool IsSubscribedToFrameType(uint8_t port, netdev::wire::FrameType frame_type)
       __TA_REQUIRES_SHARED(parent_->control_lock());
 
   inline void TxTaken() { in_flight_tx_++; }
@@ -259,8 +262,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   const uint16_t descriptor_count_;
   const uint64_t descriptor_length_;
   const netdev::wire::SessionFlags flags_;
-  const std::array<uint8_t, netdev::wire::kMaxFrameTypes> frame_types_;
-  const uint32_t frame_type_count_;
 
   // AttachedPorts information. Parent device is responsible for detaching ports from sessions
   // before destroying them.

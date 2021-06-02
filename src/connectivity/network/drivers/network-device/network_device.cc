@@ -82,12 +82,6 @@ void NetworkDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::
   device_->Bind(std::move(request->device));
 }
 
-void NetworkDevice::GetMacAddressing(GetMacAddressingRequestView request,
-                                     GetMacAddressingCompleter::Sync& _completer) {
-  ZX_ASSERT_MSG(device_, "Can't serve mac if not bound to parent implementation");
-  device_->BindMac(std::move(request->mac));
-}
-
 static zx_driver_ops_t network_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;

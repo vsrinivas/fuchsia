@@ -649,7 +649,7 @@ func (impl *netdevInspectImpl) ReadData() inspect.Object {
 			{Key: "TxDrops", Value: inspect.MetricValueWithUintValue(impl.value.TxStats().Drops.Value())},
 		},
 		Properties: []inspect.Property{
-			{Key: "Class", Value: inspect.PropertyValueWithStr(impl.value.Info().Class.String())},
+			{Key: "Class", Value: inspect.PropertyValueWithStr(impl.value.Class().String())},
 		},
 	}
 }

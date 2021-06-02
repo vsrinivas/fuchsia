@@ -49,16 +49,18 @@ zx_status_t RxBuffer::WriteData(fbl::Span<const uint8_t> data, const VmoProvider
 
 FakeNetworkPortImpl::FakeNetworkPortImpl()
     : port_info_({
-          .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kEthernet),
+          .port_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kEthernet),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = 1,
           .tx_types_list = tx_types_.data(),
           .tx_types_count = 1,
       }) {
   rx_types_[0] = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
-  tx_types_[0].type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
-  tx_types_[0].supported_flags = 0;
-  tx_types_[0].features = netdev::wire::kFrameFeaturesRaw;
+  tx_types_[0] = {
+      .type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet),
+      .features = netdev::wire::kFrameFeaturesRaw,
+      .supported_flags = 0,
+  };
   EXPECT_OK(zx::event::create(0, &event_));
 }
 
@@ -84,13 +86,42 @@ void FakeNetworkPortImpl::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
 void FakeNetworkPortImpl::NetworkPortRemoved() {
   EXPECT_FALSE(port_removed_) << "removed same port twice";
   port_removed_ = true;
+  if (on_removed_) {
+    on_removed_();
+  }
 }
 
-void FakeNetworkPortImpl::AddPort(uint8_t port_id,
-                                  ddk::NetworkDeviceIfcProtocolClient* ifc_client) {
+void FakeNetworkPortImpl::AddPort(uint8_t port_id, ddk::NetworkDeviceIfcProtocolClient ifc_client) {
   ASSERT_FALSE(port_added_) << "can't add the same port object twice";
+  id_ = port_id;
   port_added_ = true;
-  ifc_client->AddPort(port_id, this, &network_port_protocol_ops_);
+  device_client_ = ifc_client;
+  ifc_client.AddPort(port_id, this, &network_port_protocol_ops_);
+}
+
+void FakeNetworkPortImpl::RemoveSync() {
+  // Already removed.
+  if (!port_added_ || port_removed_) {
+    return;
+  }
+  sync_completion_t signal;
+  on_removed_ = [&signal]() { sync_completion_signal(&signal); };
+  device_client_.RemovePort(id_);
+  sync_completion_wait(&signal, zx::time::infinite().get());
+}
+
+void FakeNetworkPortImpl::SetOnline(bool online) {
+  port_status_t status = status_;
+  status.flags = static_cast<uint32_t>(online ? netdev::wire::StatusFlags::kOnline
+                                              : netdev::wire::StatusFlags());
+  SetStatus(status);
+}
+
+void FakeNetworkPortImpl::SetStatus(const port_status_t& status) {
+  status_ = status;
+  if (device_client_.is_valid()) {
+    device_client_.PortStatusChanged(id_, &status);
+  }
 }
 
 FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
@@ -114,12 +145,7 @@ FakeNetworkDeviceImpl::~FakeNetworkDeviceImpl() {
 
 zx_status_t FakeNetworkDeviceImpl::NetworkDeviceImplInit(
     const network_device_ifc_protocol_t* iface) {
-  port0_.SetStatus(
-      {.mtu = 2048, .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)});
   device_client_ = ddk::NetworkDeviceIfcProtocolClient(iface);
-
-  auto port_protocol = port0_.protocol();
-  device_client_.AddPort(kPort0, port_protocol.ctx, port_protocol.ops);
   return ZX_OK;
 }
 
@@ -224,7 +250,6 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_
       rx_buffer = {
           .meta =
               {
-                  .port = kPort0,
                   .frame_type =
                       static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet),
               },
@@ -271,18 +296,6 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
   return false;
 }
 
-void FakeNetworkDeviceImpl::SetOnline(bool online) {
-  port_status_t status = port0_.status();
-  status.flags = static_cast<uint32_t>(online ? netdev::wire::StatusFlags::kOnline
-                                              : netdev::wire::StatusFlags());
-  SetStatus(status);
-}
-
-void FakeNetworkDeviceImpl::SetStatus(const port_status_t& status) {
-  port0_.SetStatus(status);
-  device_client_.PortStatusChanged(kPort0, &status);
-}
-
 zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::CreateChild(
     async_dispatcher_t* dispatcher) {
   auto protocol = proto();
@@ -301,25 +314,19 @@ zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::Creat
 
 zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, const char* name,
                               netdev::wire::SessionFlags flags, uint16_t num_descriptors,
-                              uint64_t buffer_size,
-                              fidl::VectorView<netdev::wire::FrameType> frame_types) {
+                              uint64_t buffer_size) {
   netdev::wire::FrameType supported_frames[1];
   supported_frames[0] = netdev::wire::FrameType::kEthernet;
-  netdev::wire::SessionInfo info{};
-  if (frame_types.count() == 0) {
-    // default to just ethernet
-    info.rx_frames = fidl::VectorView<netdev::wire::FrameType>::FromExternal(supported_frames, 1);
-  } else {
-    info.rx_frames = std::move(frame_types);
-  }
-  info.options = flags;
   zx_status_t status;
   if ((status = Init(num_descriptors, buffer_size)) != ZX_OK) {
     return status;
   }
-  if ((status = GetInfo(&info)) != ZX_OK) {
-    return status;
+  zx::status info_status = GetInfo();
+  if (info_status.is_error()) {
+    return info_status.status_value();
   }
+  netdev::wire::SessionInfo& info = info_status.value();
+  info.set_options(alloc_, flags);
 
   auto session_name = fidl::StringView::FromExternal(name);
 
@@ -342,7 +349,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
 
 zx_status_t TestSession::Init(uint16_t descriptor_count, uint64_t buffer_size) {
   zx_status_t status;
-  if (descriptors_vmo_.is_valid() || data_vmo_.is_valid() || session_.is_valid()) {
+  if (descriptors_vmo_.is_valid() || data_vmo_.is_valid() || session_.channel().is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -364,36 +371,75 @@ zx_status_t TestSession::Init(uint16_t descriptor_count, uint64_t buffer_size) {
   return ZX_OK;
 }
 
-zx_status_t TestSession::GetInfo(netdev::wire::SessionInfo* info) {
-  zx_status_t status;
+zx::status<netdev::wire::SessionInfo> TestSession::GetInfo() {
   if (!data_vmo_.is_valid() || !descriptors_vmo_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  if ((status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &info->data)) != ZX_OK) {
-    return status;
+  zx::vmo data_vmo;
+  if (zx_status_t status = data_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &data_vmo); status != ZX_OK) {
+    return zx::error(status);
   }
-  if ((status = descriptors_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &info->descriptors)) != ZX_OK) {
-    return status;
+  zx::vmo descriptors_vmo;
+  if (zx_status_t status = descriptors_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &descriptors_vmo);
+      status != ZX_OK) {
+    return zx::error(status);
   }
-
-  info->descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
-  info->descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t);
-  info->descriptor_count = descriptors_count_;
-  return ZX_OK;
+  netdev::wire::SessionInfo info(alloc_);
+  info.set_data(alloc_, std::move(data_vmo));
+  info.set_descriptors(alloc_, std::move(descriptors_vmo));
+  info.set_descriptor_version(alloc_, NETWORK_DEVICE_DESCRIPTOR_VERSION);
+  info.set_descriptor_length(alloc_, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
+  info.set_descriptor_count(alloc_, descriptors_count_);
+  return zx::ok(std::move(info));
 }
 
 void TestSession::Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::Fifos fifos) {
-  session_ = std::move(session);
+  session_ = fidl::WireSyncClient<netdev::Session>(std::move(session));
   fifos_ = std::move(fifos);
 }
 
-zx_status_t TestSession::SetPaused(bool paused) {
-  return fidl::WireCall<netdev::Session>(session_).SetPaused(paused).status();
+zx_status_t TestSession::AttachPort(uint8_t port_id,
+                                    std::vector<netdev::wire::FrameType> frame_types) {
+  fidl::WireResult wire_result = session_.Attach(
+      port_id, fidl::VectorView<netdev::wire::FrameType>::FromExternal(frame_types));
+  if (!wire_result.ok()) {
+    return wire_result.status();
+  }
+  const auto& result = wire_result.value().result;
+  switch (result.which()) {
+    case netdev::wire::SessionAttachResult::Tag::kResponse:
+      return ZX_OK;
+    case netdev::wire::SessionAttachResult::Tag::kErr:
+      return result.err();
+  }
 }
 
-zx_status_t TestSession::Close() {
-  return fidl::WireCall<netdev::Session>(session_).Close().status();
+zx_status_t TestSession::AttachPort(FakeNetworkPortImpl& impl) {
+  std::vector<netdev::wire::FrameType> rx_types;
+  for (uint8_t frame_type :
+       fbl::Span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
+    rx_types.push_back(static_cast<netdev::wire::FrameType>(frame_type));
+  }
+  return AttachPort(impl.id(), std::move(rx_types));
 }
+
+zx_status_t TestSession::DetachPort(uint8_t port_id) {
+  fidl::WireResult wire_result = session_.Detach(port_id);
+  if (!wire_result.ok()) {
+    return wire_result.status();
+  }
+  const auto& result = wire_result.value().result;
+  switch (result.which()) {
+    case netdev::wire::SessionDetachResult::Tag::kResponse:
+      return ZX_OK;
+    case netdev::wire::SessionDetachResult::Tag::kErr:
+      return result.err();
+  }
+}
+
+zx_status_t TestSession::DetachPort(FakeNetworkPortImpl& impl) { return DetachPort(impl.id()); }
+
+zx_status_t TestSession::Close() { return session_.Close().status(); }
 
 zx_status_t TestSession::WaitClosed(zx::time deadline) {
   return session_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);

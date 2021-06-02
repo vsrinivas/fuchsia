@@ -35,8 +35,33 @@ struct SessionConfig {
   uint16_t tx_descriptor_count;
   // Session flags.
   netdev::wire::SessionFlags options;
-  // Types of rx frames to subscribe to.
-  std::vector<netdev::wire::FrameType> rx_frames;
+};
+
+// Device information.
+//
+// A newtype for fuchsia.hardware.network/DeviceInfo with owned values.
+struct DeviceInfo {
+  DeviceInfo() = default;
+  DeviceInfo(const DeviceInfo&) = delete;
+  DeviceInfo(DeviceInfo&&) = default;
+  DeviceInfo& operator=(DeviceInfo&&) = default;
+  DeviceInfo& operator=(const DeviceInfo&) = delete;
+
+  static zx::status<DeviceInfo> Create(const netdev::wire::DeviceInfo& fidl);
+
+  uint8_t min_descriptor_length;
+  uint8_t descriptor_version;
+  uint16_t rx_depth;
+  uint16_t tx_depth;
+  uint32_t buffer_alignment;
+  uint32_t max_buffer_length;
+  uint32_t min_rx_buffer_length;
+  uint32_t min_tx_buffer_length;
+  uint16_t min_tx_buffer_head;
+  uint16_t min_tx_buffer_tail;
+  uint8_t max_buffer_parts;
+  std::vector<fuchsia_hardware_network::wire::RxAcceleration> rx_accel;
+  std::vector<fuchsia_hardware_network::wire::TxAcceleration> tx_accel;
 };
 
 // A client for `fuchsia.hardware.network/Device`.
@@ -47,7 +72,7 @@ class NetworkDeviceClient {
   class StatusWatchHandle;
 
   // Creates a default session configuration with the given device information.
-  static SessionConfig DefaultSessionConfig(const netdev::wire::Info& dev_info);
+  static SessionConfig DefaultSessionConfig(const DeviceInfo& dev_info);
   // Creates a client that will bind to `handle` using `dispatcher`.
   //
   // If `dispatcher` is `nullptr`, the default dispatcher for the current thread will be used.
@@ -57,10 +82,11 @@ class NetworkDeviceClient {
   ~NetworkDeviceClient();
 
   using OpenSessionCallback = fit::function<void(zx_status_t)>;
-  using SessionConfigFactory = fit::function<SessionConfig(const netdev::wire::Info&)>;
+  using SessionConfigFactory = fit::function<SessionConfig(const DeviceInfo&)>;
   using RxCallback = fit::function<void(Buffer buffer)>;
   using ErrorCallback = fit::function<void(zx_status_t)>;
-  using StatusCallback = fit::function<void(netdev::wire::Status)>;
+  using StatusCallback = fit::function<void(netdev::wire::PortStatus)>;
+
   // Opens a new session with `name` and invokes `callback` when done.
   //
   // `config_factory` is called to create a `SessionConfig` from a `fuchsia.hardware.network/Info`,
@@ -76,10 +102,17 @@ class NetworkDeviceClient {
   // handle is closed.
   void SetErrorCallback(ErrorCallback callback) { err_callback_ = std::move(callback); }
 
-  // Pauses or unpauses this client's session.
+  // Attaches a port to the current session.
   //
-  // Returns `ZX_ERR_BAD_STATE` if there's no open session.
-  [[nodiscard]] zx_status_t SetPaused(bool paused);
+  // Calls callback with the operation's result.
+  void AttachPort(uint8_t port_id, std::vector<netdev::wire::FrameType> rx_frame_types,
+                  ErrorCallback callback);
+
+  // Detaches a port from the current session.
+  //
+  // Calls callback with the operation's result.
+  void DetachPort(uint8_t port_id, ErrorCallback callback);
+
   // Kills the current session.
   //
   // The error callback is called once the session is destroyed with the session epitaph.
@@ -102,9 +135,9 @@ class NetworkDeviceClient {
   // `buffer` is the number of changes buffered by the network device, according to the
   // `fuchsia.hardware.network.Device` protocol.
   zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>> WatchStatus(
-      StatusCallback callback, uint32_t buffer = 1);
+      uint8_t port_id, StatusCallback callback, uint32_t buffer = 1);
 
-  const netdev::wire::Info& device_info() const { return device_info_; }
+  const DeviceInfo& device_info() const { return device_info_; }
 
   // Allocates a transmit buffer.
   //
@@ -282,7 +315,7 @@ class NetworkDeviceClient {
   };
 
   zx_status_t PrepareSession();
-  fit::result<netdev::wire::SessionInfo, zx_status_t> MakeSessionInfo();
+  zx::status<netdev::wire::SessionInfo> MakeSessionInfo(fidl::AnyAllocator& alloc);
   zx_status_t PrepareDescriptors();
   buffer_descriptor_t* descriptor(uint16_t idx);
   void* data(uint64_t offset);
@@ -299,6 +332,7 @@ class NetworkDeviceClient {
   void RxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                 const zx_packet_signal_t* signal);
   void ErrorTeardown(zx_status_t);
+  void ScheduleCallbackPromise(fit::promise<void, zx_status_t> promise, ErrorCallback callback);
 
   bool session_running_ = false;
   RxCallback rx_callback_;
@@ -316,7 +350,7 @@ class NetworkDeviceClient {
   fidl::Client<netdev::Device> device_;
   const std::shared_ptr<EventHandler<netdev::Session>> session_handler_;
   fidl::Client<netdev::Session> session_;
-  netdev::wire::Info device_info_;
+  DeviceInfo device_info_;
   // rx descriptors ready to be sent back to the device.
   std::vector<uint16_t> rx_out_queue_;
   // tx descriptors available to be written.

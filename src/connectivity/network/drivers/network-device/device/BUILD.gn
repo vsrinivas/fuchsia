@@ -14,6 +14,8 @@ ddk_source_split("device") {
     "device_port.cc",
     "device_port.h",
     "log.h",
+    "port_watcher.cc",
+    "port_watcher.h",
     "public/network_device.h",
     "rx_queue.cc",
     "rx_queue.h",

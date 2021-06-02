@@ -18,6 +18,10 @@ use async_trait::async_trait;
 
 use crate::errors::{self, ContextExt as _};
 
+// TODO(http://fxbug.dev/64310): Do not automatically connect to port 0 once Netstack exposes FIDL
+// that is port-aware.
+const PORT0: u8 = 0;
+
 /// An error when adding a device.
 pub(super) enum AddDeviceError {
     AlreadyExists,
@@ -72,9 +76,9 @@ impl DeviceInfo for feth_ext::EthernetInfo {
     }
 }
 
-impl DeviceInfo for fhwnet::Info {
+impl DeviceInfo for fhwnet::PortInfo {
     fn is_wlan(&self) -> bool {
-        self.class == fhwnet::DeviceClass::Wlan
+        self.class == Some(fhwnet::DeviceClass::Wlan)
     }
 
     fn is_physical(&self) -> bool {
@@ -223,7 +227,7 @@ impl Device for NetworkDevice {
     const NAME: &'static str = "netdev";
     const PATH: &'static str = "class/network";
     type ServiceMarker = fhwnet::DeviceInstanceMarker;
-    type DeviceInfo = fhwnet::Info;
+    type DeviceInfo = fhwnet::PortInfo;
     type DeviceInstance = NetworkDeviceInstance;
 
     async fn get_topo_path_and_device(
@@ -240,11 +244,20 @@ impl Device for NetworkDevice {
             .get_device(req)
             .context("error geting device")
             .map_err(errors::Error::NonFatal)?;
+
+        let (port, port_server_end) = fidl::endpoints::create_proxy()
+            .context("error creating port proxy")
+            .map_err(errors::Error::Fatal)?;
+        let () = device
+            .get_port(PORT0, port_server_end)
+            .context("error getting port")
+            .map_err(errors::Error::NonFatal)?;
+
         let (mac_addressing, req) = fidl::endpoints::create_proxy()
             .context("error creating mac addressing proxy")
             .map_err(errors::Error::Fatal)?;
-        let () = device_instance
-            .get_mac_addressing(req)
+        let () = port
+            .get_mac(req)
             .context("error getting MAC addressing client")
             .map_err(errors::Error::NonFatal)?;
 
@@ -253,13 +266,21 @@ impl Device for NetworkDevice {
 
     async fn device_info_and_mac(
         device_instance: &NetworkDeviceInstance,
-    ) -> Result<(fhwnet::Info, feth_ext::MacAddress), errors::Error> {
+    ) -> Result<(fhwnet::PortInfo, feth_ext::MacAddress), errors::Error> {
         let NetworkDeviceInstance { device, mac_addressing } = device_instance;
-        let info = device
+        let (port, port_server_end) = fidl::endpoints::create_proxy()
+            .context("error creating port proxy")
+            .map_err(errors::Error::Fatal)?;
+        let () = device
+            .get_port(PORT0, port_server_end)
+            .context("error getting port")
+            .map_err(errors::Error::NonFatal)?;
+        let port_info = port
             .get_info()
             .await
-            .context("error getting netdev info")
+            .context("error getting port info")
             .map_err(errors::Error::NonFatal)?;
+
         let mac_addr = feth_ext::MacAddress {
             octets: mac_addressing
                 .get_unicast_address()
@@ -269,11 +290,11 @@ impl Device for NetworkDevice {
                 .octets,
         };
 
-        Ok((info, mac_addr))
+        Ok((port_info, mac_addr))
     }
 
     fn eth_device_info(
-        _info: fhwnet::Info,
+        _info: fhwnet::PortInfo,
         mac: feth_ext::MacAddress,
         features: feth::Features,
     ) -> feth_ext::EthernetInfo {

@@ -45,7 +45,7 @@ bits EthernetFeatures : uint32 {
 /// hardware support. Each frame type has an associated [`FrameTypeSupport.features`] bits
 /// enumeration that lists FrameType-specific features that may or may not be supported. Devices
 /// that do not perform parsing are encouraged to just use the [`FRAME_FEATURES_RAW`] bit in
-/// `features`, which will inform the client that all frame features are allowed.
+/// `features`, which informs the client that all frame features are allowed.
 struct FrameTypeSupport {
     /// The frame type this support entry refers to.
     FrameType type;

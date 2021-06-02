@@ -55,7 +55,13 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
 zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Create(
     async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
     DeviceInterface* parent, fidl::ServerEnd<netdev::Session> control) {
-  if (info.descriptor_version != NETWORK_DEVICE_DESCRIPTOR_VERSION) {
+  // Validate required session fields.
+  if (!(info.has_data() && info.has_descriptor_count() && info.has_descriptor_length() &&
+        info.has_descriptor_version() && info.has_descriptors())) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  if (info.descriptor_version() != NETWORK_DEVICE_DESCRIPTOR_VERSION) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -88,24 +94,12 @@ Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info
         *end = '\0';
         return t;
       }()),
-      vmo_descriptors_(std::move(info.descriptors)),
+      vmo_descriptors_(std::move(info.descriptors())),
       paused_(true),
-      descriptor_count_(info.descriptor_count),
-      descriptor_length_(info.descriptor_length * sizeof(uint64_t)),
-      flags_(info.options),
-      frame_types_([&info]() {
-        std::remove_const<decltype(frame_types_)>::type t;
-        ZX_ASSERT(info.rx_frames.count() <= t.size());
-        for (size_t i = 0; i < info.rx_frames.count(); i++) {
-          t[i] = static_cast<uint8_t>(info.rx_frames[i]);
-        }
-        return t;
-      }()),
-      frame_type_count_(static_cast<uint32_t>(info.rx_frames.count())),
-      parent_(parent) {
-  // TODO(http://fxbug.dev/64310): We're storing requested frame types for now and using it on
-  // SetPaused. This will not be necessary once session FIDL updates.
-}
+      descriptor_count_(info.descriptor_count()),
+      descriptor_length_(info.descriptor_length() * sizeof(uint64_t)),
+      flags_(info.has_options() ? info.options() : netdev::wire::SessionFlags()),
+      parent_(parent) {}
 
 Session::~Session() {
   // Stop the Tx thread if it hasn't been stopped already. We need to do this on destruction in case
@@ -413,7 +407,7 @@ zx_status_t Session::FetchTx() {
     // Reject invalid tx types.
     port.AssertParentControlLockShared(*parent_);
     if (!port.WithPort([frame_type = desc->frame_type](DevicePort& p) {
-          return p.IsValidRxFrameType(frame_type);
+          return p.IsValidRxFrameType(static_cast<netdev::wire::FrameType>(frame_type));
         })) {
       return ZX_ERR_IO_INVALID;
     }
@@ -555,22 +549,8 @@ void Session::ResumeTx() {
   }
 }
 
-void Session::SetPaused(SetPausedRequestView request, SetPausedCompleter::Sync& _completer) {
-  // TODO(http://fxbug.dev/64310): Transitionally setting a session as paused means attaching or
-  // detaching port0, until we migrate the session FIDL.
-  zx_status_t status;
-  if (request->paused) {
-    status = DetachPort(DeviceInterface::kPort0);
-  } else {
-    status = AttachPort(DeviceInterface::kPort0, fbl::Span(frame_types_.data(), frame_type_count_));
-  }
-  if (status != ZX_OK) {
-    LOGF_WARN("network-device(%s): SetPaused(%d): %s", name(), request->paused,
-              zx_status_get_string(status));
-  }
-}
-
-zx_status_t Session::AttachPort(uint8_t port_id, fbl::Span<const uint8_t> frame_types) {
+zx_status_t Session::AttachPort(uint8_t port_id,
+                                fbl::Span<const netdev::wire::FrameType> frame_types) {
   size_t attached_count;
   {
     fbl::AutoLock lock(&parent_->control_lock());
@@ -655,6 +635,25 @@ bool Session::OnPortDestroyed(uint8_t port_id) {
     paused_ = true;
   }
   return should_stop;
+}
+
+void Session::Attach(AttachRequestView request, AttachCompleter::Sync& completer) {
+  zx_status_t status =
+      AttachPort(request->port, fbl::Span(request->rx_frames.data(), request->rx_frames.count()));
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void Session::Detach(DetachRequestView request, DetachCompleter::Sync& completer) {
+  zx_status_t status = DetachPort(request->port);
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
 }
 
 void Session::Close(CloseRequestView request, CloseCompleter::Sync& _completer) { Kill(); }
@@ -802,7 +801,8 @@ bool Session::CompleteRx(const RxFrameInfo& frame_info) {
   // Allow the buffer to be reused as long as our rx path is still valid.
   bool allow_reuse = rx_valid_;
 
-  if (IsSubscribedToFrameType(frame_info.meta.port, frame_info.meta.frame_type) &&
+  if (IsSubscribedToFrameType(frame_info.meta.port,
+                              static_cast<netdev::wire::FrameType>(frame_info.meta.frame_type)) &&
       !paused_.load()) {
     // Allow reuse if any issue happens loading descriptor configuration.
     // NB: Error logging happens at LoadRxInfo at a greater granularity, we only care about success
@@ -817,7 +817,8 @@ void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
   // Shouldn't call CompleteRxWith where owner is self. Assertion enforces that
   // DeviceInterface::CopySessionData does the right thing.
   ZX_ASSERT(&owner != this);
-  if (!IsSubscribedToFrameType(frame_info.meta.port, frame_info.meta.frame_type) ||
+  if (!IsSubscribedToFrameType(frame_info.meta.port,
+                               static_cast<netdev::wire::FrameType>(frame_info.meta.frame_type)) ||
       paused_.load()) {
     // Don't do anything if we're paused or not subscribed to this frame type.
     return;
@@ -930,6 +931,11 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
     // Do nothing if we're paused.
     return false;
   }
+  const buffer_descriptor_t* owner_desc = owner.descriptor(owner_index);
+  if (!IsSubscribedToFrameType(owner_desc->port_id,
+                               static_cast<netdev::wire::FrameType>(owner_desc->frame_type))) {
+    return false;
+  }
 
   if (rx_avail_queue_count_ == 0) {
     // Can't do much if we can't fetch more descriptors.
@@ -943,12 +949,12 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   rx_avail_queue_count_--;
   auto target_desc = rx_avail_queue_[rx_avail_queue_count_];
 
-  const buffer_descriptor_t* owner_desc = owner.descriptor(owner_index);
   buffer_descriptor_t* desc = descriptor(target_desc);
   // NOTE(brunodalbo) Do we want to listen on info as well?
   desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   desc->frame_type = owner_desc->frame_type;
   desc->return_flags = static_cast<uint32_t>(netdev::wire::RxFlags::kRxEchoedTx);
+  desc->port_id = owner_desc->port_id;
 
   uint64_t my_offset = 0;
   uint64_t owner_offset = 0;
@@ -1094,7 +1100,7 @@ void Session::CommitRx() {
   rx_return_queue_count_ = 0;
 }
 
-bool Session::IsSubscribedToFrameType(uint8_t port, uint8_t frame_type) {
+bool Session::IsSubscribedToFrameType(uint8_t port, netdev::wire::FrameType frame_type) {
   if (port >= attached_ports_.size()) {
     return false;
   }
@@ -1104,7 +1110,7 @@ bool Session::IsSubscribedToFrameType(uint8_t port, uint8_t frame_type) {
   }
   fbl::Span subscribed = slot.value().frame_types();
   return std::any_of(subscribed.begin(), subscribed.end(),
-                     [frame_type](const uint8_t& t) { return t == frame_type; });
+                     [frame_type](const netdev::wire::FrameType& t) { return t == frame_type; });
 }
 
 void Session::SetDataVmo(uint8_t vmo_id, DataVmoStore::StoredVmo* vmo) {

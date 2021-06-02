@@ -18,7 +18,6 @@ enum MacFilterMode {
     PROMISCUOUS = 2;
 };
 
-[Discoverable]
 protocol MacAddressing {
     /// Gets the Device's current unicast MAC address.
     ///
@@ -30,19 +29,18 @@ protocol MacAddressing {
     /// - response `address` device's unicast MAC address.
     GetUnicastAddress() -> (fuchsia.net.MacAddress address);
 
-    // TODO(fxbug.dev/44065) enable an API like the one below to be notified of changes to the Unicast
-    // MAC once plumbed through the banjo protocol as well.
+    // TODO(https://fxbug.dev/44065) enable an API like the one below to be notified of changes to
+    // the Unicast MAC once plumbed through the banjo protocol as well.
     // WatchUnicastAddress() -> (Mac address);
 
     /// Sets requested operating mode of this device to `mode`.
     ///
     /// The requested mode is attached to the current client connection to the device. Because
     /// multiple clients can be attached to the same device at once, the mode with the least
-    /// restrictions will be the one actively put into effect into the underlying device
-    /// implementation.
+    /// restrictions is the one actively put into effect into the underlying device implementation.
     ///
     /// If the device does not support the requested mode, but supports a mode that is more open
-    /// than the requested one, `SetMode` will succeed regardless. Otherwise, if the device only
+    /// than the requested one, `SetMode` succeeds regardless. Otherwise, if the device only
     /// supports *more restrictive* modes than the one requested, `SetMode` returns
     /// `ZX_ERR_NOT_SUPPORTED`.
     ///

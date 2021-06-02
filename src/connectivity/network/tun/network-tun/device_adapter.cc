@@ -26,13 +26,7 @@ zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(
       .ctx = adapter.get(),
   };
 
-  zx::status device = NetworkDeviceInterface::Create(
-      dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto), "network-tun");
-  if (device.is_error()) {
-    return device.take_error();
-  }
-  adapter->device_ = std::move(device.value());
-
+  // NB: Mac must be created first so it is set when kPort0 is created.
   if (mac.has_value()) {
     zx::status mac_adapter = MacAdapter::Create(parent, mac.value(), false);
     if (mac_adapter.is_error()) {
@@ -40,6 +34,13 @@ zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(
     }
     adapter->mac_ = std::move(mac_adapter.value());
   }
+
+  zx::status device = NetworkDeviceInterface::Create(
+      dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto), "network-tun");
+  if (device.is_error()) {
+    return device.take_error();
+  }
+  adapter->device_ = std::move(device.value());
 
   return zx::ok(std::move(adapter));
 }
@@ -430,8 +431,7 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
           .min_tx_buffer_length = parent->config().min_tx_buffer_length,
       }),
       port_info_(port_info_t{
-          .device_class =
-              static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kUnknown),
+          .port_class = static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kUnknown),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = parent->config().rx_types.size(),
           .tx_types_list = tx_types_.data(),

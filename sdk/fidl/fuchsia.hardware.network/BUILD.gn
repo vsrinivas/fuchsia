@@ -12,6 +12,7 @@ fidl("fuchsia.hardware.network") {
     "frames.fidl",
     "instance.fidl",
     "mac.fidl",
+    "port.fidl",
     "session.fidl",
   ]
 

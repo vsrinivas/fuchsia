@@ -120,10 +120,20 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   // Copy the vectors of supported acceleration flags.
-  std::copy_n(device_info_.rx_accel_list, device_info_.rx_accel_count, accel_rx_.begin());
-  device_info_.rx_accel_list = accel_rx_.data();
-  std::copy_n(device_info_.tx_accel_list, device_info_.tx_accel_count, accel_tx_.begin());
-  device_info_.tx_accel_list = accel_tx_.data();
+  {
+    fbl::Span span(device_info_.rx_accel_list, device_info_.rx_accel_count);
+    std::transform(span.begin(), span.end(), accel_rx_.begin(),
+                   [](uint8_t v) { return static_cast<netdev::wire::RxAcceleration>(v); });
+  }
+  {
+    fbl::Span span(device_info_.tx_accel_list, device_info_.tx_accel_count);
+    std::transform(span.begin(), span.end(), accel_tx_.begin(),
+                   [](uint8_t v) { return static_cast<netdev::wire::TxAcceleration>(v); });
+  }
+  // Clear list accessors -- they point to device-owned memory. We can access the lists through the
+  // |accel_rx_| and |accel_tx_| member fields.
+  device_info_.rx_accel_list = nullptr;
+  device_info_.tx_accel_list = nullptr;
 
   if (device_info_.rx_depth > kMaxFifoDepth || device_info_.tx_depth > kMaxFifoDepth) {
     LOGF_ERROR("network-device: init: device '%s' reports too large FIFO depths: %d/%d (max=%d)",
@@ -188,23 +198,6 @@ zx_status_t DeviceInterface::Bind(fidl::ServerEnd<netdev::Device> req) {
   return Binding::Bind(this, std::move(req));
 }
 
-// TODO(http://fxbug.dev/64310): Delete this method when ports are exposed over FIDL.
-zx_status_t DeviceInterface::BindMac(fidl::ServerEnd<netdev::MacAddressing> req) {
-  SharedAutoLock lock(&control_lock_);
-  // Don't attach new bindings if we're tearing down.
-  if (teardown_state_ != TeardownState::RUNNING) {
-    return ZX_ERR_BAD_STATE;
-  }
-  // Always attempt to bind mac to port 0 until we're able to remove this method.
-  return WithPort(kPort0, [req = std::move(req)](const std::unique_ptr<DevicePort>& port0) mutable {
-    if (!port0) {
-      return ZX_ERR_NOT_FOUND;
-    }
-    port0->BindMac(std::move(req));
-    return ZX_OK;
-  });
-}
-
 void DeviceInterface::NetworkDeviceIfcPortStatusChanged(uint8_t port_id,
                                                         const port_status_t* new_status) {
   SharedAutoLock lock(&control_lock_);
@@ -228,6 +221,7 @@ void DeviceInterface::NetworkDeviceIfcPortStatusChanged(uint8_t port_id,
 
 void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
                                               const network_port_protocol_t* port_proto) {
+  LOGF_TRACE("network-device: %s(%d)", __FUNCTION__, port_id);
   auto port_client = ddk::NetworkPortProtocolClient(port_proto);
   auto release_port = fit::defer([&port_client]() {
     if (port_client.is_valid()) {
@@ -277,20 +271,27 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
   port_client.clear();
   port_slot = std::move(port);
 
-  // TODO(http://fxbug.dev/64310): Notify port watchers.
+  for (auto& watcher : port_watchers_) {
+    watcher.PortAdded(port_id);
+  }
 }
 
 void DeviceInterface::NetworkDeviceIfcRemovePort(uint8_t port_id) {
+  LOGF_TRACE("network-device: %s(%d)", __FUNCTION__, port_id);
   SharedAutoLock lock(&control_lock_);
   // Ignore if we're tearing down, all ports will be removed as part of teardown.
   if (teardown_state_ != TeardownState::RUNNING) {
     return;
   }
-  WithPort(port_id, [](const std::unique_ptr<DevicePort>& port) {
-    if (port) {
-      port->Teardown();
-    }
-  });
+  WithPort(port_id,
+           [this](const std::unique_ptr<DevicePort>& port) __TA_REQUIRES_SHARED(control_lock_) {
+             if (port) {
+               for (auto& watcher : port_watchers_) {
+                 watcher.PortRemoved(port->id());
+               }
+               port->Teardown();
+             }
+           });
 }
 
 void DeviceInterface::NetworkDeviceIfcCompleteRx(const rx_buffer_t* rx_list, size_t rx_count) {
@@ -310,78 +311,40 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
 
 void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   LOGF_TRACE("network-device: %s", __FUNCTION__);
-  SharedAutoLock lock(&control_lock_);
-  // TODO(http://fxbug.dev/64310): Remove port0 requirement once FIDL is migrated to multi-port
-  // version.
-  WithPort(kPort0, [this, &completer](const std::unique_ptr<DevicePort>& port0) {
-    if (!port0) {
-      completer.Close(ZX_ERR_INTERNAL);
-      return;
-    }
-    auto& port_info = port0->info();
+  netdev::wire::DeviceInfo::Frame_ frame;
+  netdev::wire::DeviceInfo device_info(
+      fidl::ObjectView<netdev::wire::DeviceInfo::Frame_>::FromExternal(&frame));
 
-    netdev::wire::Info info{
-        .class_ = static_cast<netdev::wire::DeviceClass>(port_info.device_class),
-        .min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t),
-        .descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION,
-        .rx_depth = rx_fifo_depth(),
-        .tx_depth = tx_fifo_depth(),
-        .buffer_alignment = device_info_.buffer_alignment,
-        .max_buffer_length = device_info_.max_buffer_length,
-        .min_rx_buffer_length = device_info_.min_rx_buffer_length,
-        .min_tx_buffer_length = device_info_.min_tx_buffer_length,
-        .min_tx_buffer_head = device_info_.tx_head_length,
-        .min_tx_buffer_tail = device_info_.tx_tail_length,
-    };
+  uint8_t min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t);
+  uint8_t descriptor_version = NETWORK_DEVICE_DESCRIPTOR_VERSION;
+  uint16_t rx_depth = rx_fifo_depth();
+  uint16_t tx_depth = tx_fifo_depth();
+  auto tx_accel = fidl::VectorView<netdev::wire::TxAcceleration>::FromExternal(
+      accel_tx_.data(), device_info_.tx_accel_count);
+  auto rx_accel = fidl::VectorView<netdev::wire::RxAcceleration>::FromExternal(
+      accel_rx_.data(), device_info_.rx_accel_count);
+  device_info
+      .set_min_descriptor_length(fidl::ObjectView<uint8_t>::FromExternal(&min_descriptor_length))
+      .set_descriptor_version(fidl::ObjectView<uint8_t>::FromExternal(&descriptor_version))
+      .set_rx_depth(fidl::ObjectView<uint16_t>::FromExternal(&rx_depth))
+      .set_tx_depth(fidl::ObjectView<uint16_t>::FromExternal(&tx_depth))
+      .set_buffer_alignment(
+          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.buffer_alignment))
+      .set_max_buffer_length(
+          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.max_buffer_length))
+      .set_max_buffer_parts(fidl::ObjectView<uint8_t>::FromExternal(&device_info_.max_buffer_parts))
+      .set_min_rx_buffer_length(
+          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.min_rx_buffer_length))
+      .set_min_tx_buffer_length(
+          fidl::ObjectView<uint32_t>::FromExternal(&device_info_.min_tx_buffer_length))
+      .set_min_tx_buffer_head(
+          fidl::ObjectView<uint16_t>::FromExternal(&device_info_.tx_head_length))
+      .set_min_tx_buffer_tail(
+          fidl::ObjectView<uint16_t>::FromExternal(&device_info_.tx_tail_length))
+      .set_tx_accel(fidl::ObjectView<decltype(tx_accel)>::FromExternal(&tx_accel))
+      .set_rx_accel(fidl::ObjectView<decltype(rx_accel)>::FromExternal(&rx_accel));
 
-    std::array<netdev::wire::FrameType, netdev::wire::kMaxFrameTypes> rx;
-    std::array<netdev::wire::FrameTypeSupport, netdev::wire::kMaxFrameTypes> tx;
-    for (size_t i = 0; i < port_info.rx_types_count; i++) {
-      rx[i] = static_cast<netdev::wire::FrameType>(port_info.rx_types_list[i]);
-    }
-    for (size_t i = 0; i < port_info.tx_types_count; i++) {
-      auto& dst = tx[i];
-      auto& src = port_info.tx_types_list[i];
-      dst.features = src.features;
-      dst.supported_flags = netdev::wire::TxFlags::TruncatingUnknown(src.supported_flags);
-      dst.type = static_cast<netdev::wire::FrameType>(src.type);
-    }
-
-    info.rx_types = fidl::VectorView<netdev::wire::FrameType>::FromExternal(
-        rx.data(), port_info.rx_types_count);
-    info.tx_types = fidl::VectorView<netdev::wire::FrameTypeSupport>::FromExternal(
-        tx.data(), port_info.tx_types_count);
-
-    std::array<netdev::wire::RxAcceleration, netdev::wire::kMaxAccelFlags> rx_accel;
-    std::array<netdev::wire::TxAcceleration, netdev::wire::kMaxAccelFlags> tx_accel;
-    for (size_t i = 0; i < device_info_.rx_accel_count; i++) {
-      rx_accel[i] = static_cast<netdev::wire::RxAcceleration>(device_info_.rx_accel_list[i]);
-    }
-    for (size_t i = 0; i < device_info_.tx_accel_count; i++) {
-      tx_accel[i] = static_cast<netdev::wire::TxAcceleration>(device_info_.tx_accel_list[i]);
-    }
-    info.rx_accel = fidl::VectorView<netdev::wire::RxAcceleration>::FromExternal(
-        rx_accel.data(), device_info_.rx_accel_count);
-    info.tx_accel = fidl::VectorView<netdev::wire::TxAcceleration>::FromExternal(
-        tx_accel.data(), device_info_.tx_accel_count);
-
-    completer.Reply(std::move(info));
-  });
-}
-
-void DeviceInterface::GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) {
-  SharedAutoLock lock(&control_lock_);
-  // TODO(http://fxbug.dev/64310): Transitionally only fulfill request if port 0 exists.
-  WithPort(kPort0, [&completer](const std::unique_ptr<DevicePort>& port0) {
-    if (!port0) {
-      completer.Close(ZX_ERR_INTERNAL);
-      return;
-    }
-    port_status_t status;
-    port0->impl().GetStatus(&status);
-    WithWireStatus([&completer](netdev::wire::Status wire_status) { completer.Reply(wire_status); },
-                   status);
-  });
+  completer.Reply(std::move(device_info));
 }
 
 void DeviceInterface::OpenSession(OpenSessionRequestView request,
@@ -395,44 +358,12 @@ void DeviceInterface::OpenSession(OpenSessionRequestView request,
   }
 }
 
-void DeviceInterface::GetStatusWatcher(GetStatusWatcherRequestView request,
-                                       GetStatusWatcherCompleter::Sync& _completer) {
-  SharedAutoLock lock(&control_lock_);
-  // TODO(http://fxbug.dev/64310): Remove port0 requirement once FIDL is migrated to multi-port
-  // version.
-  WithPort(kPort0, [watcher = std::move(request->watcher),
-                    buffer = request->buffer](const std::unique_ptr<DevicePort>& port0) mutable {
-    if (!port0) {
-      watcher.Close(ZX_ERR_NOT_FOUND);
-      return;
-    }
-    port0->BindStatusWatcher(std::move(watcher), buffer);
-  });
-}
-
 zx::status<netdev::wire::DeviceOpenSessionResponse> DeviceInterface::OpenSession(
     fidl::StringView name, netdev::wire::SessionInfo session_info) {
   fbl::AutoLock lock(&control_lock_);
   // We're currently tearing down and can't open any new sessions.
   if (teardown_state_ != TeardownState::RUNNING) {
     return zx::error(ZX_ERR_UNAVAILABLE);
-  }
-
-  // TODO(http://fxbug.dev/64310): We need to validate the request against port0 to fulfill the FIDL
-  // API. Remove this once the session API changes to be aware of ports.
-  zx_status_t status = WithPort(kPort0, [&session_info](const std::unique_ptr<DevicePort>& port0) {
-    if (!port0) {
-      return ZX_ERR_UNAVAILABLE;
-    }
-    for (auto frame_type : session_info.rx_frames) {
-      if (!port0->IsValidRxFrameType(static_cast<uint8_t>(frame_type))) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-    }
-    return ZX_OK;
-  });
-  if (status != ZX_OK) {
-    return zx::error(status);
   }
 
   zx::status endpoints = fidl::CreateEndpoints<netdev::Session>();
@@ -447,9 +378,12 @@ zx::status<netdev::wire::DeviceOpenSessionResponse> DeviceInterface::OpenSession
   }
   auto& [session, fifos] = session_creation.value();
 
+  if (!session_info.has_data()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
   // NB: It's safe to register the VMO after session creation (and thread start) because sessions
   // always start in a paused state, so the tx path can't be running while we hold the control lock.
-  zx::status vmo_registration = RegisterDataVmo(std::move(session_info.data));
+  zx::status vmo_registration = RegisterDataVmo(std::move(session_info.data()));
   if (vmo_registration.is_error()) {
     return vmo_registration.take_error();
   }
@@ -471,6 +405,56 @@ zx::status<netdev::wire::DeviceOpenSessionResponse> DeviceInterface::OpenSession
       .session = std::move(endpoints->client),
       .fifos = std::move(fifos),
   });
+}
+
+void DeviceInterface::GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) {
+  SharedAutoLock lock(&control_lock_);
+  WithPort(request->id,
+           [req = std::move(request->port)](const std::unique_ptr<DevicePort>& port) mutable {
+             if (port) {
+               port->Bind(std::move(req));
+             } else {
+               req.Close(ZX_ERR_NOT_FOUND);
+             }
+           });
+}
+
+void DeviceInterface::GetPortWatcher(GetPortWatcherRequestView request,
+                                     GetPortWatcherCompleter::Sync& _completer) {
+  fbl::AutoLock lock(&control_lock_);
+  if (teardown_state_ != TeardownState::RUNNING) {
+    // Don't install new watchers after teardown has started.
+    return;
+  }
+
+  fbl::AllocChecker ac;
+  auto watcher = fbl::make_unique_checked<PortWatcher>(&ac);
+  if (!ac.check()) {
+    request->watcher.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
+
+  std::array<uint8_t, MAX_PORTS> port_ids;
+  size_t port_id_count = 0;
+
+  for (const std::unique_ptr<DevicePort>& port : ports_) {
+    if (port) {
+      port_ids[port_id_count++] = port->id();
+    }
+  }
+
+  zx_status_t status = watcher->Bind(dispatcher_, fbl::Span(port_ids.begin(), port_id_count),
+                                     std::move(request->watcher), [this](PortWatcher& watcher) {
+                                       fbl::AutoLock lock(&control_lock_);
+                                       port_watchers_.erase(watcher);
+                                       ContinueTeardown(TeardownState::PORT_WATCHERS);
+                                     });
+
+  if (status != ZX_OK) {
+    LOGF_ERROR("network-device: Failed to bind port watcher: %s", zx_status_get_string(status));
+    return;
+  }
+  port_watchers_.push_back(std::move(watcher));
 }
 
 uint16_t DeviceInterface::rx_fifo_depth() const {
@@ -703,14 +687,27 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           for (auto& b : bindings_) {
             b.Unbind();
           }
-          return nullptr;
         }
-        // Let fallthrough, no bindings to destroy.
         __FALLTHROUGH;
       }
       case TeardownState::BINDINGS: {
-        // Pre-condition to enter ports state: bindings must be empty.
+        // Pre-condition to enter port watchers state: bindings must be empty.
         if (!bindings_.is_empty()) {
+          return nullptr;
+        }
+        teardown_state_ = TeardownState::PORT_WATCHERS;
+        LOGF_TRACE("network-device: Teardown state is PORT_WATCHERS (%ld watchers to destroy)",
+                   port_watchers_.size_slow());
+        if (!port_watchers_.is_empty()) {
+          for (auto& w : port_watchers_) {
+            w.Unbind();
+          }
+        }
+        __FALLTHROUGH;
+      }
+      case TeardownState::PORT_WATCHERS: {
+        // Pre-condition to enter ports state: port watchers must be empty.
+        if (!port_watchers_.is_empty()) {
           return nullptr;
         }
         teardown_state_ = TeardownState::PORTS;
@@ -722,10 +719,6 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           }
         }
         LOGF_TRACE("network-device: Teardown state is PORTS (%ld ports to destroy)", port_count);
-        if (port_count != 0) {
-          return nullptr;
-        }
-        // Let it fallthrough, no ports to destroy.
         __FALLTHROUGH;
       }
       case TeardownState::PORTS: {
@@ -788,17 +781,18 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
   return false;
 }
 
-zx::status<AttachedPort> DeviceInterface::AcquirePort(uint8_t port_id,
-                                                      fbl::Span<const uint8_t> rx_frame_types) {
+zx::status<AttachedPort> DeviceInterface::AcquirePort(
+    uint8_t port_id, fbl::Span<const netdev::wire::FrameType> rx_frame_types) {
   return WithPort(
       port_id,
       [this, &rx_frame_types](const std::unique_ptr<DevicePort>& port) -> zx::status<AttachedPort> {
         if (!port) {
           return zx::error(ZX_ERR_NOT_FOUND);
         }
-        if (std::any_of(rx_frame_types.begin(), rx_frame_types.end(), [&port](uint8_t frame_type) {
-              return !port->IsValidRxFrameType(frame_type);
-            })) {
+        if (std::any_of(rx_frame_types.begin(), rx_frame_types.end(),
+                        [&port](netdev::wire::FrameType frame_type) {
+                          return !port->IsValidRxFrameType(frame_type);
+                        })) {
           return zx::error(ZX_ERR_INVALID_ARGS);
         }
         return zx::ok(AttachedPort(this, port.get(), rx_frame_types));
@@ -1023,11 +1017,13 @@ void DeviceInterface::ListenSessionData(const Session& owner,
   for (const uint16_t& descriptor : descriptors) {
     if (primary_session_ && primary_session_.get() != &owner && primary_session_->IsListen()) {
       primary_session_->AssertParentRxLock(*this);
+      primary_session_->AssertParentControlLockShared(*this);
       copied |= primary_session_->ListenFromTx(owner, descriptor);
     }
     for (auto& s : sessions_) {
       if (&s != &owner && s.IsListen()) {
         s.AssertParentRxLock(*this);
+        s.AssertParentControlLockShared(*this);
         copied |= s.ListenFromTx(owner, descriptor);
       }
     }

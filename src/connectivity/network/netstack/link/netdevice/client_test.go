@@ -675,7 +675,7 @@ func TestPairExchangePackets(t *testing.T) {
 	rDispatcher := make(dispatcherChan, 1)
 	lClient.Attach(&lDispatcher)
 	rClient.Attach(&rDispatcher)
-	packetCount := lClient.info.RxDepth * 4
+	packetCount := lClient.deviceInfo.RxDepth * 4
 
 	if err := lClient.Up(); err != nil {
 		t.Fatalf("failed to start left client: %s", err)
@@ -693,7 +693,7 @@ func TestPairExchangePackets(t *testing.T) {
 			t.Errorf("watcher.Close() failed: %s", err)
 		}
 	})
-	if err := lClient.device.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
+	if err := lClient.port.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
 		t.Fatalf("failed to get status watcher: %s", err)
 	}
 

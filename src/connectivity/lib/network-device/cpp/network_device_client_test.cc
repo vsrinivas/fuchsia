@@ -43,6 +43,7 @@ class TestEventHandler : public fidl::WireAsyncEventHandler<T> {
 
 class NetDeviceTest : public gtest::RealLoopFixture {
  public:
+  static constexpr uint8_t kPortId = 0;
   NetDeviceTest() : gtest::RealLoopFixture() {}
 
   bool RunLoopUntilOrFailure(fit::function<bool()> f) {
@@ -176,6 +177,17 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return opt.value();
   }
 
+  zx_status_t AttachPort(NetworkDeviceClient& client, uint8_t port = kPortId,
+                         std::vector<netdev::wire::FrameType> frame_types = {
+                             netdev::wire::FrameType::kEthernet}) {
+    std::optional<zx_status_t> opt;
+    client.AttachPort(port, frame_types, [&opt](zx_status_t status) { opt = status; });
+    if (!RunLoopUntilOrFailure([&opt] { return opt.has_value(); })) {
+      return ZX_ERR_TIMED_OUT;
+    }
+    return ZX_OK;
+  }
+
  protected:
   fidl::FidlAllocator<> alloc_;
 };
@@ -188,7 +200,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
   tun_device->ConnectProtocols(CreateClientRequest(&client));
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(client->SetPaused(false));
+  ASSERT_OK(AttachPort(*client));
   ASSERT_TRUE(WaitTapOnline(tun_device));
   ASSERT_TRUE(client->HasSession());
 
@@ -256,7 +268,7 @@ TEST_F(NetDeviceTest, TestEcho) {
   tun_device->ConnectProtocols(CreateClientRequest(&client));
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(client->SetPaused(false));
+  ASSERT_OK(AttachPort(*client));
   ASSERT_TRUE(WaitTapOnline(tun_device));
   ASSERT_TRUE(client->HasSession());
 
@@ -362,8 +374,8 @@ TEST_F(NetDeviceTest, TestEchoPair) {
 
   ASSERT_OK(StartSession(*left));
   ASSERT_OK(StartSession(*right));
-  ASSERT_OK(left->SetPaused(false));
-  ASSERT_OK(right->SetPaused(false));
+  ASSERT_OK(AttachPort(*left));
+  ASSERT_OK(AttachPort(*right));
 
   left->SetRxCallback([&left](NetworkDeviceClient::Buffer buffer) {
     auto tx = left->AllocTx();
@@ -396,8 +408,8 @@ TEST_F(NetDeviceTest, TestEchoPair) {
   {
     fit::bridge online_bridge;
     auto status_handle =
-        right->WatchStatus([completer = std::move(online_bridge.completer)](
-                               fuchsia_hardware_network::wire::Status status) mutable {
+        right->WatchStatus(kPortId, [completer = std::move(online_bridge.completer)](
+                                        fuchsia_hardware_network::wire::PortStatus status) mutable {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             completer.complete_ok();
           }
@@ -424,19 +436,20 @@ TEST_F(NetDeviceTest, StatusWatcher) {
   uint32_t call_count2 = 0;
   bool expect_online = true;
 
-  auto watcher1 = client->WatchStatus([&call_count1, &expect_online](
-                                          fuchsia_hardware_network::wire::Status status) {
-    call_count1++;
-    ASSERT_EQ(
-        static_cast<bool>(status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline),
-        expect_online)
-        << "Unexpected status flags " << static_cast<uint32_t>(status.flags())
-        << ", online should be " << expect_online;
-  });
+  auto watcher1 = client->WatchStatus(
+      kPortId, [&call_count1, &expect_online](fuchsia_hardware_network::wire::PortStatus status) {
+        call_count1++;
+        ASSERT_EQ(static_cast<bool>(status.flags() &
+                                    fuchsia_hardware_network::wire::StatusFlags::kOnline),
+                  expect_online)
+            << "Unexpected status flags " << static_cast<uint32_t>(status.flags())
+            << ", online should be " << expect_online;
+      });
 
   {
     auto watcher2 = client->WatchStatus(
-        [&call_count2](fuchsia_hardware_network::wire::Status status) { call_count2++; });
+        kPortId,
+        [&call_count2](fuchsia_hardware_network::wire::PortStatus status) { call_count2++; });
 
     // Run loop with both watchers attached.
     ASSERT_TRUE(RunLoopUntilOrFailure([&call_count1, &call_count2]() {
@@ -472,7 +485,7 @@ TEST_F(NetDeviceTest, ErrorCallback) {
   tun_device->ConnectProtocols(CreateClientRequest(&client));
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(client->SetPaused(false));
+  ASSERT_OK(AttachPort(*client));
   ASSERT_TRUE(WaitTapOnline(tun_device));
   ASSERT_TRUE(client->HasSession());
 
@@ -509,7 +522,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   tun_device->ConnectProtocols(CreateClientRequest(&client));
 
   ASSERT_OK(StartSession(*client));
-  ASSERT_OK(client->SetPaused(false));
+  ASSERT_OK(AttachPort(*client));
   ASSERT_TRUE(WaitTapOnline(tun_device));
   ASSERT_TRUE(client->HasSession());
 

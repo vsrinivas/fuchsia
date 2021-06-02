@@ -13,7 +13,7 @@ import "fidl/fuchsia/hardware/network"
 type SessionConfigFactory interface {
 	// Creates a SessionConfig for a given network device based on the provided
 	// deviceInfo.
-	MakeSessionConfig(deviceInfo *network.Info) (SessionConfig, error)
+	MakeSessionConfig(deviceInfo *network.DeviceInfo) (SessionConfig, error)
 }
 
 // Configuration used to open a session with a network device.
@@ -45,14 +45,10 @@ type SimpleSessionConfigFactory struct {
 }
 
 // MakeSessionConfig implements SessionConfigFactory.
-func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo *network.Info) (SessionConfig, error) {
+func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo *network.DeviceInfo) (SessionConfig, error) {
 	bufferLength := DefaultBufferLength
 	if deviceInfo.MaxBufferLength < bufferLength {
 		bufferLength = deviceInfo.MaxBufferLength
-	}
-	frameTypes := c.FrameTypes
-	if len(frameTypes) == 0 {
-		frameTypes = deviceInfo.RxTypes
 	}
 
 	config := SessionConfig{
@@ -62,7 +58,7 @@ func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo *network.Info)
 		RxDescriptorCount: deviceInfo.RxDepth,
 		TxDescriptorCount: deviceInfo.TxDepth,
 		Options:           network.SessionFlagsPrimary,
-		RxFrames:          frameTypes,
+		RxFrames:          c.FrameTypes,
 	}
 	align := deviceInfo.BufferAlignment
 	if config.BufferStride%align != 0 {

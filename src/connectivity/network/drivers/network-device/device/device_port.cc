@@ -18,15 +18,28 @@ DevicePort::DevicePort(async_dispatcher_t* dispatcher, uint8_t id,
       port_(port),
       mac_(std::move(mac)),
       on_teardown_(std::move(on_teardown)) {
-  port.GetInfo(&info_);
-  ZX_ASSERT(info_.rx_types_count <= netdev::wire::kMaxFrameTypes);
-  ZX_ASSERT(info_.tx_types_count <= netdev::wire::kMaxFrameTypes);
+  port_info_t info;
+  port.GetInfo(&info);
+  ZX_ASSERT_MSG(info.rx_types_count <= netdev::wire::kMaxFrameTypes,
+                "too many port rx types: %ld > %d", info.rx_types_count,
+                netdev::wire::kMaxFrameTypes);
+  ZX_ASSERT_MSG(info.tx_types_count <= netdev::wire::kMaxFrameTypes,
+                "too many port tx types: %ld > %d", info.tx_types_count,
+                netdev::wire::kMaxFrameTypes);
 
-  // Copy frame type support from port info since lists in banjo are always unowned.
-  std::copy_n(info_.rx_types_list, info_.rx_types_count, supported_rx_.begin());
-  info_.rx_types_list = supported_rx_.data();
-  std::copy_n(info_.tx_types_list, info_.tx_types_count, supported_tx_.begin());
-  info_.tx_types_list = supported_tx_.data();
+  port_class_ = static_cast<netdev::wire::DeviceClass>(info.port_class);
+
+  supported_rx_count_ = 0;
+  for (const uint8_t& rx_support : fbl::Span(info.rx_types_list, info.rx_types_count)) {
+    supported_rx_[supported_rx_count_++] = static_cast<netdev::wire::FrameType>(rx_support);
+  }
+  supported_tx_count_ = 0;
+  for (const tx_support_t& tx_support : fbl::Span(info.tx_types_list, info.tx_types_count)) {
+    supported_tx_[supported_tx_count_++] = {
+        .type = static_cast<netdev::wire::FrameType>(tx_support.type),
+        .features = tx_support.features,
+        .supported_flags = static_cast<netdev::wire::TxFlags>(tx_support.supported_flags)};
+  }
 }
 
 void DevicePort::StatusChanged(const port_status_t& new_status) {
@@ -36,8 +49,8 @@ void DevicePort::StatusChanged(const port_status_t& new_status) {
   }
 }
 
-void DevicePort::BindStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watcher,
-                                   uint32_t buffer) {
+void DevicePort::GetStatusWatcher(GetStatusWatcherRequestView request,
+                                  GetStatusWatcherCompleter::Sync& _completer) {
   fbl::AutoLock lock(&lock_);
   if (teardown_started_) {
     // Don't install new watchers after teardown has started.
@@ -45,13 +58,13 @@ void DevicePort::BindStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watche
   }
 
   fbl::AllocChecker ac;
-  auto n_watcher = fbl::make_unique_checked<StatusWatcher>(&ac, buffer);
+  auto n_watcher = fbl::make_unique_checked<StatusWatcher>(&ac, request->buffer);
   if (!ac.check()) {
     return;
   }
 
   zx_status_t status =
-      n_watcher->Bind(dispatcher_, std::move(watcher), [this](StatusWatcher* watcher) {
+      n_watcher->Bind(dispatcher_, std::move(request->watcher), [this](StatusWatcher* watcher) {
         fbl::AutoLock lock(&lock_);
         watchers_.erase(*watcher);
         MaybeFinishTeardown();
@@ -69,7 +82,8 @@ void DevicePort::BindStatusWatcher(fidl::ServerEnd<netdev::StatusWatcher> watche
 }
 
 bool DevicePort::MaybeFinishTeardown() {
-  if (teardown_started_ && on_teardown_ && watchers_.is_empty() && !mac_ && on_teardown_) {
+  if (teardown_started_ && on_teardown_ && watchers_.is_empty() && !mac_ && on_teardown_ &&
+      bindings_.is_empty()) {
     // Always finish teardown on dispatcher to evade deadlock opportunity on DeviceInterface ports
     // lock.
     async::PostTask(dispatcher_, [this, call = std::move(on_teardown_)]() mutable { call(*this); });
@@ -91,6 +105,9 @@ void DevicePort::Teardown() {
   for (auto& watcher : watchers_) {
     watcher.Unbind();
   }
+  for (auto& binding : bindings_) {
+    binding.Unbind();
+  }
   if (mac_) {
     mac_->Teardown([this]() {
       // Always dispatch mac teardown callback to our dispatcher.
@@ -104,7 +121,9 @@ void DevicePort::Teardown() {
   }
 }
 
-void DevicePort::BindMac(fidl::ServerEnd<netdev::MacAddressing> req) {
+void DevicePort::GetMac(GetMacRequestView request, GetMacCompleter::Sync& _completer) {
+  fidl::ServerEnd req = std::move(request->mac);
+
   fbl::AutoLock lock(&lock_);
   if (teardown_started_) {
     return;
@@ -147,16 +166,68 @@ void DevicePort::NotifySessionCount(size_t new_count) {
   }
 }
 
-bool DevicePort::IsValidRxFrameType(uint8_t frame_type) const {
-  fbl::Span rx_types(info_.rx_types_list, info_.rx_types_count);
+bool DevicePort::IsValidRxFrameType(netdev::wire::FrameType frame_type) const {
+  fbl::Span rx_types(supported_rx_.begin(), supported_rx_count_);
   return std::any_of(rx_types.begin(), rx_types.end(),
-                     [frame_type](const uint8_t& t) { return t == frame_type; });
+                     [frame_type](const netdev::wire::FrameType& t) { return t == frame_type; });
 }
 
-bool DevicePort::IsValidTxFrameType(uint8_t frame_type) const {
-  fbl::Span tx_types(info_.tx_types_list, info_.tx_types_count);
-  return std::any_of(tx_types.begin(), tx_types.end(),
-                     [frame_type](const tx_support_t& t) { return t.type == frame_type; });
+bool DevicePort::IsValidTxFrameType(netdev::wire::FrameType frame_type) const {
+  fbl::Span tx_types(supported_tx_.begin(), supported_tx_count_);
+  return std::any_of(
+      tx_types.begin(), tx_types.end(),
+      [frame_type](const netdev::wire::FrameTypeSupport& t) { return t.type == frame_type; });
+}
+
+void DevicePort::Bind(fidl::ServerEnd<netdev::Port> req) {
+  fbl::AllocChecker ac;
+  std::unique_ptr<Binding> binding(new (&ac) Binding);
+  if (!ac.check()) {
+    req.Close(ZX_ERR_NO_MEMORY);
+    return;
+  }
+
+  fbl::AutoLock lock(&lock_);
+  // Capture a pointer to the binding so we can erase it in the unbound function.
+  Binding* binding_ptr = binding.get();
+  binding->Bind(fidl::BindServer(dispatcher_, std::move(req), this,
+                                 [binding_ptr](DevicePort* port, fidl::UnbindInfo /*unused*/,
+                                               fidl::ServerEnd<netdev::Port> /*unused*/) {
+                                   // Always complete unbind later to avoid deadlock in case bind
+                                   // fails synchronously.
+                                   async::PostTask(port->dispatcher_, [port, binding_ptr]() {
+                                     fbl::AutoLock lock(&port->lock_);
+                                     port->bindings_.erase(*binding_ptr);
+                                     port->MaybeFinishTeardown();
+                                   });
+                                 }));
+
+  bindings_.push_front(std::move(binding));
+}
+
+void DevicePort::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  netdev::wire::PortInfo::Frame_ frame;
+  netdev::wire::PortInfo port_info(
+      fidl::ObjectView<netdev::wire::PortInfo::Frame_>::FromExternal(&frame));
+  // NB: Need to copy port identifier out because ObjectView wants a non const pointer.
+  uint8_t port_id = port_id_;
+  auto tx_support = fidl::VectorView<netdev::wire::FrameTypeSupport>::FromExternal(
+      supported_tx_.data(), supported_tx_count_);
+  auto rx_support = fidl::VectorView<netdev::wire::FrameType>::FromExternal(supported_rx_.data(),
+                                                                            supported_rx_count_);
+  port_info.set_id(fidl::ObjectView<uint8_t>::FromExternal(&port_id))
+      .set_class_(fidl::ObjectView<netdev::wire::DeviceClass>::FromExternal(&port_class_))
+      .set_tx_types(fidl::ObjectView<decltype(tx_support)>::FromExternal(&tx_support))
+      .set_rx_types(fidl::ObjectView<decltype(rx_support)>::FromExternal(&rx_support));
+
+  completer.Reply(std::move(port_info));
+}
+
+void DevicePort::GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) {
+  port_status_t status;
+  port_.GetStatus(&status);
+  WithWireStatus(
+      [&completer](netdev::wire::PortStatus wire_status) { completer.Reply(wire_status); }, status);
 }
 
 }  // namespace network::internal

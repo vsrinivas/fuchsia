@@ -36,8 +36,6 @@ class NetworkDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_N
   void DdkRelease();
 
   void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
-  void GetMacAddressing(GetMacAddressingRequestView request,
-                        GetMacAddressingCompleter::Sync& _completer) override;
 
  private:
   std::optional<thrd_t> loop_thread_;

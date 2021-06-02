@@ -80,7 +80,7 @@ void StatusWatcher::WatchStatus(WatchStatusRequestView request,
         // an async transaction.
         WithWireStatus(
             [completer = std::move(std::exchange(pending_txn_, completer.ToAsync()).value())](
-                netdev::wire::Status wire_status) mutable { completer.Reply(wire_status); },
+                netdev::wire::PortStatus wire_status) mutable { completer.Reply(wire_status); },
             last_observed_.value());
       } else {
         // If we already have a pending transaction that hasn't been resolved and we don't have a
@@ -95,8 +95,9 @@ void StatusWatcher::WatchStatus(WatchStatusRequestView request,
   } else {
     const port_status_t status = queue_.front();
     queue_.pop();
-    WithWireStatus([&completer](netdev::wire::Status wire_status) { completer.Reply(wire_status); },
-                   status);
+    WithWireStatus(
+        [&completer](netdev::wire::PortStatus wire_status) { completer.Reply(wire_status); },
+        status);
     last_observed_ = status;
   }
 }
@@ -115,9 +116,10 @@ void StatusWatcher::PushStatus(const port_status_t& status) {
   }
 
   if (pending_txn_.has_value() && queue_.empty()) {
-    WithWireStatus([completer = std::move(std::exchange(pending_txn_, std::nullopt).value())](
-                       netdev::wire::Status wire_status) mutable { completer.Reply(wire_status); },
-                   status);
+    WithWireStatus(
+        [completer = std::move(std::exchange(pending_txn_, std::nullopt).value())](
+            netdev::wire::PortStatus wire_status) mutable { completer.Reply(wire_status); },
+        status);
     last_observed_ = status;
   } else {
     queue_.push(status);

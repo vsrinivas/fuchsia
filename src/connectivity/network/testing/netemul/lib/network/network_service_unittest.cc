@@ -20,6 +20,8 @@
 namespace {
 // Set kTestTimeout to a value different than infinity to test timeouts locally.
 constexpr zx::duration kTestTimeout = zx::duration::infinite();
+constexpr fuchsia_hardware_network::wire::FrameType kEndpointFrameType =
+    static_cast<fuchsia_hardware_network::wire::FrameType>(netemul::Endpoint::kFrameType);
 }  // namespace
 
 #define TEST_BUF_SIZE (512ul)
@@ -1099,13 +1101,17 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
-  ASSERT_OK(netdev_cli.SetPaused(false));
+  netdev_cli.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+    ASSERT_OK(status);
+    ok = true;
+  });
+  WAIT_FOR_OK_AND_RESET(ok);
 
   // Wait for both to come online.
   {
     bool netdev_online = false;
-    auto watcher =
-        netdev_cli.WatchStatus([&netdev_online](fuchsia_hardware_network::wire::Status status) {
+    auto watcher = netdev_cli.WatchStatus(
+        Endpoint::kPortId, [&netdev_online](fuchsia_hardware_network::wire::PortStatus status) {
           if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
             netdev_online = true;
           }
@@ -1220,23 +1226,33 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
     ok = true;
   });
   WAIT_FOR_OK_AND_RESET(ok);
-  ASSERT_OK(cli1.SetPaused(false));
-  ASSERT_OK(cli2.SetPaused(false));
+  cli1.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+    ASSERT_OK(status);
+    ok = true;
+  });
+  WAIT_FOR_OK_AND_RESET(ok);
+  cli2.AttachPort(Endpoint::kPortId, {kEndpointFrameType}, [&ok](zx_status_t status) {
+    ASSERT_OK(status);
+    ok = true;
+  });
+  WAIT_FOR_OK_AND_RESET(ok);
 
   // Wait for both to come online.
   {
     bool online1 = false;
     bool online2 = false;
-    auto watcher1 = cli1.WatchStatus([&online1](fuchsia_hardware_network::wire::Status status) {
-      if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
-        online1 = true;
-      }
-    });
-    auto watcher2 = cli2.WatchStatus([&online2](fuchsia_hardware_network::wire::Status status) {
-      if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
-        online2 = true;
-      }
-    });
+    auto watcher1 = cli1.WatchStatus(
+        Endpoint::kPortId, [&online1](fuchsia_hardware_network::wire::PortStatus status) {
+          if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
+            online1 = true;
+          }
+        });
+    auto watcher2 = cli2.WatchStatus(
+        Endpoint::kPortId, [&online2](fuchsia_hardware_network::wire::PortStatus status) {
+          if (status.flags() & fuchsia_hardware_network::wire::StatusFlags::kOnline) {
+            online2 = true;
+          }
+        });
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&online1, &online2]() { return online1 && online2; },
                                           kTestTimeout));
   }

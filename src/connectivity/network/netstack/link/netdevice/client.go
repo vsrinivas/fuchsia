@@ -38,6 +38,10 @@ const descriptorLength uint64 = C.sizeof_buffer_descriptor_t
 const tag = "netdevice"
 const emptyLinkAddress tcpip.LinkAddress = ""
 
+// TODO(https://fxbug.dev/64310): Remove port 0 assumptions once netstack FIDL
+// supports ports.
+const port0 = 0
+
 type bufferDescriptor = C.buffer_descriptor_t
 
 var _ link.Controller = (*Client)(nil)
@@ -50,7 +54,7 @@ var _ stack.GSOEndpoint = (*Client)(nil)
 type InfoProvider interface {
 	RxStats() *fifo.RxStats
 	TxStats() *fifo.TxStats
-	Info() network.Info
+	Class() network.DeviceClass
 }
 
 var _ InfoProvider = (*Client)(nil)
@@ -63,11 +67,13 @@ type Client struct {
 	// and Wait.
 	dispatcherWg sync.WaitGroup
 
-	device  *network.DeviceWithCtxInterface
-	session *network.SessionWithCtxInterface
-	info    network.Info
-	config  SessionConfig
-	watcher *network.StatusWatcherWithCtxInterface
+	device     *network.DeviceWithCtxInterface
+	port       *network.PortWithCtxInterface
+	session    *network.SessionWithCtxInterface
+	deviceInfo network.DeviceInfo
+	portInfo   network.PortInfo
+	config     SessionConfig
+	watcher    *network.StatusWatcherWithCtxInterface
 
 	data        fifo.MappedVMO
 	descriptors fifo.MappedVMO
@@ -143,7 +149,7 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 			}
 		}
 		// Pad tx frame to device requirements.
-		for ; n < int(c.info.MinTxBufferLength); n++ {
+		for ; n < int(c.deviceInfo.MinTxBufferLength); n++ {
 			data[n] = 0
 		}
 
@@ -302,11 +308,39 @@ func (*Client) SupportedGSO() stack.SupportedGSO {
 }
 
 func (c *Client) Up() error {
-	return c.session.SetPaused(context.Background(), false)
+	result, err := c.session.Attach(context.Background(), port0, c.config.RxFrames)
+	if err != nil {
+		return err
+	}
+	switch w := result.Which(); w {
+	case network.SessionAttachResultResponse:
+		return nil
+	case network.SessionAttachResultErr:
+		return &zx.Error{
+			Status: zx.Status(result.Err),
+			Text:   "failed to attach session",
+		}
+	default:
+		panic(fmt.Sprintf("unexpected session.Attach variant %d", w))
+	}
 }
 
 func (c *Client) Down() error {
-	return c.session.SetPaused(context.Background(), true)
+	result, err := c.session.Detach(context.Background(), port0)
+	if err != nil {
+		return err
+	}
+	switch w := result.Which(); w {
+	case network.SessionDetachResultResponse:
+		return nil
+	case network.SessionDetachResultErr:
+		return &zx.Error{
+			Status: zx.Status(result.Err),
+			Text:   "failed to detach session",
+		}
+	default:
+		panic(fmt.Sprintf("unexpected session.Detach variant %d", w))
+	}
 }
 
 func (c *Client) SetOnLinkClosed(f func()) {
@@ -326,7 +360,7 @@ func (c *Client) SetPromiscuousMode(bool) error {
 }
 
 func (c *Client) DeviceClass() network.DeviceClass {
-	return c.info.Class
+	return c.portInfo.Class
 }
 
 // Closes the client and disposes of all its resources.
@@ -385,9 +419,62 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 	if err != nil {
 		return nil, fmt.Errorf("failed to get device information: %w", err)
 	}
+	if !(deviceInfo.HasMinDescriptorLength() &&
+		deviceInfo.HasDescriptorVersion() &&
+		deviceInfo.HasRxDepth() &&
+		deviceInfo.HasTxDepth() &&
+		deviceInfo.HasBufferAlignment() &&
+		deviceInfo.HasMaxBufferLength() &&
+		deviceInfo.HasMinRxBufferLength() &&
+		deviceInfo.HasMinTxBufferLength() &&
+		deviceInfo.HasMinTxBufferHead() &&
+		deviceInfo.HasMinTxBufferTail() &&
+		deviceInfo.HasMaxBufferParts()) {
+		return nil, fmt.Errorf("incomplete DeviceInfo: %#v", deviceInfo)
+	}
+
 	config, err := sessionConfigFactory.MakeSessionConfig(&deviceInfo)
 	if err != nil {
 		return nil, fmt.Errorf("session configuration factory failed: %w", err)
+	}
+
+	portRequest, port, err := network.NewPortWithCtxInterfaceRequest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create port request: %w", err)
+	}
+	if err := dev.GetPort(ctx, port0, portRequest); err != nil {
+		return nil, fmt.Errorf("failed to get port %d: %w", port0, err)
+	}
+
+	portInfo, err := port.GetInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get port info: %w", err)
+	}
+	if !(portInfo.HasId() && portInfo.HasClass() && portInfo.HasRxTypes() && portInfo.HasTxTypes()) {
+		return nil, fmt.Errorf("incomplete PortInfo: %#v", portInfo)
+	}
+
+	if len(config.RxFrames) == 0 {
+		config.RxFrames = portInfo.RxTypes
+	} else {
+		// Verify that requested frame types are valid.
+		isValidRxFrame := func(frameType network.FrameType) bool {
+			for _, f := range portInfo.RxTypes {
+				if f == frameType {
+					return true
+				}
+			}
+			return false
+		}
+		for _, requested := range config.RxFrames {
+			if !isValidRxFrame(requested) {
+				// NB: Rx types is formatted with %v below so it's printed as a slice of
+				// frame types correctly. %s compiles correctly but is interpreted as
+				// []uint8, which is itself printed as a string backed by that slice
+				// when using %s.
+				return nil, fmt.Errorf("requested unsupported frame type: %s. (should be in %v)", requested, portInfo.RxTypes)
+			}
+		}
 	}
 
 	// Descriptor count must be a power of 2.
@@ -406,15 +493,13 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		return nil, fmt.Errorf("failed to create descriptors VMO: %w", err)
 	}
 
-	sessionInfo := network.SessionInfo{
-		Descriptors:       descVmo,
-		Data:              dataVmo,
-		DescriptorVersion: C.NETWORK_DEVICE_DESCRIPTOR_VERSION,
-		DescriptorLength:  uint8(config.DescriptorLength / 8),
-		DescriptorCount:   config.RxDescriptorCount + config.TxDescriptorCount,
-		Options:           config.Options,
-		RxFrames:          config.RxFrames,
-	}
+	var sessionInfo network.SessionInfo
+	sessionInfo.SetDescriptors(descVmo)
+	sessionInfo.SetData(dataVmo)
+	sessionInfo.SetDescriptorVersion(C.NETWORK_DEVICE_DESCRIPTOR_VERSION)
+	sessionInfo.SetDescriptorLength(uint8(config.DescriptorLength / 8))
+	sessionInfo.SetDescriptorCount(config.RxDescriptorCount + config.TxDescriptorCount)
+	sessionInfo.SetOptions(config.Options)
 
 	sessionResult, err := dev.OpenSession(ctx, "netstack", sessionInfo)
 	if err != nil {
@@ -434,7 +519,7 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		_ = mappedDescVmo.Close()
 		return nil, fmt.Errorf("failed to create status watcher request: %w", err)
 	}
-	if err := dev.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
+	if err := port.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
 		_ = mappedDataVmo.Close()
 		_ = mappedDescVmo.Close()
 		_ = watcher.Close()
@@ -443,8 +528,10 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 
 	c := &Client{
 		device:      dev,
+		port:        port,
 		session:     &sessionResult.Response.Session,
-		info:        deviceInfo,
+		deviceInfo:  deviceInfo,
+		portInfo:    portInfo,
 		config:      config,
 		watcher:     watcher,
 		data:        mappedDataVmo,
@@ -464,8 +551,8 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		panic(fmt.Sprintf("Bad handler tx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
 	}
 
-	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(uint32(c.info.TxDepth))
-	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(uint32(c.info.RxDepth))
+	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(uint32(c.deviceInfo.TxDepth))
+	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(uint32(c.deviceInfo.RxDepth))
 
 	descriptorIndex := uint16(0)
 	vmoOffset := uint64(0)
@@ -505,7 +592,7 @@ func (c *Client) TxStats() *fifo.TxStats {
 	return &c.handler.Stats.Tx
 }
 
-// Info implements InfoProvider.
-func (c *Client) Info() network.Info {
-	return c.info
+// Class implements InfoProvider.
+func (c *Client) Class() network.DeviceClass {
+	return c.portInfo.Class
 }

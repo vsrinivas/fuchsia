@@ -141,7 +141,8 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
 
   port_info_t& port_info() { return port_info_; }
   const port_status_t& status() const { return status_; }
-  void AddPort(uint8_t port_id, ddk::NetworkDeviceIfcProtocolClient* ifc_client);
+  void AddPort(uint8_t port_id, ddk::NetworkDeviceIfcProtocolClient ifc_client);
+  void RemoveSync();
   void SetMac(mac_addr_protocol_t proto) { mac_proto_ = proto; }
 
   network_port_protocol_t protocol() {
@@ -153,16 +154,21 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
 
   bool active() const { return port_active_; }
   bool removed() const { return port_removed_; }
+  uint8_t id() const { return id_; }
 
   const zx::event& events() const { return event_; }
 
- protected:
-  friend FakeNetworkDeviceImpl;
-  void SetStatus(port_status_t status) { status_ = status; }
+  void SetOnline(bool online);
+  void SetStatus(const port_status_t& status);
 
  private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FakeNetworkPortImpl);
+
   std::array<uint8_t, netdev::wire::kMaxFrameTypes> rx_types_;
   std::array<tx_support_t, netdev::wire::kMaxFrameTypes> tx_types_;
+  ddk::NetworkDeviceIfcProtocolClient device_client_;
+  fit::callback<void()> on_removed_;
+  uint8_t id_;
   mac_addr_protocol_t mac_proto_{};
   port_info_t port_info_{};
   std::atomic_bool port_active_ = false;
@@ -174,8 +180,6 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
 
 class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl> {
  public:
-  // TODO(https://fxbug.dev/64310): Remove hard coded port 0.
-  static constexpr uint8_t kPort0 = 0;
   FakeNetworkDeviceImpl();
   ~FakeNetworkDeviceImpl();
 
@@ -205,8 +209,6 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   const zx::event& events() const { return event_; }
 
   device_info_t& info() { return info_; }
-
-  FakeNetworkPortImpl& port0() { return port0_; }
 
   std::unique_ptr<RxBuffer> PopRxBuffer() __TA_EXCLUDES(lock_) {
     fbl::AutoLock lock(&lock_);
@@ -258,9 +260,6 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   bool TriggerStart();
   bool TriggerStop();
 
-  void SetOnline(bool online);
-  void SetStatus(const port_status_t& status);
-
   network_device_impl_protocol_t proto() {
     return network_device_impl_protocol_t{.ops = &network_device_impl_protocol_ops_, .ctx = this};
   }
@@ -273,8 +272,9 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   fbl::Span<const zx::vmo> vmos() { return fbl::Span(vmos_.begin(), vmos_.end()); }
 
  private:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(FakeNetworkDeviceImpl);
+
   fbl::Mutex lock_;
-  FakeNetworkPortImpl port0_;
   std::array<zx::vmo, MAX_VMOS> vmos_;
   device_info_t info_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;
@@ -300,14 +300,17 @@ class TestSession {
   zx_status_t Open(fidl::WireSyncClient<netdev::Device>& netdevice, const char* name,
                    netdev::wire::SessionFlags flags = netdev::wire::SessionFlags::kPrimary,
                    uint16_t num_descriptors = kDefaultDescriptorCount,
-                   uint64_t buffer_size = kDefaultBufferLength,
-                   fidl::VectorView<netdev::wire::FrameType> frame_types =
-                       fidl::VectorView<netdev::wire::FrameType>());
+                   uint64_t buffer_size = kDefaultBufferLength);
 
   zx_status_t Init(uint16_t descriptor_count, uint64_t buffer_size);
-  zx_status_t GetInfo(netdev::wire::SessionInfo* info);
+  zx::status<netdev::wire::SessionInfo> GetInfo();
   void Setup(fidl::ClientEnd<netdev::Session> session, netdev::wire::Fifos fifos);
-  zx_status_t SetPaused(bool paused);
+  [[nodiscard]] zx_status_t AttachPort(uint8_t port_id,
+                                       std::vector<netdev::wire::FrameType> frame_types);
+  [[nodiscard]] zx_status_t AttachPort(FakeNetworkPortImpl& impl);
+  [[nodiscard]] zx_status_t DetachPort(uint8_t port_id);
+  [[nodiscard]] zx_status_t DetachPort(FakeNetworkPortImpl& impl);
+
   zx_status_t Close();
   zx_status_t WaitClosed(zx::time deadline);
   void ZeroVmo();
@@ -341,7 +344,7 @@ class TestSession {
     return SendTx(&descriptor, 1, &actual);
   }
 
-  fidl::ClientEnd<netdev::Session>& session() { return session_; }
+  fidl::WireSyncClient<netdev::Session>& session() { return session_; }
 
   uint64_t canonical_offset(uint16_t index) const { return buffer_length_ * index; }
 
@@ -349,9 +352,10 @@ class TestSession {
   const zx::channel& channel() const { return session_.channel(); }
 
  private:
+  fidl::FidlAllocator<> alloc_;
   uint16_t descriptors_count_{};
   uint64_t buffer_length_{};
-  fidl::ClientEnd<netdev::Session> session_;
+  fidl::WireSyncClient<netdev::Session> session_;
   zx::vmo data_vmo_;
   fzl::VmoMapper data_;
   zx::vmo descriptors_vmo_;

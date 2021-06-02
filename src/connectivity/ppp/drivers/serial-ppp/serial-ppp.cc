@@ -565,7 +565,7 @@ void SerialPpp::NetworkDeviceImplSetSnoop(bool snoop) {
 
 void SerialPpp::NetworkPortGetInfo(port_info_t* out_info) {
   *out_info = {
-      .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kPpp),
+      .port_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kPpp),
       .rx_types_list = kRxFrameTypes,
       .rx_types_count = sizeof(kRxFrameTypes) / sizeof(uint8_t),
       .tx_types_list = kTxFrameSupport,

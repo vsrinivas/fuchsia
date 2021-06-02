@@ -13,8 +13,8 @@
 #include "definitions.h"
 #include "device_port.h"
 #include "locks.h"
+#include "port_watcher.h"
 #include "public/network_device.h"
-#include "status_watcher.h"
 
 namespace network::internal {
 class RxQueue;
@@ -58,10 +58,6 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
                         public ::network::NetworkDeviceInterface {
  public:
-  // TODO(http://fxbug.dev/64310): Delete this constant once FIDL supports ports and we're not
-  // hard-coding port number 0 as the "default port".
-  static constexpr uint8_t kPort0 = 0;
-
   static zx::status<std::unique_ptr<DeviceInterface>> Create(
       async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent,
       const char* parent_name);
@@ -70,7 +66,6 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // Public NetworkDevice API.
   void Teardown(fit::callback<void()> callback) override;
   zx_status_t Bind(fidl::ServerEnd<netdev::Device> req) override;
-  zx_status_t BindMac(fidl::ServerEnd<netdev::MacAddressing> req) override;
 
   // NetworkDevice interface implementation.
   void NetworkDeviceIfcPortStatusChanged(uint8_t port_id, const port_status_t* new_status);
@@ -151,10 +146,10 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
 
   // FIDL protocol implementation.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
-  void GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) override;
   void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override;
-  void GetStatusWatcher(GetStatusWatcherRequestView request,
-                        GetStatusWatcherCompleter::Sync& completer) override;
+  void GetPort(GetPortRequestView request, GetPortCompleter::Sync& completer) override;
+  void GetPortWatcher(GetPortWatcherRequestView request,
+                      GetPortWatcherCompleter::Sync& completer) override;
 
   // Serves the OpenSession FIDL handle method synchronously.
   zx::status<netdev::wire::DeviceOpenSessionResponse> OpenSession(
@@ -169,7 +164,8 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   //
   // NB: The validity of the returned AttachedPort is not really guaranteed by the type system, but
   // by the fact that DeviceInterface will detach all ports from sessions before continuing.
-  zx::status<AttachedPort> AcquirePort(uint8_t port_id, fbl::Span<const uint8_t> rx_frame_types)
+  zx::status<AttachedPort> AcquirePort(uint8_t port_id,
+                                       fbl::Span<const netdev::wire::FrameType> rx_frame_types)
       __TA_REQUIRES(control_lock_);
 
  private:
@@ -186,7 +182,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   };
   using BindingList = fbl::DoublyLinkedList<std::unique_ptr<Binding>>;
 
-  enum class TeardownState { RUNNING, BINDINGS, PORTS, SESSIONS, FINISHED };
+  enum class TeardownState { RUNNING, BINDINGS, PORT_WATCHERS, PORTS, SESSIONS, FINISHED };
 
   explicit DeviceInterface(async_dispatcher_t* dispatcher,
                            ddk::NetworkDeviceImplProtocolClient parent);
@@ -263,8 +259,8 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // dispatcher used for slow-path operations:
   async_dispatcher_t* const dispatcher_;
   const ddk::NetworkDeviceImplProtocolClient device_;
-  std::array<uint8_t, netdev::wire::kMaxAccelFlags> accel_rx_{};
-  std::array<uint8_t, netdev::wire::kMaxAccelFlags> accel_tx_{};
+  std::array<netdev::wire::RxAcceleration, netdev::wire::kMaxAccelFlags> accel_rx_;
+  std::array<netdev::wire::TxAcceleration, netdev::wire::kMaxAccelFlags> accel_tx_;
 
   std::unique_ptr<Session> primary_session_ __TA_GUARDED(control_lock_);
   SessionList sessions_ __TA_GUARDED(control_lock_);
@@ -278,6 +274,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // non-overlapping unique identifiers within a set of valid IDs.
   DataVmoStore vmo_store_ __TA_GUARDED(control_lock_);
   BindingList bindings_ __TA_GUARDED(control_lock_);
+  PortWatcher::List port_watchers_ __TA_GUARDED(control_lock_);
 
   TeardownState teardown_state_ __TA_GUARDED(control_lock_) = TeardownState::RUNNING;
   fit::callback<void()> teardown_callback_ __TA_GUARDED(control_lock_);

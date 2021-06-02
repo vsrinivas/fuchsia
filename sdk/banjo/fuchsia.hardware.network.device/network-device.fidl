@@ -354,8 +354,8 @@ struct TxSupport {
 
 /// Static port information.
 struct PortInfo {
-    /// Device class, as defined in [`fuchsia.hardware.network/DeviceClass`].
-    uint8 device_class;
+    /// Port class, as defined in [`fuchsia.hardware.network/PortClass`].
+    uint8 port_class;
     /// Supported rx frame types, as defined by [`fuchsia.hardware.network/FrameType`].
     vector<uint8>:MAX rx_types;
     /// Supported tx frame types.

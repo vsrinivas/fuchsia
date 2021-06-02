@@ -23,9 +23,9 @@ namespace network::internal {
 
 template <typename F>
 void WithWireStatus(F fn, port_status_t status) {
-  netdev::wire::Status::Frame_ frame;
-  netdev::wire::Status wire_status(
-      fidl::ObjectView<netdev::wire::Status::Frame_>::FromExternal(&frame));
+  netdev::wire::PortStatus::Frame_ frame;
+  netdev::wire::PortStatus wire_status(
+      fidl::ObjectView<netdev::wire::PortStatus::Frame_>::FromExternal(&frame));
   netdev::wire::StatusFlags flags = netdev::wire::StatusFlags::TruncatingUnknown(status.flags);
   wire_status.set_flags(fidl::ObjectView<netdev::wire::StatusFlags>::FromExternal(&flags));
   wire_status.set_mtu(fidl::ObjectView<uint32_t>::FromExternal(&status.mtu));

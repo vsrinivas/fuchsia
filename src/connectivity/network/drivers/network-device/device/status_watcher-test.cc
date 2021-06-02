@@ -34,7 +34,7 @@ port_status_t MakeStatus(StatusFlags status_flags, uint32_t mtu) {
 
 class ObservedStatus {
  public:
-  explicit ObservedStatus(const netdev::wire::Status& status)
+  explicit ObservedStatus(const netdev::wire::PortStatus& status)
       : mtu_(status.mtu()), flags_(status.flags()) {}
 
   uint32_t mtu() const { return mtu_; }
@@ -114,7 +114,7 @@ class WatchClient {
         fbl::AutoLock lock(&lock_);
         event_.signal(0, kEvent);
         if (result.ok()) {
-          observed_status_.emplace(result.value().device_status);
+          observed_status_.emplace(result.value().port_status);
         } else {
           break;
         }
