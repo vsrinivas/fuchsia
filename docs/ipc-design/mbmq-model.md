@@ -224,8 +224,8 @@ are dropped:
     but it will be freed when `zx_msgqueue_read()` returns the MBO to
     the `owned_by_caller` state.
 
-    This means it is possible to do a "send and forget" with an MBO:
-    that is, send the MBO as a request message, but close the MBO
+    This means it is possible to do a "fire-and-forget" send with an
+    MBO: that is, send the MBO as a request message, but close the MBO
     handle and ignore any replies.
 
 *   Automatic replies: An MBO receives an automatic reply message if
