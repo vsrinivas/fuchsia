@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.bluetooth.gatt2") {
+  # RemoteService fails this check intentionally ("service" refers to a GATT
+  # service, not a FIDL service).
+  excluded_checks = [ "protocol-name-includes-service" ]
+
+  sdk_category = "partner"
+
+  sources = [
+    "client.fidl",
+    "constants.fidl",
+    "types.fidl",
+  ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.bluetooth" ]
+}

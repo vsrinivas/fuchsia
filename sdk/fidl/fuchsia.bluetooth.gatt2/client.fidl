@@ -1,0 +1,197 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.gatt2;
+
+using fuchsia.bluetooth as bt;
+
+/// Wrapper around a possible truncated value recieved from the server.
+table ReadValue {
+    /// Characteristic or descriptor handle. Always present.
+    1: Handle handle;
+    /// The value of the characteristic or descriptor. Always present.
+    2: bytes:MAX_VALUE_LENGTH value;
+    /// True if `value` might be truncated (the buffer was completely filled
+    /// by the server). `ReadCharacteristic` or `ReadDescriptor` should be used
+    /// to read the complete value.
+    /// Always present.
+    3: bool maybe_truncated;
+};
+
+/// A result returned by `RemoteService.ReadByType`.
+table ReadByTypeResult {
+    /// Characteristic or descriptor handle.
+    1: Handle handle;
+    /// The value of the characteristic or descriptor, if it was read successfully.
+    2: ReadValue value;
+    /// Reason the value could not be read, if reading it resulted in an error.
+    3: Error error;
+};
+
+/// Listens to characteristic notifications & indications.
+protocol CharacteristicNotifier {
+    /// Called when a characteristic value notification or indication is
+    /// received from the server.
+    ///
+    /// + request `value` the value of the updated characteristic.
+    /// - response An empty response should be sent immediately as an
+    ///   acknowledgement that the notification was received (for flow control).
+    OnNotification(ReadValue value) -> ();
+};
+
+protocol RemoteService {
+    /// Returns the characteristics and characteristic descriptors that belong to
+    /// this service.
+    DiscoverCharacteristics()
+        -> (vector<Characteristic>:MAX_CHARACTERISTIC_COUNT characteristics);
+
+    /// Reads characteristics and descriptors with the given `uuid`.
+    ///
+    /// This method is useful for reading values before discovery has completed,
+    /// thereby reducing latency.
+    ///
+    /// + request `uuid` The UUID of the characteristics/descriptors to read.
+    /// - response `results` The results of the read. May be empty if no
+    ///            matching values are read. If reading a value results in a
+    ///            permission error, the handle and error will be included.
+    /// * error Returns `INVALID_PARAMETERS` if `uuid` refers to an internally
+    ///         reserved descriptor type (e.g. the Client Characteristic
+    ///         Configuration descriptor).
+    /// * error Returns `TOO_MANY_RESULTS` if more results were read than can fit
+    ///         in a FIDL response. Consider reading characteristics/descriptors
+    ///         individually after performing discovery.
+    /// * error Returns `FAILURE` if the server returns an error not specific to
+    ///         a single result.
+    ReadByType(bt.Uuid uuid)
+        -> (vector<ReadByTypeResult>:MAX_ATTRIBUTE_COUNT results) error Error;
+
+    /// Reads the value of a characteristic with the given `handle`.
+    ///
+    /// + request `handle` The characteristic handle to read.
+    /// + request `options` Options that apply to the read.
+    /// - response `value` The value of the characteristic.
+    /// * error Returns `INVALID_HANDLE` if `handle` is invalid.
+    /// * error Returns `INVALID_PARAMETERS` if `options` is invalid.
+    /// * error Returns `READ_NOT_PERMITTED` or `INSUFFICIENT_*` if the server
+    ///         rejects the read request.
+    /// * error Returns `FAILURE` if the server returns an error.
+    ReadCharacteristic(Handle handle, ReadOptions options)
+        -> (ReadValue value) error Error;
+
+    /// Writes `value` to the characteristic with `handle` using the provided
+    /// `options`.
+    ///
+    /// It is not recommended to send additional writes while a write is already
+    /// in progress (the server may receive simultaneous writes in any order).
+    ///
+    /// + request `handle` The characteristic to be written to.
+    /// + request `value` The value to be written.
+    /// + request `options` Options that apply to the write.
+    /// - response An empty response will be sent when a success response is
+    ///            received from the server (or immediately if
+    ///            `options.with_response` is false)
+    /// * error Returns `INVALID_HANDLE` if `handle` is invalid.
+    /// * error Returns `INVALID_PARAMETERS` if `options` is invalid.
+    /// * error Returns `WRITE_NOT_PERMITTED` or `INSUFFICIENT_*`if the server
+    ///         rejects the write request with a reason.
+    /// * error Returns `FAILURE` if the server returns an error.
+    WriteCharacteristic(Handle handle, bytes:MAX_VALUE_LENGTH value, WriteOptions options)
+        -> () error Error;
+
+    /// Reads the value of the characteristic descriptor with `handle` and
+    /// returns it in the reply.
+    ///
+    /// + request `handle` The descriptor handle to read.
+    /// + request `options` Options that apply to the read.
+    /// - response `value` The value of the descriptor.
+    /// * error Returns `INVALID_HANDLE` if `handle` is invalid.
+    /// * error Returns `INVALID_PARAMETERS` if `options` is invalid.
+    /// * error Returns `READ_NOT_PERMITTED` or `INSUFFICIENT_*` if the server
+    ///         rejects the read request.
+    /// * error Returns `FAILURE` if the server returns an error.
+    ReadDescriptor(Handle handle, ReadOptions options)
+        -> (ReadValue value) error Error;
+
+    /// Writes `value` to the characteristic descriptor with `handle`.
+    /// It is not recommended to send additional writes while a write is already
+    /// in progress (the server may receive simultaneous writes in any order).
+    ///
+    /// + request `handle` The descriptor handle to written to.
+    /// + request `value` The value to be written.
+    /// + request `options` Options that apply to the write.
+    /// - response An empty response will be sent when a success response is
+    ///            received from the server (or immediately if
+    ///            `options.with_response` is false)
+    /// * error Returns `INVALID_HANDLE` if `handle` is invalid or refers to an
+    ///         internally reserved descriptor type (e.g. the Client
+    ///         Characteristic Configuration descriptor).
+    /// * error Returns `INVALID_PARAMETERS` if `options` is invalid.
+    /// * error Returns `WRITE_NOT_PERMITTED` or `INSUFFICIENT_*` if the server
+    ///         rejects the write with a reason.
+    /// * error Returns `FAILURE` if the server returns an error.
+    WriteDescriptor(Handle handle, bytes:MAX_VALUE_LENGTH value, WriteOptions options)
+        -> () error Error;
+
+    /// Subscribe to notifications & indications from the characteristic with
+    /// the given `handle`.
+    ///
+    /// Either notifications or indications will be enabled depending on
+    /// characteristic properties. Indications will be preferred if they are
+    /// supported. This operation fails if the characteristic does not have the
+    /// "notify" or "indicate" property.
+    ///
+    /// A write request will be issued to configure the characteristic for
+    /// notifications/indications if it contains a Client Characteristic
+    /// Configuration descriptor. This method fails if an error occurs while
+    /// writing to the descriptor.
+    ///
+    /// On success, the `notifier` protocol can be used to be notified when
+    /// the peer sends a notification or indication. Indications are
+    /// automatically confirmed. When the protocol is dropped, the subscription
+    /// may end if no other local client is receiving notifications.
+    ///
+    /// + request `handle` the characteristic handle.
+    /// + request `notifier` the protocol used for notifications.
+    /// - response An empty response will be sent immediately if registration
+    ///            succeeds.
+    /// * error Returns a `FAILURE` if the characteristic does not support
+    ///         notifications or indications.
+    /// * error Returns a `INVALID_HANDLE` if `handle` is invalid.
+    /// * error Returns a `WRITE_NOT_PERMITTED`  or `INSUFFICIENT_*`for a
+    ///         descriptor write error.
+    RegisterCharacteristicNotifier(Handle handle, CharacteristicNotifier notifier)
+        -> () error Error;
+};
+
+protocol Client {
+    /// Enumerates services found on the peer that this Client represents.
+    /// Results can be restricted by specifying a list of UUIDs in `uuids`. On
+    /// the initial request, a complete snapshot will be returned. Subsequent
+    /// calls receive a response only when one or more services have been added,
+    /// modified, or removed from the entries reported since the most recent
+    /// call.
+    ///
+    /// To further interact with services, clients must obtain a RemoteService
+    /// protocol by calling ConnectToService().
+    ///
+    /// + request `uuids` the UUID allowlist. If empty, all services will be
+    ///   returned.
+    /// - response `updated` the services that have been added or modified since
+    ///   WatchServices() was last called. The returned ServiceInfo tables will
+    ///   contain only basic information about each service and the
+    ///   `characteristics` and `includes` fields will be null.
+    /// - response `removed` the handles of the services that have been removed
+    ///   since the last call to WatchServices().
+    WatchServices(vector<bt.Uuid>:MAX uuids)
+        -> (vector<ServiceInfo>:MAX_SERVICE_COUNT updated, vector<Handle>:MAX_SERVICE_COUNT removed);
+
+    /// Connects the RemoteService with the given identifier.
+    ///
+    /// `service` will be closed on error, with an epitaph that provides a
+    /// reason.
+    /// * error Returns a `ZX_ERR_BAD_HANDLE` if `handle` is invalid.
+    /// * error Returns a `ZX_ERR_CONNECTION_RESET` if the service is removed.
+    /// * error Returns a `ZX_ERR_NOT_CONNECTED` if the peer disconnects.
+    ConnectToService(Handle handle, request<RemoteService> service);
+};

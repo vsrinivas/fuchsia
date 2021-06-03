@@ -1,0 +1,222 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.gatt2;
+
+using fuchsia.bluetooth as bt;
+
+/// Errors that are returned by bluetooth.gatt2 methods.
+enum Error {
+    /// A general error occurred that can not be classified as one of the more
+    /// specific errors.
+    FAILURE = 1;
+
+    /// Indicates that the response received from the server was invalid.
+    INVALID_RESPONSE = 2;
+
+    /// Indicates that more results were read than can fit in a FIDL response.
+    /// Consider reading attributes individually.
+    TOO_MANY_RESULTS = 3;
+
+    /// This attribute requires authorization, but the client is not authorized.
+    INSUFFICIENT_AUTHORIZATION = 4;
+
+    /// This attribute requires authentication, but the client is not authenticated.
+    INSUFFICIENT_AUTHENTICATION = 5;
+
+    /// This attribute requires a connection encrypted by a larger encryption key.
+    INSUFFICIENT_ENCRYPTION_KEY_SIZE = 6;
+
+    /// This attribute requires encryption, but the connection is not encrypted.
+    INSUFFICIENT_ENCRYPTION = 7;
+
+    /// This attribute is not readable.
+    READ_NOT_PERMITTED = 8;
+
+    /// This attribute is not writable.
+    WRITE_NOT_PERMITTED = 9;
+
+    /// One or more of the parameters are invalid. See the parameter documentation.
+    INVALID_PARAMETERS = 10;
+
+    /// The attribute indicated by the handle is invalid. It may have been removed.
+    INVALID_HANDLE = 11;
+};
+
+// A Handle uniquely identifies a service, characteristic, or descriptor.
+struct Handle {
+    uint64 value;
+};
+
+/// Represents encryption, authentication, and authorization permissions that can
+/// be assigned to a specific access permission.
+table SecurityRequirements {
+    /// If true, the physical link must be encrypted to access this attribute.
+    1: bool encryption_required;
+
+    /// If true, the physical link must be authenticated to access this
+    /// attribute.
+    2: bool authentication_required;
+
+    /// If true, the client needs to be authorized before accessing this
+    /// attribute.
+    3: bool authorization_required;
+};
+
+/// Specifies the access permissions for a specific attribute value.
+table AttributePermissions {
+    /// Specifies whether or not an attribute has the read permission. If null,
+    /// then the attribute value cannot be read. Otherwise, it can be read only if
+    /// the permissions specified in the SecurityRequirements table are satisfied.
+    1: SecurityRequirements read;
+
+    /// Specifies whether or not an attribute has the write permission. If null,
+    /// then the attribute value cannot be written. Otherwise, it be written only
+    /// if the permissions specified in the SecurityRequirements table are satisfied.
+    2: SecurityRequirements write;
+
+    /// Specifies the security requirements for a client to subscribe to
+    /// notifications or indications on a characteristic. A characteristic's
+    /// support for notifications or indiciations is specified using the NOTIFY and
+    /// INDICATE characteristic properties. If a local characteristic has one of
+    /// these properties then this field can not be null. Otherwise, this field
+    /// must be left as null.
+    ///
+    /// This field is ignored for Descriptors.
+    3: SecurityRequirements update;
+};
+
+/// Possible values for the characteristic properties bitfield. These specify the
+/// GATT procedures that are allowed for a particular characteristic.
+bits CharacteristicPropertyBits : uint16 {
+    BROADCAST = 0x1;
+    READ = 0x2;
+    WRITE_WITHOUT_RESPONSE = 0x4;
+    WRITE = 0x8;
+    NOTIFY = 0x10;
+    INDICATE = 0x20;
+    AUTHENTICATED_SIGNED_WRITES = 0x40;
+    RELIABLE_WRITE = 0x100;
+    WRITABLE_AUXILIARIES = 0x200;
+};
+
+/// Represents a local or remote GATT service.
+table ServiceInfo {
+    /// Uniquely identifies this GATT service. Always present if this represents
+    /// a remote service. Ignored if present for local services.
+    1: Handle handle;
+
+    /// Indicates whether this is a primary or secondary service.
+    /// Always present for remote services. Optional for local services
+    /// Default: true
+    2: bool primary;
+
+    /// The UUID that identifies the type of this service.
+    /// Always present for remote services. Required for local services.
+    3: bt.Uuid type;
+
+    /// The characteristics of this service.
+    /// Always present for remote services. Required for local services.
+    4: vector<Characteristic>:MAX_CHARACTERISTIC_COUNT characteristics;
+
+    /// Handles of other services that are included by this service.
+    /// Only present for remote services if non-empty. Optional for local
+    /// services.
+    5: vector<Handle>:MAX_SERVICE_COUNT includes;
+};
+
+/// Represents a local or remote GATT characteristic.
+table Characteristic {
+    /// Uniquely identifies this characteristic within a service.
+    /// For local characteristics, the specified handle must be unique across
+    /// all characteristic and descriptor handles in this service.
+    ///
+    /// Always present. For local characteristics, this value is mandatory.
+    1: Handle handle;
+
+    /// The UUID that identifies the type of this characteristic.
+    /// Always present. Mandatory for local characteristics.
+    2: bt.Uuid type;
+
+    /// The characteristic properties bitfield. See `CharacteristicPropertyBits`
+    /// above for possible values.
+    /// Always present. Mandatory for local characteristics.
+    3: uint32 properties;
+
+    /// The attribute permissions of this characteristic. For remote
+    /// characteristics, this value will be null until the permissions are
+    /// discovered via read and write requests.
+    ///
+    /// For local characteristics, this value is mandatory.
+    4: AttributePermissions permissions;
+
+    /// The descriptors of this characteristic.
+    /// Present only if non-empty. Optional for local characteristics.
+    5: vector<Descriptor>:MAX_DESCRIPTOR_COUNT descriptors;
+};
+
+/// Represents a local or remote GATT characteristic descriptor.
+table Descriptor {
+    /// Uniquely identifies this descriptor within a service.
+    /// For local descriptors, the specified handle must be unique
+    /// across all characteristic and descriptor handles in this service.
+    ///
+    /// Always present. For local descriptors, this value is mandatory.
+    1: Handle handle;
+
+    /// The UUID that identifies the type of this descriptor.
+    /// Always present. For local descriptors, this value is mandatory.
+    2: bt.Uuid type;
+
+    /// The attribute permissions of this descriptor. For remote
+    /// descriptors, this value will be null until the permissions are
+    /// discovered via read and write requests.
+    ///
+    /// For local descriptors, this value is mandatory.
+    3: AttributePermissions permissions;
+};
+
+/// Represents the supported options to read a characteristic or descriptor
+/// value from a server.
+table ReadOptions {
+    /// The byte to start the read at. Must be less than the length of the value.
+    /// Optional.
+    /// Default: 0
+    1: uint16 offset;
+    /// The maximum number of bytes to read.
+    /// Optional.
+    /// Default: `MAX_VALUE_LENGTH`
+    2: uint16 max_bytes;
+    /// If true, read the complete value of the characteristic/descriptor. This
+    /// may require many messages, and therefore cause high latency.
+    ///
+    /// If false, read only the portion of the value that fits into a single
+    /// message (at least 22 bytes). This will be low latency, and is useful for
+    /// situations where a truncated value is acceptable. Possible truncation is
+    /// indicated by the `maybe_truncated` parameter in the response. `max_bytes`
+    /// will be ignored.
+    ///
+    /// Optional.
+    /// Default: true
+    3: bool read_complete_value;
+};
+
+/// Represents the supported options to write a characteristic value to a server.
+table WriteOptions {
+    /// If true, wait for acknowledgement from the peer before returning.
+    ///
+    /// If false, delivery will not be confirmed before returning. Writing
+    /// without a response is only supported for short characteristics with the
+    /// `WRITE_WITHOUT_RESPONSE` property. If the written value can't
+    /// fit into a single message, a `FAILURE` error will be returned. To ensure
+    /// that the value fits, it must be at most 20 bytes. `offset` must be 0.
+    ///
+    /// Optional.
+    /// Default: true
+    1: bool with_response;
+    /// Request a write starting at the byte indicated.
+    /// Optional.
+    /// Default: 0
+    2: uint16 offset;
+};
