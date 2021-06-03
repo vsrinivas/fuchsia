@@ -199,6 +199,7 @@ pub enum IfEnum {
     Disable(IfDisable),
     Enable(IfEnable),
     Get(IfGet),
+    IpForward(IfIpForward),
     List(IfList),
 }
 
@@ -289,6 +290,46 @@ pub struct IfEnable {
 pub struct IfGet {
     #[argh(positional)]
     pub id: u64,
+}
+
+#[derive(FromArgs, Clone, Debug, PartialEq)]
+#[argh(subcommand, name = "ip-forward")]
+/// get or set IP forwarding for an interface
+pub struct IfIpForward {
+    #[argh(subcommand)]
+    pub cmd: IfIpForwardEnum,
+}
+
+#[derive(FromArgs, Clone, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum IfIpForwardEnum {
+    Show(IfIpForwardShow),
+    Set(IfIpForwardSet),
+}
+
+#[derive(FromArgs, Clone, Debug, PartialEq)]
+#[argh(subcommand, name = "show")]
+/// get IP forwarding for an interface
+pub struct IfIpForwardShow {
+    #[argh(positional)]
+    pub id: u64,
+
+    #[argh(positional, from_str_fn(parse_ip_version_str))]
+    pub ip_version: fnet::IpVersion,
+}
+
+#[derive(FromArgs, Clone, Debug, PartialEq)]
+#[argh(subcommand, name = "set")]
+/// set IP forwarding for an interface
+pub struct IfIpForwardSet {
+    #[argh(positional)]
+    pub id: u64,
+
+    #[argh(positional, from_str_fn(parse_ip_version_str))]
+    pub ip_version: fnet::IpVersion,
+
+    #[argh(positional)]
+    pub enable: bool,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]

@@ -211,6 +211,28 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
             println!("{}", fstack_ext::InterfaceInfo::from(info));
         }
+        IfEnum::IpForward(IfIpForward { cmd }) => {
+            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
+            match cmd {
+                IfIpForwardEnum::Show(IfIpForwardShow { id, ip_version }) => {
+                    let enabled = fstack_ext::exec_fidl!(
+                        stack.get_interface_ip_forwarding(id, ip_version),
+                        "error getting interface IP forwarding"
+                    )?;
+                    info!("IP forwarding for {:?} is {} on interface {}", ip_version, enabled, id);
+                }
+                IfIpForwardEnum::Set(IfIpForwardSet { id, ip_version, enable }) => {
+                    let () = fstack_ext::exec_fidl!(
+                        stack.set_interface_ip_forwarding(id, ip_version, enable),
+                        "error setting interface IP forwarding"
+                    )?;
+                    info!(
+                        "IP forwarding for {:?} set to {} on interface {}",
+                        ip_version, enable, id
+                    );
+                }
+            }
+        }
         IfEnum::Enable(IfEnable { id }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
@@ -891,6 +913,72 @@ mod tests {
         assert_eq!(vec![10, 20, 30], shortlist_interfaces_by_nicid("th"));
         assert_eq!(vec![100, 200, 300], shortlist_interfaces_by_nicid("wlan"));
         assert_eq!(vec![10, 100], shortlist_interfaces_by_nicid("001"));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_if_ip_forward() {
+        const IP_FORWARD: bool = true;
+
+        let (stack_controller, mut stack_requests) =
+            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+        let (netstack_controller, _netstack_requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+        let connector =
+            TestConnector { stack: Some(stack_controller), netstack: Some(netstack_controller) };
+
+        let do_if_fut = do_if(
+            opts::IfEnum::IpForward(IfIpForward {
+                cmd: IfIpForwardEnum::Set(IfIpForwardSet {
+                    id: INTERFACE_ID,
+                    ip_version: IP_VERSION,
+                    enable: IP_FORWARD,
+                }),
+            }),
+            &connector,
+        );
+        let requests_fut = async {
+            let (got_interface_id, got_ip_version, got_enable, responder) = stack_requests
+                .try_next()
+                .await
+                .expect("stack FIDL error")
+                .expect("request stream should not have ended")
+                .into_set_interface_ip_forwarding()
+                .expect("request should be of type SetInterfaceIpForwarding");
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_version, IP_VERSION);
+            assert_eq!(got_enable, IP_FORWARD);
+            let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
+            .await
+            .expect("setting interface ip forwarding should succeed");
+
+        let do_if_fut = do_if(
+            opts::IfEnum::IpForward(IfIpForward {
+                cmd: IfIpForwardEnum::Show(IfIpForwardShow {
+                    id: INTERFACE_ID,
+                    ip_version: IP_VERSION,
+                }),
+            }),
+            &connector,
+        );
+        let requests_fut = async {
+            let (got_interface_id, got_ip_version, responder) = stack_requests
+                .try_next()
+                .await
+                .expect("stack FIDL error")
+                .expect("request stream should not have ended")
+                .into_get_interface_ip_forwarding()
+                .expect("request should be of type InterfaceIpForwarding");
+            assert_eq!(got_interface_id, INTERFACE_ID);
+            assert_eq!(got_ip_version, IP_VERSION);
+            let () = responder.send(&mut Ok(true)).expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
+            .await
+            .expect("getting interface ip forwarding should succeed");
     }
 
     #[fasync::run_singlethreaded(test)]
