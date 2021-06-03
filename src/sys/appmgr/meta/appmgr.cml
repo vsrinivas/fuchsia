@@ -404,6 +404,12 @@
             path: "/svc_for_sys/fuchsia.logger.Log",
         },
 
+        // From diagnostics-persistence
+        {
+            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            path: "/svc_for_sys/fuchsia.diagnostics.persist.DataPersistence-wlan",
+        },
+
         // From sysinfo
         {
             protocol: "fuchsia.sysinfo.SysInfo",

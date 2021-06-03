@@ -529,6 +529,11 @@
             from: "parent",
             to: "#test_manager",
         },
+        {
+            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
+            from: "#diagnostics-persistence",
+            to: "#appmgr",
+        },
 
         // These capabilities are offered to test_manager for use by certain non-hermetic tests.
         {
