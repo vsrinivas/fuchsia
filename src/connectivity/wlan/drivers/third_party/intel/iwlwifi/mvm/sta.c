@@ -37,10 +37,9 @@
 
 #include <zircon/status.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
 #if 0   // NEEDS_PORTING
 static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);

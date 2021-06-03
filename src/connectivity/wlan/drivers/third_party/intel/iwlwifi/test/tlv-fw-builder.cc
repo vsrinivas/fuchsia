@@ -8,7 +8,7 @@
 
 #include <cstring>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"

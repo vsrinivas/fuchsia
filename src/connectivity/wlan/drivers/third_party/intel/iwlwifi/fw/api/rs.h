@@ -35,7 +35,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RS_H_
 
-#include "mac.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/mac.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 /**
  * enum iwl_tlc_mng_cfg_flags_enum - options for TLC config flags

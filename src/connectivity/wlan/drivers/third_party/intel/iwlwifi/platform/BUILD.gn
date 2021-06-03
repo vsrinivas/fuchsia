@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
+
+# This BUILD.gn defines the Fuchsia-specific platform support library for the iwlwifi driver.
+
+# Platform-support library for the iwlwifi driver.
+source_set("platform") {
+  sources = [
+    "debug.cc",
+    "device.cc",
+    "ieee80211.cc",
+    "module.cc",
+  ]
+  public = [
+    "compiler.h",
+    "debug.h",
+    "device.h",
+    "ieee80211.h",
+    "kernel.h",
+    "module.h",
+    "pci.h",
+  ]
+  deps = [
+    "//garnet/lib/wlan/protocol:protocol",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//zircon/system/ulib/sync",
+  ]
+  public_deps = [
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
+    "//src/lib/ddk",
+    "//zircon/system/public",
+  ]
+  public_configs = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:fuchsia_config",
+  ]
+}

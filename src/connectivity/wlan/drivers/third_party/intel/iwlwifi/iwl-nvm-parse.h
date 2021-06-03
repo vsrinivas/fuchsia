@@ -35,6 +35,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_NVM_PARSE_H_
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 /**
  * enum iwl_nvm_sbands_flags - modification flags for the channel profiles

@@ -33,13 +33,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
+#include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"

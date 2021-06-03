@@ -36,6 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SOC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SOC_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+
 /* type of devices for defining SOC latency */
 enum iwl_soc_device_types {
   SOC_CONFIG_CMD_INTEGRATED = 0x0,

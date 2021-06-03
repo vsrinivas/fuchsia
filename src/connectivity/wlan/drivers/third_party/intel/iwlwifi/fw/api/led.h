@@ -34,6 +34,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_LED_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_LED_H_
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+
 /**
  * struct iwl_led_cmd - LED switching command
  *

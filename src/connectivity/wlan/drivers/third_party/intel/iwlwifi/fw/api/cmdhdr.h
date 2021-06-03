@@ -35,6 +35,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CMDHDR_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CMDHDR_H_
 
+#include <stdint.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+
 /**
  * DOC: Host command section
  *
@@ -66,8 +70,8 @@ static inline uint32_t iwl_cmd_id(uint8_t opcode, uint8_t groupid, uint8_t versi
 }
 
 /* make uint16_t wide id out of uint8_t group and opcode */
-#define WIDE_ID(grp, opcode) (((grp) << 8) | (opcode))
-#define DEF_ID(opcode) ((1 << 8) | (opcode))
+#define WIDE_ID(grp, opcode) ((uint16_t)(((grp) << 8) | (opcode)))
+#define DEF_ID(opcode) ((uint16_t)((1 << 8) | (opcode)))
 
 /* due to the conversion, this group is special; new groups
  * should be defined in the appropriate fw-api header files

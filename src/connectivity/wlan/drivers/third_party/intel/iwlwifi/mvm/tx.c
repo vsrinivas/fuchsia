@@ -34,11 +34,12 @@
  *
  *****************************************************************************/
 
-#include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #if 0  // NEEDS_PORTING
 static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, uint16_t tid,
@@ -61,7 +62,7 @@ static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, 
 static uint16_t iwl_mvm_tx_csum(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_hdr* hdr,
                                 struct ieee80211_tx_info* info, uint16_t offload_assist) {
 #if IS_ENABLED(CONFIG_INET)
-    uint16_t mh_len = ieee80211_hdrlen(hdr->frame_control);
+    uint16_t mh_len = ieee80211_get_header_len(hdr->frame_control);
     uint8_t protocol = 0;
 
     /*
@@ -260,7 +261,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt, struct
 
 #if 0  // NEEDS_PORTING
     /* padding is inserted later in transport */
-    if (ieee80211_hdrlen(fc) % 4 && !(offload_assist & BIT(TX_CMD_OFFLD_AMSDU))) {
+    if (ieee80211_get_header_len(fc) % 4 && !(offload_assist & BIT(TX_CMD_OFFLD_AMSDU))) {
         offload_assist |= BIT(TX_CMD_OFFLD_PAD);
     }
 
@@ -493,7 +494,7 @@ static void iwl_mvm_set_tx_params(struct iwl_mvm* mvm, const wlan_tx_packet_t* p
         offload_assist = iwl_mvm_tx_csum(mvm, skb, hdr, info, offload_assist);
 
         /* padding is inserted later in transport */
-        if (ieee80211_hdrlen(hdr->frame_control) % 4 &&
+        if (ieee80211_get_header_len(hdr->frame_control) % 4 &&
             !(offload_assist & BIT(TX_CMD_OFFLD_AMSDU))) {
             offload_assist |= BIT(TX_CMD_OFFLD_PAD);
         }
@@ -666,7 +667,7 @@ int iwl_mvm_tx_skb_non_sta(struct iwl_mvm* mvm, struct sk_buff* skb) {
     struct ieee80211_tx_info info;
     struct iwl_device_cmd* dev_cmd;
     uint8_t sta_id;
-    int hdrlen = ieee80211_hdrlen(hdr->frame_control);
+    int hdrlen = ieee80211_get_header_len(hdr->frame_control);
     __le16 fc = hdr->frame_control;
     bool offchannel = IEEE80211_SKB_CB(skb)->flags & IEEE80211_TX_CTL_TX_OFFCHAN;
     int queue = -1;
@@ -988,7 +989,8 @@ zx_status_t iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, const wlan_tx_packet_t* pkt,
   uint16_t txq_id = mvmsta->tid_data[tid].txq_id;
   zx_status_t ret;
 
-  size_t hdrlen = ieee80211_hdrlen((struct ieee80211_frame_header*)pkt->packet_head.data_buffer);
+  size_t hdrlen =
+      ieee80211_get_header_len((struct ieee80211_frame_header*)pkt->packet_head.data_buffer);
   struct iwl_device_cmd dev_cmd;
   iwl_mvm_set_tx_params(mvm, pkt, hdrlen, mvmsta, &dev_cmd);
 

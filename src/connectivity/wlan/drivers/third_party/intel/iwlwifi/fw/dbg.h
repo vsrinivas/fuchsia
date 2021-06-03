@@ -44,6 +44,8 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 /**
  * struct iwl_fw_dump_desc - describes the dump

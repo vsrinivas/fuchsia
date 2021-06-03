@@ -35,6 +35,7 @@
  *****************************************************************************/
 #include <lib/ddk/io-buffer.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/runtime.h"

@@ -37,8 +37,8 @@
 
 #include <stdint.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/phy-ctxt.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 /* TODO: read it from tlv */
 #define NAN_MAX_SUPPORTED_DE_ENTRIES 10

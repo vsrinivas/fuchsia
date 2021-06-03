@@ -36,6 +36,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_H_
 
-#include "rs-ng.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/rs-ng.h"
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_H_

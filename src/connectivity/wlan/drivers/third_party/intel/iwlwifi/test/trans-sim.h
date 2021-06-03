@@ -14,7 +14,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_TRANS_SIM_H_
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
 namespace wlan {

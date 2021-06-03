@@ -6,6 +6,14 @@ import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 
+# Common configuration for builds on Fuchsia.
+config("fuchsia_config") {
+  defines = [
+    "CPTCFG_IWL_TIMEOUT_FACTOR=1",
+    "CPTCFG_IWLMVM=1",
+  ]
+}
+
 bind_rules("iwlwifi_bind") {
   rules = "iwlwifi.bind"
   output = "iwlwifi-bind.h"
@@ -18,34 +26,20 @@ group("tests") {
   deps = [ ":iwlwifi_bind_test" ]
 }
 
-config_flags = [
-  "CPTCFG_IWL_TIMEOUT_FACTOR=1",
-  "CPTCFG_IWLMVM=1",
-]
-
 # Contains the driver minus any PCIE specific code so that the simulation tests
 # can easily provide a fake PCIE layer.
 source_set("core") {
   visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
-  defines = config_flags
 
   sources = [
     "cfg/7000.c",
     "cfg/8000.c",
-    "cpp-wrapper.cc",
     "device.cc",
     "device.h",
-    "fuchsia_device.c",
-    "fuchsia_device.h",
-    "fuchsia_module.c",
-    "fuchsia_module.h",
-    "fuchsia_porting.c",
-    "fuchsia_porting.h",
     "fw/init.c",
     "fw/notif-wait.c",
     "fw/paging.c",
     "fw/smem.c",
-    "ieee80211.h",
     "inspect.cc",
     "iwl-config.h",
     "iwl-csr.h",
@@ -85,6 +79,7 @@ source_set("core") {
   deps = [
     "//garnet/lib/wlan/protocol:protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async",
@@ -98,19 +93,18 @@ source_set("core") {
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/backtrace-request",
   ]
+
+  public_configs = [ ":fuchsia_config" ]
 }
 
 # Contains the entire driver, separate from the driver_module for the unit
 # tests.
 source_set("pcie") {
   visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
-  defines = config_flags
   configs += [ "//build/config:all_source" ]
-
   sources = [
     "pcie/bind.cc",
     "pcie/drv.c",
-    "pcie/fuchsia_pci.h",
     "pcie/internal.h",
     "pcie/pcie_device.cc",
     "pcie/pcie_device.h",
@@ -119,23 +113,23 @@ source_set("pcie") {
     "pcie/trans.c",
     "pcie/tx.c",
   ]
-
   deps = [
     ":core",
     ":iwlwifi_bind",
     "//garnet/lib/wlan/protocol",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//src/devices/lib/driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
   ]
-
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/sync",
   ]
+  public_configs = [ ":fuchsia_config" ]
 }
 
 driver_module("iwlwifi_driver") {

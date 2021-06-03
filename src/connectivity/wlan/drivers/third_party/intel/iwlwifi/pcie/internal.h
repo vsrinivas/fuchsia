@@ -52,7 +52,8 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/fuchsia_pci.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 /* We need 2 entries for the TX command and header, and another one might
  * be needed for potential data in the SKB's head. The remaining ones can

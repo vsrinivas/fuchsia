@@ -38,11 +38,10 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SCAN_H_
 
 #include <fuchsia/wlan/ieee80211/c/fidl.h>
+#include <netinet/if_ether.h>
 #include <stdint.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
-
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 /* Scan Commands, Responses, Notifications */
 

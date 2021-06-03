@@ -40,6 +40,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//zircon/public/lib/zxtest",
   ]
 }
@@ -52,6 +53,7 @@ group("test") {
 # Definition for simulated transportation layer + gtest
 testing_deps = [
   ":iwlwifi_sim_trans_ss",
+  "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
   "//src/devices/testing/fake-bti",
   "//src/devices/testing/fake_ddk",
   "//zircon/public/lib/mock-function",
@@ -65,16 +67,6 @@ executable("dummy_test") {
   testonly = true
 
   sources = [ "dummy_test.cc" ]
-
-  defines = testing_defines
-  deps = testing_deps
-}
-
-executable("fuchsia_porting_test") {
-  output_name = "fuchsia_porting_test"
-  testonly = true
-
-  sources = [ "fuchsia_porting_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -181,6 +173,16 @@ executable("phy-ctxt_test") {
   deps = testing_deps
 }
 
+executable("platform_test") {
+  output_name = "platform_test"
+  testonly = true
+
+  sources = [ "platform_test.cc" ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 executable("sta_test") {
   output_name = "sta_test"
   testonly = true
@@ -214,7 +216,6 @@ executable("wlan-device_test") {
 
 _tests = [
   "dummy_test",
-  "fuchsia_porting_test",
   "fw_test",
   "iwl-phy-db_test",
   "mac-ctxt_test",
@@ -224,6 +225,7 @@ _tests = [
   "nvm_test",
   "pcie_test",
   "phy-ctxt_test",
+  "platform_test",
   "sta_test",
   "utils_test",
   "wlan-device_test",

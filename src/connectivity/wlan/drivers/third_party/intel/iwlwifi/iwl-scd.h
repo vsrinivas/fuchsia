@@ -34,9 +34,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_SCD_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_SCD_H_
 
-#include "iwl-io.h"
-#include "iwl-prph.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 static inline void iwl_scd_txq_set_chain(struct iwl_trans* trans, uint16_t txq_id) {
   iwl_set_bits_prph(trans, SCD_QUEUECHAIN_SEL, BIT(txq_id));

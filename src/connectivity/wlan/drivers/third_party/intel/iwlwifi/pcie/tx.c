@@ -36,12 +36,12 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
 
+#include <lib/async/dispatcher.h>
 #include <lib/async/time.h>
+#include <lib/backtrace-request/backtrace-request.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
-
-#include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #endif  // NEEDS_PORTING
@@ -51,6 +51,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-scd.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
 #define IWL_TX_CRC_SIZE 4
 #define IWL_TX_DELIMITER_SIZE 4
@@ -2380,7 +2381,7 @@ zx_status_t iwl_trans_pcie_tx(struct iwl_trans* trans, const wlan_tx_packet_t* p
   //
 
   const uint8_t hdr_len =
-      ieee80211_hdrlen((struct ieee80211_frame_header*)pkt->packet_head.data_buffer);
+      ieee80211_get_header_len((struct ieee80211_frame_header*)pkt->packet_head.data_buffer);
   const uint16_t tb1_len =
       sizeof(struct iwl_cmd_header) + sizeof(struct iwl_tx_cmd) - tb0_size + hdr_len;
   // See original code: "do not align A-MSDU to dword as the subframe header aligns it"

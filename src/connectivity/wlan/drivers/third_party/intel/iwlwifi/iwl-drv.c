@@ -44,8 +44,6 @@
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_module.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
@@ -55,6 +53,8 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/module.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-cfg.h"
 #endif

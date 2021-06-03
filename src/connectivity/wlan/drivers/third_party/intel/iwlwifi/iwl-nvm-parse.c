@@ -36,7 +36,6 @@
 
 #include <stdint.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/cpp-wrapper.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/cmdhdr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
@@ -47,6 +46,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 
 /* NVM offsets (in words) definitions */
 enum nvm_offsets {
@@ -293,7 +293,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
     }
 
     // TODO(fxbug.dev/69717): Remove this workaround for IWL_NVM_EXT.
-    if (!is_valid_chan(nvm_chan[ch_idx])) {
+    if (!ieee80211_is_valid_chan(nvm_chan[ch_idx])) {
       IWL_WARN(channel, "Ignored invalid channel %d from NVM\n", nvm_chan[ch_idx]);
       continue;
     }
@@ -313,7 +313,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
 
     channel->ch_num = nvm_chan[ch_idx];
     channel->band = is_5ghz ? WLAN_INFO_BAND_5GHZ : WLAN_INFO_BAND_2GHZ;
-    channel->center_freq = get_center_freq(channel->ch_num);
+    channel->center_freq = ieee80211_get_center_freq((uint8_t)channel->ch_num);
 
     /* Initialize regulatory-based run-time data */
 

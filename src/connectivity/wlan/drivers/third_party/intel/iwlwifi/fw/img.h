@@ -41,6 +41,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 /**
  * enum iwl_ucode_type

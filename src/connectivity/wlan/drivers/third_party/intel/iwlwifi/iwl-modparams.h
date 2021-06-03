@@ -35,8 +35,10 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_MODPARAMS_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
-#include "fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 extern struct iwl_mod_params iwlwifi_mod_params;
 

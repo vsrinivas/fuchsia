@@ -38,6 +38,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/phy-ctxt.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 #define IWL_MVM_TDLS_STA_COUNT 4
 

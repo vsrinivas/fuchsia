@@ -34,8 +34,9 @@
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DHC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DHC_H_
-#include "mac.h"
-#include "scan.h"
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/mac.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/scan.h"
 
 #define DHC_TABLE_MASK_POS (28)
 

@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
 
+#include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include <algorithm>
 
 // Maximum bytes to dump in hex_dump_str()
-#define MAX_DUMP_LEN_IN_A_ROW 16
+constexpr size_t kMaxDumpLenInARow = 16;
 
 static char hex_char(uint8_t ch) { return (ch >= 10) ? (ch - 10) + 'a' : ch + '0'; }
 
@@ -22,13 +24,13 @@ static char printable(uint8_t ch) {
 }
 
 char* hex_dump_str(char* output, size_t output_size, const void* ptr, size_t len) {
-  if (output_size < HEX_DUMP_BUF_SIZE || len > MAX_DUMP_LEN_IN_A_ROW) {
-    return NULL;
+  if (output_size < HEX_DUMP_BUF_SIZE || len > kMaxDumpLenInARow) {
+    return nullptr;
   }
 
-  const uint8_t* ch = (const uint8_t*)ptr;
+  const uint8_t* ch = reinterpret_cast<const uint8_t*>(ptr);
   memset(output, ' ', HEX_DUMP_BUF_SIZE);
-  for (size_t j = 0; j < MAX_DUMP_LEN_IN_A_ROW && j < len; j++) {
+  for (size_t j = 0; j < kMaxDumpLenInARow && j < len; j++) {
     uint8_t val = ch[j];
 
     // print the hex part.
@@ -47,14 +49,15 @@ char* hex_dump_str(char* output, size_t output_size, const void* ptr, size_t len
 }
 
 void hex_dump(const char* prefix, const void* ptr, size_t len) {
-  IWL_INFO(NULL, "%sdump %zu (0x%zx) bytes %p:\n", prefix, len, len, ptr);
+  zxlogf(INFO, "%sdump %zu (0x%zx) bytes %p:\n", prefix, len, len, ptr);
   if (!ptr) {
     return;
   }
 
-  for (size_t i = 0; i < len; i += MAX_DUMP_LEN_IN_A_ROW) {
+  for (size_t i = 0; i < len; i += kMaxDumpLenInARow) {
     char buf[HEX_DUMP_BUF_SIZE];
-    hex_dump_str(buf, sizeof(buf), ptr + i, MIN(len - i, MAX_DUMP_LEN_IN_A_ROW));
-    IWL_INFO(NULL, "%s%s\n", prefix, buf);
+    hex_dump_str(buf, sizeof(buf), reinterpret_cast<const uint8_t*>(ptr) + i,
+                 std::min(len - i, kMaxDumpLenInARow));
+    zxlogf(INFO, "%s%s\n", prefix, buf);
   }
 }

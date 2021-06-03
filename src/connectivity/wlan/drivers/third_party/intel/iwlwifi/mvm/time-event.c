@@ -36,6 +36,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 
+#include <lib/async/time.h>
 #include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"

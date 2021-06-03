@@ -36,6 +36,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_FILE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_FILE_H_
 
+#include <netinet/if_ether.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+
 /* v1/v2 uCode file layout */
 struct iwl_ucode_header {
   __le32 ver; /* major/minor/API/serial */

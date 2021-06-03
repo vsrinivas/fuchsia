@@ -16,16 +16,18 @@
 
 // TODO(29700): Consolidate to one ieee80211.h
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <netinet/if_ether.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  // defined(__cplusplus)
 
 // The below constants are not defined in the 802.11-2016 Std.
 #define IEEE80211_MAX_CHAINS 4
@@ -161,9 +163,18 @@ struct ieee80211_vif {
   uint8_t dummy;
 };
 
-static inline struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len,
-                                                      const struct ieee80211_ops* ops) {
-  return NULL;  // NEEDS_PORTING
-}
+struct ieee80211_frame_header;
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
+size_t ieee80211_get_header_len(struct ieee80211_frame_header* fh);
+
+struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee80211_ops* ops);
+
+bool ieee80211_is_valid_chan(uint8_t primary);
+
+uint16_t ieee80211_get_center_freq(uint8_t channel_num);
+
+#if defined(__cplusplus)
+}  // extern "C"
+#endif  // defined(__cplusplus)
+
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_IEEE80211_H_

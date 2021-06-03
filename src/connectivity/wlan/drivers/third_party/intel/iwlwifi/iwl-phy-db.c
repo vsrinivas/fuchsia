@@ -37,6 +37,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 
 #define CHANNEL_NUM_SIZE 4 /* num of channels in calib_ch size */
 

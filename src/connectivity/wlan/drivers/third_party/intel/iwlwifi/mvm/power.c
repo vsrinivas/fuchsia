@@ -53,7 +53,8 @@
 
 #include <zircon/status.h>
 
-#include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
+#include <wlan/protocol/ieee80211.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/constants.h"

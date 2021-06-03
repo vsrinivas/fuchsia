@@ -37,6 +37,7 @@
 #include <lib/sync/condition.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/assert.h>
+#include <zircon/time.h>
 
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-context-info-gen3.h"

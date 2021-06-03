@@ -2,20 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_module.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/module.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include <string>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/device.h"
 
 static const size_t kModuleNameMax = 256;
+
+// Forward-declare the individual module entry points here.  We will only link them below if they
+// are enabled by configuration.
+extern "C" {
+zx_status_t iwl_mvm_init();
+}
 
 zx_status_t iwl_module_request(const char* name, ...) {
   va_list ap;
@@ -24,13 +32,14 @@ zx_status_t iwl_module_request(const char* name, ...) {
   vsnprintf(module_name, sizeof(module_name), name, ap);
   va_end(ap);
 
-  // Fuchsia does not build the other IWL driver components as separate modules, so we load them
-  // directly instead.
-  if (strcmp(module_name, "iwlmvm") == 0) {
+  // Link in the module initializers that are enabled by configuration.
+#if defined(CPTCFG_IWLMVM)
+  if (std::strcmp("iwlmvm", module_name) == 0) {
     return iwl_mvm_init();
   }
+#endif  // defined(CPTCFG_IWLMVM)
 
-  return ZX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t iwl_firmware_request(struct device* dev, const char* name, struct firmware* firmware) {
@@ -44,7 +53,6 @@ zx_status_t iwl_firmware_request(struct device* dev, const char* name, struct fi
   uintptr_t vaddr = 0;
   if ((status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &vaddr)) !=
       ZX_OK) {
-    IWL_ERR(drv, "Failed to map firmware VMO: %s\n", zx_status_get_string(status));
     zx_handle_close(vmo);
     return status;
   }
@@ -76,7 +84,6 @@ zx_status_t iwl_firmware_release(struct firmware* firmware) {
   if (firmware->vmo != ZX_HANDLE_INVALID) {
     if ((status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)firmware->data, firmware->size)) !=
         ZX_OK) {
-      IWL_ERR(NULL, "Failed to unmap firmware VMO: %s\n", zx_status_get_string(status));
       return status;
     }
     zx_handle_close(firmware->vmo);

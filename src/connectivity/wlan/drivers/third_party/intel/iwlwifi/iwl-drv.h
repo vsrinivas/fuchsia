@@ -36,7 +36,7 @@
 
 #include <zircon/types.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #ifdef __cplusplus
 extern "C" {

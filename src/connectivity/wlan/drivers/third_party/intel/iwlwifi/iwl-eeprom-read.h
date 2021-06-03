@@ -33,7 +33,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_READ_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_READ_H_
 
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 int iwl_read_eeprom(struct iwl_trans* trans, uint8_t** eeprom, size_t* eeprom_size);
 

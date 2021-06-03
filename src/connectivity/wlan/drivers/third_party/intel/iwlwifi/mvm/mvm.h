@@ -65,6 +65,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/lte-coex.h"

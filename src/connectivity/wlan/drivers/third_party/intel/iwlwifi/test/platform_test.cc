@@ -1,14 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 //
-// Unittest code for the functions in fuchsia_porting.h.
-
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+// Unittest code for the functions in the iwlwifi platform/ directory.
 
 #include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 namespace {
 

@@ -35,14 +35,10 @@
 
 #include <zircon/status.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
-
-// TODO(29700): This will be deprecated in favor of the banjo ieee80211.h
-#include <wlan/protocol/ieee80211.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 /*
  * iwl_mvm_rx_rx_phy_cmd - REPLY_RX_PHY_CMD handler
  *

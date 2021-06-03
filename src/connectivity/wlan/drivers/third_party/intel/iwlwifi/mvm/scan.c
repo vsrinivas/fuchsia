@@ -36,6 +36,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/scan.h"
 
+#include <lib/async/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/time.h>

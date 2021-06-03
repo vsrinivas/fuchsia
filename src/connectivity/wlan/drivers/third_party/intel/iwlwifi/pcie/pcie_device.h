@@ -12,7 +12,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 
 extern "C" {
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/fuchsia_pci.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 }
 
 namespace async {

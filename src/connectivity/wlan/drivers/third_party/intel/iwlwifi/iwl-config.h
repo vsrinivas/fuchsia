@@ -37,8 +37,10 @@
 
 #include <stdbool.h>
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #ifdef __cplusplus
 extern "C" {

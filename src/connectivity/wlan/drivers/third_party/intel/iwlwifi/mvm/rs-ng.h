@@ -51,6 +51,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/_rateScaleMng.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiGroupDatapath.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/apiVersion.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 #define RS_NAME "iwlwifi-rs"
 

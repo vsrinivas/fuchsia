@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_MODULE_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_MODULE_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MODULE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MODULE_H_
 
 // This file contains system calls related to module and firmware loading,
 
@@ -11,17 +11,11 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#ifdef __cplusplus
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+
+#if defined(__cplusplus)
 extern "C" {
-#endif  // __cplusplus
-
-struct device;
-
-struct firmware {
-  zx_handle_t vmo;
-  uint8_t* data;
-  size_t size;
-};
+#endif  // defined(__cplusplus)
 
 // Request loading of another driver module.
 zx_status_t iwl_module_request(const char* name, ...);
@@ -37,8 +31,8 @@ zx_status_t iwl_firmware_request_nowait(struct device* dev, const char* name,
 // Free a loaded firmware binary.
 zx_status_t iwl_firmware_release(struct firmware* firmware);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }  // extern "C"
-#endif  // __cplusplus
+#endif  // defined(__cplusplus)
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_MODULE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MODULE_H_

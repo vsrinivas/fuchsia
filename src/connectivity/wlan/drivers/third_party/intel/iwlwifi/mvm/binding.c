@@ -32,6 +32,9 @@
  *
  *****************************************************************************/
 
+#include <string.h>
+#include <zircon/types.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 

@@ -34,23 +34,14 @@
  *
  *****************************************************************************/
 
-#include <fuchsia/hardware/pci/c/banjo.h>
-#include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <lib/ddk/debug.h>
-#include <lib/ddk/device.h>
-#include <lib/ddk/driver.h>
-#include <lib/device-protocol/pci.h>
 #include <stdlib.h>
 #include <zircon/status.h>
 
-#include <wlan/protocol/mac.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwlwifi-bind.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/fuchsia_pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pci.h"
 
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"

@@ -23,7 +23,6 @@
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/bti.h>
-#include <stdio.h>
 #include <zircon/listnode.h>
 
 #include <array>
@@ -34,12 +33,12 @@
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester-pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 

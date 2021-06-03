@@ -38,8 +38,9 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 
 #include <threads.h>
+#include <zircon/types.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
+#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 /* for IWL_MAX_TID_COUNT */
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"

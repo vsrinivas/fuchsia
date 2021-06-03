@@ -37,6 +37,8 @@
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
 
 struct iwl_nvm_data {
   int n_hw_addrs;

@@ -33,6 +33,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DBG_TLV_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DBG_TLV_H_
 
+#include <stdint.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+
 /**
  * struct iwl_apply_point_data
  * @data: start address of this apply point data
@@ -46,6 +50,7 @@ struct iwl_apply_point_data {
 };
 
 struct iwl_trans;
+struct iwl_ucode_tlv;
 void iwl_load_fw_dbg_tlv(struct device* dev, struct iwl_trans* trans);
 void iwl_fw_dbg_free(struct iwl_trans* trans);
 void iwl_fw_dbg_copy_tlv(struct iwl_trans* trans, struct iwl_ucode_tlv* tlv, bool ext);

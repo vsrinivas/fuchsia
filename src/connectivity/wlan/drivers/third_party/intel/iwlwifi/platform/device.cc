@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/device.h"
 
 #include <lib/ddk/driver.h>
 
