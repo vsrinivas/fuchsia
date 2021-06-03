@@ -1,0 +1,69 @@
+{
+    children: [
+        {
+            name: "system-updater",
+            url: "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.update.installer.Installer",
+            from: "#system-updater",
+            to: "#appmgr",
+        },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#appmgr",
+            to: "#system-updater",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#pkg-resolver",
+            to: "#system-updater",
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg-cache",
+            to: "#system-updater",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#system-updater" ],
+        },
+        {
+            protocol: [
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.paver.Paver",
+            ],
+            from: "parent",
+            to: "#system-updater",
+        },
+        {
+            directory: "system",
+            from: "parent",
+            as: "pkgfs-system",
+            to: "#system-updater",
+        },
+        {
+            directory: "build-info",
+            from: "parent",
+            to: "#system-updater",
+        },
+        {
+            directory: "deprecated-misc-storage",
+            from: "parent",
+            to: "#system-updater",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#system-updater",
+        },
+    ],
+}

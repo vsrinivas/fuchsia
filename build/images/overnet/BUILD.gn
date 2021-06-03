@@ -12,6 +12,7 @@ core_name = "core-overnet"
 core_realm("core") {
   package_name = core_name
   testonly = true
+  deps = [ "//src/sys/pkg/bin/system-updater:system-updater-core-shard" ]
 }
 
 root_realm("root") {
@@ -30,11 +31,13 @@ assemble_system("overnet") {
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
+    "//src/sys/appmgr:core_component_id_index",
     "//src/sys/sysmgr",
     "//src/sys/sysmgr:services_config",
     "//src/connectivity/overnet/overnetstack",
     "//src/connectivity/overnet/overnetstack:overnetstack_config",
     "//src/connectivity/overnet/tools/debug-serial",
+    "//src/sys/pkg/bin/system-updater",
     "//src/sys/pkg/bin/system-update-committer",
   ]
   bootfs_labels = [

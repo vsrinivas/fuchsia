@@ -10,7 +10,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboot_controller_detach_causes_deferred_reboot() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -42,7 +42,7 @@ async fn reboot_controller_detach_causes_deferred_reboot() {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboot_controller_unblock_causes_reboot() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -74,7 +74,7 @@ async fn reboot_controller_unblock_causes_reboot() {
 
 #[fasync::run_singlethreaded(test)]
 async fn reboot_controller_dropped_causes_reboot() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")

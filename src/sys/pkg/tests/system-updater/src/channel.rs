@@ -6,7 +6,7 @@ use super::*;
 
 #[fasync::run_singlethreaded(test)]
 async fn promotes_target_channel_as_current_channel() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.set_target_channel("target-channel");
 
@@ -31,7 +31,7 @@ async fn promotes_target_channel_as_current_channel() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_target_channel_does_not_exist() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -48,7 +48,8 @@ async fn succeeds_even_if_target_channel_does_not_exist() {
 async fn does_not_promote_target_channel_on_failure() {
     let env = TestEnv::builder()
         .paver_service(|builder| builder.insert_hook(mphooks::return_error(|_| Status::INTERNAL)))
-        .build();
+        .build()
+        .await;
 
     env.set_target_channel("target-channel");
 

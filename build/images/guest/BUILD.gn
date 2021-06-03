@@ -11,6 +11,7 @@ core_name = "core-guest"
 core_realm("core") {
   package_name = core_name
   testonly = true
+  deps = [ "//src/sys/pkg/bin/system-updater:system-updater-core-shard" ]
 }
 
 root_realm("root") {
@@ -29,9 +30,11 @@ assemble_system("guest") {
     "//src/diagnostics/log-stats:package",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
+    "//src/sys/appmgr:core_component_id_index",
     "//src/sys/appmgr",
     "//src/sys/pkg/bin/pkg-cache",
     "//src/sys/pkg/bin/pkg-resolver",
+    "//src/sys/pkg/bin/system-updater",
     "//src/sys/pkg/bin/system-update-committer",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",

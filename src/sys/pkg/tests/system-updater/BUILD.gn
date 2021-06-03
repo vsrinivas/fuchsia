@@ -10,8 +10,10 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
@@ -21,6 +23,7 @@ rustc_test("driver") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
     "//src/lib/syslog/rust:syslog",
@@ -67,13 +70,18 @@ rustc_test("driver") {
 
 fuchsia_component("system-updater-test") {
   testonly = true
-  manifest = "meta/system-updater-test.cmx"
+  manifest = "meta/system-updater-test.cml"
   deps = [ ":driver" ]
 }
 
 fuchsia_test_package("system-updater-integration-tests") {
   test_components = [ ":system-updater-test" ]
-  deps = [ "//src/sys/pkg/bin/system-updater:isolated" ]
+  deps = [ "//src/sys/pkg/bin/system-updater:isolated-v2" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

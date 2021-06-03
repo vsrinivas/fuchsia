@@ -105,7 +105,17 @@
             to: "#core",
         },
         {
+            directory: "build-info",
+            from: "#bootstrap",
+            to: "#core",
+        },
+        {
             directory: "config-data",
+            from: "#bootstrap",
+            to: "#core",
+        },
+        {
+            directory: "deprecated-misc-storage",
             from: "#bootstrap",
             to: "#core",
         },

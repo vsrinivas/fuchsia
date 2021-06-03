@@ -831,7 +831,15 @@
             from: "#driver_manager",
         },
         {
+            directory: "build-info",
+            from: "#fshost",
+        },
+        {
             directory: "config-data",
+            from: "#fshost",
+        },
+        {
+            directory: "deprecated-misc-storage",
             from: "#fshost",
         },
         {

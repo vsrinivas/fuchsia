@@ -16,7 +16,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_without_writable_data() {
-    let env = TestEnv::builder().mount_data(false).build();
+    let env = TestEnv::builder().mount_data(false).build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -121,7 +121,7 @@ fn strip_start_time(mut value: serde_json::Value) -> serde_json::Value {
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_history() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     assert_eq!(env.read_history(), None);
 
@@ -194,7 +194,7 @@ async fn writes_history() {
 
 #[fasync::run_singlethreaded(test)]
 async fn replaces_bogus_history() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.write_history(json!({
         "valid": "no",
@@ -252,7 +252,7 @@ async fn replaces_bogus_history() {
 
 #[fasync::run_singlethreaded(test)]
 async fn increments_attempts_counter_on_retry() {
-    let env = TestEnv::builder().build();
+    let env = TestEnv::builder().build().await;
 
     env.resolver
         .url("fuchsia-pkg://fuchsia.com/not-found")
@@ -430,7 +430,8 @@ async fn serves_fidl_with_history_present() {
             }
             ],
         }))
-        .build();
+        .build()
+        .await;
 
     let installer_proxy = env.installer_proxy();
 
@@ -508,7 +509,7 @@ async fn serves_fidl_with_history_present() {
 /// When there's no history, the history FIDL APIs should return results with empty fields.
 #[fasync::run_singlethreaded(test)]
 async fn serves_fidl_without_history_present() {
-    let env = TestEnv::new();
+    let env = TestEnv::new().await;
 
     let installer_proxy = env.installer_proxy();
 
