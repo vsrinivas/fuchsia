@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <zircon/device/vfs.h>
 
@@ -23,13 +21,10 @@ namespace {
 
 using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
-using ::testing::UnorderedElementsAre;
-using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/appmgr_inspect_integration_tests#meta/"
     "inspect_vmo_test_app.cmx";
-constexpr char kTestProcessName[] = "inspect_vmo_test_app.cmx";
 
 class InspectTest : public sys::testing::TestWithEnvironment {
  protected:
@@ -59,71 +54,62 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&done] { return done; });
   }
 
-  // Open the root vmo from the Inspect Tree.
-  // Returns ZX_OK on success.
-  zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
-    files::Glob glob(
-        Substitute("/hub/r/test/*/c/$0/*/out/diagnostics/fuchsia.inspect.Tree", kTestProcessName));
-    if (glob.size() == 0) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    fuchsia::inspect::TreeSyncPtr ptr;
-    zx_status_t status;
-    status = fdio_service_connect(std::string(*glob.begin()).c_str(),
-                                  ptr.NewRequest().TakeChannel().release());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    fuchsia::inspect::TreeContent content;
-    status = ptr->GetContent(&content);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    *out_vmo = std::move(content.mutable_buffer()->vmo);
-    return ZX_OK;
-  }
-
  private:
   std::unique_ptr<EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr controller_;
 };
 
 TEST_F(InspectTest, ReadHierarchy) {
-  zx::vmo vmo;
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
+  async::Executor executor(dispatcher());
+  inspect::contrib::ArchiveReader reader(
+      real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
+      {"test/inspect_vmo_test_app.cmx:root"});
+  fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+  executor.schedule_task(
+      reader.SnapshotInspectUntilPresent({"inspect_vmo_test_app.cmx"})
+          .then(
+              [&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>& rest) {
+                result = std::move(rest);
+              }));
+  RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
 
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
+  ASSERT_TRUE(result.is_ok()) << "Error: " << result.error();
+  auto inspect_datas = result.take_value();
+  ASSERT_EQ(inspect_datas.size(), 1lu);
+  const auto& inspect_data = inspect_datas[0];
 
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(
-          NodeMatches(NameMatches("root")),
-          ChildrenMatch(UnorderedElementsAre(
-              AllOf(NodeMatches(AllOf(NameMatches("t1"),
-                                      PropertyList(UnorderedElementsAre(
-                                          StringIs("version", "1.0"),
-                                          ByteVectorIs("frame", std::vector<uint8_t>({0, 0, 0})),
-                                          IntIs("value", -10), BoolIs("active", true))))),
-                    ChildrenMatch(UnorderedElementsAre(
-                        NodeMatches(AllOf(NameMatches("item-0x0"),
-                                          PropertyList(UnorderedElementsAre(IntIs("value", 10))))),
-                        NodeMatches(AllOf(NameMatches("item-0x1"),
-                                          PropertyList(UnorderedElementsAre(IntIs("value", 100)))))
+  const auto& version = inspect_data.GetByPath({"root", "t1", "version"});
+  EXPECT_EQ(version, rapidjson::Value("1.0"));
 
-                            ))),
-              AllOf(NodeMatches(AllOf(NameMatches("t2"),
-                                      PropertyList(UnorderedElementsAre(
-                                          StringIs("version", "1.0"),
-                                          ByteVectorIs("frame", std::vector<uint8_t>({0, 0, 0})),
-                                          IntIs("value", -10), BoolIs("active", true))))),
-                    ChildrenMatch(UnorderedElementsAre(
-                        NodeMatches(AllOf(NameMatches("item-0x2"),
-                                          PropertyList(UnorderedElementsAre(IntIs("value", 4)))))))
+  const auto& frame = inspect_data.GetByPath({"root", "t1", "frame"});
+  EXPECT_EQ(frame, rapidjson::Value("b64:AAAA"));
 
-                        )))));
+  const auto& value = inspect_data.GetByPath({"root", "t1", "value"});
+  EXPECT_EQ(value, rapidjson::Value(-10));
+
+  const auto& active = inspect_data.GetByPath({"root", "t1", "active"});
+  EXPECT_EQ(active, rapidjson::Value(true));
+
+  const auto& item0_value = inspect_data.GetByPath({"root", "t1", "item-0x0", "value"});
+  EXPECT_EQ(item0_value, rapidjson::Value(10));
+
+  const auto& item1_value = inspect_data.GetByPath({"root", "t1", "item-0x1", "value"});
+  EXPECT_EQ(item1_value, rapidjson::Value(100));
+
+  const auto& t2_version = inspect_data.GetByPath({"root", "t2", "version"});
+  EXPECT_EQ(t2_version, rapidjson::Value("1.0"));
+
+  const auto& t2_frame = inspect_data.GetByPath({"root", "t2", "frame"});
+  EXPECT_EQ(t2_frame, rapidjson::Value("b64:AAAA"));
+
+  const auto& t2_value = inspect_data.GetByPath({"root", "t2", "value"});
+  EXPECT_EQ(t2_value, rapidjson::Value(-10));
+
+  const auto& t2_active = inspect_data.GetByPath({"root", "t2", "active"});
+  EXPECT_EQ(t2_active, rapidjson::Value(true));
+
+  const auto& item2_value = inspect_data.GetByPath({"root", "t2", "item-0x2", "value"});
+  EXPECT_EQ(item2_value, rapidjson::Value(4));
 }
 
 }  // namespace

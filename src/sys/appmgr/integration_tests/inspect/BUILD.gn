@@ -30,13 +30,12 @@ executable("test-vmo") {
 
   deps = [
     "//sdk/fidl/fuchsia.inspect",
-    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/inspect",
   ]
 }
 
@@ -61,13 +60,12 @@ executable("test-health") {
 
   deps = [
     "//sdk/fidl/fuchsia.inspect",
-    "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/inspect",
   ]
 }
 

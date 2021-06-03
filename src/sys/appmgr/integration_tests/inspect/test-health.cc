@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <zircon/device/vfs.h>
 
@@ -22,15 +21,10 @@ namespace {
 
 using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
-using ::testing::_;
-using ::testing::ElementsAre;
-using ::testing::UnorderedElementsAre;
-using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/appmgr_inspect_integration_tests#meta/"
     "inspect_health_test_app.cmx";
-constexpr char kTestProcessName[] = "inspect_health_test_app.cmx";
 
 class InspectHealthTest : public sys::testing::TestWithEnvironment {
  protected:
@@ -57,51 +51,39 @@ class InspectHealthTest : public sys::testing::TestWithEnvironment {
     RunLoopUntil([&done] { return done; });
   }
 
-  // Open the root vmo from the Inspect Tree.
-  // Returns ZX_OK on success.
-  zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
-    files::Glob glob(
-        Substitute("/hub/r/test/*/c/$0/*/out/diagnostics/fuchsia.inspect.Tree", kTestProcessName));
-    if (glob.size() == 0) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    fuchsia::inspect::TreeSyncPtr ptr;
-    zx_status_t status;
-    status = fdio_service_connect(std::string(*glob.begin()).c_str(),
-                                  ptr.NewRequest().TakeChannel().release());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    fuchsia::inspect::TreeContent content;
-    status = ptr->GetContent(&content);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    *out_vmo = std::move(content.mutable_buffer()->vmo);
-    return ZX_OK;
-  }
-
  private:
   std::unique_ptr<EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr controller_;
 };
 
 TEST_F(InspectHealthTest, ReadHierarchy) {
-  zx::vmo vmo;
-  ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo));
+  async::Executor executor(dispatcher());
+  inspect::contrib::ArchiveReader reader(
+      real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>(),
+      {"test/inspect_health_test_app.cmx:root"});
+  fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> result;
+  executor.schedule_task(
+      reader.SnapshotInspectUntilPresent({"inspect_health_test_app.cmx"})
+          .then(
+              [&](fit::result<std::vector<inspect::contrib::DiagnosticsData>, std::string>& rest) {
+                result = std::move(rest);
+              }));
+  RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
 
-  auto hierarchy = inspect::ReadFromVmo(std::move(vmo)).take_value();
+  ASSERT_TRUE(result.is_ok()) << "Error: " << result.error();
+  const auto inspect_datas = result.take_value();
+  ASSERT_EQ(inspect_datas.size(), 1lu);
+  const auto& inspect_data = inspect_datas[0];
 
-  EXPECT_THAT(hierarchy,
-              AllOf(NodeMatches(NameMatches("root")),
-                    ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
-                        NameMatches("fuchsia.inspect.Health"),
-                        PropertyList(UnorderedElementsAre(
-                            StringIs("status", "UNHEALTHY"), StringIs("message", "Example failure"),
-                            IntIs("start_timestamp_nanos", _))))))))));
+  const auto& status = inspect_data.GetByPath({"root", "fuchsia.inspect.Health", "status"});
+  EXPECT_EQ(status, rapidjson::Value("UNHEALTHY"));
+
+  const auto& message = inspect_data.GetByPath({"root", "fuchsia.inspect.Health", "message"});
+  EXPECT_EQ(message, rapidjson::Value("Example failure"));
+
+  const auto& timestamp =
+      inspect_data.GetByPath({"root", "fuchsia.inspect.Health", "start_timestamp_nanos"});
+  EXPECT_TRUE(timestamp.IsNumber());
 }
 
 }  // namespace
