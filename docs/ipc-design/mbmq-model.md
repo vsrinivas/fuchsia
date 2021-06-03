@@ -292,6 +292,38 @@ Channel endpoint:
     `enqueued_as_request`.  This will be empty if the endpoint has an
     associated MsgQueue.
 
+## Properties of CMHs
+
+CMHs have these useful properties:
+
+*   **Acts as a reply capability:** A CMH acts as single-use,
+    revokable capability for replying to a request.  When the reply is
+    sent, the CMH's reference to the MBO is dropped, revoking the
+    callee's ability to use it to modify the MBO or send the MBO as a
+    reply again.
+
+*   **Reusable:** A callee can reuse a CMH across multiple requests.
+    This means we can avoid doing an allocation and deallocation for
+    each request, and we can avoid modifying the handle table for each
+    request.  (A CMH's ability to reply to a particular request is
+    revoked when the reply is sent, but the CMH itself is not
+    revoked.)
+
+*   **Acts as a message handle:** A CMH acts as a handle to a request
+    message.  This means that a large request can be read
+    incrementally by doing multiple syscall invocations using that
+    handle to read parts of the message.  (Note, however, that we have
+    not defined the syscalls for doing that yet.)  This means that a
+    careful callee can potentially accept arbitrarily large messages
+    while avoiding being vulnerable to memory exhaustion DoS.
+
+    In contrast, Zircon's current `zx_channel_read()` syscall requires
+    that a message be read fully into memory (or be truncated).  This
+    means that if the current 64k message size limit were removed,
+    there would be no way for a message receiver to use
+    `zx_channel_read()` to receive an arbitrarily large message
+    without risking exhausting its own memory.
+
 ## "Fire-and-forget" requests: requests without replies
 
 At the FIDL level, some request messages are "fire-and-forget": they
