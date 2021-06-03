@@ -21,6 +21,8 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pmhttp"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/sse"
+
+	repov2 "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 )
 
 // poor mans reset, for flags used in the below tests
@@ -281,6 +283,102 @@ func TestServer(t *testing.T) {
 		}
 		if want != string(got) {
 			t.Errorf("got %s, want %s", got, want)
+		}
+	})
+}
+
+func TestServerV2(t *testing.T) {
+	defer resetFlags()
+	defer resetServer()
+	cfg := build.TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+	build.BuildTestPackage(cfg)
+
+	portFileDir := t.TempDir()
+	portFile := filepath.Join(portFileDir, "port-file")
+	repoDir := t.TempDir()
+	manifestListPath := filepath.Join(cfg.OutputDir, "pkg-manifests.list")
+	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
+	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	repo, err := repo.New(repoDir, filepath.Join(repoDir, "repository", "blobs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.AddTargets([]string{}, json.RawMessage{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repo.CommitUpdates(false); err != nil {
+		t.Fatal(err)
+	}
+
+	addrChan := make(chan string)
+	var w sync.WaitGroup
+	w.Add(1)
+	go func() {
+		defer w.Done()
+		err := Run(cfg, []string{"-l", "127.0.0.1:0", "-repo", repoDir, "-p", manifestListPath, "-f", portFile, "-c", "2"}, addrChan)
+		if err != nil && err != http.ErrServerClosed {
+			t.Fatal(err)
+		}
+	}()
+	defer func() {
+		server.Close()
+		w.Wait()
+	}()
+	addr := <-addrChan
+	baseURL := fmt.Sprintf("http://%s", addr)
+
+	// after building, we need to wait for publication to complete, so start a client for that
+	cli := newTestAutoClient(t, baseURL)
+	defer cli.close()
+
+	cli.verifyNoPendingEvents()
+
+	// the first event happens as the initial version of the package is published
+	event := cli.readEvent()
+	if got, want := event.Event, "timestamp.json"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+
+	t.Run("serves v2 config.json", func(t *testing.T) {
+		res, err := http.Get(baseURL + "/config.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+
+		if got, want := res.Header.Get("Content-Type"), "application/json"; got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+
+		var config repov2.Config
+		if err := json.NewDecoder(res.Body).Decode(&config); err != nil {
+			t.Fatalf("failed to decode config: %s", err)
+		}
+
+		if len(config.RootKeys) != 1 {
+			t.Errorf("got root keys %q, wanted 1", config.RootKeys)
+		}
+
+		if config.RootVersion != 1 {
+			t.Errorf("got root version %v, wanted 1", config.RootVersion)
+		}
+
+		if config.RootThreshold != 1 {
+			t.Errorf("got root threshold %v, wanted 1", config.RootThreshold)
+		}
+
+		if !config.Mirrors[0].Subscribe {
+			t.Errorf("got repo URL mirror subscribe %v, wanted true", config.Mirrors[0].Subscribe)
 		}
 	})
 }

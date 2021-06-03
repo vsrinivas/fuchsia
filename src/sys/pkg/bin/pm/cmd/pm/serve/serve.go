@@ -36,6 +36,7 @@ var (
 	encryptionKey = fs.String("e", "", "Path to a symmetric blob encryption key *UNSAFE*")
 	publishList   = fs.String("p", "", "path to a package list file to be auto-published")
 	portFile      = fs.String("f", "", "path to a file to write the HTTP listen port")
+	configVersion = fs.Int("c", 1, "component framework version for config.json")
 	config        = &repo.Config{}
 	initOnce      sync.Once
 )
@@ -176,14 +177,28 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		}
 	}))
 
-	cs := pmhttp.NewConfigServer(func() []byte {
-		b, err := ioutil.ReadFile(filepath.Join(*repoServeDir, "root.json"))
-		if err != nil {
-			log.Printf("%s", err)
-		}
-		return b
-	}, *encryptionKey)
-	mux.Handle("/config.json", cs)
+	switch *configVersion {
+	case 1:
+		cs := pmhttp.NewConfigServer(func() []byte {
+			b, err := ioutil.ReadFile(filepath.Join(*repoServeDir, "root.json"))
+			if err != nil {
+				log.Printf("%s", err)
+			}
+			return b
+		}, *encryptionKey)
+		mux.Handle("/config.json", cs)
+	case 2:
+		cs := pmhttp.NewConfigServerV2(func() []byte {
+			b, err := ioutil.ReadFile(filepath.Join(*repoServeDir, "root.json"))
+			if err != nil {
+				log.Printf("%s", err)
+			}
+			return b
+		})
+		mux.Handle("/config.json", cs)
+	default:
+		return fmt.Errorf("[pm auto] invalid component version specified: %v", *configVersion)
+	}
 
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.RequestURI, "/blobs") && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {

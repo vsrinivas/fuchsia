@@ -67,6 +67,8 @@ go_library("pm_lib") {
     "pmhttp/auto.go",
     "pmhttp/config.go",
     "pmhttp/config_test.go",
+    "pmhttp/configv2.go",
+    "pmhttp/configv2_test.go",
     "pmhttp/index.go",
     "pmhttp/pmhttp.go",
     "repo/config.go",
