@@ -261,10 +261,10 @@ int main(int argc, char** argv) {
   } else if (!strcmp(argv[1], "nano")) {
     return nanospam();
   } else if (!strcmp(argv[1], "heap1")) {
-    int n = (argc > 2) ? strtoul(argv[2], 0, 10) : THREADS;
+    int n = (argc > 2) ? (int)strtoul(argv[2], 0, 10) : THREADS;
     return heapblaster(n, 1);
   } else if (!strcmp(argv[1], "heap2")) {
-    int n = (argc > 2) ? strtoul(argv[2], 0, 10) : THREADS;
+    int n = (argc > 2) ? (int)strtoul(argv[2], 0, 10) : THREADS;
     return heapblaster(n, 0);
   } else {
     printf("unknown sub-command '%s'\n", argv[1]);

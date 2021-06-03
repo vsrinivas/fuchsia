@@ -718,7 +718,6 @@ config("Wno-conversion") {
     "//src/virtualization/lib/vsh/*",
     "//src/virtualization/tests/*",
     "//src/virtualization/third_party/fdt/*",
-    "//src/zircon/tests/evil/*",
     "//third_party/*",
     "//tools/bootserver_old/*",
     "//tools/fidlcat/*",
