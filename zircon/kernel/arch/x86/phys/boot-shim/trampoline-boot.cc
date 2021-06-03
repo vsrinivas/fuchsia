@@ -34,11 +34,11 @@ class TrampolineBoot::Trampoline {
 
   [[noreturn]] void Boot(const zircon_kernel_t* kernel, uint32_t kernel_size, void* zbi) {
     TrampolineArgs args = {
-        .dst = reinterpret_cast<std::byte*>(kFixedLoadAddress),
-        .src = reinterpret_cast<const std::byte*>(kernel),
+        .dst = kFixedLoadAddress,
+        .src = reinterpret_cast<uintptr_t>(kernel),
         .count = kernel_size,
         .entry = static_cast<uintptr_t>(kernel->data_kernel.entry),
-        .zbi = zbi,
+        .zbi = reinterpret_cast<uintptr_t>(zbi),
     };
     args.SetDirection();
     ZX_ASSERT(args.entry == kernel->data_kernel.entry);
@@ -60,11 +60,11 @@ class TrampolineBoot::Trampoline {
       }
     }
 
-    std::byte* dst;
-    const std::byte* src;
-    size_t count;
-    uintptr_t entry;
-    void* zbi;
+    uint64_t dst;
+    uint64_t src;
+    uint64_t count;
+    uint64_t entry;
+    uint64_t zbi;
     bool backwards;
   };
 
@@ -86,8 +86,8 @@ class TrampolineBoot::Trampoline {
     // jumping to the entry point (%rbx).
     const std::byte* code;
     size_t size;
-    __asm__(
-        R"""(
+    __asm__(R"""(
+.code64
 .pushsection .rodata.trampoline, "a?", %%progbits
 0:
   mov %c[backwards](%%rsi), %%al
@@ -109,16 +109,26 @@ class TrampolineBoot::Trampoline {
   jmp *%%rbx
 2:
 .popsection
-lea 0b(%%rip), %[code]
-mov $(2b - 0b), %[size]
 )"""
-        : [code] "=r"(code), [size] "=r"(size)
-        : [backwards] "i"(offsetof(TrampolineArgs, backwards)),  //
-          [dst] "i"(offsetof(TrampolineArgs, dst)),              //
-          [src] "i"(offsetof(TrampolineArgs, src)),              //
-          [count] "i"(offsetof(TrampolineArgs, count)),          //
-          [zbi] "i"(offsetof(TrampolineArgs, zbi)),              //
-          [entry] "i"(offsetof(TrampolineArgs, entry)));
+#ifdef __i386__
+            R"""(
+.code32
+  mov $0b, %[code]
+  mov $(2b - 0b), %[size]
+            )"""
+#else
+            R"""(
+  lea 0b(%%rip), %[code]
+  mov $(2b - 0b), %[size]
+            )"""
+#endif
+            : [code] "=r"(code), [size] "=r"(size)
+            : [backwards] "i"(offsetof(TrampolineArgs, backwards)),  //
+              [dst] "i"(offsetof(TrampolineArgs, dst)),              //
+              [src] "i"(offsetof(TrampolineArgs, src)),              //
+              [count] "i"(offsetof(TrampolineArgs, count)),          //
+              [zbi] "i"(offsetof(TrampolineArgs, zbi)),              //
+              [entry] "i"(offsetof(TrampolineArgs, entry)));
     return {code, size};
   }
 

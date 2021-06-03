@@ -184,7 +184,9 @@ template("zbi_test") {
             qemu_kernel_label =
                 get_label_info(invoker.qemu_kernel, "label_with_toolchain")
           }
-          forward_variables_from(invoker, [ "timeout" ])
+          if (defined(invoker.timeout) && invoker.timeout != false) {
+            timeout = invoker.timeout
+          }
         },
       ]
     }

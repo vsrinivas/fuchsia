@@ -6,10 +6,13 @@
 
 import("//build/testing/zbi_test.gni")
 import("//build/unification/global_variables.gni")
+import("//zircon/kernel/phys/phys_executable.gni")
+import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
 group("boot-shim") {
   deps = [
+    ":linux-x86-boot-shim",
     ":pic-1mb-boot-shim",
     ":x86-1mb-boot-shim",
   ]
@@ -75,11 +78,6 @@ if (toolchain.environment == "kernel.phys" ||
   }
 }
 
-group("tests") {
-  testonly = true
-  deps = [ ":x86-boot-shim-tests" ]
-}
-
 zbi_executable("phys-1mb-hello-world") {
   testonly = true
 
@@ -111,4 +109,99 @@ zbi_test("x86-boot-shim-tests") {
     # Finally, the PIC->1M shim hands off to the 1M test program.
     ":phys-1mb-hello-world",
   ]
+}
+
+if (toolchain.environment == "kernel.phys32") {
+  source_set("legacy-boot-shim") {
+    sources = [ "legacy-boot-shim.cc" ]
+    deps = [
+      ":stdout",
+      ":trampoline-boot",
+      "..:address-space",
+      "..:legacy-boot",
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys:arch-header",
+      "//zircon/kernel/phys:main",
+      "//zircon/kernel/phys:symbolize",
+      "//zircon/system/ulib/hwreg",
+    ]
+  }
+
+  source_set("stdout") {
+    sources = [ "stdout.cc" ]
+    public = [ "stdout.h" ]
+    deps = [
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/system/ulib/lazy_init",
+      "//zircon/system/ulib/uart",
+    ]
+  }
+
+  phys_executable("linux-x86-boot-shim") {
+    sources = [ "linux-x86-boot-shim.cc" ]
+    deps = [
+      ":legacy-boot-shim",
+      "..:linuxboot",
+      "//zircon/kernel/phys:symbolize",
+    ]
+  }
+} else {
+  group("linux-x86-boot-shim") {
+    public_deps =
+        [ ":linux-x86-boot-shim(//zircon/kernel/arch/x86/phys:kernel.phys32)" ]
+  }
+}
+
+qemu_shims = [
+  {
+    name = "linux-x86-boot-shim"
+    format = "linuxboot"
+  },
+]
+
+qemu_shim_tests = [
+  "core-tests",
+  "phys-unittests",
+]
+
+template("qemu_shim_test") {
+  foreach(shim, qemu_shims) {
+    zbi_test("${shim.name}-$target_name") {
+      foreach(qemu, qemu_boot_formats) {
+        if (qemu.name == shim.format) {
+          qemu_kernel = ":${shim.name}(${qemu.environment})"
+          forward_variables_from(qemu, [ "timeout" ])
+        }
+      }
+      assert(defined(qemu_kernel), "$shim not in $qemu_boot_formats")
+
+      device_types = [ "QEMU" ]
+
+      forward_variables_from(invoker, "*")
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":x86-boot-shim-tests" ]
+  foreach(shim, qemu_shims) {
+    deps += [ ":${shim.name}" ]
+    foreach(test, qemu_shim_tests) {
+      deps += [ ":${shim.name}-$test" ]
+    }
+  }
+}
+
+qemu_shim_test("phys-unittests") {
+  deps = [ "//zircon/kernel/phys/test:zbi-phys-unittests.zbi(//zircon/kernel/phys:kernel.phys_$current_cpu)" ]
+}
+
+qemu_shim_test("core-tests") {
+  deps = [ "//zircon/system/utest/core:core-tests.zbi($default_toolchain)" ]
+
+  # This runs the real kernel with full hardware reboot/shutdown support and it
+  # isn't necessarily really quick, so don't impose the short timeout used for
+  # raw phys tests.
+  timeout = false
 }

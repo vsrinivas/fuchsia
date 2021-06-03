@@ -51,31 +51,40 @@ extern "C" const BuildIdNote __stop_note_gnu_build_id[];
 
 class BuildId {
  public:
-  BuildId(const BuildIdNote* start = __start_note_gnu_build_id,
-          const BuildIdNote* stop = __stop_note_gnu_build_id)
-      : note_(start) {
-    ZX_ASSERT(note_->matches());
-    ZX_ASSERT(note_->next() <= stop);
-  }
-
   auto begin() const { return note_->build_id; }
   auto end() const { return begin() + size(); }
   size_t size() const { return note_->n_descsz; }
 
-  ktl::string_view Print() {
+  ktl::string_view Print() const { return {hex_, size() * 2}; }
+
+  void Init(const BuildIdNote* start = __start_note_gnu_build_id,
+            const BuildIdNote* stop = __stop_note_gnu_build_id) {
+    note_ = start;
+    ZX_ASSERT(note_->matches());
+    ZX_ASSERT(note_->next() <= stop);
     ZX_ASSERT(size() <= kMaxBuildIdSize);
     char* p = hex_;
     for (uint8_t byte : *this) {
       *p++ = "0123456789abcdef"[byte >> 4];
       *p++ = "0123456789abcdef"[byte & 0xf];
     }
-    return {hex_, size() * 2};
+  }
+
+  static const BuildId& GetInstance() {
+    if (!gInstance.note_) {
+      gInstance.Init();
+    }
+    return gInstance;
   }
 
  private:
-  const BuildIdNote* note_ = nullptr;
+  static BuildId gInstance;
+
+  const BuildIdNote* note_;
   char hex_[kMaxBuildIdSize * 2];
 };
+
+BuildId BuildId::gInstance;
 
 }  // namespace
 
@@ -88,8 +97,10 @@ void Symbolize::Printf(const char* fmt, ...) {
   va_end(args);
 }
 
+ktl::string_view Symbolize::BuildIdString() { return BuildId::GetInstance().Print(); }
+
 void Symbolize::PrintModule() {
-  Printf("{{{module:0:%s:elf:%V}}}\n", kProgramName_, BuildId().Print());
+  Printf("{{{module:0:%s:elf:%V}}}\n", kProgramName_, BuildId::GetInstance().Print());
 }
 
 void Symbolize::PrintMmap() {

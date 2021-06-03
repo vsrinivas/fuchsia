@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/testing/zbi_test.gni")
+import("//zircon/kernel/phys/qemu.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
 group("boot-shim") {
@@ -56,6 +57,9 @@ zbi_test("zbi-boot-shim-phys-unittests") {
     ":zbi-boot-shim",
     "//zircon/kernel/phys/test:zbi-phys-unittests.zbi(//zircon/kernel/phys:kernel.phys_$current_cpu)",
   ]
+
+  # Set a short timeout since the tests don't reliably reboot the machine.
+  timeout = qemu_short_timeout
 }
 
 zbi_test("zbi-boot-shim-core-tests") {

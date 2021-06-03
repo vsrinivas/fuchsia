@@ -33,6 +33,9 @@ class Symbolize {
 
   void set_output(FILE* f) { output_ = f; }
 
+  // Return the hex string for the program's own build ID.
+  ktl::string_view BuildIdString();
+
   // Print the contextual markup elements describing this phys executable.
   PHYS_SINGLETHREAD void ContextAlways();
 
