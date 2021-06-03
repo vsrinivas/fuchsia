@@ -344,7 +344,6 @@ func Main() {
 
 	dnsWatchers := newDnsServerWatcherCollection(ns.dnsConfig.GetServersCacheAndChannel)
 
-	socketProviderImpl := providerImpl{ns: ns}
 	ns.stats.init(ns)
 	appCtx.OutgoingService.AddDiagnostics("counters", &component.DirectoryWrapper{
 		Directory: &inspectDirectory{
@@ -470,7 +469,7 @@ func Main() {
 	}
 
 	{
-		stub := socket.ProviderWithCtxStub{Impl: &socketProviderImpl}
+		stub := socket.ProviderWithCtxStub{Impl: &providerImpl{ns: ns}}
 		appCtx.OutgoingService.AddService(
 			socket.ProviderName,
 			func(ctx context.Context, c zx.Channel) error {
@@ -483,7 +482,7 @@ func Main() {
 	}
 
 	{
-		stub := routes.StateWithCtxStub{Impl: &routesImpl{ns.stack}}
+		stub := routes.StateWithCtxStub{Impl: &routesImpl{stack: ns.stack}}
 		appCtx.OutgoingService.AddService(
 			routes.StateName,
 			func(ctx context.Context, c zx.Channel) error {
