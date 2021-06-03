@@ -8,6 +8,7 @@ use {
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
+    addr::TargetAddr,
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
     bridge::{DaemonError, TargetAddrInfo, TargetIpPort},
@@ -19,11 +20,11 @@ use {
     fidl_fuchsia_developer_remotecontrol::{
         IdentifyHostError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
     },
-    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::Task,
     hoist::OvernetInstance,
-    netext::{scope_id_to_name, IsLocalAddr},
+    netext::IsLocalAddr,
     rand::random,
     std::cell::RefCell,
     std::cmp::Ordering,
@@ -32,7 +33,7 @@ use {
     std::fmt,
     std::fmt::{Debug, Display},
     std::hash::{Hash, Hasher},
-    std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
+    std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     std::rc::{Rc, Weak},
     std::sync::Arc,
     std::time::{Duration, Instant},
@@ -451,8 +452,8 @@ impl Target {
 
         // Order by link-local first, then by recency
         let link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| match (
-            e1.addr.ip.is_link_local_addr(),
-            e2.addr.ip.is_link_local_addr(),
+            e1.addr.ip().is_link_local_addr(),
+            e2.addr.ip().is_link_local_addr(),
         ) {
             (true, true) | (false, false) => recency(e1, e2),
             (true, false) => Ordering::Less,
@@ -664,8 +665,8 @@ impl Target {
             .into_iter()
             .filter(|entry| {
                 entry.manual
-                    || if let IpAddr::V6(v) = &entry.addr.ip {
-                        entry.addr.scope_id != 0 || !v.is_link_local_addr()
+                    || if let IpAddr::V6(v) = &entry.addr.ip() {
+                        entry.addr.scope_id() != 0 || !v.is_link_local_addr()
                     } else {
                         true
                     }
@@ -681,7 +682,7 @@ impl Target {
             .into_iter()
             .filter(|entry| {
                 entry.manual
-                    || if let IpAddr::V4(v) = &entry.addr.ip { !v.is_loopback() } else { true }
+                    || if let IpAddr::V4(v) = &entry.addr.ip() { !v.is_loopback() } else { true }
             })
             .collect();
     }
@@ -749,13 +750,13 @@ impl Target {
             // originally present, for example if a directly connected USB target has restarted,
             // wherein the scopeid could be incremented due to the device being given a new
             // interface id allocation.
-            if addr.ip().is_ipv6() && addr.scope_id == 0 {
+            if addr.ip().is_ipv6() && addr.scope_id() == 0 {
                 if let Some(entry) = addrs.get(&(addr, now.clone()).into()) {
-                    addr.scope_id = entry.addr.scope_id;
+                    addr.set_scope_id(entry.addr.scope_id());
                 }
 
                 // Note: not adding ipv6 link-local addresses without scopes here is deliberate!
-                if addr.ip().is_link_local_addr() && addr.scope_id == 0 {
+                if addr.ip().is_link_local_addr() && addr.scope_id() == 0 {
                     continue;
                 }
             }
@@ -981,145 +982,6 @@ impl Debug for Target {
     }
 }
 
-// TODO(fxbug.dev/52733): Have `TargetAddr` support serial numbers.
-#[derive(Hash, Clone, Debug, Copy, Eq, PartialEq)]
-pub struct TargetAddr {
-    ip: IpAddr,
-    scope_id: u32,
-}
-
-impl Ord for TargetAddr {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let this_socket = SocketAddr::from(self);
-        let other_socket = SocketAddr::from(other);
-        this_socket.cmp(&other_socket)
-    }
-}
-
-impl PartialOrd for TargetAddr {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Into<bridge::TargetAddrInfo> for &TargetAddr {
-    fn into(self) -> bridge::TargetAddrInfo {
-        bridge::TargetAddrInfo::Ip(bridge::TargetIp {
-            ip: match self.ip {
-                IpAddr::V6(i) => IpAddress::Ipv6(Ipv6Address { addr: i.octets().into() }),
-                IpAddr::V4(i) => IpAddress::Ipv4(Ipv4Address { addr: i.octets().into() }),
-            },
-            scope_id: self.scope_id,
-        })
-    }
-}
-
-impl Into<bridge::TargetAddrInfo> for TargetAddr {
-    fn into(self) -> bridge::TargetAddrInfo {
-        (&self).into()
-    }
-}
-
-impl From<bridge::TargetAddrInfo> for TargetAddr {
-    fn from(t: bridge::TargetAddrInfo) -> Self {
-        (&t).into()
-    }
-}
-
-impl From<&bridge::TargetAddrInfo> for TargetAddr {
-    fn from(t: &bridge::TargetAddrInfo) -> Self {
-        let (addr, scope): (IpAddr, u32) = match t {
-            bridge::TargetAddrInfo::Ip(ip) => match ip.ip {
-                IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),
-                IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), ip.scope_id),
-            },
-            bridge::TargetAddrInfo::IpPort(ip) => match ip.ip {
-                IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),
-                IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), ip.scope_id),
-            },
-            // TODO(fxbug.dev/52733): Add serial numbers.,
-        };
-
-        (addr, scope).into()
-    }
-}
-
-impl From<Subnet> for TargetAddr {
-    fn from(i: Subnet) -> Self {
-        // TODO(awdavies): Figure out if it's possible to get the scope_id from
-        // this address.
-        match i.addr {
-            IpAddress::Ipv4(ip4) => SocketAddr::from((ip4.addr, 0)).into(),
-            IpAddress::Ipv6(ip6) => SocketAddr::from((ip6.addr, 0)).into(),
-        }
-    }
-}
-
-impl From<TargetAddr> for SocketAddr {
-    fn from(t: TargetAddr) -> Self {
-        Self::from(&t)
-    }
-}
-
-impl From<&TargetAddr> for SocketAddr {
-    fn from(t: &TargetAddr) -> Self {
-        match t.ip {
-            IpAddr::V6(addr) => SocketAddr::V6(SocketAddrV6::new(addr, 0, 0, t.scope_id)),
-            IpAddr::V4(addr) => SocketAddr::V4(SocketAddrV4::new(addr, 0)),
-        }
-    }
-}
-
-impl From<(IpAddr, u32)> for TargetAddr {
-    fn from(f: (IpAddr, u32)) -> Self {
-        Self { ip: f.0, scope_id: f.1 }
-    }
-}
-
-impl From<SocketAddr> for TargetAddr {
-    fn from(s: SocketAddr) -> Self {
-        Self {
-            ip: s.ip(),
-            scope_id: match s {
-                SocketAddr::V6(addr) => addr.scope_id(),
-                _ => 0,
-            },
-        }
-    }
-}
-
-impl TargetAddr {
-    /// Construct a new TargetAddr from a string representation of the form
-    /// accepted by std::net::SocketAddr, e.g. 127.0.0.1:22, or [fe80::1%1]:0.
-    pub fn new<S>(s: S) -> Result<Self>
-    where
-        S: AsRef<str>,
-    {
-        let sa = s.as_ref().parse::<SocketAddr>()?;
-        Ok(Self::from(sa))
-    }
-
-    pub fn scope_id(&self) -> u32 {
-        self.scope_id
-    }
-
-    pub fn ip(&self) -> IpAddr {
-        self.ip.clone()
-    }
-}
-
-impl Display for TargetAddr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.ip())?;
-
-        if self.ip.is_link_local_addr() && self.scope_id() > 0 {
-            write!(f, "%{}", scope_id_to_name(self.scope_id()))?;
-        }
-
-        Ok(())
-    }
-}
-
 /// Convert a TargetAddrInfo to a SocketAddr preserving the port number if
 /// provided, otherwise the returned SocketAddr will have port number 0.
 pub fn target_addr_info_to_socketaddr(tai: TargetAddrInfo) -> SocketAddr {
@@ -1169,7 +1031,7 @@ impl TargetQuery {
             Self::Addr(addr) => t.addresses.iter().any(|a| {
                 // If the query does not contain a scope, allow a match against
                 // only the IP.
-                a == addr || addr.scope_id == 0 && a.ip == addr.ip
+                a == addr || addr.scope_id() == 0 && a.ip() == addr.ip()
             }),
             Self::First => true,
         }
@@ -1288,7 +1150,7 @@ impl TargetCollection {
         if to_update.is_none() {
             let new_nodename = new_target.nodename();
             let new_ips =
-                new_target.addrs().iter().map(|addr| addr.ip.clone()).collect::<Vec<IpAddr>>();
+                new_target.addrs().iter().map(|addr| addr.ip().clone()).collect::<Vec<IpAddr>>();
             let new_port = new_target.ssh_port();
             let new_serial = new_target.serial();
 
@@ -1309,7 +1171,7 @@ impl TargetCollection {
                     || nodenames_match()
                     // Only match against addresses if the ports are the same
                     || (target.ssh_port() == new_port
-                        && target.addrs().iter().any(|addr| new_ips.contains(&addr.ip)))
+                        && target.addrs().iter().any(|addr| new_ips.contains(&addr.ip())))
                 {
                     to_update.replace(target.clone());
                     break;
@@ -1463,9 +1325,10 @@ mod test {
         bridge::TargetIp,
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_net::Subnet,
         futures::prelude::*,
         matches::assert_matches,
-        std::net::{Ipv4Addr, Ipv6Addr},
+        std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     };
 
     const DEFAULT_PRODUCT_CONFIG: &str = "core";
@@ -1582,7 +1445,7 @@ mod test {
         t3.addrs_insert((a2.clone(), 3).into());
         tc.merge_insert(clone_target(&t3));
         let merged_target = tc.get(nodename.clone()).unwrap();
-        assert_eq!(merged_target.addrs().iter().filter(|addr| addr.scope_id == 3).count(), 1);
+        assert_eq!(merged_target.addrs().iter().filter(|addr| addr.scope_id() == 3).count(), 1);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2167,14 +2030,14 @@ mod test {
         // user adding it explicitly. That is, the target has a correctly scoped
         // link-local address.
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
+        addr_set.replace(TargetAddr::from((ip, 0xbadf00d)));
         let t1 = Target::new_with_addrs(Option::<String>::None, addr_set);
 
         // t2 is an incoming target that has the same address, but, it is
         // missing scope information, this is essentially what occurs when we
         // ask the target for its addresses.
         let t2 = Target::new_named("this-is-a-crunchy-falafel");
-        t2.addrs.borrow_mut().replace(TargetAddr { ip, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr::from((ip, 0)).into());
 
         let tc = TargetCollection::new_with_queue();
         tc.merge_insert(t1);
@@ -2186,9 +2049,9 @@ mod test {
         let mut addrs = target.addrs().into_iter();
         let addr = addrs.next().expect("Merged target has no address.");
         assert!(addrs.next().is_none());
-        assert_eq!(addr, TargetAddr { ip, scope_id: 0xbadf00d });
-        assert_eq!(addr.ip, ip);
-        assert_eq!(addr.scope_id, 0xbadf00d);
+        assert_eq!(addr, TargetAddr::from((ip, 0xbadf00d)));
+        assert_eq!(addr.ip(), ip);
+        assert_eq!(addr.scope_id(), 0xbadf00d);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2196,7 +2059,7 @@ mod test {
         let ip = "fe80::1".parse().unwrap();
 
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip, scope_id: 1 });
+        addr_set.replace(TargetAddr::from((ip, 1)));
         let t1 = Target::new_with_addrs(Option::<String>::None, addr_set.clone());
         t1.set_ssh_port(Some(8022));
         let t2 = Target::new_with_addrs(Option::<String>::None, addr_set.clone());
@@ -2220,10 +2083,10 @@ mod test {
             std::mem::swap(&mut found1, &mut found2)
         }
 
-        assert_eq!(found1.addrs().into_iter().next().unwrap().ip, ip);
+        assert_eq!(found1.addrs().into_iter().next().unwrap().ip(), ip);
         assert_eq!(found1.ssh_port(), Some(8022));
 
-        assert_eq!(found2.addrs().into_iter().next().unwrap().ip, ip);
+        assert_eq!(found2.addrs().into_iter().next().unwrap().ip(), ip);
         assert_eq!(found2.ssh_port(), Some(8023));
     }
 
@@ -2232,7 +2095,7 @@ mod test {
         let ip = "fe80::1".parse().unwrap();
 
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip, scope_id: 1 });
+        addr_set.replace(TargetAddr::from((ip, 1)));
         let t1 = Target::new_with_addrs(Some("t1"), addr_set.clone());
         t1.set_ssh_port(Some(8022));
         let t2 = Target::new_with_addrs(Some("t2"), addr_set.clone());
@@ -2251,11 +2114,11 @@ mod test {
         let found1 = iter.next().expect("must have target one");
         let found2 = iter.next().expect("must have target two");
 
-        assert_eq!(found1.addrs().into_iter().next().unwrap().ip, ip);
+        assert_eq!(found1.addrs().into_iter().next().unwrap().ip(), ip);
         assert_eq!(found1.ssh_port(), Some(8022));
         assert_eq!(found1.nodename(), Some("t1".to_string()));
 
-        assert_eq!(found2.addrs().into_iter().next().unwrap().ip, ip);
+        assert_eq!(found2.addrs().into_iter().next().unwrap().ip(), ip);
         assert_eq!(found2.ssh_port(), Some(8023));
         assert_eq!(found2.nodename(), Some("t2".to_string()));
     }
@@ -2285,11 +2148,11 @@ mod test {
         let ip1 = "f111::3".parse().unwrap();
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
+        addr_set.replace(TargetAddr::from((ip1, 0xbadf00d)));
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new_named("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue();
-        t2.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr::from((ip2, 0)).into());
         tc.merge_insert(t1);
         tc.merge_insert(t2);
         let mut targets = tc.targets().into_iter();
@@ -2315,11 +2178,11 @@ mod test {
         let ip1 = "f111::3".parse().unwrap();
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
+        addr_set.replace(TargetAddr::from((ip1, 0xbadf00d)));
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new_named("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue();
-        t2.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr::from((ip2, 0)).into());
         tc.merge_insert(t1);
         tc.merge_insert(t2);
         let mut targets = tc.targets().into_iter();
@@ -2344,11 +2207,11 @@ mod test {
         let ip1 = "f111::3".parse().unwrap();
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
+        addr_set.replace(TargetAddr::from((ip1, 0xbadf00d)));
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new_named("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue();
-        t2.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.addrs.borrow_mut().replace(TargetAddr::from((ip2, 0)).into());
         tc.merge_insert(t1);
         tc.merge_insert(t2);
         let mut targets = tc.targets().into_iter();
@@ -2704,7 +2567,7 @@ mod test {
     async fn test_netsvc_ssh_address_info_should_be_none() {
         let ip = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
-        addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
+        addr_set.replace(TargetAddr::from((ip, 0xbadf00d)));
         let target = Target::new_with_netsvc_addrs(Some("foo"), addr_set);
 
         assert!(target.ssh_address_info().is_none());

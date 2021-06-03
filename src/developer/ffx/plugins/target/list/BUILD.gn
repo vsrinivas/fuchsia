@@ -10,7 +10,7 @@ ffx_plugin("ffx_list") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//src/developer/ffx/daemon:lib",
+    "//src/developer/ffx/lib/addr:lib",
     "//src/developer/ffx/lib/netext:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:lazy_static",

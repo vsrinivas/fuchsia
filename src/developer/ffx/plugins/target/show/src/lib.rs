@@ -4,9 +4,9 @@
 
 use {
     crate::show::{ShowEntry, ShowValue},
+    addr::TargetAddr,
     anyhow::{anyhow, bail, Result},
     ffx_core::ffx_plugin,
-    ffx_daemon::target::TargetAddr,
     ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
     fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},

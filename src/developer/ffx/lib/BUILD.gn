@@ -4,7 +4,9 @@
 
 if (is_host) {
   libs = [
+    "addr",
     "async-once",
+    "netext",
     "pkg",
     "services",
     "timeout",

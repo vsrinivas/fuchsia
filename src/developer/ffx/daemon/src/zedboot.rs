@@ -4,7 +4,7 @@
 
 use {
     crate::events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
-    crate::target::*,
+    addr::TargetAddr,
     anyhow::{anyhow, bail, Context as _, Result},
     async_io::Async,
     async_net::UdpSocket,

@@ -858,7 +858,7 @@ impl Daemon {
 mod test {
     use {
         super::*,
-        crate::target::TargetAddr,
+        addr::TargetAddr,
         fidl_fuchsia_developer_bridge::{
             self as bridge, DaemonMarker, DaemonProxy, TargetAddrInfo, TargetIpPort,
         },

@@ -1,7 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::target;
+use addr::TargetAddr;
 use std::net::SocketAddr;
 
 pub trait TryIntoTargetInfo: Sized {
@@ -17,7 +17,7 @@ pub trait TryIntoTargetInfo: Sized {
 #[derive(Debug, Default, Hash, Clone, PartialEq, Eq)]
 pub struct TargetInfo {
     pub nodename: Option<String>,
-    pub addresses: Vec<target::TargetAddr>,
+    pub addresses: Vec<TargetAddr>,
     pub serial: Option<String>,
     pub ssh_port: Option<u16>,
 }

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    addr::TargetAddr,
     anyhow::{anyhow, Error, Result},
-    ffx_daemon::target::TargetAddr,
     ffx_list_args::Format,
     fidl_fuchsia_developer_bridge as bridge,
     netext::IsLocalAddr,

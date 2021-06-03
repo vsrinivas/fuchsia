@@ -66,7 +66,7 @@ async fn list_impl<W: Write>(
 mod test {
     use {
         super::*,
-        ffx_daemon::target::TargetAddr,
+        addr::TargetAddr,
         ffx_list_args::Format,
         fidl_fuchsia_developer_bridge::{
             DaemonRequest, RemoteControlState, Target as FidlTarget, TargetState, TargetType,

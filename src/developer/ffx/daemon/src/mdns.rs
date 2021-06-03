@@ -5,8 +5,8 @@
 use {
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
-    crate::target::*,
     ::mdns::protocol as dns,
+    addr::TargetAddr,
     anyhow::{Context as _, Result},
     async_io::Async,
     async_lock::Mutex,
