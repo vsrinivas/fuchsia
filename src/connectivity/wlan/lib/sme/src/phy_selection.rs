@@ -98,9 +98,8 @@ pub fn derive_phy_cbw(
         None => {
             error!(
                 "Could not find the device capability corresponding to the \
-                 channel {} of the selected AP {:?} \
+                 channel of the selected AP \
                  Falling back to ERP with 20 MHz bandwidth",
-                bss.chan.primary, bss.bssid
             );
             // Fallback to a common ground of Fuchsia
             return (fidl_common::Phy::Erp, fidl_common::Cbw::Cbw20);
@@ -162,8 +161,7 @@ pub fn derive_phy_cbw_for_ap(
         None => {
             error!(
                 "Could not find the device capability corresponding to the \
-                 channel {} Falling back to HT with 20 MHz bandwidth",
-                chan.primary
+                 channel. Falling back to HT with 20 MHz bandwidth",
             );
             return (Phy::Ht, Cbw::Cbw20);
         }
