@@ -1249,3 +1249,16 @@
   reviewers: ['jeremymanson@google.com', 'mkember@google.com', 'shayba@google.com']
   submitted: '2021-04-27'
   reviewed: '2021-MM-DD'
+
+- name: 'RFC-0098'
+  title: 'Component Framework RFC Criteria'
+  short_description: 'An addendum to the RFC process that defines broad impact for Component Framework.'
+  authors: ['thatguy@google.com']
+  file: '0098_component_framework_rfc_criteria.md'
+  area: ['Component Framework', 'Governance']
+  issue: ['']
+  gerrit_change_id: ['']
+  status: 'Accepted'
+  reviewers: [ 'ypomortsev@google.com', 'geb@google.com', 'shayba@google.com', 'pascallouis@google.com' ]
+  submitted: '2021-05-20'
+  reviewed: '2021-06-01'

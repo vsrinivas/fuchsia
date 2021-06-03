@@ -205,3 +205,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0095_build_and_assemble_workstation_out_of_tree.md
 - title: "RFC-0097: FIDL Toolchain"
   path: /docs/contribute/governance/rfcs/0097_fidl_toolchain.md
+- title: "RFC-0098: Component Framework RFC Criteria"
+  path: /docs/contribute/governance/rfcs/0098_component_framework_rfc_criteria.md
