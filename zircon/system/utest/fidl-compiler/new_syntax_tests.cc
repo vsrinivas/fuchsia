@@ -10,11 +10,16 @@
 // test case both produces new syntax and ensures that it compiles and has
 // IR and coding tables that match the output from compiling the old syntax.
 
+#include <optional>
+
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostic_types.h"
 #include "fidl/diagnostics.h"
+#include "fidl/experimental_flags.h"
 #include "fidl/flat_ast.h"
+#include "fidl/utils.h"
 #include "test_library.h"
 
 namespace {
@@ -23,72 +28,136 @@ using fidl::flat::GetLayoutInvocation;
 using fidl::flat::GetName;
 using fidl::flat::GetType;
 
-TEST(NewSyntaxTests, GoodSyntaxVersionOmitted) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-library example;
+TEST(NewSyntaxTests, SyntaxTokenCases) {
+  struct Case {
+    const std::optional<fidl::ExperimentalFlags::Flag> flag;
+    const bool has_token;
+    const fidl::utils::Syntax syntax;
+    const std::optional<fidl::diagnostics::DiagnosticDef> error;
+  };
 
-type S = struct{};
-)FIDL",
-                      experimental_flags);
+  // test every combination of flag value (no flag, old only, either, new only),
+  // token/no token, old/new syntax.
+  std::vector<Case> cases = {
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = std::nullopt,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = fidl::ErrExpectedDeclaration,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = std::nullopt,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kOldSyntaxOnly,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = fidl::ErrExpectedDeclaration,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = fidl::ErrExpectedDeclaration,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = std::nullopt,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = std::nullopt,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kAllowNewSyntax,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = fidl::ErrExpectedDeclaration,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = fidl::ErrExpectedDeclaration,
+      },
+      Case{.flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
+           .has_token = false,
+           .syntax = fidl::utils::Syntax::kNew,
+           .error = std::nullopt},
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = fidl::ErrRemoveSyntaxVersion,
+      },
+      Case{
+          .flag = fidl::ExperimentalFlags::Flag::kNewSyntaxOnly,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = fidl::ErrRemoveSyntaxVersion,
+      },
+      Case{
+          .flag = std::nullopt,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = std::nullopt,
+      },
+      Case{
+          .flag = std::nullopt,
+          .has_token = false,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = fidl::ErrExpectedDeclaration,
+      },
+      Case{
+          .flag = std::nullopt,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kOld,
+          .error = fidl::ErrRemoveSyntaxVersion,
+      },
+      Case{
+          .flag = std::nullopt,
+          .has_token = true,
+          .syntax = fidl::utils::Syntax::kNew,
+          .error = fidl::ErrRemoveSyntaxVersion,
+      },
+  };
+  for (const auto& test_case : cases) {
+    fidl::ExperimentalFlags flags;
+    if (test_case.flag)
+      flags.SetFlag(*test_case.flag);
 
-  ASSERT_COMPILED(library);
-}
+    std::ostringstream lib;
+    if (test_case.has_token)
+      lib << "deprecated_syntax;\n";
+    lib << "library example;\n\n";
 
-TEST(NewSyntaxTests, BadSyntaxVersionOmittedMismatch) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-deprecated_syntax;
-library example;
+    if (test_case.syntax == fidl::utils::Syntax::kNew) {
+      lib << "type S = struct {};\n";
+    } else {
+      lib << "struct S {};\n";
+    }
 
-type S = struct{};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
-}
-
-TEST(NewSyntaxTests, GoodSyntaxVersionDeprecated) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-deprecated_syntax;
-library example;
-
-struct S {};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_COMPILED(library);
-}
-
-TEST(NewSyntaxTests, BadSyntaxVersionDeprecatedMismatch) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-deprecated_syntax;
-library example;
-
-type S = struct{};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
-}
-
-TEST(NewSyntaxTests, BadSyntaxVersionMismatch) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-library example;
-
-struct S {};
-)FIDL",
-                      experimental_flags);
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedDeclaration);
+    TestLibrary library(lib.str(), flags);
+    std::unique_ptr<fidl::raw::File> dont_care;
+    if (test_case.error.has_value()) {
+      ASSERT_ERRORED_DURING_COMPILE(library, *test_case.error);
+    } else {
+      ASSERT_COMPILED(library);
+    }
+  }
 }
 
 TEST(NewSyntaxTests, BadSyntaxVersionWithoutFlag) {
