@@ -106,7 +106,24 @@ pub struct RegistryService {
 
 impl RegistryService {
     /// Creates the instance of the test helper and connects to shortcut registry service.
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new() -> Result<Self> {
+        RegistryService::new_with_view_ref(RegistryService::new_view_ref()).await
+    }
+
+    /// Registers a new shortcut with the shortcut registry service.
+    /// Returns a future that resolves to the FIDL response.
+    pub async fn register_shortcut(&self, shortcut: ui_shortcut::Shortcut) -> Result<()> {
+        self.registry.register_shortcut(shortcut).check()?.await.map_err(Into::into)
+    }
+
+    /// Creates a new dummy `ViewRef` for testing.
+    pub fn new_view_ref() -> fidl_fuchsia_ui_views::ViewRef {
+        scenic::ViewRefPair::new().expect("could not create ViewRef").view_ref
+    }
+
+    /// Creates a new client with a custom view ref.  Use with, for example
+    /// [RegistryService::new_view_ref].
+    pub async fn new_with_view_ref(view_ref: fidl_fuchsia_ui_views::ViewRef) -> Result<Self> {
         START.call_once(|| {
             fuchsia_syslog::init_with_tags(&["shortcut"])
                 .expect("shortcut syslog init should not fail");
@@ -118,18 +135,11 @@ impl RegistryService {
         let (listener_client_end, listener) =
             fidl::endpoints::create_request_stream::<ui_shortcut::ListenerMarker>()?;
 
-        // Set listener and view ref.
-        let view_ref = scenic::ViewRefPair::new()?.view_ref;
+        // Set listener for the supplied view_ref.
         registry
             .set_view(&mut fuchsia_scenic::duplicate_view_ref(&view_ref)?, listener_client_end)?;
 
         Ok(Self { registry, listener, view_ref })
-    }
-
-    /// Registers a new shortcut with the shortcut registry service.
-    /// Returns a future that resolves to the FIDL response.
-    pub async fn register_shortcut(&self, shortcut: ui_shortcut::Shortcut) -> Result<(), Error> {
-        self.registry.register_shortcut(shortcut).check()?.await.map_err(Into::into)
     }
 }
 

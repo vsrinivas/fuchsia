@@ -847,3 +847,40 @@ async fn handle_meta_tab_tab() -> Result<(), Error> {
 
     Ok(())
 }
+
+// Verifies that registering a shortcut handler on a view_ref *after* that
+// view_ref is hooked up into the focus chain still triggers a shortcut.
+// See fxbug.dev/76758 for details.
+#[fasync::run_singlethreaded(test)]
+async fn shortcut_registration_after_focus_chain_set() -> Result<(), Error> {
+    let view_ref = RegistryService::new_view_ref();
+
+    // Timing: a valid view ref is hooked into the focus chain before its
+    // handler is registered.
+    let manager_service = ManagerService::new().await?;
+    // Set focus chain here.
+    manager_service.set_focus_chain(vec![&view_ref]).await?;
+
+    // Register a shortcut handler here.
+    // Creation of `client` registers a shortcut with the given view_ref.
+    let mut client = RegistryService::new_with_view_ref(view_ref).await?;
+
+    let shortcut = ShortcutBuilder::new().set_key3(input::Key::K).set_id(TEST_SHORTCUT_ID).build();
+    client.register_shortcut(shortcut).await?;
+
+    let handled = Latch::new();
+    let handled_clone = handled.clone();
+    TestCase::new()
+        .set_keys(vec![input::Key::K])
+        .set_shortcut_hook(Box::new(move |id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            true
+        }))
+        .set_handled_hook(Box::new(move |was_handled| handled_clone.latch(was_handled)))
+        .run(&mut client, &manager_service)
+        .await?;
+
+    assert_eq!(true, handled.get_value(), "shortcut was supposed to be handled but wasn't");
+
+    Ok(())
+}

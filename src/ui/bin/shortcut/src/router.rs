@@ -93,6 +93,9 @@ impl Router {
                         // the client registry for a minimal amount of time.
                         client_registry.lock().await.shortcuts.push(Shortcut::new(shortcut));
                     }
+                    // A shortcut registration invalidates the previously computed
+                    // focused registries, so let's update it now.
+                    self.environment.store.recompute_focused_registries().await;
                     responder.send().unwrap_or_else(|e| {
                         // Handle the error to prevent service shutdown in case of
                         // misbehaving client.

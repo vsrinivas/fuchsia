@@ -5,7 +5,8 @@
 use {
     fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_syslog::fx_log_info,
+    fuchsia_scenic as scenic,
+    fuchsia_syslog::{fx_log_debug, fx_log_info},
     fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
     futures::{
@@ -45,7 +46,24 @@ struct RegistryStoreInner {
     // of collection once client connection is removed.
     registries: Vec<Weak<Mutex<ClientRegistry>>>,
 
+    // The last received focus chain.  `None` if an update was never received
+    // since startup (rare), or set by `handle_focus_change`.
+    last_seen_focus_chain: Option<Vec<fidl_fuchsia_ui_views::ViewRef>>,
+
     // Currently focused clients in the FocusChain order, i.e. parents first.
+    // It is computed eagerly on state changes, such that shortcut matching could
+    // be done quickly on a trigger key.
+    //
+    // The focused_registries is invalidated on any changes to the focus or the
+    // registry itself and needs to be recomputed when `registries` or
+    // `last_seen_focus_chain` change.
+    //
+    // Use `recompute_focused_registries` to keep the registries up to date.
+    //
+    // # Invariant
+    //
+    // At any given time, `focused_registries` contains all registries
+    // whose `ViewRef`s are matching the `last_seen_focus_chain`.
     focused_registries: Vec<Weak<Mutex<ClientRegistry>>>,
 }
 
@@ -84,7 +102,17 @@ impl RegistryStore {
 
     /// Update client registries to account for a `FocusChain` event.
     pub async fn handle_focus_change(&self, focus_chain: &ui_focus::FocusChain) {
+        let focus_chain = match focus_chain {
+            ui_focus::FocusChain { focus_chain: Some(focus_chain), .. } => focus_chain,
+            _ => return,
+        };
         self.inner.lock().await.update_focused_registries(focus_chain).await;
+    }
+
+    /// Recomputes the focused registries based on the current state of the focus chain.
+    /// Review: pub(crate)?
+    pub async fn recompute_focused_registries(&self) {
+        self.inner.lock().await.recompute_focused_registries().await;
     }
 }
 
@@ -96,13 +124,22 @@ impl RegistryStoreInner {
         registry
     }
 
-    /// Updates `self.focused_registries` to reflect current focus chain.
-    async fn update_focused_registries(&mut self, focus_chain: &ui_focus::FocusChain) {
-        let focus_chain = match focus_chain {
-            ui_focus::FocusChain { focus_chain: Some(focus_chain), .. } => focus_chain,
-            _ => return,
-        };
+    async fn recompute_focused_registries(&mut self) {
+        // A better way would be not to clone the focus chain but the mutability
+        // of self would need to be rethought for that. Use this approach until
+        // performance becomes an issue.
+        let focus_chain = self.last_seen_focus_chain.as_ref().map(|f| clone_focus_chain(f));
+        if let Some(ref f) = focus_chain {
+            fx_log_debug!("recompute_focused_registries: focus_chain: {:?}", koids_of(f));
+            self.update_focused_registries(f).await;
+        }
+    }
 
+    /// Updates `self.focused_registries` to reflect current focus chain.
+    async fn update_focused_registries(
+        &mut self,
+        focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>,
+    ) {
         // Iterator over all active registries, i.e. all `Weak` refs upgraded.
         let registries_iter = stream::iter(
             self.registries
@@ -141,6 +178,10 @@ impl RegistryStoreInner {
             .collect()
             .await;
 
+        // Keep the last focus chain so that early shortcut registrations would
+        // be recomputed correctly.
+        self.last_seen_focus_chain = Some(clone_focus_chain(focus_chain));
+
         // Only focused shortcut clients are retained, and other view_refs are dropped.
         self.focused_registries = focus_chain
             .into_iter()
@@ -153,6 +194,11 @@ impl RegistryStoreInner {
                     .and_then(|koid| registries.remove(&koid))
             })
             .collect();
+        fx_log_debug!(
+            "update_focused_registries: updated focus chain to: {:?}, num focused registries: {:?}",
+            &self.last_seen_focus_chain.as_ref().map(|f| koids_of(f)),
+            &self.focused_registries.len()
+        );
     }
 }
 
@@ -197,6 +243,31 @@ impl Deref for Shortcut {
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
+}
+
+/// Produces a clone of the supplied `focus_chain`.  This is a separate free function since
+/// the `ViewRef`s that `focus_chain` consists of are not trivially cloneable, and it is
+/// unclear whether this function is of general interest or not.
+///
+/// # Performance
+///
+/// It takes about 1us to clone a ViewRef.
+fn clone_focus_chain(
+    focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>,
+) -> Vec<fidl_fuchsia_ui_views::ViewRef> {
+    focus_chain
+        .iter()
+        .map(|v| scenic::duplicate_view_ref(v).expect("failed to clone a ViewRef"))
+        .collect()
+}
+
+/// Turns `focus_chain` into a sequence of corresponding `zx::Koid`s.  Mainly useful
+/// for debugging.
+fn koids_of(focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>) -> Vec<zx::Koid> {
+    focus_chain
+        .iter()
+        .map(|v| v.reference.as_handle_ref().get_koid().expect("failed to get koid"))
+        .collect()
 }
 
 #[cfg(test)]
