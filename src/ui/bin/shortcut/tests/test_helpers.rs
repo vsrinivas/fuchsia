@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{Context as _, Error, Result},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
     fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_shortcut as ui_shortcut,
     fidl_fuchsia_ui_views as ui_views,
@@ -15,19 +15,26 @@ use {
 
 static START: Once = Once::new();
 
-/// A reference-counted boolean value that can be latched to the value of "true" once.
+/// A reference-counted value that can be latched to the value of "true" once.  Subsequent
+/// invocations do not change the latch value, but the latch can be queried as to how many times
+/// a valid "set" happened, using `get_num_valid_sets`.
 #[derive(Clone, Debug)]
 pub struct Latch {
-    inner: sync::Arc<std::cell::RefCell<bool>>,
+    inner: sync::Arc<std::cell::RefCell<i32>>,
 }
 
 impl Latch {
     pub fn new() -> Self {
-        Latch { inner: sync::Arc::new(std::cell::RefCell::new(false)) }
+        Latch { inner: sync::Arc::new(std::cell::RefCell::new(0)) }
     }
 
     /// Returns the current value stored in the [LatchUp].
     pub fn value(&self) -> bool {
+        self.get_num_valid_sets() > 0
+    }
+
+    /// Returns the number of calls that the latch was activated.
+    pub fn get_num_valid_sets(&self) -> i32 {
         *self.inner.borrow()
     }
 
@@ -35,7 +42,7 @@ impl Latch {
     /// `true`
     pub fn latch_if_set(&self, value: bool) {
         if value {
-            self.inner.replace(value);
+            self.inner.replace_with(|old| *old + 1);
         }
     }
 }
@@ -145,13 +152,16 @@ impl ManagerService {
         Ok(Self { manager })
     }
 
-    /// Emulates a key press event using input3 interface.
-    /// Returns a future that resolves to a FIDL response from manager service.
-    pub async fn press_key3(&self, key: input::Key) -> Result<bool, Error> {
+    /// Emulates a key3 event.  Returns `true` if the key was handled, or error.
+    pub async fn send_key3_event(
+        &self,
+        key: input::Key,
+        event: ui_input3::KeyEventType,
+    ) -> Result<bool> {
         // Process key event that triggers a shortcut.
         let event = ui_input3::KeyEvent {
             timestamp: None,
-            type_: Some(ui_input3::KeyEventType::Pressed),
+            type_: Some(event),
             key: Some(key),
             modifiers: None,
             ..ui_input3::KeyEvent::EMPTY
@@ -160,36 +170,42 @@ impl ManagerService {
         self.manager.handle_key3_event(event).check()?.await.map_err(Into::into)
     }
 
-    /// Emulates a key release event using input3 interface.
-    /// Returns a future that resolves to a FIDL response from manager service.
-    pub async fn release_key3(&self, key: input::Key) -> Result<bool, Error> {
-        // Process key event that triggers a shortcut.
-        let event = ui_input3::KeyEvent {
-            timestamp: None,
-            type_: Some(ui_input3::KeyEventType::Released),
-            key: Some(key),
-            modifiers: None,
-            ..ui_input3::KeyEvent::EMPTY
-        };
+    /// Emulates sending the specified key events verbatim: can be used to send
+    /// asymmetric events, which allows testing for specific key chords.
+    /// Returns `Ok(true)` if at least one of the events in the stream was
+    /// handled.
+    pub async fn send_multiple_key3_event(
+        &self,
+        events: Vec<(input::Key, ui_input3::KeyEventType)>,
+    ) -> Result<bool> {
+        let mut was_handled = false;
+        for (key, event_type) in events.into_iter() {
+            let event_handled = self.send_key3_event(key, event_type).await?;
+            was_handled = was_handled || event_handled;
+        }
+        Ok(was_handled)
+    }
 
-        self.manager.handle_key3_event(event).check()?.await.map_err(Into::into)
+    /// Emulates a key press event using input3 interface.  Returns a a FIDL response from manager
+    /// service.
+    pub async fn press_key3(&self, key: input::Key) -> Result<bool> {
+        self.send_key3_event(key, ui_input3::KeyEventType::Pressed).await
+    }
+
+    /// Emulates a key release event using input3 interface.  Returns a FIDL response from manager
+    /// service.
+    pub async fn release_key3(&self, key: input::Key) -> Result<bool> {
+        self.send_key3_event(key, ui_input3::KeyEventType::Released).await
     }
 
     /// Emulates multiple key press events sequentially using input3 interface.
     /// Returns `Ok(true)` if any of the keys were handled.
-    pub async fn press_multiple_key3(&self, keys: Vec<input::Key>) -> Result<bool, Error> {
+    pub async fn press_multiple_key3(&self, keys: Vec<input::Key>) -> Result<bool> {
         let mut was_handled = false;
         let mut iter = keys.into_iter().peekable();
         while let Some(key) = iter.next() {
             fx_log_debug!("TestCase::press_multiple_keys: processing key: {:?}", &key);
-            let event = ui_input3::KeyEvent {
-                timestamp: None,
-                type_: Some(ui_input3::KeyEventType::Pressed),
-                key: Some(key),
-                modifiers: None,
-                ..ui_input3::KeyEvent::EMPTY
-            };
-            let key_handled = self.manager.handle_key3_event(event).check()?.await?;
+            let key_handled = self.press_key3(key).await?;
 
             if key_handled && iter.peek().is_some() {
                 panic!("Shortcuts activated, but unused keys remained in the sequence!");
@@ -202,23 +218,16 @@ impl ManagerService {
 
     /// Emulates multiple key release events sequentially using input3 interface.
     /// Returns `Ok(true)` if any of the keys were handled.
-    pub async fn release_multiple_key3(&self, keys: Vec<input::Key>) -> Result<bool, Error> {
+    pub async fn release_multiple_key3(&self, keys: Vec<input::Key>) -> Result<bool> {
         let mut was_handled = false;
         for key in keys.into_iter() {
-            let event = ui_input3::KeyEvent {
-                timestamp: None,
-                type_: Some(ui_input3::KeyEventType::Released),
-                key: Some(key),
-                modifiers: None,
-                ..ui_input3::KeyEvent::EMPTY
-            };
-            let key_handled = self.manager.handle_key3_event(event).check()?.await?;
+            let key_handled = self.release_key3(key).await?;
             was_handled = was_handled || key_handled;
         }
         Ok(was_handled)
     }
 
-    pub async fn set_focus_chain(&self, focus_chain: Vec<&ui_views::ViewRef>) -> Result<(), Error> {
+    pub async fn set_focus_chain(&self, focus_chain: Vec<&ui_views::ViewRef>) -> Result<()> {
         let focus_chain = ui_focus::FocusChain {
             focus_chain: Some(
                 focus_chain
