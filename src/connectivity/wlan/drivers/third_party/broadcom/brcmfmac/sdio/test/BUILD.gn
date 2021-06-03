@@ -27,7 +27,7 @@ executable("sdio_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:stub_device",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",

@@ -55,7 +55,6 @@ executable("bcmdhd_crossdriver_test") {
   testonly = true
   sources = [ "bcmdhd_crossdriver_test.cc" ]
   deps = [
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/bcmdhd/crossdriver:bcmdhd_crossdriver",
     "//third_party/googletest:gmock",
@@ -68,7 +67,6 @@ executable("brcmu_utils_test") {
   sources = [ "brcmu_utils_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
@@ -80,7 +78,6 @@ executable("channel_conversion_test") {
   sources = [ "channel_conversion_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -92,7 +89,6 @@ executable("cfg80211_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
@@ -104,7 +100,6 @@ executable("debug_test") {
   sources = [ "debug_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
@@ -122,7 +117,6 @@ executable("device_inspect_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:device_inspect_utils",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
@@ -139,7 +133,6 @@ executable("dma_buffer_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zx",
   ]
@@ -152,7 +145,6 @@ executable("dma_pool_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zx",
   ]
@@ -165,7 +157,6 @@ executable("dma_ring_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zx",
   ]
@@ -189,7 +180,6 @@ executable("netbuf_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/zircon-internal",
   ]
@@ -226,10 +216,7 @@ executable("throttle_counter_test") {
   output_name = "throttle_counter_test"
   testonly = true
   sources = [ "throttle_counter_test.cc" ]
-  deps = [
-    "//src/devices/testing/fake_ddk",
-    "//src/lib/fxl/test:gtest_main",
-  ]
+  deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
 executable("token_bucket_test") {
@@ -245,7 +232,6 @@ executable("workqueue_test") {
   sources = [ "workqueue_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
-    "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/sync",
   ]
