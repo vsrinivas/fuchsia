@@ -5,6 +5,7 @@
 use {
     anyhow::Context,
     bytes::Bytes,
+    fidl_fuchsia_pkg as pkg,
     futures::{future::ready, stream::once, AsyncReadExt, Stream},
     parking_lot::Mutex,
     serde::{Deserialize, Serialize},
@@ -56,10 +57,30 @@ pub struct RepositoryConfig {
     pub mirrors: Option<Vec<MirrorConfig>>,
 }
 
+impl Into<pkg::RepositoryConfig> for RepositoryConfig {
+    fn into(self) -> pkg::RepositoryConfig {
+        pkg::RepositoryConfig {
+            repo_url: self.repo_url,
+            root_keys: self.root_keys.map(|v| v.into_iter().map(|r| r.into()).collect()),
+            root_version: self.root_version,
+            mirrors: self.mirrors.map(|v| v.into_iter().map(|m| m.into()).collect()),
+            ..pkg::RepositoryConfig::EMPTY
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
 pub enum RepositoryKeyConfig {
     /// The raw ed25519 public key as binary data.
     Ed25519Key(Vec<u8>),
+}
+
+impl Into<pkg::RepositoryKeyConfig> for RepositoryKeyConfig {
+    fn into(self) -> pkg::RepositoryKeyConfig {
+        match self {
+            Self::Ed25519Key(keys) => pkg::RepositoryKeyConfig::Ed25519Key(keys),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -69,12 +90,26 @@ pub struct MirrorConfig {
     /// Whether or not to automatically monitor the mirror for updates. Required.
     pub subscribe: Option<bool>,
 }
-#[derive(Debug)]
+
+impl Into<pkg::MirrorConfig> for MirrorConfig {
+    fn into(self) -> pkg::MirrorConfig {
+        pkg::MirrorConfig {
+            mirror_url: self.mirror_url,
+            subscribe: self.subscribe,
+            ..pkg::MirrorConfig::EMPTY
+        }
+    }
+}
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("not found")]
     NotFound,
+    #[error("invalid path '{0}'")]
     InvalidPath(PathBuf),
-    Io(io::Error),
-    Other(anyhow::Error),
+    #[error("I/O error")]
+    Io(#[source] io::Error),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
 }
 
 impl From<std::io::Error> for Error {
@@ -84,12 +119,6 @@ impl From<std::io::Error> for Error {
         } else {
             Error::Io(err)
         }
-    }
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(err: anyhow::Error) -> Self {
-        Error::Other(err)
     }
 }
 

@@ -4,18 +4,17 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_repository") {
+ffx_plugin("ffx_repository_target_register") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
-
-  plugin_deps = [
-    "add:ffx_repository_add",
-    "list:ffx_repository_list",
-    "remove:ffx_repository_remove",
-    "serve:ffx_repository_serve",
-    "target:ffx_repository_target",
+  deps = [
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//third_party/rust_crates:futures",
   ]
 
-  sources = [ "src/args.rs" ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

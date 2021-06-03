@@ -4,11 +4,13 @@
 
 library fuchsia.developer.bridge;
 
+using fuchsia.device;
 using fuchsia.net;
 
 const uint64 MAX_NAME = 255;
 const uint64 MAX_PATH = 4095;
 const uint64 MAX_REPOS = 512;
+const uint64 MAX_ALIASES = 32;
 
 flexible union RepositorySpec {
     1: FileSystemRepositorySpec filesystem;
@@ -31,6 +33,8 @@ protocol Repositories {
     Remove(string:MAX_NAME name) -> (bool found);
 
     List(request<RepositoryIterator> iterator);
+
+    RegisterTarget(RepositoryTarget target_info) -> () error RepositoryError;
 };
 
 struct RepositoryConfig {
@@ -40,4 +44,31 @@ struct RepositoryConfig {
 
 protocol RepositoryIterator {
     Next() -> (vector<RepositoryConfig>:MAX_REPOS repos);
+};
+
+table RepositoryTarget {
+    /// The configured name of the repository
+    1: string:MAX_NAME repo_name;
+    /// The target on which to configure this repository
+    2: string:fuchsia.device.DEVICE_NAME_MAX target_identifier;
+    /// An optional list of hostnames. A rewrite rule will be added
+    /// for each hostname in this list to resolve to this repository.
+    3: vector<string:MAX_NAME>:MAX_ALIASES aliases;
+};
+
+enum RepositoryError : uint32 {
+    /// Repository "name" is missing in an API where it is required.
+    MISSING_REPOSITORY_NAME = 1;
+    /// No repository matches the provided name.
+    NO_MATCHING_REPOSITORY = 2;
+    /// There was an error communicating with the target. This may mean that
+    /// the target does not exist, is down or unreachable, or that there was an
+    /// error communicating with a proxy on target.
+    /// TODO(fxbug.dev/77904) make this more specific when we have more specific
+    /// errors from the underlying API.
+    TARGET_COMMUNICATION_FAILURE = 3;
+    /// There was an error from the fuchsia.pkg.RepositoryManager.
+    REPOSITORY_MANAGER_ERROR = 4;
+    /// There was a error from fuchsia.pkg.rewrite.Engine.
+    REWRITE_ENGINE_ERROR = 5;
 };
