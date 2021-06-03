@@ -8,6 +8,12 @@
 This proposal was rejected due to neither of the proposed changes being a clear
 and obvious improvement over the existing state of affairs.
 
+**See also:**
+
+* [RFC-0050: FIDL Syntax Revamp](0050_syntax_revamp.md)
+* [RFC-0086: Updates to RFC-0050: FIDL Attributes Syntax](0086_rfc_0050_attributes.md)
+* [RFC-0087: Updates to RFC-0050: FIDL Method Parameter Syntax](0087_fidl_method_syntax.md)
+
 ### New separator for `bits` and `enum` layouts
 
 This RFC was originally motivated by the observation that [RFC-0050: Syntax

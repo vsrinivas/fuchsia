@@ -39,6 +39,12 @@ changes following these principles.
     [RFC-0044: Extensible Method Arguments][rfc-0044], i.e. accepting RFC-0050
     means rejecting RFC-0044 as "obsolete".
 
+This RFC was later amended by:
+
+*   [RFC-0086: Updates to RFC-0050: FIDL Attributes Syntax](0086_rfc_0050_attributes.md)
+*   [RFC-0087: Updates to RFC-0050: FIDL Method Parameter Syntax](0087_fidl_method_syntax.md)
+*   [RFC-0088: Updates to RFC-0050: FIDL Bits, Enum, and Constraints Syntax](0088_rfc_0050_bits_enums_constraints.md)
+
 ## Motivation {#motivation}
 
 ### Introductory Examples

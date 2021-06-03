@@ -640,7 +640,7 @@
   reviewed: '2019-12-19'
 
 - name: 'RFC-0050'
-  title: 'Syntax revamp'
+  title: 'FIDL Syntax Revamp'
   short_description: 'We establish guiding principles for syntactic choices, and make a few syntax changes following these principles.'
   authors: ['pascallouis@google.com']
   file: '0050_syntax_revamp.md'

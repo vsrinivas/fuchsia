@@ -10,6 +10,12 @@
 This document describes a new syntax for [attributes][fidl-attributes] in the
 FIDL language.
 
+**See also:**
+
+* [RFC-0050: FIDL Syntax Revamp](0050_syntax_revamp.md)
+* [RFC-0087: Updates to RFC-0050: FIDL Method Parameter Syntax](0087_fidl_method_syntax.md)
+* [RFC-0088: Updates to RFC-0050: FIDL Bits, Enum, and Constraints Syntax](0088_rfc_0050_bits_enums_constraints.md)
+
 ## Motivation
 
 FIDL attributes provide a clear way to attach compile-time metadata to FIDL

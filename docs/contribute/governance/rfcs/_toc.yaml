@@ -111,7 +111,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0048_explicit_union_ordinals.md
 - title: "RFC-0049: FIDL tuning process evolution"
   path: /docs/contribute/governance/rfcs/0049_fidl_tuning_process_evolution.md
-- title: "RFC-0050: Syntax revamp"
+- title: "RFC-0050: FIDL Syntax Revamp"
   path: /docs/contribute/governance/rfcs/0050_syntax_revamp.md
 - title: "RFC-0051: Safer structs for C++"
   path: /docs/contribute/governance/rfcs/0051_safer_structs_for_cpp.md
