@@ -13,7 +13,6 @@ using zx;
 /// We use a channel for the BufferCollectionToken instead of a single eventpair
 /// (pair) because this way we can detect error conditions like a participant
 /// dying mid-create.
-[ForDeprecatedCBindings]
 protocol BufferCollectionToken {
     /// The initiator or a participant can send Duplicate() as part of creating
     /// another participant-side handle to the same logical

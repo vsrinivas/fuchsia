@@ -7,7 +7,7 @@
 // Multiple Participants
 extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   const size_t kBufferCollectionConstraintsSize =
-      sizeof(fuchsia_sysmem_BufferCollectionConstraints);
+      sizeof(fuchsia_sysmem::wire::BufferCollectionConstraints);
   LOGRTNC(size != 2 * kBufferCollectionConstraintsSize,
           "size: %zu != 2 * kBufferCollectionConstraintsSize: %zu\n", size,
           kBufferCollectionConstraintsSize);
@@ -16,160 +16,149 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   FakeDdkSysmem fake_sysmem;
   LOGRTNC(!fake_sysmem.Init(), "Failed FakeDdkSysmem::Init()\n");
 
-  zx::channel allocator_client_1;
-  zx_status_t status =
-      connect_to_sysmem_driver(fake_sysmem.ddk().FidlClient().get(), &allocator_client_1);
-  LOGRTN(status, "Failed to connect to sysmem driver.\n");
+  auto allocator_client_1 = fake_sysmem.Connect();
+  LOGRTN(allocator_client_1.status_value(), "Failed to connect to sysmem driver.\n");
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator_1(
+      std::move(allocator_client_1.value()));
 
-  zx::channel token_client_1;
-  zx::channel token_server_1;
-  status = zx::channel::create(0, &token_client_1, &token_server_1);
-  LOGRTN(status, "Failed token 1 channel create.\n");
+  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  LOGRTN(token_endpoints.status_value(), "Failed token 1 channel create.\n");
+  auto [token_client_1, token_server_1] = std::move(*token_endpoints);
 
   // Client 1 creates a token and new LogicalBufferCollection using
   // AllocateSharedCollection().
-  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator_client_1.get(),
-                                                            token_server_1.release());
-  LOGRTN(status, "Failed client 1 shared collection allocate.\n");
+  auto new_collection_result = allocator_1.AllocateSharedCollection(std::move(token_server_1));
+  LOGRTN(new_collection_result.status(), "Failed client 1 shared collection allocate.\n");
 
-  zx::channel token_client_2;
-  zx::channel token_server_2;
-  status = zx::channel::create(0, &token_client_2, &token_server_2);
-  LOGRTN(status, "Failed token 2 channel create.\n");
+  zx::status token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  LOGRTN(token_endpoints_2.status_value(), "Failed token 2 channel create.\n");
+  auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
 
   // Client 1 duplicates its token and gives the duplicate to client 2 (this
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
-                                                         token_server_2.release());
-  LOGRTN(status, "Failed token 1 -> 2 duplicate.\n");
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> token_1(std::move(token_client_1));
+  auto duplicate_result_2 = token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2));
+  LOGRTN(duplicate_result_2.status(), "Failed token 1 -> 2 duplicate.\n");
 
-  zx::channel token_client_3;
-  zx::channel token_server_3;
-  status = zx::channel::create(0, &token_client_3, &token_server_3);
-  LOGRTN(status, "Failed token 3 channel create.\n");
+  zx::status token_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  LOGRTN(token_endpoints_3.status_value(), "Failed token 3 channel create.\n");
+  auto [token_client_3, token_server_3] = std::move(*token_endpoints_3);
 
   // Client 3 is used to test a participant that doesn't set any constraints
   // and only wants a notification that the allocation is done.
-  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
-                                                         token_server_3.release());
-  LOGRTN(status, "Failed token 1 -> 3 duplicate.\n");
+  auto duplicate_result_3 = token_1.Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3));
+  LOGRTN(duplicate_result_3.status(), "Failed token 1 -> 3 duplicate.\n");
 
-  zx::channel collection_client_1;
-  zx::channel collection_server_1;
-  status = zx::channel::create(0, &collection_client_1, &collection_server_1);
-  LOGRTN(status, "Failed collection 1 channel create.\n");
-  LOGRTNC(token_client_1.get() == ZX_HANDLE_INVALID, "Invalid token client 1.\n");
+  zx::status collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  LOGRTN(collection_endpoints_1.status_value(), "Failed collection 1 channel create.\n");
+  auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
+  LOGRTNC(token_1.channel().get() == ZX_HANDLE_INVALID, "Invalid token client 1.\n");
+  auto bind_result = allocator_1.BindSharedCollection(std::move(token_1.client_end()),
+                                                      std::move(collection_server_1));
+  LOGRTN(bind_result.status(), "Bind shared collection client/collection 1.\n");
 
-  status = fuchsia_sysmem_AllocatorBindSharedCollection(
-      allocator_client_1.get(), token_client_1.release(), collection_server_1.release());
-  LOGRTN(status, "Bind shared collection client/collection 1.\n");
-
-  BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
-  memcpy(constraints_1.get(), data_ptr, kBufferCollectionConstraintsSize);
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_1;
+  memcpy(&constraints_1, data_ptr, kBufferCollectionConstraintsSize);
   data_ptr += kBufferCollectionConstraintsSize;
 
-  BufferCollectionConstraints constraints_2(BufferCollectionConstraints::Default);
-  memcpy(constraints_2.get(), data_ptr, kBufferCollectionConstraintsSize);
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints_2;
+  memcpy(&constraints_2, data_ptr, kBufferCollectionConstraintsSize);
   data_ptr += kBufferCollectionConstraintsSize;
 
-  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
-                                                         constraints_1.release());
-  LOGRTN(status, "BufferCollectionSetConstraints 1 failed.\n");
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_1(
+      std::move(collection_client_1));
+  auto set_constraints_result = collection_1.SetConstraints(true, std::move(constraints_1));
+  LOGRTN(set_constraints_result.status(), "BufferCollectionSetConstraints 1 failed.\n");
 
   // Client 2 connects to sysmem separately.
-  zx::channel allocator_client_2;
-  status = connect_to_sysmem_driver(fake_sysmem.ddk().FidlClient().get(), &allocator_client_2);
-  LOGRTN(status, "Failed to connect to sysmem driver (2).\n");
+  auto allocator_client_2 = fake_sysmem.Connect();
+  LOGRTN(allocator_client_2.status_value(), "Failed to connect to sysmem driver. (2)\n");
+  fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator_2(
+      std::move(allocator_client_2.value()));
 
-  zx::channel collection_client_2, collection_server_2;
-  status = zx::channel::create(0, &collection_client_2, &collection_server_2);
-  LOGRTN(status, "Failed collection 2 channel create.\n");
+  zx::status collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  LOGRTN(collection_endpoints_2.status_value(), "Failed collection 2 channel create.\n");
+  auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_2(
+      std::move(collection_client_2));
 
   // Just because we can, perform this sync as late as possible, just before
   // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
   // the BindSharedCollection() might arrive at the server before the
   // Duplicate() that delivered the server end of token_client_2 to sysmem,
   // which would cause sysmem to not recognize the token.
-  status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
-  LOGRTN(status, "Failed BufferCollectionSync 1.\n");
+  auto sync_result = collection_1.Sync();
+  LOGRTN(sync_result.status(), "Failed BufferCollectionSync 1.\n");
 
-  // ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
-  status = fuchsia_sysmem_AllocatorBindSharedCollection(
-      allocator_client_2.get(), token_client_2.release(), collection_server_2.release());
-  LOGRTN(status, "Failed BindSharedCollection 2.\n");
+  auto bind_result_2 =
+      allocator_2.BindSharedCollection(std::move(token_client_2), std::move(collection_server_2));
+  LOGRTN(bind_result_2.status(), "Failed BindSharedCollection 2.\n");
 
-  zx::channel collection_client_3;
-  zx::channel collection_server_3;
-  status = zx::channel::create(0, &collection_client_3, &collection_server_3);
-  LOGRTN(status, "Failed collection 3 channel create.\n");
-  LOGRTNC(token_client_3.get() == ZX_HANDLE_INVALID, "Invalid token client 3.\n");
+  zx::status collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  LOGRTN(collection_endpoints_3.status_value(), "Failed collection 3 channel create.\n");
+  auto [collection_client_3, collection_server_3] = std::move(*collection_endpoints_3);
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_3(
+      std::move(collection_client_3));
+  LOGRTNC(token_client_3.channel().get() == ZX_HANDLE_INVALID, "Invalid token client 3.\n");
 
-  status = fuchsia_sysmem_AllocatorBindSharedCollection(
-      allocator_client_2.get(), token_client_3.release(), collection_server_3.release());
-  LOGRTN(status, "Failed BindSharedCollection 2 -> 3.\n");
+  auto bind_result_3 =
+      allocator_2.BindSharedCollection(std::move(token_client_3), std::move(collection_server_3));
+  LOGRTN(bind_result_3.status(), "Failed BindSharedCollection 2 -> 3.\n");
 
-  fuchsia_sysmem_BufferCollectionConstraints empty_constraints = {};
+  fuchsia_sysmem::wire::BufferCollectionConstraints empty_constraints;
 
-  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_3.get(), false,
-                                                         &empty_constraints);
-  LOGRTN(status, "Failed BufferCollectionSetConstraints 3 -> empty.\n");
+  auto set_constraints_3_result = collection_3.SetConstraints(false, std::move(empty_constraints));
+  LOGRTN(set_constraints_3_result.status(), "Failed BufferCollectionSetConstraints 3 -> empty.\n");
 
   // Not all constraints have been input, so the buffers haven't been
   // allocated yet.
-  zx_status_t check_status;
-  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_1.get(),
-                                                                &check_status);
-  LOGRTN(status, "Failed BufferCollectionCheckBuffersAllocated 1.\n");
-  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(),
-                                                                &check_status);
-  LOGRTN(status, "Failed BufferCollectionCheckBuffersAllocated 2.\n");
+  auto check_result_1_fail = collection_1.CheckBuffersAllocated();
+  LOGRTN(check_result_1_fail.status(), "Failed BufferCollectionCheckBuffersAllocated 1.\n");
+  LOGRTNC(check_result_1_fail->status != ZX_OK,
+          "BufferCollection allocated when shouldn't be. 1\n");
+  auto check_result_2_fail = collection_2.CheckBuffersAllocated();
+  LOGRTN(check_result_2_fail.status(), "Failed BufferCollectionCheckBuffersAllocated 2.\n");
+  LOGRTNC(check_result_2_fail->status != ZX_OK,
+          "BufferCollection allocated when shouldn't be. 2\n");
 
-  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
-                                                         constraints_2.release());
-  LOGRTN(status, "Failed BufferCollectionSetConstraints 2.\n");
+  auto set_constraints_2_result = collection_2.SetConstraints(true, std::move(constraints_2));
+  LOGRTN(set_constraints_2_result.status(), "Failed BufferCollectionSetConstraints 2.\n");
 
   //
   // Only after both participants (both clients) have SetConstraints() will
   // the allocation be successful.
   //
-  zx_status_t allocation_status;
-  BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
-  // This helps with a later exact equality check.
-  memset(buffer_collection_info_1.get(), 0, sizeof(*buffer_collection_info_1.get()));
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
-      collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+  auto allocate_result = collection_1.WaitForBuffersAllocated();
   // This is the first round-trip to/from sysmem.  A failure here can be due
   // to any step above failing async.
-  LOGRTN(status, "WaitForBuffersAllocated, collection 1 failed.\n");
-  LOGRTN(allocation_status, "WaitForBuffersAllocated, allocation_status collection 1 failed.\n");
+  LOGRTN(allocate_result.status(), "WaitForBuffersAllocated, collection 1 failed.\n");
+  LOGRTN(allocate_result->status,
+         "WaitForBuffersAllocated, allocation_status collection 1 failed.\n");
 
-  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_1.get(),
-                                                                &check_status);
-  LOGRTN(status, "CheckBuffersAllocated, collection 1 failed.\n");
-  LOGRTN(check_status, "CheckBuffersAllocated, check_status collection 1 failed.\n");
-  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(),
-                                                                &check_status);
-  LOGRTN(status, "CheckBuffersAllocated, collection 2 failed.\n");
-  LOGRTN(check_status, "CheckBuffersAllocated, check_status collection 2 failed.\n");
+  auto check_result_1 = collection_1.CheckBuffersAllocated();
+  LOGRTN(check_result_1.status(), "CheckBuffersAllocated, collection 1 failed.\n");
+  LOGRTN(check_result_1->status, "CheckBuffersAllocated, check_status collection 1 failed.\n");
 
-  BufferCollectionInfo buffer_collection_info_2(BufferCollectionInfo::Default);
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
-      collection_client_2.get(), &allocation_status, buffer_collection_info_2.get());
-  LOGRTN(status, "WaitForBuffersAllocated, collection 2 failed.\n");
-  LOGRTN(allocation_status, "WaitForBuffersAllocated, allocation_status collection 2 failed.\n");
+  auto check_result_2 = collection_2.CheckBuffersAllocated();
+  LOGRTN(check_result_2.status(), "CheckBuffersAllocated, collection 2 failed.\n");
+  LOGRTN(check_result_2->status, "CheckBuffersAllocated, check_status collection 2 failed.\n");
 
-  BufferCollectionInfo buffer_collection_info_3(BufferCollectionInfo::Default);
-  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
-      collection_client_3.get(), &allocation_status, buffer_collection_info_3.get());
-  LOGRTN(status, "WaitForBuffersAllocated, collection 3 failed.\n");
-  LOGRTN(allocation_status, "WaitForBuffersAllocated, allocation_status collection 3 failed.\n");
+  auto allocate_result_2 = collection_2.WaitForBuffersAllocated();
+  LOGRTN(allocate_result_2.status(), "WaitForBuffersAllocated, collection 2 failed.\n");
+  LOGRTN(allocate_result_2->status,
+         "WaitForBuffersAllocated, allocation_status collection 2 failed.\n");
+
+  auto allocate_result_3 = collection_3.WaitForBuffersAllocated();
+  LOGRTN(allocate_result_3.status(), "WaitForBuffersAllocated, collection 3 failed.\n");
+  LOGRTN(allocate_result_3->status,
+         "WaitForBuffersAllocated, allocation_status collection 3 failed.\n");
 
   // Close to ensure grabbing null constraints from a closed collection
   // doesn't crash
-  zx_status_t close_status = fuchsia_sysmem_BufferCollectionClose(collection_client_3.get());
-  LOGRTN(close_status, "Failed to close collection_client_3.\n");
+  auto close_result = collection_3.Close();
+  LOGRTN(close_result.status(), "Failed to close collection_client_3.\n");
 
   return 0;
 }

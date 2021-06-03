@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_BUFFER_COLLECTION_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_BUFFER_COLLECTION_H_
 
-#include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fidl/internal.h>

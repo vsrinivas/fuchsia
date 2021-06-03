@@ -6,19 +6,12 @@
 #define SRC_DEVICES_SYSMEM_TESTS_SYSMEM_FUZZ_SYSMEM_FUZZ_COMMON_H_
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
-#include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fidl-async-2/fidl_struct.h>
 
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 #include "src/devices/sysmem/drivers/sysmem/device.h"
 #include "src/devices/sysmem/drivers/sysmem/driver.h"
-
-using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
-                                               fuchsia_sysmem::wire::BufferCollectionConstraints>;
-using BufferCollectionInfo =
-    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, fuchsia_sysmem::wire::BufferCollectionInfo2>;
 
 class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
  public:
@@ -56,6 +49,7 @@ class FakeDdkSysmem {
   fake_ddk::Bind& ddk() { return ddk_; }
 
   bool Init();
+  zx::status<fidl::ClientEnd<fuchsia_sysmem::Allocator>> Connect();
 
  protected:
   bool initialized_ = false;
@@ -68,8 +62,5 @@ class FakeDdkSysmem {
   // another thread.
   fake_ddk::Bind ddk_;
 };
-
-zx_status_t connect_to_sysmem_driver(zx_handle_t fake_ddk_client,
-                                     zx::channel* allocator_client_param);
 
 #endif  // SRC_DEVICES_SYSMEM_TESTS_SYSMEM_FUZZ_SYSMEM_FUZZ_COMMON_H_

@@ -13,7 +13,6 @@
 
 #include "buffer_collection_token.h"
 #include "fbl/ref_ptr.h"
-#include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
 #include "macros.h"
 #include "node_properties.h"

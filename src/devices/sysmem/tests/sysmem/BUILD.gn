@@ -10,8 +10,7 @@ test("sysmem") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sysmem_tests.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//sdk/lib/fdio",
@@ -23,13 +22,8 @@ test("sysmem") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_unittest_package("sysmem-test") {

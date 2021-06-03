@@ -5,9 +5,8 @@
 #include "sysmem_fuzz_common.h"
 
 #include <fuchsia/sysmem/c/banjo.h>
-#include <lib/ddk/platform-defs.h>
-
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 
 #include "log_rtn.h"
 
@@ -51,16 +50,19 @@ bool FakeDdkSysmem::Init() {
   return initialized_;
 }
 
-zx_status_t connect_to_sysmem_driver(zx_handle_t fake_ddk_client,
-                                     zx::channel* allocator_client_param) {
-  zx::channel allocator_client;
-  zx::channel allocator_server;
-  zx_status_t status = zx::channel::create(0, &allocator_client, &allocator_server);
-  LOGRTN(status, "Failed allocator channel create.\n");
+zx::status<fidl::ClientEnd<fuchsia_sysmem::Allocator>> FakeDdkSysmem::Connect() {
+  zx::status allocator_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::Allocator>();
+  if (allocator_endpoints.is_error()) {
+    return zx::error(allocator_endpoints.status_value());
+  }
 
-  status = fuchsia_sysmem_DriverConnectorConnect(fake_ddk_client, allocator_server.release());
-  LOGRTN(status, "Failed sysmem driver connect.\n");
+  auto [allocator_client_end, allocator_server_end] = std::move(*allocator_endpoints);
 
-  *allocator_client_param = std::move(allocator_client);
-  return ZX_OK;
+  fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_sysmem::DriverConnector>(
+                                               zx::unowned(ddk_.FidlClient())))
+                                .Connect(std::move(allocator_server_end));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  return zx::ok(std::move(allocator_client_end));
 }

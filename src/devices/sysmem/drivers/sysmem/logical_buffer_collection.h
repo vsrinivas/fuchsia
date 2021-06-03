@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 
-#include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
@@ -529,7 +528,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     LogTableDiffs<fuchsia_sysmem2::wire::BufferCollectionInfo>("", o, n);
   }
 
-  void LogConstraints(Location location, NodeProperties* node_properties, const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const;
+  void LogConstraints(Location location, NodeProperties* node_properties,
+                      const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const;
 
   Device* parent_device_ = nullptr;
 
