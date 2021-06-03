@@ -1,0 +1,51 @@
+[
+    {
+        tag: 'wlanstack-connect-events',
+        service_name: 'wlan',
+        max_bytes: 1200,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:wlanstack.cmx:root/client_stats/connect',
+            'INSPECT:wlanstack.cmx:root/client_stats/connect:*',
+        ],
+    },
+    {
+        tag: 'wlanstack-disconnect-events',
+        service_name: 'wlan',
+        max_bytes: 8000,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:wlanstack.cmx:root/client_stats/disconnect',
+            'INSPECT:wlanstack.cmx:root/client_stats/disconnect:*',
+        ],
+    },
+    {
+        tag: 'wlanstack-scan-events',
+        service_name: 'wlan',
+        max_bytes: 3500,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:wlanstack.cmx:root/client_stats/scan',
+        ],
+    },
+    {
+        tag: 'wlanstack-scan-failure-events',
+        service_name: 'wlan',
+        max_bytes: 200,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:wlanstack.cmx:root/client_stats/scan_failures',
+            'INSPECT:wlanstack.cmx:root/client_stats/scan_failures:*',
+        ],
+    },
+    {
+        tag: 'wlanstack-device-events',
+        service_name: 'wlan',
+        max_bytes: 2000,
+        min_seconds_between_fetch: 60,
+        selectors: [
+            'INSPECT:wlanstack.cmx:root/device_events',
+            'INSPECT:wlanstack.cmx:root/device_events:*',
+        ],
+    },
+]
