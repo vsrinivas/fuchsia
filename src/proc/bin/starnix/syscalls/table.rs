@@ -33,6 +33,11 @@ impl FromSyscallArg for usize {
         arg as usize
     }
 }
+impl FromSyscallArg for i64 {
+    fn from_arg(arg: u64) -> i64 {
+        arg as i64
+    }
+}
 impl FromSyscallArg for u64 {
     fn from_arg(arg: u64) -> u64 {
         arg
@@ -137,6 +142,7 @@ pub fn dispatch_syscall(
         getuid[0],
         ioctl[4],
         kill[2],
+        lseek[3],
         mmap[6],
         mprotect[3],
         munmap[2],

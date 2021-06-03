@@ -20,6 +20,7 @@
 #include <linux/auxvec.h>
 #include <linux/capability.h>
 #include <linux/fcntl.h>
+#include <linux/fs.h>
 #include <linux/limits.h>
 #include <linux/mman.h>
 #include <linux/prctl.h>
@@ -27,7 +28,6 @@
 #include <linux/sched.h>
 #include <linux/signal.h>
 #include <linux/stat.h>
-#include <linux/resource.h>
 #include <linux/time.h>
 #include <linux/uio.h>
 

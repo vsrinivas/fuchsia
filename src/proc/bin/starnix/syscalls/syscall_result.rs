@@ -53,6 +53,12 @@ impl From<u32> for SyscallResult {
     }
 }
 
+impl From<i64> for SyscallResult {
+    fn from(value: i64) -> Self {
+        SyscallResult::Success(value as u64)
+    }
+}
+
 impl From<u64> for SyscallResult {
     fn from(value: u64) -> Self {
         SyscallResult::Success(value)

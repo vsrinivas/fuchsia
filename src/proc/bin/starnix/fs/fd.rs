@@ -39,6 +39,23 @@ impl fmt::Display for FdNumber {
     }
 }
 
+pub enum SeekOrigin {
+    SET,
+    CUR,
+    END,
+}
+
+impl SeekOrigin {
+    pub fn from_raw(whence: u32) -> Result<SeekOrigin, Errno> {
+        match whence {
+            SEEK_SET => Ok(SeekOrigin::SET),
+            SEEK_CUR => Ok(SeekOrigin::CUR),
+            SEEK_END => Ok(SeekOrigin::END),
+            _ => Err(EINVAL),
+        }
+    }
+}
+
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
 pub trait FileOps: Send + Sync {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
@@ -65,6 +82,15 @@ pub trait FileOps: Send + Sync {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno>;
+
+    /// Adjust the seek offset if the file is seekable.
+    fn seek(
+        &self,
+        file: &FileObject,
+        task: &Task,
+        offset: off_t,
+        whence: SeekOrigin,
+    ) -> Result<off_t, Errno>;
 
     /// Responds to an mmap call by returning a VMO. At least the requested protection flags must
     /// be set on the VMO. Reading or writing the VMO must read or write the file. If this is not
@@ -129,6 +155,15 @@ macro_rules! fd_impl_nonseekable {
         ) -> Result<usize, Errno> {
             Err(ESPIPE)
         }
+        fn seek(
+            &self,
+            _file: &FileObject,
+            _task: &Task,
+            _offset: off_t,
+            _whence: SeekOrigin,
+        ) -> Result<off_t, Errno> {
+            Err(ESPIPE)
+        }
     };
 }
 
@@ -158,6 +193,16 @@ macro_rules! fd_impl_seekable {
             let size = self.write_at(file, task, *offset, data)?;
             *offset += size;
             Ok(size)
+        }
+        fn seek(
+            &self,
+            _file: &FileObject,
+            _task: &Task,
+            _offset: off_t,
+            _whence: SeekOrigin,
+        ) -> Result<off_t, Errno> {
+            not_implemented!("seek is not implemented");
+            Err(ENOSYS)
         }
     };
 }

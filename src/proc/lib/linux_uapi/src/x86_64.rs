@@ -8,6 +8,36 @@ use zerocopy::{AsBytes, FromBytes};
 
 pub use crate::x86_64_types::*;
 
+#[repr(C)]
+#[derive(Default)]
+pub struct __IncompleteArrayField<T>(::std::marker::PhantomData<T>, [T; 0]);
+impl<T> __IncompleteArrayField<T> {
+    #[inline]
+    pub const fn new() -> Self {
+        __IncompleteArrayField(::std::marker::PhantomData, [])
+    }
+    #[inline]
+    pub fn as_ptr(&self) -> *const T {
+        self as *const _ as *const T
+    }
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self as *mut _ as *mut T
+    }
+    #[inline]
+    pub unsafe fn as_slice(&self, len: usize) -> &[T] {
+        ::std::slice::from_raw_parts(self.as_ptr(), len)
+    }
+    #[inline]
+    pub unsafe fn as_mut_slice(&mut self, len: usize) -> &mut [T] {
+        ::std::slice::from_raw_parts_mut(self.as_mut_ptr(), len)
+    }
+}
+impl<T> ::std::fmt::Debug for __IncompleteArrayField<T> {
+    fn fmt(&self, fmt: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        fmt.write_str("__IncompleteArrayField")
+    }
+}
 pub const EPERM: u32 = 1;
 pub const ENOENT: u32 = 2;
 pub const ESRCH: u32 = 3;
@@ -994,6 +1024,188 @@ pub const XATTR_NAME_MAX: u32 = 255;
 pub const XATTR_SIZE_MAX: u32 = 65536;
 pub const XATTR_LIST_MAX: u32 = 65536;
 pub const RTSIG_MAX: u32 = 32;
+pub const FSCRYPT_POLICY_FLAGS_PAD_4: u32 = 0;
+pub const FSCRYPT_POLICY_FLAGS_PAD_8: u32 = 1;
+pub const FSCRYPT_POLICY_FLAGS_PAD_16: u32 = 2;
+pub const FSCRYPT_POLICY_FLAGS_PAD_32: u32 = 3;
+pub const FSCRYPT_POLICY_FLAGS_PAD_MASK: u32 = 3;
+pub const FSCRYPT_POLICY_FLAG_DIRECT_KEY: u32 = 4;
+pub const FSCRYPT_POLICY_FLAG_IV_INO_LBLK_64: u32 = 8;
+pub const FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32: u32 = 16;
+pub const FSCRYPT_POLICY_FLAGS_VALID: u32 = 31;
+pub const FSCRYPT_MODE_AES_256_XTS: u32 = 1;
+pub const FSCRYPT_MODE_AES_256_CTS: u32 = 4;
+pub const FSCRYPT_MODE_AES_128_CBC: u32 = 5;
+pub const FSCRYPT_MODE_AES_128_CTS: u32 = 6;
+pub const FSCRYPT_MODE_ADIANTUM: u32 = 9;
+pub const __FSCRYPT_MODE_MAX: u32 = 9;
+pub const FSCRYPT_POLICY_V1: u32 = 0;
+pub const FSCRYPT_KEY_DESCRIPTOR_SIZE: u32 = 8;
+pub const FSCRYPT_KEY_DESC_PREFIX: &'static [u8; 9usize] = b"fscrypt:\0";
+pub const FSCRYPT_KEY_DESC_PREFIX_SIZE: u32 = 8;
+pub const FSCRYPT_MAX_KEY_SIZE: u32 = 64;
+pub const FSCRYPT_POLICY_V2: u32 = 2;
+pub const FSCRYPT_KEY_IDENTIFIER_SIZE: u32 = 16;
+pub const FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR: u32 = 1;
+pub const FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER: u32 = 2;
+pub const __FSCRYPT_ADD_KEY_FLAG_HW_WRAPPED: u32 = 1;
+pub const FSCRYPT_KEY_REMOVAL_STATUS_FLAG_FILES_BUSY: u32 = 1;
+pub const FSCRYPT_KEY_REMOVAL_STATUS_FLAG_OTHER_USERS: u32 = 2;
+pub const FSCRYPT_KEY_STATUS_ABSENT: u32 = 1;
+pub const FSCRYPT_KEY_STATUS_PRESENT: u32 = 2;
+pub const FSCRYPT_KEY_STATUS_INCOMPLETELY_REMOVED: u32 = 3;
+pub const FSCRYPT_KEY_STATUS_FLAG_ADDED_BY_SELF: u32 = 1;
+pub const FS_KEY_DESCRIPTOR_SIZE: u32 = 8;
+pub const FS_POLICY_FLAGS_PAD_4: u32 = 0;
+pub const FS_POLICY_FLAGS_PAD_8: u32 = 1;
+pub const FS_POLICY_FLAGS_PAD_16: u32 = 2;
+pub const FS_POLICY_FLAGS_PAD_32: u32 = 3;
+pub const FS_POLICY_FLAGS_PAD_MASK: u32 = 3;
+pub const FS_POLICY_FLAG_DIRECT_KEY: u32 = 4;
+pub const FS_POLICY_FLAGS_VALID: u32 = 31;
+pub const FS_ENCRYPTION_MODE_INVALID: u32 = 0;
+pub const FS_ENCRYPTION_MODE_AES_256_XTS: u32 = 1;
+pub const FS_ENCRYPTION_MODE_AES_256_GCM: u32 = 2;
+pub const FS_ENCRYPTION_MODE_AES_256_CBC: u32 = 3;
+pub const FS_ENCRYPTION_MODE_AES_256_CTS: u32 = 4;
+pub const FS_ENCRYPTION_MODE_AES_128_CBC: u32 = 5;
+pub const FS_ENCRYPTION_MODE_AES_128_CTS: u32 = 6;
+pub const FS_ENCRYPTION_MODE_SPECK128_256_XTS: u32 = 7;
+pub const FS_ENCRYPTION_MODE_SPECK128_256_CTS: u32 = 8;
+pub const FS_ENCRYPTION_MODE_ADIANTUM: u32 = 9;
+pub const FS_KEY_DESC_PREFIX: &'static [u8; 9usize] = b"fscrypt:\0";
+pub const FS_KEY_DESC_PREFIX_SIZE: u32 = 8;
+pub const FS_MAX_KEY_SIZE: u32 = 64;
+pub const MS_RDONLY: u32 = 1;
+pub const MS_NOSUID: u32 = 2;
+pub const MS_NODEV: u32 = 4;
+pub const MS_NOEXEC: u32 = 8;
+pub const MS_SYNCHRONOUS: u32 = 16;
+pub const MS_REMOUNT: u32 = 32;
+pub const MS_MANDLOCK: u32 = 64;
+pub const MS_DIRSYNC: u32 = 128;
+pub const MS_NOSYMFOLLOW: u32 = 256;
+pub const MS_NOATIME: u32 = 1024;
+pub const MS_NODIRATIME: u32 = 2048;
+pub const MS_BIND: u32 = 4096;
+pub const MS_MOVE: u32 = 8192;
+pub const MS_REC: u32 = 16384;
+pub const MS_VERBOSE: u32 = 32768;
+pub const MS_SILENT: u32 = 32768;
+pub const MS_POSIXACL: u32 = 65536;
+pub const MS_UNBINDABLE: u32 = 131072;
+pub const MS_PRIVATE: u32 = 262144;
+pub const MS_SLAVE: u32 = 524288;
+pub const MS_SHARED: u32 = 1048576;
+pub const MS_RELATIME: u32 = 2097152;
+pub const MS_KERNMOUNT: u32 = 4194304;
+pub const MS_I_VERSION: u32 = 8388608;
+pub const MS_STRICTATIME: u32 = 16777216;
+pub const MS_LAZYTIME: u32 = 33554432;
+pub const MS_SUBMOUNT: u32 = 67108864;
+pub const MS_NOREMOTELOCK: u32 = 134217728;
+pub const MS_NOSEC: u32 = 268435456;
+pub const MS_BORN: u32 = 536870912;
+pub const MS_ACTIVE: u32 = 1073741824;
+pub const MS_NOUSER: u32 = 2147483648;
+pub const MS_RMT_MASK: u32 = 41943121;
+pub const MS_MGC_VAL: u32 = 3236757504;
+pub const MS_MGC_MSK: u32 = 4294901760;
+pub const OPEN_TREE_CLONE: u32 = 1;
+pub const OPEN_TREE_CLOEXEC: u32 = 524288;
+pub const MOVE_MOUNT_F_SYMLINKS: u32 = 1;
+pub const MOVE_MOUNT_F_AUTOMOUNTS: u32 = 2;
+pub const MOVE_MOUNT_F_EMPTY_PATH: u32 = 4;
+pub const MOVE_MOUNT_T_SYMLINKS: u32 = 16;
+pub const MOVE_MOUNT_T_AUTOMOUNTS: u32 = 32;
+pub const MOVE_MOUNT_T_EMPTY_PATH: u32 = 64;
+pub const MOVE_MOUNT__MASK: u32 = 119;
+pub const FSOPEN_CLOEXEC: u32 = 1;
+pub const FSPICK_CLOEXEC: u32 = 1;
+pub const FSPICK_SYMLINK_NOFOLLOW: u32 = 2;
+pub const FSPICK_NO_AUTOMOUNT: u32 = 4;
+pub const FSPICK_EMPTY_PATH: u32 = 8;
+pub const FSMOUNT_CLOEXEC: u32 = 1;
+pub const MOUNT_ATTR_RDONLY: u32 = 1;
+pub const MOUNT_ATTR_NOSUID: u32 = 2;
+pub const MOUNT_ATTR_NODEV: u32 = 4;
+pub const MOUNT_ATTR_NOEXEC: u32 = 8;
+pub const MOUNT_ATTR__ATIME: u32 = 112;
+pub const MOUNT_ATTR_RELATIME: u32 = 0;
+pub const MOUNT_ATTR_NOATIME: u32 = 16;
+pub const MOUNT_ATTR_STRICTATIME: u32 = 32;
+pub const MOUNT_ATTR_NODIRATIME: u32 = 128;
+pub const INR_OPEN_CUR: u32 = 1024;
+pub const INR_OPEN_MAX: u32 = 4096;
+pub const BLOCK_SIZE_BITS: u32 = 10;
+pub const BLOCK_SIZE: u32 = 1024;
+pub const SEEK_SET: u32 = 0;
+pub const SEEK_CUR: u32 = 1;
+pub const SEEK_END: u32 = 2;
+pub const SEEK_DATA: u32 = 3;
+pub const SEEK_HOLE: u32 = 4;
+pub const SEEK_MAX: u32 = 4;
+pub const RENAME_NOREPLACE: u32 = 1;
+pub const RENAME_EXCHANGE: u32 = 2;
+pub const RENAME_WHITEOUT: u32 = 4;
+pub const FILE_DEDUPE_RANGE_SAME: u32 = 0;
+pub const FILE_DEDUPE_RANGE_DIFFERS: u32 = 1;
+pub const NR_FILE: u32 = 8192;
+pub const FS_XFLAG_REALTIME: u32 = 1;
+pub const FS_XFLAG_PREALLOC: u32 = 2;
+pub const FS_XFLAG_IMMUTABLE: u32 = 8;
+pub const FS_XFLAG_APPEND: u32 = 16;
+pub const FS_XFLAG_SYNC: u32 = 32;
+pub const FS_XFLAG_NOATIME: u32 = 64;
+pub const FS_XFLAG_NODUMP: u32 = 128;
+pub const FS_XFLAG_RTINHERIT: u32 = 256;
+pub const FS_XFLAG_PROJINHERIT: u32 = 512;
+pub const FS_XFLAG_NOSYMLINKS: u32 = 1024;
+pub const FS_XFLAG_EXTSIZE: u32 = 2048;
+pub const FS_XFLAG_EXTSZINHERIT: u32 = 4096;
+pub const FS_XFLAG_NODEFRAG: u32 = 8192;
+pub const FS_XFLAG_FILESTREAM: u32 = 16384;
+pub const FS_XFLAG_DAX: u32 = 32768;
+pub const FS_XFLAG_COWEXTSIZE: u32 = 65536;
+pub const FS_XFLAG_HASATTR: u32 = 2147483648;
+pub const BMAP_IOCTL: u32 = 1;
+pub const FSLABEL_MAX: u32 = 256;
+pub const FS_SECRM_FL: u32 = 1;
+pub const FS_UNRM_FL: u32 = 2;
+pub const FS_COMPR_FL: u32 = 4;
+pub const FS_SYNC_FL: u32 = 8;
+pub const FS_IMMUTABLE_FL: u32 = 16;
+pub const FS_APPEND_FL: u32 = 32;
+pub const FS_NODUMP_FL: u32 = 64;
+pub const FS_NOATIME_FL: u32 = 128;
+pub const FS_DIRTY_FL: u32 = 256;
+pub const FS_COMPRBLK_FL: u32 = 512;
+pub const FS_NOCOMP_FL: u32 = 1024;
+pub const FS_ENCRYPT_FL: u32 = 2048;
+pub const FS_BTREE_FL: u32 = 4096;
+pub const FS_INDEX_FL: u32 = 4096;
+pub const FS_IMAGIC_FL: u32 = 8192;
+pub const FS_JOURNAL_DATA_FL: u32 = 16384;
+pub const FS_NOTAIL_FL: u32 = 32768;
+pub const FS_DIRSYNC_FL: u32 = 65536;
+pub const FS_TOPDIR_FL: u32 = 131072;
+pub const FS_HUGE_FILE_FL: u32 = 262144;
+pub const FS_EXTENT_FL: u32 = 524288;
+pub const FS_VERITY_FL: u32 = 1048576;
+pub const FS_EA_INODE_FL: u32 = 2097152;
+pub const FS_EOFBLOCKS_FL: u32 = 4194304;
+pub const FS_NOCOW_FL: u32 = 8388608;
+pub const FS_DAX_FL: u32 = 33554432;
+pub const FS_INLINE_DATA_FL: u32 = 268435456;
+pub const FS_PROJINHERIT_FL: u32 = 536870912;
+pub const FS_CASEFOLD_FL: u32 = 1073741824;
+pub const FS_RESERVED_FL: u32 = 2147483648;
+pub const FS_FL_USER_VISIBLE: u32 = 253951;
+pub const FS_FL_USER_MODIFIABLE: u32 = 229631;
+pub const SYNC_FILE_RANGE_WAIT_BEFORE: u32 = 1;
+pub const SYNC_FILE_RANGE_WRITE: u32 = 2;
+pub const SYNC_FILE_RANGE_WAIT_AFTER: u32 = 4;
+pub const SYNC_FILE_RANGE_WRITE_AND_WAIT: u32 = 7;
 pub const MAP_32BIT: u32 = 64;
 pub const MAP_GROWSDOWN: u32 = 256;
 pub const MAP_DENYWRITE: u32 = 2048;
@@ -1530,6 +1742,200 @@ pub struct open_how {
     pub mode: __u64,
     pub resolve: __u64,
 }
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fscrypt_policy_v1 {
+    pub version: __u8,
+    pub contents_encryption_mode: __u8,
+    pub filenames_encryption_mode: __u8,
+    pub flags: __u8,
+    pub master_key_descriptor: [__u8; 8usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fscrypt_key {
+    pub mode: __u32,
+    pub raw: [__u8; 64usize],
+    pub size: __u32,
+}
+impl Default for fscrypt_key {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fscrypt_policy_v2 {
+    pub version: __u8,
+    pub contents_encryption_mode: __u8,
+    pub filenames_encryption_mode: __u8,
+    pub flags: __u8,
+    pub __reserved: [__u8; 4usize],
+    pub master_key_identifier: [__u8; 16usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fscrypt_get_policy_ex_arg {
+    pub policy_size: __u64,
+    pub policy: fscrypt_get_policy_ex_arg__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union fscrypt_get_policy_ex_arg__bindgen_ty_1 {
+    pub version: __u8,
+    pub v1: fscrypt_policy_v1,
+    pub v2: fscrypt_policy_v2,
+}
+impl Default for fscrypt_get_policy_ex_arg__bindgen_ty_1 {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+impl Default for fscrypt_get_policy_ex_arg {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fscrypt_key_specifier {
+    pub type_: __u32,
+    pub __reserved: __u32,
+    pub u: fscrypt_key_specifier__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union fscrypt_key_specifier__bindgen_ty_1 {
+    pub __reserved: [__u8; 32usize],
+    pub descriptor: [__u8; 8usize],
+    pub identifier: [__u8; 16usize],
+}
+impl Default for fscrypt_key_specifier__bindgen_ty_1 {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+impl Default for fscrypt_key_specifier {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct fscrypt_provisioning_key_payload {
+    pub type_: __u32,
+    pub __reserved: __u32,
+    pub raw: __IncompleteArrayField<__u8>,
+}
+#[repr(C)]
+pub struct fscrypt_add_key_arg {
+    pub key_spec: fscrypt_key_specifier,
+    pub raw_size: __u32,
+    pub key_id: __u32,
+    pub __reserved: [__u32; 7usize],
+    pub __flags: __u32,
+    pub raw: __IncompleteArrayField<__u8>,
+}
+impl Default for fscrypt_add_key_arg {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fscrypt_remove_key_arg {
+    pub key_spec: fscrypt_key_specifier,
+    pub removal_status_flags: __u32,
+    pub __reserved: [__u32; 5usize],
+}
+impl Default for fscrypt_remove_key_arg {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fscrypt_get_key_status_arg {
+    pub key_spec: fscrypt_key_specifier,
+    pub __reserved: [__u32; 6usize],
+    pub status: __u32,
+    pub status_flags: __u32,
+    pub user_count: __u32,
+    pub __out_reserved: [__u32; 13usize],
+}
+impl Default for fscrypt_get_key_status_arg {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
+}
+pub const fsconfig_command_FSCONFIG_SET_FLAG: fsconfig_command = 0;
+pub const fsconfig_command_FSCONFIG_SET_STRING: fsconfig_command = 1;
+pub const fsconfig_command_FSCONFIG_SET_BINARY: fsconfig_command = 2;
+pub const fsconfig_command_FSCONFIG_SET_PATH: fsconfig_command = 3;
+pub const fsconfig_command_FSCONFIG_SET_PATH_EMPTY: fsconfig_command = 4;
+pub const fsconfig_command_FSCONFIG_SET_FD: fsconfig_command = 5;
+pub const fsconfig_command_FSCONFIG_CMD_CREATE: fsconfig_command = 6;
+pub const fsconfig_command_FSCONFIG_CMD_RECONFIGURE: fsconfig_command = 7;
+pub type fsconfig_command = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct file_clone_range {
+    pub src_fd: __s64,
+    pub src_offset: __u64,
+    pub src_length: __u64,
+    pub dest_offset: __u64,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fstrim_range {
+    pub start: __u64,
+    pub len: __u64,
+    pub minlen: __u64,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct file_dedupe_range_info {
+    pub dest_fd: __s64,
+    pub dest_offset: __u64,
+    pub bytes_deduped: __u64,
+    pub status: __s32,
+    pub reserved: __u32,
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct file_dedupe_range {
+    pub src_offset: __u64,
+    pub src_length: __u64,
+    pub dest_count: __u16,
+    pub reserved1: __u16,
+    pub reserved2: __u32,
+    pub info: __IncompleteArrayField<file_dedupe_range_info>,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct files_stat_struct {
+    pub nr_files: crate::x86_64_types::c_ulong,
+    pub nr_free_files: crate::x86_64_types::c_ulong,
+    pub max_files: crate::x86_64_types::c_ulong,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct inodes_stat_t {
+    pub nr_inodes: crate::x86_64_types::c_long,
+    pub nr_unused: crate::x86_64_types::c_long,
+    pub dummy: [crate::x86_64_types::c_long; 5usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct fsxattr {
+    pub fsx_xflags: __u32,
+    pub fsx_extsize: __u32,
+    pub fsx_nextents: __u32,
+    pub fsx_projid: __u32,
+    pub fsx_cowextsize: __u32,
+    pub fsx_pad: [crate::x86_64_types::c_uchar; 8usize],
+}
+pub type __kernel_rwf_t = crate::x86_64_types::c_int;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct prctl_mm_map {

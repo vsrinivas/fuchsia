@@ -41,6 +41,16 @@ pub fn sys_close(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult
     Ok(SUCCESS)
 }
 
+pub fn sys_lseek(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    offset: off_t,
+    whence: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    Ok(file.ops().seek(&file, &ctx.task, offset, SeekOrigin::from_raw(whence)?)?.into())
+}
+
 pub fn sys_fcntl(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
