@@ -20,7 +20,7 @@ alias u32 = uint32;
 alias vec_of_strings = vector<string>;
 alias vec_of_strings_at_most_5 = vector<string>:5;
 alias channel = handle:CHANNEL;
-alias client_end = channel;
+alias alias_of_channel = channel;
 
 resource struct ExampleOfUseOfAliases {
     u32 field_of_u32;
@@ -29,6 +29,6 @@ resource struct ExampleOfUseOfAliases {
     vec_of_strings_at_most_5 field_of_vec_of_strings_at_most_5;
     vector<someotherlibrary.ReferenceMe>:5 field_of_vec_of_ref_me_at_most_5;
     channel field_of_channel;
-    client_end field_of_client_end;
-    client_end? field_of_nullable_client_end;
+    alias_of_channel field_of_client_end;
+    alias_of_channel? field_of_nullable_client_end;
 };

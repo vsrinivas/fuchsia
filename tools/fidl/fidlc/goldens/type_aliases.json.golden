@@ -271,7 +271,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/client_end",
+            "name": "fidl.test.typealiases/alias_of_channel",
             "args": [],
             "nullable": false
           },
@@ -279,7 +279,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 32,
-            "column": 16,
+            "column": 22,
             "length": 19
           },
           "field_shape_v1": {
@@ -296,7 +296,7 @@
             "nullable": true
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/client_end",
+            "name": "fidl.test.typealiases/alias_of_channel",
             "args": [],
             "nullable": true
           },
@@ -304,7 +304,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
             "line": 33,
-            "column": 17,
+            "column": 23,
             "length": 28
           },
           "field_shape_v1": {
@@ -407,12 +407,12 @@
       }
     },
     {
-      "name": "fidl.test.typealiases/client_end",
+      "name": "fidl.test.typealiases/alias_of_channel",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 23,
         "column": 7,
-        "length": 10
+        "length": 16
       },
       "partial_type_ctor": {
         "name": "handle",
@@ -428,7 +428,7 @@
     "fidl.test.typealiases/obj_type",
     "fidl.test.typealiases/handle",
     "fidl.test.typealiases/channel",
-    "fidl.test.typealiases/client_end",
+    "fidl.test.typealiases/alias_of_channel",
     "fidl.test.typealiases/ExampleOfUseOfAliases"
   ],
   "declarations": {
@@ -439,6 +439,6 @@
     "fidl.test.typealiases/vec_of_strings": "type_alias",
     "fidl.test.typealiases/vec_of_strings_at_most_5": "type_alias",
     "fidl.test.typealiases/channel": "type_alias",
-    "fidl.test.typealiases/client_end": "type_alias"
+    "fidl.test.typealiases/alias_of_channel": "type_alias"
   }
 }

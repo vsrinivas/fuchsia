@@ -51,7 +51,8 @@ IDENTIFIERS = [
     Identifier('bitand'),
     Identifier('bitor'),
     Identifier('bool'),
-    Identifier('box', RUST_KEYWORD),
+    # TODO(fxbug.dev/77561): this can be re-enabled once builtin shadowing works.
+    # Identifier('box', RUST_KEYWORD),
     Identifier('break', RUST_KEYWORD),
     Identifier('byte'),
     Identifier('bytes'),
