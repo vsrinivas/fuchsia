@@ -36,13 +36,18 @@ const WAS_HANDLED_TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
 ///  - if `shortcut_hook` is not provided:
 ///    - default shortcut handler responds `false` to any shortcut activation
 ///  - if `handled_hook` is provided:
-///    - `handled_hook` is invoked with `true` if any of the keys were handled
+///    - `handled_hook` is invoked with `true` if any of the keys were handled, or
+///      `false` if they were not.
 ///  - `keys` are released sequentially
 struct TestCase {
     keys: Option<Vec<input::Key>>,
     events: Option<Vec<(input::Key, ui_input3::KeyEventType)>>,
     shortcut_hook: Box<dyn Fn(u32) -> bool>,
     handled_hook: Box<dyn Fn(bool) -> ()>,
+    // If set, `handled_hook` above will be called when key releases are processed.
+    // If not set, the hook will not be called.  This allows us to ensure that
+    // keys are handled on presses.
+    call_handled_hook_on_release: bool,
 }
 
 /// A type that multiplexes two different event streams into one.
@@ -61,6 +66,7 @@ impl TestCase {
             events: None,
             shortcut_hook: Box::new(|_| false),
             handled_hook: Box::new(|_| ()),
+            call_handled_hook_on_release: true,
         }
     }
 
@@ -94,6 +100,14 @@ impl TestCase {
 
     fn set_handled_hook(mut self, handled_hook: Box<dyn Fn(bool) -> ()>) -> Self {
         self.handled_hook = handled_hook;
+        self
+    }
+
+    // Set whether the hook set by `set_handled_hook` will be called on key release. It is
+    // called by default, so passing `false` here will turn that off.
+    // Returns `self` for chaining.
+    fn set_call_handled_hook_on_release(mut self, call_handled_hook_on_release: bool) -> Self {
+        self.call_handled_hook_on_release = call_handled_hook_on_release;
         self
     }
 
@@ -141,7 +155,7 @@ impl TestCase {
         let listener = &mut registry_service.listener;
 
         // Stream of shortcut activation events.
-        // For each shortcut activation, shortcut hook is executed with shortcut id.
+        // For each shortcut activation, self.shortcut_hook is executed with shortcut id.
         let shortcut_activation_stream =
             listener.map(|req| self.respond_to_activation_request(req));
 
@@ -149,10 +163,10 @@ impl TestCase {
         futures::pin_mut!(handle_key_fut);
 
         // Create a single-item event stream for pressing and handling all events.
-        let handle_key_stream =
+        let key_stream =
             stream::once(handle_key_fut).map(|was_handled| EventType::KeyHandled(was_handled));
 
-        let events = stream::select(handle_key_stream, shortcut_activation_stream);
+        let events = stream::select(key_stream, shortcut_activation_stream);
 
         // Advance combined stream of events and stop when the key was handled.
         let was_handled = self.handle_event_stream(events).await;
@@ -176,11 +190,15 @@ impl TestCase {
             listener.map(|req| self.respond_to_activation_request(req));
         let handle_key_fut = manager_service.release_multiple_key3(keys.clone());
         futures::pin_mut!(handle_key_fut);
-        let handle_key_stream =
+        let key_release_stream =
             stream::once(handle_key_fut).map(|was_handled| EventType::KeyHandled(was_handled));
-        let events = stream::select(handle_key_stream, shortcut_activation_stream);
+        let events = stream::select(key_release_stream, shortcut_activation_stream);
         let was_handled = self.handle_event_stream(events).await;
-        (self.handled_hook)(was_handled);
+        // Some tests may want to call this hook only on presses, so this one is
+        // made conditional.
+        if self.call_handled_hook_on_release {
+            (self.handled_hook)(was_handled);
+        }
         Ok(())
     }
 
@@ -260,77 +278,83 @@ async fn test_keys3() -> Result<(), Error> {
     TestCase::new()
         .set_keys(vec![input::Key::E])
         .set_handled_hook(Box::new(|was_handled| assert_eq!(false, was_handled)))
+        .set_call_handled_hook_on_release(false)
         .run(&mut registry_service, &manager_service)
         .await?;
 
     // LeftShift + E triggers a shortcut.
-    let left_shift_e = Latch::new();
+    let left_shift_e_latch = Latch::new();
     {
-        let left_shift_e = left_shift_e.clone();
+        let left_shift_e = left_shift_e_latch.clone();
         TestCase::new()
             .set_keys(vec![input::Key::LeftShift, input::Key::E])
             .set_shortcut_hook(Box::new(|id| {
                 assert_eq!(id, TEST_SHORTCUT_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| left_shift_e.latch_if_set(was_handled)))
+            .set_call_handled_hook_on_release(false)
+            .set_handled_hook(Box::new(move |was_handled| left_shift_e.latch(was_handled)))
             .run(&mut registry_service, &manager_service)
             .await?;
     }
-    assert_eq!(true, left_shift_e.value());
+    assert_eq!(true, left_shift_e_latch.get_value());
 
     // RightShift + E triggers a shortcut.
-    let right_shift_e = Latch::new();
+    let right_shift_e_latch = Latch::new();
     {
-        let right_shift_e = right_shift_e.clone();
+        let right_shift_e = right_shift_e_latch.clone();
         TestCase::new()
             .set_keys(vec![input::Key::RightShift, input::Key::E])
             .set_shortcut_hook(Box::new(|id| {
                 assert_eq!(id, TEST_SHORTCUT_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| right_shift_e.latch_if_set(was_handled)))
+            .set_call_handled_hook_on_release(false)
+            .set_handled_hook(Box::new(move |was_handled| right_shift_e.latch(was_handled)))
             .run(&mut registry_service, &manager_service)
             .await?;
     }
-    assert_eq!(true, right_shift_e.value());
+    assert_eq!(true, right_shift_e_latch.get_value());
 
     // RightCtrl + RightShift + R triggers a shortcut.
-    let ctrl_shift_r = Latch::new();
+    let ctrl_shift_r_latch = Latch::new();
     {
-        let ctrl_shift_r = ctrl_shift_r.clone();
+        let ctrl_shift_r = ctrl_shift_r_latch.clone();
         TestCase::new()
             .set_keys(vec![input::Key::RightCtrl, input::Key::RightShift, input::Key::R])
             .set_shortcut_hook(Box::new(|id| {
                 assert_eq!(id, TEST_SHORTCUT_2_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| ctrl_shift_r.latch_if_set(was_handled)))
+            .set_handled_hook(Box::new(move |was_handled| ctrl_shift_r.latch(was_handled)))
+            .set_call_handled_hook_on_release(false)
             .run(&mut registry_service, &manager_service)
             .await?;
     }
-    assert_eq!(true, ctrl_shift_r.value());
+    assert_eq!(true, ctrl_shift_r_latch.get_value());
 
     // RightShift + RightCtrl + R triggers a shortcut.
-    let ctrl_shift_r = Latch::new();
+    let ctrl_shift_r_latch = Latch::new();
     {
-        let ctrl_shift_r = ctrl_shift_r.clone();
+        let ctrl_shift_r = ctrl_shift_r_latch.clone();
         TestCase::new()
             .set_keys(vec![input::Key::RightShift, input::Key::RightCtrl, input::Key::R])
             .set_shortcut_hook(Box::new(|id| {
                 assert_eq!(id, TEST_SHORTCUT_2_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| ctrl_shift_r.latch_if_set(was_handled)))
+            .set_handled_hook(Box::new(move |was_handled| ctrl_shift_r.latch(was_handled)))
+            .set_call_handled_hook_on_release(false)
             .run(&mut registry_service, &manager_service)
             .await?;
     }
-    assert_eq!(true, ctrl_shift_r.value());
+    assert_eq!(true, ctrl_shift_r_latch.get_value());
 
     // LeftCtrl + R does not trigger a shortcut.
     TestCase::new()
         .set_keys(vec![input::Key::LeftCtrl, input::Key::R])
         .set_handled_hook(Box::new(move |was_handled| assert_eq!(false, was_handled)))
+        .set_call_handled_hook_on_release(false)
         .run(&mut registry_service, &manager_service)
         .await?;
 
@@ -408,7 +432,7 @@ async fn test_focus_change() -> Result<(), Error> {
                     assert_eq!(id, TEST_SHORTCUT_ID);
                     true
                 }))
-                .set_handled_hook(Box::new(move |was_handled| handled.latch_if_set(was_handled)))
+                .set_handled_hook(Box::new(move |was_handled| handled.latch(was_handled)))
                 .run(&mut client1, &manager_service)
         };
         futures::pin_mut!(client1);
@@ -418,7 +442,7 @@ async fn test_focus_change() -> Result<(), Error> {
 
         let activated_listener = future::select(client1, client2).await;
 
-        assert_eq!(true, handled.value());
+        assert_eq!(true, handled.get_value());
         assert!(matches!(activated_listener, future::Either::Left { .. }));
     }
 
@@ -439,12 +463,12 @@ async fn test_focus_change() -> Result<(), Error> {
                     assert_eq!(id, TEST_SHORTCUT_2_ID);
                     true
                 }))
-                .set_handled_hook(Box::new(move |was_handled| handled.latch_if_set(was_handled)))
+                .set_handled_hook(Box::new(move |was_handled| handled.latch(was_handled)))
                 .run(&mut client2, &manager_service)
         };
         futures::pin_mut!(client2);
         let activated_listener = future::select(client2, client1).await;
-        assert_eq!(true, handled.value());
+        assert_eq!(true, handled.get_value());
         assert!(matches!(activated_listener, future::Either::Left { .. }));
     }
 
@@ -495,12 +519,12 @@ async fn test_multiple_matches() -> Result<(), Error> {
                 assert_eq!(id, TEST_SHORTCUT_2_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| handled.latch_if_set(was_handled)))
+            .set_handled_hook(Box::new(move |was_handled| handled.latch(was_handled)))
             .run(&mut child, &manager_service)
     };
     futures::pin_mut!(child_fut);
     let activated_listener = future::select(child_fut, parent_fut).await;
-    assert_eq!(true, handled.value());
+    assert_eq!(true, handled.get_value());
     assert!(matches!(activated_listener, future::Either::Left { .. }));
 
     Ok(())
@@ -536,7 +560,7 @@ async fn test_priority_matches() -> Result<(), Error> {
                 assert_eq!(id, TEST_SHORTCUT_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| handled.latch_if_set(was_handled)))
+            .set_handled_hook(Box::new(move |was_handled| handled.latch(was_handled)))
             .run(&mut parent, &manager_service)
     };
     futures::pin_mut!(parent_fut);
@@ -546,7 +570,7 @@ async fn test_priority_matches() -> Result<(), Error> {
 
     let activated_listener = future::select(parent_fut, child_fut).await;
 
-    assert_eq!(true, handled.value());
+    assert_eq!(true, handled.get_value());
     assert!(matches!(activated_listener, future::Either::Left { .. }));
 
     Ok(())
@@ -585,7 +609,7 @@ async fn test_multiple_priority_matches() -> Result<(), Error> {
                 assert_eq!(id, TEST_SHORTCUT_ID);
                 true
             }))
-            .set_handled_hook(Box::new(move |was_handled| handled.latch_if_set(was_handled)))
+            .set_handled_hook(Box::new(move |was_handled| handled.latch(was_handled)))
             .run(&mut parent, &manager_service)
     };
     futures::pin_mut!(parent_fut);
@@ -595,7 +619,7 @@ async fn test_multiple_priority_matches() -> Result<(), Error> {
 
     let activated_listener = future::select(parent_fut, child_fut).await;
 
-    assert_eq!(true, handled.value());
+    assert_eq!(true, handled.get_value());
     assert!(matches!(activated_listener, future::Either::Left { .. }));
 
     Ok(())
@@ -622,20 +646,18 @@ async fn test_priority_same_client() -> Result<(), Error> {
     client.register_shortcut(shortcut).await?;
 
     let handled = Latch::new();
-    {
-        let handled = handled.clone();
-        TestCase::new()
-            .set_keys(vec![input::Key::K])
-            .set_shortcut_hook(Box::new(move |id| {
-                assert_eq!(id, TEST_SHORTCUT_ID);
-                true
-            }))
-            .set_handled_hook(Box::new(move |was_handled| handled.latch_if_set(was_handled)))
-            .run(&mut client, &manager_service)
-            .await?;
-    }
+    let handled_clone = handled.clone();
+    TestCase::new()
+        .set_keys(vec![input::Key::K])
+        .set_shortcut_hook(Box::new(move |id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            true
+        }))
+        .set_handled_hook(Box::new(move |was_handled| handled_clone.latch(was_handled)))
+        .run(&mut client, &manager_service)
+        .await?;
 
-    assert_eq!(true, handled.value());
+    assert_eq!(true, handled.get_value());
 
     Ok(())
 }
@@ -656,20 +678,18 @@ async fn handle_meta_press_release_shortcut() -> Result<(), Error> {
         .build();
     client.register_shortcut(shortcut).await?;
 
-    let was_handled = Latch::new();
-    {
-        let was_handled = was_handled.clone();
-        TestCase::new()
-            .set_keys(vec![input::Key::LeftMeta])
-            .set_shortcut_hook(Box::new(move |id| {
-                assert_eq!(id, TEST_SHORTCUT_ID);
-                true
-            }))
-            .set_handled_hook(Box::new(move |handled| was_handled.latch_if_set(handled)))
-            .run(&mut client, &manager_service)
-            .await?;
-    }
-    assert_eq!(true, was_handled.value(), "shortcut was not handled");
+    let handled = Latch::new();
+    let handled_clone = handled.clone();
+    TestCase::new()
+        .set_keys(vec![input::Key::LeftMeta])
+        .set_shortcut_hook(Box::new(move |id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            true
+        }))
+        .set_handled_hook(Box::new(move |handled| handled_clone.latch(handled)))
+        .run(&mut client, &manager_service)
+        .await?;
+    assert_eq!(true, handled.get_value(), "shortcut was not handled");
 
     Ok(())
 }
@@ -683,40 +703,87 @@ async fn handle_overlapping_shortcuts_with_meta_key() -> Result<(), Error> {
 
     manager_service.set_focus_chain(vec![&client.view_ref]).await?;
 
-    {
-        let shortcut = ShortcutBuilder::new()
-            .set_key3(input::Key::LeftMeta)
-            .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
-            .set_id(TEST_SHORTCUT_ID)
-            .build();
-        client.register_shortcut(shortcut).await?;
-    }
-    {
-        let shortcut = ShortcutBuilder::new()
-            .set_key3(input::Key::K)
-            .set_keys_required(vec![input::Key::LeftMeta])
-            .set_trigger(ui_shortcut::Trigger::KeyPressed)
-            .set_id(TEST_SHORTCUT_2_ID)
-            .build();
-        client.register_shortcut(shortcut).await?;
-    }
+    let shortcut = ShortcutBuilder::new()
+        .set_key3(input::Key::LeftMeta)
+        .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
+        .set_id(TEST_SHORTCUT_ID)
+        .build();
+    client.register_shortcut(shortcut).await?;
+    let shortcut = ShortcutBuilder::new()
+        .set_key3(input::Key::K)
+        .set_keys_required(vec![input::Key::LeftMeta])
+        .set_trigger(ui_shortcut::Trigger::KeyPressed)
+        .set_id(TEST_SHORTCUT_2_ID)
+        .build();
+    client.register_shortcut(shortcut).await?;
 
     // When LeftMeta+K is pressed, only the LeftMeta+K shortcut is actuated,
     // not the LeftMeta-press-release.
-    let was_handled = Latch::new();
-    {
-        let was_handled = was_handled.clone();
-        TestCase::new()
-            .set_keys(vec![input::Key::LeftMeta, input::Key::K])
-            .set_shortcut_hook(Box::new(move |id| {
-                assert_eq!(id, TEST_SHORTCUT_2_ID);
-                true
-            }))
-            .set_handled_hook(Box::new(move |handled| was_handled.latch_if_set(handled)))
-            .run(&mut client, &manager_service)
-            .await?;
-    }
-    assert_eq!(true, was_handled.value(), "event was not handled");
+    let handled = Latch::new();
+    let handled_clone = handled.clone();
+    TestCase::new()
+        .set_keys(vec![input::Key::LeftMeta, input::Key::K])
+        .set_shortcut_hook(Box::new(move |id| {
+            assert_eq!(id, TEST_SHORTCUT_2_ID);
+            true
+        }))
+        .set_handled_hook(Box::new(move |handled| handled_clone.latch(handled)))
+        .run(&mut client, &manager_service)
+        .await?;
+    assert_eq!(true, handled.get_value(), "event was not handled");
+
+    Ok(())
+}
+
+// Shows that a press+release shortcut is not triggered if a key intervenes.
+#[fasync::run_singlethreaded(test)]
+async fn do_not_handle_shortcut_with_intervening_keys() -> Result<(), Error> {
+    let mut client = RegistryService::new().await?;
+    let manager_service = ManagerService::new().await?;
+
+    manager_service.set_focus_chain(vec![&client.view_ref]).await?;
+
+    let shortcut = ShortcutBuilder::new()
+        .set_key3(input::Key::LeftMeta)
+        .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
+        .set_id(TEST_SHORTCUT_ID)
+        .build();
+    client.register_shortcut(shortcut).await?;
+
+    let handled = Latch::new();
+    let shortcut_activated = Latch::new();
+
+    // Clones here and below are moved into the hooks supplied to TestCase.
+    let shortcut_activated_clone = shortcut_activated.clone();
+    let handled_clone = handled.clone();
+
+    use ui_input3::KeyEventType::{Pressed, Released};
+    TestCase::new()
+        // LeftMeta  _____/"""""""""""""""""\___________
+        // K         ________/""""""""\_________________
+        //
+        // """" - actuated
+        // ____ - not actuated
+        .set_events(vec![
+            (input::Key::LeftMeta, Pressed),
+            (input::Key::K, Pressed),
+            (input::Key::K, Released),
+            (input::Key::LeftMeta, Released),
+        ])
+        .set_shortcut_hook(Box::new(move |id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            shortcut_activated_clone.latch(true);
+            true
+        }))
+        .set_handled_hook(Box::new(move |handled| handled_clone.latch(handled)))
+        .run(&mut client, &manager_service)
+        .await?;
+    assert_eq!(false, handled.get_value(), "event was handled but should not have been");
+    assert_eq!(
+        0,
+        shortcut_activated.get_num_valid_sets(),
+        "event was not handled the expected number of times"
+    );
 
     Ok(())
 }
@@ -733,46 +800,45 @@ async fn handle_meta_tab_tab() -> Result<(), Error> {
 
     manager_service.set_focus_chain(vec![&client.view_ref]).await?;
 
-    {
-        let shortcut = ShortcutBuilder::new()
-            .set_key3(input::Key::Tab)
-            .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
-            .set_keys_required(vec![input::Key::LeftMeta])
-            .set_id(TEST_SHORTCUT_ID)
-            .build();
-        client.register_shortcut(shortcut).await?;
-    }
+    let shortcut = ShortcutBuilder::new()
+        .set_key3(input::Key::Tab)
+        .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
+        .set_keys_required(vec![input::Key::LeftMeta])
+        .set_id(TEST_SHORTCUT_ID)
+        .build();
+    client.register_shortcut(shortcut).await?;
 
-    let was_handled = Latch::new();
+    let handled = Latch::new();
+    // Clones here and below are moved into the hooks supplied to TestCase.
+    let handled_clone = handled.clone();
+
     let shortcut_activated = Latch::new();
-    {
-        use ui_input3::KeyEventType::{Pressed, Released};
-        let was_handled = was_handled.clone();
-        let num_calls = shortcut_activated.clone();
-        TestCase::new()
-            // LeftMeta  _____/"""""""""""""""""""""""""""""""""\___________
-            // Tab       ________/""""""""\________/"""""""""\______________
-            //
-            // """" - actuated
-            // ____ - not actuated
-            .set_events(vec![
-                (input::Key::LeftMeta, Pressed),
-                (input::Key::Tab, Pressed),
-                (input::Key::Tab, Released),
-                (input::Key::Tab, Pressed),
-                (input::Key::Tab, Released),
-                (input::Key::LeftMeta, Released),
-            ])
-            .set_shortcut_hook(Box::new(move |id| {
-                assert_eq!(id, TEST_SHORTCUT_ID);
-                num_calls.latch_if_set(true);
-                true
-            }))
-            .set_handled_hook(Box::new(move |handled| was_handled.latch_if_set(handled)))
-            .run(&mut client, &manager_service)
-            .await?;
-    }
-    assert_eq!(true, was_handled.value(), "event was not handled");
+    let shortcut_activated_clone = shortcut_activated.clone();
+
+    use ui_input3::KeyEventType::{Pressed, Released};
+    TestCase::new()
+        // LeftMeta  _____/"""""""""""""""""""""""""""""""""\___________
+        // Tab       ________/""""""""\________/"""""""""\______________
+        //
+        // """" - actuated
+        // ____ - not actuated
+        .set_events(vec![
+            (input::Key::LeftMeta, Pressed),
+            (input::Key::Tab, Pressed),
+            (input::Key::Tab, Released),
+            (input::Key::Tab, Pressed),
+            (input::Key::Tab, Released),
+            (input::Key::LeftMeta, Released),
+        ])
+        .set_shortcut_hook(Box::new(move |id| {
+            assert_eq!(id, TEST_SHORTCUT_ID);
+            shortcut_activated_clone.latch(true);
+            true
+        }))
+        .set_handled_hook(Box::new(move |handled| handled_clone.latch(handled)))
+        .run(&mut client, &manager_service)
+        .await?;
+    assert_eq!(true, handled.get_value(), "event was not handled");
     assert_eq!(
         2,
         shortcut_activated.get_num_valid_sets(),

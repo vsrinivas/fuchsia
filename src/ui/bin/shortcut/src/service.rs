@@ -71,7 +71,11 @@ pub struct ManagerService {
     /// updated *after* a key event is processed, so during the processing it
     /// contains the known actuated set as of just prior to this event.
     keys_pressed: HashSet<input::Key>,
-    /// The last key event that has been observed by this.
+    /// The last key event that has been observed by this.  Used to determine
+    /// whether e.g. there was another key event intervening between the press and
+    /// release of this key.  For example, if Meta/press+release was registered
+    /// as a shortcut alongside Meta+K, we want only Meta+K to fire even though
+    /// the press and release of Meta is an integral part of Meta+K actuation.
     last_key_event_observed: Option<KeyEvent>,
 }
 
@@ -93,17 +97,14 @@ impl ManagerService {
             _ => return Ok(false),
         };
         match type_ {
-            // SYNC and CANCEL events should probably not be included in
-            // `last_key_event_observed`, since they are emitted in response to
-            // focus loss and regain, and not key actuation.  This has a
-            // consequence of disallowing shortcut event propagation across
-            // focus loss, which is likely a good thing.
             ui_input3::KeyEventType::Sync => {
                 self.keys_pressed.insert(event.key);
+                self.last_key_event_observed = Some(event.clone());
                 Ok(true)
             }
             ui_input3::KeyEventType::Cancel => {
                 self.keys_pressed.remove(&event.key);
+                self.last_key_event_observed = None;
                 Ok(true)
             }
             ui_input3::KeyEventType::Pressed => {
@@ -229,6 +230,8 @@ impl ManagerService {
         let matching_shortcuts = registry
             .shortcuts
             .iter()
+            // TODO(fmil): This filter can likely be refactored into a series of
+            // .and_then calls.
             .filter(|shortcut| {
                 // Filter out all shortcuts with mismatching priority.
                 match shortcut.use_priority {
@@ -254,11 +257,22 @@ impl ManagerService {
                 }
                 // Filter out all key presses that don't match the set of needed 'armed' keys.  The
                 // procedure for doing so differs, however, in case of a key press, and key
-                // release.  When a key press is processed, it is not present in the set of
-                // keys_pressed.  However, when a key release is processed, it is present in the
-                // set of keys_pressed, since we already observed its key press event.  Not only
-                // that, but no intervening key events involving *other* keys may happen between
-                // the press and the release in order to register the press.
+                // release.
+                //
+                // When a key press is processed, it is not present in the set of
+                // keys_pressed.
+                //
+                // However, when a key release is processed, it is present in the
+                // set of keys_pressed, since we already observed its key press event. To register
+                // a key release, two conditions are needed: the key needs to be released, but
+                // also there should have been no intervening events on other keys between this
+                // key press and this key release.
+                //
+                // Examples:
+                //   Triggers Meta press+release:
+                //     [Meta press; Meta release]
+                //   Does not trigger Meta press+release:
+                //     ['k' press; Meta press; 'k' release; Meta release] ('k' release intervenes)
                 match (&event.pressed, &shortcut.required_armed_keys) {
                     // Match arms corresponding to key presses.
                     (Some(true), Some(keys_armed)) if &self.keys_pressed == keys_armed => {
@@ -269,23 +283,40 @@ impl ManagerService {
                     }
 
                     // Observation: perhaps a good alternative way to achieve this in a different
-                    // way would be to normalize a "pressed and released" shortcut as one that
-                    // requires the shortcut itself to be armed.  This way we'd not need the
-                    // elaborate workaround such as this one.  However, the issue here is that if
-                    // the keyboard protocol is ever breached, we could have a wrong deliberation.
+                    // way would be to normalize a "pressed and released" shortcut into one that
+                    // requires the shortcut itself to be armed, and triggers on a release.
 
-                    // Match arms corresponding to key releases.  Since we already filtered
-                    // for either pressed key on pressed trigger, or released key on
-                    // press-and-release trigger, just one of the two is needed.
-                    (Some(false), Some(keys_armed)) => {
+                    // Match arms corresponding to key releases.
+                    //
+                    // Technically the trigger and the pressed event can be different, so in the
+                    // match arms below we're missing a third element to make the full
+                    // deliberation.  However, the *previous* match statement establishes that we
+                    // only ever get here if:
+                    //
+                    //    (shortcut.trigger == KeyPressed && event.pressed == Some(true)
+                    //     || shortcut.trigger == KeyPressedAndReleased && event.pressed ==
+                    //     Some(false))
+                    //
+                    // so we can use only one of the two fields to make a full deliberation.
+                    (Some(false), Some(required_keys_armed)) => {
                         // Key shortcut release while other keys need to be armed.  This means
                         // the set of armed keys need to be pressed, but also the current key needs
                         // to be pressed, and also no intervening different keypresses need to
                         // have been pressed.
-                        let mut keys_armed = keys_armed.clone();
+                        let mut keys_armed = required_keys_armed.clone();
                         keys_armed.insert(shortcut_key.clone());
                         if self.keys_pressed != keys_armed {
                             return false;
+                        }
+                        if let Some(ref last_observed) = &self.last_key_event_observed {
+                            // Does not trigger a shortcut if there were intervening keys, for
+                            // example a sequence of events:
+                            //    [meta press, 'k' press, 'k' release, meta release]
+                            // will *not* trigger meta press+release shortcut since events on
+                            // 'k' intervened.
+                            if shortcut_key != last_observed.key {
+                                return false;
+                            }
                         }
                     }
                     (Some(false), None) => {
@@ -310,7 +341,7 @@ impl ManagerService {
                 // Trigger if the key in the event matches the corresponding shortcut key.
                 let matches = event.key == shortcut_key;
                 fx_log_debug!(
-                    "get_matching_shortcut: {}: event: {:?}, key:{:?}, last: {:?}",
+                    "get_matching_shortcuts: matches: {}: event: {:?}, key:{:?}, last: {:?}",
                     matches,
                     &event,
                     &shortcut_key,

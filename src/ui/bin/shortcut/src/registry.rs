@@ -183,12 +183,12 @@ pub struct Shortcut {
 
 impl Shortcut {
     pub fn new(shortcut: ui_shortcut::Shortcut) -> Self {
-        let keys_required_hash: Option<HashSet<_>> = shortcut
+        let required_armed_keys: Option<HashSet<_>> = shortcut
             .keys_required
             .as_ref()
             .cloned()
             .map(|keys_required| keys_required.into_iter().collect::<HashSet<_>>());
-        Self { inner: shortcut, required_armed_keys: keys_required_hash }
+        Self { inner: shortcut, required_armed_keys }
     }
 }
 
@@ -223,7 +223,9 @@ mod tests {
             ..ui_shortcut::Shortcut::EMPTY
         };
         let shortcut = Shortcut::new(fidl_shortcut);
-        let keys_required_hash = Some([input::Key::A, input::Key::B].iter().cloned().collect());
-        assert_eq!(shortcut.required_armed_keys, keys_required_hash);
+        assert_eq!(
+            shortcut.required_armed_keys,
+            Some([input::Key::A, input::Key::B].iter().cloned().collect())
+        );
     }
 }

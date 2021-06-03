@@ -20,29 +20,30 @@ static START: Once = Once::new();
 /// a valid "set" happened, using `get_num_valid_sets`.
 #[derive(Clone, Debug)]
 pub struct Latch {
-    inner: sync::Arc<std::cell::RefCell<i32>>,
+    inner: sync::Arc<std::cell::Cell<i32>>,
 }
 
 impl Latch {
     pub fn new() -> Self {
-        Latch { inner: sync::Arc::new(std::cell::RefCell::new(0)) }
+        Latch { inner: sync::Arc::new(std::cell::Cell::new(0)) }
     }
 
-    /// Returns the current value stored in the [LatchUp].
-    pub fn value(&self) -> bool {
+    /// Returns the current value stored in the [Latch].
+    pub fn get_value(&self) -> bool {
         self.get_num_valid_sets() > 0
     }
 
-    /// Returns the number of calls that the latch was activated.
+    /// Returns the number of calls that the latch was set.
     pub fn get_num_valid_sets(&self) -> i32 {
-        *self.inner.borrow()
+        self.inner.get()
     }
 
-    /// Latches the value if it is "true".  Any subsequent calls to [LatchUp::value] will return
-    /// `true`
-    pub fn latch_if_set(&self, value: bool) {
+    /// Latches the `value` if it is "true".  Any subsequent calls to [Latch::get_value] will
+    /// return `true`.
+    pub fn latch(&self, value: bool) {
         if value {
-            self.inner.replace_with(|old| *old + 1);
+            let val = self.get_num_valid_sets();
+            self.inner.replace(val + 1);
         }
     }
 }
