@@ -363,6 +363,23 @@ Note that a badly-behaved callee could hold into the MBO indefinitely,
 but that is not very different from behaving badly by never unqueuing
 requests.
 
+## Preserving cross-channel message ordering
+
+The MBMQ model is able to preserve the ordering of messages sent on
+different channels that are handled by the same server process.  This
+means that, for example, if message M1 is sent on channel C1 and then
+message M2 is sent on channel C2, the server process can ensure that
+the messages are processed in the order they were sent.  The server
+just has to ensure that C1 and C2 are redirected to the same MsgQueue,
+which will preserve the message ordering within the MsgQueue.
+
+In contrast, Zircon's current IPC primitives are not able to preserve
+message ordering in this case, because channels C1 and C2 have
+separate message queues.  As messages are enqueued onto those queues,
+the information about their interleaving is lost.  Zircon currently
+preserves message ordering only within a channel, not between
+channels.
+
 ## A note on terminology: "caller" and "callee"
 
 We are using the terms "caller" and "callee" to emphasise that these
