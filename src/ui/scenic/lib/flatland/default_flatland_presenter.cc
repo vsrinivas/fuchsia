@@ -15,28 +15,45 @@ DefaultFlatlandPresenter::DefaultFlatlandPresenter(async_dispatcher_t* main_disp
 
 void DefaultFlatlandPresenter::SetFrameScheduler(
     const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
+  FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
   FX_DCHECK(frame_scheduler_.expired()) << "FrameScheduler already set.";
   frame_scheduler_ = frame_scheduler;
 }
 
-std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences(
-    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>&
-        highest_present_per_session) {
-  std::vector<zx::event> fences;
-  for (const auto& [session_id, present_id] : highest_present_per_session) {
+scheduling::SessionUpdater::UpdateResults DefaultFlatlandPresenter::UpdateSessions(
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+    uint64_t trace_id) {
+  FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
+  FX_DCHECK(!sessions_updated_);
+  sessions_updated_ = true;
+
+  for (const auto& [session_id, present_id] : sessions_to_update) {
     const auto begin_it = release_fences_.lower_bound({session_id, 0});
     const auto end_it = release_fences_.upper_bound({session_id, present_id});
     FX_DCHECK(std::distance(begin_it, end_it) >= 0);
     std::for_each(
         begin_it, end_it,
-        [&fences](
+        [this](
             std::pair<const scheduling::SchedulingIdPair, std::vector<zx::event>>& release_fences) {
           std::move(std::begin(release_fences.second), std::end(release_fences.second),
-                    std::back_inserter(fences));
+                    std::back_inserter(accumulated_release_fences_));
         });
     release_fences_.erase(begin_it, end_it);
   }
-  return fences;
+
+  // There is no way for any updates to fail, since the code above is simply gathering a vector of
+  // fences; it has no visibility into changes to the scene graph.
+  return UpdateResults{};
+}
+
+std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences() {
+  FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
+  FX_DCHECK(sessions_updated_);
+  sessions_updated_ = false;
+
+  std::vector<zx::event> result(std::move(accumulated_release_fences_));
+  accumulated_release_fences_.clear();
+  return result;
 }
 
 scheduling::PresentId DefaultFlatlandPresenter::RegisterPresent(
@@ -118,6 +135,8 @@ void DefaultFlatlandPresenter::GetFuturePresentationInfos(
 }
 
 void DefaultFlatlandPresenter::RemoveSession(scheduling::SessionId session_id) {
+  FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
+
   // Remove any registered release fences for the removed session.
   {
     auto start = release_fences_.lower_bound({session_id, 0});

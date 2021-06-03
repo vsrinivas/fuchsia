@@ -200,6 +200,16 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
   EXPECT_EQ(presentation_infos[0].presentation_time, kPresentationTime);
 }
 
+// Helper function for TakeReleaseFences test below.  Encapsulates two calls which always happen
+// together in the test: UpdateSessions() and TakeReleaseFences().
+static std::vector<zx::event> TakeReleaseFences(
+    const std::shared_ptr<DefaultFlatlandPresenter>& presenter,
+    const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update) {
+  auto result = presenter->UpdateSessions(sessions_to_update, 0);
+  EXPECT_TRUE(result.sessions_with_failed_updates.empty());
+  return presenter->TakeReleaseFences();
+}
+
 TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
   auto presenter = CreateDefaultFlatlandPresenter();
 
@@ -230,20 +240,20 @@ TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
 
   // There will be no fences yet, because RegisterPresent() stashes the fences in a task dispatched
   // to the main thread, which hasn't run yet.
-  auto fences_empty = presenter->TakeReleaseFences({
-      {kSessionIdA, present_id_A2},
-      {kSessionIdB, present_id_B1},
-  });
+  auto fences_empty = TakeReleaseFences(presenter, {
+                                                       {kSessionIdA, present_id_A2},
+                                                       {kSessionIdB, present_id_B1},
+                                                   });
   EXPECT_TRUE(fences_empty.empty());
 
   // Try to take the same fences.  We should see the fences for A1/A2/B1, but not B2.  Note that we
   // don't explicitly mention A1, but we get the fences for it too, because A2 has a higher present
   // ID for the same session ID.
   RunLoopUntilIdle();
-  auto fences_A1A2B1 = presenter->TakeReleaseFences({
-      {kSessionIdA, present_id_A2},
-      {kSessionIdB, present_id_B1},
-  });
+  auto fences_A1A2B1 = TakeReleaseFences(presenter, {
+                                                        {kSessionIdA, present_id_A2},
+                                                        {kSessionIdB, present_id_B1},
+                                                    });
   EXPECT_EQ(fences_A1A2B1.size(), release_fence_koids_A1.size() + release_fence_koids_A2.size() +
                                       release_fence_koids_B1.size());
   auto fences_A1A2B1_koids = utils::ExtractKoids(fences_A1A2B1);
@@ -260,9 +270,9 @@ TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
   // Register one more present.
   const auto present_id_B3 = presenter->RegisterPresent(kSessionIdB, std::move(release_fences_B3));
   RunLoopUntilIdle();
-  auto fences_B2B3 = presenter->TakeReleaseFences({
-      {kSessionIdB, present_id_B3},
-  });
+  auto fences_B2B3 = TakeReleaseFences(presenter, {
+                                                      {kSessionIdB, present_id_B3},
+                                                  });
   EXPECT_EQ(fences_B2B3.size(), release_fence_koids_B2.size() + release_fence_koids_B3.size());
   auto fences_B2B3_koids = utils::ExtractKoids(fences_B2B3);
   for (auto koid : release_fence_koids_B2) {
