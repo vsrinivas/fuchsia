@@ -3,6 +3,7 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include src/connectivity/location/OWNERS
+include src/connectivity/network/OWNERS
 include src/connectivity/wlan/wlancfg/OWNERS
 include src/connectivity/wlan/wlanstack/OWNERS
 include src/lib/fuchsia-component-test/OWNERS

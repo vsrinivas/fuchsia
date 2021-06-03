@@ -3,11 +3,14 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include src/connectivity/bluetooth/OWNERS
+include src/connectivity/lib/packet-formats/OWNERS
+include src/connectivity/lib/packet-formats-dhcp/OWNERS
 include src/connectivity/lowpan/lib/spinel_pack/OWNERS
 include src/connectivity/network/netstack3/OWNERS
 include src/connectivity/overnet/OWNERS
 include src/connectivity/ppp/OWNERS
 include src/connectivity/wlan/OWNERS
+include src/developer/ffx/OWNERS
 include src/devices/lib/OWNERS
 include src/diagnostics/OWNERS
 include src/lib/assembly/OWNERS
@@ -15,8 +18,6 @@ include src/lib/diagnostics/inspect/format/rust/OWNERS
 include src/lib/diagnostics/inspect/rust/OWNERS
 include src/lib/fuchsia-component/OWNERS
 include src/lib/mdns/OWNERS
-include src/lib/network/packet-formats/OWNERS
-include src/lib/network/packet-formats-dhcp/OWNERS
 include src/lib/storage/OWNERS
 include src/lib/zerocopy/OWNERS
 include src/media/OWNERS

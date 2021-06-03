@@ -6,7 +6,6 @@ include garnet/bin/OWNERS
 include src/connectivity/network/dhcp/OWNERS
 include src/connectivity/wlan/wlancfg/OWNERS
 include src/connectivity/wlan/wlanstack/OWNERS
-include src/lib/http-sse/OWNERS
 include src/lib/storage/OWNERS
 include src/sys/OWNERS
 include src/sys/appmgr/OWNERS

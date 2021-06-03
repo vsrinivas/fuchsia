@@ -3,5 +3,6 @@
 # DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
 
 include build/sdk/OWNERS
+include src/developer/ffx/OWNERS
 include src/storage/OWNERS
 include third_party/rust_crates/vendor/zip/OWNERS

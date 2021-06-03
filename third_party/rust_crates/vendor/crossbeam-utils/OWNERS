@@ -7,4 +7,3 @@ include third_party/rust_crates/vendor/crossbeam-channel/OWNERS
 include third_party/rust_crates/vendor/crossbeam-deque/OWNERS
 include third_party/rust_crates/vendor/crossbeam-epoch/OWNERS
 include third_party/rust_crates/vendor/crossbeam-queue/OWNERS
-include third_party/rust_crates/vendor/rayon-core/OWNERS

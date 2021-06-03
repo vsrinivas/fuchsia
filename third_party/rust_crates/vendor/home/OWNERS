@@ -4,4 +4,5 @@
 
 include src/developer/ffx/OWNERS
 include src/developer/ffx/lib/pkg/OWNERS
+include src/developer/ffx/plugins/emulator/OWNERS
 include src/lib/analytics/OWNERS

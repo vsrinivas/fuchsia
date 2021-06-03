@@ -9,3 +9,4 @@ include third_party/rust_crates/vendor/argh_derive/OWNERS
 include third_party/rust_crates/vendor/enum-as-inner/OWNERS
 include third_party/rust_crates/vendor/structopt-derive/OWNERS
 include tools/create/OWNERS
+include tools/fidl/fidldoc/OWNERS

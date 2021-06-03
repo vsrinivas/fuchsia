@@ -7,6 +7,6 @@ include src/connectivity/bluetooth/OWNERS
 include src/connectivity/wlan/OWNERS
 include src/lib/assembly/OWNERS
 include src/lib/diagnostics/inspect/rust/OWNERS
-include src/storage/OWNERS
+include src/lib/storage/OWNERS
 include src/sys/lib/fuchsia-bootfs/OWNERS
 include tools/zedmon/OWNERS

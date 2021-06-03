@@ -38,5 +38,4 @@ include tools/bindc/OWNERS
 include tools/blackout/OWNERS
 include tools/cmc/OWNERS
 include tools/component_id_index/OWNERS
-include tools/create/OWNERS
 include tools/jq5/OWNERS

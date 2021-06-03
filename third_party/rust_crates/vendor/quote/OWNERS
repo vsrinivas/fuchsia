@@ -15,6 +15,7 @@ include src/lib/fuchsia/OWNERS
 include src/lib/fuchsia-async-macro/OWNERS
 include src/lib/fuzzing/OWNERS
 include src/lib/storage/OWNERS
+include src/lib/testing/fixture/OWNERS
 include src/proc/OWNERS
 include src/sys/lib/cm_rust/OWNERS
 include src/sys/test_runners/OWNERS

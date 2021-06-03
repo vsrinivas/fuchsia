@@ -12,6 +12,9 @@ backtrace = ["third_party/rust_crates/OWNERS"]
 bitflags = ["third_party/rust_crates/OWNERS"]
 crossbeam = ["third_party/rust_crates/OWNERS"]
 futures = ["third_party/rust_crates/OWNERS"]
+futures-core = ["third_party/rust_crates/OWNERS"]
+futures-lite = ["third_party/rust_crates/OWNERS"]
+futures-util = ["third_party/rust_crates/OWNERS"]
 itertools = ["third_party/rust_crates/OWNERS"]
 lazy_static = ["third_party/rust_crates/OWNERS"]
 libc = ["third_party/rust_crates/OWNERS"]
@@ -31,6 +34,9 @@ thiserror = ["third_party/rust_crates/OWNERS"]
 log = ["src/diagnostics/OWNERS"]
 tracing = ["src/diagnostics/OWNERS"]
 
+# hyper maintainers
+hyper = ["src/lib/fuchsia-hyper/OWNERS"]
+
 # security team
 c2-chacha = ["src/security/OWNERS"]
 hyper-rustls = ["src/security/OWNERS"]
@@ -47,6 +53,7 @@ security-framework-sys = ["src/security/OWNERS"]
 sha1 = ["src/security/OWNERS"]
 siphasher = ["src/security/OWNERS"]
 tokio-rustls = ["src/security/OWNERS"]
+uuid = ["src/security/OWNERS"]
 webpki = ["src/security/OWNERS"]
 
 # storage team

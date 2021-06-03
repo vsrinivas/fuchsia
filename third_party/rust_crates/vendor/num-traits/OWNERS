@@ -4,6 +4,7 @@
 
 include src/connectivity/bluetooth/OWNERS
 include src/connectivity/lib/at-commands/OWNERS
+include src/connectivity/lib/packet-formats-dhcp/OWNERS
 include src/connectivity/network/dhcp/OWNERS
 include src/connectivity/wlan/OWNERS
 include src/devices/lib/OWNERS
@@ -14,7 +15,6 @@ include src/lib/assembly/OWNERS
 include src/lib/diagnostics/hierarchy/rust/OWNERS
 include src/lib/diagnostics/inspect/format/rust/OWNERS
 include src/lib/diagnostics/inspect/rust/OWNERS
-include src/lib/network/packet-formats-dhcp/OWNERS
 include src/lib/process_builder/OWNERS
 include src/power/power-manager/OWNERS
 include src/testing/sl4f/OWNERS

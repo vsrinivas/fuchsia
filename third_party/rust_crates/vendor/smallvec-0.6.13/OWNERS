@@ -5,5 +5,4 @@
 include src/graphics/lib/compute/OWNERS
 include src/lib/ui/carnelian/OWNERS
 include third_party/rust_crates/vendor/parking_lot_core-0.6.2/OWNERS
-include third_party/rust_crates/vendor/smallvec/OWNERS
 include third_party/rust_crates/vendor/unicode-normalization/OWNERS
