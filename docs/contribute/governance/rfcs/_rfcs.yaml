@@ -1237,6 +1237,19 @@
   submitted: '2021-03-24'
   reviewed: '2021-05-19'
 
+- name: 'RFC-0096'
+  title: 'user input architecture'
+  short_description: 'The high-level architecture for delivering user input events (keyboard, mouse, touch, etc.) on Fuchsia on systems with a graphical user interface and multiple runtimes.'
+  authors: ['neelsa@google.com']
+  file: '0096_user_input_arch.md'
+  area: ['HCI']
+  issue: ['72908']
+  gerrit_change_id: ['516176']
+  status: 'Accepted'
+  reviewers: ['jaeheon@google.com', 'jsankey@google.com', 'pascallouis@google.com', 'quiche@google.com', 'reveman@google.com', 'thatguy@google.com', ]
+  submitted: '2021-04-15'
+  reviewed: '2021-05-26'
+
 - name: 'RFC-0097'
   title: 'FIDL Toolchain'
   short_description: 'Description of a canonical FIDL toolchain.'
