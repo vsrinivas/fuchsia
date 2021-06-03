@@ -15,6 +15,32 @@ constexpr auto ToUnderlying(TEnum value) -> typename std::underlying_type<TEnum>
   return static_cast<typename std::underlying_type<TEnum>::type>(value);
 }
 
+namespace internal {
+
+template <typename EnumT, typename UnderlyingT>
+class FlexibleEnumValue {
+ public:
+  constexpr FlexibleEnumValue(const FlexibleEnumValue&) noexcept = default;
+  constexpr FlexibleEnumValue(FlexibleEnumValue&&) noexcept = default;
+  constexpr FlexibleEnumValue& operator=(const FlexibleEnumValue&) noexcept = default;
+  constexpr FlexibleEnumValue& operator=(FlexibleEnumValue&&) noexcept = default;
+  constexpr operator UnderlyingT() const { return value_; }
+  constexpr operator EnumT() const { return EnumT(value_); }
+  constexpr bool IsUnknown() const {
+    EnumT e{value_};
+    return e.IsUnknown();
+  }
+
+ private:
+  constexpr FlexibleEnumValue() = delete;
+  friend EnumT;
+  constexpr explicit FlexibleEnumValue(UnderlyingT value) noexcept : value_(value) {}
+
+  UnderlyingT value_;
+};
+
+}  // namespace internal
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_ENUM_H_

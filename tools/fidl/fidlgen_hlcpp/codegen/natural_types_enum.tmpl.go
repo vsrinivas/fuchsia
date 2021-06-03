@@ -17,11 +17,18 @@ enum class {{ .Name }} : {{ .Type }} {
 };
 {{ else }}
 {{ .Docs }}
-class {{ .Name }} final {
+class {{ .Name }} final : private ::fidl::internal::FlexibleEnumValue<{{ .Name }}, {{ .Type }}> {
+private:
+  using ValueType = ::fidl::internal::FlexibleEnumValue<{{ .Name }}, {{ .Type }}>;
 public:
-  constexpr {{ .Name }}() : value_(0) {}
-  constexpr explicit {{ .Name }}({{ .Type }} value) : value_(value) {}
-  constexpr {{ .Name }}(const {{ .Name }}& other) = default;
+  constexpr {{ .Name }}() : FlexibleEnumValue(0) {}
+  constexpr explicit {{ .Name }}({{ .Type }} value) : FlexibleEnumValue(value) {}
+  constexpr {{ .Name }}(const {{ .Name }}& other) : FlexibleEnumValue(other.value_) {}
+  constexpr {{ .Name }}& operator=({{ .Name }} other) {
+    value_ = other.value_;
+    return *this;
+  }
+
   constexpr operator {{ .Type }}() const { return value_; }
 
   constexpr bool IsUnknown() const {
@@ -43,18 +50,10 @@ public:
 
   {{- range .Members }}
     {{ .Docs }}
-    static const {{ $.Name }} {{ .Name }};
+    static constexpr ValueType {{ .Name }}{ {{ .Value }} };
   {{- end }}
-
-private:
-  {{ .Type }} value_;
 };
 
-#if !(__cplusplus < 201703)
-{{- range $member := .Members }}
-constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} = {{ $ }}({{ $member.Value }});
-{{- end }}
-#endif  // !(__cplusplus < 201703)
 
 {{ end }}
 
@@ -66,14 +65,6 @@ inline zx_status_t Clone({{ . }} value,
 {{ end }}
 
 {{- define "EnumDefinition" }}
-{{ EnsureNamespace . }}
-{{- if .IsFlexible }}
-#if (__cplusplus < 201703)
-{{- range $member := .Members }}
-constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} = {{ $ }}({{ $member.Value }});
-{{- end }}
-#endif  // (__cplusplus < 201703)
-{{- end }}
 {{- end }}
 
 {{- define "EnumTraits" }}
