@@ -684,7 +684,6 @@ config("Wno-conversion") {
     "//src/sys/bin/psutils/*",
     "//src/sys/lib/chrealm/*",
     "//src/sys/pkg/lib/far/*",
-    "//src/sys/sysmgr/*",
     "//src/sys/tools/activity-ctl/*",
     "//src/sys/tools/log/*",
     "//src/testing/loadbench/*",
