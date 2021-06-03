@@ -7,6 +7,7 @@ use lazy_static::lazy_static;
 use parking_lot::{Mutex, RwLock};
 use process_builder::elf_load;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
@@ -473,6 +474,48 @@ impl MemoryManager {
         Ok(&buffer[..null_index])
     }
 
+    pub fn read_iovec(
+        &self,
+        iovec_addr: UserAddress,
+        iovec_count: i32,
+    ) -> Result<Vec<UserBuffer>, Errno> {
+        let iovec_count: usize = iovec_count.try_into().map_err(|_| EINVAL)?;
+        if iovec_count > UIO_MAXIOV as usize {
+            return Err(EINVAL);
+        }
+
+        let mut data = vec![UserBuffer::default(); iovec_count];
+        self.read_memory(iovec_addr, data.as_mut_slice().as_bytes_mut())?;
+        Ok(data)
+    }
+
+    pub fn read_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<(), Errno>
+    where
+        F: FnMut(&[u8]) -> Result<Option<()>, Errno>,
+    {
+        for buffer in data {
+            let mut bytes = vec![0; buffer.length];
+            self.read_memory(buffer.address, &mut bytes)?;
+            if callback(&bytes)?.is_none() {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn read_all(&self, data: &[UserBuffer], bytes: &mut [u8]) -> Result<(), Errno> {
+        let mut offset = 0;
+        for buffer in data {
+            let end = std::cmp::min(offset + buffer.length, bytes.len());
+            self.read_memory(buffer.address, &mut bytes[offset..end])?;
+            offset = end;
+            if offset == bytes.len() {
+                return Ok(());
+            }
+        }
+        Err(EFAULT)
+    }
+
     pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
         let actual = self.process.write_memory(addr.ptr(), bytes).map_err(|_| EFAULT)?;
         if actual != bytes.len() {
@@ -487,6 +530,34 @@ impl MemoryManager {
         object: &T,
     ) -> Result<(), Errno> {
         self.write_memory(user.addr(), &object.as_bytes())
+    }
+
+    pub fn write_each<F>(&self, data: &[UserBuffer], mut callback: F) -> Result<(), Errno>
+    where
+        F: FnMut(&mut [u8]) -> Result<&[u8], Errno>,
+    {
+        for buffer in data {
+            let mut bytes = vec![0; buffer.length];
+            let result = callback(&mut bytes)?;
+            self.write_memory(buffer.address, &result)?;
+            if result.len() != bytes.len() {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn write_all(&self, data: &[UserBuffer], bytes: &[u8]) -> Result<(), Errno> {
+        let mut offset = 0;
+        for buffer in data {
+            let end = std::cmp::min(offset + buffer.length, bytes.len());
+            self.write_memory(buffer.address, &bytes[offset..end])?;
+            offset = end;
+            if offset == bytes.len() {
+                return Ok(());
+            }
+        }
+        Err(EFAULT)
     }
 }
 
@@ -601,5 +672,158 @@ mod tests {
         assert_eq!(brk_addr, brk_addr2);
         let mapped_addr2 = map_memory(&ctx, mapped_addr, *PAGE_SIZE);
         assert_eq!(mapped_addr, mapped_addr2);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_each() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let mm = &task_owner.task.mm;
+
+        let page_size = *PAGE_SIZE;
+        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+
+        let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
+        mm.write_memory(addr, &data).expect("failed to write test data");
+
+        let iovec = vec![
+            UserBuffer { address: addr, length: 25 },
+            UserBuffer { address: addr + 64usize, length: 12 },
+        ];
+
+        let mut read_count = 0;
+        mm.read_each(&iovec, |buffer| {
+            match read_count {
+                0 => {
+                    assert_eq!(&data[..25], buffer);
+                }
+                1 => {
+                    assert_eq!(&data[64..76], buffer);
+                }
+                _ => {
+                    assert!(false);
+                }
+            };
+            read_count += 1;
+            Ok(Some(()))
+        })
+        .expect("failed to read each");
+        assert_eq!(read_count, 2);
+
+        read_count = 0;
+        mm.read_each(&iovec, |_| {
+            read_count += 1;
+            Ok(None)
+        })
+        .expect("failed to read each");
+        assert_eq!(read_count, 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_all() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let mm = &task_owner.task.mm;
+
+        let page_size = *PAGE_SIZE;
+        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+
+        let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
+        mm.write_memory(addr, &data).expect("failed to write test data");
+
+        let iovec = vec![
+            UserBuffer { address: addr, length: 25 },
+            UserBuffer { address: addr + 64usize, length: 12 },
+        ];
+
+        let mut buffer = vec![0u8; 37];
+        mm.read_all(&iovec, &mut buffer).expect("failed to read all");
+        assert_eq!(&data[..25], &buffer[..25]);
+        assert_eq!(&data[64..76], &buffer[25..]);
+
+        buffer = vec![0u8; 27];
+        mm.read_all(&iovec, &mut buffer).expect("failed to read all");
+        assert_eq!(&data[..25], &buffer[..25]);
+        assert_eq!(&data[64..66], &buffer[25..27]);
+
+        buffer = vec![0u8; 42];
+        assert_eq!(Err(EFAULT), mm.read_all(&iovec, &mut buffer));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_write_each() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let mm = &task_owner.task.mm;
+
+        let page_size = *PAGE_SIZE;
+        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+
+        let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
+
+        let iovec = vec![
+            UserBuffer { address: addr, length: 25 },
+            UserBuffer { address: addr + 64usize, length: 12 },
+        ];
+
+        let mut write_count = 0;
+        mm.write_each(&iovec, |buffer| {
+            match write_count {
+                0 => {
+                    assert_eq!(buffer.len(), 25);
+                    buffer.copy_from_slice(&data[..25]);
+                }
+                1 => {
+                    assert_eq!(buffer.len(), 12);
+                    buffer.copy_from_slice(&data[25..37]);
+                }
+                _ => {
+                    assert!(false);
+                }
+            };
+            write_count += 1;
+            Ok(buffer)
+        })
+        .expect("failed to write each");
+        assert_eq!(write_count, 2);
+
+        let mut written = vec![0u8; 1024];
+        mm.read_memory(addr, &mut written).expect("failed to read back memory");
+        assert_eq!(&written[..25], &data[..25]);
+        assert_eq!(&written[64..76], &data[25..37]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_write_all() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let mm = &task_owner.task.mm;
+
+        let page_size = *PAGE_SIZE;
+        let addr = map_memory(&ctx, UserAddress::default(), 64 * page_size);
+
+        let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
+
+        let iovec = vec![
+            UserBuffer { address: addr, length: 25 },
+            UserBuffer { address: addr + 64usize, length: 12 },
+        ];
+
+        mm.write_all(&iovec, &data[..37]).expect("failed to read all");
+
+        let mut written = vec![0u8; 1024];
+        mm.read_memory(addr, &mut written).expect("failed to read back memory");
+
+        assert_eq!(&written[..25], &data[..25]);
+        assert_eq!(&written[64..76], &data[25..37]);
+
+        written = vec![0u8; 1024];
+        mm.write_memory(addr, &mut written).expect("clear memory");
+        mm.write_all(&iovec, &data[..27]).expect("failed to read all");
+        mm.read_memory(addr, &mut written).expect("failed to read back memory");
+        assert_eq!(&written[..25], &data[..25]);
+        assert_eq!(&written[64..66], &data[25..27]);
+
+        assert_eq!(Err(EFAULT), mm.write_all(&iovec, &&data[..42]));
     }
 }

@@ -5,7 +5,9 @@
 mod errno;
 pub mod uapi;
 mod user_address;
+mod user_buffer;
 
 pub use errno::*;
 pub use uapi::*;
 pub use user_address::*;
+pub use user_buffer::*;

@@ -21,18 +21,17 @@ impl SyslogFile {
 impl FileOps for SyslogFile {
     fd_impl_nonseekable!();
 
-    fn write(&self, _file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut size = 0;
-        for vec in data {
-            let mut local = vec![0; vec.iov_len];
-            task.mm.read_memory(vec.iov_base, &mut local)?;
-            info!(target: "stdio", "{}", String::from_utf8_lossy(&local));
-            size += vec.iov_len;
-        }
+        task.mm.read_each(data, |bytes| {
+            info!(target: "stdio", "{}", String::from_utf8_lossy(bytes));
+            size += bytes.len();
+            Ok(Some(()))
+        })?;
         Ok(size)
     }
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
         Ok(0)
     }
 

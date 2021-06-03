@@ -23,31 +23,26 @@ impl FuchsiaPipe {
 impl FileOps for FuchsiaPipe {
     fd_impl_nonseekable!();
 
-    fn write(&self, _file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut size = 0;
-        for vec in data {
-            let mut local = vec![0; vec.iov_len];
-            task.mm.read_memory(vec.iov_base, &mut local)?;
-            let actual = self.socket.write(&local).map_err(Errno::from_status_like_fdio)?;
+        task.mm.read_each(data, |bytes| {
+            let actual = self.socket.write(&bytes).map_err(Errno::from_status_like_fdio)?;
             size += actual;
-            if actual != vec.iov_len {
-                break;
+            if actual != bytes.len() {
+                return Ok(None);
             }
-        }
+            Ok(Some(()))
+        })?;
         Ok(size)
     }
 
-    fn read(&self, _file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut size = 0;
-        for vec in data {
-            let mut local = vec![0; vec.iov_len];
-            let actual = self.socket.read(&mut local).map_err(Errno::from_status_like_fdio)?;
-            task.mm.write_memory(vec.iov_base, &local[0..actual])?;
+        task.mm.write_each(data, |bytes| {
+            let actual = self.socket.read(bytes).map_err(Errno::from_status_like_fdio)?;
             size += actual;
-            if actual != vec.iov_len {
-                break;
-            }
-        }
+            Ok(&bytes[0..actual])
+        })?;
         Ok(size)
     }
 

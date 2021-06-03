@@ -7,7 +7,6 @@ use fuchsia_zircon as zx;
 use log::warn;
 use std::convert::TryInto;
 use std::ffi::CString;
-use zerocopy::AsBytes;
 
 use crate::fs::pipe::*;
 use crate::fs::*;
@@ -20,21 +19,21 @@ use crate::types::*;
 pub fn sys_read(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    buffer: UserAddress,
-    count: usize,
+    address: UserAddress,
+    length: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().read(&file, &ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+    Ok(file.ops().read(&file, &ctx.task, &[UserBuffer { address, length }])?.into())
 }
 
 pub fn sys_write(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    buffer: UserAddress,
-    count: usize,
+    address: UserAddress,
+    length: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().write(&file, &ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+    Ok(file.ops().write(&file, &ctx.task, &[UserBuffer { address, length }])?.into())
 }
 
 pub fn sys_close(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult, Errno> {
@@ -97,36 +96,13 @@ pub fn sys_fcntl(
 pub fn sys_pread64(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    buf: UserAddress,
-    count: usize,
+    address: UserAddress,
+    length: usize,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let bytes = file.ops().read_at(
-        &file,
-        &ctx.task,
-        offset,
-        &[iovec_t { iov_base: buf, iov_len: count }],
-    )?;
+    let bytes = file.ops().read_at(&file, &ctx.task, offset, &[UserBuffer { address, length }])?;
     Ok(bytes.into())
-}
-
-fn read_iovec(
-    task: &Task,
-    iovec_addr: UserAddress,
-    iovec_count: i32,
-) -> Result<Vec<iovec_t>, Errno> {
-    let iovec_count: usize = iovec_count.try_into().map_err(|_| EINVAL)?;
-    if iovec_count > UIO_MAXIOV as usize {
-        return Err(EINVAL);
-    }
-
-    let mut iovecs: Vec<iovec_t> = Vec::new();
-    iovecs.reserve(iovec_count); // TODO: try_reserve
-    iovecs.resize(iovec_count, iovec_t::default());
-
-    task.mm.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
-    Ok(iovecs)
 }
 
 pub fn sys_readv(
@@ -135,9 +111,9 @@ pub fn sys_readv(
     iovec_addr: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
-    let iovecs = read_iovec(&ctx.task, iovec_addr, iovec_count)?;
+    let iovec = ctx.task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().read(&file, &ctx.task, &iovecs)?.into())
+    Ok(file.ops().read(&file, &ctx.task, &iovec)?.into())
 }
 
 pub fn sys_writev(
@@ -146,9 +122,9 @@ pub fn sys_writev(
     iovec_addr: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
-    let iovecs = read_iovec(&ctx.task, iovec_addr, iovec_count)?;
+    let iovec = ctx.task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = ctx.task.files.get(fd)?;
-    Ok(file.ops().write(&file, &ctx.task, &iovecs)?.into())
+    Ok(file.ops().write(&file, &ctx.task, &iovec)?.into())
 }
 
 pub fn sys_fstatfs(

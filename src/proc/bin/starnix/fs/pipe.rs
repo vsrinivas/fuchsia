@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use parking_lot::Mutex;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use crate::devices::*;
@@ -25,6 +26,12 @@ struct Pipe {
 
     /// The number of bytes actually stored in inside the pipe currently.
     used: usize,
+
+    /// The bytes stored inside the pipe.
+    ///
+    /// Write are added at the end of the queue. Read consume from the front of
+    /// the queue.
+    buffers: VecDeque<Vec<u8>>,
 }
 
 impl Pipe {
@@ -32,7 +39,7 @@ impl Pipe {
         // Pipes default to a size of 16 pages.
         let default_pipe_size = (*PAGE_SIZE * 16) as usize;
 
-        Arc::new(Mutex::new(Pipe { size: default_pipe_size, used: 0 }))
+        Arc::new(Mutex::new(Pipe { size: default_pipe_size, used: 0, buffers: VecDeque::new() }))
     }
 
     fn get_size(&self) -> usize {
@@ -49,6 +56,28 @@ impl Pipe {
         }
         self.size = round_up(requested_size, page_size);
         Ok(())
+    }
+
+    fn get_available(&self) -> usize {
+        self.size - self.used
+    }
+
+    fn pop_front(&mut self) -> Option<Vec<u8>> {
+        if let Some(front) = self.buffers.pop_front() {
+            self.used -= front.len();
+            return Some(front);
+        }
+        None
+    }
+
+    fn push_front(&mut self, buffer: Vec<u8>) {
+        self.used += buffer.len();
+        self.buffers.push_front(buffer);
+    }
+
+    fn push_back(&mut self, buffer: Vec<u8>) {
+        self.used += buffer.len();
+        self.buffers.push_back(buffer);
     }
 
     fn fcntl(
@@ -106,12 +135,62 @@ impl FsNodeOps for PipeNode {
 impl FileOps for PipeReadEndpoint {
     fd_impl_nonseekable!();
 
-    fn write(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(
+        &self,
+        _file: &FileObject,
+        _task: &Task,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
         Err(EBADF)
     }
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
-        Err(ENOSYS)
+    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        let mut pipe = self.pipe.lock();
+        if pipe.used == 0 {
+            return Err(EAGAIN);
+        }
+        let actual = std::cmp::min(pipe.used, UserBuffer::get_total_length(data));
+        if actual == 0 {
+            return Ok(0);
+        }
+        let mut remaining = actual;
+
+        let mut iter = data.iter();
+        let mut dst = iter.next().ok_or(EFAULT)?;
+        let mut dst_offset = 0;
+
+        let mut src = pipe.pop_front().ok_or(EFAULT)?;
+        let mut src_offset = 0;
+        loop {
+            while dst_offset == dst.length {
+                dst = iter.next().ok_or(EFAULT)?;
+                dst_offset = 0;
+            }
+
+            while src_offset == src.len() {
+                src = pipe.pop_front().ok_or(EFAULT)?;
+                src_offset = 0;
+            }
+
+            let chunk_size = std::cmp::min(dst.length - dst_offset, src.len() - src_offset);
+            let src_end = src_offset + chunk_size;
+            let result = task.mm.write_memory(dst.address + dst_offset, &src[src_offset..src_end]);
+
+            remaining -= chunk_size;
+
+            if result.is_err() || remaining == 0 {
+                if src_end != src.len() {
+                    let leftover = src[src_end..].to_vec();
+                    pipe.push_front(leftover);
+                }
+                result?;
+                break;
+            }
+
+            dst_offset += chunk_size;
+            src_offset += chunk_size;
+        }
+        Ok(actual)
     }
 
     fn fstat(&self, file: &FileObject, _task: &Task) -> Result<stat_t, Errno> {
@@ -132,11 +211,23 @@ impl FileOps for PipeReadEndpoint {
 impl FileOps for PipeWriteEndpoint {
     fd_impl_nonseekable!();
 
-    fn write(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
-        Err(ENOSYS)
+    fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+        let mut pipe = self.pipe.lock();
+        let available = pipe.get_available();
+        if available == 0 {
+            return Err(EAGAIN);
+        }
+        let actual = std::cmp::min(available, UserBuffer::get_total_length(data));
+        if actual == 0 {
+            return Ok(0);
+        }
+        let mut bytes = vec![0u8; actual];
+        task.mm.read_all(data, &mut bytes)?;
+        pipe.push_back(bytes);
+        Ok(actual)
     }
 
-    fn read(&self, _file: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, _task: &Task, _data: &[UserBuffer]) -> Result<usize, Errno> {
         Err(EBADF)
     }
 

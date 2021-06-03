@@ -54,13 +54,6 @@ pub struct stat_t {
 
 #[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
 #[repr(C)]
-pub struct iovec_t {
-    pub iov_base: UserAddress,
-    pub iov_len: usize,
-}
-
-#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
-#[repr(C)]
 pub struct statfs {
     f_type: i64,
     f_bsize: i64,

@@ -146,13 +146,10 @@ impl FileOps for RemoteFile {
         _file: &FileObject,
         task: &Task,
         offset: usize,
-        buf: &[iovec_t],
+        data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut total = 0;
-        for vec in buf {
-            total += vec.iov_len;
-        }
-        let (status, data) = match self.node {
+        let total = UserBuffer::get_total_length(data);
+        let (status, bytes) = match self.node {
             RemoteNode::File(ref n) => {
                 // TODO(tbodt): Break this into 8k chunks if needed to fit in the FIDL protocol
                 n.read_at(total as u64, offset as u64, zx::Time::INFINITE).map_err(fidl_error)
@@ -161,16 +158,8 @@ impl FileOps for RemoteFile {
             RemoteNode::Other(_) => Err(EINVAL),
         }?;
         zx::Status::ok(status).map_err(fio_error)?;
-        let mut offset = 0;
-        for vec in buf {
-            let end = std::cmp::min(offset + vec.iov_len, data.len());
-            task.mm.write_memory(vec.iov_base, &data[offset..end])?;
-            offset = end;
-            if offset == data.len() {
-                break;
-            }
-        }
-        Ok(data.len())
+        task.mm.write_all(data, &bytes)?;
+        Ok(bytes.len())
     }
 
     fn write_at(
@@ -178,7 +167,7 @@ impl FileOps for RemoteFile {
         _file: &FileObject,
         _task: &Task,
         _offset: usize,
-        _data: &[iovec_t],
+        _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         Err(ENOSYS)
     }

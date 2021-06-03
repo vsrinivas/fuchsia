@@ -97,6 +97,7 @@ if (target_cpu == "x64") {
       "types/mod.rs",
       "types/uapi.rs",
       "types/user_address.rs",
+      "types/user_buffer.rs",
     ]
   }
 

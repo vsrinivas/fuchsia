@@ -43,7 +43,7 @@ impl fmt::Display for FdNumber {
 pub trait FileOps: Send + Sync {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
-    fn read(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno>;
     /// Read from the file at an offset. If your file is seekable, consider implementing this with
     /// fd_impl_nonseekable!.
     fn read_at(
@@ -51,11 +51,11 @@ pub trait FileOps: Send + Sync {
         file: &FileObject,
         task: &Task,
         offset: usize,
-        data: &[iovec_t],
+        data: &[UserBuffer],
     ) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable!.
-    fn write(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno>;
     /// Write to the file at a offset. If your file is nonseekable, consider implementing this with
     /// fd_impl_nonseekable!.
     fn write_at(
@@ -63,7 +63,7 @@ pub trait FileOps: Send + Sync {
         file: &FileObject,
         task: &Task,
         offset: usize,
-        data: &[iovec_t],
+        data: &[UserBuffer],
     ) -> Result<usize, Errno>;
 
     /// Responds to an mmap call by returning a VMO. At least the requested protection flags must
@@ -116,7 +116,7 @@ macro_rules! fd_impl_nonseekable {
             _file: &FileObject,
             _task: &Task,
             _offset: usize,
-            _data: &[iovec_t],
+            _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             Err(ESPIPE)
         }
@@ -125,7 +125,7 @@ macro_rules! fd_impl_nonseekable {
             _file: &FileObject,
             _task: &Task,
             _offset: usize,
-            _data: &[iovec_t],
+            _data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             Err(ESPIPE)
         }
@@ -137,13 +137,23 @@ macro_rules! fd_impl_nonseekable {
 #[macro_export]
 macro_rules! fd_impl_seekable {
     () => {
-        fn read(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+        fn read(
+            &self,
+            file: &FileObject,
+            task: &Task,
+            data: &[UserBuffer],
+        ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
             let size = self.read_at(file, task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
-        fn write(&self, file: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+        fn write(
+            &self,
+            file: &FileObject,
+            task: &Task,
+            data: &[UserBuffer],
+        ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
             let size = self.write_at(file, task, *offset, data)?;
             *offset += size;
