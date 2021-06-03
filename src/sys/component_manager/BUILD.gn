@@ -233,6 +233,7 @@ template("component_manager") {
         "//src/sys/lib/directory_broker",
         "//src/sys/lib/library_loader",
         "//src/sys/lib/routing/testing:routing_test_helpers",
+        "//third_party/rust_crates:matches",
         "//third_party/rust_crates:test-case",
       ]
     }

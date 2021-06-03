@@ -8,7 +8,8 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl_fuchsia_kernel as fkernel,
-    fuchsia_zircon::Resource,
+    fuchsia_async::DurationExt as _,
+    fuchsia_zircon::{self as zx, Resource},
     futures::prelude::*,
     lazy_static::lazy_static,
     std::sync::Arc,
@@ -109,8 +110,19 @@ impl BuiltinCapability for KernelStats {
                     };
                     responder.send(&mut stats)?;
                 }
-                fkernel::StatsRequest::GetCpuLoad { .. } => {
-                    return Err(fuchsia_zircon::Status::NOT_SUPPORTED.into());
+                fkernel::StatsRequest::GetCpuLoad { duration, responder } => {
+                    if duration <= 0 {
+                        return Err(anyhow::anyhow!("Duration must be greater than 0"));
+                    }
+
+                    let start_time = fuchsia_async::Time::now();
+                    let start_stats = self.resource.cpu_stats()?;
+                    fuchsia_async::Timer::new(zx::Duration::from_nanos(duration).after_now()).await;
+                    let end_time = fuchsia_async::Time::now();
+                    let end_stats = self.resource.cpu_stats()?;
+
+                    let loads = calculate_cpu_loads(start_time, start_stats, end_time, end_stats);
+                    responder.send(&loads)?;
                 }
             }
         }
@@ -120,6 +132,26 @@ impl BuiltinCapability for KernelStats {
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool {
         capability.matches_protocol(&KERNEL_STATS_CAPABILITY_NAME)
     }
+}
+
+/// Uses start / end times and corresponding PerCpuStats to calculate and return a vector of per-CPU
+/// load values as floats in the range 0.0 - 100.0.
+fn calculate_cpu_loads(
+    start_time: fuchsia_async::Time,
+    start_stats: Vec<zx::PerCpuStats>,
+    end_time: fuchsia_async::Time,
+    end_stats: Vec<zx::PerCpuStats>,
+) -> Vec<f32> {
+    let elapsed_time = (end_time - start_time).into_nanos();
+    start_stats
+        .iter()
+        .zip(end_stats.iter())
+        .map(|(start, end)| {
+            let busy_time = elapsed_time - (end.idle_time - start.idle_time);
+            let load_pct = busy_time as f64 / elapsed_time as f64 * 100.0;
+            load_pct as f32
+        })
+        .collect::<Vec<f32>>()
 }
 
 #[cfg(test)]
@@ -144,15 +176,21 @@ mod tests {
         Ok(Resource::from(root_resource_handle))
     }
 
-    async fn serve_kernel_stats() -> Result<fkernel::StatsProxy, Error> {
+    enum OnError {
+        Panic,
+        Ignore,
+    }
+
+    async fn serve_kernel_stats(on_error: OnError) -> Result<fkernel::StatsProxy, Error> {
         let root_resource = get_root_resource().await?;
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fkernel::StatsMarker>()?;
-        fasync::Task::local(
-            KernelStats::new(root_resource)
-                .serve(stream)
-                .unwrap_or_else(|e| panic!("Error while serving kernel stats: {}", e)),
-        )
+        fasync::Task::local(KernelStats::new(root_resource).serve(stream).unwrap_or_else(
+            move |e| match on_error {
+                OnError::Panic => panic!("Error while serving kernel stats: {}", e),
+                _ => {}
+            },
+        ))
         .detach();
         Ok(proxy)
     }
@@ -163,7 +201,7 @@ mod tests {
             return Ok(());
         }
 
-        let kernel_stats_provider = serve_kernel_stats().await?;
+        let kernel_stats_provider = serve_kernel_stats(OnError::Panic).await?;
         let mem_stats = kernel_stats_provider.get_memory_stats().await?;
 
         assert!(mem_stats.total_bytes.unwrap() > 0);
@@ -178,7 +216,7 @@ mod tests {
             return Ok(());
         }
 
-        let kernel_stats_provider = serve_kernel_stats().await?;
+        let kernel_stats_provider = serve_kernel_stats(OnError::Panic).await?;
         let mem_stats_extended = kernel_stats_provider.get_memory_stats_extended().await?;
 
         assert!(mem_stats_extended.total_bytes.unwrap() > 0);
@@ -193,7 +231,7 @@ mod tests {
             return Ok(());
         }
 
-        let kernel_stats_provider = serve_kernel_stats().await?;
+        let kernel_stats_provider = serve_kernel_stats(OnError::Panic).await?;
         let cpu_stats = kernel_stats_provider.get_cpu_stats().await?;
         let actual_num_cpus = cpu_stats.actual_num_cpus;
         assert!(actual_num_cpus > 0);
@@ -209,6 +247,76 @@ mod tests {
 
         assert!(idle_time_sum > 0);
         assert!(syscalls_sum > 0);
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn get_cpu_load_invalid_duration() {
+        if !root_resource_available() {
+            return;
+        }
+
+        let kernel_stats_provider = serve_kernel_stats(OnError::Ignore).await.unwrap();
+
+        // The server should close the channel when it receives an invalid argument
+        matches::assert_matches!(
+            kernel_stats_provider.get_cpu_load(0).await,
+            Err(fidl::Error::ClientChannelClosed { .. })
+        );
+    }
+
+    #[fuchsia::test]
+    async fn get_cpu_load() -> Result<(), Error> {
+        if !root_resource_available() {
+            return Ok(());
+        }
+
+        let kernel_stats_provider = serve_kernel_stats(OnError::Panic).await?;
+        let cpu_loads = kernel_stats_provider.get_cpu_load(1000).await?;
+
+        assert!(cpu_loads.iter().sum::<f32>() > 0.0);
+
+        Ok(())
+    }
+
+    // Takes a vector of CPU loads and generates the necessary parameters that can be fed into
+    // `calculate_cpu_loads` to result in those load calculations.
+    fn parameters_for_expected_cpu_loads(
+        cpu_loads: Vec<f32>,
+    ) -> (fuchsia_async::Time, Vec<zx::PerCpuStats>, fuchsia_async::Time, Vec<zx::PerCpuStats>)
+    {
+        let start_time = fuchsia_async::Time::from_nanos(0);
+        let end_time = fuchsia_async::Time::from_nanos(1000000000);
+
+        let (start_stats, end_stats) = std::iter::repeat(zx::PerCpuStats::default())
+            .zip(cpu_loads.into_iter().map(|load| {
+                let end_time_f32 = end_time.into_nanos() as f32;
+                let idle_time = (end_time_f32 - (load / 100.0 * end_time_f32)) as i64;
+                zx::PerCpuStats { idle_time, ..zx::PerCpuStats::default() }
+            }))
+            .unzip();
+
+        (start_time, start_stats, end_time, end_stats)
+    }
+
+    #[fuchsia::test]
+    fn test_calculate_cpu_loads() -> Result<(), Error> {
+        // CPU0 loaded to 75%
+        let (start_time, start_stats, end_time, end_stats) =
+            parameters_for_expected_cpu_loads(vec![75.0, 0.0]);
+        assert_eq!(
+            calculate_cpu_loads(start_time, start_stats, end_time, end_stats),
+            vec![75.0, 0.0]
+        );
+
+        // CPU1 loaded to 75%
+        let (start_time, start_stats, end_time, end_stats) =
+            parameters_for_expected_cpu_loads(vec![0.0, 75.0]);
+        assert_eq!(
+            calculate_cpu_loads(start_time, start_stats, end_time, end_stats),
+            vec![0.0, 75.0]
+        );
 
         Ok(())
     }
