@@ -105,7 +105,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
     }
 
     FirmwareCode code = {offset + sizeof(FirmwareHeader), firmware_length};
-    firmware_code_[{firmware_cpu, firmware_format}] = code;
+    firmware_code_[FirmwareKey{.cpu = firmware_cpu, .format = firmware_format}] = code;
 
     offset += package_length;
   }
@@ -221,7 +221,7 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** 
   if (cpu_names.empty() || format_name.empty())
     return ZX_ERR_INVALID_ARGS;
   for (auto& cpu_name : cpu_names) {
-    auto it = firmware_code_.find({cpu_name, format_name});
+    auto it = firmware_code_.find(FirmwareKey{.cpu = cpu_name, .format = format_name});
     if (it != firmware_code_.end()) {
       *data_out = reinterpret_cast<uint8_t*>(ptr_) + it->second.offset;
       *size_out = it->second.size;
@@ -249,8 +249,8 @@ void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type, uint8_
   assert(ptr_ == 0);
 
   ptr_ = reinterpret_cast<uintptr_t>(data);
-  firmware_code_[{cpu_names[0], format_name}].size = size;
-  firmware_code_[{cpu_names[0], format_name}].offset = 0;
+  firmware_code_[FirmwareKey{.cpu = cpu_names[0], .format = format_name}].size = size;
+  firmware_code_[FirmwareKey{.cpu = cpu_names[0], .format = format_name}].offset = 0;
 }
 
 }  // namespace amlogic_decoder

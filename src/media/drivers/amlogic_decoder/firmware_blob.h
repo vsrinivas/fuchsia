@@ -117,7 +117,21 @@ class FirmwareBlob {
   zx::vmo vmo_;
   uintptr_t ptr_ = 0;
   uint64_t fw_size_ = 0;
-  using FirmwareKey = std::tuple<std::string, std::string>;  // Use <cpu, format> tuple as key
+  struct FirmwareKey {
+    std::string cpu;
+    std::string format;
+
+    bool operator==(const FirmwareKey& other) const {
+      return cpu == other.cpu && format == other.format;
+    }
+
+    bool operator<(const FirmwareKey& other) const {
+      if (cpu != other.cpu) {
+        return cpu < other.cpu;
+      }
+      return format < other.format;
+    }
+  };
   std::map<FirmwareKey, FirmwareCode> firmware_code_;
 };
 

@@ -80,8 +80,6 @@ fuchsia_unittest_package("use_h264_decoder_test") {
       emu_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
       vim3_env,
     ]
   }
@@ -103,8 +101,6 @@ fuchsia_unittest_package("use-h264-decoder-frame-num-gaps-test") {
       emu_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799
       vim3_env,
     ]
   }
@@ -136,8 +132,6 @@ fuchsia_unittest_package("use-h264-multi-decoder-test") {
       astro_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799
       vim3_env,
     ]
   }
@@ -157,8 +151,6 @@ fuchsia_unittest_package("use-h264-multi-decoder-flake-repro-test") {
       astro_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799
       vim3_env,
     ]
   }
@@ -181,8 +173,6 @@ fuchsia_unittest_package("use_h264_decoder_stream_switching_test") {
       astro_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
       vim3_env,
 
       # emu_env,
@@ -206,8 +196,6 @@ fuchsia_unittest_package("use-h264-multi-decoder-stream-switching-test") {
       astro_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
       vim3_env,
     ]
   }
@@ -229,8 +217,6 @@ fuchsia_unittest_package(
       astro_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
       vim3_env,
     ]
   }
@@ -312,8 +298,6 @@ fuchsia_test_package("h264_decoder_fuzzer_tests") {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799
       vim3_env,
     ]
   }
@@ -330,8 +314,6 @@ fuchsia_unittest_package("vp9_decoder_fuzzer_test") {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and fxb/43496
       vim3_env,
     ]
   }
@@ -377,8 +359,6 @@ fuchsia_test_package("use_vp9_decoder_tests") {
       astro_env,
       nelson_env,
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and fxb/43496
       vim3_env,
     ]
   }
@@ -396,8 +376,6 @@ fuchsia_unittest_package("use-vp9-decoder-stream-switching-test") {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and fxb/43496
       vim3_env,
     ]
   }
@@ -416,8 +394,6 @@ fuchsia_unittest_package("use_vp9_decoder_skip_first_frame_test") {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and fxb/43496
       vim3_env,
     ]
   }
@@ -440,8 +416,6 @@ fuchsia_unittest_package("use_vp9_decoder_24_output_frames_test") {
     # this one.
     environments = [
       sherlock_env,
-
-      # Fails on Vim3 due to fxb/70799 and fxb/43496
       vim3_env,
     ]
   }
@@ -505,8 +479,6 @@ template("vp9_file_decoder_conformance_test") {
       # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [
         sherlock_env,
-
-        # Fails on Vim3 due to fxb/70799 and fxb/43496
         vim3_env,
       ]
     }

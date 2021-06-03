@@ -445,6 +445,7 @@ zx_status_t Vdec1::InitializeInputContext(InputContext* context, bool is_secure)
 }
 
 zx_status_t Vdec1::SaveInputContext(InputContext* context) {
+  // Not sure why there are dirty cache lines corresponding to the input context.
   context->buffer->CacheFlush(0, context->buffer->size());
   BarrierAfterFlush();
 
