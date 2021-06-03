@@ -34,8 +34,8 @@ template("extract_public_symbols") {
 
     args = [
       "$clang_prefix/llvm-nm",
-      rebase_path(invoker.library),
-      rebase_path(invoker.symbols),
+      rebase_path(invoker.library, root_build_dir),
+      rebase_path(invoker.symbols, root_build_dir),
     ]
   }
 }
