@@ -18,6 +18,11 @@ namespace fidl {
 
 class SourceSpan {
  public:
+  // TODO(fxbug.dev/70427): we use a string, offset pair since this is persistent across
+  // SourceSpans that come from different SourceFiles of the same content (the initial
+  // data is stored during compilation of one copy, and fidlconv uses another during conversion).
+  using Key = std::pair<std::string, size_t>;
+
   constexpr SourceSpan(std::string_view data, const SourceFile& source_file)
       : data_(data), source_file_(&source_file) {}
 
@@ -49,6 +54,9 @@ class SourceSpan {
              (data_.data() < rhs.data_.data() ||
               (data_.data() == rhs.data_.data() && (data_.size() < rhs.data_.size())))));
   }
+
+  // TODO(fxbug.dev/70427): remove this with the converter
+  Key ToKey() const;
 
  private:
   std::string_view data_;

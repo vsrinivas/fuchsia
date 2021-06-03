@@ -3061,4 +3061,31 @@ type Foo = resource struct {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
 }
 
+TEST(ConverterTests, AliasOfResource) {
+  std::string old_version = R"FIDL(
+library example;
+
+resource struct Resource {};
+alias MyResource = vector<Resource>;
+
+protocol Foo {
+  SendResource(MyResource r);
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+type Resource = resource struct {};
+alias MyResource = vector<Resource>;
+
+protocol Foo {
+  SendResource(resource struct { r MyResource; });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 }  // namespace

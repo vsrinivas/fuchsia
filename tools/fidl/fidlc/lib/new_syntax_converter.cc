@@ -151,67 +151,6 @@ std::optional<UnderlyingType> resolve_type(
   return resolve_identifier(id->components.back(), lib);
 }
 
-bool is_resource(const std::unique_ptr<raw::TypeConstructorOld>& type_ctor,
-                 const flat::Library* lib) {
-  // handle types with arguments: recurse into the argument type
-  if (type_ctor->maybe_arg_type_ctor)
-    return is_resource(type_ctor->maybe_arg_type_ctor, lib);
-
-  // handle builtin types
-  auto underlying_type = resolve_type(type_ctor, lib);
-  switch (underlying_type->kind()) {
-    case UnderlyingType::Kind::kHandle:
-    case UnderlyingType::Kind::kProtocol:
-      return true;
-    case UnderlyingType::Kind::kPrimitive:
-    case UnderlyingType::Kind::kString:
-      return false;
-    case UnderlyingType::Kind::kRequestHandle:
-    case UnderlyingType::Kind::kVector:
-    case UnderlyingType::Kind::kArray:
-      assert(false && "types with arguments should be handled by the recursive call above");
-      __builtin_unreachable();
-    case UnderlyingType::Kind::kStruct:
-    case UnderlyingType::Kind::kOther:
-      break;
-  }
-
-  // handle user defined types
-  const auto* decl = underlying_type->maybe_decl();
-  assert(decl != nullptr &&
-         "non user-defined types should be handled by the underlying type switch above");
-  switch (decl->kind) {
-    case flat::Decl::Kind::kBits:
-    case flat::Decl::Kind::kEnum:
-      return false;
-    case flat::Decl::Kind::kStruct: {
-      const auto* struct_decl = static_cast<const flat::Struct*>(decl);
-      assert(struct_decl->resourceness.has_value() && "compiled decl must have resourceness");
-      return *struct_decl->resourceness == types::Resourceness::kResource;
-    }
-    case flat::Decl::Kind::kUnion: {
-      const auto* union_decl = static_cast<const flat::Union*>(decl);
-      assert(union_decl->resourceness.has_value() && "compiled decl must have resourceness");
-      return *union_decl->resourceness == types::Resourceness::kResource;
-    }
-    case flat::Decl::Kind::kTable: {
-      const auto* table_decl = static_cast<const flat::Table*>(decl);
-      return table_decl->resourceness == types::Resourceness::kResource;
-    }
-    case flat::Decl::Kind::kProtocol:
-    case flat::Decl::Kind::kResource:
-    case flat::Decl::Kind::kService:
-    case flat::Decl::Kind::kConst:
-    case flat::Decl::Kind::kTypeAlias:
-      // protocol, resource: should be handled in switch statement above
-      // service, const: can't be used as type
-      // alias: underlying type should always be fully resolved
-      assert(false && "shouldn't get here");
-      __builtin_unreachable();
-  }
-  return false;
-}
-
 }  // namespace
 
 std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(
@@ -356,8 +295,6 @@ void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter>& e
 
 void ConvertingTreeVisitor::OnParameterListOld(
     const std::unique_ptr<raw::ParameterListOld>& element) {
-  in_parameter_list_ = true;
-  in_resourced_parameter_list_ = false;
   std::unique_ptr<Conversion> conv =
       std::make_unique<ParameterListConversion>(in_response_with_error_);
   Converting converting(this, std::move(conv), element->start_, element->end_);
@@ -369,9 +306,16 @@ void ConvertingTreeVisitor::OnParameterListOld(
   // TypeConversions performed by each of its constituent types.
   auto& top = open_conversions_.top();
   auto parameter_list_conv = static_cast<ParameterListConversion*>(top.get());
-  parameter_list_conv->resourced_ = in_resourced_parameter_list_;
-  in_resourced_parameter_list_ = false;
-  in_parameter_list_ = false;
+  if (element->parameter_list.empty()) {
+    parameter_list_conv->resourced_ = false;
+  } else {
+    auto it = library_->derived_resourceness.find(element->span().ToKey());
+    if (it == library_->derived_resourceness.end()) {
+      std::cout << element->span().data() << std::endl;
+    }
+    assert(it != library_->derived_resourceness.end());
+    parameter_list_conv->resourced_ = it->second;
+  }
 }
 
 void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::ProtocolMethod>& element) {
@@ -472,10 +416,6 @@ void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember
 
 void ConvertingTreeVisitor::OnTypeConstructorOld(
     const std::unique_ptr<raw::TypeConstructorOld>& element) {
-  if (in_parameter_list_ && is_resource(element, library_)) {
-    in_resourced_parameter_list_ = true;
-  }
-
   std::optional<UnderlyingType> underlying_type = resolve(element);
   // We should never get a null Builtin - if we do, there is a mistake in the
   // converter code.  Failing this assert means we are looking at an

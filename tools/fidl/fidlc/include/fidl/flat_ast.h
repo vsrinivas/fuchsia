@@ -617,6 +617,10 @@ struct Struct final : public TypeDecl {
 
   // This is true iff this struct is a method request/response in a transaction header.
   const bool is_request_or_response;
+  // TODO(fxbug.dev/70247): To avoid re-deriving resourceness of request/response
+  // structs, we store the resourceness in a map using the raw::ParameterListOld's
+  // SourceSpan as a key so that we may look it up during conversion
+  std::optional<SourceSpan> from_parameter_list_span;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
@@ -1452,6 +1456,10 @@ class Library {
   // All Decl pointers here are non-null and are owned by the
   // various foo_declarations_.
   std::vector<const Decl*> declaration_order_;
+
+  // TODO(fxbug.dev/70427): This stores precomputed resourceness info for the converter to access by
+  // mapping from filename + offset to resourceness
+  std::map<SourceSpan::Key, bool> derived_resourceness;
 
  private:
   // TODO(fxbug.dev/76219): Remove when canonicalizing types.

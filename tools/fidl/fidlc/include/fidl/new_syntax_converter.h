@@ -27,8 +27,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
       : to_syntax_(syntax),
         last_conversion_end_(nullptr),
         in_response_with_error_(false),
-        in_parameter_list_(false),
-        in_resourced_parameter_list_(false),
         last_comment_(0),
         library_(library) {}
   // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
@@ -227,22 +225,6 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // struct in the response position, like `MyMethod() -> () error zx.status`.
   // This boolean keeps track of whether or not we have entered such a response.
   bool in_response_with_error_;
-
-  // In the new syntax, the struct we generate to replace the old syntax's
-  // parameter list may or may not have to carry the `resource` modifier,
-  // depending on whether or not the parameter list contains any handles.
-  // Because we do not know when we start the ParameterListConversion if the
-  // ParameterList in question contains handles (as we have not yet visited the
-  // individual parameters it contains), we set in_parameter_list_ to true to
-  // signal to any TypeConversions deeper in the tree that they should be on the
-  // lookout for handles.  Then, when doing the constituent TypeConversions for
-  // each parameter, we flip in_resourced_parameter_list_ to true if we do
-  // encounter a handle.  Finally, just before we write the
-  // ParameterListConversion, we check to see if in_resourced_parameter_list_
-  // has been set to true.  If it has, we prepend the `resource` modifier to the
-  // resulting struct declaration.
-  bool in_parameter_list_;
-  bool in_resourced_parameter_list_;
 
   // Keeps track of the last comment in the comments_ list to have been "tested"
   // for being inside a conversion span.  The char pointer at the vector index

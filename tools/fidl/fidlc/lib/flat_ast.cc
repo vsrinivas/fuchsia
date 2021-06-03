@@ -3063,6 +3063,7 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> a
     return false;
 
   *out_struct_decl = struct_declarations_.back().get();
+  struct_declarations_.back()->from_parameter_list_span = parameters->span();
   return true;
 }
 
@@ -4585,6 +4586,10 @@ bool Library::CompileDecl(Decl* decl) {
       auto struct_decl = static_cast<Struct*>(decl);
       if (!CompileStruct(struct_decl))
         return false;
+      if (struct_decl->from_parameter_list_span) {
+        bool value = *struct_decl->resourceness == types::Resourceness::kResource;
+        derived_resourceness.insert({struct_decl->from_parameter_list_span->ToKey(), value});
+      }
       break;
     }
     case Decl::Kind::kTable: {
