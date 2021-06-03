@@ -675,7 +675,6 @@ config("Wno-conversion") {
     "//src/modular/bin/sessionmgr/*",
     "//src/modular/lib/async/cpp/*",
     "//src/modular/lib/fidl/*",
-    "//src/power/thermd/*",
     "//src/security/tee_manager/*",
     "//src/storage/volume_image/ftl:*",
     "//src/storage/volume_image/utils:*",

@@ -29,9 +29,6 @@ if (target_cpu == "x64") {
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 
@@ -55,9 +52,6 @@ if (target_cpu == "arm64") {
     ]
 
     sources = [ "src/main.rs" ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   fuchsia_unittest_package("thermd-bin-tests") {
