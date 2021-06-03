@@ -143,7 +143,8 @@ struct ChannelWriteAction : ActionBase<ChannelWriteAction> {
         buffer(bytes) {}
 
   void Perform(Worker*) override {
-    const auto status = endpoint->write(0, buffer.data(), buffer.size(), nullptr, 0);
+    const auto status =
+        endpoint->write(0, buffer.data(), static_cast<uint32_t>(buffer.size()), nullptr, 0);
     FX_CHECK(status == ZX_OK);
   }
 
@@ -163,7 +164,8 @@ struct ChannelReadAction : ActionBase<ChannelReadAction> {
     uint32_t actual_bytes;
     uint32_t actual_handles;
     const auto status =
-        endpoint->read(0, buffer.data(), nullptr, buffer.size(), 0, &actual_bytes, &actual_handles);
+        endpoint->read(0, buffer.data(), nullptr, static_cast<uint32_t>(buffer.size()), 0,
+                       &actual_bytes, &actual_handles);
     FX_CHECK(status == ZX_OK) << "Failed to read channel: " << status;
   }
 
@@ -602,7 +604,7 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
     }
   }
 
-  int instances = 1;
+  int64_t instances = 1;
   if (worker.HasMember("instances")) {
     const auto& instances_member = worker["instances"];
     const bool is_integer = instances_member.IsInt();

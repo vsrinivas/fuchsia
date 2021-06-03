@@ -33,9 +33,6 @@ source_set("lib") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("bin") {
@@ -43,9 +40,6 @@ executable("bin") {
   sources = [ "loadbench.cc" ]
 
   deps = [ ":lib" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 resource("loadbench_files") {
@@ -83,9 +77,6 @@ executable("loadbench_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("loadbench_tests") {

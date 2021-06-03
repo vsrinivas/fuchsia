@@ -146,9 +146,9 @@ int main(int argc, char** argv) {
   ReadCpuStats(cpu_stats_start.data(), cpu_stats_start.size());
 
   const std::chrono::nanoseconds interval_ns =
-      default_interval.has_value() ? default_interval.value()
-                                   : workload.interval().has_value() ? workload.interval().value()
-                                                                     : kDefaultWorkloadInterval;
+      default_interval.has_value()      ? default_interval.value()
+      : workload.interval().has_value() ? workload.interval().value()
+                                        : kDefaultWorkloadInterval;
   const auto interval_s = double_seconds{interval_ns}.count();
   std::cout << "Waiting for " << interval_s << " s..." << std::endl;
   std::this_thread::sleep_for(interval_ns);
@@ -219,7 +219,9 @@ int main(int argc, char** argv) {
     std::cout << "  Average Iterations: " << average_iterations << " per thread ("
               << (average_iterations * thread_count / cpu_count) << " per cpu)" << std::endl;
     std::cout << "  Average Runtime: " << average_runtime << " s/thread ("
-              << (average_runtime * thread_count / cpu_count) << " s/cpu)" << std::endl;
+              << (average_runtime * static_cast<double>(thread_count) /
+                  static_cast<double>(cpu_count))
+              << " s/cpu)" << std::endl;
   }
 
   using MapItem = decltype(group_stats)::value_type;
@@ -282,10 +284,12 @@ int main(int argc, char** argv) {
 
         std::cout << "Tracing stats:" << std::endl;
         std::cout << "  Average Wall Duration: "
-                  << double_nanoseconds{total_wall_duration_ns}.count() / duration_stats.size()
+                  << double_nanoseconds{total_wall_duration_ns}.count() /
+                         static_cast<double>(duration_stats.size())
                   << " ns." << std::endl;
         std::cout << "  Average Queuing Time: "
-                  << double_nanoseconds{total_queuing_time_ns}.count() / queuing_stats.size()
+                  << double_nanoseconds{total_queuing_time_ns}.count() /
+                         static_cast<double>(queuing_stats.size())
                   << " ns." << std::endl;
       } else {
         FX_LOGS(WARNING) << "No events found that match provided string ref.";

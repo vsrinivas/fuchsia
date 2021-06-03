@@ -153,7 +153,7 @@ std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_bu
   if (*bytes_read < KTRACE_HDRSIZE) {
     // Compute updated values to continue reading trace buffer into data buffer.
     const size_t bytes_read_originally = *bytes_read;
-    const uint32_t updated_offset = *offset + bytes_read_originally;
+    const uint32_t updated_offset = static_cast<uint32_t>(*offset + bytes_read_originally);
     const size_t remaining_len = KTRACE_HDRSIZE - bytes_read_originally;
 
     ReadKernelBuffer(handle, data_buf + bytes_read_originally, updated_offset, remaining_len,
@@ -194,7 +194,7 @@ std::tuple<bool, bool> Tracing::FetchRecord(zx_handle_t handle, uint8_t* data_bu
     // Compute updated values to read trace payload into data buffer.
     const size_t bytes_read_before_payload = *bytes_read;
     const size_t payload_len = KTRACE_LEN(record->tag) - *bytes_read;
-    const size_t payload_offset = *offset + *bytes_read;
+    const uint32_t payload_offset = static_cast<uint32_t>(*offset + *bytes_read);
 
     ReadKernelBuffer(handle, data_buf + *bytes_read, payload_offset, payload_len, bytes_read);
 
