@@ -23,9 +23,6 @@ test("component_cpp_unittests_bin") {
     "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("component_cpp_unittests") {
@@ -71,9 +68,6 @@ test("component_cpp_testing_tests_bin") {
     "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("component_cpp_testing_tests") {

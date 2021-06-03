@@ -588,7 +588,6 @@ config("Wno-conversion") {
     "//garnet/public/lib/test_runner/cpp/*",
     "//sdk/lib/media/audio/cpp/*",
     "//sdk/lib/media/cpp/*",
-    "//sdk/lib/sys/cpp/*",
     "//sdk/lib/sys/service/cpp/*",
     "//sdk/lib/syslog/streams/cpp/*",
     "//sdk/lib/ui/scenic/cpp/*",
