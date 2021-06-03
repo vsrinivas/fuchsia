@@ -32,6 +32,12 @@ struct Pipe {
     /// Write are added at the end of the queue. Read consume from the front of
     /// the queue.
     buffers: VecDeque<Vec<u8>>,
+
+    /// The reader end of this pipe is open.
+    has_reader: bool,
+
+    /// The writer end of this pipe is open.
+    has_writer: bool,
 }
 
 impl Pipe {
@@ -39,7 +45,13 @@ impl Pipe {
         // Pipes default to a size of 16 pages.
         let default_pipe_size = (*PAGE_SIZE * 16) as usize;
 
-        Arc::new(Mutex::new(Pipe { size: default_pipe_size, used: 0, buffers: VecDeque::new() }))
+        Arc::new(Mutex::new(Pipe {
+            size: default_pipe_size,
+            used: 0,
+            buffers: VecDeque::new(),
+            has_reader: true,
+            has_writer: true,
+        }))
     }
 
     fn get_size(&self) -> usize {
@@ -132,6 +144,13 @@ impl FsNodeOps for PipeNode {
     }
 }
 
+impl Drop for PipeReadEndpoint {
+    fn drop(&mut self) {
+        let mut pipe = self.pipe.lock();
+        pipe.has_reader = false;
+    }
+}
+
 impl FileOps for PipeReadEndpoint {
     fd_impl_nonseekable!();
 
@@ -147,7 +166,11 @@ impl FileOps for PipeReadEndpoint {
     fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
         if pipe.used == 0 {
-            return Err(EAGAIN);
+            if pipe.has_writer {
+                return Err(EAGAIN);
+            } else {
+                return Ok(0);
+            }
         }
         let actual = std::cmp::min(pipe.used, UserBuffer::get_total_length(data));
         if actual == 0 {
@@ -208,11 +231,21 @@ impl FileOps for PipeReadEndpoint {
     }
 }
 
+impl Drop for PipeWriteEndpoint {
+    fn drop(&mut self) {
+        let mut pipe = self.pipe.lock();
+        pipe.has_writer = false;
+    }
+}
+
 impl FileOps for PipeWriteEndpoint {
     fd_impl_nonseekable!();
 
     fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
+        if !pipe.has_reader {
+            return Err(EPIPE);
+        }
         let available = pipe.get_available();
         if available == 0 {
             return Err(EAGAIN);
