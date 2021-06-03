@@ -102,43 +102,6 @@ void BufferCollection::Bind(zx::channel channel) {
       });
 }
 
-void BufferCollection::SetEventSink(SetEventSinkRequestView request,
-                                    SetEventSinkCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::SetEventSink() when already is_done_");
-    return;
-  }
-  if (!request->events) {
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
-             "BufferCollection::SetEventSink() must be called "
-             "with a non-zero handle.");
-    return;
-  }
-  if (is_set_constraints_seen_) {
-    // It's not required to use SetEventSink(), but if it's used, it must be
-    // before SetConstraints().
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
-             "BufferCollection::SetEventSink() (if any) must be "
-             "before SetConstraints().");
-    return;
-  }
-  if (events_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
-             "BufferCollection::SetEventSink() may only be called at most once.");
-    return;
-  }
-
-  events_.emplace(std::move(request->events));
-  // We don't create BufferCollection until after processing all inbound
-  // messages that were queued toward the server on the token channel of the
-  // token that was used to create this BufferCollection, so we can send this
-  // event now, as all the Duplicate() inbound from that token are done being
-  // processed before here.
-  events_->OnDuplicatedTokensKnownByServer();
-}
-
 void BufferCollection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   // This isn't real churn.  As a temporary measure, we need to count churn despite there not being
   // any, since more real churn is coming soon, and we need to test the mitigation of that churn.
@@ -569,23 +532,6 @@ void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_res
 
   // If there are any, they'll be flushed to LogicalBufferCollection now.
   MaybeFlushPendingLifetimeTracking();
-
-  if (!events_) {
-    return;
-  }
-
-  fuchsia_sysmem::wire::BufferCollectionInfo2 v1;
-  if (logical_allocation_result_->status == ZX_OK) {
-    ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
-    auto v1_result = CloneResultForSendingV1(*logical_allocation_result_->buffer_collection_info);
-    if (!v1_result.is_ok()) {
-      // FailAsync() already called.
-      return;
-    }
-    v1 = v1_result.take_value();
-  }
-
-  events_->OnBuffersAllocated(logical_allocation_result_->status, std::move(v1));
 }
 
 bool BufferCollection::has_constraints() { return node_properties().has_constraints(); }

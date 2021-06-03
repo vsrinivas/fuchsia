@@ -2,7 +2,7 @@
 
 ## Sysmem Driver Environment
 
-Sysmem initially will run in the platoform bus driver's devhost process, because
+Sysmem initially will run in the platform bus driver's devhost process, because
 driver to driver communication is currently easiest when a driver with incoming
 connections runs there.  Later on, it'll run in its own devhost.
 
@@ -49,28 +49,6 @@ Fidl is served from the sysmem driver, including async request completion, by
 using SimpleBinding<>, which together with FIDL C generated code acts a lot like
 Binding<> does when used with FIDL C++ generated code.
 
-## Sysmem protocol design constraints
-
-The sysmem protocol is meant to allow clients using the generated FIDL C code to
-make requests which may not immediately complete without blocking a client
-thread.
-
-The generated FIDL C code has no way to make a request that has a response
-without blocking a client thread, and does not generate code to receive and
-dispatch FIDL events.
-
-For this reason, all requests that have a response are optional - there is
-always a non-blocking way to achieve the same thing.  However, this means that
-to avoid blocking, the client must act as a server/stub for
-BufferCollectionEvents, and send the client end of a BufferCollectionEvents
-channel using BufferCollection.SetEventSink().
-
-The generated FIDL C code requires Layout="Simple", so all sysmem protocols
-conform to that.  This means that any time there would normally be a nullable
-field x, there's instead a "bool has_x;" immediately before that logically
-nullable field x to indicate whether x is logically null (false) or logically
-non-null (true).
-
 ## Sysmem protocol description
 
-See comments in allocator_2.fidl and related files.
+See comments in allocator.fidl and related files.

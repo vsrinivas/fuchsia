@@ -36,7 +36,6 @@ class FakeLogicalBufferCollection : public fuchsia::sysmem::BufferCollection {
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollection> GetBufferCollection();
 
   // These functions are here for the class to compile, but we do not use them:
-  void SetEventSink(fidl::InterfaceHandle<class fuchsia::sysmem::BufferCollectionEvents> events) {}
   void CheckBuffersAllocated(fit::function<void(int32_t)> callback) {}
   void CloseSingleBuffer(uint64_t buffer_index) {}
   void AllocateSingleBuffer(uint64_t buffer_index) {}

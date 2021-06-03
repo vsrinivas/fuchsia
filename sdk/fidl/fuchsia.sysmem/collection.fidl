@@ -72,10 +72,7 @@ protocol BufferCollectionToken {
     /// passing this token to BindSharedCollection().  Either will ensure that
     /// the server knows about the tokens created via Duplicate() before the
     /// other participant sends the token to the server via separate Allocator
-    /// channel.  If a client is using FIDL C generated code and doesn't want to
-    /// block waiting for a response message, the other option is to notice
-    /// arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
-    /// after turning in this token for a BufferCollection.
+    /// channel.
     ///
     /// These values for rights_attenuation_mask result in no attenuation:
     ///   * ZX_RIGHT_SAME_RIGHTS (preferred)
@@ -95,8 +92,7 @@ protocol BufferCollectionToken {
     /// Other options include waiting for each Duplicate() to complete
     /// individually (using separate call to BufferCollectionToken.Sync() after
     /// each), or calling Sync() on BufferCollection after this token has
-    /// been turned in via BindSharedCollection(), or noticing arrival of
-    /// BufferCollectionEvents::OnDuplicatedTokensKnownByServer().
+    /// been turned in via BindSharedCollection().
     ///
     /// Calling BufferCollectionToken.Sync() on a token that isn't/wasn't a
     /// valid sysmem token risks the Sync() hanging forever.  See
@@ -218,19 +214,6 @@ protocol BufferCollectionToken {
 /// avoiding allocation overlap (in time).
 [ForDeprecatedCBindings]
 protocol BufferCollection {
-    /// At least for now, the only way to get events from a BufferCollection is
-    /// to set a reverse BufferCollectionEvents channel.  This can be sent up to
-    /// once at any point during BufferCollection channel lifetime.  All events
-    /// are one-shot events, and will be sent immediately via `events` if the
-    /// one-shot event's condition has already become true (once true will stay
-    /// true; only goes from false to true once).
-    ///
-    /// `events` is the client end of a BufferCollectionEvents which will be sent
-    /// one-way messages indicating events relevant to this BufferCollection
-    /// channel (some may be specific to this BufferCollection channel and some
-    /// may be relevant to the overall logical BufferCollection).
-    SetEventSink(BufferCollectionEvents events);
-
     /// See comments on BufferCollectionToken::Sync().
     Sync() -> ();
 
@@ -274,20 +257,6 @@ protocol BufferCollection {
     ///     must be turned in via BindSharedCollection().
     ///   * All BufferCollection(s) of the logical BufferCollection must have had
     ///     SetConstraints() sent to them.
-    ///
-    /// A caller using C generated FIDL code who wishes not to block a thread in
-    /// a zx_channel_call() for a potentially fairly long duration on this
-    /// message/response can use SetEventSink() and
-    /// BufferCollectionEvents.OnBuffersPopulated() instead.
-    ///
-    /// This method is still legal to call despite use of OnBuffersPopulated(),
-    /// but in that case the additional BufferCollectionInfo returned here will
-    /// include handles that are redundant with other handles in the
-    /// BufferCollectionInfo delivered via OnBuffersPopulated() (separate handle
-    /// but same underlying VMO objects), so most clients that bother calling
-    /// SetEventSink() will prefer to receive BufferCollectionInfo via
-    /// OnBuffersPopulated().  This method is mostly here for clients that don't
-    /// call SetEventSink().
     ///
     /// Returns `ZX_OK` if successful.
     /// Returns `ZX_ERR_NO_MEMORY` if the request is valid but cannot be
@@ -377,18 +346,14 @@ protocol BufferCollection {
     /// Allows getting any aux buffers allocated after using
     /// SetConstraintsAuxBuffers().
     ///
-    /// Sending this message is not permitted until at least one of the
-    /// following has occurred:
-    ///   * WaitForBuffersAllocated() completing
-    ///   * OnBuffersAllocated() being received
+    /// Sending this message is not permitted until WaitForBuffersAllocated() completes.
     ///
     /// On failure, status will be a failing status and
     /// buffer_collection_info_aux_buffers won't be filled out, and won't have
     /// any handles.
     ///
     /// On success, status will be ZX_OK, and buffer_count will be the same as
-    /// the main buffer_count from WaitForBuffersAllocated() or
-    /// OnBuffersAllocated().
+    /// the main buffer_count from WaitForBuffersAllocated().
     ///
     /// If a participant specified "allow_clear_aux_buffers_for_secure" true but
     /// "need_clear_aux_buffers_for_secure" false (or not set), the participant
@@ -540,67 +505,4 @@ protocol BufferCollection {
     /// transfer without causing CodecFactory channel failure).
     AttachLifetimeTracking(
         zx.handle:EVENTPAIR server_end, uint32 buffers_remaining);
-};
-
-/// This interface intentionally doesn't include any event for
-/// OnOldBufferClosed(), because such an event could arrive at a participant too
-/// soon to be useful.  Instead, such an indication should be made in-band within
-/// FIDL interfaces that deliver packets to downstream participants.
-[ForDeprecatedCBindings]
-protocol BufferCollectionEvents {
-    /// See comments on BufferCollectionToken::Sync().
-    ///
-    /// This message only indicates that the server has reached the point where
-    /// it knows about previously created tokens Duplicate()ed from the token
-    /// used to create this BufferCollection.
-    OnDuplicatedTokensKnownByServer();
-
-    /// This event indicates that buffer allocation is over, whether successful
-    /// or failed.
-    ///
-    /// This event will eventually be sent by the server (unless the
-    /// BufferCollection channel closes first).
-    ///
-    /// `status`:
-    /// `ZX_OK` if successful.
-    /// `ZX_ERR_NO_MEMORY` if the request is valid but cannot be fulfilled due to
-    /// resource exhaustion.
-    /// `ZX_ERR_ACCESS_DENIED` if the caller is not permitted to obtain the
-    /// buffers it requested.
-    /// `ZX_ERR_INVALID_ARGS` if the request is malformed.
-    /// `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
-    /// perhaps due to hardware limitations.
-    ///
-    /// `buffer_collection_info` The buffer information, including VMO handles.
-    /// If `status` is not `ZX_OK`, `buffer_collection_info` is default
-    /// initialized and contains no meaningful information.
-    OnBuffersAllocated(zx.status status,
-                       BufferCollectionInfo_2 buffer_collection_info);
-
-    /// A participant can learn when a new buffer is allocated via this event.
-    /// The only participant that will see a failing status is the participant
-    /// that attempted the single buffer allocation.  Other participants will
-    /// only see successful single buffer allocations.
-    ///
-    /// `status`:
-    ///
-    /// `ZX_OK` if successful.  This can be seen by any participant (whether
-    /// sender of AllocateSingleBuffer() or not.)
-    ///
-    /// `ZX_ERR_NOT_FOUND` if the buffer_index sent via
-    /// CheckSingleBufferAllocated() isn't known to the server.  This can be seen
-    /// by any participant (whether sender of AllocateSingleBuffer() or not.)
-    ///
-    /// These error codes are only ever seen by the sender of
-    /// AllocateSingleBuffer():
-    ///
-    /// `ZX_ERR_NO_MEMORY` if the request is valid but cannot be fulfilled due to
-    /// resource exhaustion.
-    /// `ZX_ERR_ACCESS_DENIED` if the caller is not permitted to obtain the
-    /// buffers it requested.
-    /// `ZX_ERR_INVALID_ARGS` if the request is malformed.
-    /// `ZX_ERR_NOT_SUPPORTED` if request is valid but cannot be satisfied,
-    /// perhaps due to hardware limitations.
-    OnAllocateSingleBufferDone(zx.status status,
-                               SingleBufferInfo buffer_info);
 };

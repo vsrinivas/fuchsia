@@ -36,9 +36,6 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   //
   // fuchsia.sysmem.BufferCollection interface methods
   //
-
-  void SetEventSink(SetEventSinkRequestView request,
-                    SetEventSinkCompleter::Sync& completer) override;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& completer) override;
@@ -142,16 +139,6 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
 
   // Cached from LogicalBufferCollection.
   TableSet& table_set_;
-
-  // Client end of a BufferCollectionEvents channel, for the local server to
-  // send events to the remote client.  All of the messages in this interface
-  // are one-way with no response, so sending an event doesn't block the
-  // server thread.
-  //
-  // This may remain non-set if SetEventSink() is never used by a client.  A
-  // client may send SetEventSink() up to once.
-  //
-  std::optional<fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionEvents>> events_;
 
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
