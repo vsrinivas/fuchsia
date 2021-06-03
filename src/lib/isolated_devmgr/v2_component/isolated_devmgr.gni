@@ -50,7 +50,7 @@ template("isolated_devmgr_v2_component") {
   assert(defined(invoker.package_name),
          "the package_name where the IsolateDevMgr will run must be defined")
   package_name = invoker.package_name
-  manifest_path = "${target_gen_dir}/meta/isolated-devmgr.cml"
+  manifest_path = "${target_gen_dir}/meta/${package_name}-isolated-devmgr.cml"
   generated_file(manifest_path) {
     contents = {
       include = [
