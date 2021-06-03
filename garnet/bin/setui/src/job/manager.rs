@@ -13,21 +13,21 @@
 //! will process each received source for new [Jobs](Job) and provide the necessary backing, such as
 //! caches, to support executing the [Job].
 
-use crate::job::execution;
 use crate::job::source::{self, Error};
 use crate::job::{self, Job, Payload};
+use crate::job::{execution, PinStream};
 use crate::message::base::MessengerType;
 use crate::service;
 use crate::service::message;
 
 use ::futures::FutureExt;
-use core::pin::Pin;
 use fuchsia_async as fasync;
 use futures::stream::{FuturesOrdered, StreamFuture};
-use futures::Stream;
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+
+type JobStreamItem = (source::Id, Option<Result<Job, Error>>);
 
 /// [Manager] processes incoming streams for new [Job]s. [Job]s are handled and executed by the
 /// [Manager] based on the [Job] definitions.
@@ -41,9 +41,7 @@ pub struct Manager {
     /// A future representing the collection of sources given to this manager. The future produces
     /// a tuple containing the [Job] and [source id](source::Id) of the stream to associate with it.
     /// None will be passed as the [Job] if the [Job] stream has been reached for a given source.
-    job_futures: FuturesOrdered<
-        StreamFuture<Pin<Box<dyn Stream<Item = (source::Id, Option<Result<Job, Error>>)> + Send>>>,
-    >,
+    job_futures: FuturesOrdered<StreamFuture<PinStream<JobStreamItem>>>,
     /// A [Id generator](source::IdGenerator) responsible for producing unique [Ids](source::Id) for
     /// the received sources.
     source_id_generator: source::IdGenerator,
@@ -183,7 +181,7 @@ impl Manager {
         &mut self,
         source: source::Id,
         job: Option<Result<Job, Error>>,
-        source_stream: Pin<Box<dyn Stream<Item = (source::Id, Option<Result<Job, Error>>)> + Send>>,
+        source_stream: PinStream<JobStreamItem>,
     ) {
         if let Some(Ok(job)) = job {
             // When the stream produces a job, associate with the appropriate source. Then try see

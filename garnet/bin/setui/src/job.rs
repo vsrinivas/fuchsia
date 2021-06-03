@@ -37,12 +37,14 @@ payload_convert!(Job, Payload);
 /// [StoreHandleMapping] represents the mapping from a [Job's](Job) [Signature] to the [data::Data]
 /// store. This store is shared by all [Jobs](Job) with the same [Signature].
 pub(super) type StoreHandleMapping = HashMap<Signature, data::StoreHandle>;
+type PinStream<T> = Pin<Box<dyn Stream<Item = T> + Send>>;
+type SourceStreamHandle = Arc<Mutex<Option<PinStream<Result<Job, source::Error>>>>>;
 
 /// The data payload that can be sent to the [Job Manager](crate::job::manager::Manager).
 #[derive(Clone)]
 pub enum Payload {
     /// [Source] represents a new source of [Jobs](Job).
-    Source(Arc<Mutex<Option<Pin<Box<dyn Stream<Item = Result<Job, source::Error>> + Send>>>>>),
+    Source(SourceStreamHandle),
 }
 
 impl Debug for Payload {
@@ -257,11 +259,10 @@ impl Info {
             .expect("messenger should be available")
             .0;
 
-        let store = if let Some(signature) = self.execution_type.get_signature() {
-            Some(stores.entry(*signature).or_insert(Arc::new(Mutex::new(HashMap::new()))).clone())
-        } else {
-            None
-        };
+        let store = self
+            .execution_type
+            .get_signature()
+            .map(|signature| stores.entry(*signature).or_insert_with(Default::default).clone());
 
         Box::pin(async move {
             let start = now();
@@ -358,7 +359,7 @@ pub(super) mod execution {
                 self.active.insert(job.id);
             }
 
-            return active_job;
+            active_job
         }
 
         pub fn complete(&mut self, job_info: job::Info) {

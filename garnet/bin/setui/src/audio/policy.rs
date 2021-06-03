@@ -544,13 +544,13 @@ mod tests {
         retrieved_ids.extend(property2.active_policies.iter().map(|policy| policy.id));
 
         // Verify transforms are present.
-        let retrieved_transforms: Vec<Transform> =
-            property.active_policies.iter().map(|policy| policy.transform).collect();
-        let retrieved_transforms2: Vec<Transform> =
-            property2.active_policies.iter().map(|policy| policy.transform).collect();
-        for transform in transforms.iter() {
-            assert!(retrieved_transforms.contains(&transform));
-            assert!(retrieved_transforms2.contains(&transform));
+        let mut retrieved_transforms =
+            property.active_policies.iter().map(|policy| policy.transform);
+        let mut retrieved_transforms2 =
+            property2.active_policies.iter().map(|policy| policy.transform);
+        for transform in transforms {
+            assert!(retrieved_transforms.any(|x| x == transform));
+            assert!(retrieved_transforms2.any(|x| x == transform));
         }
     }
 }

@@ -48,13 +48,12 @@ impl From<SettingInfo> for InputDeviceSettings {
 
 fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
     // Every device requires at least a device type and state flags.
-    let input_states_invalid_args: Vec<&FidlInputState> = fidl_input_states
+    let mut input_states_invalid_args = fidl_input_states
         .iter()
-        .filter(|input_state| input_state.device_type.is_none() || input_state.state.is_none())
-        .collect();
+        .filter(|input_state| input_state.device_type.is_none() || input_state.state.is_none());
 
     // If any devices were filtered out, the args were invalid, so exit.
-    if !input_states_invalid_args.is_empty() {
+    if input_states_invalid_args.next().is_some() {
         fx_log_err!("Failed to parse input request: missing args");
         return None;
     }

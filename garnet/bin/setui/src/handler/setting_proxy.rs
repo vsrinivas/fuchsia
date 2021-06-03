@@ -680,7 +680,7 @@ impl SettingProxy {
                     // failed, which indicates the channel got dropped and requests cannot be
                     // processed anymore.
                     proxy_request_sender_clone
-                        .unbounded_send(ProxyRequest::HandleResult(result.clone()))
+                        .unbounded_send(ProxyRequest::HandleResult(result))
                         .expect(
                             "SettingProxy::execute_next_request, proxy_request_sender failed to \
                             send proxy request",

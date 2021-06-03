@@ -91,16 +91,16 @@ where
     }
 }
 
-/// The [Into] implementation here is for conveniently converting a [Work] definition into a [Job].
+/// The [From] implementation here is for conveniently converting a [Work] definition into a [Job].
 /// Since [Work] is a singleshot request, it is automatically converted into a [Load::Independent]
 /// workload.
-impl<R, T> Into<Job> for Work<R, T>
+impl<R, T> From<Work<R, T>> for Job
 where
     R: From<Response> + Send + Sync + 'static,
     T: Responder<R> + Send + Sync + 'static,
 {
-    fn into(self) -> Job {
-        Job::new(Load::Independent(Box::new(self)))
+    fn from(work: Work<R, T>) -> Job {
+        Job::new(Load::Independent(Box::new(work)))
     }
 }
 

@@ -49,7 +49,7 @@ impl Seeder {
                 .await
                 .expect("should create messenger")
                 .0,
-            manager_signature: manager_signature,
+            manager_signature,
         }
     }
 
@@ -187,7 +187,7 @@ impl Handler {
         delegate: &mut Delegate,
         callback: F,
     ) -> bool {
-        for (_, execution_group) in &mut self.jobs {
+        for execution_group in self.jobs.values_mut() {
             // If there are no jobs ready to become active, move to next group.
             if let Some(job_info) = execution_group.promote_next_to_active() {
                 let execution =
@@ -202,7 +202,7 @@ impl Handler {
             }
         }
 
-        return false;
+        false
     }
 
     /// Returns whether the source is active, defined as having at least one [Job] which is

@@ -89,8 +89,8 @@ pub type Register = Box<
     dyn for<'a> FnOnce(&Delegate, &Seeder, &mut ServiceFsDir<'_, ServiceObj<'a, ()>>) + Send + Sync,
 >;
 
-impl From<&Interface> for Vec<Dependency> {
-    fn from(item: &Interface) -> Self {
+impl From<Interface> for Vec<Dependency> {
+    fn from(item: Interface) -> Self {
         let mut dependencies = Vec::new();
 
         dependencies.append(&mut match item {
@@ -156,9 +156,8 @@ impl From<&Interface> for Vec<Dependency> {
 
 // Converts an Interface into the closure to bring up the interface in the service environment as
 // defined by Register.
-impl From<&Interface> for Register {
-    fn from(item: &Interface) -> Self {
-        let interface = item.clone();
+impl From<Interface> for Register {
+    fn from(interface: Interface) -> Self {
         Box::new(
             move |delegate: &Delegate,
                   seeder: &Seeder,
@@ -236,8 +235,8 @@ impl From<&Interface> for Register {
 // configuration into actionable Registrants that can be used in the setting service.
 impl From<Interface> for Registrant {
     fn from(item: Interface) -> Self {
-        let mut builder = registration::Builder::new(Registrar::Fidl((&item).into()));
-        let dependencies: Vec<Dependency> = (&item).into();
+        let mut builder = registration::Builder::new(Registrar::Fidl(item.into()));
+        let dependencies: Vec<Dependency> = item.into();
         for dependency in dependencies {
             builder = builder.add_dependency(dependency);
         }

@@ -94,7 +94,7 @@ impl<
                     store.insert(key, Data::SettingInfo(info.clone()));
                 }
 
-                return return_val;
+                return_val
             }
             Ok(Payload::Response(Err(error))) => Some(Err(error)),
             Err(error) => {
@@ -174,11 +174,11 @@ impl<
         R: From<SettingInfo> + Send + Sync + 'static,
         E: From<Error> + Send + Sync + 'static,
         T: Responder<R, E> + Send + Sync + 'static,
-    > Into<Job> for Work<R, E, T>
+    > From<Work<R, E, T>> for Job
 {
-    fn into(self) -> Job {
-        let signature = self.signature;
-        Job::new(Load::Sequential(Box::new(self), signature))
+    fn from(work: Work<R, E, T>) -> Job {
+        let signature = work.signature;
+        Job::new(Load::Sequential(Box::new(work), signature))
     }
 }
 
