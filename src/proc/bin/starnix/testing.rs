@@ -35,7 +35,7 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
     let kernel =
         Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
 
-    let task = Task::new(
+    let task = Task::create_process(
         &kernel,
         &CString::new("test-task").unwrap(),
         0,
@@ -53,7 +53,7 @@ pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
-    Task::new(
+    Task::create_process(
         kernel,
         &CString::new(task_name).unwrap(),
         0,

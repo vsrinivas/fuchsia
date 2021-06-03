@@ -154,7 +154,11 @@ fn start_task(
 ) -> Result<zx::Channel, zx::Status> {
     let exceptions = task.thread.create_exception_channel()?;
     let suspend_token = task.thread.suspend()?;
-    task.thread_group.process.start(&task.thread, 0, 0, zx::Handle::invalid(), 0)?;
+    if task.id == task.thread_group.leader {
+        task.thread_group.process.start(&task.thread, 0, 0, zx::Handle::invalid(), 0)?;
+    } else {
+        task.thread.start(0, 0, 0, 0)?;
+    }
     task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
     task.thread.write_state_general_regs(registers)?;
     mem::drop(suspend_token);
@@ -220,7 +224,7 @@ async fn start_component(
     files.insert(FdNumber::from_raw(1), stdio.clone());
     files.insert(FdNumber::from_raw(2), stdio);
 
-    let task_owner = Task::new(
+    let task_owner = Task::create_process(
         &kernel,
         &binary_path,
         0,

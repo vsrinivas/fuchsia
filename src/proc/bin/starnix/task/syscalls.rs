@@ -22,17 +22,27 @@ pub fn sys_clone(
     user_child_tid: UserRef<pid_t>,
     user_tls: UserAddress,
 ) -> Result<SyscallResult, Errno> {
-    let task_owner =
-        ctx.task.clone_task(flags, user_stack, user_parent_tid, user_child_tid, user_tls)?;
+    let task_owner = ctx.task.clone_task(flags, user_parent_tid, user_child_tid)?;
     let tid = task_owner.task.id;
 
     let mut registers = ctx.registers;
     registers.rax = 0;
+    registers.rsp = user_stack.ptr() as u64;
 
-    let task = ctx.task.clone();
-    spawn_task(task_owner, registers, move |_| {
-        let _ = send_signal(&task, &UncheckedSignal::from(SIGCHLD));
-    });
+    if flags & (CLONE_SETTLS as u64) != 0 {
+        registers.fs_base = user_tls.ptr() as u64;
+    }
+
+    if flags & (CLONE_THREAD as u64) != 0 {
+        spawn_task(task_owner, registers, |_| {
+            // TODO: Do threads need a task_complete callback?
+        });
+    } else {
+        let task = ctx.task.clone();
+        spawn_task(task_owner, registers, move |_| {
+            let _ = send_signal(&task, &UncheckedSignal::from(SIGCHLD));
+        });
+    }
 
     Ok(tid.into())
 }

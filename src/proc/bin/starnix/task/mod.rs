@@ -255,6 +255,11 @@ impl ThreadGroup {
         }
     }
 
+    fn add(&self, task: &Task) {
+        let mut tasks = self.tasks.write();
+        tasks.insert(task.id);
+    }
+
     fn remove(&self, task: &Task) {
         let kill_process = {
             let mut tasks = self.tasks.write();
@@ -336,7 +341,51 @@ pub struct Task {
 }
 
 impl Task {
-    pub fn new(
+    /// Internal function for creating a Task object.
+    ///
+    /// Useful for sharing the default initialization of members between
+    /// create_process and create_thread.
+    ///
+    /// Consider using create_process or create_thread instead of calling this
+    /// function directly.
+    fn new(
+        id: pid_t,
+        thread_group: Arc<ThreadGroup>,
+        parent: pid_t,
+        thread: zx::Thread,
+        files: Arc<FdTable>,
+        mm: Arc<MemoryManager>,
+        fs: Arc<FileSystem>,
+        creds: Credentials,
+        exit_signal: Option<Signal>,
+    ) -> TaskOwner {
+        TaskOwner {
+            task: Arc::new(Task {
+                id,
+                thread_group,
+                parent,
+                children: RwLock::new(HashSet::new()),
+                thread,
+                files,
+                mm,
+                fs,
+                creds,
+                set_child_tid: Mutex::new(UserRef::default()),
+                clear_child_tid: Mutex::new(UserRef::default()),
+                signal_stack: Mutex::new(None),
+                signal_mask: Mutex::new(sigset_t::default()),
+                exit_signal,
+                exit_code: Mutex::new(None),
+                zombie_tasks: RwLock::new(vec![]),
+            }),
+        }
+    }
+
+    /// Create a task that is the leader of a new thread group.
+    ///
+    /// This function creates an underlying Zircon process to host the new
+    /// task.
+    pub fn create_process(
         kernel: &Arc<Kernel>,
         name: &CString,
         parent: pid_t,
@@ -360,52 +409,101 @@ impl Task {
 
         let mut pids = kernel.pids.write();
         let id = pids.allocate_pid();
-        let task = Arc::new(Task {
+        let task_owner = Self::new(
             id,
-            thread_group: Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
-            parent: parent,
-            children: RwLock::new(HashSet::new()),
+            Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
+            parent,
             thread,
             files,
-            mm: Arc::new(
+            Arc::new(
                 MemoryManager::new(duplicate_process, root_vmar)
                     .map_err(Errno::from_status_like_fdio)?,
             ),
             fs,
-            creds: creds,
-            set_child_tid: Mutex::new(UserRef::default()),
-            clear_child_tid: Mutex::new(UserRef::default()),
-            signal_stack: Mutex::new(None),
-            signal_mask: Mutex::new(sigset_t::default()),
+            creds,
             exit_signal,
-            exit_code: Mutex::new(None),
-            zombie_tasks: RwLock::new(vec![]),
-        });
-        pids.add_task(&task);
-        pids.add_thread_group(&task.thread_group);
-
-        Ok(TaskOwner { task })
+        );
+        pids.add_task(&task_owner.task);
+        pids.add_thread_group(&task_owner.task.thread_group);
+        Ok(task_owner)
     }
 
+    /// Create a task that is a member of an existing thread group.
+    ///
+    /// The task is added to |self.thread_group|.
+    ///
+    /// This function creates an underlying Zircon thread to run the new
+    /// task.
+    pub fn create_thread(
+        &self,
+        files: Arc<FdTable>,
+        fs: Arc<FileSystem>,
+        creds: Credentials,
+    ) -> Result<TaskOwner, Errno> {
+        let thread = self
+            .thread_group
+            .process
+            .create_thread("child-thread".as_bytes())
+            .map_err(Errno::from_status_like_fdio)?;
+
+        let mut pids = self.thread_group.kernel.pids.write();
+        let id = pids.allocate_pid();
+        let task_owner = Self::new(
+            id,
+            Arc::clone(&self.thread_group),
+            self.parent,
+            thread,
+            files,
+            Arc::clone(&self.mm),
+            fs,
+            creds,
+            None,
+        );
+        pids.add_task(&task_owner.task);
+        self.thread_group.add(&task_owner.task);
+        Ok(task_owner)
+    }
+
+    /// Clone this task.
+    ///
+    /// Creates a new task object that shares some state with this task
+    /// according to the given flags.
+    ///
+    /// Used by the clone() syscall to create both processes and threads.
     pub fn clone_task(
         &self,
         flags: u64,
-        user_stack: UserAddress,
-        _user_parent_tid: UserRef<pid_t>,
+        user_parent_tid: UserRef<pid_t>,
         user_child_tid: UserRef<pid_t>,
-        _user_tls: UserAddress,
     ) -> Result<TaskOwner, Errno> {
         // TODO: Implement more flags.
-        const IMPLEMENTED_FLAGS: u64 =
-            (CLONE_FS | CLONE_FILES | CLONE_CHILD_CLEARTID | CLONE_CHILD_SETTID | CSIGNAL) as u64;
+        const IMPLEMENTED_FLAGS: u64 = (CLONE_VM
+            | CLONE_FS
+            | CLONE_FILES
+            | CLONE_SIGHAND
+            | CLONE_THREAD
+            | CLONE_SYSVSEM
+            | CLONE_SETTLS
+            | CLONE_PARENT_SETTID
+            | CLONE_CHILD_CLEARTID
+            | CLONE_CHILD_SETTID
+            | CSIGNAL) as u64;
 
-        if flags & !IMPLEMENTED_FLAGS != 0 {
-            not_implemented!("clone does not implement flags: {}", flags & !IMPLEMENTED_FLAGS);
+        // CLONE_SETTLS is implemented by sys_clone.
+
+        let clone_thread = flags & (CLONE_THREAD as u64) != 0;
+        let clone_vm = flags & (CLONE_VM as u64) != 0;
+        let clone_sighand = flags & (CLONE_SIGHAND as u64) != 0;
+
+        if clone_thread != clone_vm || clone_thread != clone_sighand {
+            not_implemented!(
+                "clone requires CLONE_THREAD, CLONE_VM, and CLONE_SIGHAND to all be set or unset"
+            );
             return Err(ENOSYS);
         }
 
-        if !user_stack.is_null() {
-            not_implemented!("clone does not implement non-zero stack: {}", user_stack);
+        if flags & !IMPLEMENTED_FLAGS != 0 {
+            not_implemented!("clone does not implement flags: 0x{:x}", flags & !IMPLEMENTED_FLAGS);
             return Err(ENOSYS);
         }
 
@@ -423,16 +521,25 @@ impl Task {
 
         let creds = self.creds.clone();
 
-        let child = Self::new(
-            &self.thread_group.kernel,
-            &CString::new("cloned-child").unwrap(),
-            self.id,
-            files,
-            fs,
-            creds,
-            child_exit_signal,
-        )?;
-        self.mm.snapshot_to(&child.task.mm)?;
+        let child;
+        if clone_thread {
+            child = self.create_thread(files, fs, creds)?;
+        } else {
+            child = Self::create_process(
+                &self.thread_group.kernel,
+                &CString::new("cloned-child").unwrap(),
+                self.id,
+                files,
+                fs,
+                creds,
+                child_exit_signal,
+            )?;
+            self.mm.snapshot_to(&child.task.mm)?;
+        }
+
+        if flags & (CLONE_PARENT_SETTID as u64) != 0 {
+            self.mm.write_object(user_parent_tid, &child.task.id)?;
+        }
 
         if flags & (CLONE_CHILD_CLEARTID as u64) != 0 {
             *child.task.clear_child_tid.lock() = user_child_tid;
