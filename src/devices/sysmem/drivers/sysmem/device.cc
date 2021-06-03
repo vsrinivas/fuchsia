@@ -472,6 +472,7 @@ zx_status_t Device::Bind() {
       return status;
     }
   }
+  zxlogf(INFO, "sysmem finished initialization");
 
   return ZX_OK;
 }
