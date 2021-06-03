@@ -4,6 +4,7 @@
 
 use parking_lot::Mutex;
 use std::collections::VecDeque;
+use std::convert::TryInto;
 use std::sync::Arc;
 
 use crate::devices::*;
@@ -107,6 +108,25 @@ impl Pipe {
                 Ok(self.get_size().into())
             }
             _ => Err(EINVAL),
+        }
+    }
+
+    fn ioctl(
+        &self,
+        _file: &FileObject,
+        task: &Task,
+        request: u32,
+        in_addr: UserAddress,
+        _out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        match request {
+            FIONREAD => {
+                let addr = UserRef::<i32>::new(in_addr);
+                let value: i32 = self.used.try_into().map_err(|_| EINVAL)?;
+                task.mm.write_object(addr, &value)?;
+                Ok(SUCCESS)
+            }
+            _ => default_ioctl(request),
         }
     }
 }
@@ -230,6 +250,17 @@ impl FileOps for PipeReadEndpoint {
     ) -> Result<SyscallResult, Errno> {
         self.pipe.lock().fcntl(file, task, cmd, arg)
     }
+
+    fn ioctl(
+        &self,
+        file: &FileObject,
+        task: &Task,
+        request: u32,
+        in_addr: UserAddress,
+        out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        self.pipe.lock().ioctl(file, task, request, in_addr, out_addr)
+    }
 }
 
 impl Drop for PipeWriteEndpoint {
@@ -278,5 +309,16 @@ impl FileOps for PipeWriteEndpoint {
         arg: u64,
     ) -> Result<SyscallResult, Errno> {
         self.pipe.lock().fcntl(file, task, cmd, arg)
+    }
+
+    fn ioctl(
+        &self,
+        file: &FileObject,
+        task: &Task,
+        request: u32,
+        in_addr: UserAddress,
+        out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        self.pipe.lock().ioctl(file, task, request, in_addr, out_addr)
     }
 }
