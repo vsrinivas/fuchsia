@@ -114,6 +114,11 @@ a different callee.
     the `owned_by_caller` state) or a CMH handle (for a CMH pointing
     to an MBO in the `owned_by_callee` state).
 
+    If the message is too large to fit into the buffer passed to the
+    syscall, the syscall returns the size of the message.  This allows
+    the process to allocate a larger buffer and call the syscall
+    again.
+
 *   `zx_mbo_write(mbo_or_cmh, data, handles)`: Writes an MBO.  This
     replaces the MBO's existing contents.  (Operations for
     partial/incremental writes will be defined later.)  This takes
