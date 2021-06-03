@@ -10,6 +10,7 @@ use crate::devices::*;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::PAGE_SIZE;
+use crate::signals::{signal_handling::send_signal, *};
 use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
@@ -244,6 +245,7 @@ impl FileOps for PipeWriteEndpoint {
     fn write(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut pipe = self.pipe.lock();
         if !pipe.has_reader {
+            send_signal(&task, &UncheckedSignal::from(SIGPIPE))?;
             return Err(EPIPE);
         }
         let available = pipe.get_available();

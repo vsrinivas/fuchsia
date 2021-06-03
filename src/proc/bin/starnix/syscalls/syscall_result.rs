@@ -19,6 +19,11 @@ pub enum SyscallResult {
     /// The syscall completed successfully. The associated `u64` is the return value from the
     /// syscall.
     Success(u64),
+
+    /// Return from a signal handler.
+    ///
+    /// This result avoids modifying the register state of the thread..
+    SigReturn,
 }
 
 pub const SUCCESS: SyscallResult = SyscallResult::Success(0);

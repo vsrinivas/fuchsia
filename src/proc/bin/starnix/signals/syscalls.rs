@@ -254,7 +254,7 @@ pub fn sys_tgkill(
 
 pub fn sys_rt_sigreturn(ctx: &mut SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     restore_from_signal_handler(ctx);
-    Ok(SUCCESS)
+    Ok(SyscallResult::SigReturn)
 }
 
 /// Sends a signal to all thread groups in `thread_groups`.

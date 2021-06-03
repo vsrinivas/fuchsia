@@ -128,6 +128,11 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
                 strace!("-> {:#x}", return_value);
                 ctx.registers.rax = return_value;
             }
+            Ok(SyscallResult::SigReturn) => {
+                // Do not modify the register state of the thread. The sigreturn syscall has
+                // restored the proper register state for the thread to continue with.
+                strace!("-> sigreturn");
+            }
             Err(errno) => {
                 strace!("!-> {}", errno);
                 ctx.registers.rax = (-errno.value()) as u64;

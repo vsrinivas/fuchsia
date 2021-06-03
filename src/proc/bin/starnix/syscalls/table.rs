@@ -146,6 +146,7 @@ pub fn dispatch_syscall(
         mmap[6],
         mprotect[3],
         munmap[2],
+        nanosleep[2],
         newfstatat[4],
         openat[4],
         pipe2[2],

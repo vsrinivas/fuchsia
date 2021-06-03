@@ -84,6 +84,28 @@ pub fn sys_gettimeofday(
     return Ok(SUCCESS);
 }
 
+fn get_time_from_timespec(ts: timespec) -> Result<zx::Time, Errno> {
+    if ts.tv_nsec >= NANOS_PER_SECOND {
+        return Err(EINVAL);
+    }
+    return Ok(zx::Time::ZERO
+        + zx::Duration::from_seconds(ts.tv_sec)
+        + zx::Duration::from_nanos(ts.tv_nsec));
+}
+
+pub fn sys_nanosleep(
+    ctx: &SyscallContext<'_>,
+    user_request: UserRef<timespec>,
+    _user_remaining: UserRef<timespec>,
+) -> Result<SyscallResult, Errno> {
+    let mut request = timespec::default();
+    ctx.task.mm.read_object(user_request, &mut request)?;
+    let time = get_time_from_timespec(request)?;
+    // TODO: We should be waiting on an object that can wake us up if we get a signal.
+    time.sleep();
+    Ok(SUCCESS)
+}
+
 pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
     warn!(target: "unknown_syscall", "UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
