@@ -25,11 +25,6 @@ Relevant code paths with unit and integration tests:
 
 ### What unique coverage does this E2E test provide?
 
-These tests differ from the pre-existing tests for package management
-because these run the command-line binaries themselves while the
-other tests programmatically test the functions and libraries that
-comprise those binaries.
-
-They are also primarily testing the actual commands (with the same
+These tests are mostly testing the actual commands (with the same
 flags) that consumers were found using, so these tests are ensuring
 we don't break our consumers.

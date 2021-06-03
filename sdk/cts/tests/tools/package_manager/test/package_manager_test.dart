@@ -79,6 +79,7 @@ void main() {
   });
   group('Package Manager', () {
     Optional<String> originalRewriteRule;
+    String originalRewriteRuleJson;
     Set<String> originalRepos;
     PackageManagerRepo repoServer;
     String testPackageName = 'cts-package-manager-sample-component';
@@ -88,13 +89,19 @@ void main() {
 
       // Gather the original package management settings before test begins.
       originalRepos = await getCurrentRepos(sl4fDriver);
-      var ruleListResponse = await sl4fDriver.ssh.run('pkgctl rule list');
-      expect(ruleListResponse.exitCode, 0);
-      originalRewriteRule =
-          getCurrentRewriteRule(ruleListResponse.stdout.toString());
+      originalRewriteRule = getCurrentRewriteRule(
+          (await repoServer.pkgctlRuleList(
+                  'Save original rewrite rules from `pkgctl rule list`', 0))
+              .stdout
+              .toString());
+      originalRewriteRuleJson = (await repoServer.pkgctlRuleDumpdynamic(
+              'Save original rewrite rules from `pkgctl rule dump-dynamic`', 0))
+          .stdout
+          .toString();
     });
     tearDown(() async {
-      if (!await resetPkgctl(sl4fDriver, originalRepos, originalRewriteRule)) {
+      if (!await resetPkgctl(
+          sl4fDriver, originalRepos, originalRewriteRuleJson)) {
         log.severe('Failed to reset pkgctl to default state');
       }
       if (repoServer != null) {
@@ -149,6 +156,13 @@ void main() {
           .stdout
           .toString();
       String repoName = repoServer.getRepoPath().replaceAll('/', '_');
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^ WARNING ^^^^^^^^^^^^^^^^^^^^^^^^^^
+      // This is using deprecated legacy behavior which is going away in the future.
+      // Do not use this as an example or take it as inspiration for production code.
+      // Please refer to the allowed characters as defined here:
+      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
       String repoUrl = 'fuchsia-pkg://$repoName';
       expect(listSrcsOutput.contains(repoUrl), isTrue);
 
@@ -179,6 +193,120 @@ void main() {
           .stdout
           .toString();
       expect(listSrcsOutput, originalRuleList);
+
+      log.info(
+          'Killing serve process and ensuring the output contains `[pm serve]`.');
+      final killStatus = repoServer.kill();
+      expect(killStatus, isTrue);
+
+      var serveOutputBuilder = StringBuffer();
+      var serveProcess = repoServer.getServeProcess();
+      expect(serveProcess.isPresent, isTrue);
+      await repoServer
+          .getServeStdoutSplitStream()
+          .transform(utf8.decoder)
+          .listen((data) {
+        serveOutputBuilder.write(data);
+      }).asFuture();
+      final serveOutput = serveOutputBuilder.toString();
+      // Ensuring that `[pm serve]` appears in the output because the `-q` flag
+      // wasn't used in the serve command.
+      expect(serveOutput.contains('[pm serve]'), isTrue);
+    });
+    test(
+        'Test that creates a repository, registers it using pkgctl, and validates that the '
+        'package in the repository is visible.', () async {
+      // Covers these commands (success cases only):
+      //
+      // Newly covered:
+      // pkgctl get-hash fuchsia-pkg://<repo URL>/<package name>
+      // pkgctl rule dump-dynamic
+      // pkgctl repo add url <repo URL> -f 1
+      // pkgctl repo rm fuchsia-pkg://<repo URL>
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
+
+      String repoName = 'pm-test-repo';
+      String repoUrl = 'fuchsia-pkg://$repoName';
+
+      // Confirm our serve is serving what we expect.
+      log.info('Getting the available packages');
+      final curlResponse = await Process.run(
+          'curl', ['http://localhost:$port/targets.json', '-i']);
+
+      log.info('curl response: ${curlResponse.stdout.toString()}');
+      expect(curlResponse.exitCode, 0);
+      final curlOutput = curlResponse.stdout.toString();
+      expect(curlOutput.contains('$testPackageName/0'), isTrue);
+
+      var gethashOutput = (await repoServer.pkgctlGethash(
+              'Should error when checking for the package',
+              '$repoUrl/$testPackageName',
+              1))
+          .stdout
+          .toString();
+
+      // Record what the rule list is before we begin, and confirm that is
+      // the rule list when we are finished.
+      final originalRuleList = (await repoServer.pkgctlRuleDumpdynamic(
+              'Recording the current rule list', 0))
+          .stdout
+          .toString();
+
+      await repoServer.pkgctlRepoAddUrlNF(
+          'Adding the new repository ${repoServer.getRepoPath()} as an update source with http://$hostAddress:$port/config.json',
+          'http://$hostAddress:$port/config.json',
+          repoName,
+          '1',
+          0);
+
+      // Check that our new repo source is listed.
+      var listSrcsOutput = (await repoServer.pkgctlRepo(
+              'Running pkgctl repo to list sources', 0))
+          .stdout
+          .toString();
+
+      log.info('listSrcsOutput: $listSrcsOutput');
+      expect(listSrcsOutput.contains(repoUrl), isTrue);
+
+      gethashOutput = (await repoServer.pkgctlGethash(
+              'Checking if the package now exists',
+              '$repoUrl/$testPackageName',
+              0))
+          .stdout
+          .toString();
+
+      log.info('gethashOutput: $gethashOutput');
+
+      expect(
+          gethashOutput
+              .contains('Error: Failed to get package hash with error:'),
+          isFalse);
+
+      var ruleListOutput = (await repoServer.pkgctlRuleDumpdynamic(
+              'Confirm rule list did not change.', 0))
+          .stdout
+          .toString();
+      expect(ruleListOutput, originalRuleList);
+
+      await repoServer.pkgctlRepoRm('Delete $repoUrl', repoUrl, 0);
+
+      // Check that our new repo source is gone.
+      listSrcsOutput = (await repoServer.pkgctlRepo(
+              'Running pkgctl repo to list sources', 0))
+          .stdout
+          .toString();
+
+      log.info('listSrcsOutput: $listSrcsOutput');
+      expect(listSrcsOutput.contains(repoUrl), isFalse);
+
+      ruleListOutput = (await repoServer.pkgctlRuleDumpdynamic(
+              'Confirm rule list did not change.', 0))
+          .stdout
+          .toString();
+      expect(ruleListOutput, originalRuleList);
 
       log.info(
           'Killing serve process and ensuring the output contains `[pm serve]`.');
@@ -289,6 +417,12 @@ void main() {
           .replaceAll(':', '_')
           .replaceAll('[', '_')
           .replaceAll(']', '_');
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^ WARNING ^^^^^^^^^^^^^^^^^^^^^^^^^^
+      // This is using deprecated legacy behavior which is going away in the future.
+      // Do not use this as an example or take it as inspiration for production code.
+      // Please refer to the allowed characters as defined here:
+      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
       log.info('Checking repo name is $repoName');
       expect(listSrcsOutput.contains(repoName), isTrue);
@@ -362,6 +496,13 @@ void main() {
           'http://$hostAddress:$port/config.json',
           0);
       String repoName = repoServer.getRepoPath().replaceAll('/', '_');
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^ WARNING ^^^^^^^^^^^^^^^^^^^^^^^^^^
+      // This is using deprecated legacy behavior which is going away in the future.
+      // Do not use this as an example or take it as inspiration for production code.
+      // Please refer to the allowed characters as defined here:
+      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
+      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
       String repoUrl = 'fuchsia-pkg://$repoName';
 
       var listSrcsOutput = (await repoServer.pkgctlRepo(
@@ -412,7 +553,7 @@ void main() {
     });
     test(
         'Test the flow from repo creation, to archive generation, '
-        'to running the component on the device.', () async {
+        'to using amberctl and running the component on the device.', () async {
       // Covers several key steps:
       // 0. Sanity check. The given component is not already available in the repo.
       // 1. The given component is archived into a valid `.far`.
@@ -446,6 +587,39 @@ void main() {
       expect(response.stdout.toString(), 'Hello, World!\n');
       response = await sl4fDriver.ssh.run(
           'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample2.cmx');
+      expect(response.exitCode, 0);
+      expect(response.stdout.toString(), 'Hello, World2!\n');
+    });
+    test(
+        'Test the flow from repo creation, to archive generation, '
+        'to using pkgctl and running the component on the device.', () async {
+      // Covers several key steps:
+      // 1. The given component is archived into a valid `.far`.
+      // 2. We are able to create our own repo.
+      // 3. We are able to serve our repo to a given Fuchsia device.
+      // 4. The device is able to pull the given component from our repo.
+      // 5. The given component contains the expected content.
+      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
+      final optionalPort = repoServer.getServePort();
+      expect(optionalPort.isPresent, isTrue);
+      final port = optionalPort.value;
+
+      String repoName = 'pm-test-repo';
+      String repoUrl = 'fuchsia-pkg://$repoName';
+
+      await repoServer.pkgctlRepoAddUrlNF(
+          'Adding the new repository as an update source with http://$hostAddress:$port',
+          'http://$hostAddress:$port/config.json',
+          repoName,
+          '1',
+          0);
+
+      var response = await sl4fDriver.ssh.run(
+          'run $repoUrl/$testPackageName#meta/cts-package-manager-sample.cmx');
+      expect(response.exitCode, 0);
+      expect(response.stdout.toString(), 'Hello, World!\n');
+      response = await sl4fDriver.ssh.run(
+          'run $repoUrl/$testPackageName#meta/cts-package-manager-sample2.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World2!\n');
     });

@@ -74,7 +74,7 @@ Future<Set<String>> getCurrentRepos(sl4f.Sl4f sl4fDriver) async {
 /// will generically remove all non-original sources and enable the original
 /// rewrite rule.
 Future<bool> resetPkgctl(sl4f.Sl4f sl4fDriver, Set<String> originalRepos,
-    Optional<String> originalRewriteRule) async {
+    String originalRewriteRule) async {
   var currentRepos = await getCurrentRepos(sl4fDriver);
 
   // Remove all repos that were not originally existing.
@@ -86,16 +86,10 @@ Future<bool> resetPkgctl(sl4f.Sl4f sl4fDriver, Set<String> originalRepos,
     }
   }
 
-  if (originalRewriteRule.isPresent) {
-    // TODO: Get this to work:
-    // 'pkgctl rule replace json \"\'{\\"version\\": \\"1\\", \\"content\\": [{\\"host_match\\": \\"fuchsia.com\\",\\"host_replacement\\": \\"$originalRewriteRule\\",\\"path_prefix_match\\": \\"/\\",\\"path_prefix_replacement\\": \\"/\\"}] }\'\"'
-    // Have been unable to find the correct escape character incantations for
-    // the command to run successfully.
-    final enableSrcResponse = await sl4fDriver.ssh
-        .run('amberctl enable_src -n ${originalRewriteRule.value}');
-    if (enableSrcResponse.exitCode != 0) {
-      return false;
-    }
+  final response = await sl4fDriver.ssh
+      .run('pkgctl rule replace json \'$originalRewriteRule\'');
+  if (response.exitCode != 0) {
+    return false;
   }
   return true;
 }

@@ -326,12 +326,87 @@ class PackageManagerRepo {
     return _sl4fRun(msg, 'pkgctl repo', [], retCode);
   }
 
+  /// Add repo source using `pkgctl repo add file`.
+  ///
+  /// Uses this command:
+  /// `pkgctl repo add file <path> -f <format version>`
+  Future<ProcessResult> pkgctlRepoAddFileF(
+      String msg, String path, String format, int retCode) async {
+    return _sl4fRun(
+        msg, 'pkgctl repo add', ['file $path', '-f $format'], retCode);
+  }
+
+  /// Add repo source using `pkgctl repo add file`.
+  ///
+  /// Uses this command:
+  /// `pkgctl repo add file <path> -n <name> -f <format version>`
+  Future<ProcessResult> pkgctlRepoAddFileNF(
+      String msg, String path, String name, String format, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl repo add',
+        ['file $path', '-n $name', '-f $format'], retCode);
+  }
+
+  /// Add repo source using `pkgctl repo add url`.
+  ///
+  /// Uses this command:
+  /// `pkgctl repo add url <url> -f <format version>`
+  Future<ProcessResult> pkgctlRepoAddUrlF(
+      String msg, String url, String format, int retCode) async {
+    return _sl4fRun(
+        msg, 'pkgctl repo add', ['url $url', '-f $format'], retCode);
+  }
+
+  /// Add repo source using `pkgctl repo add url`.
+  ///
+  /// Uses this command:
+  /// `pkgctl repo add url <url> -n <name> -f <format version>`
+  Future<ProcessResult> pkgctlRepoAddUrlNF(
+      String msg, String url, String name, String format, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl repo add',
+        ['url $url', '-n $name', '-f $format'], retCode);
+  }
+
+  /// Remove a repo source using `pkgctl repo rm`.
+  ///
+  /// Uses this command:
+  /// `pkgctl repo rm <repo name>`
+  Future<ProcessResult> pkgctlRepoRm(
+      String msg, String repoName, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl repo', ['rm $repoName'], retCode);
+  }
+
+  /// Replace dynamic rules using `pkgctl rule replace`.
+  ///
+  /// Uses this command:
+  /// `pkgctl rule replace json <json>`
+  Future<ProcessResult> pkgctlRuleReplace(
+      String msg, String json, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl rule replace', ['json \'$json\''], retCode);
+  }
+
   /// List redirect rules using `pkgctl rule list`.
   ///
   /// Uses this command:
   /// `pkgctl rule list`
   Future<ProcessResult> pkgctlRuleList(String msg, int retCode) async {
     return _sl4fRun(msg, 'pkgctl rule list', [], retCode);
+  }
+
+  /// List redirect rules using `pkgctl rule dump-dynamic`.
+  ///
+  /// Uses this command:
+  /// `pkgctl rule dump-dynamic`
+  Future<ProcessResult> pkgctlRuleDumpdynamic(String msg, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl rule dump-dynamic', [], retCode);
+  }
+
+  /// Get a package hash `pkgctl get-hash`.
+  ///
+  /// Uses this command:
+  /// `pkgctl get-hash <package name>`
+  Future<ProcessResult> pkgctlGethash(
+      String msg, String package, int retCode) async {
+    return _sl4fRun(msg, 'pkgctl', ['get-hash $package'], retCode);
   }
 
   Future<ProcessResult> _sl4fRun(
