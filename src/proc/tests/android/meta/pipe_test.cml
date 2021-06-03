@@ -2,7 +2,7 @@
     include: [ "src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "system/bin/pipe_test",
-        args: [ "--gunit_filter=*Inode/*:*Permissions/*:*Flags/*:*.Write/*:*WritePage/*:*NonBlocking/*:*Seek/*:*WriterSideClosesReadDataFirst/*:*CloseTwice/*:*FionRead/*:*CloExec:*BadOptions:-*/named*" ],
+        args: [ "--gunit_filter=*Inode/*:*Permissions/*:*Flags/*:*.Write/*:*WritePage/*:*NonBlocking/*:*Seek/*:*WriterSideClosesReadDataFirst/*:*CloseTwice/*:*FionRead/*:*SizeChange*/*:*CloExec:*BadOptions:-*/named*" ],
         root: "root",
     },
 }

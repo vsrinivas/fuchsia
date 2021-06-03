@@ -17,6 +17,7 @@ use crate::task::*;
 use crate::types::*;
 
 const ATOMIC_IO_BYTES: usize = 4096;
+const PIPE_MAX_SIZE: usize = 1048576; // From pipe.go in gVisor.
 
 fn round_up(value: usize, increment: usize) -> usize {
     (value + (increment - 1)) & !(increment - 1)
@@ -61,6 +62,9 @@ impl Pipe {
     }
 
     fn set_size(&mut self, mut requested_size: usize) -> Result<(), Errno> {
+        if requested_size > PIPE_MAX_SIZE {
+            return Err(EINVAL);
+        }
         if requested_size < self.used {
             return Err(EBUSY);
         }
