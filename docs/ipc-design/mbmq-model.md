@@ -103,7 +103,7 @@ The cycle can now repeat.  The caller can now write a new request
 message into the MBO and send it on a channel as above, potentially to
 a different callee.
 
-## Operations
+## Core operations
 
 *   `zx_mbo_create() -> mbo`: Creates a new MBO.  The MBO starts off
     in the `owned_by_caller` state.
@@ -296,6 +296,76 @@ Channel endpoint:
 *   List of MBOs, all of which will be in the state
     `enqueued_as_request`.  This will be empty if the endpoint has an
     associated MsgQueue.
+
+## Combined send+wait operation
+
+The core IPC operations described above can all be invoked via
+separate syscall invocations.  In addition to those syscalls, we
+provide a combined send+wait syscall that allows a specific sequence
+of those core IPC operations to be done in a single syscall
+invocation.  This allows a process to send an outgoing message and
+then wait for an incoming message.
+
+Using this combined syscall reduces the overhead associated with
+syscall invocations that comes from entering and leaving kernel mode.
+More importantly, it allows the kernel to optimise the cases where it
+is possible to do a direct context switch to the receiver process.  If
+the "send message" step wakes a thread, and if the
+`zx_msgqueue_read()` step would block, the kernel can switch directly
+to the thread that was woken.
+
+Furthermore, if the message being sent fits into the buffer provided
+by the receiver, the kernel can potentially copy the message directly
+to the receiver's buffer without making an intermediate copy in the
+MBO's buffer.  This is termed the "direct-copy optimisation".  (Note,
+however, that this is not entirely straightforward to implement,
+because the sender and receiver's address spaces will usually not be
+mapped at the same time.)
+
+### Definition
+
+```c
+struct zx_mbmq_multiop {
+  // Inputs for write+send:
+  bool is_req;           // true if sending a request, false if sending a reply
+  zx_handle_t mbo;       // for zx_mbo_write() + zx_channel_write_mbo()/zx_cmh_send_reply()
+  zx_handle_t channel;   // for zx_channel_write_mbo() (if is_req is true)
+
+  // Inputs for wait+read:
+  zx_handle_t msgqueue;  // for zx_msgqueue_read()
+  zx_handle_t cmh;       // for zx_msgqueue_read()
+
+  buffer_info buf;       // for zx_mbo_write() and zx_mbo_read()
+
+  // Output:
+  uint64_t key;          // from zx_msgqueue_read()
+};
+
+zx_status_t zx_mbmq_multiop(zx_mbmq_multiop* args);
+```
+
+`zx_mbmq_multiop()` does the following:
+
+*   Do `zx_mbo_write()` to write the message specified by `buf` into
+    the MBO specified by `mbo` (which may be an MBO handle or a CMH
+    handle).
+*   Send message:
+    *   If `is_req` is true, do `zx_channel_write_mbo()` to send `mbo`
+        on `channel`.
+    *   If `is_req` is false, do `zx_cmh_send_reply()` on `mbo` to
+        send the message as a reply.
+*   Do `zx_msgqueue_read()` on `msgqueue` and `cmh`.  Returns the
+    resulting key value in `key`.
+*   Do `zx_mbo_read()` to read the message from the MBO that was
+    unqueued by `zx_msgqueue_read()` into `buffer`.
+    *   If the message was fully read into the buffer, the MBO is
+        truncated (i.e. its copy of the message is dropped).  This is
+        to allow the direct-copy optimisation.
+    *   If the message that was unqueued was a request, this is
+        equivalent to `zx_mbo_read()` on `cmh`.  Otherwise, if the
+        unqueued message was a reply, then if userland were to do an
+        equivalent `zx_mbo_read()` call it would involve looking up
+        the MBO handle based on the `key` value.
 
 ## Properties of CMHs
 
