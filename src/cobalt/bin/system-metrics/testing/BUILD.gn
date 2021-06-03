@@ -18,7 +18,4 @@ source_set("fake_fetchers") {
     "..:system_metrics_daemon_lib",
     "//sdk/fidl/fuchsia.cobalt",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

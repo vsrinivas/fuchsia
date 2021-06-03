@@ -64,9 +64,6 @@ source_set("system_metrics_daemon_lib") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
@@ -122,9 +119,6 @@ executable("cobalt_system_metrics_unittests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(67363): Temporarily disable lsan for this target. Reenable once all leaks are fixed.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
