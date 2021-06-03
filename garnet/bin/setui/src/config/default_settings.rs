@@ -52,7 +52,7 @@ where
             self.cached_value = Some(self.load_default_settings()?);
         }
 
-        Ok(self.cached_value.as_ref().unwrap().clone())
+        Ok(self.cached_value.as_ref().expect("cached value not present").clone())
     }
 
     /// Attempts to load the settings from the given config_file_path.

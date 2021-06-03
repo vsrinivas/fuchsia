@@ -195,13 +195,8 @@ impl ClientImpl {
         generate_controller: GenerateController,
     ) -> ControllerGenerateResult {
         let client = Arc::new(Self::new(&context));
-        let controller_result = generate_controller(Arc::clone(&client)).await;
 
-        if let Err(error) = controller_result {
-            return Err(anyhow::Error::new(error));
-        }
-
-        let mut controller = controller_result.unwrap();
+        let mut controller = generate_controller(Arc::clone(&client)).await?;
 
         // Process MessageHub requests
         fasync::Task::spawn(async move {

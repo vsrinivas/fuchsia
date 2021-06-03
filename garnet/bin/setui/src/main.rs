@@ -86,7 +86,8 @@ fn main() -> Result<(), Error> {
 
     let storage_factory = StashDeviceStorageFactory::new(
         STASH_IDENTITY,
-        connect_to_protocol::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
+        connect_to_protocol::<fidl_fuchsia_stash::StoreMarker>()
+            .expect("failed to connect to stash"),
     );
 
     // EnvironmentBuilder::spawn returns a future that can be awaited for the

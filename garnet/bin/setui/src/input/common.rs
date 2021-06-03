@@ -113,7 +113,8 @@ pub async fn monitor_media_buttons(
 ) -> Result<(), Error> {
     let presenter_service =
         service_context_handle.connect::<DeviceListenerRegistryMarker>().await?;
-    let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>().unwrap();
+    let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>()
+        .expect("failed to create request stream for media buttons listener");
 
     if call!(presenter_service => register_media_buttons_listener(client_end)).is_err() {
         fx_log_err!("Registering media button listener with presenter service failed.");
@@ -175,7 +176,7 @@ pub async fn connect_to_camera(
     let camera_id = get_camera_id(&camera_watcher_proxy).await?;
 
     // Connect to the camera device with the found id.
-    let (camera_proxy, device_server) = create_proxy::<DeviceMarker>().unwrap();
+    let (camera_proxy, device_server) = create_proxy::<DeviceMarker>()?;
     if call!(camera_watcher_proxy => connect_to_device(camera_id, device_server)).is_err() {
         return Err(format_err!("Could not connect to fuchsia.camera3.DeviceWatcher device"));
     }

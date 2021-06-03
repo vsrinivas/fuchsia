@@ -98,7 +98,7 @@ impl StreamVolumeControl {
         let mut new_stream_value = stream;
         new_stream_value.user_volume_level = round_volume_level(stream.user_volume_level);
 
-        let proxy = self.proxy.as_ref().unwrap();
+        let proxy = self.proxy.as_ref().expect("no volume control proxy");
 
         if (self.stored_stream.user_volume_level - new_stream_value.user_volume_level).abs()
             > f32::EPSILON
@@ -132,7 +132,11 @@ impl StreamVolumeControl {
             return Ok(());
         }
 
-        let (vol_control_proxy, server_end) = create_proxy().unwrap();
+        let (vol_control_proxy, server_end) = create_proxy().map_err(|err| {
+            ControllerError::UnexpectedError(
+                format!("failed to create proxy for volume control: {:?}", err).into(),
+            )
+        })?;
         let stream_type = self.stored_stream.stream_type;
         let mut usage = Usage::RenderUsage(AudioRenderUsage::from(stream_type));
 

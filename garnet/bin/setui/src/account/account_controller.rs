@@ -51,15 +51,13 @@ async fn schedule_clear_accounts(service_context: &ServiceContext) -> Result<(),
     let connect_result =
         service_context.connect::<fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker>().await;
 
-    if connect_result.is_err() {
-        return Err(ControllerError::ExternalFailure(
+    let device_settings_manager = connect_result.map_err(|_| {
+        ControllerError::ExternalFailure(
             SettingType::Account,
             "device_settings_manager".into(),
             "connect".into(),
-        ));
-    }
-
-    let device_settings_manager = connect_result.unwrap();
+        )
+    })?;
 
     call_async!(device_settings_manager => set_integer(FACTORY_RESET_FLAG, 1))
         .await

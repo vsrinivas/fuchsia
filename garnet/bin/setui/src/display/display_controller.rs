@@ -52,7 +52,6 @@ lazy_static! {
 pub fn default_display_info() -> DisplayInfo {
     let mut default_display_info = *DEFAULT_DISPLAY_INFO;
 
-    // TODO(fxbug.dev/76038): Clean up unwrap calls.
     if let Ok(Some(display_configuration)) =
         DISPLAY_CONFIGURATION.lock().unwrap().get_default_value()
     {

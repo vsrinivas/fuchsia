@@ -51,7 +51,7 @@ impl Sender<Vec<LightGroup>> for IndividualLightGroupResponder {
                     .find(|group| {
                         group.name.as_ref().map(|n| *n == light_group_name).unwrap_or(false)
                     })
-                    .unwrap(),
+                    .unwrap_or_else(|| panic!("failed to find light group {:?}", light_group_name)),
             )
             .log_fidl_response_error(LightMarker::DEBUG_NAME);
     }

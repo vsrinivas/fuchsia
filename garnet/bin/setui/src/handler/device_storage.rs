@@ -335,8 +335,11 @@ impl DeviceStorage {
                     )
                 });
             if cached_value.is_none() {
+                let stash_key = prefixed(T::KEY);
                 if let Some(stash_value) =
-                    cached_storage.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
+                    cached_storage.stash_proxy.get_value(&stash_key).await.unwrap_or_else(|_| {
+                        panic!("failed to get value from stash for {:?}", stash_key)
+                    })
                 {
                     if let Value::Stringval(string_value) = &*stash_value {
                         maybe_init = Some(T::deserialize_from(&string_value));
@@ -401,8 +404,11 @@ impl DeviceStorage {
             .unwrap_or_else(|| panic!("Invalid data keyed by {}", T::KEY));
         let mut cached_storage = typed_storgae.cached_storage.lock().await;
         if cached_storage.current_data.is_none() || !self.caching_enabled {
+            let stash_key = prefixed(T::KEY);
             if let Some(stash_value) =
-                cached_storage.stash_proxy.get_value(&prefixed(T::KEY)).await.unwrap()
+                cached_storage.stash_proxy.get_value(&stash_key).await.unwrap_or_else(|_| {
+                    panic!("failed to get value from stash for {:?}", stash_key)
+                })
             {
                 if let Value::Stringval(string_value) = &*stash_value {
                     cached_storage.current_data =
@@ -511,8 +517,11 @@ impl DeviceStorageFactory for StashDeviceStorageFactory {
             InitializationState::Initializing(initial_keys) => {
                 let device_storage =
                     Arc::new(DeviceStorage::with_stash_proxy(initial_keys.drain(), || {
-                        let (accessor_proxy, server_end) = create_proxy().unwrap();
-                        self.store.create_accessor(false, server_end).unwrap();
+                        let (accessor_proxy, server_end) =
+                            create_proxy().expect("failed to create proxy for stash");
+                        self.store
+                            .create_accessor(false, server_end)
+                            .expect("failed to create accessor for stash");
                         accessor_proxy
                     }));
                 *initialization = InitializationState::Initialized(Arc::clone(&device_storage));

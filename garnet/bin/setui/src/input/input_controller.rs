@@ -244,12 +244,12 @@ impl InputControllerInner {
             device_type.to_string(),
             DeviceStateSource::HARDWARE,
         );
-        if hw_state_res.is_err() {
-            return Err(ControllerError::UnexpectedError(
-                "Could not fetch current hw mute state".into(),
-            ));
-        }
-        let mut hw_state = hw_state_res.unwrap();
+
+        let mut hw_state = hw_state_res.map_err(|err| {
+            ControllerError::UnexpectedError(
+                format!("Could not fetch current hw mute state: {:?}", err).into(),
+            )
+        })?;
 
         if muted {
             // Unset available and set muted.

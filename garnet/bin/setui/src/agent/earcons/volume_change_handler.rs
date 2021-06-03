@@ -170,13 +170,9 @@ impl VolumeChangeHandler {
     /// Invoked when a new `AudioInfo` is retrieved. Determines whether an
     /// earcon should be played and plays sound if necessary.
     async fn on_audio_info(&mut self, audio_info: AudioInfo) {
-        let changed_streams = if audio_info.modified_counters.is_none() {
-            Vec::new()
-        } else {
-            self.calculate_changed_streams(
-                audio_info.streams,
-                audio_info.modified_counters.unwrap(),
-            )
+        let changed_streams = match audio_info.modified_counters {
+            None => Vec::new(),
+            Some(counters) => self.calculate_changed_streams(audio_info.streams, counters),
         };
 
         let media_user_volume =

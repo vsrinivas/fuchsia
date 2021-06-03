@@ -382,11 +382,8 @@ impl ContextBuilder {
 
     /// Generates the Context.
     pub fn build(self) -> Context {
-        let service_context = if self.service_context.is_none() {
-            Arc::new(ServiceContext::new(None, None))
-        } else {
-            self.service_context.unwrap()
-        };
+        let service_context =
+            self.service_context.unwrap_or_else(|| Arc::new(ServiceContext::new(None, None)));
         let environment = Environment::new(self.settings, service_context);
 
         // Note: ContextBuilder should use the same context id system as the SettingHandlerFactoryImpl.
