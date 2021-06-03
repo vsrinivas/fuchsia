@@ -9,6 +9,7 @@
 
 #include <algorithm>
 
+#include "device_type.h"
 #include "macros.h"
 #include "registers.h"
 #include "src/media/lib/memory_barriers/memory_barriers.h"
@@ -444,6 +445,9 @@ zx_status_t Vdec1::InitializeInputContext(InputContext* context, bool is_secure)
 }
 
 zx_status_t Vdec1::SaveInputContext(InputContext* context) {
+  context->buffer->CacheFlush(0, context->buffer->size());
+  BarrierAfterFlush();
+
   // No idea what this does.
   VldMemVififoControl::Get().FromValue(1 << 15).WriteTo(mmio()->dosbus);
   VldMemSwapAddr::Get()

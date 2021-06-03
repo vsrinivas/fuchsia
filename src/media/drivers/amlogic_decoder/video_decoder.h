@@ -38,14 +38,6 @@ namespace amlogic_decoder {
 class FirmwareBlob;
 class PtsManager;
 
-enum class DeviceType {
-  // These should be ordered from oldest to newest.
-  kGXM = 1,   // S912
-  kG12A = 2,  // S905D2
-  kG12B = 3,  // T931
-  kSM1 = 4,   // S905D3
-};
-
 // Returns true if |a| is newer than or the same as |b|.
 inline bool IsDeviceAtLeast(DeviceType a, DeviceType b) {
   return static_cast<int>(a) >= static_cast<int>(b);

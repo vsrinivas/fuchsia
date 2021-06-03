@@ -11,6 +11,10 @@
 
 #include <map>
 #include <string>
+#include <tuple>
+
+#include "device_type.h"
+#include "macros.h"
 
 namespace amlogic_decoder {
 
@@ -89,6 +93,7 @@ class FirmwareBlob {
     kHevc = 2,        // Used by VP9 decoder.
   };
 
+  explicit FirmwareBlob(DeviceType device_type) : device_type_(device_type) {}
   ~FirmwareBlob();
 
   zx_status_t LoadFirmware(zx_device_t* device);
@@ -108,10 +113,12 @@ class FirmwareBlob {
     uint32_t size;
   };
 
+  DeviceType device_type_;
   zx::vmo vmo_;
   uintptr_t ptr_ = 0;
   uint64_t fw_size_ = 0;
-  std::map<std::string, FirmwareCode> firmware_code_;
+  using FirmwareKey = std::tuple<std::string, std::string>;  // Use <cpu, format> tuple as key
+  std::map<FirmwareKey, FirmwareCode> firmware_code_;
 };
 
 }  // namespace amlogic_decoder

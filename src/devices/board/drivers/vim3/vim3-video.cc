@@ -62,10 +62,6 @@ static constexpr pbus_irq_t vim_video_irqs[] = {
         .irq = A311D_DOS_MBOX_1_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
-    {
-        .irq = A311D_DOS_MBOX_2_IRQ,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
-    },
 };
 
 static constexpr zx_bind_inst_t sysmem_match[] = {

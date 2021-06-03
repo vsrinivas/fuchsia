@@ -82,7 +82,7 @@ fuchsia_unittest_package("use_h264_decoder_test") {
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -183,7 +183,7 @@ fuchsia_unittest_package("use_h264_decoder_stream_switching_test") {
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
-      # vim3_env,
+      vim3_env,
 
       # emu_env,
     ]
@@ -208,7 +208,7 @@ fuchsia_unittest_package("use-h264-multi-decoder-stream-switching-test") {
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -231,7 +231,7 @@ fuchsia_unittest_package(
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799 and https://fxbug.dev/75580
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -379,7 +379,7 @@ fuchsia_test_package("use_vp9_decoder_tests") {
       sherlock_env,
 
       # Fails on Vim3 due to fxb/70799 and fxb/43496
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -396,8 +396,9 @@ fuchsia_unittest_package("use-vp9-decoder-stream-switching-test") {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
       sherlock_env,
+
       # Fails on Vim3 due to fxb/70799 and fxb/43496
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -415,8 +416,9 @@ fuchsia_unittest_package("use_vp9_decoder_skip_first_frame_test") {
     # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
     environments = [
       sherlock_env,
+
       # Fails on Vim3 due to fxb/70799 and fxb/43496
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -438,8 +440,9 @@ fuchsia_unittest_package("use_vp9_decoder_24_output_frames_test") {
     # this one.
     environments = [
       sherlock_env,
+
       # Fails on Vim3 due to fxb/70799 and fxb/43496
-      # vim3_env,
+      vim3_env,
     ]
   }
 }
@@ -502,8 +505,9 @@ template("vp9_file_decoder_conformance_test") {
       # Disable on astro because not enough contiguous memory. TODO(fxbug.dev/41735) Re-enable
       environments = [
         sherlock_env,
+
         # Fails on Vim3 due to fxb/70799 and fxb/43496
-        # vim3_env,
+        vim3_env,
       ]
     }
   }

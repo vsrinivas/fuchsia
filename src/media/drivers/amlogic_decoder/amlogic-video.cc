@@ -879,7 +879,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   registers_ = std::unique_ptr<MmioRegisters>(new MmioRegisters{
       &*dosbus_, &*aobus_, &*dmc_, &*hiubus_, &*reset_, &*parser_regs_, &*demux_});
 
-  firmware_ = std::make_unique<FirmwareBlob>();
+  firmware_ = std::make_unique<FirmwareBlob>(device_type_);
   status = firmware_->LoadFirmware(parent_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed load firmware");

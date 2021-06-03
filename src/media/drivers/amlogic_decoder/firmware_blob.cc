@@ -8,7 +8,7 @@
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 
-#include "macros.h"
+#include <vector>
 
 namespace amlogic_decoder {
 
@@ -89,23 +89,23 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
       return ZX_ERR_NO_MEMORY;
     }
 
+    char firmware_cpu[sizeof(header->data.cpu) + 1] = {};
     char firmware_format[sizeof(header->data.format) + 1] = {};
+    memcpy(firmware_cpu, header->data.cpu, sizeof(header->data.cpu));
     memcpy(firmware_format, header->data.format, sizeof(header->data.format));
 
     constexpr bool kLogFirmwares = false;
     if (kLogFirmwares) {
       // To help diagnose firmware loading problems.
       char firmware_name[sizeof(header->data.name) + 1] = {};
-      char firmware_cpu[sizeof(header->data.cpu) + 1] = {};
       memcpy(firmware_name, header->data.name, sizeof(header->data.name));
-      memcpy(firmware_cpu, header->data.cpu, sizeof(header->data.cpu));
       LOG(INFO, "firmware_format: %s firmware_cpu: %s firmware_name: %s",
           std::string(firmware_format).c_str(), std::string(firmware_cpu).c_str(),
           std::string(firmware_name).c_str());
     }
 
     FirmwareCode code = {offset + sizeof(FirmwareHeader), firmware_length};
-    firmware_code_[std::string(firmware_format)] = code;
+    firmware_code_[{firmware_cpu, firmware_format}] = code;
 
     offset += package_length;
   }
@@ -114,7 +114,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
 
 namespace {
 
-std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
+std::string FirmwareTypeToFormat(FirmwareBlob::FirmwareType type) {
   switch (type) {
     case FirmwareBlob::FirmwareType::kDec_Mpeg12:
       return "mpeg12";
@@ -187,21 +187,52 @@ std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
   }
 }
 
+std::vector<std::string> DeviceTypeToCpu(DeviceType device_type) {
+  std::vector<std::string> cpu_names;
+  switch (device_type) {
+    case DeviceType::kGXM:
+      cpu_names.push_back("gxm");
+      break;
+    case DeviceType::kG12B:
+      cpu_names.push_back("g12b");
+      // Sometimes G12b shares firmware with G12a and GXM. But always match G12b before G12a, then
+      // GXM. Do not change the order!
+      cpu_names.push_back("g12a");
+      cpu_names.push_back("gxm");
+      break;
+    case DeviceType::kG12A:
+      cpu_names.push_back("g12a");
+      break;
+    case DeviceType::kSM1:
+      cpu_names.push_back("sm1");
+      break;
+    default:
+      LOG(ERROR, "Unrecognized device type: %d", device_type);
+  }
+  return cpu_names;
+}
+
 }  // namespace
 
 zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** data_out,
                                           uint32_t* size_out) {
-  std::string format_name = FirmwareTypeToName(firmware_type);
-  if (format_name == "")
+  auto cpu_names = DeviceTypeToCpu(device_type_);
+  auto format_name = FirmwareTypeToFormat(firmware_type);
+  if (cpu_names.empty() || format_name.empty())
     return ZX_ERR_INVALID_ARGS;
-  auto it = firmware_code_.find(format_name);
-  if (it == firmware_code_.end()) {
-    DECODE_ERROR("Couldn't find firmware type: %d", firmware_type);
-    return ZX_ERR_INVALID_ARGS;
+  for (auto& cpu_name : cpu_names) {
+    auto it = firmware_code_.find({cpu_name, format_name});
+    if (it != firmware_code_.end()) {
+      *data_out = reinterpret_cast<uint8_t*>(ptr_) + it->second.offset;
+      *size_out = it->second.size;
+      LOG(INFO, "Got firmware with cpu_name %s and format %s for type %d and device type %d",
+          &cpu_name[0], &format_name[0], firmware_type, device_type_);
+      return ZX_OK;
+    }
   }
-  *data_out = reinterpret_cast<uint8_t*>(ptr_) + it->second.offset;
-  *size_out = it->second.size;
-  return ZX_OK;
+  DECODE_ERROR("Couldn't find firmware for type: %d and device type: %d", firmware_type,
+               device_type_);
+  return ZX_ERR_INVALID_ARGS;
 }
 
 void FirmwareBlob::GetWholeBlob(uint8_t** data_out, uint32_t* size_out) {
@@ -213,13 +244,13 @@ void FirmwareBlob::GetWholeBlob(uint8_t** data_out, uint32_t* size_out) {
 
 void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type, uint8_t* data,
                                               uint32_t size) {
-  std::string format_name = FirmwareTypeToName(firmware_type);
+  auto cpu_names = DeviceTypeToCpu(device_type_);
+  std::string format_name = FirmwareTypeToFormat(firmware_type);
   assert(ptr_ == 0);
 
   ptr_ = reinterpret_cast<uintptr_t>(data);
-
-  firmware_code_[format_name].size = size;
-  firmware_code_[format_name].offset = 0;
+  firmware_code_[{cpu_names[0], format_name}].size = size;
+  firmware_code_[{cpu_names[0], format_name}].offset = 0;
 }
 
 }  // namespace amlogic_decoder

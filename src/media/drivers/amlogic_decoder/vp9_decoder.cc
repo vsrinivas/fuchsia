@@ -13,6 +13,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "device_type.h"
 #include "firmware_blob.h"
 #include "macros.h"
 #include "pts_manager.h"

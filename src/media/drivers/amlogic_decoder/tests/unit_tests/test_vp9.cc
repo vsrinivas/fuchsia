@@ -50,14 +50,15 @@ class FakeDecoderCore : public DecoderCore {
 
 class FakeOwner : public VideoDecoder::Owner {
  public:
-  FakeOwner(DosRegisterIo* dosbus, AmlogicVideo* video) : dosbus_(dosbus), video_(video) {
+  FakeOwner(DosRegisterIo* dosbus, AmlogicVideo* video)
+      : device_type_(DeviceType::kGXM), dosbus_(dosbus), video_(video), blob_(device_type_) {
     blob_.LoadFakeFirmwareForTesting(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu, nullptr, 0);
   }
 
   CodecMetrics& metrics() override { return default_nop_metrics_; }
   DosRegisterIo* dosbus() override { return dosbus_; }
   zx::unowned_bti bti() override { return video_->bti(); }
-  DeviceType device_type() override { return DeviceType::kGXM; }
+  DeviceType device_type() override { return device_type_; }
   FirmwareBlob* firmware_blob() override { return &blob_; }
   bool is_tee_available() override { return false; };
   zx_status_t TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
@@ -109,6 +110,7 @@ class FakeOwner : public VideoDecoder::Owner {
   bool have_set_protected() const { return have_set_protected_; }
 
  private:
+  DeviceType device_type_;
   DosRegisterIo* dosbus_;
   AmlogicVideo* video_;
   mutable FakeDecoderCore core_;

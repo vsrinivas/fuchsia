@@ -42,6 +42,7 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 board_system_image_deps += [
   "//garnet/packages/prod:magma-arm-mali-system",
   "//garnet/packages/prod:magma-vsi-vip",
+  "//src/media/drivers/amlogic_decoder",
 ]
 
 board_package_labels += [
