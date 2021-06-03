@@ -44,7 +44,7 @@ class BootZbi {
   //
   // TODO(mcgrathr): Remove this when ZBI kernels in use actually conform to
   // the protocol and don't clobber extra memory.
-  static constexpr uint64_t kKernelBootAllocReserve = 1024 * 1024 * 4;
+  static constexpr uint64_t kKernelBootAllocReserve = 1024 * 1024 * 32;
 
   // Default-constructible and move-only.
   BootZbi() = default;

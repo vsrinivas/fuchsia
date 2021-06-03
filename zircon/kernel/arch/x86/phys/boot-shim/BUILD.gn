@@ -13,6 +13,7 @@ import("//zircon/kernel/phys/zbi_executable.gni")
 group("boot-shim") {
   deps = [
     ":linux-x86-boot-shim",
+    ":multiboot-shim",
     ":pic-1mb-boot-shim",
     ":x86-1mb-boot-shim",
   ]
@@ -145,10 +146,24 @@ if (toolchain.environment == "kernel.phys32") {
       "//zircon/kernel/phys:symbolize",
     ]
   }
+
+  phys_executable("multiboot-shim") {
+    sources = [ "multiboot-shim.cc" ]
+    deps = [
+      ":legacy-boot-shim",
+      "..:multiboot",
+      "//zircon/kernel/phys:symbolize",
+    ]
+  }
 } else {
   group("linux-x86-boot-shim") {
     public_deps =
         [ ":linux-x86-boot-shim(//zircon/kernel/arch/x86/phys:kernel.phys32)" ]
+  }
+
+  group("multiboot-shim") {
+    public_deps =
+        [ ":multiboot-shim(//zircon/kernel/arch/x86/phys:kernel.phys32)" ]
   }
 }
 
@@ -156,6 +171,10 @@ qemu_shims = [
   {
     name = "linux-x86-boot-shim"
     format = "linuxboot"
+  },
+  {
+    name = "multiboot-shim"
+    format = "multiboot"
   },
 ]
 

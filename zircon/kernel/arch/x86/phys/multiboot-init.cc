@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/memalloc/allocator.h>
+#include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/boot/e820.h>
@@ -109,6 +110,22 @@ void InitMemory(void* bootloader_data) {
         printf("%s: Multiboot mods @ %p count %zu != expected 1.\n", Symbolize::kProgramName_,
                mods.data(), mods.size());
       }
+    }
+  }
+
+  // TODO(crbug.com/917455): Depthcharge as of
+  // https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/firmware-eve-9584.B
+  // prepends items and adjusts the ZBI container header, but fails to update
+  // the Multiboot module_t header to match.  This is now fixed upstream by
+  // https://chromium.googlesource.com/chromiumos/platform/depthcharge/+/b80fb0a9b04c97769ffe73babddf0aa9e3bc0b94#
+  // but not yet rolled out to all devices.  So if there is a valid ZBI
+  // container header that says it's bigger than the Multiboot module header
+  // says it is, believe the ZBI header and not the outer Multiboot header.
+  if (gLegacyBoot.ramdisk.size() > sizeof(zbi_header_t)) {
+    auto hdr = reinterpret_cast<zbi_header_t*>(gLegacyBoot.ramdisk.data());
+    size_t zbi_size = zbitl::StorageFromRawHeader(hdr).size();
+    if (zbi_size > gLegacyBoot.ramdisk.size()) {
+      gLegacyBoot.ramdisk = {gLegacyBoot.ramdisk.data(), zbi_size};
     }
   }
 

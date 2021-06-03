@@ -213,6 +213,7 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/phys:symbolize",
         "//zircon/kernel/phys/lib/memalloc",
         "//zircon/system/ulib/pretty",
+        "//zircon/system/ulib/zbitl",
       ]
       public_deps = [
         ":legacy-boot",

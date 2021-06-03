@@ -12,9 +12,10 @@
 // usable 32-bit segmentation environment with flat segments, but does
 // not provide a stack.
 .function _start, global
-  mov %ebx, %esi
   cmp $MULTIBOOT_BOOTLOADER_MAGIC, %eax
-  je Phys32Entry
+  jne .Lbad_multiboot_magic
+  mov %ebx, %esi
+  jmp Phys32Entry
 
 .Lbad_multiboot_magic:
   ud2
