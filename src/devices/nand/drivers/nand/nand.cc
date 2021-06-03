@@ -47,9 +47,8 @@ zx_status_t NandDevice::ReadPage(uint8_t* data, uint8_t* oob, uint32_t nand_page
   }
   if (status != ZX_OK) {
     zxlogf(WARNING, "%s: Read error %d, exhausted all retries", __func__, status);
-  }
-  if (retry > 1) {
-    zxlogf(INFO, "%s: Successfuly read@%u on retry %zd", __func__, nand_page, retry - 1);
+  } else if (retry > 1) {
+    zxlogf(INFO, "%s: Successfully read@%u on retry %zd", __func__, nand_page, retry - 1);
   }
   return status;
 }
