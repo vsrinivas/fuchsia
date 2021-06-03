@@ -108,11 +108,12 @@ func TestParseMetaContents_InvalidLine(t *testing.T) {
 func TestMetaContentsString(t *testing.T) {
 	contents := MetaContents{
 		"bin/app": MustDecodeMerkleRoot(merkleA),
-		"foo/bar": MustDecodeMerkleRoot(merkleE),
+		"recovery": MustDecodeMerkleRoot(merkleE),
+		"recovery.vbmeta": MustDecodeMerkleRoot(merkleF),
 	}
 	actual := contents.String()
 
-	expected := fmt.Sprintf("bin/app=%s\nfoo/bar=%s\n", merkleA, merkleE)
+	expected := fmt.Sprintf("bin/app=%s\nrecovery=%s\nrecovery.vbmeta=%s\n", merkleA, merkleE, merkleF)
 
 	if expected != actual {
 		t.Errorf("got %v, want %v", actual, expected)

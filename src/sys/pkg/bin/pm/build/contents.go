@@ -125,12 +125,18 @@ func ParseMetaContents(r io.Reader) (MetaContents, error) {
 // String serializes the instance in the manifest file format, which could be
 // parsed by ParseMetaContents.
 func (m MetaContents) String() string {
+	paths := make([]string, 0, len(m))
+	for path, _ := range m {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
 	contentLines := make([]string, 0, len(m))
-	for path, root := range m {
+	for _, path := range paths {
+		root := m[path]
 		line := fmt.Sprintf("%s=%s\n", path, root)
 		contentLines = append(contentLines, line)
 	}
-	sort.Strings(contentLines)
 
 	return strings.Join(contentLines, "")
 }
