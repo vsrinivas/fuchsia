@@ -20,6 +20,7 @@
 #include "fbl/ref_ptr.h"
 #include "fuchsia/sys/cpp/fidl.h"
 #include "lib/async/cpp/task.h"
+#include "lib/syslog/cpp/macros.h"
 #include "src/sys/appmgr/job_provider_impl.h"
 #include "src/sys/appmgr/realm.h"
 #include "src/sys/appmgr/util.h"
@@ -238,29 +239,34 @@ void Namespace::MaybeAddComponentEventProvider() {
 
 void Namespace::RunShutdownIfNoChildren(fxl::RefPtr<Namespace> ns) {
   if (ns->status_ == Status::SHUTTING_DOWN && ns->children_.empty()) {
+    ns->status_ = Status::STOPPING;
     ns->vfs_.CloseAllConnectionsForVnode(*ns->services_, [ns]() {
-      ns->status_ = Status::STOPPED;
-      for (auto& callback : ns->shutdown_callbacks_) {
-        async::PostTask(async_get_default_dispatcher(),
-                        [callback = std::move(callback)]() mutable { callback(); });
-      }
-      ns->shutdown_callbacks_.clear();
-      ns->vfs_.Shutdown([ns](zx_status_t /*unused*/) mutable { ns.reset(); });
+      ns->vfs_.Shutdown([ns](zx_status_t /*unused*/) mutable {
+        ns->status_ = Status::STOPPED;
+        if (ns->parent_) {
+          bool ret = ns->parent_->RemoveChild(ns.get());
+          FX_DCHECK(ret);
+        }
+        for (auto& callback : ns->shutdown_callbacks_) {
+          async::PostTask(async_get_default_dispatcher(),
+                          [callback = std::move(callback)]() mutable { callback(); });
+        }
+        ns->shutdown_callbacks_.clear();
+        ns.reset();
+      });
     });
   }
 }
 
-void Namespace::ExtractChild(fxl::RefPtr<Namespace> ns, Namespace* child) {
-  ns->children_.erase(child);
-  RunShutdownIfNoChildren(std::move(ns));
-}
+bool Namespace::RemoveChild(Namespace* child) { return children_.erase(child) == 1; }
 
 void Namespace::FlushAndShutdown(fxl::RefPtr<Namespace> self,
                                  fs::ManagedVfs::CloseAllConnectionsForVnodeCallback callback) {
   ZX_ASSERT(self.get() == this);
   switch (status_) {
     case Status::SHUTTING_DOWN:
-      // We are already shutting down. Store callback and return.
+    case Status::STOPPING:
+      // We are already stopping/shutting down. Store callback and return.
       if (callback) {
         shutdown_callbacks_.push_back(std::move(callback));
       }
@@ -287,7 +293,7 @@ void Namespace::FlushAndShutdown(fxl::RefPtr<Namespace> self,
 
   for (auto& child : children_) {
     async::PostTask(async_get_default_dispatcher(), [ns = child.second, self]() {
-      ns->FlushAndShutdown(ns, [ptr = ns.get(), self]() { ExtractChild(self, ptr); });
+      ns->FlushAndShutdown(ns, [ptr = ns.get(), self]() { RunShutdownIfNoChildren(self); });
     });
   }
 }

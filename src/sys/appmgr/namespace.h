@@ -110,8 +110,16 @@ class Namespace : public fuchsia::sys::Environment,
   // So that constructor with parent namesapace cannot be used directly.
   struct PrivateConstructor {};
   enum Status {
+    /// Namespace running and serving request.
     RUNNING,
+
+    /// Got shutdown request.
     SHUTTING_DOWN,
+
+    /// Stopping vfs and dependencies.
+    STOPPING,
+
+    /// Namespace stopped.
     STOPPED,
   };
 
@@ -129,7 +137,9 @@ class Namespace : public fuchsia::sys::Environment,
 
   void AddChild(fxl::RefPtr<Namespace> child);
 
-  static void ExtractChild(fxl::RefPtr<Namespace> ns, Namespace* child);
+  /// Removes child and returns true if the child was present.
+  bool RemoveChild(Namespace* child);
+
   static void RunShutdownIfNoChildren(fxl::RefPtr<Namespace> ns);
 
   fidl::BindingSet<fuchsia::sys::Environment> environment_bindings_;

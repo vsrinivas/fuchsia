@@ -79,6 +79,40 @@ class NamespaceTest : public ::gtest::RealLoopFixture {
   }
 };
 
+TEST_F(NamespaceTest, NoReferencesToParentAfterItIsShutDown) {
+  ServiceListPtr service_list(new ServiceList);
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  service_list->host_directory = dir.TakeChannel();
+  auto parent_ns = MakeNamespace(std::move(service_list));
+  auto child_ns = Namespace::CreateChildNamespace(parent_ns.ns(), nullptr, nullptr, nullptr);
+  // When creating a child namespace, parent also stores a reference to namespace. As we already
+  // have a reference here, make sure that we have more than one reference of this namespace. After
+  // `FlushAndShutdown` is called reference stored in parent should go away.
+  EXPECT_FALSE(child_ns->HasOneRef());
+  bool ns_killed = false;
+  child_ns->FlushAndShutdown(child_ns, [&]() {
+    // After child_ns is shut down, no one else is holding references to it anymore.
+    EXPECT_TRUE(child_ns->HasOneRef());
+    ns_killed = true;
+  });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(ns_killed);
+}
+
+TEST_F(NamespaceTest, KillNamespaceWithNoParent) {
+  auto ns = fxl::MakeRefCounted<Namespace>(nullptr, nullptr, nullptr);
+  // no one else should be holding a reference
+  EXPECT_TRUE(ns->HasOneRef());
+  bool ns_killed = false;
+  ns->FlushAndShutdown(ns, [&]() {
+    // make sure we have one ns reference so that it can be killed after shutdown.
+    EXPECT_TRUE(ns->HasOneRef());
+    ns_killed = true;
+  });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(ns_killed);
+}
+
 class NamespaceHostDirectoryTest : public NamespaceTest {
  protected:
   zx::channel OpenAsDirectory() {
