@@ -105,15 +105,21 @@ func TestBadHeaders_misnumberedHeaders(t *testing.T) {
 	ruleTestCase{
 		files: map[string]string{
 			"misnumbered_headers.md": `
-# Title A
-## Title A
-«####» Title A
+# H1
+## H2
+«####» H4
 Above header is two levels higher than previous header, making it invalid. Only H2, or H3 would be valid here.
 
-### Title B
-#### Title B
-«##» Title B
-Above header is tow levels lower than previous header, making it invalid. Only H3, H4, or H5 would be valid here.`,
+### H3
+#### H4
+## H2-2
+Above header is two levels lower than previous header, which is valid.
+## H2-3
+«#» Title B
+Above header is H1, which is invalid; only one H1 can exist in a doc.
+### H3-2
+#### H4
+## H2-4`,
 		},
 	}.runOverTokens(t, newBadHeaders)
 }

@@ -61,6 +61,7 @@ func (rule *badHeaders) OnNext(tok core.Token) {
 			rule.headerTok = tok
 			rule.headerLn = tok.Ln
 			curr_depth := len(tok.Content)
+			depth_delta := curr_depth - rule.headerDepth
 
 			if curr_depth == 1 {
 				rule.skipHeader = true
@@ -70,20 +71,15 @@ func (rule *badHeaders) OnNext(tok core.Token) {
 					return
 				}
 				rule.initHeaderFound = true
-			} else if curr_depth == rule.headerDepth-1 {
-				// If header depth decreased, pop highest level set of headers
-				rule.docHeaderStack = rule.docHeaderStack[:len(rule.docHeaderStack)-1]
-			} else if curr_depth == rule.headerDepth+1 {
+			} else if depth_delta < 0 {
+				// If header depth decreased, pop all higher level headers
+				rule.docHeaderStack = rule.docHeaderStack[:len(rule.docHeaderStack)+depth_delta]
+			} else if depth_delta == 1 {
 				// If header depth increased, create new set to track higher level headers
 				rule.docHeaderStack = append(rule.docHeaderStack, make(map[string]struct{}))
-			} else if curr_depth != rule.headerDepth {
+			} else if depth_delta > 1 {
 				// Report and skip misnumbered header
-				switch curr_depth {
-				case 2:
-					rule.reporter.Warnf(rule.headerTok, "misnumbered header, must be H2, or H3")
-				default:
-					rule.reporter.Warnf(rule.headerTok, "misnumbered header, must be H%d, H%d, or H%d", rule.headerDepth-1, rule.headerDepth, rule.headerDepth+1)
-				}
+				rule.reporter.Warnf(rule.headerTok, "misnumbered header, must be between H2 and H%d inclusive", rule.headerDepth+1)
 				rule.skipHeader = true
 				return
 			}
