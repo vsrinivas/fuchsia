@@ -15,13 +15,13 @@ use {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "serve", description = "")]
 pub struct ServeCommand {
-    /// serve repositories on this address. `ADDRESS` is optional. Defaults to `localhost:8084`.
+    /// serve repositories on this address. `ADDRESS` is optional. Defaults to `localhost:8085`.
     #[argh(option, short = 'a', default = "default_listen_addr()", from_str_fn(parse_listen_addr))]
     pub listen_address: SocketAddr,
 }
 
 fn default_listen_addr() -> SocketAddr {
-    (Ipv4Addr::LOCALHOST, 8084).into()
+    (Ipv4Addr::LOCALHOST, 8085).into()
 }
 
 fn parse_listen_addr(addr: &str) -> Result<SocketAddr, String> {
