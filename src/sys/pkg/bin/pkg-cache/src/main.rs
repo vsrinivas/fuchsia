@@ -25,6 +25,7 @@ mod blobs;
 mod cache_service;
 mod dynamic_index;
 mod gc_service;
+mod index;
 mod pkgfs_inspect;
 
 #[cfg(test)]

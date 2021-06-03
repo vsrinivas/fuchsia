@@ -265,7 +265,7 @@ pub async fn fulfill_meta_far_blob(
 
 /// Parses the meta far blob, if it exists in blobfs, returning the package path in meta/package and
 /// the set of all content blobs specified in meta/contents.
-async fn enumerate_package_blobs(
+pub async fn enumerate_package_blobs(
     blobfs: &blobfs::Client,
     meta_hash: &Hash,
 ) -> Result<Option<(PackagePath, HashSet<Hash>)>, DynamicIndexError> {
@@ -284,6 +284,7 @@ async fn enumerate_package_blobs(
 
     Ok(Some((meta_package.into_path(), meta_contents.into_hashes().collect::<HashSet<_>>())))
 }
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum PackageNode {
     Pending {
