@@ -61,7 +61,6 @@
 
 #define POWER_KEEP_ALIVE_PERIOD_SEC 25
 
-#if 0   // NEEDS_PORTING
 static int iwl_mvm_beacon_filter_send_cmd(struct iwl_mvm* mvm, struct iwl_beacon_filter_cmd* cmd,
                                           uint32_t flags) {
   IWL_DEBUG_POWER(mvm, "ba_enable_beacon_abort is: %d\n", le32_to_cpu(cmd->ba_enable_beacon_abort));
@@ -82,18 +81,17 @@ static int iwl_mvm_beacon_filter_send_cmd(struct iwl_mvm* mvm, struct iwl_beacon
                               sizeof(struct iwl_beacon_filter_cmd), cmd);
 }
 
-static void iwl_mvm_beacon_filter_set_cqm_params(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+static void iwl_mvm_beacon_filter_set_cqm_params(struct iwl_mvm_vif* mvmvif,
                                                  struct iwl_beacon_filter_cmd* cmd, bool d0i3) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-
+#if 0   // NEEDS_PORTING
   if (vif->bss_conf.cqm_rssi_thold && !d0i3) {
     cmd->bf_energy_delta = cpu_to_le32(vif->bss_conf.cqm_rssi_hyst);
     /* fw uses an absolute value for this */
     cmd->bf_roaming_state = cpu_to_le32(-vif->bss_conf.cqm_rssi_thold);
   }
+#endif  // NEEDS_PORTING
   cmd->ba_enable_beacon_abort = cpu_to_le32(mvmvif->bf_data.ba_enabled);
 }
-#endif  // NEEDS_PORTING
 
 static void iwl_mvm_power_log(struct iwl_mvm* mvm, struct iwl_mac_power_cmd* cmd) {
   IWL_DEBUG_POWER(mvm,
@@ -770,64 +768,63 @@ void iwl_mvm_beacon_filter_debugfs_parameters(struct ieee80211_vif* vif,
 }
 #endif
 
-static int _iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                         struct iwl_beacon_filter_cmd* cmd, uint32_t cmd_flags,
-                                         bool d0i3) {
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  int ret;
+#endif  // NEEDS_PORTING
+static zx_status_t _iwl_mvm_enable_beacon_filter(struct iwl_mvm_vif* mvmvif,
+                                                 struct iwl_beacon_filter_cmd* cmd,
+                                                 uint32_t cmd_flags, bool d0i3) {
+  struct iwl_mvm* mvm = mvmvif->mvm;
 
-  if (mvmvif != mvm->bf_allowed_vif || !vif->bss_conf.dtim_period ||
-      vif->type != NL80211_IFTYPE_STATION || vif->p2p) {
-    return 0;
+  if (mvmvif != mvm->bf_allowed_vif || !mvmvif->bss_conf.dtim_period ||
+      mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT || mvmvif->p2p) {
+    return ZX_OK;
   }
 
-  iwl_mvm_beacon_filter_set_cqm_params(mvm, vif, cmd, d0i3);
+  iwl_mvm_beacon_filter_set_cqm_params(mvmvif, cmd, d0i3);
+#if 0   // NEEDS_PORTING
   if (!d0i3) {
     iwl_mvm_beacon_filter_debugfs_parameters(vif, cmd);
   }
-  ret = iwl_mvm_beacon_filter_send_cmd(mvm, cmd, cmd_flags);
+#endif  // NEEDS_PORTING
+  zx_status_t ret = iwl_mvm_beacon_filter_send_cmd(mvm, cmd, cmd_flags);
 
   /* don't change bf_enabled in case of temporary d0i3 configuration */
-  if (!ret && !d0i3) {
+  if (ret == ZX_OK && !d0i3) {
     mvmvif->bf_data.bf_enabled = true;
   }
 
   return ret;
 }
 
-int iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags) {
+zx_status_t iwl_mvm_enable_beacon_filter(struct iwl_mvm_vif* mvmvif, uint32_t flags) {
   struct iwl_beacon_filter_cmd cmd = {
       IWL_BF_CMD_CONFIG_DEFAULTS,
       .bf_enable_beacon_filter = cpu_to_le32(1),
   };
 
-  return _iwl_mvm_enable_beacon_filter(mvm, vif, &cmd, flags, false);
+  return _iwl_mvm_enable_beacon_filter(mvmvif, &cmd, flags, false);
 }
 
-static int _iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                          uint32_t flags, bool d0i3) {
+static zx_status_t _iwl_mvm_disable_beacon_filter(struct iwl_mvm_vif* mvmvif, uint32_t flags,
+                                                  bool d0i3) {
   struct iwl_beacon_filter_cmd cmd = {};
-  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  int ret;
 
-  if (vif->type != NL80211_IFTYPE_STATION || vif->p2p) {
-    return 0;
+  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT || mvmvif->p2p) {
+    return ZX_OK;
   }
 
-  ret = iwl_mvm_beacon_filter_send_cmd(mvm, &cmd, flags);
+  zx_status_t ret = iwl_mvm_beacon_filter_send_cmd(mvmvif->mvm, &cmd, flags);
 
   /* don't change bf_enabled in case of temporary d0i3 configuration */
-  if (!ret && !d0i3) {
+  if (ret == ZX_OK && !d0i3) {
     mvmvif->bf_data.bf_enabled = false;
   }
 
   return ret;
 }
 
-int iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags) {
-  return _iwl_mvm_disable_beacon_filter(mvm, vif, flags, false);
+zx_status_t iwl_mvm_disable_beacon_filter(struct iwl_mvm_vif* mvmvif, uint32_t flags) {
+  return _iwl_mvm_disable_beacon_filter(mvmvif, flags, false);
 }
-#endif  // NEEDS_PORTING
 
 static zx_status_t iwl_mvm_power_set_ps(struct iwl_mvm* mvm) {
   bool disable_ps;

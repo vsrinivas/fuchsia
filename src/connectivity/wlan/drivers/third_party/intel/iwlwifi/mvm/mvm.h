@@ -394,6 +394,7 @@ struct iwl_mvm_vif {
   bool monitor_active;
   uint8_t low_latency;
   bool ps_disabled;
+  bool p2p;
   struct iwl_mvm_vif_bf_data bf_data;
 
   struct {
@@ -1913,8 +1914,8 @@ static inline void iwl_mvm_beacon_filter_debugfs_parameters(struct ieee80211_vif
 #endif
 int iwl_mvm_update_d0i3_power_mode(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool enable,
                                    uint32_t flags);
-int iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags);
-int iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags);
+zx_status_t iwl_mvm_enable_beacon_filter(struct iwl_mvm_vif* mvmvif, uint32_t flags);
+zx_status_t iwl_mvm_disable_beacon_filter(struct iwl_mvm_vif* mvmvif, uint32_t flags);
 /* SMPS */
 void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                          enum iwl_mvm_smps_type_request req_type,

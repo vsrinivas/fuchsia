@@ -412,6 +412,11 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
     IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
     goto out;
   }
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTHORIZED);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTHORIZED: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
 
   // Tell firmware to pass multicast packets to driver.
   iwl_mvm_configure_filter(mvmvif->mvm);

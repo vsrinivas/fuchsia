@@ -2839,20 +2839,23 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
 
     ret = iwl_mvm_update_sta(mvm, mvm_sta);
 
+  } else if (old_state == IWL_STA_ASSOC && new_state == IWL_STA_AUTHORIZED) {
 #if 0   // NEEDS_PORTING
-    } else if (old_state == IWL_STA_ASSOC && new_state == IWL_STA_AUTHORIZED) {
         /* we don't support TDLS during DCM */
         if (iwl_mvm_phy_ctx_count(mvm) > 1) { iwl_mvm_teardown_tdls_peers(mvm); }
 
         if (sta->tdls) {
             iwl_mvm_tdls_check_trigger(mvm, vif, sta->addr, NL80211_TDLS_ENABLE_LINK);
         }
+#endif  // NEEDS_PORTING
 
-        /* enable beacon filtering */
-        if (iwl_mvm_enable_beacon_filter(mvm, vif, 0)) {
-          IWL_WARN(mvm, "cannot enable beacon filter\n");
-        }
+    /* enable beacon filtering */
+    if (iwl_mvm_enable_beacon_filter(mvmvif, 0)) {
+      IWL_WARN(mvm, "cannot enable beacon filter\n");
+    }
+    ret = ZX_OK;
 
+#if 0   // NEEDS_PORTING
         iwl_mvm_rs_rate_init(mvm, sta, mvmvif->phy_ctxt->channel->band, true);
 
         /* if wep is used, need to set the key for the station now */

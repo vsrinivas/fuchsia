@@ -792,7 +792,7 @@ TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
 
   ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
-  ASSERT_EQ(IWL_STA_ASSOC, mvm_sta->sta_state);
+  ASSERT_EQ(IWL_STA_AUTHORIZED, mvm_sta->sta_state);
   ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
   ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
 }
