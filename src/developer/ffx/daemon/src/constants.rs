@@ -20,9 +20,6 @@ pub(crate) const ZEDBOOT_MAX_AGE: Duration =
 // Delay between retry attempts to find the RCS.
 pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 
-// Config keys
-pub(crate) const SSH_PRIV: &str = "ssh.priv";
-
 pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
 
 #[cfg(not(test))]

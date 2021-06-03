@@ -5,7 +5,7 @@
 use {
     crate::constants::RETRY_DELAY,
     crate::ssh::build_ssh_command,
-    crate::target::{ConnectionState, Target, TargetAddr},
+    crate::target::{ConnectionState, Target},
     anyhow::{anyhow, Context, Result},
     async_io::Async,
     fuchsia_async::{Task, Timer},
@@ -17,6 +17,7 @@ use {
     hoist::OvernetInstance,
     std::future::Future,
     std::io,
+    std::net::SocketAddr,
     std::process::{Child, Stdio},
     std::rc::Weak,
     std::time::Duration,
@@ -45,22 +46,15 @@ async fn latency_sensitive_copy(
 }
 
 impl HostPipeChild {
-    pub async fn new(
-        addrs: Vec<TargetAddr>,
-        ssh_port: Option<u16>,
-        id: u64,
-    ) -> Result<HostPipeChild> {
-        let mut inner = build_ssh_command(
-            addrs,
-            ssh_port,
-            vec!["remote_control_runner", format!("{}", id).as_str()],
-        )
-        .await?
-        .stdout(Stdio::piped())
-        .stdin(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .context("running target overnet pipe")?;
+    pub async fn new(addr: SocketAddr, id: u64) -> Result<HostPipeChild> {
+        let mut inner =
+            build_ssh_command(addr, vec!["remote_control_runner", format!("{}", id).as_str()])
+                .await?
+                .stdout(Stdio::piped())
+                .stdin(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .context("running target overnet pipe")?;
 
         let (mut pipe_rx, mut pipe_tx) = futures::AsyncReadExt::split(
             overnet_pipe(hoist::hoist()).context("creating local overnet pipe")?,
@@ -157,24 +151,24 @@ impl Drop for HostPipeChild {
 pub struct HostPipeConnection {}
 
 impl HostPipeConnection {
-    pub fn new(target: Weak<Target>) -> impl Future<Output = Result<(), String>> {
+    pub fn new(target: Weak<Target>) -> impl Future<Output = Result<()>> {
         HostPipeConnection::new_with_cmd(target, HostPipeChild::new, RETRY_DELAY)
     }
 
     async fn new_with_cmd<F>(
         target: Weak<Target>,
-        cmd_func: impl FnOnce(Vec<TargetAddr>, Option<u16>, u64) -> F + Copy + 'static,
+        cmd_func: impl FnOnce(SocketAddr, u64) -> F + Copy + 'static,
         relaunch_command_delay: Duration,
-    ) -> Result<(), String>
+    ) -> Result<()>
     where
         F: futures::Future<Output = Result<HostPipeChild>>,
     {
         loop {
             log::debug!("Spawning new host-pipe instance");
-            let target = target.upgrade().ok_or("parent Arc<> lost. exiting".to_owned())?;
-            let addrs = target.addrs();
-            let port = target.ssh_port();
-            let mut cmd = cmd_func(addrs, port, target.id()).await.map_err(|e| e.to_string())?;
+            let target = target.upgrade().ok_or(anyhow!("parent Arc<> lost. exiting"))?;
+            let ssh_address =
+                target.ssh_address().ok_or(anyhow!("target does not yet have an ssh address"))?;
+            let mut cmd = cmd_func(ssh_address, target.id()).await?;
 
             // Attempts to run the command. If it exits successfully (disconnect due to peer
             // dropping) then will set the target to disconnected state. If
@@ -182,7 +176,7 @@ impl HostPipeConnection {
             // continue and attempt to run the command again.
             match Task::blocking(async move { cmd.wait() })
                 .await
-                .map_err(|e| format!("host-pipe error running try-wait: {}", e.to_string()))
+                .map_err(|e| anyhow!("host-pipe error running try-wait: {}", e.to_string()))
             {
                 Ok(_) => {
                     target.update_connection_state(|s| match s {
@@ -234,11 +228,7 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(
-        _t: Vec<TargetAddr>,
-        _port: Option<u16>,
-        _id: u64,
-    ) -> Result<HostPipeChild> {
+    async fn start_child_normal_operation(_addr: SocketAddr, _id: u64) -> Result<HostPipeChild> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
                 .arg("test-command")
@@ -249,11 +239,7 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(
-        _t: Vec<TargetAddr>,
-        _port: Option<u16>,
-        _id: u64,
-    ) -> Result<HostPipeChild> {
+    async fn start_child_internal_failure(_addr: SocketAddr, _id: u64) -> Result<HostPipeChild> {
         Err(anyhow!(ERR_CTX))
     }
 
