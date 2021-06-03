@@ -11,10 +11,14 @@ group("tests") {
 
   deps = [
     ":hw_tests",
-    "goldfish_benchmark",
     "goldfish_test",
     "vkreadback:linux_arm64",
   ]
+
+  # TODO(77955): Make this test work under KASan.
+  if (select_variant + [ "kasan" ] - [ "kasan" ] == select_variant) {
+    deps += [ "goldfish_benchmark" ]
+  }
 }
 
 group("hw_tests") {
