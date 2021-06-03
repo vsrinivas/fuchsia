@@ -1275,3 +1275,16 @@
   reviewers: [ 'maniscalco@google.com', 'shanyu@google.com', 'brunodalbo@google.com', 'scottmg@google.com', 'pascallouis@google.com', 'iyerm@google.com', 'mcgrathr@google.com', 'abarth@google.com' ]
   submitted: '2021-05-06'
   reviewed: '2021-06-03'
+
+- name: 'RFC-0101'
+  title: 'Dynamic components with numbered handles'
+  short_description: 'Provides a way to pass numbered handles to dynamic components.'
+  authors: ['lindkvist@google.com, geb@google.com']
+  file: 'NNNN_dynamic_components_numbered_handles.md'
+  area: ['Component Framework']
+  issue: ['']
+  gerrit_change_id: ['531642']
+  status: 'Accepted'
+  reviewers: [ 'bryanhenry@google.com', 'geb@google.com', 'dgonyeo@google.com', 'shayba@google.com', 'thatguy@google.com']
+  submitted: '2021-05-18'
+  reviewed: '2021-06-02'

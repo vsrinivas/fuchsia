@@ -209,3 +209,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0098_component_framework_rfc_criteria.md
 - title: "RFC-0099: Introduce `zx_socket_set_disposition`"
   path: /docs/contribute/governance/rfcs/0099_socket_set_disposition.md
+- title: "RFC-0101: Dynamic components with numbered handles"
+  path: /docs/contribute/governance/rfcs/0101_dynamic_components_with_numbered_handles.md
