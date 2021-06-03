@@ -123,9 +123,15 @@ impl ServiceRegister {
             fut.await.unwrap_or_else(|e| log::warn!("running service stream handler: {:#?}", e));
             if let Some(inner) = weak_inner.upgrade() {
                 if let Some(handle) = inner.remove_handle(&name_copy, &task_id) {
-                    log::info!("dropping service task: {}-{}", name_copy, task_id);
+                    // Closes the stream's handle to make sure the task
+                    // completes cleanly.
                     let r = handle.shutdown().await;
-                    log::info!("shutdown result for {}-{}: {:?}", name_copy, task_id, r);
+                    log::info!(
+                        "service stream for {}-{} finished with result: {:?}",
+                        name_copy,
+                        task_id,
+                        r
+                    );
                 }
             }
             Ok(())
