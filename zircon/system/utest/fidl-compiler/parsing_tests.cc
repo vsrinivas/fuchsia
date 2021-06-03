@@ -894,4 +894,30 @@ type Foo = struct {
   ASSERT_COMPILED(library);
 }
 
+TEST(ParsingTests, BadSubtypeCtor) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct : uint32 {};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotSpecifySubtype);
+}
+
+TEST(ParsingTests, BadLayoutClass) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = foobar {};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLayoutClass);
+}
+
 }  // namespace

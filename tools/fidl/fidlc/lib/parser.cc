@@ -2040,42 +2040,46 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
 
 std::unique_ptr<raw::Layout> Parser::ParseLayout(
     ASTScope& scope, const Modifiers& modifiers,
-    std::unique_ptr<raw::CompoundIdentifier> identifier,
+    std::unique_ptr<raw::CompoundIdentifier> compound_identifier,
     std::unique_ptr<raw::TypeConstructorNew> subtype_ctor) {
   raw::Layout::Kind kind;
   raw::LayoutMember::Kind member_kind;
 
-  if (identifier->components.size() != 1) {
+  if (compound_identifier->components.size() != 1) {
     return Fail(ErrInvalidLayoutClass);
   }
+  std::unique_ptr<raw::Identifier> identifier = std::move(compound_identifier->components[0]);
 
   // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
   // remove token subkinds for struct, union, table, bits, and enum. Or
   // maybe we want to have a 'recognize token subkind' on an identifier
   // instead of doing string comparison directly.
-  if (identifier->components[0]->span().data() == "bits") {
-    ValidateModifiers<types::Strictness>(modifiers, identifier->components[0]->start_);
+  if (identifier->span().data() == "bits") {
+    ValidateModifiers<types::Strictness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kBits;
     member_kind = raw::LayoutMember::Kind::kValue;
-  } else if (identifier->components[0]->span().data() == "enum") {
-    ValidateModifiers<types::Strictness>(modifiers, identifier->components[0]->start_);
+  } else if (identifier->span().data() == "enum") {
+    ValidateModifiers<types::Strictness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kEnum;
     member_kind = raw::LayoutMember::Kind::kValue;
-  } else if (identifier->components[0]->span().data() == "struct") {
-    ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
+  } else if (identifier->span().data() == "struct") {
+    ValidateModifiers<types::Resourceness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kStruct;
     member_kind = raw::LayoutMember::Kind::kStruct;
-  } else if (identifier->components[0]->span().data() == "table") {
-    ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
+  } else if (identifier->span().data() == "table") {
+    ValidateModifiers<types::Resourceness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kTable;
     member_kind = raw::LayoutMember::Kind::kOrdinaled;
-  } else if (identifier->components[0]->span().data() == "union") {
-    ValidateModifiers<types::Strictness, types::Resourceness>(modifiers,
-                                                              identifier->components[0]->start_);
+  } else if (identifier->span().data() == "union") {
+    ValidateModifiers<types::Strictness, types::Resourceness>(modifiers, identifier->start_);
     kind = raw::Layout::Kind::kUnion;
     member_kind = raw::LayoutMember::Kind::kOrdinaled;
   } else {
     return Fail(ErrInvalidLayoutClass);
+  }
+
+  if (member_kind != raw::LayoutMember::Kind::kValue && subtype_ctor != nullptr) {
+    return Fail(ErrCannotSpecifySubtype, identifier->start_.kind_and_subkind());
   }
 
   ConsumeToken(OfKind(Token::Kind::kLeftCurly));

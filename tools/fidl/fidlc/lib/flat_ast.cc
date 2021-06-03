@@ -3324,7 +3324,7 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
                                        union_declaration->resourceness));
 }
 
-// TODO(fxbug.dev/71536): these conversion methods may need to be refactored
+// TODO(fxbug.dev/77853): these conversion methods may need to be refactored
 //  once the new flat AST lands, and such coercion  is no longer needed.
 template <typename T, typename M>
 bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name& context,

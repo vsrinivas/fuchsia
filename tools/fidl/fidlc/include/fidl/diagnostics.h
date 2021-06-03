@@ -78,6 +78,7 @@ constexpr ErrorDef ErrOldHandleSyntax(
     "handle<type> is no longer supported, please use zx.handle:TYPE");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrCannotSpecifyModifier(
     "cannot specify modifier {} for {}");
+constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifySubtype("cannot specify subtype for {}");
 constexpr ErrorDef<Token::KindAndSubkind> ErrDuplicateModifier(
     "duplicate occurrence of modifier {}");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrConflictingModifier(

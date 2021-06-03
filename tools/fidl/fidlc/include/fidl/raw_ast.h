@@ -993,7 +993,7 @@ class Layout final : public SourceElement {
   std::vector<std::unique_ptr<raw::LayoutMember>> members;
   std::optional<types::Strictness> strictness;
   types::Resourceness resourceness;
-  // TODO(fxbug.dev/65978): Eventually we'll make [Struct/Ordinaled/Value]Layout
+  // TODO(fxbug.dev/77853): Eventually we'll make [Struct/Ordinaled/Value]Layout
   //  classes to inherit from the now-abstract Layout class, similar to what can
   //  currently be seen on LayoutMember and its children.  When that happens
   //  this field will only exist on ValueLayout.
