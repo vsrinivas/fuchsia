@@ -363,7 +363,7 @@ Note that a badly-behaved callee could hold into the MBO indefinitely,
 but that is not very different from behaving badly by never unqueuing
 requests.
 
-## Preserving cross-channel message ordering
+## Preserving message ordering across channels
 
 The MBMQ model is able to preserve the ordering of messages sent on
 different channels that are handled by the same server process.  This
