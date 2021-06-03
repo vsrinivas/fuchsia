@@ -81,7 +81,7 @@ TEST_F(VirtualCameraTest, FramesReceived) {
   RunLoopUntilFailureOr(token_received);
 
   fuchsia::sysmem::BufferCollectionPtr collection;
-  SetFailOnError(collection);
+  SetFailOnError(collection, "BufferCollection");
   allocator_->BindSharedCollection(std::move(client_token), collection.NewRequest());
 
   fuchsia::sysmem::BufferCollectionConstraints constraints{

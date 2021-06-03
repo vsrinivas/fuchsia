@@ -599,7 +599,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
   void SetupFakeTokenHandles(uint32_t count) {
     for (uint32_t i = 0; i < count; i++) {
       BufferCollectionTokenHandle token_handle;
-      context_provider().ConnectToPublicService(token_handle.NewRequest());
+      auto _unused_server_end = token_handle.NewRequest();
       stream_serv()->token_handle_provider()->Put(std::move(token_handle));
     }
   }

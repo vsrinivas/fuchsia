@@ -13,7 +13,7 @@ using zx;
 /// We use a channel for the BufferCollectionToken instead of a single eventpair
 /// (pair) because this way we can detect error conditions like a participant
 /// dying mid-create.
-[Discoverable, ForDeprecatedCBindings]
+[ForDeprecatedCBindings]
 protocol BufferCollectionToken {
     /// The initiator or a participant can send Duplicate() as part of creating
     /// another participant-side handle to the same logical
@@ -216,7 +216,7 @@ protocol BufferCollectionToken {
 /// memory fragmentation and avoid overlap of buffer allocation lifetimes for
 /// the old and new collections. Collections can be large enough that it's worth
 /// avoiding allocation overlap (in time).
-[Discoverable, ForDeprecatedCBindings]
+[ForDeprecatedCBindings]
 protocol BufferCollection {
     /// At least for now, the only way to get events from a BufferCollection is
     /// to set a reverse BufferCollectionEvents channel.  This can be sent up to
@@ -546,7 +546,7 @@ protocol BufferCollection {
 /// OnOldBufferClosed(), because such an event could arrive at a participant too
 /// soon to be useful.  Instead, such an indication should be made in-band within
 /// FIDL interfaces that deliver packets to downstream participants.
-[Discoverable, ForDeprecatedCBindings]
+[ForDeprecatedCBindings]
 protocol BufferCollectionEvents {
     /// See comments on BufferCollectionToken::Sync().
     ///

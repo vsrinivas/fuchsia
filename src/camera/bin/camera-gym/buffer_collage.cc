@@ -170,7 +170,7 @@ fit::promise<uint32_t> BufferCollage::AddCollection(
 
     // Bind and duplicate the token.
     fuchsia::sysmem::BufferCollectionTokenPtr token_ptr;
-    SetStopOnError(token_ptr);
+    SetStopOnError(token_ptr, "BufferCollectionToken");
     zx_status_t status = token_ptr.Bind(std::move(token), loop_.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status);
