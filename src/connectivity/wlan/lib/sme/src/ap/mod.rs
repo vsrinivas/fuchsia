@@ -598,7 +598,7 @@ impl InfraBss {
     }
 
     fn handle_channel_switch(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
-        info!("Channel switch for AP.");
+        info!("Channel switch for AP: {:?}", info);
         self.op_radio_cfg.chan.primary = info.new_channel;
     }
 
