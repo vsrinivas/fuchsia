@@ -34,6 +34,8 @@ scenic_impl::ConfigValues ReadConfig() {
 
   std::string config_string;
   if (files::ReadFileToString("/config/data/scenic_config", &config_string)) {
+    FX_LOGS(INFO) << "Found config file at /config/data/scenic_config";
+
     rapidjson::Document document;
     document.Parse(config_string);
 
@@ -47,23 +49,26 @@ scenic_impl::ConfigValues ReadConfig() {
       values.min_predicted_frame_duration =
           zx::usec(frame_scheduler_min_predicted_frame_duration_in_us);
     }
-    FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
-                  << values.min_predicted_frame_duration.to_usecs();
 
     if (document.HasMember("enable_allocator_for_flatland")) {
       auto& val = document["enable_allocator_for_flatland"];
       FX_CHECK(val.IsBool()) << "enable_allocator_for_flatland must be a boolean";
       values.enable_allocator_for_flatland = val.GetBool();
     }
-    FX_LOGS(INFO) << "enable_allocator_for_flatland: " << values.enable_allocator_for_flatland;
 
     if (document.HasMember("pointer_auto_focus")) {
       auto& val = document["pointer_auto_focus"];
       FX_CHECK(val.IsBool()) << "pointer_auto_focus must be a boolean";
       values.pointer_auto_focus_on = val.GetBool();
     }
-    FX_LOGS(INFO) << "Scenic pointer auto focus: " << values.pointer_auto_focus_on;
+  } else {
+    FX_LOGS(INFO) << "No config file found at /config/data/scenic_config; using default values";
   }
+
+  FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
+                << values.min_predicted_frame_duration.to_usecs();
+  FX_LOGS(INFO) << "enable_allocator_for_flatland: " << values.enable_allocator_for_flatland;
+  FX_LOGS(INFO) << "Scenic pointer auto focus: " << values.pointer_auto_focus_on;
 
   return values;
 }
