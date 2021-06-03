@@ -207,3 +207,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0097_fidl_toolchain.md
 - title: "RFC-0098: Component Framework RFC Criteria"
   path: /docs/contribute/governance/rfcs/0098_component_framework_rfc_criteria.md
+- title: "RFC-0099: Introduce `zx_socket_set_disposition`"
+  path: /docs/contribute/governance/rfcs/0099_socket_set_disposition.md

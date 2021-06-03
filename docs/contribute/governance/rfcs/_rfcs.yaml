@@ -1262,3 +1262,16 @@
   reviewers: [ 'ypomortsev@google.com', 'geb@google.com', 'shayba@google.com', 'pascallouis@google.com' ]
   submitted: '2021-05-20'
   reviewed: '2021-06-01'
+
+- name: 'RFC-0099'
+  title: 'Introduce `zx_socket_set_disposition`'
+  short_description: 'Introduce `zx_socket_set_disposition` to replace `zx_socket_shutdown` with a reversible operation.'
+  authors: ['tamird@google.com']
+  file: '0099_socket_set_disposition.md'
+  area: ['Zircon']
+  issue: ['67465']
+  gerrit_change_id: ['526441']
+  status: 'Accepted'
+  reviewers: [ 'maniscalco@google.com', 'shanyu@google.com', 'brunodalbo@google.com', 'scottmg@google.com', 'pascallouis@google.com', 'iyerm@google.com', 'mcgrathr@google.com', 'abarth@google.com' ]
+  submitted: '2021-05-06'
+  reviewed: '2021-06-03'
