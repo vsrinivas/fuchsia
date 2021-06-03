@@ -1922,11 +1922,14 @@ static bool pmi_interrupt_handler(iframe_t* frame, PerfmonState* state) {
   LTRACEF("cpu %u: clearing status bits 0x%" PRIx64 "\n", cpu, bits_to_clear);
   write_msr(IA32_PERF_GLOBAL_STATUS_RESET, bits_to_clear);
 
-  // TODO(dje): Always do this test for now. Later conditionally include
-  // via some debugging macro.
-  uint64_t end_status = read_msr(IA32_PERF_GLOBAL_STATUS);
-  if (end_status != 0)
-    TRACEF("WARNING: cpu %u: end status 0x%" PRIx64 "\n", cpu, end_status);
+  // Writing to IA32_PERF_GLOBAL_STATUS_RESET should clear IA32_PERF_GLOBAL_STATUS indicators.
+  // If debug asserts are implemented, read the MSR to be sure; avoid the read otherwise, as
+  // reading the MSR here is expensive.
+  if (DEBUG_ASSERT_IMPLEMENTED) {
+    uint64_t end_status = read_msr(IA32_PERF_GLOBAL_STATUS);
+    if (end_status != 0)
+      TRACEF("WARNING: cpu %u: end status 0x%" PRIx64 "\n", cpu, end_status);
+  }
 
   return true;
 }
