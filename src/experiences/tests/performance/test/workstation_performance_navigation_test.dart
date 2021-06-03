@@ -26,6 +26,14 @@ const _timeoutSeconds = 10;
 const _trace2jsonPath = 'runtime_deps/trace2json';
 const _yellowUrl = 'http://127.0.0.1:8080/yellow.html';
 
+// Flags to enable/disable each test in order of
+// 0: Launch Simple Browser
+// 1: Open 5 tabs
+// 2: Rearrange tabs
+// 3: Switch tabs
+// 4: Close tabs
+const skipTests = [false, false, true, false, false];
+
 void main() {
   sl4f.Dump dump;
   Directory dumpDir;
@@ -150,7 +158,7 @@ void main() {
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-  });
+  }, skip: skipTests[0]);
 
   test('Trace performance of opening 5 tabs in Simple Browser', () async {
     FlutterDriver browser;
@@ -233,7 +241,7 @@ void main() {
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-  });
+  }, skip: skipTests[1]);
 
   test('Trace performance of rearranging tabs in Simple Browser', () async {
     FlutterDriver browser;
@@ -354,7 +362,7 @@ void main() {
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-  });
+  }, skip: skipTests[2]);
 
   test('Trace performance of switching tabs in Simple Browser', () async {
     FlutterDriver browser;
@@ -464,7 +472,7 @@ void main() {
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-  });
+  }, skip: skipTests[3]);
 
   test('Trace performance of closing tabs', () async {
     FlutterDriver browser;
@@ -565,5 +573,5 @@ void main() {
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-  });
+  }, skip: skipTests[4]);
 }
