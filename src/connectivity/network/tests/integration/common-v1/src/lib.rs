@@ -174,6 +174,35 @@ pub async fn wait_for_non_loopback_interface_up<
     }
 }
 
+/// Waits for an interface to come up with the specified address.
+pub async fn wait_for_interface_up_and_address(
+    state: &fidl_fuchsia_net_interfaces::StateProxy,
+    id: u64,
+    want_addr: &fidl_fuchsia_net::Subnet,
+) {
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&state)
+            .expect("failed to get interfaces event stream"),
+        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
+        |fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. }| {
+            if !online {
+                return None;
+            }
+
+            // If configuring static addresses, make sure the addresses are
+            // present (this ensures that DAD has resolved for IPv6 addresses).
+            addresses
+                .iter()
+                .any(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr == want_addr
+                })
+                .then(|| ())
+        },
+    )
+    .await
+    .expect("failed waiting for interface to be up and configured")
+}
+
 /// Gets inspect data in environment.
 ///
 /// Returns the resulting inspect data for `component`, filtered by

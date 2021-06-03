@@ -8,17 +8,35 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use fidl_fuchsia_logger;
+use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
+use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
-use fuchsia_async::TimeoutExt as _;
+use fidl_fuchsia_netemul_environment as netemul_environment;
+use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use anyhow::Context as _;
 use fidl::endpoints::create_endpoints;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip, fidl_subnet, std_ip, std_socket_addr};
+use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::EnvironmentUdpSocket as _;
 use netstack_testing_common::environments::{Netstack, Netstack2, TestSandboxExt as _};
-use netstack_testing_common::{EthertapName as _, Result};
+use netstack_testing_common::{
+    wait_for_interface_up_and_address, EthertapName as _, Result,
+    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+};
 use netstack_testing_macros::variants_test;
+use packet::serialize::Serializer as _;
+use packet::ParsablePacket as _;
+use packet_formats::error::ParseError;
+use packet_formats::ethernet::{
+    EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt as _,
+};
+use packet_formats::icmp::{
+    IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs,
+    IcmpUnusedCode, MessageBody as _, OriginalPacket,
+};
+use packet_formats::ip::IpPacketBuilder as _;
+use test_case::test_case;
 
 /// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
 /// if given an invalid interface id.
@@ -1266,4 +1284,312 @@ async fn test_interfaces_watcher() -> Result {
     assert_eq!(try_next(&mut stream).await?, want);
 
     Ok(())
+}
+
+enum ForwardingConfiguration {
+    All,
+    Iface1Only(fidl_fuchsia_net::IpVersion),
+    Iface2Only(fidl_fuchsia_net::IpVersion),
+}
+
+struct ForwardingTestCase<I: IcmpIpExt> {
+    iface1_addr: fidl_fuchsia_net::Subnet,
+    iface2_addr: fidl_fuchsia_net::Subnet,
+    forwarding_config: Option<ForwardingConfiguration>,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    expect_forward: bool,
+}
+
+fn test_forwarding_v4(
+    forwarding_config: Option<ForwardingConfiguration>,
+    expect_forward: bool,
+) -> ForwardingTestCase<net_types::ip::Ipv4> {
+    ForwardingTestCase {
+        iface1_addr: fidl_subnet!("192.168.1.1/24"),
+        iface2_addr: fidl_subnet!("192.168.2.1/24"),
+        forwarding_config,
+        // TODO(https://fxbug.dev/77901): Use `std_ip_v4!(..).into()`.
+        // TODO(https://fxbug.dev/77965): Use `net_declare` macros to create
+        // `net_types` addresses.
+        src_ip: net_types::ip::Ipv4Addr::new(std_ip_v4!("192.168.1.2").octets()),
+        dst_ip: net_types::ip::Ipv4Addr::new(std_ip_v4!("192.168.2.2").octets()),
+        expect_forward,
+    }
+}
+
+fn test_forwarding_v6(
+    forwarding_config: Option<ForwardingConfiguration>,
+    expect_forward: bool,
+) -> ForwardingTestCase<net_types::ip::Ipv6> {
+    ForwardingTestCase {
+        iface1_addr: fidl_subnet!("a::1/64"),
+        iface2_addr: fidl_subnet!("b::1/64"),
+        forwarding_config,
+        // TODO(https://fxbug.dev/77901): Use `std_ip_v6!(..).into()`.
+        // TODO(https://fxbug.dev/77965): Use `net_declare` macros to create
+        // `net_types` addresses.
+        src_ip: net_types::ip::Ipv6Addr::new(std_ip_v6!("a::2").octets()),
+        dst_ip: net_types::ip::Ipv6Addr::new(std_ip_v6!("b::2").octets()),
+        expect_forward,
+    }
+}
+
+#[variants_test]
+#[test_case(
+    "v4_none_forward_icmp_v4",
+    test_forwarding_v4(
+        None,
+        false,
+    ); "v4_none_forward_icmp_v4")]
+#[test_case(
+    "v4_all_forward_icmp_v4",
+    test_forwarding_v4(
+        Some(ForwardingConfiguration::All),
+        true,
+    ); "v4_all_forward_icmp_v4")]
+#[test_case(
+    "v4_iface1_forward_v4_icmp_v4",
+    test_forwarding_v4(
+        Some(ForwardingConfiguration::Iface1Only(fidl_fuchsia_net::IpVersion::V4)),
+        true,
+    ); "v4_iface1_forward_v4_icmp_v4")]
+#[test_case(
+    "v4_iface1_forward_v6_icmp_v4",
+    test_forwarding_v4(
+        Some(ForwardingConfiguration::Iface1Only(fidl_fuchsia_net::IpVersion::V6)),
+        false,
+    ); "v4_iface1_forward_v6_icmp_v4")]
+#[test_case(
+    "v4_iface2_forward_v4_icmp_v4",
+    test_forwarding_v4(
+        Some(ForwardingConfiguration::Iface2Only(fidl_fuchsia_net::IpVersion::V4)),
+        false,
+    ); "v4_iface2_forward_v4_icmp_v4")]
+#[test_case(
+    "v6_none_forward_icmp_v6",
+    test_forwarding_v6(
+        None,
+        false,
+    ); "v6_none_forward_icmp_v6")]
+#[test_case(
+    "v6_all_forward_icmp_v6",
+    test_forwarding_v6(
+        Some(ForwardingConfiguration::All),
+        true,
+    ); "v6_all_forward_icmp_v6")]
+#[test_case(
+    "v6_iface1_forward_v6_icmp_v6",
+    test_forwarding_v6(
+        Some(ForwardingConfiguration::Iface1Only(fidl_fuchsia_net::IpVersion::V6)),
+        true,
+    ); "v6_iface1_forward_v6_icmp_v6")]
+#[test_case(
+    "v6_iface1_forward_v4_icmp_v6",
+    test_forwarding_v6(
+        Some(ForwardingConfiguration::Iface1Only(fidl_fuchsia_net::IpVersion::V4)),
+        false,
+    ); "v6_iface1_forward_v4_icmp_v6")]
+#[test_case(
+    "v6_iface2_forward_v6_icmp_v6",
+    test_forwarding_v6(
+        Some(ForwardingConfiguration::Iface2Only(fidl_fuchsia_net::IpVersion::V6)),
+        false,
+    ); "v6_iface2_forward_v6_icmp_v6")]
+async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
+    test_name: &str,
+    sub_test_name: &str,
+    test_case: ForwardingTestCase<I>,
+) where
+    IcmpEchoRequest:
+        for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode, Body = OriginalPacket<&'a [u8]>>,
+    I::Addr: NetTypesIpAddressExt,
+{
+    const TTL: u8 = 64;
+    const ECHO_ID: u16 = 1;
+    const ECHO_SEQ: u16 = 2;
+    const MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
+
+    let ForwardingTestCase {
+        iface1_addr,
+        iface2_addr,
+        forwarding_config,
+        src_ip,
+        dst_ip,
+        expect_forward,
+    } = test_case;
+
+    let name = format!("{}_{}", test_name, sub_test_name);
+    let name = name.as_str();
+
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let sandbox = &sandbox;
+    let environment = sandbox
+        .create_netstack_environment_with::<Netstack2, _, _>(
+            name,
+            std::iter::empty::<netemul_environment::LaunchService>(),
+        )
+        .expect("failed to create netstack environment");
+    let environment = &environment;
+
+    let net_ep_iface = |net_num: u8, addr: fidl_fuchsia_net::Subnet| async move {
+        let net = sandbox
+            .create_network(format!("net{}", net_num))
+            .await
+            .expect("failed to create network");
+        let fake_ep = net.create_fake_endpoint().expect("failed to create fake endpoint");
+        let iface = environment
+            .join_network::<E, _>(
+                &net,
+                format!("iface{}", net_num).as_str().ethertap_compatible_name(),
+                &netemul::InterfaceConfig::StaticIp(addr),
+            )
+            .await
+            .expect("failed to configure networking");
+
+        (net, fake_ep, iface)
+    };
+
+    let (_net1, fake_ep1, iface1) = net_ep_iface(1, iface1_addr).await;
+    let (_net2, fake_ep2, iface2) = net_ep_iface(2, iface2_addr).await;
+
+    let interface_state = environment
+        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("failed to connect to fuchsia.net.interfaces/State");
+
+    let ((), ()) = futures::future::join(
+        wait_for_interface_up_and_address(&interface_state, iface1.id(), &iface1_addr),
+        wait_for_interface_up_and_address(&interface_state, iface2.id(), &iface2_addr),
+    )
+    .await;
+
+    if let Some(config) = forwarding_config {
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .expect("error connecting to stack");
+
+        match config {
+            ForwardingConfiguration::All => {
+                let () = stack
+                    .enable_ip_forwarding()
+                    .await
+                    .expect("error enabling IP forwarding request");
+            }
+            ForwardingConfiguration::Iface1Only(ip_version) => {
+                let () = stack
+                    .set_interface_ip_forwarding(iface1.id(), ip_version, true)
+                    .await
+                    .expect("set_interface_ip_forwarding FIDL error for iface1")
+                    .expect("error enabling IP forwarding on iface1");
+            }
+            ForwardingConfiguration::Iface2Only(ip_version) => {
+                let () = stack
+                    .set_interface_ip_forwarding(iface2.id(), ip_version, true)
+                    .await
+                    .expect("set_interface_ip_forwarding FIDL error for iface2")
+                    .expect("error enabling IP forwarding on iface2");
+            }
+        }
+    }
+
+    let neighbor_controller = environment
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .expect("failed to connect to Controller");
+    let dst_ip_fidl: <I::Addr as NetTypesIpAddressExt>::Fidl = dst_ip.into_ext();
+    let () = neighbor_controller
+        .add_entry(iface2.id(), &mut dst_ip_fidl.into_ext(), &mut MAC.clone())
+        .await
+        .expect("add_entry FIDL error")
+        .expect("error adding static entry");
+
+    let mut icmp_body = [1, 2, 3, 4, 5, 6, 7, 8];
+
+    let ser = packet::Buf::new(&mut icmp_body, ..)
+        .encapsulate(IcmpPacketBuilder::<I, _, _>::new(
+            src_ip,
+            dst_ip,
+            IcmpUnusedCode,
+            IcmpEchoRequest::new(ECHO_ID, ECHO_SEQ),
+        ))
+        .encapsulate(<I as packet_formats::ip::IpExt>::PacketBuilder::new(
+            src_ip,
+            dst_ip,
+            TTL,
+            I::ICMP_IP_PROTO,
+        ))
+        .encapsulate(EthernetFrameBuilder::new(
+            net_types::ethernet::Mac::new([1, 2, 3, 4, 5, 6]),
+            net_types::ethernet::Mac::BROADCAST,
+            I::ETHER_TYPE,
+        ))
+        .serialize_vec_outer()
+        .expect("failed to serialize ICMP packet")
+        .unwrap_b();
+
+    let duration = if expect_forward {
+        ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT
+    } else {
+        ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT
+    };
+
+    let ((), forwarded) = futures::future::join(
+        fake_ep1.write(ser.as_ref()).map(|r| r.expect("failed to write to fake endpoint #1")),
+        fake_ep2
+            .frame_stream()
+            .map(|r| r.expect("error getting OnData event"))
+            .filter_map(|(data, dropped)| {
+                assert_eq!(dropped, 0);
+
+                let mut data = &data[..];
+
+                let eth = EthernetFrame::parse(&mut data, EthernetFrameLengthCheck::NoCheck)
+                    .expect("error parsing ethernet frame");
+
+                if eth.ethertype() != Some(I::ETHER_TYPE) {
+                    // Ignore other IP packets.
+                    return futures::future::ready(None);
+                }
+
+                let (mut payload, src_ip, dst_ip, proto, got_ttl) =
+                    packet_formats::testutil::parse_ip_packet::<I>(&data)
+                        .expect("error parsing IP packet");
+
+                if proto != I::ICMP_IP_PROTO {
+                    // Ignore non-ICMP packets.
+                    return futures::future::ready(None);
+                }
+
+                let icmp = match IcmpPacket::<I, _, IcmpEchoRequest>::parse(
+                    &mut payload,
+                    IcmpParseArgs::new(src_ip, dst_ip),
+                ) {
+                    Ok(o) => o,
+                    Err(ParseError::NotExpected) => {
+                        // Ignore non-echo request packets.
+                        return futures::future::ready(None);
+                    }
+                    Err(e) => {
+                        panic!("error parsing ICMP echo request packet: {}", e)
+                    }
+                };
+
+                let echo_request = icmp.message();
+                assert_eq!(echo_request.id(), ECHO_ID);
+                assert_eq!(echo_request.seq(), ECHO_SEQ);
+                assert_eq!(icmp.body().bytes(), icmp_body);
+                assert_eq!(got_ttl, TTL - 1);
+
+                // Our packet was forwarded.
+                futures::future::ready(Some(true))
+            })
+            .next()
+            .map(|r| r.expect("stream unexpectedly ended"))
+            .on_timeout(duration.after_now(), || {
+                // The packet was not forwarded.
+                false
+            }),
+    )
+    .await;
+
+    assert_eq!(expect_forward, forwarded);
 }

@@ -51,7 +51,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
         abi: _,
         fn_token: _,
         ident: name,
-        generics,
+        generics: syn::Generics { lt_token: _, params, gt_token: _, where_clause },
         paren_token: _,
         inputs,
         variadic: _,
@@ -126,8 +126,8 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
     }
 
     // We only care about generic type parameters and their last trait bound.
-    let mut trait_bounds = Vec::with_capacity(generics.params.len());
-    for gen in generics.params.iter() {
+    let mut type_generics = Vec::with_capacity(params.len());
+    for gen in params.iter() {
         let generic_type = match gen {
             syn::GenericParam::Type(t) => t,
             other => {
@@ -140,45 +140,22 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             }
         };
 
-        if generic_type.bounds.len() != 1 {
-            return syn::Error::new_spanned(
-                proc_macro2::TokenStream::from(input),
-                format!(
-                    "test functions expect a single bound for each generic parameter; got = {:#?}",
-                    generic_type.bounds
-                ),
-            )
-            .to_compile_error()
-            .into();
-        }
+        type_generics.push(generic_type)
+    }
 
-        // Should not panic because of the earlier check.
-        let type_bound = generic_type
-            .bounds
-            .last()
-            .expect("only expect a single bound for each generic parameter");
-
-        let trait_type_bound = match type_bound {
+    fn has_type_bound<'a, I: std::iter::Iterator<Item = &'a syn::TypeParamBound>>(
+        mut bounds: I,
+        want_bound: &syn::Path,
+    ) -> bool {
+        bounds.any(|b| match b {
             syn::TypeParamBound::Trait(syn::TraitBound {
                 paren_token: _,
                 modifier: _,
                 lifetimes: _,
                 path,
-            }) => path,
-            other => {
-                return syn::Error::new_spanned(
-                    proc_macro2::TokenStream::from(input),
-                    format!(
-                        "test functions only support trait type parameter bounds; got = {:#?}",
-                        other
-                    ),
-                )
-                .to_compile_error()
-                .into()
-            }
-        };
-
-        trait_bounds.push(trait_type_bound)
+            }) => path == want_bound,
+            _ => false,
+        })
     }
 
     // Generate the list of test variations we will generate.
@@ -186,7 +163,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
     // The intial variation has no replacements or suffix.
     let test_variations = variants.into_iter().fold(vec![TestVariation::default()], |acc, v| {
         // If the test is not generic over `v`, then skip `v`.
-        if !trait_bounds.iter().any(|trait_bound| *trait_bound == &v.trait_bound) {
+        if !type_generics.iter().any(|gtype| has_type_bound(gtype.bounds.iter(), &v.trait_bound)) {
             return acc;
         }
 
@@ -211,23 +188,34 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
         let test_name_str = format!("{}{}", name.to_string(), v.suffix);
         let test_name = syn::Ident::new(&test_name_str, Span::call_site());
 
-        // Replace all the generics with concrete types.
-        let mut params = Vec::with_capacity(trait_bounds.len());
-        for trait_bound in trait_bounds.iter() {
-            if let Some((_, tn)) = v.trait_replacements.iter().find(|(tb, _)| trait_bound == &tb) {
-                params.push(tn);
+        // Pass the test variation's type to the right generic parameters and
+        // leave the rest of the generics.
+        let mut generics = Vec::with_capacity(type_generics.len());
+        let mut params = Vec::with_capacity(type_generics.len());
+        for generic in type_generics.iter() {
+            let syn::TypeParam { attrs: _, ident, colon_token: _, bounds, eq_token: _, default: _ } =
+                &generic;
+
+            if let Some((_, tn)) =
+                v.trait_replacements.iter().find(|(tb, _)| has_type_bound(bounds.iter(), &tb))
+            {
+                // This parameter is relevant to the test variation.
+                params.push(tn.clone());
             } else {
-                return syn::Error::new_spanned(
-                    proc_macro2::TokenStream::from(input),
-                    format!("unexpected parameter bound = {:#?}", trait_bound),
-                )
-                .to_compile_error()
-                .into();
+                // This parameter is not related to a test variation, keep the
+                // parameter in the generated function.
+                let mut p = syn::punctuated::Punctuated::new();
+                p.push(syn::PathSegment {
+                    ident: ident.clone(),
+                    arguments: syn::PathArguments::None,
+                });
+                params.push(syn::Path { leading_colon: None, segments: p });
+                generics.push(generic);
             }
         }
 
-        // Ignore the first argument to the original test function from the list of
-        // inputs which we pass in explicitly through `args` (the test name).
+        // Pass the test name as the first argument, and keep other arguments
+        // in the generated function which will be passed to the original function.
         let impl_inputs = inputs
             .iter()
             .enumerate()
@@ -237,8 +225,6 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             attrs: vec![],
             lit: syn::Lit::Str(syn::LitStr::new(&test_name_str, Span::call_site())),
         })];
-
-        // Pass in the remaining inputs.
         for arg in impl_inputs.iter() {
             let arg = match arg {
                 syn::FnArg::Typed(syn::PatType { attrs: _, pat, colon_token: _, ty: _ }) => pat,
@@ -280,7 +266,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
         impls.push(quote! {
             #(#impl_attrs)*
             #[fuchsia_async::run_singlethreaded(test)]
-            async fn #test_name ( #(#impl_inputs),* ) #output {
+            async fn #test_name < #(#generics),* > ( #(#impl_inputs),* ) #output #where_clause {
                 #name :: < #(#params),* > ( #(#args),* ).await
             }
         });

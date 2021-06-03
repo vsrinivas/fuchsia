@@ -12,11 +12,15 @@ rustc_test("fidl") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-declare",
+    "//src/connectivity/lib/net-types",
+    "//src/connectivity/lib/packet-formats",
+    "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/rust-v1:lib",
     "//src/connectivity/network/tests/integration/common-v1:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
@@ -25,10 +29,12 @@ rustc_test("fidl") {
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//src/lib/network/packet",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:test-case",
   ]
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]

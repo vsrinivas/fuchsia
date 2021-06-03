@@ -12,6 +12,32 @@ use fidl_fuchsia_net as fidl;
 use anyhow;
 use net_types::ip;
 
+/// Extension trait to provides access to FIDL types.
+pub trait NetTypesIpAddressExt: ip::IpAddress {
+    /// The equivalent FIDL address type.
+    type Fidl: IntoExt<fidl::IpAddress> + FromExt<Self>;
+}
+
+impl NetTypesIpAddressExt for ip::Ipv4Addr {
+    type Fidl = fidl::Ipv4Address;
+}
+
+impl NetTypesIpAddressExt for ip::Ipv6Addr {
+    type Fidl = fidl::Ipv6Address;
+}
+
+impl FromExt<ip::Ipv4Addr> for fidl::Ipv4Address {
+    fn from_ext(f: ip::Ipv4Addr) -> fidl::Ipv4Address {
+        fidl::Ipv4Address { addr: f.ipv4_bytes() }
+    }
+}
+
+impl FromExt<ip::Ipv6Addr> for fidl::Ipv6Address {
+    fn from_ext(f: ip::Ipv6Addr) -> fidl::Ipv6Address {
+        fidl::Ipv6Address { addr: f.ipv6_bytes() }
+    }
+}
+
 /// Extension trait to allow user-friendly formatting.
 pub trait DisplayExt {
     type Displayable: Display;

@@ -127,17 +127,38 @@ impl<C: StackContext> StackFidlWorker<C> {
                     &mut self.lock_worker().await.fidl_del_forwarding_entry(subnet)
                 );
             }
-            StackRequest::EnablePacketFilter { id: _, responder: _ } => {
-                // TODO(toshik)
+            StackRequest::EnablePacketFilter { id: _, responder } => {
+                // TODO(https://fxbug.dev/76995): Support packet filter.
+                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
             }
-            StackRequest::DisablePacketFilter { id: _, responder: _ } => {
-                // TODO(toshik)
+            StackRequest::DisablePacketFilter { id: _, responder } => {
+                // TODO(https://fxbug.dev/76995): Support packet filter.
+                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
             }
-            StackRequest::EnableIpForwarding { responder: _ } => {
-                // TODO(toshik)
+            StackRequest::EnableIpForwarding { responder } => {
+                // TODO(https://fxbug.dev/76987): Support enabling IP forwarding.
+                let () = responder
+                    .control_handle()
+                    .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
             }
-            StackRequest::DisableIpForwarding { responder: _ } => {
-                // TODO(toshik)
+            StackRequest::DisableIpForwarding { responder } => {
+                // TODO(https://fxbug.dev/76987): Support disabling IP forwarding.
+                let () = responder
+                    .control_handle()
+                    .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
+            }
+            StackRequest::GetInterfaceIpForwarding { id: _, ip_version: _, responder } => {
+                // TODO(https://fxbug.dev/76987): Support querying per-NIC forwarding.
+                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+            }
+            StackRequest::SetInterfaceIpForwarding {
+                id: _,
+                ip_version: _,
+                enabled: _,
+                responder,
+            } => {
+                // TODO(https://fxbug.dev/76987): Support configuring per-NIC forwarding.
+                responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
             }
             StackRequest::GetDnsServerWatcher { watcher, control_handle: _ } => {
                 let () = watcher

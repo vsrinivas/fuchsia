@@ -487,6 +487,38 @@ func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
 	return nil
 }
 
+func (ni *stackImpl) GetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.IpVersion) (stack.StackGetInterfaceIpForwardingResult, error) {
+	netProto, ok := fidlconv.ToTCPNetProto(ip)
+	if !ok {
+		return stack.StackGetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
+	}
+
+	switch enabled, err := ni.ns.stack.NICForwarding(tcpip.NICID(id), netProto); err.(type) {
+	case nil:
+		return stack.StackGetInterfaceIpForwardingResultWithResponse(stack.StackGetInterfaceIpForwardingResponse{Enabled: enabled}), nil
+	case *tcpip.ErrUnknownNICID:
+		return stack.StackGetInterfaceIpForwardingResultWithErr(stack.ErrorNotFound), nil
+	default:
+		panic(fmt.Sprintf("ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t): %s", id, netProto, enabled, err))
+	}
+}
+
+func (ni *stackImpl) SetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.IpVersion, enabled bool) (stack.StackSetInterfaceIpForwardingResult, error) {
+	netProto, ok := fidlconv.ToTCPNetProto(ip)
+	if !ok {
+		return stack.StackSetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
+	}
+
+	switch err := ni.ns.stack.SetNICForwarding(tcpip.NICID(id), netProto, enabled); err.(type) {
+	case nil:
+		return stack.StackSetInterfaceIpForwardingResultWithResponse(stack.StackSetInterfaceIpForwardingResponse{}), nil
+	case *tcpip.ErrUnknownNICID:
+		return stack.StackSetInterfaceIpForwardingResultWithErr(stack.ErrorNotFound), nil
+	default:
+		panic(fmt.Sprintf("ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t): %s", id, netProto, enabled, err))
+	}
+}
+
 func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServerWatcherWithCtxInterfaceRequest) error {
 	return ni.dnsWatchers.Bind(watcher)
 }

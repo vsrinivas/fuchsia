@@ -199,11 +199,17 @@ protocol Stack {
     /// Disable the packet filter on a specific interface.
     DisablePacketFilter(fuchsia.net.interface_id id) -> () error Error;
 
-    /// Enable IP Forwarding.
+    /// Enable IP Forwarding for all interfaces and IP versions.
     EnableIpForwarding() -> ();
 
-    /// Disable IP Forwarding.
+    /// Disable IP Forwarding for all interfaces and IP versions.
     DisableIpForwarding() -> ();
+
+    /// Returns the IP forwarding state for an interface.
+    GetInterfaceIpForwarding(fuchsia.net.interface_id id, fuchsia.net.IpVersion ip_version) -> (bool enabled) error Error;
+
+    /// Sets the IP forwarding state for an interface.
+    SetInterfaceIpForwarding(fuchsia.net.interface_id id, fuchsia.net.IpVersion ip_version, bool enabled) -> () error Error;
 
     /// Get a [`fuchsia.net.name/DnsServerWatcher`].
     GetDnsServerWatcher(request<fuchsia.net.name.DnsServerWatcher> watcher);
