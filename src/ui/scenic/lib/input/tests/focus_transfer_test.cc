@@ -383,53 +383,6 @@ TEST_F(FocusTransferTest, TouchFocusWithValidTargetAfterA11yRejects) {
   }
 }
 
-// Ensure TouchFocusWithInvalidTarget works after accessibility rejects the pointer stream.
-TEST_F(FocusTransferTest, TouchFocusWithInvalidTargetAfterA11yRejects) {
-  A11yListener a11y_listener(input_system());  // Turn on accessibility interception.
-  RunLoopUntilIdle();                          // Ensure FIDL calls get processed.
-
-  // Inject ADD, DOWN, and MOVE (the MOVE triggers a11y rejection).
-  {
-    scenic::Session* const session = root_session()->session();
-
-    PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
-                                   /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(finger.Add(7, 2));
-    session->Enqueue(finger.Down(7, 2));
-    session->Enqueue(finger.Move(7, 2));
-  }
-  RunLoopUntilIdle();
-
-  // A11y rejection of MOVE should cause focus event dispatch to ordinary clients.
-  // However, there was no latch on DOWN, so nothing should see pointer events.
-
-  // Verify client 1 receives unfocus event.
-  {
-    const std::vector<InputEvent>& events = client_1()->events();
-    ASSERT_EQ(events.size(), 1u);
-
-    // FOCUS
-    EXPECT_TRUE(events[0].is_focus());
-    EXPECT_FALSE(events[0].focus().focused);
-  }
-
-  // Verify client 2 receives nothing, since nothing was hit.
-  {
-    const std::vector<InputEvent>& events = client_2()->events();
-    EXPECT_EQ(events.size(), 0u);
-  }
-
-  // Verify root session receives focus event, since we revert to root of focus chain.
-  {
-    const std::vector<InputEvent>& events = root_session()->events();
-    ASSERT_EQ(events.size(), 1u);
-
-    // FOCUS
-    EXPECT_TRUE(events[0].is_focus());
-    EXPECT_TRUE(events[0].focus().focused);
-  }
-}
-
 // Normally, focus gets transferred to a valid target on the DOWN phase.
 TEST_F(FocusTransferTest, MouseFocusWithValidTarget) {
   // Inject ADD/DOWN on client 2 to trigger delayed focus dispatch.

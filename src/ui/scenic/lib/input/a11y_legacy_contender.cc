@@ -27,9 +27,14 @@ void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointer
                                        bool is_end_of_stream) {
   deliver_to_client_(event);
 
-  // If new stream, add it.
-  if (!ongoing_streams_.count(stream_id)) {
+  const bool is_new_stream = ongoing_streams_.count(stream_id) == 0;
+  FX_DCHECK(!(won_streams_awaiting_first_message_.count(stream_id) != 0 && !is_new_stream));
+  if (is_new_stream) {
     AddStream(stream_id, event.pointer_id);
+    if (won_streams_awaiting_first_message_.count(stream_id)) {
+      ongoing_streams_.at(stream_id).awarded_win = true;
+      won_streams_awaiting_first_message_.erase(stream_id);
+    }
   }
 
   // Check whether we're done.
@@ -49,9 +54,17 @@ void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalPointer
 }
 
 void A11yLegacyContender::EndContest(StreamId stream_id, bool awarded_win) {
-  FX_DCHECK(ongoing_streams_.count(stream_id) != 0);
-  ongoing_streams_.at(stream_id).awarded_win = awarded_win;
-  if (!awarded_win || (awarded_win && ongoing_streams_.at(stream_id).has_ended)) {
+  auto it = ongoing_streams_.find(stream_id);
+  if (it == ongoing_streams_.end()) {
+    FX_DCHECK(awarded_win) << "Can't lose a stream before it starts.";
+    const auto [_, success] = won_streams_awaiting_first_message_.emplace(stream_id);
+    FX_DCHECK(success) << "Can't have two EndContest() calls for the same stream.";
+    return;
+  }
+
+  auto& stream = it->second;
+  stream.awarded_win = awarded_win;
+  if (!awarded_win || (awarded_win && stream.has_ended)) {
     RemoveStream(stream_id);
   }
 }

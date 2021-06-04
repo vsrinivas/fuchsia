@@ -453,7 +453,16 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, S
   if (event.phase == Phase::kAdd) {
     std::vector<ContenderId> contenders = CollectContenders(stream_id, event);
     if (!contenders.empty()) {
-      gesture_arenas_.emplace(stream_id, GestureArena{std::move(contenders)});
+      const bool is_single_contender = contenders.size() == 1;
+      const ContenderId front_contender = contenders.front();
+      const auto [it, success] =
+          gesture_arenas_.emplace(stream_id, GestureArena{std::move(contenders)});
+      FX_DCHECK(success);
+      // If there's only a single contender then the contest is already decided
+      FX_DCHECK(it->second.contest_has_ended() == is_single_contender);
+      if (it->second.contest_has_ended()) {
+        contenders_.at(front_contender)->EndContest(stream_id, /*awarded_win*/ true);
+      }
     } else {
       // No node was hit. Transfer focus to root.
       request_focus_(ZX_KOID_INVALID);

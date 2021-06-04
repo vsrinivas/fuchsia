@@ -10,6 +10,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "src/ui/scenic/lib/input/gesture_contender.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
@@ -44,10 +45,18 @@ class A11yLegacyContender final : public GestureContender {
   void AddStream(StreamId stream_id, uint32_t pointer_id);
   void RemoveStream(StreamId stream_id);
 
-  std::unordered_map<StreamId, Stream> ongoing_streams_;
   // Multiple streams with the same pointer id can start before A11y has time to respond to the
   // previous one. Handle them in order, since A11y responses should arrive in order.
   std::unordered_map</*pointer_id*/ uint32_t, std::deque<StreamId>> pointer_id_to_stream_id_map_;
+
+  // Tracks all streams that have had at least one event passed into UpdateStream(), and that
+  // haven't either "been won and has ended", or "haven't been lost".
+  std::unordered_map<StreamId, Stream> ongoing_streams_;
+
+  // Streams can be declared as won before the first UpdateStream() call concerning the stream,
+  // this set tracks those streams. This set should never contain a stream that also exists in
+  // |ongoing_streams_|.
+  std::unordered_set<StreamId> won_streams_awaiting_first_message_;
 
   const fit::function<void(StreamId, GestureResponse)> respond_;
   const fit::function<void(const InternalPointerEvent& event)> deliver_to_client_;

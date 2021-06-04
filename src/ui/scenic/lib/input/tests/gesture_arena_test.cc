@@ -36,93 +36,47 @@ struct Contest {
   std::vector<Update> updates;
 };
 
-Contest SingleContender_ShouldWinWithYes() {
+Contest HigherPriorityShouldWin_WithYesFollowdByNo_AgainstMaybe() {
   return {
-      .contenders_high_to_low = {1},
-      .stream = {.length = 1, .is_last_message = false},
-      .updates =
-          std::vector<Update>{
-              {
-                  .response = {.contender_id = 1, .responses = {GestureResponse::kYes}},
-                  .result = {.winner = 1, .losers = {}, .end_of_contest = true},
-              },
-          },
-  };
-}
-
-Contest SingleContender_ShouldWinWithMaybe() {
-  return {
-      .contenders_high_to_low = {1},
-      .stream = {.length = 1, .is_last_message = false},
-      .updates =
-          std::vector<Update>{
-              {
-                  .response = {.contender_id = 1, .responses = {GestureResponse::kMaybe}},
-                  .result = {.winner = 1, .losers = {}, .end_of_contest = true},
-              },
-          },
-  };
-}
-
-Contest SingleContender_ShouldWinWithHold() {
-  return {
-      .contenders_high_to_low = {1},
-      .stream = {.length = 1, .is_last_message = false},
-      .updates =
-          std::vector<Update>{
-              {
-                  .response = {.contender_id = 1, .responses = {GestureResponse::kHold}},
-                  .result = {.winner = 1, .losers = {}, .end_of_contest = true},
-              },
-          },
-  };
-}
-
-Contest SingleContender_ShouldLoseWithNo() {
-  return {
-      .contenders_high_to_low = {1},
-      .stream = {.length = 1, .is_last_message = false},
-      .updates =
-          std::vector<Update>{
-              {
-                  .response = {.contender_id = 1, .responses = {GestureResponse::kNo}},
-                  .result = {.losers = {1}, .end_of_contest = true},
-              },
-          },
-  };
-}
-
-Contest SingleContender_ShouldWinWithYesFollowdByNo() {
-  return {
-      .contenders_high_to_low = {1},
+      .contenders_high_to_low = {1, 2},
       .stream = {.length = 2, .is_last_message = false},
       .updates =
           std::vector<Update>{
+              {
+                  .response = {.contender_id = 2,
+                               .responses = {GestureResponse::kMaybe, GestureResponse::kMaybe}},
+                  .result = {.end_of_contest = false},
+              },
               {
                   .response = {.contender_id = 1,
                                .responses = {GestureResponse::kYes, GestureResponse::kNo}},
-                  .result = {.winner = 1, .losers = {}, .end_of_contest = true},
+                  .result = {.winner = 1, .losers = {2}, .end_of_contest = true},
               },
           },
   };
 }
 
-Contest SingleContender_ShouldLoseWithNoFollowdByYes() {
+Contest HigherPriorityShouldLose_WithNoFollowdByYes_AgainstMaybe() {
   return {
-      .contenders_high_to_low = {1},
+      .contenders_high_to_low = {1, 2},
       .stream = {.length = 2, .is_last_message = false},
       .updates =
           std::vector<Update>{
               {
+                  .response = {.contender_id = 2,
+                               .responses = {GestureResponse::kMaybe, GestureResponse::kMaybe}},
+                  .result = {.end_of_contest = false},
+              },
+              {
                   .response = {.contender_id = 1,
                                .responses = {GestureResponse::kNo, GestureResponse::kYes}},
-                  .result = {.losers = {1}, .end_of_contest = true},
+                  .result = {.winner = 2, .losers = {1}, .end_of_contest = true},
               },
           },
   };
 }
 
-Contest MultipleContenders_LowestPriorityShouldWin_IfBothAnswerYes() {
+Contest LowestPriorityShouldWin_IfBothAnswerYes() {
   return {
       .contenders_high_to_low = {1, 2},  // 1 has higher priority.
       .stream = {.length = 1, .is_last_message = false},
@@ -141,7 +95,7 @@ Contest MultipleContenders_LowestPriorityShouldWin_IfBothAnswerYes() {
 }
 
 // Same as previous test, with priorities reversed. To confirm that response order doesn't matter.
-Contest MultipleContenders_LowestPriorityShouldWin_IfBothAnswerYes_ReversedPriority() {
+Contest LowestPriorityShouldWin_IfBothAnswerYes_ReversedPriority() {
   return {
       .contenders_high_to_low = {2, 1},  // 2 has higher priority.
       .stream = {.length = 1, .is_last_message = false},
@@ -159,7 +113,7 @@ Contest MultipleContenders_LowestPriorityShouldWin_IfBothAnswerYes_ReversedPrior
   };
 }
 
-Contest MultipleContenders_HighestPriorityYesPrioritize_ShouldWin() {
+Contest HighestPriorityYesPrioritize_ShouldWin() {
   return {
       .contenders_high_to_low = {1, 2, 3, 4},
       .stream = {.length = 1, .is_last_message = false},
@@ -388,28 +342,31 @@ Contest MultipleNoWithoutEndingContest_ShouldNotCrash() {
   };
 }
 
+TEST(GestureArenaTest, SingleContender_ShouldWinImmediately) {
+  const ContenderId kSingleContender = 1;
+  GestureArena arena(/*contenders*/ {kSingleContender});
+  EXPECT_TRUE(arena.contest_has_ended());
+  EXPECT_THAT(arena.contenders(), testing::ElementsAre(kSingleContender));
+}
+
 class GestureArenaParameterizedTest : public testing::TestWithParam<Contest> {};
 INSTANTIATE_TEST_CASE_P(
     /*no prefix*/, GestureArenaParameterizedTest,
     testing::Values(
-        SingleContender_ShouldWinWithYes(),                                             // 0
-        SingleContender_ShouldWinWithMaybe(),                                           // 1
-        SingleContender_ShouldWinWithHold(),                                            // 2
-        SingleContender_ShouldLoseWithNo(),                                             // 3
-        SingleContender_ShouldWinWithYesFollowdByNo(),                                  // 4
-        SingleContender_ShouldLoseWithNoFollowdByYes(),                                 // 5
-        MultipleContenders_LowestPriorityShouldWin_IfBothAnswerYes(),                   // 6
-        MultipleContenders_LowestPriorityShouldWin_IfBothAnswerYes_ReversedPriority(),  // 7
-        MultipleContenders_HighestPriorityYesPrioritize_ShouldWin(),                    // 8
-        AllMaybeShouldPreventResolution_UntilSweep(),                                   // 9
-        HigherPriorityHold_AgainstMaybeAtSweep_ShouldPreventResolution(),               // 10
-        LowerPriorityHold_AgainstMaybeAtSweep_ShouldPreventResolution(),                // 11
-        HigherPriorityHold_AgainstMaybeSuppressAtSweep_ShouldPreventResolution(),       // 12
-        LowerPriorityHold_AgainstMaybeSuppressAtSweep_ShouldNotPreventResolution(),     // 13
-        HoldFollowedByMaybe_InTheSameVector_ShouldResolve(),                            // 14
-        MultipleHold_ShouldResolve_WhenAllHaveBeenReleased(),                           // 15
-        Hold_ReleasedAheadOfTime_ShouldResolve(),                                       // 16
-        MultipleNoWithoutEndingContest_ShouldNotCrash()                                 // 17
+        HigherPriorityShouldLose_WithNoFollowdByYes_AgainstMaybe(),                  // 0
+        HigherPriorityShouldWin_WithYesFollowdByNo_AgainstMaybe(),                   // 1
+        LowestPriorityShouldWin_IfBothAnswerYes(),                                   // 2
+        LowestPriorityShouldWin_IfBothAnswerYes_ReversedPriority(),                  // 3
+        HighestPriorityYesPrioritize_ShouldWin(),                                    // 4
+        AllMaybeShouldPreventResolution_UntilSweep(),                                // 5
+        HigherPriorityHold_AgainstMaybeAtSweep_ShouldPreventResolution(),            // 6
+        LowerPriorityHold_AgainstMaybeAtSweep_ShouldPreventResolution(),             // 7
+        HigherPriorityHold_AgainstMaybeSuppressAtSweep_ShouldPreventResolution(),    // 8
+        LowerPriorityHold_AgainstMaybeSuppressAtSweep_ShouldNotPreventResolution(),  // 9
+        HoldFollowedByMaybe_InTheSameVector_ShouldResolve(),                         // 10
+        MultipleHold_ShouldResolve_WhenAllHaveBeenReleased(),                        // 11
+        Hold_ReleasedAheadOfTime_ShouldResolve(),                                    // 12
+        MultipleNoWithoutEndingContest_ShouldNotCrash()                              // 13
         ));
 TEST_P(GestureArenaParameterizedTest, Basic) {
   const Contest contest = GetParam();

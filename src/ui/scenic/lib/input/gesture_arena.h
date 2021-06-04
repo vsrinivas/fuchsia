@@ -26,6 +26,8 @@ struct ContestResults {
 // On construction the arena takes a list of all the clients contending, in priority order, for the
 // stream. The arena then receives responses for the every contender, and uses these in
 // combination with priority to decide the owner ("winner") of the stream.
+// If there's only a single contender then the contest is immediately decided in favor of that
+// contender.
 //
 // Intended use:
 // InputSystem creates one GestureArena every time a new stream begins, designating contenders

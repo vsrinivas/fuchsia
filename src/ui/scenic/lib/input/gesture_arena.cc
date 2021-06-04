@@ -145,6 +145,10 @@ GestureArena::GestureArena(std::vector<ContenderId> contenders) {
     FX_DCHECK(success2);
     FX_DCHECK(priority_to_id_.at(it1->second.priority) == it1->second.id);
   }
+
+  if (contenders.size() == 1) {
+    contest_has_ended_ = true;
+  }
 }
 
 void GestureArena::UpdateStream(uint64_t added_length, bool is_last_message) {
