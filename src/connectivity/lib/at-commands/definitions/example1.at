@@ -43,6 +43,9 @@ command { AT+TESTIO=field1: Integer, field2: Option<Integer>}
 # List type argument
 command { AT+TESTL=field: List<Integer>}
 
+# List type argument with optional elements
+command { AT+TESTOL=field: List<Option<Integer>>}
+
 # Map  type arguments
 command { AT+TESTM=field: Map<Integer, String> }
 
@@ -109,6 +112,9 @@ response { +TESTIO: field1: Integer, field2: Option<Integer> }
 
 # List type arguments
 response { +TESTL: field: List<Integer> }
+
+# List type arguments with optional elements
+response { +TESTOL: field: List<Option<Integer>> }
 
 # Map type arguments
 response { +TESTM: field: Map<Integer, String> }

@@ -13,7 +13,8 @@
 /// match the parse tree defined in grammar.rs.
 use {
     crate::definition::{
-        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type, Variant,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PossiblyOptionType,
+        PrimitiveType, Type, Variant,
     },
     crate::grammar::{Grammar, Rule},
     anyhow::{bail, ensure, Context, Result},
@@ -334,36 +335,55 @@ fn parse_type(typ: Pair<'_>) -> Result<Type> {
     let mut type_elements = typ.into_inner();
     let type_variant = next_match_one_of(
         &mut type_elements,
-        vec![Rule::option_type, Rule::list_type, Rule::map_type, Rule::identifier],
+        vec![Rule::list_type, Rule::map_type, Rule::possibly_option_type],
     )?;
 
     let parsed_type = match type_variant.as_rule() {
-        Rule::option_type => parse_option_type(type_variant)?,
+        Rule::possibly_option_type => {
+            Type::PossiblyOptionType(parse_possibly_option_type(type_variant)?)
+        }
         Rule::list_type => parse_list_type(type_variant)?,
         Rule::map_type => parse_map_type(type_variant)?,
-        Rule::identifier => Type::PrimitiveType(parse_primitive_type(type_variant)?),
         _ => unreachable!(),
     };
 
     Ok(parsed_type)
 }
 
-fn parse_option_type(option_type: Pair<'_>) -> Result<Type> {
+fn parse_possibly_option_type(possibly_option_type: Pair<'_>) -> Result<PossiblyOptionType> {
+    let mut possibly_option_type_elements = possibly_option_type.into_inner();
+    let possibly_option_type_variant = next_match_one_of(
+        &mut possibly_option_type_elements,
+        vec![Rule::option_type, Rule::identifier],
+    )?;
+
+    let parsed_possibly_option_type = match possibly_option_type_variant.as_rule() {
+        Rule::option_type => parse_option_type(possibly_option_type_variant)?,
+        Rule::identifier => {
+            PossiblyOptionType::PrimitiveType(parse_primitive_type(possibly_option_type_variant)?)
+        }
+        _ => unreachable!(),
+    };
+
+    Ok(parsed_possibly_option_type)
+}
+
+fn parse_option_type(option_type: Pair<'_>) -> Result<PossiblyOptionType> {
     let mut option_type_elements = option_type.into_inner();
 
     let element_type = next_match(&mut option_type_elements, Rule::identifier)?;
     let parsed_element_type = parse_primitive_type(element_type)?;
 
-    Ok(Type::Option(parsed_element_type))
+    Ok(PossiblyOptionType::OptionType(parsed_element_type))
 }
 
 fn parse_list_type(list_type: Pair<'_>) -> Result<Type> {
     let mut list_type_elements = list_type.into_inner();
 
-    let element_type = next_match(&mut list_type_elements, Rule::identifier)?;
-    let parsed_element_type = parse_primitive_type(element_type)?;
+    let element_type = next_match(&mut list_type_elements, Rule::possibly_option_type)?;
+    let parsed_element_type = parse_possibly_option_type(element_type)?;
 
-    Ok(Type::List(parsed_element_type))
+    Ok(Type::ListType(parsed_element_type))
 }
 
 fn parse_map_type(map_type: Pair<'_>) -> Result<Type> {
@@ -375,7 +395,7 @@ fn parse_map_type(map_type: Pair<'_>) -> Result<Type> {
     let value_type = next_match(&mut map_type_elements, Rule::identifier)?;
     let parsed_value_type = parse_primitive_type(value_type)?;
 
-    Ok(Type::Map { key: parsed_key_type, value: parsed_value_type })
+    Ok(Type::MapType { key: parsed_key_type, value: parsed_value_type })
 }
 
 fn parse_primitive_type(primitive_type: Pair<'_>) -> Result<PrimitiveType> {

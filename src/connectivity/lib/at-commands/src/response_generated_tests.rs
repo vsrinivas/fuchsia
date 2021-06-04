@@ -262,7 +262,7 @@ fn one_int_arg() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -282,7 +282,7 @@ fn one_int_arg_no_delimiter() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: None,
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -302,9 +302,7 @@ fn one_string_arg() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::String(
-                        String::from("abc"),
-                    )),
+                    lowlevel::Argument::PrimitiveArgument(String::from("abc")),
                 ]),
                 terminator: None,
             },
@@ -328,8 +326,8 @@ fn one_kv_arg() {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::KeyValueArgument {
-                        key: lowlevel::PrimitiveArgument::Integer(1),
-                        value: lowlevel::PrimitiveArgument::String(String::from("abc")),
+                        key: String::from("1"),
+                        value: String::from("abc"),
                     },
                 ]),
                 terminator: None,
@@ -350,13 +348,37 @@ fn args_list() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(2)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
+                    lowlevel::Argument::PrimitiveArgument(String::from("2")),
                 ]),
                 terminator: None,
             },
         },
         cr_lf_delimit("+TESTL: 1,2"),
+    )
+}
+
+// Extension response with multiple arguments which form a list of optional elements
+#[test]
+fn args_optional_list() {
+    test_roundtrips(
+        highlevel::Response::Success(highlevel::Success::Testol {
+            field: vec![Some(1), None, Some(2)],
+        }),
+        lowlevel::Response::Success {
+            name: String::from("TESTOL"),
+            is_extension: true,
+            arguments: lowlevel::DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: lowlevel::Arguments::ArgumentList(vec![
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
+                    lowlevel::Argument::PrimitiveArgument(String::from("")),
+                    lowlevel::Argument::PrimitiveArgument(String::from("2")),
+                ]),
+                terminator: None,
+            },
+        },
+        cr_lf_delimit("+TESTOL: 1,,2"),
     )
 }
 
@@ -371,8 +393,8 @@ fn args_optional_present() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(2)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
+                    lowlevel::Argument::PrimitiveArgument(String::from("2")),
                 ]),
                 terminator: None,
             },
@@ -392,12 +414,13 @@ fn args_optional_absent() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
+                    lowlevel::Argument::PrimitiveArgument(String::from("")),
                 ]),
                 terminator: None,
             },
         },
-        cr_lf_delimit("+TESTIO: 1"),
+        cr_lf_delimit("+TESTIO: 1,"),
     )
 }
 
@@ -415,10 +438,8 @@ fn args() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::String(
-                        String::from("abc"),
-                    )),
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("abc")),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -438,7 +459,7 @@ fn paren_args() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
                 ]]),
                 terminator: None,
             },
@@ -462,16 +483,10 @@ fn multiple_paren_args() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![
-                    vec![lowlevel::Argument::PrimitiveArgument(
-                        lowlevel::PrimitiveArgument::Integer(1),
-                    )],
+                    vec![lowlevel::Argument::PrimitiveArgument(String::from("1"))],
                     vec![
-                        lowlevel::Argument::PrimitiveArgument(
-                            lowlevel::PrimitiveArgument::Integer(2),
-                        ),
-                        lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::String(
-                            String::from("abc"),
-                        )),
+                        lowlevel::Argument::PrimitiveArgument(String::from("2")),
+                        lowlevel::Argument::PrimitiveArgument(String::from("abc")),
                     ],
                 ]),
                 terminator: None,
@@ -499,19 +514,13 @@ fn multiple_paren_kv_args() {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![lowlevel::Argument::KeyValueArgument {
-                        key: lowlevel::PrimitiveArgument::Integer(1),
-                        value: lowlevel::PrimitiveArgument::String(String::from("abc")),
+                        key: String::from("1"),
+                        value: String::from("abc"),
                     }],
                     vec![
-                        lowlevel::Argument::PrimitiveArgument(
-                            lowlevel::PrimitiveArgument::Integer(2),
-                        ),
-                        lowlevel::Argument::PrimitiveArgument(
-                            lowlevel::PrimitiveArgument::Integer(3),
-                        ),
-                        lowlevel::Argument::PrimitiveArgument(
-                            lowlevel::PrimitiveArgument::Integer(4),
-                        ),
+                        lowlevel::Argument::PrimitiveArgument(String::from("2")),
+                        lowlevel::Argument::PrimitiveArgument(String::from("3")),
+                        lowlevel::Argument::PrimitiveArgument(String::from("4")),
                     ],
                 ]),
                 terminator: None,
@@ -532,7 +541,7 @@ fn two_responses_same_name() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -547,7 +556,7 @@ fn two_responses_same_name() {
             arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
-                    lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+                    lowlevel::Argument::PrimitiveArgument(String::from("1")),
                 ]]),
                 terminator: None,
             },

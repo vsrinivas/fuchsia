@@ -21,16 +21,14 @@ use {
 };
 
 static ARGUMENTS_PARSER: ArgumentsParser<Rule> = ArgumentsParser {
-    argument: Rule::argument,
-    optional_argument_delimiter: Rule::optional_argument_delimiter,
-    arguments: Rule::arguments,
-    optional_argument_terminator: Rule::optional_argument_terminator,
     argument_list: Rule::argument_list,
-    integer: Rule::integer,
+    argument: Rule::argument,
+    arguments: Rule::arguments,
     key_value_argument: Rule::key_value_argument,
+    optional_argument_delimiter: Rule::optional_argument_delimiter,
+    optional_argument_terminator: Rule::optional_argument_terminator,
     parenthesized_argument_lists: Rule::parenthesized_argument_lists,
     primitive_argument: Rule::primitive_argument,
-    string: Rule::string,
 };
 
 pub fn parse(string: &String) -> ParseResult<Response, Rule> {

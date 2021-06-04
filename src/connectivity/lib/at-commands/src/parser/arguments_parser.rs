@@ -15,26 +15,24 @@
 /// match the parse tree defined in argument_grammar.rs.
 use {
     crate::{
-        lowlevel::{Argument, Arguments, DelimitedArguments, PrimitiveArgument},
+        lowlevel::{Argument, Arguments, DelimitedArguments},
         parser::common::{
-            next_match, next_match_one_of, next_match_option, next_match_rep, parse_integer,
-            parse_string, ParseResult,
+            next_match, next_match_one_of, next_match_option, next_match_rep, parse_string,
+            ParseResult,
         },
     },
     pest::{iterators::Pair, RuleType},
 };
 
 pub struct ArgumentsParser<Rule: RuleType> {
-    pub argument: Rule,
-    pub optional_argument_delimiter: Rule,
-    pub arguments: Rule,
-    pub optional_argument_terminator: Rule,
     pub argument_list: Rule,
-    pub integer: Rule,
+    pub argument: Rule,
+    pub arguments: Rule,
     pub key_value_argument: Rule,
+    pub optional_argument_delimiter: Rule,
+    pub optional_argument_terminator: Rule,
     pub parenthesized_argument_lists: Rule,
     pub primitive_argument: Rule,
-    pub string: Rule,
 }
 
 impl<Rule: RuleType> ArgumentsParser<Rule> {
@@ -131,7 +129,20 @@ impl<Rule: RuleType> ArgumentsParser<Rule> {
             .map(|argument_pair| self.parse_argument(argument_pair))
             .collect::<ParseResult<Vec<Argument>, Rule>>()?;
 
-        Ok(parsed_argument_vec)
+        // This is a hack.  There's no way for the parser to tell if "AT+CMD=" contains zero
+        // arguments or one empty argument.  The parser eagerly assumes that it's one empty
+        // argument.  However, if the AT command definition expects zero arguments this is an
+        // error. On the other hand, missing optional argunments at the end of an AT command
+        // are considered empty. Forcing this to be zero arguments here allows the raise step
+        // to handle both the zero arguments case and the empty optional argument case.
+        let parsed_argument_vec_maybe_empty =
+            if parsed_argument_vec == vec![Argument::PrimitiveArgument(String::from(""))] {
+                Vec::new()
+            } else {
+                parsed_argument_vec
+            };
+
+        Ok(parsed_argument_vec_maybe_empty)
     }
 
     fn parse_argument(&self, argument: Pair<'_, Rule>) -> ParseResult<Argument, Rule> {
@@ -146,7 +157,7 @@ impl<Rule: RuleType> ArgumentsParser<Rule> {
         let parsed_argument = if argument_variant_rule == self.key_value_argument {
             self.parse_key_value_argument(argument_variant)?
         } else if argument_variant_rule == self.primitive_argument {
-            Argument::PrimitiveArgument(self.parse_primitive_argument(argument_variant)?)
+            Argument::PrimitiveArgument(parse_string(argument_variant)?)
         } else {
             // This is unreachable since next_match_one_of only returns success if one of the rules
             // passed into it matches; otherwise it returns Err and this method will return early
@@ -164,35 +175,11 @@ impl<Rule: RuleType> ArgumentsParser<Rule> {
         let mut argument_elements = key_value_argument.into_inner();
 
         let key = next_match(&mut argument_elements, self.primitive_argument)?;
-        let parsed_key = self.parse_primitive_argument(key)?;
+        let parsed_key = parse_string(key)?;
 
         let value = next_match(&mut argument_elements, self.primitive_argument)?;
-        let parsed_value = self.parse_primitive_argument(value)?;
+        let parsed_value = parse_string(value)?;
 
         Ok(Argument::KeyValueArgument { key: parsed_key, value: parsed_value })
-    }
-
-    fn parse_primitive_argument(
-        &self,
-        primitive_argument: Pair<'_, Rule>,
-    ) -> ParseResult<PrimitiveArgument, Rule> {
-        let mut argument_elements = primitive_argument.into_inner();
-
-        let argument_variant =
-            next_match_one_of(&mut argument_elements, vec![self.string, self.integer])?;
-
-        let argument_variant_rule = argument_variant.as_rule();
-        let parsed_argument = if argument_variant_rule == self.string {
-            PrimitiveArgument::String(parse_string(argument_variant)?)
-        } else if argument_variant_rule == self.integer {
-            PrimitiveArgument::Integer(parse_integer(argument_variant)?)
-        } else {
-            // This is unreachable since next_match_one_of only returns success if one of the rules
-            // passed into it matches; otherwise it returns Err and this method will return early
-            // before reaching this point.
-            unreachable!()
-        };
-
-        Ok(parsed_argument)
     }
 }

@@ -94,10 +94,15 @@ pub struct Argument {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    List(PrimitiveType),
-    Option(PrimitiveType),
-    Map { key: PrimitiveType, value: PrimitiveType },
+    ListType(PossiblyOptionType),
+    MapType { key: PrimitiveType, value: PrimitiveType },
+    PossiblyOptionType(PossiblyOptionType),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum PossiblyOptionType {
     PrimitiveType(PrimitiveType),
+    OptionType(PrimitiveType),
 }
 
 #[derive(Debug, Clone, PartialEq)]

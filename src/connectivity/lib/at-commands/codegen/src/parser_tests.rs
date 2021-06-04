@@ -4,7 +4,8 @@
 
 use codegen_lib::{
     definition::{
-        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type, Variant,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PossiblyOptionType,
+        PrimitiveType, Type, Variant,
     },
     parser,
 };
@@ -125,7 +126,9 @@ fn exec_one_arg_no_comma() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
@@ -146,7 +149,9 @@ fn exec_one_arg_no_with_comma() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
@@ -167,7 +172,9 @@ fn exec_one_arg_nonstd_delim() {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
@@ -188,7 +195,9 @@ fn exec_one_arg_term() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: Some(String::from(";")),
             },
@@ -209,7 +218,9 @@ fn exec_one_arg_nonstd_delim_term() {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: Some(String::from(";")),
             },
@@ -230,7 +241,9 @@ fn exec_one_arg_no_delim() {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
@@ -252,11 +265,15 @@ fn exec_args_no_comma() {
                 arguments: Arguments::ArgumentList(vec![
                     Argument {
                         name: String::from("field1"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     },
                     Argument {
                         name: String::from("field2"),
-                        typ: Type::PrimitiveType(PrimitiveType::String),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::String,
+                        )),
                     },
                 ]),
                 terminator: None,
@@ -279,11 +296,15 @@ fn exec_args_with_comma() {
                 arguments: Arguments::ArgumentList(vec![
                     Argument {
                         name: String::from("field1"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     },
                     Argument {
                         name: String::from("field2"),
-                        typ: Type::PrimitiveType(PrimitiveType::String),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::String,
+                        )),
                     },
                 ]),
                 terminator: None,
@@ -305,7 +326,9 @@ fn paren_args() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]]),
                 terminator: None,
             },
@@ -327,16 +350,22 @@ fn multiple_paren_args() {
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument {
                         name: String::from("field1"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     }],
                     vec![
                         Argument {
                             name: String::from("field2"),
-                            typ: Type::PrimitiveType(PrimitiveType::Integer),
+                            typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                                PrimitiveType::Integer,
+                            )),
                         },
                         Argument {
                             name: String::from("field3"),
-                            typ: Type::PrimitiveType(PrimitiveType::String),
+                            typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                                PrimitiveType::String,
+                            )),
                         },
                     ],
                 ]),
@@ -359,13 +388,16 @@ fn option_type() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::Option(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::OptionType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
         }),
     )
 }
+
 // List type argument
 #[test]
 fn list_type() {
@@ -379,7 +411,28 @@ fn list_type() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::List(PrimitiveType::Integer),
+                    typ: Type::ListType(PossiblyOptionType::PrimitiveType(PrimitiveType::Integer)),
+                }]),
+                terminator: None,
+            },
+        }),
+    )
+}
+
+// List type argument with optional elements
+#[test]
+fn option_list_type() {
+    test_parse(
+        "command { AT+TEST=field: List<Option<Integer>>}",
+        Definition::Command(Command::Execute {
+            name: String::from("TEST"),
+            type_name: None,
+            is_extension: true,
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from("=")),
+                arguments: Arguments::ArgumentList(vec![Argument {
+                    name: String::from("field"),
+                    typ: Type::ListType(PossiblyOptionType::OptionType(PrimitiveType::Integer)),
                 }]),
                 terminator: None,
             },
@@ -400,7 +453,10 @@ fn map_type() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::Map { key: PrimitiveType::Integer, value: PrimitiveType::String },
+                    typ: Type::MapType {
+                        key: PrimitiveType::Integer,
+                        value: PrimitiveType::String,
+                    },
                 }]),
                 terminator: None,
             },
@@ -527,7 +583,9 @@ fn resp_one_arg_no_comma() {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
@@ -548,7 +606,9 @@ fn resp_one_arg_with_comma() {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]),
                 terminator: None,
             },
@@ -570,11 +630,15 @@ fn resp_args_no_comma() {
                 arguments: Arguments::ArgumentList(vec![
                     Argument {
                         name: String::from("field1"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     },
                     Argument {
                         name: String::from("field2"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     },
                 ]),
                 terminator: None,
@@ -597,11 +661,15 @@ fn resp_args_with_comma() {
                 arguments: Arguments::ArgumentList(vec![
                     Argument {
                         name: String::from("field1"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     },
                     Argument {
                         name: String::from("field2"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     },
                 ]),
                 terminator: None,
@@ -623,7 +691,9 @@ fn resp_paren_args() {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![Argument {
                     name: String::from("field"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                        PrimitiveType::Integer,
+                    )),
                 }]]),
                 terminator: None,
             },
@@ -645,16 +715,22 @@ fn resp_paren_multiple_args() {
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument {
                         name: String::from("field1"),
-                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                            PrimitiveType::Integer,
+                        )),
                     }],
                     vec![
                         Argument {
                             name: String::from("field2"),
-                            typ: Type::PrimitiveType(PrimitiveType::Integer),
+                            typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                                PrimitiveType::Integer,
+                            )),
                         },
                         Argument {
                             name: String::from("field3"),
-                            typ: Type::PrimitiveType(PrimitiveType::String),
+                            typ: Type::PossiblyOptionType(PossiblyOptionType::PrimitiveType(
+                                PrimitiveType::String,
+                            )),
                         },
                     ],
                 ]),

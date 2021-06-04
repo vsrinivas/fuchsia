@@ -103,36 +103,30 @@ impl WriteTo for Arguments {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Argument {
     /// A primitive string or int.
-    PrimitiveArgument(PrimitiveArgument),
+    PrimitiveArgument(String),
     /// A key-value pair like `a=1`
-    KeyValueArgument { key: PrimitiveArgument, value: PrimitiveArgument },
+    KeyValueArgument { key: String, value: String },
+}
+
+impl Argument {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Argument::PrimitiveArgument(argument) => argument.is_empty(),
+            Argument::KeyValueArgument { key, value } => key.is_empty() && value.is_empty(),
+        }
+    }
 }
 
 impl WriteTo for Argument {
     fn write_to<W: io::Write>(&self, sink: &mut W) -> io::Result<()> {
         match self {
-            Argument::PrimitiveArgument(argument) => argument.write_to(sink),
+            Argument::PrimitiveArgument(argument) => sink.write_all(argument.as_bytes())?,
             Argument::KeyValueArgument { key, value } => {
-                key.write_to(sink)?;
+                sink.write_all(key.as_bytes())?;
                 sink.write_all(b"=")?;
-                value.write_to(sink)
+                sink.write_all(value.as_bytes())?;
             }
         }
-    }
-}
-
-/// Primitive string or int arguments.
-#[derive(Debug, Clone, PartialEq)]
-pub enum PrimitiveArgument {
-    String(String),
-    Integer(i64),
-}
-
-impl WriteTo for PrimitiveArgument {
-    fn write_to<W: io::Write>(&self, sink: &mut W) -> io::Result<()> {
-        match self {
-            PrimitiveArgument::String(string) => sink.write_all(string.as_bytes()),
-            PrimitiveArgument::Integer(int) => sink.write_all(int.to_string().as_bytes()),
-        }
+        Ok(())
     }
 }

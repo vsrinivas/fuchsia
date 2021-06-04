@@ -11,7 +11,8 @@ use {
         error::Result,
     },
     crate::definition::{
-        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PossiblyOptionType,
+        PrimitiveType, Type,
     },
     std::io,
 };
@@ -196,7 +197,7 @@ fn codegen_match_branch<W: io::Write>(
     Ok(())
 }
 
-fn codegen_encode_primitive<W: io::Write>(
+fn codegen_encode_string<W: io::Write>(
     sink: &mut W,
     indent: u64,
     src_name: &str,
@@ -205,13 +206,7 @@ fn codegen_encode_primitive<W: io::Write>(
 ) -> Result {
     match typ {
         PrimitiveType::Integer => {
-            write_indented!(
-                sink,
-                indent,
-                "let {} = lowlevel::PrimitiveArgument::Integer(*{});\n",
-                dst_name,
-                src_name
-            )?;
+            write_indented!(sink, indent, "let {} = i64::to_string(&{});\n", dst_name, src_name)?;
         }
         PrimitiveType::BoolAsInt => {
             write_indented!(
@@ -221,34 +216,92 @@ fn codegen_encode_primitive<W: io::Write>(
                 dst_name,
                 src_name
             )?;
-            write_indented!(
-                sink,
-                indent,
-                "let {} = lowlevel::PrimitiveArgument::Integer({}_int);\n",
-                dst_name,
-                dst_name
-            )?;
+            write_indented!(sink, indent, "let {} = i64::to_string(&{}_int);\n", dst_name, dst_name)?;
         }
         PrimitiveType::NamedType(_type_name) => {
             write_indented!(sink, indent, "let {}_int = *{} as i64;\n", dst_name, src_name)?;
-            write_indented!(
-                sink,
-                indent,
-                "let {} = lowlevel::PrimitiveArgument::Integer({}_int);\n",
-                dst_name,
-                dst_name
-            )?;
+            write_indented!(sink, indent, "let {} = i64::to_string(&{}_int);\n", dst_name, dst_name)?;
         }
         PrimitiveType::String => {
-            write_indented!(
-                sink,
-                indent,
-                "let {} = lowlevel::PrimitiveArgument::String({}.clone());\n",
-                dst_name,
-                src_name
-            )?;
+            write_indented!(sink, indent, "let {} = {}.clone();\n", dst_name, src_name)?;
         }
     }
+    Ok(())
+}
+
+fn codegen_encode_primitive<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    src_name: &str,
+    dst_name: &str,
+    typ: &PrimitiveType,
+) -> Result {
+    let string_name = format!("{}_string", src_name);
+    codegen_encode_string(sink, indent, src_name, &string_name, typ)?;
+    write_indented!(
+        sink,
+        indent,
+        "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
+        dst_name,
+        &string_name
+    )?;
+    Ok(())
+}
+
+fn codegen_encode_possibly_option<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    name: &str,
+    arg_vec_name: &str,
+    typ: &PossiblyOptionType,
+) -> Result {
+    match typ {
+        PossiblyOptionType::PrimitiveType(typ) => {
+            let primitive_name = format!("{}_primitive", name);
+            codegen_encode_primitive(sink, indent, name, &primitive_name, &typ)?;
+            write_indented!(sink, indent, "{}.push({});\n", arg_vec_name, primitive_name)?;
+        }
+        PossiblyOptionType::OptionType(typ) => {
+            let unwrapped_name = format!("{}_unwrapped", name);
+            let primitive_name = format!("{}_primitive", name);
+            write_indented!(sink, indent, "match {} {{\n", name)?;
+            {
+                write_indented!(sink, indent, "None => {{\n",)?;
+                let indent = indent + TABSTOP;
+                {
+                    let indent = indent + TABSTOP;
+                    write_indented!(
+                        sink,
+                        indent + TABSTOP,
+                        "{}.push(lowlevel::Argument::PrimitiveArgument(String::new()));\n",
+                        arg_vec_name
+                    )?;
+                }
+                write_indented!(sink, indent, "}}\n")?;
+                write_indented!(sink, indent, "Some({}) => {{\n", unwrapped_name)?;
+                {
+                    let indent = indent + TABSTOP;
+                    codegen_encode_primitive(
+                        sink,
+                        indent + TABSTOP,
+                        &unwrapped_name,
+                        &primitive_name,
+                        &typ,
+                    )?;
+                    write_indented!(
+                        sink,
+                        indent + TABSTOP,
+                        "{}.push({});\n",
+                        arg_vec_name,
+                        primitive_name
+                    )?;
+                }
+                write_indented!(sink, indent, "}}\n")?;
+            }
+            write_indented!(sink, indent, "}}\n")?;
+        }
+    };
+
     Ok(())
 }
 
@@ -272,8 +325,8 @@ fn codegen_encode_map<W: io::Write>(
     {
         let indent = indent + TABSTOP;
 
-        codegen_encode_primitive(sink, indent, &key_src_name, &key_dst_name, key)?;
-        codegen_encode_primitive(sink, indent, &value_src_name, &value_dst_name, value)?;
+        codegen_encode_string(sink, indent, &key_src_name, &key_dst_name, key)?;
+        codegen_encode_string(sink, indent, &value_src_name, &value_dst_name, value)?;
 
         write_indented!(
             sink,
@@ -294,39 +347,16 @@ fn codegen_encode_list<W: io::Write>(
     sink: &mut W,
     indent: u64,
     name: &str,
-    typ: &PrimitiveType,
+    typ: &PossiblyOptionType,
     arg_vec_name: &str,
 ) -> Result {
-    let element_typed_name = format!("{}_typed_element", name);
-    let element_primitive_name = format!("{}_primitive_element", name);
-    let element_untyped_name = format!("{}_untyped_element", name);
+    let element_name = format!("{}_element", name);
 
-    write_indented!(sink, indent, "for {} in {}.into_iter() {{\n", element_typed_name, name)?;
-
+    write_indented!(sink, indent, "for {} in {}.into_iter() {{\n", element_name, name)?;
     // Increment indent
     {
         let indent = indent + TABSTOP;
-        codegen_encode_primitive(
-            sink,
-            indent + TABSTOP,
-            &element_typed_name,
-            &element_primitive_name,
-            typ,
-        )?;
-        write_indented!(
-            sink,
-            indent,
-            "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
-            element_untyped_name,
-            element_primitive_name
-        )?;
-        write_indented!(
-            sink,
-            indent + TABSTOP,
-            "{}.push({});\n",
-            arg_vec_name,
-            element_untyped_name
-        )?;
+        codegen_encode_possibly_option(sink, indent + TABSTOP, &element_name, arg_vec_name, typ)?;
     }
     write_indented!(sink, indent, "}}   \n")?;
 
@@ -341,52 +371,14 @@ fn codegen_argument_vec_encoding<W: io::Write>(
 ) -> Result {
     for arg in arg_vec {
         match &arg.typ {
-            Type::PrimitiveType(typ) => {
-                let primitive_arg = format!("{}_primitive", arg.name);
-                let untyped_arg = format!("{}_untyped", arg.name);
-                codegen_encode_primitive(sink, indent, &arg.name, &primitive_arg, &typ)?;
-                write_indented!(
-                    sink,
-                    indent,
-                    "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
-                    untyped_arg,
-                    primitive_arg
-                )?;
-                write_indented!(sink, indent, "{}.push({});\n", arg_vec_name, untyped_arg)?;
+            Type::PossiblyOptionType(typ) => {
+                codegen_encode_possibly_option(sink, indent, &arg.name, arg_vec_name, typ)?;
             }
-            Type::Option(typ) => {
-                let internal_arg = format!("{}_internal", arg.name);
-                let primitive_arg = format!("{}_primitive", arg.name);
-                let untyped_arg = format!("{}_untyped", arg.name);
-                write_indented!(sink, indent, "if let Some({}) = {} {{\n", internal_arg, arg.name)?;
-                codegen_encode_primitive(
-                    sink,
-                    indent + TABSTOP,
-                    &internal_arg,
-                    &primitive_arg,
-                    &typ,
-                )?;
-                write_indented!(
-                    sink,
-                    indent + TABSTOP,
-                    "let {} = lowlevel::Argument::PrimitiveArgument({});\n",
-                    untyped_arg,
-                    primitive_arg
-                )?;
-                write_indented!(
-                    sink,
-                    indent + TABSTOP,
-                    "{}.push({});\n",
-                    arg_vec_name,
-                    untyped_arg
-                )?;
-                write_indented!(sink, indent, "}}\n")?;
-            }
-            Type::List(typ) => {
+            Type::ListType(typ) => {
                 codegen_encode_list(sink, indent, &arg.name, typ, arg_vec_name)?;
                 break;
             }
-            Type::Map { key, value } => {
+            Type::MapType { key, value } => {
                 codegen_encode_map(sink, indent, &arg.name, &key, &value, arg_vec_name)?;
                 break;
             }

@@ -11,7 +11,8 @@ use {
         error::Result,
     },
     crate::definition::{
-        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PossiblyOptionType,
+        PrimitiveType, Type,
     },
     std::io,
 };
@@ -232,7 +233,7 @@ fn codegen_extract_primitive<W: io::Write>(
     write_indented!(
         sink,
         indent,
-        "let {}_primitive = {}({}_raw, &arguments)?;\n",
+        "let {}_primitive = {}({}, &arguments)?;\n",
         src_name,
         extract_primitive_fn_name,
         src_name
@@ -275,13 +276,7 @@ fn codegen_extract_primitive<W: io::Write>(
             )?;
         }
         PrimitiveType::String => {
-            write_indented!(
-                sink,
-                indent,
-                "let {} = extract_string_from_primitive({}_primitive, &arguments)?;\n",
-                dst_name,
-                src_name
-            )?;
+            write_indented!(sink, indent, "let {} = {}_primitive.clone();\n", dst_name, src_name)?;
         }
     }
     Ok(())
@@ -303,7 +298,7 @@ fn codegen_extract_map<W: io::Write>(
     write_indented!(
         sink,
         indent,
-        "for {}_raw in arg_vec[{}..].into_iter() {{\n",
+        "for {} in arg_vec[{}..].into_iter() {{\n",
         element_name,
         initial_index
     )?;
@@ -339,31 +334,35 @@ fn codegen_extract_list<W: io::Write>(
     sink: &mut W,
     indent: u64,
     name: &str,
-    typ: &PrimitiveType,
+    typ: &PossiblyOptionType,
     initial_index: i64,
 ) -> Result {
     let element_name = format!("{}_element", name);
+    let element_raw_name = format!("{}_element_raw", name);
+    let element_option_name = format!("{}_element_option", name);
 
     write_indented!(sink, indent, "let mut {} = Vec::new();\n", name,)?;
     write_indented!(
         sink,
         indent,
-        "for {}_raw in arg_vec[{}..].into_iter() {{\n",
-        element_name,
+        "for {} in arg_vec[{}..].into_iter() {{\n",
+        element_raw_name,
         initial_index
     )?;
 
     {
         let indent = indent + TABSTOP;
 
-        codegen_extract_primitive(
+        write_indented!(
             sink,
             indent,
-            &element_name,
-            &element_name,
-            "extract_primitive_from_field",
-            typ,
+            "let {} = if {}.is_empty() {{ None }} else {{ Some({}) }};\n",
+            element_option_name,
+            element_raw_name,
+            element_raw_name,
         )?;
+
+        codegen_extract_possibly_option(sink, indent, &element_option_name, &element_name, typ)?;
 
         write_indented!(sink, indent, "{}.push({});\n", name, element_name)?;
     }
@@ -372,29 +371,57 @@ fn codegen_extract_list<W: io::Write>(
     Ok(())
 }
 
-fn codegen_extract_option<W: io::Write>(
+fn codegen_extract_possibly_option<W: io::Write>(
     sink: &mut W,
     indent: u64,
-    name: &str,
-    typ: &PrimitiveType,
-    index: i64,
+    src_name: &str,
+    dst_name: &str,
+    typ: &PossiblyOptionType,
 ) -> Result {
-    write_indented!(sink, indent, "let {}_option = arg_vec.get({});\n", name, index)?;
-    write_indented!(sink, indent, "let {} = match {}_option {{\n", name, name)?;
-    write_indented!(sink, indent + TABSTOP, "None => None,\n")?;
-    write_indented!(sink, indent + TABSTOP, "Some({}_raw) => {{\n", name)?;
-    codegen_extract_primitive(
-        sink,
-        indent + TABSTOP + TABSTOP,
-        name,
-        name,
-        "extract_primitive_from_field",
-        typ,
-    )?;
-    write_indented!(sink, indent + TABSTOP + TABSTOP, "Some({})\n", name)?;
-    write_indented!(sink, indent + TABSTOP, "}}\n")?;
-    write_indented!(sink, indent, "}};\n")?;
-
+    match typ {
+        PossiblyOptionType::PrimitiveType(typ) => {
+            let unwrapped_src_name = format!("{}_unwrapped", src_name);
+            write_indented!(
+                sink,
+                indent,
+                "let {} = {}.ok_or(DeserializeErrorCause::UnknownArguments(arguments.clone()))?;\n",
+                unwrapped_src_name,
+                src_name
+            )?;
+            codegen_extract_primitive(
+                sink,
+                indent,
+                &unwrapped_src_name,
+                dst_name,
+                "extract_primitive_from_field",
+                &typ,
+            )?
+        }
+        PossiblyOptionType::OptionType(typ) => {
+            let unwrapped_src_name = format!("{}_unwrapped", src_name);
+            let unwrapped_dst_name = format!("{}_unwrapped", dst_name);
+            write_indented!(sink, indent, "let {} = match {} {{\n", dst_name, src_name)?;
+            write_indented!(
+                sink,
+                indent + TABSTOP,
+                "Some({}) if !{}.is_empty() => {{\n",
+                unwrapped_src_name,
+                unwrapped_src_name
+            )?;
+            codegen_extract_primitive(
+                sink,
+                indent + TABSTOP + TABSTOP,
+                &unwrapped_src_name,
+                &unwrapped_dst_name,
+                "extract_primitive_from_field",
+                typ,
+            )?;
+            write_indented!(sink, indent + TABSTOP + TABSTOP, "Some({})\n", unwrapped_dst_name)?;
+            write_indented!(sink, indent + TABSTOP, "}}\n")?;
+            write_indented!(sink, indent + TABSTOP, "_ => None,\n")?;
+            write_indented!(sink, indent, "}};\n")?;
+        }
+    }
     Ok(())
 }
 
@@ -406,25 +433,16 @@ fn codegen_argument_vec_extraction<W: io::Write>(
     let mut i = 0;
     for arg in arg_vec {
         match &arg.typ {
-            Type::PrimitiveType(typ) => {
-                write_indented!(sink, indent,
-                    "let {}_raw = arg_vec.get({}).ok_or(DeserializeErrorCause::UnknownArguments(arguments.clone()))?;\n",
-                    arg.name, i)?;
-                codegen_extract_primitive(
-                    sink,
-                    indent,
-                    &arg.name,
-                    &arg.name,
-                    "extract_primitive_from_field",
-                    &typ,
-                )?
+            Type::PossiblyOptionType(typ) => {
+                let option_name = format!("{}_option", &arg.name);
+                write_indented!(sink, indent, "let {} = arg_vec.get({});\n", option_name, i)?;
+                codegen_extract_possibly_option(sink, indent, &option_name, &arg.name, &typ)?
             }
-            Type::Option(typ) => codegen_extract_option(sink, indent, &arg.name, &typ, i)?,
-            Type::List(typ) => {
+            Type::ListType(typ) => {
                 codegen_extract_list(sink, indent, &arg.name, &typ, i)?;
                 break;
             }
-            Type::Map { key, value } => {
+            Type::MapType { key, value } => {
                 codegen_extract_map(sink, indent, &arg.name, &key, &value, i)?;
                 break;
             }

@@ -4,9 +4,7 @@
 
 /// Tests for the AT command response parser.
 use crate::{
-    lowlevel::{
-        Argument, Arguments, DelimitedArguments, HardcodedError, PrimitiveArgument, Response,
-    },
+    lowlevel::{Argument, Arguments, DelimitedArguments, HardcodedError, Response},
     parser::response_parser,
 };
 
@@ -145,7 +143,7 @@ fn ext_no_args_no_delimiter() {
     )
 }
 
-// Extension response with one integer argument, no trailing comma
+// Extension response with one integer argument
 #[test]
 fn one_int_arg_no_comma() {
     test_parse(
@@ -156,7 +154,7 @@ fn one_int_arg_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -175,7 +173,7 @@ fn one_int_arg_no_comma_no_delimiter() {
             arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -183,7 +181,7 @@ fn one_int_arg_no_comma_no_delimiter() {
     )
 }
 
-// Extension response with one string argument, no trailing comma
+// Extension response with one string argument
 #[test]
 fn one_string_arg_no_comma() {
     test_parse(
@@ -194,7 +192,7 @@ fn one_string_arg_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::String(String::from("abc")),
+                    String::from("abc"),
                 )]),
                 terminator: None,
             },
@@ -202,7 +200,7 @@ fn one_string_arg_no_comma() {
     )
 }
 
-// Extension response with one key-value argument, no trailing comma
+// Extension response with one key-value argument
 #[test]
 fn one_kv_arg_no_comma() {
     test_parse(
@@ -213,65 +211,8 @@ fn one_kv_arg_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::Integer(1),
-                    value: PrimitiveArgument::String(String::from("abc")),
-                }]),
-                terminator: None,
-            },
-        },
-    )
-}
-// Extension response with one integer argument, with trailing comma
-#[test]
-fn one_int_arg_with_comma() {
-    test_parse(
-        "+TEST: 1,",
-        Response::Success {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from(":")),
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
-                )]),
-                terminator: None,
-            },
-        },
-    )
-}
-
-// Extension response with one string argument, with trailing comma
-#[test]
-fn one_string_arg_with_comma() {
-    test_parse(
-        "+TEST: abc,",
-        Response::Success {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from(":")),
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::String(String::from("abc")),
-                )]),
-                terminator: None,
-            },
-        },
-    )
-}
-
-// Extension response with one key-value argument, with trailing comma
-#[test]
-fn one_kv_arg_with_comma() {
-    test_parse(
-        "+TEST: abc=1,",
-        Response::Success {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from(":")),
-                arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::String(String::from("abc")),
-                    value: PrimitiveArgument::Integer(1),
+                    key: String::from("1"),
+                    value: String::from("abc"),
                 }]),
                 terminator: None,
             },
@@ -279,7 +220,7 @@ fn one_kv_arg_with_comma() {
     )
 }
 
-// Extension response with multiple arguments, no trailing comma
+// Extension response with multiple arguments
 #[test]
 fn args_no_comma() {
     test_parse(
@@ -290,28 +231,8 @@ fn args_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ArgumentList(vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
-                ]),
-                terminator: None,
-            },
-        },
-    )
-}
-
-// Extension response with multiple arguments with trailing comma
-#[test]
-fn args_with_comma() {
-    test_parse(
-        "+TEST: abc,1,",
-        Response::Success {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from(":")),
-                arguments: Arguments::ArgumentList(vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                    Argument::PrimitiveArgument(String::from("abc")),
+                    Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -330,7 +251,7 @@ fn paren_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                    Argument::PrimitiveArgument(String::from("1")),
                 ]]),
                 terminator: None,
             },
@@ -349,10 +270,10 @@ fn multiple_paren_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
-                    vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
+                    vec![Argument::PrimitiveArgument(String::from("1"))],
                     vec![
-                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
-                        Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
+                        Argument::PrimitiveArgument(String::from("2")),
+                        Argument::PrimitiveArgument(String::from("abc")),
                     ],
                 ]),
                 terminator: None,
@@ -373,14 +294,14 @@ fn multiple_paren_kv_args() {
                 delimiter: Some(String::from(":")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::KeyValueArgument {
-                        key: PrimitiveArgument::Integer(1),
-                        value: PrimitiveArgument::String(String::from("abc")),
+                        key: String::from("1"),
+                        value: String::from("abc"),
                     }],
                     vec![
-                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
+                        Argument::PrimitiveArgument(String::from("2")),
                         Argument::KeyValueArgument {
-                            key: PrimitiveArgument::String(String::from("xyz")),
-                            value: PrimitiveArgument::Integer(3),
+                            key: String::from("xyz"),
+                            value: String::from("3"),
                         },
                     ],
                 ]),

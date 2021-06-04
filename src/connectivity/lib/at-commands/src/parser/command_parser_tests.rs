@@ -4,7 +4,7 @@
 
 /// Tests for the AT command parser.
 use crate::{
-    lowlevel::{Argument, Arguments, Command, DelimitedArguments, PrimitiveArgument},
+    lowlevel::{Argument, Arguments, Command, DelimitedArguments},
     parser::command_parser,
 };
 
@@ -61,7 +61,7 @@ fn exec_ext_no_args() {
     )
 }
 
-// Extension execute command with one integer argument, no trailing comma
+// Extension execute command with one argument
 #[test]
 fn exec_one_int_arg_no_comma() {
     test_parse(
@@ -72,7 +72,7 @@ fn exec_one_int_arg_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -80,7 +80,7 @@ fn exec_one_int_arg_no_comma() {
     )
 }
 
-// Extension execute command with one integer argument and no delimiter
+// Extension execute command with one argument and no delimiter
 #[test]
 fn exec_one_int_arg_no_delimiter() {
     test_parse(
@@ -91,7 +91,7 @@ fn exec_one_int_arg_no_delimiter() {
             arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -99,7 +99,7 @@ fn exec_one_int_arg_no_delimiter() {
     )
 }
 
-// Extension execute command with one integer argument and a > delimiter
+// Extension execute command with one argument and a > delimiter
 #[test]
 fn exec_one_int_arg_nonstandard_delimiter() {
     test_parse(
@@ -110,7 +110,7 @@ fn exec_one_int_arg_nonstandard_delimiter() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -129,7 +129,7 @@ fn exec_one_int_arg_terminator() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: Some(String::from(";")),
             },
@@ -148,33 +148,15 @@ fn exec_one_int_arg_nonstandard_delimiter_terminator() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: Some(String::from(";")),
             },
         },
     )
 }
-// Extension execute command with one string argument, no trailing comma
-#[test]
-fn exec_one_string_arg_no_comma() {
-    test_parse(
-        "AT+TEST=abc",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from("=")),
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::String(String::from("abc")),
-                )]),
-                terminator: None,
-            },
-        },
-    )
-}
 
-// Extension execute command with one key-value argument, no trailing comma
+// Extension execute command with one key-value argument
 #[test]
 fn exec_one_kv_arg_no_comma() {
     test_parse(
@@ -185,65 +167,8 @@ fn exec_one_kv_arg_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::Integer(1),
-                    value: PrimitiveArgument::String(String::from("abc")),
-                }]),
-                terminator: None,
-            },
-        },
-    )
-}
-// Extension execute command with one integer argument, with trailing comma
-#[test]
-fn exec_one_int_arg_with_comma() {
-    test_parse(
-        "AT+TEST=1,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from("=")),
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
-                )]),
-                terminator: None,
-            },
-        },
-    )
-}
-
-// Extension execute command with one string argument, with trailing comma
-#[test]
-fn exec_one_string_arg_with_comma() {
-    test_parse(
-        "AT+TEST=abc,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from("=")),
-                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::String(String::from("abc")),
-                )]),
-                terminator: None,
-            },
-        },
-    )
-}
-
-// Extension execute command with one key-value argument, with trailing comma
-#[test]
-fn exec_one_kv_arg_with_comma() {
-    test_parse(
-        "AT+TEST=abc=1,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from("=")),
-                arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::String(String::from("abc")),
-                    value: PrimitiveArgument::Integer(1),
+                    key: String::from("1"),
+                    value: String::from("abc"),
                 }]),
                 terminator: None,
             },
@@ -251,7 +176,7 @@ fn exec_one_kv_arg_with_comma() {
     )
 }
 
-// Extension execute command with multiple arguments, no trailing comma
+// Extension execute command with multiple arguments
 #[test]
 fn exec_args_no_comma() {
     test_parse(
@@ -262,28 +187,8 @@ fn exec_args_no_comma() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
-                ]),
-                terminator: None,
-            },
-        },
-    )
-}
-
-// Extension execute command with multiple arguments with trailing comma
-#[test]
-fn exec_args_with_comma() {
-    test_parse(
-        "AT+TEST=abc,1,",
-        Command::Execute {
-            name: String::from("TEST"),
-            is_extension: true,
-            arguments: DelimitedArguments {
-                delimiter: Some(String::from("=")),
-                arguments: Arguments::ArgumentList(vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                    Argument::PrimitiveArgument(String::from("abc")),
+                    Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -302,7 +207,7 @@ fn paren_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                    Argument::PrimitiveArgument(String::from("1")),
                 ]]),
                 terminator: None,
             },
@@ -321,10 +226,10 @@ fn multiple_paren_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
-                    vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
+                    vec![Argument::PrimitiveArgument(String::from("1"))],
                     vec![
-                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
-                        Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
+                        Argument::PrimitiveArgument(String::from("2")),
+                        Argument::PrimitiveArgument(String::from("abc")),
                     ],
                 ]),
                 terminator: None,
@@ -345,14 +250,14 @@ fn multiple_paren_kv_args() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::KeyValueArgument {
-                        key: PrimitiveArgument::Integer(1),
-                        value: PrimitiveArgument::String(String::from("abc")),
+                        key: String::from("1"),
+                        value: String::from("abc"),
                     }],
                     vec![
-                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
+                        Argument::PrimitiveArgument(String::from("2")),
                         Argument::KeyValueArgument {
-                            key: PrimitiveArgument::String(String::from("xyz")),
-                            value: PrimitiveArgument::Integer(3),
+                            key: String::from("xyz"),
+                            value: String::from("3"),
                         },
                     ],
                 ]),

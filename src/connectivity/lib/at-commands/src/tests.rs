@@ -12,7 +12,7 @@ mod lowlevel {
 
     pub mod write_to;
 
-    pub use arguments::{Argument, Arguments, DelimitedArguments, PrimitiveArgument};
+    pub use arguments::{Argument, Arguments, DelimitedArguments};
     pub use command::Command;
     pub use response::{HardcodedError, Response};
 

@@ -6,7 +6,7 @@
 #![cfg(test)]
 
 use crate::lowlevel::{
-    arguments::{Argument, Arguments, DelimitedArguments, PrimitiveArgument},
+    arguments::{Argument, Arguments, DelimitedArguments},
     command::Command,
     write_to::WriteTo,
 };
@@ -67,7 +67,7 @@ fn exec_one_int_arg() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -86,7 +86,7 @@ fn exec_one_int_arg_nonstandard_delimiter() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::Integer(1),
+                    String::from("1"),
                 )]),
                 terminator: None,
             },
@@ -104,7 +104,7 @@ fn exec_one_string_arg() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                    PrimitiveArgument::String(String::from("abc")),
+                    String::from("abc"),
                 )]),
                 terminator: None,
             },
@@ -123,8 +123,8 @@ fn exec_one_kv_arg() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::Integer(1),
-                    value: PrimitiveArgument::String(String::from("abc")),
+                    key: String::from("1"),
+                    value: String::from("abc"),
                 }]),
                 terminator: None,
             },
@@ -143,8 +143,8 @@ fn exec_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                    Argument::PrimitiveArgument(String::from("abc")),
+                    Argument::PrimitiveArgument(String::from("1")),
                 ]),
                 terminator: None,
             },
@@ -163,7 +163,7 @@ fn paren_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                    Argument::PrimitiveArgument(String::from("1")),
                 ]]),
                 terminator: None,
             },
@@ -182,10 +182,10 @@ fn multiple_paren_args() {
             arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
-                    vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
+                    vec![Argument::PrimitiveArgument(String::from("1"))],
                     vec![
-                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
-                        Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
+                        Argument::PrimitiveArgument(String::from("2")),
+                        Argument::PrimitiveArgument(String::from("abc")),
                     ],
                 ]),
                 terminator: None,
@@ -206,14 +206,14 @@ fn multiple_paren_kv_args() {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::KeyValueArgument {
-                        key: PrimitiveArgument::Integer(1),
-                        value: PrimitiveArgument::String(String::from("abc")),
+                        key: String::from("1"),
+                        value: String::from("abc"),
                     }],
                     vec![
-                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
+                        Argument::PrimitiveArgument(String::from("2")),
                         Argument::KeyValueArgument {
-                            key: PrimitiveArgument::String(String::from("xyz")),
-                            value: PrimitiveArgument::Integer(3),
+                            key: String::from("xyz"),
+                            value: String::from("3"),
                         },
                     ],
                 ]),
