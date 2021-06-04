@@ -82,41 +82,49 @@ def _write_build_ids_txt(binary_paths, ids_txt_path):
 
     # List of binaries whose build IDs are awaiting processing by readelf.
     # Entries are removed as readelf's output is parsed.
-    unprocessed_binary_paths = {os.path.basename(p): p for p in binary_paths}
+    unprocessed_binary_paths = set(binary_paths)
+    build_ids_map = {}
+
+    # Sanity check that unstripped binaries do not also have their stripped
+    # counterpart listed.
+    for binary_path in binary_paths:
+        stripped_binary_path = _get_stripped_path(binary_path)
+        if stripped_binary_path != binary_path:
+            unprocessed_binary_paths.discard(stripped_binary_path)
 
     with open(ids_txt_path, 'w') as ids_file:
         # Create a set to dedupe stripped binary paths in case both the stripped and
         # unstripped versions of a binary are specified.
-        stripped_binary_paths = sorted(
-            set(map(_get_stripped_path, binary_paths)))
         readelf_stdout = subprocess.check_output(
-            ['readelf', '-n'] + list(stripped_binary_paths)).decode('utf8')
+            ['readelf', '-n'] + sorted(unprocessed_binary_paths)).decode('utf8')
 
         if len(binary_paths) == 1:
             # Readelf won't report a binary's path if only one was provided to the
             # tool.
-            binary_shortname = os.path.basename(binary_paths[0])
+            binary_path = binary_paths[0]
         else:
-            binary_shortname = None
+            binary_path = None
 
         for line in readelf_stdout.split('\n'):
             line = line.strip()
 
             if line.startswith(READELF_FILE_PREFIX):
-                binary_shortname = os.path.basename(
-                    line[len(READELF_FILE_PREFIX):])
-                assert binary_shortname in unprocessed_binary_paths
+                binary_path = line[len(READELF_FILE_PREFIX):]
+                assert binary_path in unprocessed_binary_paths
 
             elif line.startswith(READELF_BUILD_ID_PREFIX):
                 # Paths to the unstripped executables listed in "ids.txt" are specified
                 # as relative paths to that file.
                 unstripped_rel_path = os.path.relpath(
-                    os.path.abspath(unprocessed_binary_paths[binary_shortname]),
+                    os.path.abspath(binary_path),
                     os.path.dirname(os.path.abspath(ids_txt_path)))
 
                 build_id = line[len(READELF_BUILD_ID_PREFIX):]
-                ids_file.write(build_id + ' ' + unstripped_rel_path + '\n')
-                del unprocessed_binary_paths[binary_shortname]
+                build_ids_map[build_id] = unstripped_rel_path
+                unprocessed_binary_paths.remove(binary_path)
+
+        for id_and_path in sorted(build_ids_map.items()):
+            ids_file.write(id_and_path[0] + ' ' + id_and_path[1] + '\n')
 
     # Did readelf forget anything? Make sure that all binaries are accounted for.
     assert not unprocessed_binary_paths
