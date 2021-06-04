@@ -87,7 +87,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
 
   // Remove any incoming trailing NULs, just in case.
   if (auto pos = gLegacyBoot.cmdline.find_last_not_of('\0'); pos != ktl::string_view::npos) {
-    gLegacyBoot.cmdline.remove_suffix(gLegacyBoot.cmdline.size() - pos);
+    gLegacyBoot.cmdline.remove_suffix(gLegacyBoot.cmdline.size() - (pos + 1));
   } else {
     gLegacyBoot.cmdline = {};
   }
