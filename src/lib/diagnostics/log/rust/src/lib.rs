@@ -5,6 +5,7 @@
 
 //! Publish diagnostics as a stream of log messages.
 
+use diagnostics_log_encoding::Severity;
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fuchsia_component::client::connect_to_protocol;
@@ -19,7 +20,6 @@ use tracing::{
 use tracing_core::span::Current;
 use tracing_log::LogTracer;
 use tracing_subscriber::{layer::Layered, prelude::*, registry::Registry};
-
 mod filter;
 mod sink;
 
@@ -41,6 +41,12 @@ macro_rules! init {
     ($tag:expr) => {
         fuchsia_async::Task::spawn($crate::init_publishing(Some($tag)).unwrap()).detach()
     };
+}
+
+/// Callback for interest listeners
+pub trait OnInterestChanged {
+    /// Callback for when the interest changes
+    fn on_changed(&self, severity: &Severity);
 }
 
 /// Creates a publisher and installs it as the global default.
@@ -92,12 +98,20 @@ impl Publisher {
     // TODO(fxbug.dev/71242) delete this and make Publisher private
     /// Publish the provided event for testing.
     pub fn event_for_testing(&self, file: &str, line: u32, record: Record) {
-        // TODO(fxbug.dev/62858) uncomment
-        // let filter: &InterestFilter = (&self.inner as &dyn Subscriber).downcast_ref().unwrap();
-        // if filter.enabled_for_testing(file, line, &record) {
-        let sink: &Sink = (&self.inner as &dyn Subscriber).downcast_ref().unwrap();
-        sink.event_for_testing(file, line, record);
-        // }
+        let filter: &InterestFilter = (&self.inner as &dyn Subscriber).downcast_ref().unwrap();
+        if filter.enabled_for_testing(file, line, &record) {
+            let sink: &Sink = (&self.inner as &dyn Subscriber).downcast_ref().unwrap();
+            sink.event_for_testing(file, line, record);
+        }
+    }
+
+    /// Registers an interest listener
+    pub fn set_interest_listener<T>(&self, listener: T)
+    where
+        T: OnInterestChanged + Send + Sync + 'static,
+    {
+        let filter: &InterestFilter = (&self.inner as &dyn Subscriber).downcast_ref().unwrap();
+        filter.set_interest_listener(listener);
     }
 }
 

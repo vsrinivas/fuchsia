@@ -5,7 +5,7 @@ use diagnostics_log_encoding::{Severity, SeverityExt};
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::{LogSinkEvent, LogSinkEventStream};
 use futures::StreamExt;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use std::{future::Future, sync::Arc};
 use tracing::{
     subscriber::{Interest, Subscriber},
@@ -13,8 +13,11 @@ use tracing::{
 };
 use tracing_subscriber::layer::{Context, Layer};
 
+use crate::OnInterestChanged;
+
 pub(crate) struct InterestFilter {
     min_severity: Arc<RwLock<Severity>>,
+    listener: Arc<Mutex<Option<Box<dyn OnInterestChanged + Send + Sync + 'static>>>>,
 }
 
 impl InterestFilter {
@@ -22,21 +25,34 @@ impl InterestFilter {
     /// to changes in the LogSink's interest.
     pub fn new(events: LogSinkEventStream) -> (Self, impl Future<Output = ()>) {
         let min_severity = Arc::new(RwLock::new(Severity::Info));
-        let filter = Self { min_severity: min_severity.clone() };
-        (filter, Self::listen_to_interest_changes(min_severity, events))
+        let listener = Arc::new(Mutex::new(None));
+        let filter = Self { min_severity: min_severity.clone(), listener: listener.clone() };
+        (filter, Self::listen_to_interest_changes(listener, min_severity, events))
+    }
+
+    /// Sets the interest listener.
+    pub fn set_interest_listener<T>(&self, listener: T)
+    where
+        T: OnInterestChanged + Send + Sync + 'static,
+    {
+        *self.listener.lock() = Some(Box::new(listener));
     }
 
     async fn listen_to_interest_changes(
+        listener: Arc<Mutex<Option<Box<dyn OnInterestChanged + Send + Sync>>>>,
         min_severity: Arc<RwLock<Severity>>,
         mut events: LogSinkEventStream,
     ) {
-        while let Some(Ok(LogSinkEvent::OnInterestChanged { interest })) = events.next().await {
+        while let Some(Ok(LogSinkEvent::OnRegisterInterest { interest })) = events.next().await {
             *min_severity.write() = interest.min_severity.unwrap_or(Severity::Info);
+            if let Some(callback) = &*listener.lock() {
+                callback.on_changed(&*min_severity.read());
+            }
         }
     }
 
     #[allow(unused)] // TODO(fxbug.dev/62858) remove attribute
-    fn enabled_for_testing(&self, _file: &str, _line: u32, record: &Record) -> bool {
+    pub fn enabled_for_testing(&self, _file: &str, _line: u32, record: &Record) -> bool {
         record.severity >= *self.min_severity.read()
     }
 }

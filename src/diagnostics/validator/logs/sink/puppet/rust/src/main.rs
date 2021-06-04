@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use diagnostics_log::OnInterestChanged;
+use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_validate_logs::{
     LogSinkPuppetRequest, LogSinkPuppetRequestStream, PuppetInfo, RecordSpec,
 };
@@ -10,11 +12,16 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_runtime as rt;
 use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
+use tracing::*;
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     diagnostics_log::init!();
     tracing::info!("Puppet started.");
+    tracing::dispatcher::get_default(|dispatcher| {
+        let publisher: &diagnostics_log::Publisher = dispatcher.downcast_ref().unwrap();
+        publisher.set_interest_listener(Listener::new());
+    });
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(|r: LogSinkPuppetRequestStream| r);
@@ -22,6 +29,39 @@ async fn main() {
 
     while let Some(incoming) = fs.next().await {
         Task::spawn(run_puppet(incoming)).detach();
+    }
+}
+
+struct Listener {}
+
+impl OnInterestChanged for Listener {
+    fn on_changed(&self, severity: &Severity) {
+        match severity {
+            Severity::Trace => {
+                trace!("Changed severity");
+            }
+            Severity::Debug => {
+                debug!("Changed severity");
+            }
+            Severity::Info => {
+                info!("Changed severity");
+            }
+            Severity::Warn => {
+                warn!("Changed severity");
+            }
+            Severity::Error => {
+                error!("Changed severity");
+            }
+            Severity::Fatal => {
+                panic!("Changed severity");
+            }
+        }
+    }
+}
+
+impl Listener {
+    pub fn new() -> Listener {
+        return Self {};
     }
 }
 

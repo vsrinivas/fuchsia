@@ -8,7 +8,7 @@
             "fuchsia-pkg://fuchsia.com/log-sink-validator-cpp#meta/sink-validator-cpp-puppet.cmx",
             "--new-file-line-rules",
             "--test-printf",
-            "--test-interest-listener"
+            "--test-stop-listener"
         ],
         "binary": "bin/sink_validator"
     },

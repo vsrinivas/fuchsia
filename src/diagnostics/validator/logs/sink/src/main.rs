@@ -42,17 +42,16 @@ struct Opt {
     /// true if you want to test structured printf
     #[argh(switch)]
     test_printf: bool,
-    /// true if you want to test interest listeners
+    /// true if the runtime supports stopping the interest listener
     #[argh(switch)]
-    test_interest_listener: bool,
+    test_stop_listener: bool,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
-    let Opt { puppet_url, new_file_line_rules, test_printf, test_interest_listener } =
-        argh::from_env();
-    Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_interest_listener)
+    let Opt { puppet_url, new_file_line_rules, test_printf, test_stop_listener } = argh::from_env();
+    Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_stop_listener)
         .await?
         .test()
         .await
@@ -73,7 +72,7 @@ impl Puppet {
         puppet_url: &str,
         new_file_line_rules: bool,
         has_structured_printf: bool,
-        has_interest_listener: bool,
+        supports_stopping_listener: bool,
     ) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(|s: LogSinkRequestStream| s);
@@ -131,10 +130,14 @@ impl Puppet {
             if has_structured_printf {
                 assert_printf_record(&mut puppet, new_file_line_rules).await?;
             }
-            if has_interest_listener {
-                assert_interest_listener(&mut puppet, new_file_line_rules, &mut stream, &mut fs)
-                    .await?;
-            }
+            assert_interest_listener(
+                &mut puppet,
+                new_file_line_rules,
+                &mut stream,
+                &mut fs,
+                supports_stopping_listener,
+            )
+            .await?;
             Ok(puppet)
         } else {
             Err(anyhow::format_err!("shouldn't ever receive legacy connections"))
@@ -228,6 +231,7 @@ async fn assert_interest_listener(
     new_file_line_rules: bool,
     stream: &mut LogSinkRequestStream,
     fs: &mut ServiceFs<ServiceObj<'_, LogSinkRequestStream>>,
+    supports_stopping_listener: bool,
 ) -> Result<(), Error> {
     macro_rules! send_log_with_severity {
         ($severity:ident) => {
@@ -276,13 +280,28 @@ async fn assert_interest_listener(
             .build(puppet.start_time..zx::Time::get_monotonic())
     );
     info!("Got interest");
-    puppet.proxy.stop_interest_listener().await.unwrap();
-    // We're restarting the logging system in the child process so we should expect a re-connection.
-    *stream = fs.next().await.unwrap();
-    if let LogSinkRequest::ConnectStructured { socket, control_handle: _ } =
-        stream.next().await.unwrap()?
-    {
-        puppet.socket = Socket::from_socket(socket)?;
+    if supports_stopping_listener {
+        puppet.proxy.stop_interest_listener().await.unwrap();
+        // We're restarting the logging system in the child process so we should expect a re-connection.
+        *stream = fs.next().await.unwrap();
+        if let LogSinkRequest::ConnectStructured { socket, control_handle: _ } =
+            stream.next().await.unwrap()?
+        {
+            puppet.socket = Socket::from_socket(socket)?;
+        }
+    } else {
+        // Reset severity to TRACE so we get all messages
+        // in later tests.
+        let interest = Interest { min_severity: Some(Severity::Trace), ..Interest::EMPTY };
+        handle.send_on_register_interest(interest)?;
+        info!("Waiting for interest to change back....");
+        assert_eq!(
+            puppet.read_record_no_tid(puppet.info.tid).await?,
+            RecordAssertion::new(&puppet.info, Severity::Trace, new_file_line_rules)
+                .add_string("message", "Changed severity")
+                .build(puppet.start_time..zx::Time::get_monotonic())
+        );
+        info!("Changed interest back");
     }
     Ok(())
 }
