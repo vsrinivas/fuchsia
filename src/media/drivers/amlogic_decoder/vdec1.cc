@@ -62,6 +62,7 @@ std::optional<InternalBuffer> Vdec1::LoadFirmwareToBuffer(const uint8_t* data, u
   auto buffer = create_result.take_value();
   memcpy(buffer.virt_base(), data, std::min(len, kFirmwareSize));
   buffer.CacheFlush(0, kFirmwareSize);
+  BarrierAfterFlush();
   return std::move(buffer);
 }
 
@@ -446,6 +447,7 @@ zx_status_t Vdec1::InitializeInputContext(InputContext* context, bool is_secure)
 zx_status_t Vdec1::SaveInputContext(InputContext* context) {
   // Not sure why there are dirty cache lines corresponding to the input context.
   context->buffer->CacheFlush(0, context->buffer->size());
+  BarrierAfterFlush();
 
   // No idea what this does.
   VldMemVififoControl::Get().FromValue(1 << 15).WriteTo(mmio()->dosbus);
