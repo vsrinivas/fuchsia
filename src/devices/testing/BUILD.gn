@@ -12,7 +12,6 @@ group("tests") {
     "fake-object:tests",
     "fake-resource:tests",
     "fake_ddk:tests",
-    "fx-logger:tests",
     "mock-mmio-reg:tests",
     "syslog:tests",
   ]

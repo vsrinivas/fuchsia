@@ -20,6 +20,7 @@ group("tests") {
     "device-watcher:tests",
     "driver-inspect-test",
     "driver-runner-integration:tests",
+    "fx-logger:tests",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
   ]
