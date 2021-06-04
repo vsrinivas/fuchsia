@@ -100,7 +100,7 @@ impl RequestInfo {
 
 /// The InspectAgent is responsible for listening to requests to the setting
 /// handlers and recording the requests to Inspect.
-pub struct InspectAgent {
+pub(crate) struct InspectAgent {
     inspect_node: inspect::Node,
     /// Last requests for inspect to save.
     last_requests: HashMap<SettingType, SettingTypeInfo>,
@@ -117,7 +117,7 @@ impl InspectAgent {
             .await;
     }
 
-    pub async fn create_with_node(context: Context, node: inspect::Node) {
+    async fn create_with_node(context: Context, node: inspect::Node) {
         let (_, message_rx) = context
             .delegate
             .create(MessengerType::Broker(Some(filter::Builder::single(

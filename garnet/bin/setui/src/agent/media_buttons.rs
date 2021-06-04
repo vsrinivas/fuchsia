@@ -29,7 +29,7 @@ fn get_event_setting_types() -> HashSet<SettingType> {
     vec![SettingType::Audio, SettingType::Light, SettingType::Input].into_iter().collect()
 }
 
-pub struct MediaButtonsAgent {
+pub(crate) struct MediaButtonsAgent {
     publisher: Publisher,
     messenger: service::message::Messenger,
 
@@ -42,7 +42,7 @@ impl DeviceStorageAccess for MediaButtonsAgent {
 }
 
 impl MediaButtonsAgent {
-    pub async fn create(context: AgentContext) {
+    pub(crate) async fn create(context: AgentContext) {
         let mut agent = MediaButtonsAgent {
             publisher: context.get_publisher(),
             messenger: context.create_messenger().await.expect("media button messenger created"),

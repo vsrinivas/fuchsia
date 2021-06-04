@@ -12,22 +12,22 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
-pub enum Action {
+pub(crate) enum Action {
     Reboot,
 }
 
 /// An implementation of hardware power statecontrol services that records the
 /// actions invoked on it.
-pub struct HardwarePowerStatecontrolService {
+pub(crate) struct HardwarePowerStatecontrolService {
     recorded_actions: Arc<RwLock<Vec<Action>>>,
 }
 
 impl HardwarePowerStatecontrolService {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { recorded_actions: Arc::new(RwLock::new(Vec::new())) }
     }
 
-    pub fn verify_action_sequence(&self, actions: Vec<Action>) -> bool {
+    pub(crate) fn verify_action_sequence(&self, actions: Vec<Action>) -> bool {
         let recorded_actions = self.recorded_actions.read();
         actions.len() == recorded_actions.len()
             && recorded_actions

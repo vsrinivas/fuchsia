@@ -7,7 +7,7 @@
 ///
 /// Rounding should be applied to audio levels handled by settings service that come from external
 /// sources.
-pub fn round_volume_level(volume: f32) -> f32 {
+pub(crate) fn round_volume_level(volume: f32) -> f32 {
     ((volume * 100.0).round() / 100.0).max(0.0).min(1.0)
 }
 

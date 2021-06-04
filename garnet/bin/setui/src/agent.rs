@@ -19,36 +19,36 @@ use std::sync::Arc;
 use thiserror::Error;
 
 /// Agent for watching the camera3 status.
-pub mod camera_watcher;
+pub(crate) mod camera_watcher;
 
 /// Agent for handling media button input.
-pub mod media_buttons;
+pub(crate) mod media_buttons;
 
 /// This mod provides a concrete implementation of the agent authority.
-pub mod authority;
+pub(crate) mod authority;
 
 /// Agent for rehydrating actions for restore.
-pub mod restore_agent;
+pub(crate) mod restore_agent;
 
 // Agent for managing access to storage.
-pub mod storage_agent;
+pub(crate) mod storage_agent;
 
 /// Agent for capturing requests.
-pub mod inspect;
+pub(crate) mod inspect;
 
 /// Earcons.
-pub mod earcons;
+pub(crate) mod earcons;
 
 /// Agent for capturing config load events.
-pub mod inspect_config;
+pub(crate) mod inspect_config;
 
 /// Agent for capturing policy state from messages from the message hub to
 /// policy proxies.
-pub mod inspect_policy;
+pub(crate) mod inspect_policy;
 
 /// Agent for capturing setting values of messages between proxies and setting
 /// handlers.
-pub mod inspect_setting_data;
+pub(crate) mod inspect_setting_data;
 
 #[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum AgentError {
@@ -58,13 +58,13 @@ pub enum AgentError {
     UnexpectedError,
 }
 
-pub type InvocationResult = Result<(), AgentError>;
+pub(crate) type InvocationResult = Result<(), AgentError>;
 
 /// The scope of an agent's life. Initialization components should
 /// only run at the beginning of the service. Service components follow
 /// initialization and run for the duration of the service.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Lifespan {
+pub(crate) enum Lifespan {
     Initialization,
     Service,
 }
@@ -72,8 +72,8 @@ pub enum Lifespan {
 /// Struct of information passed to the agent during each invocation.
 #[derive(Clone)]
 pub struct Invocation {
-    pub lifespan: Lifespan,
-    pub service_context: Arc<ServiceContext>,
+    pub(crate) lifespan: Lifespan,
+    pub(crate) service_context: Arc<ServiceContext>,
 }
 
 impl Debug for Invocation {
@@ -105,13 +105,13 @@ pub struct Context {
     pub receptor: Receptor,
     publisher: event::Publisher,
     pub delegate: service::message::Delegate,
-    pub available_components: HashSet<SettingType>,
+    pub(crate) available_components: HashSet<SettingType>,
     pub available_policies: HashSet<PolicyType>,
     pub resource_monitor_actor: Option<monitor::environment::Actor>,
 }
 
 impl Context {
-    pub async fn new(
+    pub(crate) async fn new(
         receptor: Receptor,
         delegate: service::message::Delegate,
         available_components: HashSet<SettingType>,
@@ -132,13 +132,13 @@ impl Context {
     /// Generates a new `Messenger` on the service `MessageHub`. Only
     /// top-level messages can be sent, not received, as the associated
     /// `Receptor` is discarded.
-    pub async fn create_messenger(
+    async fn create_messenger(
         &self,
     ) -> Result<service::message::Messenger, service::message::MessageError> {
         Ok(self.delegate.create(MessengerType::Unbound).await?.0)
     }
 
-    pub fn get_publisher(&self) -> event::Publisher {
+    pub(crate) fn get_publisher(&self) -> event::Publisher {
         self.publisher.clone()
     }
 }
@@ -146,14 +146,14 @@ impl Context {
 #[macro_export]
 macro_rules! blueprint_definition {
     ($component:literal, $create:expr) => {
-        pub mod blueprint {
+        pub(crate) mod blueprint {
             #[allow(unused_imports)]
             use super::*;
             use crate::agent::{Blueprint, BlueprintHandle, Context};
             use futures::future::BoxFuture;
             use std::sync::Arc;
 
-            pub fn create() -> BlueprintHandle {
+            pub(crate) fn create() -> BlueprintHandle {
                 Arc::new(BlueprintImpl)
             }
 

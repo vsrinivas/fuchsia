@@ -40,7 +40,7 @@ use std::borrow::Borrow;
 use std::sync::Arc;
 
 /// `Blueprint` struct for managing the state needed to construct a [`StorageAgent`].
-pub struct Blueprint<T>
+pub(crate) struct Blueprint<T>
 where
     T: DeviceStorageFactory,
 {
@@ -51,7 +51,7 @@ impl<T> Blueprint<T>
 where
     T: DeviceStorageFactory,
 {
-    pub fn new(storage_factory: Arc<T>) -> Self {
+    pub(crate) fn new(storage_factory: Arc<T>) -> Self {
         Self { storage_factory }
     }
 }
@@ -72,7 +72,7 @@ where
     }
 }
 
-pub struct StorageAgent<T>
+pub(crate) struct StorageAgent<T>
 where
     T: DeviceStorageFactory + Send + Sync + 'static,
 {

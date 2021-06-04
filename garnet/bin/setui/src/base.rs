@@ -64,10 +64,10 @@ pub enum Entity {
 
 /// A [Dependency] declares a reliance of a particular configuration/feature/component/etc. within
 /// the setting service. [Dependencies](Dependency) are used to generate the necessary component map
-//// to support a particular service configuration. It can used to determine if the platform/product
-//// configuration can support the requested service configuration.
+/// to support a particular service configuration. It can used to determine if the platform/product
+/// configuration can support the requested service configuration.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
-pub enum Dependency {
+pub(crate) enum Dependency {
     /// An [Entity] is a component within the setting service.
     Entity(Entity),
 }
@@ -106,7 +106,7 @@ macro_rules! generate_inspect_with_info {
 
         impl $name {
             /// Returns the name of the enum and its value, debug-formatted, for writing to inspect.
-            pub fn for_inspect(&self) -> (&'static str, String) {
+            pub(crate) fn for_inspect(&self) -> (&'static str, String) {
                 match self {
                     $(
                         $(#[cfg($test)])?
@@ -141,7 +141,7 @@ generate_inspect_with_info! {
     }
 }
 
-pub trait HasSettingType {
+pub(crate) trait HasSettingType {
     const SETTING_TYPE: SettingType;
 }
 
@@ -214,7 +214,7 @@ impl From<&SettingInfo> for SettingType {
 pub struct UnknownInfo(pub bool);
 
 /// The `Merge` trait allows merging two structs.
-pub trait Merge<Other = Self> {
+pub(crate) trait Merge<Other = Self> {
     /// Returns a copy of the original struct where the values of all fields set in `other`
     /// replace the matching fields in the copy of `self`.
     fn merge(&self, other: Other) -> Self;

@@ -45,7 +45,7 @@ pub(crate) trait HasPolicyType {
 
 impl PolicyType {
     /// Returns the corresponding setting type that this policy controls.
-    pub fn setting_type(&self) -> SettingType {
+    pub(crate) fn setting_type(&self) -> SettingType {
         match self {
             #[cfg(test)]
             PolicyType::Unknown => SettingType::Unknown,

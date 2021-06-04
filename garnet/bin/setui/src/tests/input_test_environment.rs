@@ -7,7 +7,6 @@ use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::DeviceStorage;
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::ingress::fidl::Interface;
@@ -28,24 +27,21 @@ use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_input_test_environment";
 
-pub struct TestInputEnvironment {
+pub(crate) struct TestInputEnvironment {
     /// For sending requests to the input proxy.
-    pub input_service: InputProxy,
+    pub(crate) input_service: InputProxy,
 
     /// For sending media buttons changes.
-    pub input_button_service: Arc<Mutex<InputDeviceRegistryService>>,
+    pub(crate) input_button_service: Arc<Mutex<InputDeviceRegistryService>>,
 
     /// For watching, connecting to, and making requests on the camera device.
-    pub camera3_service: Arc<Mutex<Camera3Service>>,
-
-    /// For storing the InputInfoSources.
-    pub store: Arc<DeviceStorage>,
+    pub(crate) camera3_service: Arc<Mutex<Camera3Service>>,
 
     /// For listening on service messages, particularly media buttons events.
-    pub delegate: Delegate,
+    pub(crate) delegate: Delegate,
 }
 
-pub struct TestInputEnvironmentBuilder {
+pub(crate) struct TestInputEnvironmentBuilder {
     /// The initial InputInfoSources in the environment.
     starting_input_info_sources: Option<InputInfoSources>,
 
@@ -57,7 +53,7 @@ pub struct TestInputEnvironmentBuilder {
 }
 
 impl TestInputEnvironmentBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             starting_input_info_sources: None,
             input_device_config: None,
@@ -65,7 +61,7 @@ impl TestInputEnvironmentBuilder {
         }
     }
 
-    pub fn set_starting_input_info_sources(
+    pub(crate) fn set_starting_input_info_sources(
         mut self,
         starting_input_info_sources: InputInfoSources,
     ) -> Self {
@@ -73,12 +69,15 @@ impl TestInputEnvironmentBuilder {
         self
     }
 
-    pub fn set_input_device_config(mut self, input_device_config: InputConfiguration) -> Self {
+    pub(crate) fn set_input_device_config(
+        mut self,
+        input_device_config: InputConfiguration,
+    ) -> Self {
         self.input_device_config = Some(input_device_config);
         self
     }
 
-    pub async fn build(self) -> TestInputEnvironment {
+    pub(crate) async fn build(self) -> TestInputEnvironment {
         let service_registry = ServiceRegistry::create();
         let storage_factory = Arc::new(if let Some(info) = self.starting_input_info_sources {
             InMemoryStorageFactory::with_initial_data(&info)
@@ -138,13 +137,11 @@ impl TestInputEnvironmentBuilder {
             .expect("Nested environment should exist")
             .connect_to_protocol::<InputMarker>()
             .unwrap();
-        let store = storage_factory.get_device_storage().await;
 
         TestInputEnvironment {
             input_service,
             input_button_service: input_button_service_handle,
             camera3_service: camera3_service_handle,
-            store,
             delegate,
         }
     }

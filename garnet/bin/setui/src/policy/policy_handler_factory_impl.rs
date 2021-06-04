@@ -64,7 +64,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
 }
 
 impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
-    pub fn new(
+    pub(crate) fn new(
         policies: HashSet<PolicyType>,
         settings: HashSet<SettingType>,
         storage_factory: Arc<T>,
@@ -79,7 +79,11 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
         }
     }
 
-    pub fn register(&mut self, policy_type: PolicyType, generate_function: GenerateHandler<T>) {
+    pub(crate) fn register(
+        &mut self,
+        policy_type: PolicyType,
+        generate_function: GenerateHandler<T>,
+    ) {
         self.generators.insert(policy_type, generate_function);
     }
 }

@@ -21,7 +21,7 @@ blueprint_definition!("restore_agent", crate::agent::restore_agent::RestoreAgent
 /// The Restore Agent is responsible for signaling to all components to restore
 /// external sources to the last known value. It is invoked during startup.
 #[derive(Debug)]
-pub struct RestoreAgent {
+pub(crate) struct RestoreAgent {
     messenger: service::message::Messenger,
     event_publisher: Publisher,
     available_components: HashSet<SettingType>,

@@ -374,7 +374,7 @@ pub mod persist {
             self.base.notify(event).await;
         }
 
-        pub async fn read_setting_info<T: HasSettingType>(&self) -> SettingInfo {
+        pub(crate) async fn read_setting_info<T: HasSettingType>(&self) -> SettingInfo {
             let mut receptor = self
                 .base
                 .messenger
@@ -401,7 +401,7 @@ pub mod persist {
             panic!("Did not get a read response");
         }
 
-        pub async fn read_setting<T: HasSettingType + TryFrom<SettingInfo>>(&self) -> T {
+        pub(crate) async fn read_setting<T: HasSettingType + TryFrom<SettingInfo>>(&self) -> T {
             let setting_info = self.read_setting_info::<T>().await;
             if let Ok(info) = setting_info.clone().try_into() {
                 info

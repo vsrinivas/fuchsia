@@ -32,7 +32,7 @@ blueprint_definition!(
 
 /// An agent that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
-pub struct InspectSettingAgent {
+pub(crate) struct InspectSettingAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
     setting_values: HashMap<&'static str, InspectSettingInfo>,
@@ -83,7 +83,7 @@ impl InspectSettingAgent {
     /// handlers. Agent starts immediately without calling invocation, but
     /// acknowledges the invocation payload to let the Authority know the agent
     /// starts properly.
-    pub async fn create_with_node(
+    async fn create_with_node(
         context: Context,
         inspect_node: inspect::Node,
         custom_inspector: Option<&inspect::Inspector>,

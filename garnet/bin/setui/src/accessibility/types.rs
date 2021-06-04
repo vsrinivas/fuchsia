@@ -7,12 +7,12 @@ use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AccessibilityInfo {
-    pub audio_description: Option<bool>,
-    pub screen_reader: Option<bool>,
-    pub color_inversion: Option<bool>,
-    pub enable_magnification: Option<bool>,
-    pub color_correction: Option<ColorBlindnessType>,
-    pub captions_settings: Option<CaptionsSettings>,
+    pub(crate) audio_description: Option<bool>,
+    pub(crate) screen_reader: Option<bool>,
+    pub(crate) color_inversion: Option<bool>,
+    pub(crate) enable_magnification: Option<bool>,
+    pub(crate) color_correction: Option<ColorBlindnessType>,
+    pub(crate) captions_settings: Option<CaptionsSettings>,
 }
 
 impl AccessibilityInfo {
@@ -43,7 +43,7 @@ impl Merge for AccessibilityInfo {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum ColorBlindnessType {
+pub(crate) enum ColorBlindnessType {
     /// No color blindness.
     None,
 
@@ -93,12 +93,12 @@ impl From<ColorBlindnessType> for fidl_fuchsia_settings::ColorBlindnessType {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct CaptionsSettings {
-    pub for_media: Option<bool>,
-    pub for_tts: Option<bool>,
-    pub font_style: Option<CaptionFontStyle>,
-    pub window_color: Option<ColorRgba>,
-    pub background_color: Option<ColorRgba>,
+pub(crate) struct CaptionsSettings {
+    pub(crate) for_media: Option<bool>,
+    pub(crate) for_tts: Option<bool>,
+    pub(crate) font_style: Option<CaptionFontStyle>,
+    pub(crate) window_color: Option<ColorRgba>,
+    pub(crate) background_color: Option<ColorRgba>,
 }
 
 impl CaptionsSettings {
@@ -149,11 +149,11 @@ impl From<CaptionsSettings> for fidl_fuchsia_settings::CaptionsSettings {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct CaptionFontStyle {
-    pub family: Option<CaptionFontFamily>,
-    pub color: Option<ColorRgba>,
-    pub relative_size: Option<f32>,
-    pub char_edge_style: Option<EdgeStyle>,
+pub(crate) struct CaptionFontStyle {
+    pub(crate) family: Option<CaptionFontFamily>,
+    pub(crate) color: Option<ColorRgba>,
+    pub(crate) relative_size: Option<f32>,
+    pub(crate) char_edge_style: Option<EdgeStyle>,
 }
 
 impl CaptionFontStyle {
@@ -198,7 +198,7 @@ impl From<CaptionFontStyle> for fidl_fuchsia_settings::CaptionFontStyle {
 
 /// Font family groups for closed captions, specified by 47 CFR §79.102(k).
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub enum CaptionFontFamily {
+pub(crate) enum CaptionFontFamily {
     Unknown,
     MonospacedSerif,
     ProportionalSerif,
@@ -303,11 +303,11 @@ impl From<EdgeStyle> for fidl_fuchsia_settings::EdgeStyle {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct ColorRgba {
-    pub red: f32,
-    pub green: f32,
-    pub blue: f32,
-    pub alpha: f32,
+pub(crate) struct ColorRgba {
+    pub(crate) red: f32,
+    pub(crate) green: f32,
+    pub(crate) blue: f32,
+    pub(crate) alpha: f32,
 }
 
 impl ColorRgba {

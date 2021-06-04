@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 /// Agent for playing earcons sounds.
-pub mod agent;
+pub(crate) mod agent;
 
 /// Earcons utilities.
-pub mod sound_ids;
-pub mod utils;
+pub(crate) mod sound_ids;
+pub(super) mod utils;
 
 /// Earcons handlers.
-pub mod bluetooth_handler;
+pub(crate) mod bluetooth_handler;
 mod volume_change_handler;

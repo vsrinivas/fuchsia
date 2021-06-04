@@ -13,14 +13,14 @@ use futures::TryStreamExt;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-pub struct InputDeviceRegistryService {
+pub(crate) struct InputDeviceRegistryService {
     listeners: Arc<RwLock<Vec<MediaButtonsListenerProxy>>>,
     last_sent_event: Arc<RwLock<Option<MediaButtonsEvent>>>,
     fail: bool,
 }
 
 impl InputDeviceRegistryService {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             listeners: Arc::new(RwLock::new(Vec::new())),
             last_sent_event: Arc::new(RwLock::new(None)),
@@ -28,11 +28,11 @@ impl InputDeviceRegistryService {
         }
     }
 
-    pub fn set_fail(&mut self, fail: bool) {
+    pub(crate) fn set_fail(&mut self, fail: bool) {
         self.fail = fail;
     }
 
-    pub fn send_media_button_event(&self, event: MediaButtonsEvent) {
+    pub(crate) fn send_media_button_event(&self, event: MediaButtonsEvent) {
         *self.last_sent_event.write() = Some(event.clone());
         for listener in self.listeners.read().iter() {
             listener.on_media_buttons_event(event.clone()).ok();

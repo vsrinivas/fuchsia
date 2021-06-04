@@ -17,7 +17,7 @@ use std::convert::TryInto;
 use std::sync::Arc;
 
 /// An implementation of fuchsia.hardware.light for testing use.
-pub struct HardwareLightService {
+pub(crate) struct HardwareLightService {
     pub light_info: Arc<Mutex<HashMap<u32, Info>>>,
     pub simple_values: Arc<Mutex<HashMap<u32, bool>>>,
     pub brightness_values: Arc<Mutex<HashMap<u32, f64>>>,
@@ -27,7 +27,7 @@ pub struct HardwareLightService {
 /// Allow dead code since this is just a fake for testing.
 #[allow(dead_code)]
 impl HardwareLightService {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             light_info: Arc::new(Mutex::new(HashMap::new())),
             simple_values: Arc::new(Mutex::new(HashMap::new())),
@@ -36,7 +36,7 @@ impl HardwareLightService {
         }
     }
 
-    pub async fn insert_light(
+    pub(crate) async fn insert_light(
         &self,
         index: u32,
         name: String,

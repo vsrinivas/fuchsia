@@ -12,16 +12,16 @@ use futures::TryStreamExt;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct RecoveryPolicy {
+pub(crate) struct RecoveryPolicy {
     is_local_reset_allowed: Arc<Mutex<Option<bool>>>,
 }
 
 impl RecoveryPolicy {
-    pub fn create() -> Self {
+    pub(crate) fn create() -> Self {
         Self { is_local_reset_allowed: Arc::new(Mutex::new(None)) }
     }
 
-    pub fn is_local_reset_allowed(&self) -> Arc<Mutex<Option<bool>>> {
+    pub(crate) fn is_local_reset_allowed(&self) -> Arc<Mutex<Option<bool>>> {
         self.is_local_reset_allowed.clone()
     }
 }

@@ -12,7 +12,7 @@ use futures::lock::Mutex;
 use std::sync::Arc;
 
 /// Trait for providing a service.
-pub trait Service {
+pub(crate) trait Service {
     /// Returns true if this service can process the given service name, false
     /// otherwise.
     fn can_handle_service(&self, service_name: &str) -> bool;
@@ -23,7 +23,7 @@ pub trait Service {
 }
 
 /// A helper function for creating a simple setting handler.
-pub fn create_setting_handler(
+pub(crate) fn create_setting_handler(
     request_handler: Box<
         dyn Fn(Request) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync + 'static,
     >,

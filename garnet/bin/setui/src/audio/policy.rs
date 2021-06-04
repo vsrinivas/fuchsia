@@ -25,7 +25,7 @@ pub type PropertyTarget = AudioStreamType;
 pub struct PolicyId(u32);
 
 impl PolicyId {
-    pub fn create(policy_id: u32) -> Self {
+    pub(crate) fn create(policy_id: u32) -> Self {
         Self(policy_id)
     }
 }
@@ -34,16 +34,16 @@ impl PolicyId {
 /// modification of properties should not be available post construction.
 ///
 /// [`State`]: struct.State.html
-pub struct StateBuilder {
+pub(crate) struct StateBuilder {
     properties: HashMap<PropertyTarget, Property>,
 }
 
 impl StateBuilder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { properties: HashMap::new() }
     }
 
-    pub fn add_property(
+    pub(crate) fn add_property(
         mut self,
         stream_type: PropertyTarget,
         available_transforms: TransformFlags,
@@ -54,7 +54,7 @@ impl StateBuilder {
         self
     }
 
-    pub fn build(self) -> State {
+    pub(crate) fn build(self) -> State {
         State { properties: self.properties }
     }
 }
@@ -69,18 +69,18 @@ pub struct State {
 
 impl State {
     #[cfg(test)]
-    pub fn get_properties(&self) -> Vec<Property> {
+    pub(crate) fn get_properties(&self) -> Vec<Property> {
         self.properties.values().cloned().collect::<Vec<Property>>()
     }
 
     #[cfg(test)]
-    pub fn properties(&mut self) -> &mut HashMap<PropertyTarget, Property> {
+    pub(crate) fn properties(&mut self) -> &mut HashMap<PropertyTarget, Property> {
         &mut self.properties
     }
 
     /// Attempts to find the policy with the given ID from the state. Returns the policy target if
     /// it was found and removed, else returns None.
-    pub fn find_policy_target(&self, policy_id: PolicyId) -> Option<PropertyTarget> {
+    pub(crate) fn find_policy_target(&self, policy_id: PolicyId) -> Option<PropertyTarget> {
         self.properties
             .values()
             .find_map(|property| property.find_policy(policy_id).map(|_| property.target))
@@ -88,7 +88,7 @@ impl State {
 
     /// Attempts to remove the policy with the given ID from the state. Returns the policy target if
     /// it was found and removed, else returns None.
-    pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<PropertyTarget> {
+    pub(crate) fn remove_policy(&mut self, policy_id: PolicyId) -> Option<PropertyTarget> {
         self.properties
             .values_mut()
             .find_map(|property| property.remove_policy(policy_id).map(|_| property.target))
@@ -96,7 +96,7 @@ impl State {
 
     /// Attempts to add a new policy transform to the given target. Returns the [`PolicyId`] of the
     /// new policy, or None if the target doesn't exist.
-    pub fn add_transform(
+    pub(crate) fn add_transform(
         &mut self,
         target: PropertyTarget,
         transform: Transform,
@@ -138,18 +138,18 @@ impl DeviceStorageCompatible for State {
 /// `Property` defines the current policy configuration over a given audio
 /// stream type.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct Property {
+pub(crate) struct Property {
     /// Identifier used to reference this type over other requests, such as
     /// setting a policy.
-    pub target: PropertyTarget,
+    pub(crate) target: PropertyTarget,
     /// The available transforms provided as a bitmask.
-    pub available_transforms: TransformFlags,
+    pub(crate) available_transforms: TransformFlags,
     /// The active transform definitions on this stream type.
-    pub active_policies: Vec<Policy>,
+    pub(crate) active_policies: Vec<Policy>,
 }
 
 impl Property {
-    pub fn new(stream_type: AudioStreamType, available_transforms: TransformFlags) -> Self {
+    pub(crate) fn new(stream_type: AudioStreamType, available_transforms: TransformFlags) -> Self {
         Self { target: stream_type, available_transforms, active_policies: vec![] }
     }
 
@@ -160,13 +160,13 @@ impl Property {
 
     /// Attempts to find the policy with the given ID in this property. Returns the policy if it
     /// was found, else returns None.
-    pub fn find_policy(&self, policy_id: PolicyId) -> Option<Policy> {
+    pub(crate) fn find_policy(&self, policy_id: PolicyId) -> Option<Policy> {
         self.active_policies.iter().find(|policy| policy.id == policy_id).copied()
     }
 
     /// Attempts to remove the policy with the given ID from this property. Returns the policy if it
     /// was found and removed, else returns None.
-    pub fn remove_policy(&mut self, policy_id: PolicyId) -> Option<Policy> {
+    pub(crate) fn remove_policy(&mut self, policy_id: PolicyId) -> Option<Policy> {
         match self.active_policies.iter().position(|policy| policy.id == policy_id) {
             Some(index) => Some(self.active_policies.remove(index)),
             None => None,
@@ -175,7 +175,7 @@ impl Property {
 
     /// Returns the highest [`PolicyId`] in the active policies of this property, or None if there
     /// are no active policies.
-    pub fn highest_id(&self) -> Option<PolicyId> {
+    pub(crate) fn highest_id(&self) -> Option<PolicyId> {
         self.active_policies.iter().map(|policy| policy.id).max()
     }
 }
@@ -240,7 +240,7 @@ impl From<AudioStreamType> for fidl_fuchsia_settings_policy::Target {
 bitflags! {
     /// `TransformFlags` defines the available transform space.
     #[derive(Serialize, Deserialize)]
-    pub struct TransformFlags: u64 {
+    pub(crate) struct TransformFlags: u64 {
         const TRANSFORM_MAX = 1 << 0;
         const TRANSFORM_MIN = 1 << 1;
     }
@@ -262,9 +262,9 @@ impl From<TransformFlags> for Vec<fidl_fuchsia_settings_policy::Transform> {
 
 /// `Policy` captures a fully specified transform.
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct Policy {
-    pub id: PolicyId,
-    pub transform: Transform,
+pub(crate) struct Policy {
+    pub(crate) id: PolicyId,
+    pub(crate) transform: Transform,
 }
 
 impl From<Policy> for fidl_fuchsia_settings_policy::Policy {

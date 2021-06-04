@@ -133,7 +133,7 @@ pub async fn read_sensor(sensor: &Sensor) -> Result<AmbientLightInputRpt, Error>
 }
 
 #[cfg(test)]
-pub mod testing {
+pub(crate) mod testing {
     use fidl_fuchsia_input_report::{
         Axis, DeviceDescriptor, DeviceInfo, InputDeviceRequest, InputDeviceRequestStream,
         InputReport, InputReportsReaderReadInputReportsResponder, InputReportsReaderRequest, Range,
@@ -144,12 +144,12 @@ pub mod testing {
     use futures::prelude::*;
     use std::future::Future;
 
-    pub const TEST_LUX_VAL: i64 = 605;
-    pub const TEST_RED_VAL: i64 = 345;
-    pub const TEST_BLUE_VAL: i64 = 133;
-    pub const TEST_GREEN_VAL: i64 = 164;
+    pub(crate) const TEST_LUX_VAL: i64 = 605;
+    pub(crate) const TEST_RED_VAL: i64 = 345;
+    pub(crate) const TEST_BLUE_VAL: i64 = 133;
+    pub(crate) const TEST_GREEN_VAL: i64 = 164;
 
-    pub fn get_mock_sensor_response(
+    pub(crate) fn get_mock_sensor_response(
     ) -> (Vec<SensorAxis>, impl Fn() -> Vec<InputReport> + Clone + Send + Sync + 'static) {
         // Axis copied from real data.
         let axis = Axis {
@@ -186,7 +186,7 @@ pub mod testing {
         )
     }
 
-    pub fn mock_descriptor_from_axes(axes: Vec<SensorAxis>) -> DeviceDescriptor {
+    pub(crate) fn mock_descriptor_from_axes(axes: Vec<SensorAxis>) -> DeviceDescriptor {
         DeviceDescriptor {
             device_info: Some(DeviceInfo {
                 vendor_id: VendorId::Google.into_primitive(),
@@ -209,7 +209,7 @@ pub mod testing {
         }
     }
 
-    pub fn spawn_mock_sensor_with_data<F>(
+    pub(crate) fn spawn_mock_sensor_with_data<F>(
         stream: InputDeviceRequestStream,
         axes: Vec<SensorAxis>,
         data_fn: impl FnMut() -> F + Clone + Send + Sync + 'static,
@@ -225,7 +225,7 @@ pub mod testing {
         });
     }
 
-    pub fn spawn_mock_sensor_with_handler<F>(
+    pub(crate) fn spawn_mock_sensor_with_handler<F>(
         mut stream: InputDeviceRequestStream,
         axes: Vec<SensorAxis>,
         handler: impl FnMut(InputReportsReaderReadInputReportsResponder) -> F

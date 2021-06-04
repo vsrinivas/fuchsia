@@ -12,24 +12,24 @@ use futures::TryStreamExt;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct BrightnessService {
+pub(crate) struct BrightnessService {
     manual_brightness: Arc<Mutex<Option<f32>>>,
     auto_brightness: Arc<Mutex<Option<bool>>>,
 }
 
 impl BrightnessService {
-    pub fn create() -> Self {
+    pub(crate) fn create() -> Self {
         BrightnessService {
             manual_brightness: Arc::new(Mutex::new(None)),
             auto_brightness: Arc::new(Mutex::new(None)),
         }
     }
 
-    pub fn get_manual_brightness(&self) -> Arc<Mutex<Option<f32>>> {
+    pub(crate) fn get_manual_brightness(&self) -> Arc<Mutex<Option<f32>>> {
         self.manual_brightness.clone()
     }
 
-    pub fn get_auto_brightness(&self) -> Arc<Mutex<Option<bool>>> {
+    pub(crate) fn get_auto_brightness(&self) -> Arc<Mutex<Option<bool>>> {
         self.auto_brightness.clone()
     }
 }

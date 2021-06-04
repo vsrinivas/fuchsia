@@ -21,7 +21,7 @@ use futures::StreamExt;
 use std::collections::{HashMap, HashSet};
 
 /// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
-pub struct VolumeChangeHandler {
+pub(super) struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_user_volumes: HashMap<AudioStreamType, f32>,
     modified_counters: ModifiedCounters,
@@ -38,7 +38,7 @@ const VOLUME_MAX_FILE_PATH: &str = "volume-max.wav";
 const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 
 impl VolumeChangeHandler {
-    pub async fn create(
+    pub(super) async fn create(
         publisher: event::Publisher,
         params: CommonEarconsParams,
         messenger: service::message::Messenger,

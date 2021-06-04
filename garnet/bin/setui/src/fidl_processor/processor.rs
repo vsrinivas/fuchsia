@@ -134,7 +134,7 @@ impl<S> SettingsFidlProcessor<S>
 where
     S: ServiceMarker,
 {
-    pub async fn new(
+    pub(crate) async fn new(
         stream: RequestStream<S>,
         service_messenger: service::message::Messenger,
     ) -> Self {
@@ -142,7 +142,7 @@ where
     }
 
     /// Registers a fidl processing unit for setting requests.
-    pub async fn register<V, SV, K>(
+    pub(crate) async fn register<V, SV, K>(
         &mut self,
         setting_type: SettingType,
         callback: SettingsRequestCallback<S, V, SV, K>,
@@ -162,7 +162,7 @@ where
         self.base_processor.processing_units.push(processing_unit);
     }
 
-    pub async fn process(self) {
+    pub(crate) async fn process(self) {
         self.base_processor.process().await
     }
 }

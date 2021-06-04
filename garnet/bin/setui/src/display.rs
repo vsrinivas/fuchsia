@@ -16,4 +16,4 @@ pub mod types;
 pub use light_sensor_config::LightSensorConfig;
 
 #[cfg(test)]
-pub use light_sensor::testing as light_sensor_testing;
+pub(crate) use light_sensor::testing as light_sensor_testing;

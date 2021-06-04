@@ -37,7 +37,7 @@ fn get_streams_array_from_map(
 
 type VolumeControllerHandle = Arc<Mutex<VolumeController>>;
 
-pub struct VolumeController {
+pub(crate) struct VolumeController {
     client: ClientProxy,
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
@@ -220,7 +220,7 @@ impl VolumeController {
     }
 }
 
-pub struct AudioController {
+pub(crate) struct AudioController {
     volume: VolumeControllerHandle,
 }
 

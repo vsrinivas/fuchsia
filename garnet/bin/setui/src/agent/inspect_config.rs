@@ -24,7 +24,7 @@ const CONFIG_INSPECT_NODE_NAME: &str = "config_loads";
 
 blueprint_definition!("inspect_config_agent", InspectConfigAgent::create);
 
-pub struct InspectConfigAgent {
+pub(crate) struct InspectConfigAgent {
     /// The factory for creating a messenger to receive messages.
     delegate: service::message::Delegate,
 
@@ -58,12 +58,12 @@ impl DeviceStorageAccess for InspectConfigAgent {
 }
 
 impl InspectConfigAgent {
-    pub async fn create(context: AgentContext) {
+    async fn create(context: AgentContext) {
         let inspect_node = component::inspector().root().create_child(CONFIG_INSPECT_NODE_NAME);
         InspectConfigAgent::create_with_node(context, inspect_node).await;
     }
 
-    pub async fn create_with_node(context: AgentContext, inspect_node: inspect::Node) {
+    async fn create_with_node(context: AgentContext, inspect_node: inspect::Node) {
         let mut agent = InspectConfigAgent {
             delegate: context.delegate,
             inspect_node,

@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 /// Authority provides the ability to execute agents sequentially or simultaneously for a given
 /// stage.
-pub struct Authority {
+pub(crate) struct Authority {
     // This is a list of pairs of debug ids and agent addresses.
     agent_signatures: Vec<(&'static str, service::message::Signature)>,
     // Factory passed to agents for communicating with the service.
@@ -30,7 +30,7 @@ pub struct Authority {
 }
 
 impl Authority {
-    pub async fn create(
+    pub(crate) async fn create(
         delegate: service::message::Delegate,
         available_components: HashSet<SettingType>,
         available_policies: HashSet<PolicyType>,
@@ -51,7 +51,7 @@ impl Authority {
         })
     }
 
-    pub async fn register(&mut self, blueprint: BlueprintHandle) {
+    pub(crate) async fn register(&mut self, blueprint: BlueprintHandle) {
         let agent_receptor = self
             .delegate
             .create(MessengerType::Unbound)
@@ -81,7 +81,7 @@ impl Authority {
     /// agents will receive their invocations without waiting. However, the
     /// overall completion (signaled through the receiver returned by the method),
     /// will not return until all invocations have been acknowledged.
-    pub async fn execute_lifespan(
+    pub(crate) async fn execute_lifespan(
         &self,
         lifespan: Lifespan,
         service_context: Arc<ServiceContext>,

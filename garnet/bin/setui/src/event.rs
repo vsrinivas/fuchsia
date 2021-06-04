@@ -39,7 +39,7 @@ pub enum Role {
     Sink,
 }
 
-pub mod camera_watcher {
+pub(crate) mod camera_watcher {
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum Event {
         // Indicates that the camera's software mute state changed.
@@ -53,7 +53,7 @@ pub mod camera_watcher {
     }
 }
 
-pub mod earcon {
+pub(crate) mod earcon {
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
     pub enum Event {
         // Indicates the specified earcon type was not played when it normally
@@ -67,7 +67,7 @@ pub mod earcon {
     }
 }
 
-pub mod handler {
+pub(crate) mod handler {
     use crate::handler::base::Request;
     use crate::handler::setting_handler::ExitResult;
 
@@ -88,7 +88,7 @@ pub mod handler {
     }
 }
 
-pub mod media_buttons {
+pub(crate) mod media_buttons {
     use crate::input::{ButtonType, VolumeGain};
 
     #[derive(PartialEq, Clone, Debug)]
@@ -110,7 +110,7 @@ pub mod media_buttons {
     }
 }
 
-pub mod restore {
+pub(crate) mod restore {
     use crate::base::SettingType;
 
     #[derive(PartialEq, Clone, Debug, Eq, Hash)]
@@ -130,7 +130,7 @@ pub struct Publisher {
 }
 
 impl Publisher {
-    pub async fn create(
+    pub(crate) async fn create(
         delegate: &service::message::Delegate,
         messenger_type: service::message::MessengerType,
     ) -> Publisher {
@@ -143,7 +143,7 @@ impl Publisher {
     }
 
     /// Broadcasts event to the message hub.
-    pub fn send_event(&self, event: Event) {
+    pub(crate) fn send_event(&self, event: Event) {
         self.messenger
             .message(
                 Payload::Event(event).into(),
@@ -154,7 +154,7 @@ impl Publisher {
     }
 }
 
-pub mod subscriber {
+pub(crate) mod subscriber {
     use super::*;
     use futures::future::BoxFuture;
 

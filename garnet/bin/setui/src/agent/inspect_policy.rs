@@ -27,7 +27,7 @@ blueprint_definition!("inspect_policy", crate::agent::inspect_policy::InspectPol
 
 /// An agent that listens in on messages sent on the message hub to policy handlers
 /// to record their internal state to inspect.
-pub struct InspectPolicyAgent {
+pub(crate) struct InspectPolicyAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
     policy_values: HashMap<&'static str, InspectPolicyInfo>,
@@ -65,7 +65,7 @@ impl InspectPolicyAgent {
     /// state to the inspect child node. Agent starts immediately without
     /// calling invocation, but acknowledges the invocation payload to
     /// let the Authority know the agent starts properly.
-    pub async fn create_with_node(context: Context, inspect_node: inspect::Node) {
+    async fn create_with_node(context: Context, inspect_node: inspect::Node) {
         // We must take care not to observe all requests as the agent itself can
         // issue messages and block on their response. If another message is
         // passed to the agent during this wait, we will deadlock.

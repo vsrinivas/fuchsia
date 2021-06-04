@@ -115,7 +115,7 @@ where
 }
 
 #[cfg(test)]
-pub mod testing {
+pub(crate) mod testing {
     use super::*;
 
     use crate::agent::Context;

@@ -27,7 +27,7 @@ fn get_event_setting_types() -> HashSet<SettingType> {
 }
 
 // TODO(fxbug.dev/70195): Extract common template from agents.
-pub struct CameraWatcherAgent {
+pub(crate) struct CameraWatcherAgent {
     publisher: Publisher,
     messenger: service::message::Messenger,
 
@@ -40,7 +40,7 @@ impl DeviceStorageAccess for CameraWatcherAgent {
 }
 
 impl CameraWatcherAgent {
-    pub async fn create(context: AgentContext) {
+    pub(crate) async fn create(context: AgentContext) {
         let mut agent = CameraWatcherAgent {
             publisher: context.get_publisher(),
             messenger: context

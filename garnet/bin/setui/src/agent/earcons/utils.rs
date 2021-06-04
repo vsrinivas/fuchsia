@@ -39,7 +39,7 @@ fn resource_file(
 
 /// Establish a connection to the sound player and return the proxy representing the service.
 /// Will not do anything if the sound player connection is already established.
-pub async fn connect_to_sound_player(
+pub(super) async fn connect_to_sound_player(
     publisher: Publisher,
     service_context_handle: Arc<ServiceContext>,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
@@ -59,7 +59,7 @@ pub async fn connect_to_sound_player(
 ///
 /// The id and file_name are expected to be unique and mapped 1:1 to each other. This allows
 /// the sound file to be reused without having to load it again.
-pub async fn play_sound<'a>(
+pub(super) async fn play_sound<'a>(
     sound_player_proxy: &ExternalServiceProxy<PlayerProxy>,
     file_name: &'a str,
     id: u32,

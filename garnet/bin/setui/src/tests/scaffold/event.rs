@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod subscriber {
+pub(crate) mod subscriber {
     use crate::event;
     use crate::service;
     use futures::future::BoxFuture;
@@ -12,12 +12,12 @@ pub mod subscriber {
 
     /// This blueprint provides a way for tests to specify an asynchronous
     /// closure as the create function for an event subscriber.
-    pub struct Blueprint {
+    pub(crate) struct Blueprint {
         generate: Generate,
     }
 
     impl Blueprint {
-        pub fn create(generate: Generate) -> event::subscriber::BlueprintHandle {
+        pub(crate) fn create(generate: Generate) -> event::subscriber::BlueprintHandle {
             Arc::new(Self { generate })
         }
     }

@@ -40,10 +40,10 @@ pub mod channel {
 }
 
 /// [StubWorkload] provides a blank workload to be a placeholder in tests.
-pub struct StubWorkload;
+pub(crate) struct StubWorkload;
 
 impl StubWorkload {
-    pub fn new() -> Box<Self> {
+    pub(crate) fn new() -> Box<Self> {
         Box::new(Self {})
     }
 }
@@ -68,7 +68,7 @@ pub struct Workload {
 }
 
 impl Workload {
-    pub fn new(payload: Payload, target: Signature) -> Box<Self> {
+    pub(crate) fn new(payload: Payload, target: Signature) -> Box<Self> {
         Box::new(Self { payload, target })
     }
 }
@@ -92,13 +92,15 @@ impl job::work::Sequential for Workload {
 
 /// [Workload] provides a simple implementation of [Workload](job::Workload) for sending a test
 /// Payload to a given target.
-pub struct Sequential<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync> {
+pub(crate) struct Sequential<
+    T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync,
+> {
     /// The payload to be delivered.
     callback: Arc<T>,
 }
 
 impl<T: Fn(Messenger, data::StoreHandle) -> BoxFuture<'static, ()> + Send + Sync> Sequential<T> {
-    pub fn boxed(callback: T) -> Box<Self> {
+    pub(crate) fn boxed(callback: T) -> Box<Self> {
         Box::new(Self { callback: Arc::new(callback) })
     }
 }

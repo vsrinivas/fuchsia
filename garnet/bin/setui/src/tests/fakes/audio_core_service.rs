@@ -16,37 +16,37 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub struct Builder {
+pub(crate) struct Builder {
     suppress_client_errors: bool,
 }
 
 impl Builder {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { suppress_client_errors: false }
     }
 
     /// Sets whether errors originating from communicating with the client
     /// should be checked. If not suppressed, errors encountered will be fatal
     /// for the execution.
-    pub fn set_suppress_client_errors(mut self, suppress: bool) -> Self {
+    pub(crate) fn set_suppress_client_errors(mut self, suppress: bool) -> Self {
         self.suppress_client_errors = suppress;
         self
     }
 
-    pub fn build(self) -> Arc<Mutex<AudioCoreService>> {
+    pub(crate) fn build(self) -> Arc<Mutex<AudioCoreService>> {
         Arc::new(Mutex::new(AudioCoreService::new(self.suppress_client_errors)))
     }
 }
 /// An implementation of audio core service that captures the set gains on
 /// usages.
-pub struct AudioCoreService {
+pub(crate) struct AudioCoreService {
     suppress_client_errors: bool,
     audio_streams: Arc<RwLock<HashMap<AudioRenderUsage, (f32, bool)>>>,
     exit_tx: Option<oneshot::Sender<()>>,
 }
 
 impl AudioCoreService {
-    pub fn new(suppress_client_errors: bool) -> Self {
+    pub(crate) fn new(suppress_client_errors: bool) -> Self {
         let mut streams = HashMap::new();
         for stream in default_audio_info().streams.iter() {
             streams.insert(
@@ -61,13 +61,13 @@ impl AudioCoreService {
         }
     }
 
-    pub fn get_level_and_mute(&self, usage: AudioRenderUsage) -> Option<(f32, bool)> {
+    pub(crate) fn get_level_and_mute(&self, usage: AudioRenderUsage) -> Option<(f32, bool)> {
         get_level_and_mute(usage, &self.audio_streams)
     }
 
     /// Causes the AudioCoreService to exit its request stream processing loop.
     /// Has no effect if the service is not currently processing requests.
-    pub fn exit(&mut self) {
+    pub(crate) fn exit(&mut self) {
         if let Some(tx) = self.exit_tx.take() {
             tx.send(()).ok();
         }

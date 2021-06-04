@@ -15,20 +15,20 @@ use futures::TryStreamExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-pub struct Camera3Service {
+pub(crate) struct Camera3Service {
     camera_sw_muted: Arc<AtomicBool>,
 }
 
 impl Camera3Service {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { camera_sw_muted: Arc::new(AtomicBool::new(false)) }
     }
 
-    pub fn camera_sw_muted(&self) -> bool {
+    pub(crate) fn camera_sw_muted(&self) -> bool {
         (*self.camera_sw_muted).load(Ordering::Relaxed)
     }
 
-    pub fn set_camera_sw_muted(&self, muted: bool) {
+    pub(crate) fn set_camera_sw_muted(&self, muted: bool) {
         (*self.camera_sw_muted).swap(muted, Ordering::Relaxed);
     }
 }

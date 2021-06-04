@@ -9,20 +9,20 @@ use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::sync::Arc;
 
-pub type ServiceRegistryHandle = Arc<Mutex<ServiceRegistry>>;
+pub(crate) type ServiceRegistryHandle = Arc<Mutex<ServiceRegistry>>;
 
 /// A helper class that gathers services through registration and directs
 /// the appropriate channels to them.
-pub struct ServiceRegistry {
+pub(crate) struct ServiceRegistry {
     services: Vec<Arc<Mutex<dyn Service + Send + Sync>>>,
 }
 
 impl ServiceRegistry {
-    pub fn create() -> ServiceRegistryHandle {
+    pub(crate) fn create() -> ServiceRegistryHandle {
         Arc::new(Mutex::new(ServiceRegistry { services: Vec::new() }))
     }
 
-    pub fn register_service(&mut self, service: Arc<Mutex<dyn Service + Send + Sync>>) {
+    pub(crate) fn register_service(&mut self, service: Arc<Mutex<dyn Service + Send + Sync>>) {
         self.services.push(service);
     }
 
@@ -37,7 +37,7 @@ impl ServiceRegistry {
         return Err(format_err!("channel not handled for service: {}", service_name));
     }
 
-    pub fn serve(registry_handle: ServiceRegistryHandle) -> GenerateService {
+    pub(crate) fn serve(registry_handle: ServiceRegistryHandle) -> GenerateService {
         Box::new(
             move |service_name: &str, channel: zx::Channel| -> BoxFuture<'_, Result<(), Error>> {
                 let registry_handle_clone = registry_handle.clone();

@@ -79,11 +79,11 @@ use fuchsia_syslog::fx_log_err;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that the policy ID was invalid.
-pub const ARG_POLICY_ID: &str = "policy_id";
+pub(crate) const ARG_POLICY_ID: &str = "policy_id";
 
 /// `AudioPolicyHandler` controls the persistence and enforcement of audio policies set by
 /// fuchsia.settings.policy.VolumePolicyController.
-pub struct AudioPolicyHandler {
+pub(crate) struct AudioPolicyHandler {
     /// Policy state containing all of the transforms.
     state: State,
 

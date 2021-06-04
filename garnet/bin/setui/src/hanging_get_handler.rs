@@ -167,7 +167,7 @@ where
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    pub async fn create(
+    pub(super) async fn create(
         messenger: service::message::Messenger,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST, K>>> {

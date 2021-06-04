@@ -82,7 +82,7 @@ pub enum Payload {
 }
 
 #[cfg(test)]
-pub mod test {
+pub(crate) mod test {
     use crate::payload_convert;
 
     /// This payload should be expanded to include any sort of data that tests would send that is
@@ -97,8 +97,8 @@ pub mod test {
 }
 
 /// A trait implemented by payloads for extracting the payload and associated
-/// [`message::MessageClient`] from a [`crate::message::base::MesageEvent`].
-pub trait TryFromWithClient<T>: Sized {
+/// [`message::MessageClient`] from a [`crate::message::base::MessageEvent`].
+pub(crate) trait TryFromWithClient<T>: Sized {
     type Error;
 
     fn try_from_with_client(value: T) -> Result<(Self, message::MessageClient), Self::Error>;
@@ -131,7 +131,7 @@ pub enum Role {
 #[macro_export]
 macro_rules! payload_convert {
     ($service_payload_type:ident, $payload_type:ty) => {
-        pub mod convert {
+        pub(super) mod convert {
             use super::*;
             use crate::service;
             use crate::service::TryFromWithClient;
@@ -191,7 +191,7 @@ macro_rules! payload_convert {
 }
 
 #[cfg(test)]
-pub async fn build_event_listener(delegate: &message::Delegate) -> message::Receptor {
+pub(crate) async fn build_event_listener(delegate: &message::Delegate) -> message::Receptor {
     delegate
         .messenger_builder(MessengerType::Unbound)
         .add_role(role::Signature::role(Role::Event(event::Role::Sink)))

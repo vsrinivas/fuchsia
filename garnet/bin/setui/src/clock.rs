@@ -7,12 +7,12 @@ use fuchsia_zircon::Time;
 const TIMESTAMP_DIVIDEND: i64 = 1_000_000_000;
 
 #[cfg(not(test))]
-pub fn now() -> Time {
+pub(crate) fn now() -> Time {
     Time::get_monotonic()
 }
 
 #[cfg(not(test))]
-pub fn inspect_format_now() -> String {
+pub(crate) fn inspect_format_now() -> String {
     // follows syslog timestamp format: [seconds.nanos]
     let timestamp = now().into_nanos();
     let seconds = timestamp / TIMESTAMP_DIVIDEND;
@@ -21,27 +21,27 @@ pub fn inspect_format_now() -> String {
 }
 
 #[cfg(test)]
-pub use mock::now;
+pub(crate) use mock::now;
 
 #[cfg(test)]
-pub use mock::inspect_format_now;
+pub(crate) use mock::inspect_format_now;
 
 #[cfg(test)]
-pub mod mock {
+pub(crate) mod mock {
     use super::*;
     use std::cell::RefCell;
 
     thread_local!(static MOCK_TIME: RefCell<Time> = RefCell::new(Time::get_monotonic()));
 
-    pub fn now() -> Time {
+    pub(crate) fn now() -> Time {
         MOCK_TIME.with(|time| *time.borrow())
     }
 
-    pub fn set(new_time: Time) {
+    pub(crate) fn set(new_time: Time) {
         MOCK_TIME.with(|time| *time.borrow_mut() = new_time);
     }
 
-    pub fn inspect_format_now() -> String {
+    pub(crate) fn inspect_format_now() -> String {
         let timestamp = now().into_nanos();
         let seconds = timestamp / TIMESTAMP_DIVIDEND;
         let nanos = timestamp % TIMESTAMP_DIVIDEND;

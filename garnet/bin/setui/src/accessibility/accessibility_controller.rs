@@ -33,7 +33,7 @@ impl From<AccessibilityInfo> for SettingInfo {
     }
 }
 
-pub struct AccessibilityController {
+pub(crate) struct AccessibilityController {
     client: ClientProxy,
 }
 

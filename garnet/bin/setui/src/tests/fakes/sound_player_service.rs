@@ -18,13 +18,13 @@ use std::sync::Arc;
 const DURATION: i64 = 1000000000;
 
 /// Send tuple of id and usage.
-pub type SoundEventSender = UnboundedSender<(u32, AudioRenderUsage)>;
+pub(crate) type SoundEventSender = UnboundedSender<(u32, AudioRenderUsage)>;
 
 /// Receives tuple id and usage for earcon played.
-pub type SoundEventReceiver = UnboundedReceiver<(u32, AudioRenderUsage)>;
+pub(crate) type SoundEventReceiver = UnboundedReceiver<(u32, AudioRenderUsage)>;
 
 /// An implementation of the SoundPlayer for tests.
-pub struct SoundPlayerService {
+pub(crate) struct SoundPlayerService {
     // Represents the number of times the sound has been played in total.
     play_counts: Arc<Mutex<HashMap<u32, u32>>>,
 
@@ -33,7 +33,7 @@ pub struct SoundPlayerService {
 }
 
 impl SoundPlayerService {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             play_counts: Arc::new(Mutex::new(HashMap::new())),
             sound_played_listeners: Arc::new(Mutex::new(Vec::new())),
@@ -41,17 +41,17 @@ impl SoundPlayerService {
     }
 
     // Check whether the sound with the given id was added to the Player.
-    pub async fn id_exists(&self, id: u32) -> bool {
+    pub(crate) async fn id_exists(&self, id: u32) -> bool {
         self.play_counts.lock().await.get(&id).is_some()
     }
 
     // Get the number of times the sound with the given id has played.
-    pub async fn get_play_count(&self, id: u32) -> Option<u32> {
+    pub(crate) async fn get_play_count(&self, id: u32) -> Option<u32> {
         self.play_counts.lock().await.get(&id).copied()
     }
 
     // Creates a listener to notify when a sound is played.
-    pub async fn create_sound_played_listener(&self) -> SoundEventReceiver {
+    pub(crate) async fn create_sound_played_listener(&self) -> SoundEventReceiver {
         let (sound_played_sender, sound_played_receiver) =
             futures::channel::mpsc::unbounded::<(u32, AudioRenderUsage)>();
         self.sound_played_listeners.lock().await.push(sound_played_sender);

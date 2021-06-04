@@ -116,7 +116,7 @@ pub struct ClientProxy {
 
 impl ClientProxy {
     /// Sends a setting request to the underlying setting proxy this policy handler controls.
-    pub fn send_setting_request(
+    pub(crate) fn send_setting_request(
         &self,
         setting_type: SettingType,
         request: Request,
@@ -130,7 +130,7 @@ impl ClientProxy {
     }
 
     /// Requests the setting handler to rebroadcast a settings changed event to its listeners.
-    pub fn request_rebroadcast(&self, setting_type: SettingType) {
+    pub(crate) fn request_rebroadcast(&self, setting_type: SettingType) {
         self.service_messenger
             .message(
                 HandlerPayload::Request(Request::Rebroadcast).into(),

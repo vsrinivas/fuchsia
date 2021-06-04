@@ -4,7 +4,7 @@
 
 // Constant sound ids for the earcons player to uniquely identify sounds.
 // Ids must be unique.
-pub const VOLUME_MAX_SOUND_ID: u32 = 0;
-pub const VOLUME_CHANGED_SOUND_ID: u32 = 1;
-pub const BLUETOOTH_CONNECTED_SOUND_ID: u32 = 2;
-pub const BLUETOOTH_DISCONNECTED_SOUND_ID: u32 = 3;
+pub(crate) const VOLUME_MAX_SOUND_ID: u32 = 0;
+pub(crate) const VOLUME_CHANGED_SOUND_ID: u32 = 1;
+pub(crate) const BLUETOOTH_CONNECTED_SOUND_ID: u32 = 2;
+pub(crate) const BLUETOOTH_DISCONNECTED_SOUND_ID: u32 = 3;

@@ -85,7 +85,7 @@ pub mod registration {
     }
 
     impl Registrant {
-        pub fn get_dependencies(&self) -> &HashSet<Dependency> {
+        pub(crate) fn get_dependencies(&self) -> &HashSet<Dependency> {
             &self.dependencies
         }
 
@@ -105,17 +105,17 @@ pub mod registration {
     }
 
     impl Builder {
-        pub fn new(registrar: Registrar) -> Self {
+        pub(crate) fn new(registrar: Registrar) -> Self {
             Self { registrar, dependencies: HashSet::new() }
         }
 
-        pub fn add_dependency(mut self, dependency: Dependency) -> Self {
+        pub(crate) fn add_dependency(mut self, dependency: Dependency) -> Self {
             self.dependencies.insert(dependency);
 
             self
         }
 
-        pub fn build(self) -> Registrant {
+        pub(crate) fn build(self) -> Registrant {
             Registrant { registrar: self.registrar, dependencies: self.dependencies }
         }
     }

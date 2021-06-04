@@ -17,19 +17,19 @@ use std::sync::Arc;
 pub type SessionId = u64;
 
 /// An implementation of the Discovery connection state manager for tests.
-pub struct DiscoveryService {
+pub(crate) struct DiscoveryService {
     // Fake hanging get handler. Allows the service to mock the return of the watch
     // on a connection change.
     watchers: Arc<Mutex<Vec<SessionsWatcherProxy>>>,
 }
 
 impl DiscoveryService {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { watchers: Arc::new(Mutex::new(Vec::<SessionsWatcherProxy>::new())) }
     }
 
     /// Simulate updating a media session.
-    pub async fn update_session(&self, id: SessionId, domain: &str) {
+    pub(crate) async fn update_session(&self, id: SessionId, domain: &str) {
         for watcher in self.watchers.lock().await.iter() {
             watcher
                 .session_updated(id, create_delta_with_domain(domain))
@@ -38,7 +38,7 @@ impl DiscoveryService {
         }
     }
 
-    pub async fn remove_session(&self, id: SessionId) {
+    pub(crate) async fn remove_session(&self, id: SessionId) {
         for watcher in self.watchers.lock().await.iter() {
             watcher.session_removed(id).await.expect("Failed to send remove request to handler");
         }

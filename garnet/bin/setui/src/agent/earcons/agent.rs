@@ -25,7 +25,7 @@ blueprint_definition!("earcons_agent", Agent::create);
 
 /// The Earcons Agent is responsible for watching updates to relevant sources that need to play
 /// sounds.
-pub struct Agent {
+pub(crate) struct Agent {
     publisher: Publisher,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
     messenger: service::message::Messenger,
@@ -37,10 +37,10 @@ impl DeviceStorageAccess for Agent {
 
 /// Params that are common to handlers of the earcons agent.
 #[derive(Clone)]
-pub struct CommonEarconsParams {
-    pub service_context: Arc<ServiceContext>,
-    pub sound_player_added_files: Arc<Mutex<HashSet<&'static str>>>,
-    pub sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
+pub(super) struct CommonEarconsParams {
+    pub(super) service_context: Arc<ServiceContext>,
+    pub(super) sound_player_added_files: Arc<Mutex<HashSet<&'static str>>>,
+    pub(super) sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
 }
 
 impl Debug for CommonEarconsParams {

@@ -45,7 +45,7 @@ macro_rules! request_respond {
 /// request is processed. The returned value is a result with an optional
 /// request, containing None if not processed and the original request
 /// otherwise.
-pub type RequestCallback<S, T, ST, K> =
+pub(crate) type RequestCallback<S, T, ST, K> =
     Box<dyn Fn(RequestContext<T, ST, K>, FidlRequest<S>) -> RequestResultCreator<'static, S>>;
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -53,7 +53,7 @@ type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 /// `RequestContext` is passed to each request callback to provide resources,
 /// Note that we do not directly expose the hanging get handler so that we can
 /// better control its lifetime.
-pub struct RequestContext<T, ST, K = String>
+pub(crate) struct RequestContext<T, ST, K = String>
 where
     T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
@@ -70,7 +70,11 @@ where
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    pub async fn request(&self, setting_type: SettingType, request: SettingRequest) -> Response {
+    pub(crate) async fn request(
+        &self,
+        setting_type: SettingType,
+        request: SettingRequest,
+    ) -> Response {
         let mut receptor = self
             .service_messenger
             .message(
@@ -88,14 +92,14 @@ where
         Err(Error::CommunicationError)
     }
 
-    pub async fn watch(&self, responder: ST, close_on_error: bool) {
+    pub(crate) async fn watch(&self, responder: ST, close_on_error: bool) {
         let mut hanging_get_lock = self.hanging_get_handler.lock().await;
         hanging_get_lock
             .watch(responder, if close_on_error { Some(self.exit_tx.clone()) } else { None })
             .await;
     }
 
-    pub async fn watch_with_change_fn(
+    pub(crate) async fn watch_with_change_fn(
         &self,
         change_function_key: K,
         change_function: ChangeFunction<T>,

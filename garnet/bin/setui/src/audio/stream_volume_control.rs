@@ -25,7 +25,7 @@ const PUBLISHER_EVENT_NAME: &str = "volume_control_events";
 const CONTROLLER_ERROR_DEPENDENCY: &str = "fuchsia.media.audio";
 
 /// Closure definition for an action that can be triggered by ActionFuse.
-pub type ExitAction = Arc<dyn Fn() + Send + Sync + 'static>;
+pub(crate) type ExitAction = Arc<dyn Fn() + Send + Sync + 'static>;
 
 // Stores an AudioStream and a VolumeControl proxy bound to the AudioCore
 // service for |stored_stream|'s stream type. |proxy| is set to None if it
@@ -60,7 +60,7 @@ impl Drop for StreamVolumeControl {
 
 // TODO(fxbug.dev/37777): Listen for volume changes from Volume Control.
 impl StreamVolumeControl {
-    pub async fn create(
+    pub(crate) async fn create(
         audio_service: &ExternalServiceProxy<fidl_fuchsia_media::AudioCoreProxy>,
         stream: AudioStream,
         early_exit_action: Option<ExitAction>,
@@ -83,7 +83,7 @@ impl StreamVolumeControl {
         Ok(control)
     }
 
-    pub async fn set_volume(&mut self, stream: AudioStream) -> Result<(), ControllerError> {
+    pub(crate) async fn set_volume(&mut self, stream: AudioStream) -> Result<(), ControllerError> {
         assert_eq!(self.stored_stream.stream_type, stream.stream_type);
         // Stream input should be valid. Input comes from restore should be valid
         // and from set request has the validation.

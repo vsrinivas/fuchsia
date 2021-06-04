@@ -31,12 +31,12 @@ const BLUETOOTH_CONNECTED_FILE_PATH: &str = "bluetooth-connected.wav";
 /// The file path for the earcon to be played for bluetooth disconnecting.
 const BLUETOOTH_DISCONNECTED_FILE_PATH: &str = "bluetooth-disconnected.wav";
 
-pub const BLUETOOTH_DOMAIN: &str = "Bluetooth";
+pub(crate) const BLUETOOTH_DOMAIN: &str = "Bluetooth";
 
 /// The `BluetoothHandler` takes care of the earcons functionality on bluetooth connection
 /// and disconnection.
 #[derive(Debug)]
-pub struct BluetoothHandler {
+pub(super) struct BluetoothHandler {
     // Parameters common to all earcons handlers.
     common_earcons_params: CommonEarconsParams,
     // The publisher to use for connecting to services.
@@ -52,7 +52,10 @@ enum BluetoothSoundType {
 }
 
 impl BluetoothHandler {
-    pub async fn create(publisher: Publisher, params: CommonEarconsParams) -> Result<(), Error> {
+    pub(super) async fn create(
+        publisher: Publisher,
+        params: CommonEarconsParams,
+    ) -> Result<(), Error> {
         let mut handler = Self {
             common_earcons_params: params,
             publisher,
@@ -64,7 +67,7 @@ impl BluetoothHandler {
     /// Watch for media session changes. The media sessions that have the
     /// Bluetooth mode in their metadata signify a bluetooth connection.
     /// The id of a disconnected device will be received on removal.
-    pub async fn watch_bluetooth_connections(&mut self) -> Result<(), Error> {
+    pub(super) async fn watch_bluetooth_connections(&mut self) -> Result<(), Error> {
         // Connect to media session Discovery service.
         let discovery_connection_result = self
             .common_earcons_params

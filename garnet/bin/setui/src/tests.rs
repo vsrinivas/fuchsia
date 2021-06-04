@@ -48,7 +48,7 @@ mod do_not_disturb_tests;
 mod environment_tests;
 mod event_tests;
 mod factory_reset_tests;
-pub mod fakes;
+pub(crate) mod fakes;
 mod fidl_processor_tests;
 mod hanging_get_tests;
 mod input_test_environment;

@@ -25,12 +25,12 @@ use fidl_fuchsia_ui_brightness::{
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
-pub const DEFAULT_MANUAL_BRIGHTNESS_VALUE: f32 = 0.5;
-pub const DEFAULT_AUTO_BRIGHTNESS_VALUE: f32 = 0.5;
+pub(super) const DEFAULT_MANUAL_BRIGHTNESS_VALUE: f32 = 0.5;
+pub(super) const DEFAULT_AUTO_BRIGHTNESS_VALUE: f32 = 0.5;
 
 lazy_static! {
     /// Default display used if no configuration is available.
-    pub static ref DEFAULT_DISPLAY_INFO: DisplayInfo = DisplayInfo::new(
+    pub(crate) static ref DEFAULT_DISPLAY_INFO: DisplayInfo = DisplayInfo::new(
         false,                           /*auto_brightness_enabled*/
         DEFAULT_MANUAL_BRIGHTNESS_VALUE, /*manual_brightness_value*/
         DEFAULT_AUTO_BRIGHTNESS_VALUE,   /*auto_brightness_value*/
@@ -42,14 +42,14 @@ lazy_static! {
 
 lazy_static! {
     /// Reference to a display configuration.
-    pub static ref DISPLAY_CONFIGURATION: Mutex<DefaultSetting<DisplayConfiguration, &'static str>> =
+    pub(crate) static ref DISPLAY_CONFIGURATION: Mutex<DefaultSetting<DisplayConfiguration, &'static str>> =
         Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json", None, false));
 }
 
 /// Returns a default display [`DisplayInfo`] that is derived from
 /// [`DEFAULT_DISPLAY_INFO`] with any fields specified in the
 /// display configuration set.
-pub fn default_display_info() -> DisplayInfo {
+pub(crate) fn default_display_info() -> DisplayInfo {
     let mut default_display_info = *DEFAULT_DISPLAY_INFO;
 
     if let Ok(Some(display_configuration)) =
@@ -107,7 +107,7 @@ impl From<DisplayInfoV5> for DisplayInfo {
 }
 
 #[async_trait]
-pub trait BrightnessManager: Sized {
+pub(crate) trait BrightnessManager: Sized {
     async fn from_client(client: &ClientProxy) -> Result<Self, ControllerError>;
     async fn update_brightness(
         &self,
@@ -140,7 +140,7 @@ impl BrightnessManager for () {
     }
 }
 
-pub struct ExternalBrightnessControl {
+pub(crate) struct ExternalBrightnessControl {
     brightness_service: ExternalServiceProxy<BrightnessControlProxy>,
 }
 
@@ -187,7 +187,7 @@ impl BrightnessManager for ExternalBrightnessControl {
     }
 }
 
-pub struct DisplayController<T = ()>
+pub(crate) struct DisplayController<T = ()>
 where
     T: BrightnessManager,
 {
