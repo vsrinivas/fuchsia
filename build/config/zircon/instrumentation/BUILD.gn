@@ -16,3 +16,7 @@ config("ubsan-trap") {
   cflags = compiler_flags
   ldflags = compiler_flags
 }
+
+config("instrumented-stack-size") {
+  defines = [ "CUSTOM_DEFAULT_STACK_SIZE=16384" ]
+}
