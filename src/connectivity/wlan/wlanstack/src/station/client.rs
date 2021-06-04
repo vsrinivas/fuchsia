@@ -346,6 +346,7 @@ fn send_connect_result(
 mod tests {
     use {
         super::*,
+        crate::test_helper::fake_inspect_tree,
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         fidl_fuchsia_wlan_mlme::ScanResultCode,
@@ -355,9 +356,7 @@ mod tests {
         pin_utils::pin_mut,
         rand::{prelude::ThreadRng, Rng},
         std::convert::TryInto,
-        telemetry::test_helper::{
-            fake_cobalt_sender, fake_disconnect_info, fake_inspect_tree, CobaltExt,
-        },
+        telemetry::test_helper::{fake_cobalt_sender, fake_disconnect_info, CobaltExt},
         test_case::test_case,
         wlan_common::{assert_variant, bss::Protection, channel::Channel},
         wlan_rsn::auth,
@@ -484,7 +483,7 @@ mod tests {
         let (cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let telemetry_fut =
             handle_telemetry(info_stream, cobalt_sender, cobalt_1dot1_proxy, inspect_tree);

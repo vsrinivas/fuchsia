@@ -8,7 +8,10 @@ use {
     fuchsia_inspect::{
         ArrayProperty, InspectType, Inspector, Node, NumericProperty, Property, UintProperty,
     },
-    fuchsia_inspect_contrib::nodes::BoundedListNode,
+    fuchsia_inspect_contrib::{
+        auto_persist::{self, AutoPersist},
+        nodes::BoundedListNode,
+    },
     futures::FutureExt,
     log::warn,
     parking_lot::Mutex,
@@ -41,7 +44,7 @@ pub struct WlanstackTree {
     /// "client_stats" node
     pub client_stats: ClientStatsNode,
     /// "device_events" subtree
-    pub device_events: Mutex<BoundedListNode>,
+    pub device_events: Mutex<AutoPersist<BoundedListNode>>,
     /// "iface-<n>" subtrees, where n is the iface ID.
     ifaces_trees: Mutex<IfacesTrees>,
     /// "active_iface" property, what's the currently active iface. This assumes only one iface
@@ -50,17 +53,25 @@ pub struct WlanstackTree {
 }
 
 impl WlanstackTree {
-    pub fn new(inspector: Inspector) -> Self {
+    pub fn new(
+        inspector: Inspector,
+        persistence_req_sender: auto_persist::PersistenceReqSender,
+    ) -> Self {
         let client_stats = inspector.root().create_child("client_stats");
         let device_events = inspector.root().create_child("device_events");
+        let device_events = AutoPersist::new(
+            BoundedListNode::new(device_events, DEVICE_EVENTS_LIMIT),
+            "wlanstack-device-events",
+            persistence_req_sender.clone(),
+        );
         let ifaces_trees = IfacesTrees::new(MAX_DEAD_IFACE_NODES);
         Self {
             inspector,
             // According to doc, `rand::random` uses ThreadRng, which is cryptographically secure:
             // https://docs.rs/rand/0.5.0/rand/rngs/struct.ThreadRng.html
             hasher: WlanHasher::new(rand::random::<u64>().to_le_bytes()),
-            client_stats: ClientStatsNode::new(client_stats),
-            device_events: Mutex::new(BoundedListNode::new(device_events, DEVICE_EVENTS_LIMIT)),
+            client_stats: ClientStatsNode::new(client_stats, persistence_req_sender),
+            device_events: Mutex::new(device_events),
             ifaces_trees: Mutex::new(ifaces_trees),
             latest_active_client_iface: Mutex::new(None),
         }
@@ -159,16 +170,16 @@ impl WlanstackTree {
 
 pub struct ClientStatsNode {
     _node: Node,
-    pub connect: Mutex<BoundedListNode>,
-    pub disconnect: Mutex<BoundedListNode>,
+    pub connect: Mutex<AutoPersist<BoundedListNode>>,
+    pub disconnect: Mutex<AutoPersist<BoundedListNode>>,
     /// Tracked so we know periods of time when there may be spotty data transfer.
-    pub scan: Mutex<BoundedListNode>,
-    pub scan_failures: Mutex<BoundedListNode>,
+    pub scan: Mutex<AutoPersist<BoundedListNode>>,
+    pub scan_failures: Mutex<AutoPersist<BoundedListNode>>,
     pub counters: Mutex<BoundedListNode>,
 }
 
 impl ClientStatsNode {
-    fn new(node: Node) -> Self {
+    fn new(node: Node, persistence_req_sender: auto_persist::PersistenceReqSender) -> Self {
         let connect = node.create_child("connect");
         let disconnect = node.create_child("disconnect");
         let scan = node.create_child("scan");
@@ -176,12 +187,25 @@ impl ClientStatsNode {
         let counters = node.create_child("counters");
         Self {
             _node: node,
-            connect: Mutex::new(BoundedListNode::new(connect, CONNECT_EVENTS_LIMIT)),
-            disconnect: Mutex::new(BoundedListNode::new(disconnect, DISCONNECT_EVENTS_LIMIT)),
-            scan: Mutex::new(BoundedListNode::new(scan, SCAN_EVENTS_LIMIT)),
-            scan_failures: Mutex::new(BoundedListNode::new(
-                scan_failures,
-                SCAN_FAILURE_EVENTS_LIMIT,
+            connect: Mutex::new(AutoPersist::new(
+                BoundedListNode::new(connect, CONNECT_EVENTS_LIMIT),
+                "wlanstack-connect-events",
+                persistence_req_sender.clone(),
+            )),
+            disconnect: Mutex::new(AutoPersist::new(
+                BoundedListNode::new(disconnect, DISCONNECT_EVENTS_LIMIT),
+                "wlanstack-disconnect-events",
+                persistence_req_sender.clone(),
+            )),
+            scan: Mutex::new(AutoPersist::new(
+                BoundedListNode::new(scan, SCAN_EVENTS_LIMIT),
+                "wlanstack-scan-events",
+                persistence_req_sender.clone(),
+            )),
+            scan_failures: Mutex::new(AutoPersist::new(
+                BoundedListNode::new(scan_failures, SCAN_FAILURE_EVENTS_LIMIT),
+                "wlanstack-scan-failure-events",
+                persistence_req_sender.clone(),
             )),
             counters: Mutex::new(BoundedListNode::new(counters, COUNTERS_EVENTS_LIMIT)),
         }
@@ -273,11 +297,14 @@ impl HistogramsSubtrees {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_inspect::assert_data_tree, wlan_common::assert_variant};
+    use {
+        super::*, crate::test_helper, fuchsia_inspect::assert_data_tree,
+        wlan_common::assert_variant,
+    };
 
     #[test]
     fn test_mark_unmark_active_client_iface_simple() {
-        let inspect_tree = WlanstackTree::new(Inspector::new());
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
@@ -289,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_mark_unmark_active_client_iface_interleave() {
-        let inspect_tree = WlanstackTree::new(Inspector::new());
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 

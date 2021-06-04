@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::inspect,
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_inspect::Inspector,
     fuchsia_zircon::DurationNum,
     futures::channel::mpsc,
-    std::sync::Arc,
     wlan_common::{
         bss::Protection as BssProtection,
         channel::{Cbw, Channel},
@@ -76,11 +73,6 @@ impl CobaltExt for fidl_fuchsia_metrics::MetricEventLoggerRequest {
         };
         assert!(result.is_ok());
     }
-}
-
-pub fn fake_inspect_tree() -> Arc<inspect::WlanstackTree> {
-    let inspector = Inspector::new();
-    Arc::new(inspect::WlanstackTree::new(inspector))
 }
 
 pub fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {

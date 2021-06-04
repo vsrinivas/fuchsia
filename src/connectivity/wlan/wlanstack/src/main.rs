@@ -16,6 +16,8 @@ mod service;
 mod station;
 mod stats_scheduler;
 mod telemetry;
+#[cfg(test)]
+pub mod test_helper;
 mod watchable_map;
 mod watcher_service;
 
@@ -26,9 +28,10 @@ use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
+use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_syslog as syslog;
-use futures::future::try_join5;
 use futures::prelude::*;
+use futures::try_join;
 use log::{error, info};
 use std::sync::Arc;
 use wlan_sme;
@@ -37,6 +40,9 @@ use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watcher_service::WatcherService;
 
 const CONCURRENT_LIMIT: usize = 1000;
+
+// Service name to persist Inspect data across boots
+const PERSISTENCE_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.persist.DataPersistence-wlan";
 
 /// Configuration for wlanstack service.
 /// This configuration is a super set of individual component configurations such as SME.
@@ -67,10 +73,19 @@ async fn main() -> Result<(), Error> {
     info!("Starting");
     let cfg: ServiceCfg = argh::from_env();
     info!("{:?}", cfg);
+
     let mut fs = ServiceFs::new_local();
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
     inspect_runtime::serve(&inspector, &mut fs)?;
-    let inspect_tree = Arc::new(inspect::WlanstackTree::new(inspector));
+
+    let persistence_proxy = fuchsia_component::client::connect_to_protocol_at_path::<
+        fidl_fuchsia_diagnostics_persist::DataPersistenceMarker,
+    >(PERSISTENCE_SERVICE_PATH)
+    .context("failed to connect to persistence service")?;
+    let (persistence_req_sender, persistence_req_forwarder_fut) =
+        auto_persist::create_persistence_req_sender(persistence_proxy);
+
+    let inspect_tree = Arc::new(inspect::WlanstackTree::new(inspector, persistence_req_sender));
     fs.dir("svc").add_fidl_service(IncomingServices::Device);
 
     let (phys, phy_events) = device::PhyMap::new();
@@ -125,14 +140,14 @@ async fn main() -> Result<(), Error> {
         cobalt_1dot1_proxy,
     );
 
-    let ((), (), (), (), ()) = try_join5(
+    let _ = try_join!(
         serve_fidl_fut,
         watcher_fut.map_ok(|_: void::Void| ()),
         phy_server.map_ok(|_: void::Void| ()),
         cobalt_reporter.map(Ok),
+        persistence_req_forwarder_fut.map(Ok),
         telemetry_server.map(Ok),
-    )
-    .await?;
+    )?;
     info!("Exiting");
     Ok(())
 }

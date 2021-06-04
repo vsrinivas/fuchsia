@@ -111,7 +111,8 @@ async fn serve_phy(
 ) {
     let msg = format!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
     info!("{}", msg);
-    inspect_log!(inspect_tree.device_events.lock(), msg: msg);
+    inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: msg);
+
     let id = new_phy.id;
     let event_stream = new_phy.proxy.take_event_stream();
     phys.insert(id, PhyDevice { proxy: new_phy.proxy, device: new_phy.device });
@@ -120,10 +121,10 @@ async fn serve_phy(
     if let Err(e) = r {
         let msg = format!("error reading from FIDL channel of phy #{}: {}", id, e);
         error!("{}", msg);
-        inspect_log!(inspect_tree.device_events.lock(), msg: msg);
+        inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: msg);
     }
     info!("phy removed: #{}", id);
-    inspect_log!(inspect_tree.device_events.lock(), msg: format!("phy removed: #{}", id));
+    inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: format!("phy removed: #{}", id));
 }
 
 pub fn create_and_serve_sme(
@@ -156,7 +157,7 @@ pub fn create_and_serve_sme(
     );
 
     info!("new iface #{} with role '{:?}'", id, device_info.role);
-    inspect_log!(inspect_tree.device_events.lock(), {
+    inspect_log!(inspect_tree.device_events.lock().get_mut(), {
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
     if let fidl_mlme::MacRole::Client = device_info.role {
@@ -183,7 +184,10 @@ pub fn create_and_serve_sme(
     Ok(async move {
         let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
         info!("iface removed: #{}", id);
-        inspect_log!(inspect_tree.device_events.lock(), msg: format!("iface removed: #{}", id));
+        inspect_log!(
+            inspect_tree.device_events.lock().get_mut(),
+            msg: format!("iface removed: #{}", id)
+        );
         inspect_tree.unmark_active_client_iface(id);
         ifaces.remove(&id);
         result
@@ -251,11 +255,12 @@ where
 mod tests {
     use {
         super::*,
+        crate::test_helper,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_mlme::MlmeMarker,
         fuchsia_async as fasync,
         fuchsia_cobalt::{self, CobaltSender},
-        fuchsia_inspect::{assert_data_tree, Inspector},
+        fuchsia_inspect::assert_data_tree,
         futures::channel::mpsc,
         futures::future::join,
         futures::sink::SinkExt,
@@ -281,7 +286,7 @@ mod tests {
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
-        let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
         let (sender, _receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
@@ -366,7 +371,7 @@ mod tests {
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
         let (iface_map, _iface_map_events) = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
-        let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
         let (sender, _receiver) = mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);

@@ -119,7 +119,7 @@ pub async fn serve_device_requests(
                                     msg
                                 }
                             };
-                            inspect_log!(inspect_tree.device_events.lock(), msg: msg);
+                            inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: msg);
                             inspect_tree.notify_iface_removed(iface_id);
                         });
                         fasync::Task::spawn(serve_sme_fut).detach();
@@ -457,6 +457,7 @@ async fn get_minstrel_stats(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_helper;
 
     use fidl::endpoints::ServerEnd;
     use fidl_fuchsia_wlan_device::{self as fidl_dev, PhyRequest, PhyRequestStream};
@@ -464,7 +465,6 @@ mod tests {
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_async as fasync;
-    use fuchsia_inspect::Inspector;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::future::BoxFuture;
@@ -1146,7 +1146,7 @@ mod tests {
                 .expect("failed to create Cobalt 1.1 proxy");
 
         // Create an inspector, but don't serve.
-        let inspect_tree = Arc::new(inspect::WlanstackTree::new(Inspector::new()));
+        let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
 
         let (proxy, marker) =
             create_proxy::<fidl_svc::DeviceServiceMarker>().expect("failed to create proxy");

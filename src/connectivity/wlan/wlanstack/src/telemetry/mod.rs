@@ -239,7 +239,7 @@ pub fn log_scan_stats(
     scan_stats: &ScanStats,
     is_join_scan: bool,
 ) {
-    inspect_log!(inspect_tree.client_stats.scan.lock(), {
+    inspect_log!(inspect_tree.client_stats.scan.lock().get_mut(), {
         start_at: scan_stats.scan_start_at.into_nanos(),
         end_at: scan_stats.scan_end_at.into_nanos(),
         result: format!("{:?}", scan_stats.result),
@@ -270,7 +270,7 @@ pub fn log_scan_stats(
     );
 
     if let Some(error_code_dim) = error_code_dim {
-        inspect_log!(inspect_tree.client_stats.scan_failures.lock(), {});
+        inspect_log!(inspect_tree.client_stats.scan_failures.lock().get_mut(), {});
         sender.log_event_count(
             metrics::SCAN_FAILURE_METRIC_ID,
             [
@@ -325,7 +325,7 @@ pub async fn log_connect_stats(
     let reconnect_info = log_connection_gap_time_stats(sender, connect_stats);
 
     if let ConnectResult::Success = connect_stats.result {
-        inspect_log!(inspect_tree.client_stats.connect.lock(), {
+        inspect_log!(inspect_tree.client_stats.connect.lock().get_mut(), {
             attempts: connect_stats.attempts,
             reconnect_info?: reconnect_info.as_ref().map(|info| make_inspect_loggable!({
                 gap_time: info.gap_time.into_nanos(),
@@ -707,7 +707,7 @@ pub async fn log_disconnect(
     inspect_tree: Arc<inspect::WlanstackTree>,
     info: &DisconnectInfo,
 ) {
-    inspect_log!(inspect_tree.client_stats.disconnect.lock(), {
+    inspect_log!(inspect_tree.client_stats.disconnect.lock().get_mut(), {
         connected_duration: info.connected_duration.into_nanos(),
         last_rssi: info.last_rssi,
         last_snr: info.last_snr,
@@ -851,9 +851,8 @@ mod tests {
             device::{self, IfaceDevice},
             mlme_query_proxy::MlmeQueryProxy,
             stats_scheduler::{self, StatsRequest},
-            telemetry::test_helper::{
-                fake_cobalt_sender, fake_disconnect_info, fake_inspect_tree, CobaltExt,
-            },
+            telemetry::test_helper::{fake_cobalt_sender, fake_disconnect_info, CobaltExt},
+            test_helper::fake_inspect_tree,
         },
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
@@ -895,7 +894,7 @@ mod tests {
 
         let (ifaces_map, stats_requests) = fake_iface_map();
         let (cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let telemetry_fut = report_telemetry_periodically(
             Arc::new(ifaces_map),
@@ -953,7 +952,7 @@ mod tests {
     #[test]
     fn test_log_scan_stats() {
         let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let now = now();
         let scan_stats = ScanStats {
@@ -988,7 +987,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let connect_stats = fake_connect_stats();
         let fut = log_connect_stats(
             &mut cobalt_sender,
@@ -1040,7 +1039,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let connect_stats = fake_connect_stats_old_code_path_with_join_scan();
         let fut = log_connect_stats(
             &mut cobalt_sender,
@@ -1293,7 +1292,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::User(
                 fidl_sme::UserDisconnectReason::FailedToConnect,
@@ -1357,7 +1356,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::Ap(DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
@@ -1422,7 +1421,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
             disconnect_source: DisconnectSource::Mlme(DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::MlmeLinkFailed,
@@ -1491,7 +1490,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let connect_stats = fake_connect_stats();
         let fut = log_connect_stats(
@@ -1528,7 +1527,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let disconnect_source =
             DisconnectSource::User(fidl_sme::UserDisconnectReason::FailedToConnect);
@@ -1595,7 +1594,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let disconnect_source = DisconnectSource::Ap(DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
@@ -1659,7 +1658,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let disconnect_source = DisconnectSource::Mlme(DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
@@ -1719,7 +1718,7 @@ mod tests {
     #[test]
     fn test_inspect_log_scan() {
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let now = now();
         let scan_stats = ScanStats {
@@ -1750,7 +1749,7 @@ mod tests {
     #[test]
     fn test_inspect_log_scan_failures() {
         let (mut cobalt_sender, _cobalt_receiver) = fake_cobalt_sender();
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
         let now = now();
         let scan_stats = ScanStats {
@@ -1776,7 +1775,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_counters() {
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let last = fake_iface_stats(10);
         let current = fake_iface_stats(20);
         log_counters_to_inspect(1, &last, &current, inspect_tree.clone());
@@ -1799,7 +1798,7 @@ mod tests {
 
     #[test]
     fn test_inspect_log_counters_detects_overflow() {
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let last = fake_iface_stats(20);
         let current = fake_iface_stats(10);
         log_counters_to_inspect(1, &last, &current, inspect_tree.clone());
@@ -1828,7 +1827,7 @@ mod tests {
         let (mut cobalt_1dot1_proxy, mut cobalt_1dot1_stream) =
             create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy and stream");
-        let inspect_tree = fake_inspect_tree();
+        let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let fut = log_connect_stats(
             &mut cobalt_sender,
             &mut cobalt_1dot1_proxy,

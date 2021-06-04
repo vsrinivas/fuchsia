@@ -12,6 +12,7 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.diagnostics.persist.DataPersistence-wlan",
             "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.wlan.devmgr.IsolatedDevmgr"
         ]

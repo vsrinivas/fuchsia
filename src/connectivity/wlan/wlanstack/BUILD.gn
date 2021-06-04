@@ -47,6 +47,7 @@ rustc_binary("bin") {
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/connectivity/wlan/lib/sme:wlan-sme",
     "//src/connectivity/wlan/lib/wlan_dev",
+    "//src/diagnostics/persistence/fidl:persist-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
@@ -95,6 +96,7 @@ rustc_binary("bin") {
     "src/telemetry/disconnect_tracker.rs",
     "src/telemetry/mod.rs",
     "src/telemetry/test_helper.rs",
+    "src/test_helper.rs",
     "src/watchable_map.rs",
     "src/watcher_service.rs",
   ]
