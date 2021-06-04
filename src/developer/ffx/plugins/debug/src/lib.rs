@@ -11,6 +11,41 @@ use {
     std::fs,
 };
 
+struct ProcessArguments {
+    arguments: Vec<String>,
+}
+
+impl ProcessArguments {
+    fn new() -> Self {
+        Self { arguments: Vec::new() }
+    }
+
+    fn add_flag(&mut self, name: &str, value: bool) {
+        if value {
+            self.arguments.push(name.to_string());
+        }
+    }
+
+    fn add_value(&mut self, name: &str, value: &str) {
+        self.arguments.push(name.to_string());
+        self.arguments.push(value.to_string());
+    }
+
+    fn add_option(&mut self, name: &str, value: &Option<String>) {
+        if let Some(value) = &value {
+            self.arguments.push(name.to_string());
+            self.arguments.push(value.to_string());
+        }
+    }
+
+    fn add_values(&mut self, name: &str, value: &Vec<String>) {
+        for value in value.iter() {
+            self.arguments.push(name.to_string());
+            self.arguments.push(value.to_string());
+        }
+    }
+}
+
 #[ffx_core::ffx_plugin(
     "debug_enabled",
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
@@ -31,7 +66,7 @@ pub async fn execute_debug(
 ) -> Result<(), Error> {
     let sdk = ffx_config::get_sdk().await?;
 
-    let mut arguments: Vec<String> = Vec::new();
+    let mut arguments = ProcessArguments::new();
     let mut needs_debug_agent = true;
 
     let command_path = match &cmd.sub_command {
@@ -39,25 +74,39 @@ pub async fn execute_debug(
             if let Some(from) = &options.from {
                 if from != "device" {
                     needs_debug_agent = false;
-                    arguments.push("--from".to_string());
-                    arguments.push(from.to_string());
+                    arguments.add_value("--from", from);
                 }
             }
 
+            arguments.add_option("--to", &options.to);
+            arguments.add_option("--format", &options.format);
+            arguments.add_values("--with", &options.with);
+            arguments.add_flag("--with-process-info", options.with_process_info);
+            arguments.add_option("--stack", &options.stack);
+            arguments.add_values("--syscalls", &options.syscalls);
+            arguments.add_values("--exclude-syscalls", &options.exclude_syscalls);
+            arguments.add_values("--messages", &options.messages);
+            arguments.add_values("--exclude-messages", &options.exclude_messages);
+            arguments.add_values("--trigger", &options.trigger);
+            arguments.add_values("--thread", &options.thread);
+            arguments.add_flag("--dump-messages", options.dump_messages);
+
             if needs_debug_agent {
                 // Processes to monitor.
-                for remote_name in options.remote_name.iter() {
-                    arguments.push("--remote-name".to_string());
-                    arguments.push(remote_name.to_string());
-                }
+                arguments.add_values("--remote-pid", &options.remote_pid);
+                arguments.add_values("--remote-name", &options.remote_name);
+                arguments.add_values("--extra-name", &options.extra_name);
+
+                // Jobs to monitor.
+                arguments.add_values("--remote-job-id", &options.remote_job_id);
+                arguments.add_values("--remote-job-name", &options.remote_job_name);
             }
 
             if let SdkVersion::InTree = sdk.get_version() {
                 // When ffx is used in tree, uses the JSON IR files listed in all_fidl_json.txt.
                 let ir_file =
                     format!("@{}/all_fidl_json.txt", sdk.get_path_prefix().to_str().unwrap());
-                arguments.push("--fidl-ir-path".to_string());
-                arguments.push(ir_file);
+                arguments.add_value("--fidl-ir-path", &ir_file);
             }
             sdk.get_host_tool("fidlcat")?
         }
@@ -72,7 +121,7 @@ pub async fn execute_debug(
 
     if !needs_debug_agent {
         // Start fidlcat locally.
-        let child = std::process::Command::new(&command_path).args(&arguments).spawn();
+        let child = std::process::Command::new(&command_path).args(&arguments.arguments).spawn();
         if let Err(error) = child {
             return Err(anyhow!("Can't launch {:?}: {:?}", command_path, error));
         }
@@ -97,18 +146,16 @@ pub async fn execute_debug(
     let listener = UnixListener::bind(&cmd.socket_location)?;
 
     // Connect to the Unix socket.
-    arguments.push("--unix-connect".to_string());
-    arguments.push(cmd.socket_location.to_string());
+    arguments.add_value("--unix-connect", &cmd.socket_location);
 
     // Use the symbol server.
-    arguments.push("--symbol-server".to_string());
-    arguments.push("gs://fuchsia-artifacts-release/debug".to_string());
+    arguments.add_value("--symbol-server", "gs://fuchsia-artifacts-release/debug");
 
     // Terminate the debug agent when exiting.
-    arguments.push("--quit-agent-on-exit".to_string());
+    arguments.add_flag("--quit-agent-on-exit", true);
 
     // Start fidlcat or zxdb locally.
-    let child = std::process::Command::new(&command_path).args(&arguments).spawn();
+    let child = std::process::Command::new(&command_path).args(&arguments.arguments).spawn();
     if let Err(error) = child {
         return Err(anyhow!("Can't launch {:?}: {:?}", command_path, error));
     }
