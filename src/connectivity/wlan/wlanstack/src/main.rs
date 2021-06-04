@@ -11,7 +11,6 @@ mod device;
 mod device_watch;
 mod future_util;
 mod inspect;
-mod logger;
 mod mlme_query_proxy;
 mod service;
 mod station;
@@ -27,6 +26,7 @@ use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
+use fuchsia_syslog as syslog;
 use futures::future::try_join5;
 use futures::prelude::*;
 use log::{error, info};
@@ -36,11 +36,7 @@ use wlan_sme;
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watcher_service::WatcherService;
 
-const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
-
 const CONCURRENT_LIMIT: usize = 1000;
-
-static LOGGER: logger::Logger = logger::Logger;
 
 /// Configuration for wlanstack service.
 /// This configuration is a super set of individual component configurations such as SME.
@@ -66,8 +62,7 @@ impl From<ServiceCfg> for wlan_sme::Config {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    log::set_logger(&LOGGER)?;
-    log::set_max_level(MAX_LOG_LEVEL);
+    syslog::init().expect("Syslog init should not fail");
 
     info!("Starting");
     let cfg: ServiceCfg = argh::from_env();
