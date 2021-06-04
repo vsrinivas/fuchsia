@@ -239,9 +239,15 @@ static zx_status_t do_jobs_worker(const walk_ctx_t* ctx, koid_table_t* koids, zx
         return status;
       }
     } else {
-      fprintf(stderr,
-              "WARNING: zx_object_get_child(%" PRIu64 ", (job)%" PRIu64 ", ...) failed: %s (%d)\n",
-              job_koid, koids->entries[n], zx_status_get_string(status), status);
+      // Because there's a race between fetch_children() and calling
+      // zx_object_get_child(), it's not unexpected that a child koid might
+      // become invalid in that gap, so don't warn in that case.
+      if (status != ZX_ERR_NOT_FOUND) {
+        fprintf(stderr,
+                "WARNING: zx_object_get_child(%" PRIu64 ", (job)%" PRIu64
+                ", ...) failed: %s (%d)\n",
+                job_koid, koids->entries[n], zx_status_get_string(status), status);
+      }
     }
   }
 
