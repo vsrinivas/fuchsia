@@ -1,0 +1,11 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/radar-integration-test"
+    },
+    "sandbox": {
+        "dev": [ "class/radar" ]
+    }
+}
