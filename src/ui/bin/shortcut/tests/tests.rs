@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #![cfg(test)]
 use {
-    anyhow::{format_err, Error, Result},
+    anyhow::{format_err, Result},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_shortcut as ui_shortcut,
     fuchsia_async::{self as fasync, TimeoutExt},
@@ -56,7 +56,7 @@ enum EventType {
     /// A subtype for shortcut activation.
     ShortcutActivation,
     /// A subtype for handled keys.
-    KeyHandled(Result<bool, Error>),
+    KeyHandled(Result<bool>),
 }
 
 impl TestCase {
@@ -246,7 +246,7 @@ impl TestCase {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_keys3() -> Result<(), Error> {
+async fn test_keys3() -> Result<()> {
     let mut registry_service = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
     manager_service.set_focus_chain(vec![&registry_service.view_ref]).await?;
@@ -362,7 +362,7 @@ async fn test_keys3() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_client_timeout() -> Result<(), Error> {
+async fn test_client_timeout() -> Result<()> {
     let mut registry_service = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
@@ -403,7 +403,7 @@ async fn test_client_timeout() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_focus_change() -> Result<(), Error> {
+async fn test_focus_change() -> Result<()> {
     let mut client1 = RegistryService::new().await?;
     let mut client2 = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
@@ -476,7 +476,7 @@ async fn test_focus_change() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_multiple_matches() -> Result<(), Error> {
+async fn test_multiple_matches() -> Result<()> {
     let mut parent = RegistryService::new().await?;
     let mut child = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
@@ -531,7 +531,7 @@ async fn test_multiple_matches() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_priority_matches() -> Result<(), Error> {
+async fn test_priority_matches() -> Result<()> {
     let mut parent = RegistryService::new().await?;
     let mut child = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
@@ -577,7 +577,7 @@ async fn test_priority_matches() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_multiple_priority_matches() -> Result<(), Error> {
+async fn test_multiple_priority_matches() -> Result<()> {
     let mut parent = RegistryService::new().await?;
     let mut child = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
@@ -626,7 +626,7 @@ async fn test_multiple_priority_matches() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_priority_same_client() -> Result<(), Error> {
+async fn test_priority_same_client() -> Result<()> {
     let mut client = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
@@ -665,7 +665,7 @@ async fn test_priority_same_client() -> Result<(), Error> {
 // A shortcut activated by pressing and releasing the left Meta key and nothing
 // else.
 #[fasync::run_singlethreaded(test)]
-async fn handle_meta_press_release_shortcut() -> Result<(), Error> {
+async fn handle_meta_press_release_shortcut() -> Result<()> {
     let mut client = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
@@ -697,7 +697,7 @@ async fn handle_meta_press_release_shortcut() -> Result<(), Error> {
 // When we watch for LeftMeta/press+release and LeftMeta+K/press, only the
 // latter will be triggered.
 #[fasync::run_singlethreaded(test)]
-async fn handle_overlapping_shortcuts_with_meta_key() -> Result<(), Error> {
+async fn handle_overlapping_shortcuts_with_meta_key() -> Result<()> {
     let mut client = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
@@ -737,7 +737,7 @@ async fn handle_overlapping_shortcuts_with_meta_key() -> Result<(), Error> {
 
 // Shows that a press+release shortcut is not triggered if a key intervenes.
 #[fasync::run_singlethreaded(test)]
-async fn do_not_handle_shortcut_with_intervening_keys() -> Result<(), Error> {
+async fn do_not_handle_shortcut_with_intervening_keys() -> Result<()> {
     let mut client = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
@@ -794,7 +794,7 @@ async fn do_not_handle_shortcut_with_intervening_keys() -> Result<(), Error> {
 // This shortcut is typically LeftMeta+Tab, and is typically done by holding LeftMeta
 // and pressing Tab as many times as is needed to reach the desired window.
 #[fasync::run_singlethreaded(test)]
-async fn handle_meta_tab_tab() -> Result<(), Error> {
+async fn handle_meta_tab_tab() -> Result<()> {
     let mut client = RegistryService::new().await?;
     let manager_service = ManagerService::new().await?;
 
@@ -852,7 +852,7 @@ async fn handle_meta_tab_tab() -> Result<(), Error> {
 // view_ref is hooked up into the focus chain still triggers a shortcut.
 // See fxbug.dev/76758 for details.
 #[fasync::run_singlethreaded(test)]
-async fn shortcut_registration_after_focus_chain_set() -> Result<(), Error> {
+async fn shortcut_registration_after_focus_chain_set() -> Result<()> {
     let view_ref = RegistryService::new_view_ref();
 
     // Timing: a valid view ref is hooked into the focus chain before its
