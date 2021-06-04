@@ -3,73 +3,18 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_hanging_get_responder;
-use crate::handler::base::{Request, Response};
-use crate::ingress::Scoped;
-use crate::ingress::{request, watch};
-use crate::job::{Job, Signature};
+use crate::fidl_common::FidlResponseErrorLogger;
+use crate::fidl_processor::settings::RequestContext;
+use crate::handler::base::Request;
+use crate::{fidl_hanging_get_responder, fidl_process, request_respond};
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
-    Error, FactoryResetMarker, FactoryResetRequest, FactoryResetSetResponder,
-    FactoryResetSetResult, FactoryResetSettings, FactoryResetWatchResponder,
+    Error, FactoryResetMarker, FactoryResetRequest, FactoryResetSettings,
+    FactoryResetWatchResponder,
 };
-
-const WATCH_JOB_SIGNATURE: usize = 1;
+use fuchsia_async as fasync;
 
 fidl_hanging_get_responder!(FactoryResetMarker, FactoryResetSettings, FactoryResetWatchResponder,);
-
-impl From<Response> for Scoped<FactoryResetSetResult> {
-    fn from(response: Response) -> Self {
-        Scoped(response.map_or(Err(Error::Failed), |_| Ok(())))
-    }
-}
-
-impl request::Responder<Scoped<FactoryResetSetResult>> for FactoryResetSetResponder {
-    fn respond(self, response: Scoped<FactoryResetSetResult>) {
-        self.send(&mut response.extract()).ok();
-    }
-}
-
-impl watch::Responder<FactoryResetSettings, fuchsia_zircon::Status> for FactoryResetWatchResponder {
-    fn respond(self, response: Result<FactoryResetSettings, fuchsia_zircon::Status>) {
-        match response {
-            Ok(settings) => {
-                self.send(settings).ok();
-            }
-            Err(error) => {
-                self.control_handle().shutdown_with_epitaph(error);
-            }
-        }
-    }
-}
-
-impl From<fidl::Error> for crate::job::source::Error {
-    fn from(_item: fidl::Error) -> Self {
-        crate::job::source::Error::Unknown
-    }
-}
-
-impl From<FactoryResetRequest> for Job {
-    fn from(item: FactoryResetRequest) -> Self {
-        #[allow(unreachable_patterns)]
-        match item {
-            FactoryResetRequest::Set { settings, responder } => request::Work::new(
-                SettingType::FactoryReset,
-                to_request(settings).expect("should convert"),
-                responder,
-            )
-            .into(),
-            FactoryResetRequest::Watch { responder } => watch::Work::new(
-                SettingType::FactoryReset,
-                Signature::new(WATCH_JOB_SIGNATURE),
-                responder,
-            )
-            .into(),
-            _ => {
-                panic!("Not supported!");
-            }
-        }
-    }
-}
 
 impl From<SettingInfo> for FactoryResetSettings {
     fn from(response: SettingInfo) -> Self {
@@ -86,6 +31,47 @@ impl From<SettingInfo> for FactoryResetSettings {
 fn to_request(settings: FactoryResetSettings) -> Option<Request> {
     settings.is_local_reset_allowed.map(Request::SetLocalResetAllowed)
 }
+
+fidl_process!(FactoryReset, SettingType::FactoryReset, process_request);
+
+async fn process_request(
+    context: RequestContext<FactoryResetSettings, FactoryResetWatchResponder>,
+    req: FactoryResetRequest,
+) -> Result<Option<FactoryResetRequest>, anyhow::Error> {
+    // Support future expansion of FIDL
+    #[allow(unreachable_patterns)]
+    match req {
+        FactoryResetRequest::Set { settings, responder } => {
+            if let Some(request) = to_request(settings) {
+                fasync::Task::spawn(async move {
+                    request_respond!(
+                        context,
+                        responder,
+                        SettingType::FactoryReset,
+                        request,
+                        Ok(()),
+                        Err(fidl_fuchsia_settings::Error::Failed),
+                        FactoryResetMarker
+                    );
+                })
+                .detach();
+            } else {
+                responder
+                    .send(&mut Err(Error::Unsupported))
+                    .log_fidl_response_error(FactoryResetMarker::DEBUG_NAME);
+            }
+        }
+        FactoryResetRequest::Watch { responder } => {
+            context.watch(responder, true).await;
+        }
+        _ => {
+            return Ok(Some(req));
+        }
+    }
+
+    Ok(None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

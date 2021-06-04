@@ -27,7 +27,6 @@ use crate::job::Signature;
 use crate::message::base::Audience;
 use crate::service::{message, Address};
 use async_trait::async_trait;
-use fuchsia_syslog::fx_log_warn;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -97,17 +96,7 @@ impl<
                 return_val
             }
             Ok(Payload::Response(Err(error))) => Some(Err(error)),
-            Err(error) => {
-                fx_log_warn!(
-                    "An error occurred while watching {:?}:{:?}",
-                    self.setting_type,
-                    error
-                );
-                Some(Err(match error.root_cause().downcast_ref::<Error>() {
-                    Some(error) => error.clone(),
-                    _ => crate::handler::base::Error::CommunicationError,
-                }))
-            }
+            Err(_) => Some(Err(crate::handler::base::Error::CommunicationError)),
             _ => {
                 panic!("invalid variant {:?}", response);
             }
