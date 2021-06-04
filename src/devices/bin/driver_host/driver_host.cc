@@ -122,7 +122,14 @@ static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
 zx_status_t log_rpc_result(const fbl::RefPtr<zx_device_t>& dev, const char* opname,
                            zx_status_t status, zx_status_t call_status = ZX_OK) {
   if (status != ZX_OK) {
-    LOGD(ERROR, *dev, "Failed %s RPC: %s", opname, zx_status_get_string(status));
+    constexpr char kLogFormat[] = "Failed %s RPC: %s";
+    if (status == ZX_ERR_PEER_CLOSED) {
+      // TODO(https://fxbug.dev/52627): change to an ERROR log once driver
+      // manager can shut down gracefully.
+      LOGD(WARNING, *dev, kLogFormat, opname, zx_status_get_string(status));
+    } else {
+      LOGD(ERROR, *dev, kLogFormat, opname, zx_status_get_string(status));
+    }
     return status;
   }
   if (call_status != ZX_OK && call_status != ZX_ERR_NOT_FOUND) {
@@ -520,7 +527,14 @@ void DevhostControllerConnection::CreateDevice(CreateDeviceRequestView request,
   creation_context.parent->set_flag(DEV_FLAG_DEAD);
 
   if (r != ZX_OK) {
-    LOGF(ERROR, "Failed to create driver: %s", zx_status_get_string(r));
+    constexpr char kLogFormat[] = "Failed to create driver: %s";
+    if (r == ZX_ERR_PEER_CLOSED) {
+      // TODO(https://fxbug.dev/52627): change to an ERROR log once driver
+      // manager can shut down gracefully.
+      LOGF(WARNING, kLogFormat, zx_status_get_string(r));
+    } else {
+      LOGF(ERROR, kLogFormat, zx_status_get_string(r));
+    }
     return;
   }
 

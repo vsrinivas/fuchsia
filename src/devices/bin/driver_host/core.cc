@@ -472,8 +472,15 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
     status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, str_props, str_prop_count,
                               std::move(inspect), std::move(client_remote));
     if (status < 0) {
-      LOGD(ERROR, *dev, "Failed to add device %p to driver_manager: %s", dev.get(),
-           zx_status_get_string(status));
+      constexpr char kLogFormat[] = "Failed to add device %p to driver_manager: %s";
+      if (status == ZX_ERR_PEER_CLOSED) {
+        // TODO(https://fxbug.dev/52627): change to an ERROR log once driver
+        // manager can shut down gracefully.
+        LOGD(WARNING, *dev, kLogFormat, dev.get(), zx_status_get_string(status));
+      } else {
+        LOGD(ERROR, *dev, kLogFormat, dev.get(), zx_status_get_string(status));
+      }
+
       dev->parent()->remove_child(*dev);
       dev->set_parent(nullptr);
 
