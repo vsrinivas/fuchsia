@@ -19,6 +19,7 @@ import("//src/developer/ffx/build/ffx_action.gni")
 # These imports to be replaced by board-config json files
 import("//build/images/filesystem_limits.gni")
 import("//build/images/fvm.gni")
+import("//build/product.gni")
 import("//build/zbi/zbi.gni")
 
 ####
@@ -660,6 +661,7 @@ generated_file(labels.board_config) {
 
     blobfs = {
       layout = blob_layout_format
+      include_update_package = product_include_updates_in_blobfs
     }
 
     fvm = {

@@ -196,10 +196,19 @@ pub struct BlobFSConfig {
     /// Typically "padded" or "compact"
     #[serde(default = "default_blob_layout")]
     pub layout: String,
+
+    /// Whether to include the update package in blobfs in order to reserve
+    /// space. This is usually to ensure that OTAs are possible.
+    #[serde(default = "default_true")]
+    pub include_update_package: bool,
 }
 
 fn default_blob_layout() -> String {
     "compact".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// The information required to construct a FVM.

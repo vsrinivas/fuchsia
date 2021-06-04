@@ -82,7 +82,10 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
-        Some(construct_blobfs(&outdir, &gendir, &product, &board, &base_package, &update_package)?)
+        // Include the update package in blobfs if necessary.
+        let update_package =
+            if board.blobfs.include_update_package { Some(&update_package) } else { None };
+        Some(construct_blobfs(&outdir, &gendir, &product, &board, &base_package, update_package)?)
     } else {
         info!("Skipping blobfs creation");
         None
@@ -404,7 +407,7 @@ fn construct_blobfs(
     product: &ProductConfig,
     board: &BoardConfig,
     base_package: &BasePackage,
-    update_package: &UpdatePackage,
+    update_package: Option<&UpdatePackage>,
 ) -> Result<PathBuf> {
     let mut blobfs_builder = BlobFSBuilder::new(&board.blobfs.layout);
 
@@ -423,9 +426,11 @@ fn construct_blobfs(
     }
 
     // Add the update package and its contents.
-    blobfs_builder.add_file(&update_package.path)?;
-    for (_, source) in &update_package.contents {
-        blobfs_builder.add_file(source)?;
+    if let Some(update_package) = update_package {
+        blobfs_builder.add_file(&update_package.path)?;
+        for (_, source) in &update_package.contents {
+            blobfs_builder.add_file(source)?;
+        }
     }
 
     // Build the blobfs and return its path.
