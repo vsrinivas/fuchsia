@@ -180,7 +180,7 @@ response { +CIEV: ind: Integer, value: Integer }
 
 # Indicator activation and deactivation command
 # HFP 1.8 4.35
-command { AT+BIA=indrep: List<String> }
+command { AT+BIA=indrep: List<Option<BoolAsInt>> }
 
 # Answer
 # HFP 1.8 4.34.2

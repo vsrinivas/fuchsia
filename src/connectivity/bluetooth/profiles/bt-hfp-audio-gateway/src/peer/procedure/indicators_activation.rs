@@ -9,24 +9,6 @@ use crate::peer::{
 };
 use at_commands as at;
 
-/// Converts the indicator activeness flags (represented as Strings) to a vector of
-/// optional flags. Returns the set of flags or an Error if the `indicators` are formatted
-/// incorrectly.
-// TODO(fxbug.dev/73374): Remove this once the AT library represents the command as a Vec<Option<bool>>.
-fn to_flags(indicators: Vec<String>) -> Result<Vec<Option<bool>>, ()> {
-    let result: Vec<Result<Option<bool>, ()>> = indicators
-        .into_iter()
-        .map(|ind| match ind.as_str() {
-            "" => Ok(None),
-            "1" => Ok(Some(true)),
-            "0" => Ok(Some(false)),
-            _ => Err(()),
-        })
-        .collect();
-
-    result.into_iter().collect()
-}
-
 /// The Hf may request to enable or disable indicators via this procedure. Defined in
 /// HFP v1.8 Section 4.35.
 ///
@@ -54,14 +36,8 @@ impl Procedure for IndicatorsActivationProcedure {
         match (self.terminated, update) {
             (false, at::Command::Bia { indrep }) => {
                 self.terminated = true;
-                if let Ok(flags) = to_flags(indrep) {
-                    state.ag_indicator_events_reporting.update_from_flags(flags);
-                    AgUpdate::Ok.into()
-                } else {
-                    // Per HFP v1.8 Section 4.35, if the command is incorrectly formatted,
-                    // send an ERROR result code.
-                    AgUpdate::Error.into()
-                }
+                state.ag_indicator_events_reporting.update_from_flags(indrep);
+                AgUpdate::Ok.into()
             }
             (false, at::Command::Cmer { mode, ind, .. }) => {
                 self.terminated = true;
@@ -86,20 +62,6 @@ impl Procedure for IndicatorsActivationProcedure {
 mod tests {
     use super::*;
     use matches::assert_matches;
-
-    #[test]
-    fn to_flags_conversion_produces_expected_results() {
-        let empty = Vec::new();
-        let expected: Vec<Option<bool>> = vec![];
-        assert_matches!(to_flags(empty), Ok(v) if v == expected);
-
-        let valid = vec!["1".to_string(), String::new(), "0".to_string()];
-        let expected = vec![Some(true), None, Some(false)];
-        assert_matches!(to_flags(valid), Ok(v) if v == expected);
-
-        let invalid = vec!["0".to_string(), "foo".to_string()];
-        assert_matches!(to_flags(invalid), Err(()));
-    }
 
     #[test]
     fn correct_marker() {
@@ -132,41 +94,12 @@ mod tests {
     }
 
     #[test]
-    fn update_with_invalid_indicators_produces_error_request() {
-        let mut procedure = IndicatorsActivationProcedure::new();
-        let mut state = SlcState::default();
-        assert!(!procedure.is_terminated());
-
-        // "8" is not a supported value for an indicator.
-        let indicators = vec![
-            "0".to_string(),
-            "1".to_string(),
-            "0".to_string(),
-            String::new(),
-            "8".to_string(),
-            "1".to_string(),
-        ];
-        let update = at::Command::Bia { indrep: indicators };
-        let expected_messages = vec![at::Response::Error];
-        assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::SendMessages(m) if m == expected_messages);
-        assert!(procedure.is_terminated());
-    }
-
-    #[test]
     fn update_with_valid_indicators_produces_ok_request() {
         let mut procedure = IndicatorsActivationProcedure::new();
         let mut state = SlcState::default();
         assert!(!procedure.is_terminated());
 
-        let indicators = vec![
-            "0".to_string(),
-            "1".to_string(),
-            "0".to_string(),
-            String::new(),
-            "1".to_string(),
-            String::new(),
-            String::new(),
-        ];
+        let indicators = vec![Some(false), Some(true), Some(false), None, Some(true), None, None];
         let update = at::Command::Bia { indrep: indicators };
         let expected_messages = vec![at::Response::Ok];
         assert_matches!(procedure.hf_update(update.clone(), &mut state), ProcedureRequest::SendMessages(m) if m == expected_messages);
