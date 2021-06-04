@@ -7,9 +7,12 @@ use {
     crate::utils::Position,
     crate::{input_device, keyboard, media_buttons, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_zircon as zx,
+    fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
+    fuchsia_zircon as zx,
+    maplit::hashmap,
     std::collections::HashMap,
     std::collections::HashSet,
+    std::convert::TryInto,
 };
 
 /// Returns the current time as an i64 for InputReports and input_device::EventTime for InputEvents.
@@ -284,10 +287,54 @@ pub fn create_touch_event(
     contacts.entry(fidl_ui_input::PointerEventPhase::Up).or_insert(vec![]);
     contacts.entry(fidl_ui_input::PointerEventPhase::Remove).or_insert(vec![]);
 
+    let injector_contacts = hashmap! {
+        pointerinjector::EventPhase::Add =>
+        contacts.get(&fidl_ui_input::PointerEventPhase::Add).unwrap().clone(),
+        pointerinjector::EventPhase::Change =>
+        contacts.get(&fidl_ui_input::PointerEventPhase::Move).unwrap().clone(),
+        pointerinjector::EventPhase::Remove =>
+        contacts.get(&fidl_ui_input::PointerEventPhase::Remove).unwrap().clone(),
+    };
     input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent { contacts }),
+        device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent {
+            contacts,
+            injector_contacts,
+        }),
         device_descriptor: device_descriptor.clone(),
         event_time: event_time,
+    }
+}
+
+/// Creates a [`fidl_ui_scenic::Command`] representing the given touch contact.
+///
+/// # Parameters
+/// - `phase`: The phase of the touch contact.
+/// - `contact`: The touch contact to create the event for.
+/// - `position`: The position of the contact in the viewport space.
+/// - `event_time`: The time in nanoseconds when the event was first recorded.
+#[cfg(test)]
+pub fn create_touch_pointer_sample_event(
+    phase: pointerinjector::EventPhase,
+    contact: &touch::TouchContact,
+    position: crate::utils::Position,
+    event_time: input_device::EventTime,
+) -> pointerinjector::Event {
+    let pointer_sample = pointerinjector::PointerSample {
+        pointer_id: Some(contact.id),
+        phase: Some(phase),
+        position_in_viewport: Some([position.x, position.y]),
+        scroll_v: None,
+        scroll_h: None,
+        pressed_buttons: None,
+        ..pointerinjector::PointerSample::EMPTY
+    };
+    let data = pointerinjector::Data::PointerSample(pointer_sample);
+
+    pointerinjector::Event {
+        timestamp: Some(event_time.try_into().unwrap()),
+        data: Some(data),
+        trace_flow_id: None,
+        ..pointerinjector::Event::EMPTY
     }
 }
 

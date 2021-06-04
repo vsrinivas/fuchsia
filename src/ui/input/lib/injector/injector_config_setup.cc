@@ -53,6 +53,7 @@ void InjectorConfigSetup::WatchViewport(WatchViewportCallback callback) {
   // WatchViewport().
   if (viewport_.has_value()) {
     callback(std::move(viewport_.value()));
+    viewport_.reset();
   } else {
     watch_viewport_callback_ = std::move(callback);
   }

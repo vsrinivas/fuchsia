@@ -20,6 +20,8 @@ rustc_library("input_pipeline") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//sdk/fidl/fuchsia.ui.keyboard.focus:fuchsia.ui.keyboard.focus-rustc",
+    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector-rustc",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
@@ -65,6 +67,7 @@ rustc_library("input_pipeline") {
     "src/text_settings.rs",
     "src/touch.rs",
     "src/touch_handler.rs",
+    "src/touch_injector_handler.rs",
     "src/utils.rs",
   ]
 }
@@ -72,6 +75,11 @@ rustc_library("input_pipeline") {
 fuchsia_unittest_package("input_pipeline_lib_tests") {
   manifest = "meta/input_pipeline_lib_test.cmx"
   deps = [ ":input_pipeline_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

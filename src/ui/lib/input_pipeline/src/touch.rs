@@ -9,7 +9,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
-    fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_syslog::fx_log_err,
     futures::channel::mpsc::Sender,
     maplit::hashmap,
@@ -34,11 +34,18 @@ use {
 /// signalling that the event is no longer directed towards the receiver.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TouchEvent {
+    /// Deprecated. To be removed with fxbug.dev/75817.
     /// The contacts associated with the touch event. For example, a two-finger touch would result
     /// in one touch event with two [`TouchContact`]s.
     ///
     /// Contacts are grouped based on their current phase (e.g., down, move).
     pub contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<TouchContact>>,
+
+    /// The contacts associated with the touch event. For example, a two-finger touch would result
+    /// in one touch event with two [`TouchContact`]s.
+    ///
+    /// Contacts are grouped based on their current phase (e.g., add, change).
+    pub injector_contacts: HashMap<pointerinjector::EventPhase, Vec<TouchContact>>,
 }
 
 /// A [`TouchContact`] represents a single contact (e.g., one touch of a multi-touch gesture) related
@@ -107,8 +114,8 @@ pub struct TouchDeviceDescriptor {
 /// let scaling_factor =
 ///     display_width / (contact_descriptor._x_range.end - contact_descriptor._x_range.start);
 /// // Use the scaling factor to scale the contact report's x position.
-/// let hit_location = scaling_factor * contact_report.position_x;
-/// ```
+/// let hit_location =
+///     scaling_factor * (contact_report.position_x - contact_descriptor._x_range.start);
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContactDeviceDescriptor {
     /// The range of possible x values for this touch contact.
@@ -292,10 +299,15 @@ impl TouchBinding {
         send_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add => added_contacts.clone(),
-                fidl_ui_input::PointerEventPhase::Down => added_contacts,
-                fidl_ui_input::PointerEventPhase::Move => moved_contacts,
+                fidl_ui_input::PointerEventPhase::Down => added_contacts.clone(),
+                fidl_ui_input::PointerEventPhase::Move => moved_contacts.clone(),
                 fidl_ui_input::PointerEventPhase::Up => removed_contacts.clone(),
-                fidl_ui_input::PointerEventPhase::Remove => removed_contacts,
+                fidl_ui_input::PointerEventPhase::Remove => removed_contacts.clone(),
+            },
+            hashmap! {
+                pointerinjector::EventPhase::Add => added_contacts,
+                pointerinjector::EventPhase::Change => moved_contacts,
+                pointerinjector::EventPhase::Remove => removed_contacts,
             },
             device_descriptor,
             event_time,
@@ -357,17 +369,23 @@ fn touch_contacts_from_touch_report(
 ///
 /// # Parameters
 /// - `contacts`: The contact points relevant to the new TouchEvent.
+/// - `injector_contacts`: The contact points relevant to the new TouchEvent, used to send
+///                        pointer events into Scenic.
 /// - `device_descriptor`: The descriptor for the input device generating the input reports.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
 /// - `input_event_sender`: The sender for the device binding's input event stream.
 fn send_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<TouchContact>>,
+    injector_contacts: HashMap<pointerinjector::EventPhase, Vec<TouchContact>>,
     device_descriptor: &input_device::InputDeviceDescriptor,
     event_time: input_device::EventTime,
     input_event_sender: &mut Sender<input_device::InputEvent>,
 ) {
     match input_event_sender.try_send(input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Touch(TouchEvent { contacts }),
+        device_event: input_device::InputDeviceEvent::Touch(TouchEvent {
+            contacts,
+            injector_contacts,
+        }),
         device_descriptor: device_descriptor.clone(),
         event_time,
     }) {
