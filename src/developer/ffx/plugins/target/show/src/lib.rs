@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
-    fidl_fuchsia_hwinfo::{BoardProxy, DeviceProxy, ProductProxy},
+    fidl_fuchsia_hwinfo::{Architecture, BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
     std::io::{stdout, Write},
@@ -179,6 +179,14 @@ async fn gather_build_info_show(build: ProviderProxy) -> Result<ShowEntry> {
     ))
 }
 
+fn arch_to_string(arch: Option<Architecture>) -> Option<String> {
+    match arch {
+        Some(Architecture::X64) => Some("x64".to_string()),
+        Some(Architecture::Arm64) => Some("arm64".to_string()),
+        _ => None,
+    }
+}
+
 /// Determine the device info for the device.
 async fn gather_board_show(board: BoardProxy) -> Result<ShowEntry> {
     let info = board.get_info().await?;
@@ -189,6 +197,12 @@ async fn gather_board_show(board: BoardProxy) -> Result<ShowEntry> {
         vec![
             ShowEntry::str_value("Name", "name", "SOC board name.", &info.name),
             ShowEntry::str_value("Revision", "revision", "SOC revision.", &info.revision),
+            ShowEntry::str_value(
+                "Instruction set",
+                "instruction set",
+                "Instruction set.",
+                &arch_to_string(info.cpu_architecture),
+            ),
         ],
     ))
 }
@@ -368,7 +382,8 @@ mod tests {
         DeviceIdProviderRequest, LastReboot, LastRebootInfoProviderRequest, RebootReason,
     };
     use fidl_fuchsia_hwinfo::{
-        BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo, ProductRequest,
+        Architecture, BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo,
+        ProductRequest,
     };
     use fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet};
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
@@ -383,6 +398,7 @@ mod tests {
         \nBoard: \
         \n    Name: \"fake_name\"\
         \n    Revision: \"fake_revision\"\
+        \n    Instruction set: \"x64\"\
         \nDevice: \
         \n    Serial number: \"fake_serial\"\
         \n    Retail SKU: \"fake_sku\"\
@@ -483,6 +499,7 @@ mod tests {
                     .send(BoardInfo {
                         name: Some("fake_name".to_string()),
                         revision: Some("fake_revision".to_string()),
+                        cpu_architecture: Some(Architecture::X64),
                         ..BoardInfo::EMPTY
                     })
                     .unwrap();
@@ -562,7 +579,7 @@ mod tests {
         assert_eq!(v[7]["label"], Value::String("last_reboot".to_string()));
 
         assert_eq!(v[0]["child"].as_array().unwrap().len(), 2);
-        assert_eq!(v[1]["child"].as_array().unwrap().len(), 2);
+        assert_eq!(v[1]["child"].as_array().unwrap().len(), 3);
         assert_eq!(v[2]["child"].as_array().unwrap().len(), 3);
         assert_eq!(v[3]["child"].as_array().unwrap().len(), 16);
         assert_eq!(v[4]["child"].as_array().unwrap().len(), 2);
@@ -706,5 +723,12 @@ mod tests {
         assert_eq!(result.child[0].value, Some(ShowValue::StringValue("fake_channel".to_string())));
         assert_eq!(result.child[1].title, "Next channel");
         assert_eq!(result.child[1].value, Some(ShowValue::StringValue("fake_target".to_string())));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_arch_to_string() {
+        assert_eq!(arch_to_string(Some(Architecture::X64)), Some("x64".to_string()));
+        assert_eq!(arch_to_string(Some(Architecture::Arm64)), Some("arm64".to_string()));
+        assert_eq!(arch_to_string(None), None);
     }
 }
