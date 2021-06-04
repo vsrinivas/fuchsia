@@ -75,11 +75,6 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         base_package.as_ref(),
     )?;
 
-    // Bail out here for now, unless asked to do otherwise.
-    if !full {
-        return Ok(());
-    }
-
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
         // Include the update package in blobfs if necessary.
@@ -90,6 +85,11 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         info!("Skipping blobfs creation");
         None
     };
+
+    // Bail out here for now, unless asked to do otherwise.
+    if !full {
+        return Ok(());
+    }
 
     info!("Creating the fvm");
     let _fvm_path: PathBuf = construct_fvm(&outdir, &board, blobfs_path.as_ref())?;

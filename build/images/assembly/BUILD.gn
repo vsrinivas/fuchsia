@@ -106,6 +106,7 @@ dep_labels = {
     }
   }
   prev_update_pkg = "//build/images:update.meta"
+  prev_blobfs = "//build/images:blob.blk"
 
   ####
   # Internal labels, in "dep" format:
@@ -193,6 +194,9 @@ files = {
       "//third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
   multiboot = "${root_build_dir}/multiboot.bin"
 
+  # The BlobFS output
+  blobfs = "${target_out_dir}/blob.blk"
+
   #####
   # Files used for validation against external label outputs (temporary)
   #
@@ -260,6 +264,9 @@ files = {
       "${extracted_prev_update_pkg}/meta/contents"
   extracted_prev_update_meta_package =
       "${extracted_prev_update_pkg}/meta/package"
+
+  # The blobfs created by //build/images:blob.blk
+  prev_blobfs = "${root_build_dir}/obj/build/images/blob.blk"
 }
 
 #####
@@ -814,6 +821,7 @@ ffx_action("images") {
   if (uses_base_package) {
     outputs += [
       files.base_pkg,
+      files.blobfs,
 
       # intermediate outputs that are in gendir:
       files.gen_base_static_packages,
@@ -913,6 +921,7 @@ group("output_validation_checks") {
       # previous implementation didn't if it was making a bootfs-only image, so
       # only attempt the comparison if there's a base package (which is inverse
       # of bootfs-only).
+      ":blobfs_matches",
       ":update_matches",
       ":update_pkg_meta_contents_matches",
       ":update_pkg_meta_package_matches",
@@ -1114,5 +1123,16 @@ if (uses_base_package) {
     second = files.extracted_update_meta_package
 
     display_text_diff_on_failure = true
+  }
+
+  verify_files_match("blobfs_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      dep_labels.prev_blobfs,
+    ]
+
+    first = files.prev_blobfs
+    second = files.blobfs
   }
 }
