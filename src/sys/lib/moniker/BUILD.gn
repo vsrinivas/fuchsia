@@ -28,7 +28,15 @@ rustc_library("moniker") {
 
   test_deps = [ "//third_party/rust_crates:anyhow" ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/abs_moniker.rs",
+    "src/child_moniker.rs",
+    "src/error.rs",
+    "src/extended_moniker.rs",
+    "src/lib.rs",
+    "src/partial_moniker.rs",
+    "src/relative_moniker.rs",
+  ]
 }
 
 fuchsia_unittest_package("moniker-tests") {
