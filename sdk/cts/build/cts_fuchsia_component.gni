@@ -28,23 +28,33 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     Type: string
 template("cts_fuchsia_component") {
   assert(defined(invoker.suite_name), "Suite name must be defined.")
-  if (defined(invoker.deps) && invoker.deps != []) {
-    cts_element("${target_name}_verify_deps") {
+
+  if (!defined(invoker.deps)) {
+    invoker.deps = []
+  }
+
+  if (invoker.deps != []) {
+    verify_target = target_name + "_verify_deps"
+  }
+  write_file_target = target_name + "_cts_file"
+
+  if (defined(verify_target)) {
+    cts_element(verify_target) {
       deps = invoker.deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
 
+  write_cts_file(write_file_target) {
+  }
+
   fuchsia_component(target_name) {
     forward_variables_from(invoker, "*", [ "suite_name" ])
-    if (defined(deps) && deps != []) {
-      deps += [
-        ":${target_name}_cts_file",
-        ":${target_name}_verify_deps",
-      ]
-    } else {
-      deps = [ ":${target_name}_cts_file" ]
+
+    if (defined(verify_target)) {
+      deps += [ ":$verify_target" ]
     }
+    deps += [ ":$write_file_target" ]
   }
 
   cts_copy_to_sdk(target_name) {
@@ -55,8 +65,5 @@ template("cts_fuchsia_component") {
                              "testonly",
                            ])
     sources = [ manifest ]
-  }
-
-  write_cts_file(target_name) {
   }
 }

@@ -7,24 +7,31 @@ import("//sdk/cts/build/cts_element.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 template("cts_host_test_data") {
-  if (defined(invoker.deps) && invoker.deps != []) {
-    cts_element("${target_name}_verify_deps") {
+  if (!defined(invoker.deps)) {
+    invoker.deps = []
+  }
+
+  if (invoker.deps != []) {
+    verify_target = target_name + "_verify_deps"
+  }
+  write_file_target = target_name + "_cts_file"
+
+  if (defined(verify_target)) {
+    cts_element(verify_target) {
       deps = invoker.deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
-  host_test_data(target_name) {
-    forward_variables_from(invoker, "*")
-    if (defined(deps) && deps != []) {
-      deps += [
-        ":${target_name}_cts_file",
-        ":${target_name}_verify_deps",
-      ]
-    } else {
-      deps = [ ":${target_name}_cts_file" ]
-    }
+
+  write_cts_file(write_file_target) {
   }
 
-  write_cts_file(target_name) {
+  host_test_data(target_name) {
+    forward_variables_from(invoker, "*")
+
+    if (defined(verify_target)) {
+      deps += [ ":$verify_target" ]
+    }
+    deps += [ ":$write_file_target" ]
   }
 }

@@ -14,7 +14,7 @@ cts_source_set("test_support") {
   sources = [ "async_loop_for_test.cc" ]
 
   public_deps = [
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

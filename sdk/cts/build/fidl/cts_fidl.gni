@@ -23,39 +23,39 @@ template("cts_fidl") {
   }
 
   if (invoker_deps != []) {
-    cts_element("${target_name}_verify_deps") {
+    verify_target = target_name + "_verify_deps"
+  }
+  write_file_target = target_name + "_cts_file"
+
+  if (defined(verify_target)) {
+    cts_element(verify_target) {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
 
+  write_cts_file(write_file_target) {
+  }
+
   fidl(target_name) {
     forward_variables_from(invoker, "*", [ "suite_name" ])
-    if (invoker_deps != []) {
-      if (defined(non_fidl_deps)) {
-        non_fidl_deps += [ ":${target_name}_verify_deps" ]
-      } else {
-        non_fidl_deps = [ ":${target_name}_verify_deps" ]
-      }
+    if (!defined(non_fidl_deps)) {
+      non_fidl_deps = []
     }
 
-    if (defined(non_fidl_deps)) {
-      non_fidl_deps += [ ":${target_name}_cts_file" ]
-    } else {
-      non_fidl_deps = [ ":${target_name}_cts_file" ]
+    if (defined(verify_target)) {
+      non_fidl_deps += [ ":$verify_target" ]
     }
+    non_fidl_deps += [ ":$write_file_target" ]
   }
 
   cts_source_library(target_name) {
     forward_variables_from(invoker,
                            [
+                             "public_deps",
                              "sources",
-                             "testonly",
-                             "deps",
                              "suite_name",
+                             "testonly",
                            ])
-  }
-
-  write_cts_file(target_name) {
   }
 }

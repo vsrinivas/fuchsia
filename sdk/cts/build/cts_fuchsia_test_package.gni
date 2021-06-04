@@ -26,30 +26,31 @@ template("cts_fuchsia_test_package") {
   if (defined(invoker.test_components)) {
     invoker_deps += invoker.test_components
   }
+
   if (invoker_deps != []) {
-    cts_element("${target_name}_verify_deps") {
+    verify_target = target_name + "_verify_deps"
+  }
+  write_file_target = target_name + "_cts_file"
+
+  if (defined(verify_target)) {
+    cts_element(verify_target) {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
 
-  fuchsia_test_package(target_name) {
-    forward_variables_from(invoker, "*")
-    if (invoker_deps != []) {
-      if (defined(deps)) {
-        deps += [ ":${target_name}_verify_deps" ]
-      } else {
-        deps = [ ":${target_name}_verify_deps" ]
-      }
-    }
-
-    if (defined(deps)) {
-      deps += [ ":${target_name}_cts_file" ]
-    } else {
-      deps = [ ":${target_name}_cts_file" ]
-    }
+  write_cts_file(write_file_target) {
   }
 
-  write_cts_file(target_name) {
+  fuchsia_test_package(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (defined(verify_target)) {
+      deps += [ ":$verify_target" ]
+    }
+    deps += [ ":$write_file_target" ]
   }
 }

@@ -6,13 +6,12 @@
 #
 # This rule should not be called directly, but through cts_* other build rules.
 template("write_cts_file") {
-  not_needed(invoker, "*")
   cts_extension = "this_is_cts"
+  name = string_replace(invoker.target_name, "_cts_file", "")
+  target_dir = rebase_path(get_label_info(":$name", "dir"), "//")
 
-  target_build_dir = rebase_path(get_label_info(":$target_name", "dir"), "//")
-
-  generated_file("${target_name}_cts_file") {
-    outputs = [ "${root_build_dir}/cts/${target_build_dir}/${invoker.target_name}.${cts_extension}" ]
+  generated_file(target_name) {
+    outputs = [ "${root_build_dir}/cts/${target_dir}/${name}.${cts_extension}" ]
     contents = true
   }
 }

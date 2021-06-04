@@ -189,10 +189,10 @@ cts_source_set("test_util") {
 
   sources = [ "test/test_util.h" ]
 
-  public_deps = [
-    "//sdk/lib/fidl/cpp:cpp_base",
-    "//zircon/system/public",
-  ]
+  public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+
+  # TODO(77889): Either remove this or add this to the CTS.
+  non_cts_deps = [ "//zircon/system/public" ]
 }
 
 cts_source_set("handle_util") {
@@ -205,7 +205,7 @@ cts_source_set("handle_util") {
     "test/handle_util.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 cts_copy_to_sdk("build") {

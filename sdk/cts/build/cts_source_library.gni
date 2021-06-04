@@ -34,16 +34,22 @@ template("cts_source_library") {
     all_sources += invoker.public
   }
 
+  all_deps = []
   if (defined(invoker.deps)) {
-    foreach(dep, invoker.deps) {
-      full_label = get_label_info(dep, "label_no_toolchain")
-      sdk_dep = "${full_label}_sdk"
-      sdk_deps += [ sdk_dep ]
+    all_deps += invoker.deps
+  }
+  if (defined(invoker.public_deps)) {
+    all_deps += invoker.public_deps
+  }
 
-      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
-      name = get_label_info(sdk_dep, "name")
-      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
-    }
+  foreach(dep, all_deps) {
+    full_label = get_label_info(dep, "label_no_toolchain")
+    sdk_dep = "${full_label}_sdk"
+    sdk_deps += [ sdk_dep ]
+
+    gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+    name = get_label_info(sdk_dep, "name")
+    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
   }
 
   foreach(file, all_sources) {
