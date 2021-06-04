@@ -90,6 +90,16 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
       return glm::mat4(1.f);
     };
 
+    fit::function<escher::BoundingBox()> bounding_box = [weak_ptr = GetWeakPtr()] {
+      // Return the global transform if the view is still alive and attached to a scene.
+      if (weak_ptr) {
+        return weak_ptr->GetViewNode()->GetBoundingBox();
+      }
+
+      FX_NOTREACHED() << "impossible";
+      return escher::BoundingBox();
+    };
+
     fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
                        bool semantic_hit_test)>
         hit_test = [weak_ptr = GetWeakPtr()](const escher::ray4& world_space_ray,
@@ -129,6 +139,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
                              .may_receive_focus = std::move(may_receive_focus),
                              .is_input_suppressed = std::move(is_input_suppressed),
                              .global_transform = std::move(global_transform),
+                             .bounding_box = std::move(bounding_box),
                              .hit_test = std::move(hit_test),
                              .add_annotation_view_holder = std::move(create_callback),
                              .session_id = session->id()});

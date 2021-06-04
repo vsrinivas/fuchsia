@@ -94,6 +94,9 @@ class ViewTree {
     // Park a callback that returns the current global transform of the node.
     fit::function<glm::mat4()> global_transform;
 
+    // Park a callback that returns the current bounding box of the node.
+    fit::function<escher::BoundingBox()> bounding_box;
+
     // Park a callback that performs a hit test starting at this node.
     fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
                        bool semantic_hit_test)>
@@ -261,6 +264,7 @@ struct ViewTreeNewRefNode {
   fit::function<bool()> may_receive_focus;
   fit::function<bool()> is_input_suppressed;
   fit::function<glm::mat4()> global_transform;
+  fit::function<escher::BoundingBox()> bounding_box;
   fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
                      bool semantic_hit_test)>
       hit_test;

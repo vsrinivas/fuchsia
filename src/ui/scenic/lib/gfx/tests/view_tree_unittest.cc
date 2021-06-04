@@ -28,6 +28,8 @@ using utils::ExtractKoid;
 
 const scenic_impl::SessionId kOne = 1u, kTwo = 2u, kThree = 3u, kFour = 4u, kFive = 5u;
 
+namespace {
+
 scenic_impl::gfx::ViewTreeNewRefNode ViewTreeNewRefNodeTemplate(ViewRef view_ref,
                                                                 scheduling::SessionId session_id) {
   EventReporterWeakPtr no_reporter{};
@@ -36,10 +38,24 @@ scenic_impl::gfx::ViewTreeNewRefNode ViewTreeNewRefNodeTemplate(ViewRef view_ref
           .may_receive_focus = [] { return true; },
           .is_input_suppressed = [] { return false; },
           .global_transform = [] { return glm::mat4(1.f); },
+          .bounding_box = [] { return escher::BoundingBox(); },
           .hit_test = [](auto...) {},
           .add_annotation_view_holder = [](auto) {},
           .session_id = session_id};
 }
+
+std::array<float, 16> Mat4ToArray(const glm::mat4& matrix) {
+  std::array<float, 16> array;
+  for (size_t i = 0; i < 4; ++i) {
+    for (size_t j = 0; j < 4; ++j) {
+      array[i * 4 + j] = matrix[i][j];
+    }
+  }
+
+  return array;
+}
+
+}  // namespace
 
 TEST(ViewTreeLifecycle, EmptyScene) {
   ViewTree tree{};
@@ -781,6 +797,88 @@ TEST(ViewTreePrimitive, Snapshot) {
     EXPECT_TRUE(view_tree.at(view_koid_2).children.empty());
 
     EXPECT_THAT(unconnected_views, testing::UnorderedElementsAre(view_koid_1, view_koid_3));
+  }
+}
+
+TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
+  ViewTree tree{};
+  zx_koid_t node1_koid, node2_koid;
+  {
+    {
+      auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
+      node1_koid = ExtractKoid(view_ref1);
+      scenic_impl::gfx::ViewTreeNewRefNode node1{
+          .view_ref = std::move(view_ref1),
+          .event_reporter = {},
+          .may_receive_focus = [] { return true; },
+          .is_input_suppressed = [] { return false; },
+          .global_transform = [] { return glm::mat4(2.f); },
+          .bounding_box =
+              [] {
+                return escher::BoundingBox({1, 2, 3}, {4, 5, 6});
+              },
+          .hit_test = [](auto...) {},
+          .add_annotation_view_holder = [](auto) {},
+          .session_id = 1};
+      tree.NewRefNode(std::move(node1));
+    }
+
+    {
+      auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
+      node2_koid = ExtractKoid(view_ref2);
+      scenic_impl::gfx::ViewTreeNewRefNode node2{
+          .view_ref = std::move(view_ref2),
+          .event_reporter = {},
+          .may_receive_focus = [] { return false; },
+          .is_input_suppressed = [] { return false; },
+          .global_transform = [] { return glm::mat4(1.f); },
+          .bounding_box =
+              [] {
+                return escher::BoundingBox({7, 8, 9}, {10, 11, 12});
+              },
+          .hit_test = [](auto...) {},
+          .add_annotation_view_holder = [](auto) {},
+          .session_id = 2};
+      tree.NewRefNode(std::move(node2));
+    }
+
+    tree.MakeGlobalRoot(node1_koid);
+    const zx_koid_t attach_koid_1 = 1111u;
+    tree.NewAttachNode(attach_koid_1);
+    tree.ConnectToParent(attach_koid_1, node1_koid);
+    tree.ConnectToParent(node2_koid, attach_koid_1);
+  }
+
+  const auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = tree.Snapshot();
+  EXPECT_EQ(root, node1_koid);
+  EXPECT_EQ(view_tree.size(), 2u);
+  ASSERT_TRUE(view_tree.count(node1_koid));
+  ASSERT_TRUE(view_tree.count(node2_koid));
+  EXPECT_TRUE(tree_boundaries.empty());
+  EXPECT_TRUE(unconnected_views.empty());
+
+  {
+    const auto& node1 = view_tree.at(node1_koid);
+    EXPECT_THAT(node1.children, testing::ElementsAre(node2_koid));
+    EXPECT_TRUE(node1.is_focusable);
+    EXPECT_THAT(node1.bounding_box.min, testing::ElementsAre(1, 2));
+    EXPECT_THAT(node1.bounding_box.max, testing::ElementsAre(4, 5));
+    // Transform should be inverted from |global_transform| above.
+    EXPECT_THAT(Mat4ToArray(node1.local_from_world_transform),
+                testing::ElementsAre(0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f));
+    EXPECT_EQ(utils::ExtractKoid(node1.view_ref), node1_koid);
+  }
+
+  {
+    const auto& node2 = view_tree.at(node2_koid);
+    EXPECT_EQ(node2.parent, node1_koid);
+    EXPECT_FALSE(node2.is_focusable);
+    EXPECT_THAT(node2.bounding_box.min, testing::ElementsAre(7, 8));
+    EXPECT_THAT(node2.bounding_box.max, testing::ElementsAre(10, 11));
+    // Transform should be inverted from |global_transform| above.
+    EXPECT_THAT(Mat4ToArray(node2.local_from_world_transform),
+                testing::ElementsAre(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
+    EXPECT_EQ(utils::ExtractKoid(node2.view_ref), node2_koid);
   }
 }
 

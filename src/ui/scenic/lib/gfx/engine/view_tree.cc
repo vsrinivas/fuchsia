@@ -300,6 +300,7 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
   FX_DCHECK(new_node.may_receive_focus) << "precondition";           // Callback exists.
   FX_DCHECK(new_node.is_input_suppressed) << "precondition";         // Callback exists.
   FX_DCHECK(new_node.global_transform) << "precondition";            // Callback exists.
+  FX_DCHECK(new_node.bounding_box) << "precondition";                // Callback exists.
   FX_DCHECK(new_node.hit_test) << "precondition";                    // Callback exists.
   FX_DCHECK(new_node.add_annotation_view_holder) << "precondition";  // Callback exists.
   FX_DCHECK(new_node.session_id != scheduling::kInvalidSessionId) << "precondition";
@@ -313,6 +314,7 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
               .may_receive_focus = std::move(new_node.may_receive_focus),
               .is_input_suppressed = std::move(new_node.is_input_suppressed),
               .global_transform = std::move(new_node.global_transform),
+              .bounding_box = std::move(new_node.bounding_box),
               .hit_test = std::move(new_node.hit_test),
               .add_annotation_view_holder = std::move(new_node.add_annotation_view_holder),
               .session_id = new_node.session_id};
@@ -513,6 +515,9 @@ view_tree::SubtreeSnapshot ViewTree::Snapshot() const {
       const glm::mat4 world_from_view_transform = ref_node.global_transform();
       it->second.local_from_world_transform = glm::inverse(world_from_view_transform);
       it->second.is_focusable = ref_node.may_receive_focus();
+      const escher::BoundingBox bbox = ref_node.bounding_box();
+      it->second.bounding_box = {.min = {bbox.min().x, bbox.min().y},
+                                 .max = {bbox.max().x, bbox.max().y}};
       fidl::Clone(ref_node.view_ref, &it->second.view_ref);
     }
   }

@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,12 +30,21 @@ using OnNewViewTree = fit::function<void(std::shared_ptr<const Snapshot>)>;
 using SubtreeHitTester = fit::function<SubtreeHitTestResult(
     zx_koid_t start_node, glm::vec2 local_point, bool is_semantic_hit_test)>;
 
+struct BoundingBox {
+  std::array<float, 2> min;
+  std::array<float, 2> max;
+  // Used to detect changes. The bounding box is defined in local space and not affected by
+  // any transformations, so exact matching is preferred. No need for an epsilon comparison.
+  bool operator==(const BoundingBox& other) const { return min == other.min && max == other.max; }
+};
+
 // Represents an element in a View hierarchy, used in both Snapshot and SubtreeSnapshot (both of
 // which are defined below).
 struct ViewNode {
   zx_koid_t parent = ZX_KOID_INVALID;
   std::unordered_set<zx_koid_t> children = {};
 
+  BoundingBox bounding_box;
   glm::mat4 local_from_world_transform = glm::mat4(1.f);
   bool is_focusable = true;
 
@@ -43,7 +53,7 @@ struct ViewNode {
   fuchsia::ui::views::ViewRef view_ref;
 
   bool operator==(const ViewNode& other) const {
-    return parent == other.parent &&
+    return parent == other.parent && bounding_box == other.bounding_box &&
            local_from_world_transform == other.local_from_world_transform &&
            is_focusable == other.is_focusable && children == other.children;
   }

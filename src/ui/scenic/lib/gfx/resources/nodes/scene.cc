@@ -60,6 +60,11 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
       FX_NOTREACHED() << "impossible";
       return glm::mat4(1.f);
     };
+    // The scene doesn't have a bounding box, and since this is only for the ViewTree and not for
+    // rendering the returned box should never actually be used (though the callback will be
+    // invoked).
+    fit::function<escher::BoundingBox()> bounding_box = [] { return escher::BoundingBox(); };
+
     fit::function<void(ViewHolderPtr)> add_annotation_view_holder = [](auto) {
       FX_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";
     };
@@ -82,6 +87,7 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
                              .may_receive_focus = std::move(may_receive_focus),
                              .is_input_suppressed = std::move(is_input_suppressed),
                              .global_transform = std::move(global_transform),
+                             .bounding_box = std::move(bounding_box),
                              .hit_test = std::move(hit_test),
                              .add_annotation_view_holder = std::move(add_annotation_view_holder),
                              .session_id = session_id});

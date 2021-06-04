@@ -32,14 +32,14 @@ class ViewNode : public Node {
   IntersectionInfo GetIntersection(const escher::ray4& ray,
                                    const IntersectionInfo& parent_intersection) const override;
 
+  // Returns the bounding box supplied by the owning ViewHolder. Returns an empty bounding box if no
+  // ViewHolder is available. Virtual for testing.
+  virtual escher::BoundingBox GetBoundingBox() const;
+
   // Protected for testing.
  protected:
   friend class View;
   ViewNode(Session* session, SessionId session_id, fxl::WeakPtr<View> view);
-
-  // Returns the bounding box supplied by the owning ViewHolder. Returns an empty bounding box if no
-  // ViewHolder is available. Virtual for testing.
-  virtual escher::BoundingBox GetBoundingBox() const;
 
  private:
   // The ID of the View owning this ViewNode.

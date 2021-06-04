@@ -20,6 +20,7 @@ ViewTreeNewRefNode ViewTreeNewRefNodeTemplate() {
       .may_receive_focus = [] { return true; },
       .is_input_suppressed = [] { return false; },
       .global_transform = [] { return glm::mat4(1.f); },
+      .bounding_box = [] { return escher::BoundingBox(); },
       .hit_test = [](auto...) {},
       .add_annotation_view_holder = [](auto) {},
       .session_id = 1u,
