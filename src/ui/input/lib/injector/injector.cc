@@ -217,17 +217,14 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
     // In the case of EXCLUSIVE_TARGET, the events are sent directly to |target_|.
     config.set_dispatch_policy(policy_);
     config.set_viewport(GetCurrentViewport());
-    {  // Use the root view as the |context|. It is set up to match the native resolution of the
-       // display (same coordinate space as touchscreen events).
+    {
       fuchsia::ui::pointerinjector::Context context;
       fuchsia::ui::views::ViewRef context_clone;
       fidl::Clone(context_view_ref_, &context_clone);
       context.set_view(std::move(context_clone));
       config.set_context(std::move(context));
     }
-    {  // The a11y view is the |target| (must be a descendant of |context|). Hit tests start from
-       // this point in the scene graph and go down. Delivered events are transformed to local
-       // coordinate system of the receiver.
+    {
       fuchsia::ui::pointerinjector::Target target;
       fuchsia::ui::views::ViewRef target_clone;
       fidl::Clone(target_view_ref_, &target_clone);
