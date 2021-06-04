@@ -304,6 +304,12 @@ impl Calls {
         self.all_by_state(state).min_by_key(|c| c.1.state_updated_at)
     }
 
+    /// Find the first state in the list of `states` that contains a call in that state, and return
+    /// the oldest call in that state if there are more than one call in the state.
+    fn first_of_oldest_by_states(&self, states: &[CallState]) -> Option<(CallIdx, &CallEntry)> {
+        states.iter().filter_map(|state| self.oldest_by_state(*state)).next()
+    }
+
     /// Return the Call that has been in the IncomingRinging call state the longest if at least one
     /// exists.
     pub fn ringing(&self) -> Option<Call> {
@@ -327,11 +333,7 @@ impl Calls {
     pub fn answer(&mut self) -> Result<(), CallError> {
         use CallState::*;
         let states = vec![IncomingRinging, IncomingWaiting];
-        let idx = self
-            .oldest_by_state(states[0])
-            .or_else(|| self.oldest_by_state(states[1]))
-            .ok_or(CallError::None(states))?
-            .0;
+        let idx = self.first_of_oldest_by_states(&states).ok_or(CallError::None(states))?.0;
         self.request_active(idx, true)
     }
 
@@ -345,7 +347,9 @@ impl Calls {
     /// Terminate a single call based on the following policy:
     ///
     ///   * The oldest Incoming Ringing call is terminated.
-    ///   * If there are no Incoming Ringing calls, the oldest Ongoing Active call is terminated.
+    ///   * If there are no Incoming Ringing calls, the oldest Outgoing Dialing call is terminated.
+    ///   * If there are no Outgoing Dialing calls, the oldest Outgoing Alerting call is terminated.
+    ///   * If there are no Outgoing Alerting calls, the oldest Ongoing Active call is terminated.
     ///   * If there are no Ongoing Active calls, the oldest Ongoing Held call is terminated.
     ///   * If there are no Ongoing Held calls, the oldest Incoming Waiting call is terminated.
     ///   * If there are no calls in any of the previously specified states, return an Error.
@@ -356,14 +360,15 @@ impl Calls {
     // command to manage waiting calls instead of the AT+CHUP command.
     pub fn hang_up(&mut self) -> Result<(), CallError> {
         use CallState::*;
-        let states = vec![IncomingRinging, OngoingActive, OngoingHeld, IncomingWaiting];
-        let idx = self
-            .oldest_by_state(states[0])
-            .or_else(|| self.oldest_by_state(states[1]))
-            .or_else(|| self.oldest_by_state(states[2]))
-            .or_else(|| self.oldest_by_state(states[3]))
-            .ok_or(CallError::None(states))?
-            .0;
+        let states = vec![
+            IncomingRinging,
+            OutgoingDialing,
+            OutgoingAlerting,
+            OngoingActive,
+            OngoingHeld,
+            IncomingWaiting,
+        ];
+        let idx = self.first_of_oldest_by_states(&states).ok_or(CallError::None(states))?.0;
         self.request_terminate(idx)
     }
 
