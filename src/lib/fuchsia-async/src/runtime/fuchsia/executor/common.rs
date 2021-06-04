@@ -22,7 +22,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
     sync::{Arc, Weak},
     task::Context,
-    thread, u64, usize,
+    u64, usize,
 };
 
 pub(crate) const EMPTY_WAKEUP_ID: u64 = u64::MAX;
@@ -68,7 +68,6 @@ pub(super) struct Inner {
     pub(super) port: zx::Port,
     pub(super) done: AtomicBool,
     pub(super) threadiness: Threadiness,
-    pub(super) threads: Mutex<Vec<thread::JoinHandle<()>>>,
     receivers: Mutex<PacketReceiverMap<Arc<dyn PacketReceiver>>>,
     task_count: AtomicUsize,
     active_tasks: Mutex<HashMap<usize, Arc<Task>>>,
@@ -85,7 +84,6 @@ impl Inner {
             port: zx::Port::create()?,
             done: AtomicBool::new(false),
             threadiness: Threadiness::default(),
-            threads: Mutex::new(Vec::new()),
             receivers: Mutex::new(PacketReceiverMap::new()),
             task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
             active_tasks: Mutex::new(HashMap::new()),

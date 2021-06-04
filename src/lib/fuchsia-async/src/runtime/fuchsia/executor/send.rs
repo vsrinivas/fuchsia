@@ -37,6 +37,8 @@ use std::{
 pub struct SendExecutor {
     /// The inner executor state.
     inner: Arc<Inner>,
+    /// Worker thread handles
+    threads: Vec<thread::JoinHandle<()>>,
 }
 
 impl fmt::Debug for SendExecutor {
@@ -51,7 +53,7 @@ impl SendExecutor {
     pub fn new() -> Result<Self, zx::Status> {
         let inner = Arc::new(Inner::new(ExecutorTime::RealTime)?);
         inner.clone().set_local(TimerHeap::new());
-        Ok(Self { inner })
+        Ok(Self { inner, threads: Vec::default() })
     }
 
     /// Run `future` to completion, using this thread and `num_threads - 1` workers in a pool to
@@ -106,23 +108,20 @@ impl SendExecutor {
 
     /// Add `num_workers` worker threads to the executor's thread pool.
     /// `timers`: timers from the "master" thread which would otherwise be lost.
-    fn create_worker_threads(&self, num_workers: usize, mut timers: Option<TimerHeap>) {
-        let mut threads = self.inner.threads.lock();
+    fn create_worker_threads(&mut self, num_workers: usize, mut timers: Option<TimerHeap>) {
         for _ in 0..num_workers {
-            threads.push(self.new_worker(timers.take()));
+            self.threads.push(self.new_worker(timers.take()));
         }
     }
 
-    fn join_all(&self) {
-        let mut threads = self.inner.threads.lock();
-
+    fn join_all(&mut self) {
         // Send a user packet to wake up all the threads
-        for _thread in threads.iter() {
+        for _thread in self.threads.iter() {
             self.inner.notify_empty();
         }
 
         // Join the worker threads
-        for thread in threads.drain(..) {
+        for thread in self.threads.drain(..) {
             thread.join().expect("Couldn't join worker thread.");
         }
     }
