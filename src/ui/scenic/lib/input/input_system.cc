@@ -427,13 +427,14 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, S
   auto it = touch_contenders_.find(event.target);
   if (it != touch_contenders_.end()) {
     auto& touch_source = it->second.touch_source;
-    // TODO(fxbug.dev/76233): This causes us to create a separate event to send the "win event",
-    // which also probably requires two Watch() calls from the client. Find a way to merge them into
-    // a single message.
+    // Calling EndContest() before the first event causes them to be combined in the first message
+    // to the client.
+    if (!touch_source.TracksStream(stream_id)) {
+      touch_source.EndContest(stream_id, /*awarded_win*/ true);
+    }
     touch_source.UpdateStream(
         stream_id, event,
         /*is_end_of_stream*/ event.phase == Phase::kRemove || event.phase == Phase::kCancel);
-    touch_source.EndContest(stream_id, /*awarded_win*/ true);
   } else {
     ReportPointerEventToGfxLegacyView(event, event.target,
                                       fuchsia::ui::input::PointerEventType::TOUCH);

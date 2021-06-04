@@ -79,16 +79,21 @@ fuchsia::ui::pointer::TouchEvent NewTouchEvent(StreamId stream_id,
   return new_event;
 }
 
-fuchsia::ui::pointer::TouchEvent NewEndEvent(StreamId stream_id, uint32_t device_id,
-                                             uint32_t pointer_id, bool awarded_win) {
-  fuchsia::ui::pointer::TouchEvent new_event;
-  new_event.set_timestamp(async::Now(async_get_default_dispatcher()).get());
-  new_event.set_interaction_result(fuchsia::ui::pointer::TouchInteractionResult{
+void AddInteractionResultsToEvent(fuchsia::ui::pointer::TouchEvent& event, StreamId stream_id,
+                                  uint32_t device_id, uint32_t pointer_id, const bool awarded_win) {
+  event.set_interaction_result(fuchsia::ui::pointer::TouchInteractionResult{
       .interaction =
           fuchsia::ui::pointer::TouchInteractionId{
               .device_id = device_id, .pointer_id = pointer_id, .interaction_id = stream_id},
       .status = awarded_win ? fuchsia::ui::pointer::TouchInteractionStatus::GRANTED
                             : fuchsia::ui::pointer::TouchInteractionStatus::DENIED});
+}
+
+fuchsia::ui::pointer::TouchEvent NewEndEvent(StreamId stream_id, uint32_t device_id,
+                                             uint32_t pointer_id, bool awarded_win) {
+  fuchsia::ui::pointer::TouchEvent new_event;
+  new_event.set_timestamp(async::Now(async_get_default_dispatcher()).get());
+  AddInteractionResultsToEvent(new_event, stream_id, device_id, pointer_id, awarded_win);
   return new_event;
 }
 
@@ -183,10 +188,17 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
 
   auto out_event = NewTouchEvent(stream_id, event, is_end_of_stream);
 
+  FX_DCHECK(!(won_streams_awaiting_first_message_.count(stream_id) != 0 && !is_new_stream))
+      << "Can't have a pre-decided win for an ongoing stream.";
   if (is_new_stream) {
     fuchsia::ui::pointer::TouchDeviceInfo device_info;
     device_info.set_id(event.device_id);
     out_event.set_device_info(std::move(device_info));
+
+    if (won_streams_awaiting_first_message_.count(stream_id) != 0) {
+      AddInteractionResultsToEvent(out_event, stream_id, event.device_id, event.pointer_id, true);
+      won_streams_awaiting_first_message_.erase(stream_id);
+    }
   }
 
   stream.stream_has_ended = is_end_of_stream;
@@ -202,8 +214,16 @@ void TouchSource::UpdateStream(StreamId stream_id, const InternalPointerEvent& e
 }
 
 void TouchSource::EndContest(StreamId stream_id, bool awarded_win) {
-  FX_DCHECK(ongoing_streams_.count(stream_id) != 0);
-  auto& stream = ongoing_streams_[stream_id];
+  auto it = ongoing_streams_.find(stream_id);
+  if (it == ongoing_streams_.end()) {
+    FX_DCHECK(awarded_win) << "Can't lose a stream before it starts.";
+    const auto [_, success] = won_streams_awaiting_first_message_.emplace(stream_id);
+    FX_DCHECK(success) << "Can't have two EndContest() calls for the same stream.";
+    return;
+  }
+
+  auto& stream = it->second;
+  FX_DCHECK(!stream.was_won) << "Can't have two EndContest() calls for the same stream.";
   stream.was_won = awarded_win;
   pending_events_.push(
       {.stream_id = stream_id,

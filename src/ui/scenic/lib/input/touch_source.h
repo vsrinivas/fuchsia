@@ -11,6 +11,7 @@
 
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "src/ui/scenic/lib/input/gesture_contender.h"
 
@@ -42,6 +43,8 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
   void UpdateResponse(fuchsia::ui::pointer::TouchInteractionId stream,
                       fuchsia::ui::pointer::TouchResponse response,
                       UpdateResponseCallback callback) override;
+
+  bool TracksStream(StreamId stream_id) const { return ongoing_streams_.count(stream_id) != 0; }
 
   // TODO(fxbug.dev/64379): Implement ANR.
 
@@ -104,7 +107,15 @@ class TouchSource : public GestureContender, public fuchsia::ui::pointer::TouchS
   const fit::function<void(StreamId, const std::vector<GestureResponse>&)> respond_;
   const fit::function<void()> error_handler_;
 
+  // Tracks all streams that have had at least one event passed into UpdateStream(), and that
+  // haven't either "been won and has ended", or "haven't been lost".
   std::unordered_map<StreamId, StreamData> ongoing_streams_;
+
+  // Streams can be declared as won before the first UpdateStream() call concerning the stream,
+  // this set tracks those streams. This set should never contain a stream that also exists in
+  // |ongoing_streams_|.
+  std::unordered_set<StreamId> won_streams_awaiting_first_message_;
+
   WatchCallback pending_callback_ = nullptr;
 };
 

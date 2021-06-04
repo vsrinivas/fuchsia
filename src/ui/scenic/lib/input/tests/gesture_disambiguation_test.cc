@@ -150,40 +150,20 @@ TEST_F(GestureDisambiguationTest, ExclusiveInjection_ShouldBeDeliveredOnlyToTarg
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
-  {  // TODO(fxbug.dev/76233): We wait for two messages here. This should be reduced to one.
-    input_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient1Koid), kStream1Id);
-    RunLoopUntilIdle();
-    ASSERT_EQ(received_events1.size(), 1u);
-    std::vector<fup_TouchResponse> responses;
-    responses.emplace_back(MakeTouchResponse(fup_TouchResponseType::MAYBE));
-    client1_ptr_->Watch(std::move(responses), [&received_events1](auto events) {
-      std::move(events.begin(), events.end(), std::back_inserter(received_events1));
-    });
-    RunLoopUntilIdle();
-    ASSERT_EQ(received_events1.size(), 2u);
-    ASSERT_TRUE(received_events1.back().has_interaction_result());
-    EXPECT_EQ(received_events1.back().interaction_result().status,
-              fup_TouchInteractionStatus::GRANTED);
-    EXPECT_TRUE(received_events2.empty());
-  }
+  input_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient1Koid), kStream1Id);
+  RunLoopUntilIdle();
+  EXPECT_EQ(received_events1.size(), 1u);
+  ASSERT_TRUE(received_events1[0].has_interaction_result());
+  EXPECT_EQ(received_events1[0].interaction_result().status, fup_TouchInteractionStatus::GRANTED);
+  EXPECT_TRUE(received_events2.empty());
 
-  {  // TODO(fxbug.dev/76233): We wait for two messages here. This should be reduced to one.
-    input_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient2Koid), kStream2Id);
-    RunLoopUntilIdle();
-    ASSERT_EQ(received_events2.size(), 1u);
-    {
-      std::vector<fup_TouchResponse> responses;
-      responses.emplace_back(MakeTouchResponse(fup_TouchResponseType::MAYBE));
-      client2_ptr_->Watch(std::move(responses), [&received_events2](auto events) {
-        std::move(events.begin(), events.end(), std::back_inserter(received_events2));
-      });
-    }
-    RunLoopUntilIdle();
-    ASSERT_EQ(received_events2.size(), 2u);
-    ASSERT_TRUE(received_events2.back().has_interaction_result());
-    EXPECT_EQ(received_events2.back().interaction_result().status,
-              fup_TouchInteractionStatus::GRANTED);
-  }
+  received_events1.clear();
+  input_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient2Koid), kStream2Id);
+  RunLoopUntilIdle();
+  ASSERT_EQ(received_events2.size(), 1u);
+  ASSERT_TRUE(received_events2[0].has_interaction_result());
+  EXPECT_EQ(received_events2[0].interaction_result().status, fup_TouchInteractionStatus::GRANTED);
+  EXPECT_TRUE(received_events1.empty());
 }
 
 TEST_F(GestureDisambiguationTest,
