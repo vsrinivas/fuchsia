@@ -106,6 +106,7 @@ template("component_manager") {
     "src/builtin/mmio_resource.rs",
     "src/builtin/mod.rs",
     "src/builtin/process_launcher.rs",
+    "src/builtin/relative_resolver.rs",
     "src/builtin/root_job.rs",
     "src/builtin/root_resource.rs",
     "src/builtin/runner.rs",

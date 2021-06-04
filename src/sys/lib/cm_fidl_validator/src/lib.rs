@@ -1868,6 +1868,15 @@ fn check_url(
                         }
                     }
                 }
+                // If the first character is # then it's a relative URL.
+                // It must have at least one more character.
+                '#' => {
+                    if first_char && chars_iter.next().is_some() {
+                        return start_err_len == errors.len();
+                    }
+                    errors.push(Error::invalid_field(decl_type, keyword));
+                    return false;
+                }
                 _ => {
                     errors.push(Error::invalid_field(decl_type, keyword));
                     return false;
@@ -1931,7 +1940,7 @@ mod tests {
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
     const NAME_REGEX_STR: &str = r"[0-9a-zA-Z_][0-9a-zA-Z_\-\.]*";
-    const URL_REGEX_STR: &str = r"[0-9a-z\+\-\.]+://.+";
+    const URL_REGEX_STR: &str = r"([0-9a-z\+\-\.]+://.+|#.+)";
 
     lazy_static! {
         static ref PATH_REGEX: Regex =

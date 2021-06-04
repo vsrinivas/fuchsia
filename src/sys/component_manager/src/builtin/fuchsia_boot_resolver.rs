@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::model::component::ComponentInstance,
     crate::{
         builtin::capability::BuiltinCapability,
         capability::InternalCapability,
@@ -120,7 +121,11 @@ impl FuchsiaBootResolver {
 
 #[async_trait]
 impl Resolver for FuchsiaBootResolver {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+    async fn resolve(
+        &self,
+        component_url: &str,
+        _target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError> {
         let fsys::Component { resolved_url, decl, package, .. } =
             self.resolve_async(component_url).await?;
         let resolved_url = resolved_url.unwrap();
@@ -158,6 +163,8 @@ impl BuiltinCapability for FuchsiaBootResolver {
 mod tests {
     use {
         super::*,
+        crate::model::component::ComponentInstance,
+        crate::model::environment::Environment,
         fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy_and_stream, ServerEnd},
         fidl_fuchsia_data as fdata,
@@ -165,6 +172,7 @@ mod tests {
         fidl_fuchsia_sys2::ComponentDecl,
         fuchsia_async as fasync,
         std::path::PathBuf,
+        std::sync::Weak,
         vfs::{
             self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
             file::vmo::asynchronous::read_only_static, pseudo_directory,
@@ -272,8 +280,15 @@ mod tests {
     async fn hello_world_test() -> Result<(), Error> {
         let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
 
+        let root = ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-boot:///#meta/root.cm".to_string(),
+        );
+
         let url = "fuchsia-boot:///packages/hello-world#meta/hello-world.cm";
-        let component = resolver.resolve(url).await?;
+        let component = resolver.resolve(url, &root).await?;
 
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
@@ -322,8 +337,8 @@ mod tests {
     }
 
     macro_rules! test_resolve_error {
-        ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
-            let res = $resolver.resolve($url).await;
+        ($resolver:ident, $url:expr, $target:ident, $resolver_error_expected:ident) => {
+            let res = $resolver.resolve($url, &$target).await;
             match res.err().expect("unexpected success") {
                 ResolverError::$resolver_error_expected { .. } => {}
                 e => panic!("unexpected error {:?}", e),
@@ -334,6 +349,12 @@ mod tests {
     #[fuchsia::test]
     async fn resolve_errors_test() {
         let resolver = FuchsiaBootResolver::new_from_directory(FakeBootfs::new());
-        test_resolve_error!(resolver, "fuchsia-boot:///#meta/invalid.cm", ManifestInvalid);
+        let root = ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-boot:///#meta/root.cm".to_string(),
+        );
+        test_resolve_error!(resolver, "fuchsia-boot:///#meta/invalid.cm", root, ManifestInvalid);
     }
 }

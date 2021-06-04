@@ -177,7 +177,11 @@ impl MockResolver {
 
 #[async_trait]
 impl Resolver for MockResolver {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+    async fn resolve(
+        &self,
+        component_url: &str,
+        _target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError> {
         self.resolve_async(component_url.to_string()).await
     }
 }

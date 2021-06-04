@@ -17,6 +17,7 @@ use {
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
             process_launcher::ProcessLauncher,
+            relative_resolver::{RelativeResolver, SCHEME as RELATIVE_SCHEME},
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
@@ -226,6 +227,11 @@ impl BuiltinEnvironmentBuilder {
         } else {
             None
         };
+
+        if self.add_environment_resolvers {
+            let relative_resolver = RelativeResolver::new();
+            self.resolvers.register(RELATIVE_SCHEME.to_string(), Box::new(relative_resolver));
+        }
 
         let runtime_config = Arc::new(runtime_config);
         let top_instance =

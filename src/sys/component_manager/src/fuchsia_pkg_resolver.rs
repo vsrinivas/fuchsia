@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::model::component::ComponentInstance,
     crate::model::resolver::{ResolvedComponent, Resolver, ResolverError},
     anyhow::format_err,
     async_trait::async_trait,
@@ -13,6 +14,7 @@ use {
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
     std::path::Path,
+    std::sync::Arc,
 };
 
 #[allow(unused)]
@@ -90,7 +92,11 @@ impl FuchsiaPkgResolver {
 
 #[async_trait]
 impl Resolver for FuchsiaPkgResolver {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+    async fn resolve(
+        &self,
+        component_url: &str,
+        _target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError> {
         self.resolve_async(component_url).await
     }
 }

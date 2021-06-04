@@ -377,7 +377,17 @@ impl Url {
         if url_str.is_empty() || url_str.len() > 4096 {
             return Err(ParseError::InvalidLength);
         }
-        let parsed_url = url::Url::parse(&url_str).map_err(|_| ParseError::InvalidValue)?;
+        let parsed_url = url::Url::parse(&url_str);
+        // We are considering relative URLs to be valid URLs, but only if it starts
+        // with the resource.
+        if parsed_url == Err(url::ParseError::RelativeUrlWithoutBase) {
+            if url_str.chars().nth(0) == Some('#') {
+                // Use the unparsed URL string so that the original format is preserved.
+                return Ok(Self(url_str.into_owned()));
+            }
+        }
+
+        let parsed_url = parsed_url.map_err(|_| ParseError::InvalidValue)?;
         if parsed_url.cannot_be_a_base() {
             return Err(ParseError::InvalidValue);
         }
@@ -675,6 +685,7 @@ mod tests {
     #[test]
     fn test_valid_url() {
         expect_ok!(Url, "a://foo");
+        expect_ok!(Url, "#relative-url");
         expect_ok!(Url, &format!("a://{}", repeat("x").take(4092).collect::<String>()));
     }
 

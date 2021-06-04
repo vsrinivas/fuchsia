@@ -25,7 +25,13 @@ use {
 /// further isolate the `Model` from FIDL interfacting concerns.
 #[async_trait]
 pub trait Resolver {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError>;
+    /// Resolves a component URL to its content. This function takes in the `component_url` to
+    /// resolve and the `target` component that is trying to be resolved.
+    async fn resolve(
+        &self,
+        component_url: &str,
+        target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError>;
 }
 
 /// The response returned from a Resolver. This struct is derived from the FIDL
@@ -77,16 +83,30 @@ impl ResolverRegistry {
 
 #[async_trait]
 impl Resolver for ResolverRegistry {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+    async fn resolve(
+        &self,
+        component_url: &str,
+        target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError> {
         match Url::parse(component_url) {
             Ok(parsed_url) => {
                 if let Some(resolver) = self.resolvers.get(parsed_url.scheme()) {
-                    resolver.resolve(component_url).await
+                    resolver.resolve(component_url, target).await
                 } else {
                     Err(ResolverError::SchemeNotRegistered)
                 }
             }
-            Err(e) => Err(ResolverError::malformed_url(e)),
+            Err(e) => {
+                if e == url::ParseError::RelativeUrlWithoutBase {
+                    if let Some(resolver) = self.resolvers.get("") {
+                        resolver.resolve(component_url, target).await
+                    } else {
+                        Err(ResolverError::SchemeNotRegistered)
+                    }
+                } else {
+                    Err(ResolverError::malformed_url(e))
+                }
+            }
         }
     }
 }
@@ -108,7 +128,11 @@ impl RemoteResolver {
 // component URL resolutions should be possible on a single channel.
 #[async_trait]
 impl Resolver for RemoteResolver {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+    async fn resolve(
+        &self,
+        component_url: &str,
+        _target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError> {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
             .map_err(ResolverError::internal)?;
         let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
@@ -138,8 +162,12 @@ pub struct BuiltinResolver(pub Arc<dyn Resolver + Send + Sync + 'static>);
 
 #[async_trait]
 impl Resolver for BuiltinResolver {
-    async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
-        self.0.resolve(component_url).await
+    async fn resolve(
+        &self,
+        component_url: &str,
+        target: &Arc<ComponentInstance>,
+    ) -> Result<ResolvedComponent, ResolverError> {
+        self.0.resolve(component_url, target).await
     }
 }
 
@@ -252,6 +280,9 @@ struct RemoteError(fsys::ResolverError);
 
 #[cfg(test)]
 mod tests {
+    use crate::model::component::ComponentInstance;
+    use crate::model::environment::Environment;
+    use std::sync::Weak;
     use {super::*, anyhow::format_err};
 
     struct MockOkResolver {
@@ -261,7 +292,11 @@ mod tests {
 
     #[async_trait]
     impl Resolver for MockOkResolver {
-        async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        async fn resolve(
+            &self,
+            component_url: &str,
+            _target: &Arc<ComponentInstance>,
+        ) -> Result<ResolvedComponent, ResolverError> {
             assert_eq!(self.expected_url, component_url);
             Ok(ResolvedComponent {
                 resolved_url: self.resolved_url.clone(),
@@ -289,7 +324,11 @@ mod tests {
 
     #[async_trait]
     impl Resolver for MockErrorResolver {
-        async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        async fn resolve(
+            &self,
+            component_url: &str,
+            _target: &Arc<ComponentInstance>,
+        ) -> Result<ResolvedComponent, ResolverError> {
             assert_eq!(self.expected_url, component_url);
             Err((self.error)(component_url))
         }
@@ -315,8 +354,15 @@ mod tests {
             }),
         );
 
+        let root = ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "fuchsia-boot:///#meta/root.cm".to_string(),
+        );
+
         // Resolve known scheme that returns success.
-        let component = registry.resolve("foo://url").await.unwrap();
+        let component = registry.resolve("foo://url", &root).await.unwrap();
         assert_eq!("foo://resolved", component.resolved_url);
 
         // Resolve a different scheme that produces an error.
@@ -324,7 +370,7 @@ mod tests {
             Err(ResolverError::manifest_not_found(format_err!("not available")));
         assert_eq!(
             format!("{:?}", expected_res),
-            format!("{:?}", registry.resolve("bar://url").await)
+            format!("{:?}", registry.resolve("bar://url", &root).await)
         );
 
         // Resolve an unknown scheme
@@ -332,13 +378,16 @@ mod tests {
             Err(ResolverError::SchemeNotRegistered);
         assert_eq!(
             format!("{:?}", expected_res),
-            format!("{:?}", registry.resolve("unknown://url").await),
+            format!("{:?}", registry.resolve("unknown://url", &root).await),
         );
 
         // Resolve an URL lacking a scheme.
         let expected_res: Result<ResolvedComponent, ResolverError> =
-            Err(ResolverError::malformed_url(url::ParseError::RelativeUrlWithoutBase));
-        assert_eq!(format!("{:?}", expected_res), format!("{:?}", registry.resolve("xxx").await),);
+            Err(ResolverError::SchemeNotRegistered);
+        assert_eq!(
+            format!("{:?}", expected_res),
+            format!("{:?}", registry.resolve("xxx", &root).await),
+        );
     }
 
     #[test]
