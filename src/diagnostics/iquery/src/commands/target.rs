@@ -73,11 +73,8 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
     for path_result in path_results {
         if let Ok(path) = path_result {
             let path_str = path.to_string_lossy().to_string();
-            let node = io_util::open_node_in_namespace(
-                &path_str,
-                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_NODE_REFERENCE,
-            )
-            .map_err(|e| Error::io_error("open node in namespace", e))?;
+            let node = io_util::open_node_in_namespace(&path_str, fio::OPEN_FLAG_NODE_REFERENCE)
+                .map_err(|e| Error::io_error("open node in namespace", e))?;
             if let Ok(node_info) = node.describe().await {
                 match node_info {
                     fio::NodeInfo::Service(_) => {

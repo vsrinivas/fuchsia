@@ -153,9 +153,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
                           ", incoming flags: ", ZxFlags(request->flags),
                           ", path: ", request->path.data());
-    if (open_options.flags.describe) {
-      return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
-    }
+    return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
 
   FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our options: ", options(),

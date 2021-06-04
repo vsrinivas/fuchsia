@@ -55,6 +55,45 @@ class FileOrDirectory : public fs::Vnode {
   }
 };
 
+// Helper method to monitor the OnOpen event, used by the tests below when
+// OPEN_FLAG_DESCRIBE is used.
+zx::status<fio::wire::NodeInfo> GetOnOpenResponse(zx::unowned_channel channel) {
+  zx::status<fio::wire::NodeInfo> node_info{};
+  auto get_on_open_response = [](zx::unowned_channel channel,
+                                 zx::status<fio::wire::NodeInfo>& node_info) {
+    class EventHandler final : public fidl::WireSyncEventHandler<fio::Node> {
+     public:
+      explicit EventHandler() = default;
+
+      void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
+        ASSERT_NE(event, nullptr);
+        response_ = *event;
+      }
+
+      fidl::WireResponse<fio::Node::OnOpen> GetResponse() { return response_; }
+
+      zx_status_t Unknown() override { return ZX_ERR_UNAVAILABLE; }
+
+     private:
+      fidl::WireResponse<fio::Node::OnOpen> response_;
+    };
+
+    EventHandler event_handler{};
+    fidl::Result event_result = event_handler.HandleOneEvent(channel);
+    // Expect that |on_open| was received
+    ASSERT_TRUE(event_result.ok());
+    fidl::WireResponse<fio::Node::OnOpen> response = event_handler.GetResponse();
+    if (response.s != ZX_OK) {
+      node_info = zx::error(response.s);
+      return;
+    }
+    ASSERT_FALSE(response.info.has_invalid_tag());
+    node_info = zx::ok(response.info);
+  };
+  get_on_open_response(std::move(channel), node_info);
+  return node_info;
+}
+
 class VfsTestSetup : public zxtest::Test {
  public:
   // Setup file structure with one directory and one file. Note: On creation directories and files
@@ -222,31 +261,6 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
   ASSERT_OK(ConnectClient(std::move(server_end)));
 
-  // Helper method to monitor the OnOpen event, used by the tests below
-  auto expect_on_open = [](zx::unowned_channel channel,
-                           fit::function<void(fio::wire::NodeInfo)> cb) {
-    class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
-     public:
-      explicit EventHandler(fit::function<void(fio::wire::NodeInfo)>& cb) : cb_(cb) {}
-
-      void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) override {
-        EXPECT_OK(event->s);
-        EXPECT_FALSE(event->info.has_invalid_tag());
-        cb_(std::move(event->info));
-      }
-
-      zx_status_t Unknown() override { return ZX_ERR_INVALID_ARGS; }
-
-     private:
-      fit::function<void(fio::wire::NodeInfo)>& cb_;
-    };
-
-    EventHandler event_handler(cb);
-    fidl::Result event_result = event_handler.HandleOneEvent(std::move(channel));
-    // Expect that |on_open| was received
-    EXPECT_TRUE(event_result.ok());
-  };
-
   constexpr uint32_t kOpenMode = 0755;
 
   // Connect to polymorphic node as a directory, by passing |kOpenFlagDirectory|.
@@ -257,8 +271,9 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                           fio::wire::kOpenFlagDirectory,
                       kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
                 .status());
-  expect_on_open(zx::unowned_channel(dc1),
-                 [](fio::wire::NodeInfo info) { EXPECT_TRUE(info.is_directory()); });
+  zx::status<fio::wire::NodeInfo> dir_info = GetOnOpenResponse(zx::unowned_channel(dc1));
+  ASSERT_OK(dir_info);
+  ASSERT_TRUE(dir_info->is_directory());
 
   // Connect to polymorphic node as a file, by passing |kOpenFlagNotDirectory|.
   zx::channel fc1, fc2;
@@ -268,8 +283,29 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                           fio::wire::kOpenFlagNotDirectory,
                       kOpenMode, fidl::StringView("file_or_dir"), std::move(fc2))
                 .status());
-  expect_on_open(zx::unowned_channel(fc1),
-                 [](fio::wire::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
+  zx::status<fio::wire::NodeInfo> file_info = GetOnOpenResponse(zx::unowned_channel(fc1));
+  ASSERT_OK(file_info);
+  ASSERT_TRUE(file_info->is_file());
+}
+
+TEST_F(ConnectionTest, PrevalidateFlagsOpenFailure) {
+  // Create connection to vfs
+  zx::channel client_end, server_end;
+  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
+  ASSERT_OK(ConnectClient(std::move(server_end)));
+
+  constexpr uint32_t kOpenMode = 0755;
+  // Flag combination which should return INVALID_ARGS (see PrevalidateFlags in connection.cc).
+  constexpr uint32_t kInvalidFlagCombo =
+      fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe | fio::wire::kOpenFlagDirectory |
+      fio::wire::kOpenFlagNodeReference | fio::wire::kOpenFlagAppend;
+  zx::channel dc1, dc2;
+  ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
+  // Ensure that invalid flag combination returns INVALID_ARGS.
+  ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
+                .Open(kInvalidFlagCombo, kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
+                .status());
+  ASSERT_EQ(GetOnOpenResponse(zx::unowned_channel(dc1)).status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 // A vnode which maintains a counter of number of |Open| calls that have not been balanced out with
