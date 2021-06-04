@@ -25,11 +25,17 @@ zx_status_t netboot_prepare_zbi(zx::vmo zbi_in, std::string_view cmdline, zx::vm
     std::string_view error = result.error_value();
     printf("netbootloader: ZBI is not complete : %.*s", static_cast<int>(error.size()),
            error.data());
+    view.ignore_error();
     return ZX_ERR_INTERNAL;
   }
 
-  auto second = view.begin();
-  auto first = second++;
+  auto first = view.begin();
+  auto second = std::next(first);
+  if (auto result = view.take_error(); result.is_error()) {
+    printf("netbootloader: failure encountered in iteration over ZBI: ");
+    PrintViewError(result.error_value());
+    return ZX_ERR_INTERNAL;
+  }
 
   // Copy the kernel (the first item) into its own ZBI backed by a new VMO
   // (created automatically by zbitl::View).
@@ -47,12 +53,6 @@ zx_status_t netboot_prepare_zbi(zx::vmo zbi_in, std::string_view cmdline, zx::vm
     return ZX_ERR_INTERNAL;
   } else {
     *data_zbi = std::move(result).value();
-  }
-
-  if (auto result = view.take_error(); result.is_error()) {
-    printf("netbootloader: failure encountered in iteration over ZBI: ");
-    PrintViewError(result.error_value());
-    return ZX_ERR_INTERNAL;
   }
 
   zbitl::Image data_img(zx::unowned_vmo{*data_zbi});

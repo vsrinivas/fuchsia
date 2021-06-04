@@ -52,6 +52,7 @@ zx_status_t Boot(zx::resource resource, zx::channel devmgr_channel, zx::vmo kern
   if (auto result = data_image.Extend(mexec_data_view.begin(), mexec_data_view.end());
       result.is_error()) {
     zbitl::PrintViewCopyError(result.error_value());
+    mexec_data_view.ignore_error();
     return ZX_ERR_INTERNAL;
   }
   if (auto result = mexec_data_view.take_error(); result.is_error()) {
