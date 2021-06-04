@@ -103,6 +103,7 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
         len = strlen(ex);
         if (!strncasecmp(s, ex, len)) {
           tm->tm_hour %= 12;
+          s += len;
           break;
         }
         ex = nl_langinfo(PM_STR);
@@ -110,6 +111,7 @@ char* strptime(const char* restrict s, const char* restrict f, struct tm* restri
         if (!strncasecmp(s, ex, len)) {
           tm->tm_hour %= 12;
           tm->tm_hour += 12;
+          s += len;
           break;
         }
         return 0;

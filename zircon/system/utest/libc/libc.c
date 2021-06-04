@@ -10,27 +10,36 @@
 
 #define END_TEST return true
 
-#define ASSERT_EQ(lhs, rhs, msg) \
-  if ((lhs) != (rhs)) {          \
-    return false;                \
-  }                              \
+#define ASSERT_EQ(lhs, rhs, msg)          \
+  if ((lhs) != (rhs)) {                   \
+    fprintf(stderr, "failed: %s\n", msg); \
+    return false;                         \
+  }
 
-#define ASSERT_GE(lhs, rhs, msg) \
-  if ((lhs) < (rhs)) {           \
-    return false;                \
-  }                              \
+#define ASSERT_NE(lhs, rhs, msg)          \
+  if ((lhs) == (rhs)) {                   \
+    fprintf(stderr, "failed: %s\n", msg); \
+    return false;                         \
+  }
 
-#define BEGIN_TEST_CASE(name)
+#define ASSERT_GE(lhs, rhs, msg)          \
+  if ((lhs) < (rhs)) {                    \
+    fprintf(stderr, "failed: %s\n", msg); \
+    return false;                         \
+  }
 
-#define END_TEST_CASE(name)
-
-#define RUN_TEST(function_name)     \
+#define BEGIN_TEST_CASE(name) \
   int main(int argc, char** argv) { \
-    if (!function_name()) {         \
-      return 1;                     \
-    }                               \
+
+#define END_TEST_CASE(name) \
     return 0;                       \
-  }                                 \
+  }
+
+#define RUN_TEST(function_name)             \
+  fprintf(stderr, "%s\n", #function_name); \
+  if (!function_name()) {                   \
+    return 1;                               \
+  }
 
 static bool stdio_handle_to_tid_mapping(void) {
   BEGIN_TEST;
@@ -53,6 +62,21 @@ static bool stdio_handle_to_tid_mapping(void) {
   END_TEST;
 }
 
+static bool strptime_parse_percent_p(void) {
+  BEGIN_TEST;
+
+  struct tm tm = {0};
+  const char* input = "AM";
+  // Regression test for https://fxrev.dev/539032; parse pointer wasn't advanced
+  // past the parse of %p, so the return value was incorrect.
+  const char* result = strptime(input, "%p", &tm);
+  ASSERT_NE(result, input, "didn't advance");
+  ASSERT_NE(result, NULL, "null");
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(musl_tests)
 RUN_TEST(stdio_handle_to_tid_mapping);
+RUN_TEST(strptime_parse_percent_p);
 END_TEST_CASE(musl_tests)
