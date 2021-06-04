@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "service:tests" ]
+  deps = [
+    "service:netemul-sandbox",
+    "service:tests",
+  ]
 }

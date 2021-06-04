@@ -212,6 +212,10 @@ pub async fn wait_for_interface_up_and_address(
     .expect("failed waiting for interface to be up and configured")
 }
 
+/// The name of the netemul sandbox component, which is the parent component of
+/// managed test realms.
+const NETEMUL_SANDBOX_COMPONENT_NAME: &str = "sandbox";
+
 /// Gets inspect data in realm.
 ///
 /// Returns the resulting inspect data for `component`, filtered by
@@ -222,15 +226,15 @@ pub async fn get_inspect_data<'a>(
     tree_selector: impl Into<String>,
     file_prefix: &str,
 ) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
-    let archive = realm
-        .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
-        .context("failed to connect to archive accessor")?;
-
+    let moniker = realm.get_moniker().await.context("calling get moniker")?;
     let mut data = diagnostics_reader::ArchiveReader::new()
-        .with_archive(archive)
         .add_selector(
-            diagnostics_reader::ComponentSelector::new(vec![component.into()])
-                .with_tree_selector(tree_selector.into()),
+            diagnostics_reader::ComponentSelector::new(vec![
+                NETEMUL_SANDBOX_COMPONENT_NAME.into(),
+                moniker,
+                component.into(),
+            ])
+            .with_tree_selector(tree_selector.into()),
         )
         // Enable `retry_if_empty` to prevent races in test realm bringup where
         // we may end up reaching `ArchiveReader` before it has observed

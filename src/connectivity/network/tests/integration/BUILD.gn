@@ -10,6 +10,7 @@ group("tests") {
   deps = [
     ":compile",
     ":netstack-integration-tests",
+    ":netstack-integration-tests-v2",
     "ip_forward:netemul-ip-forward-tests",
   ]
 }
@@ -27,7 +28,6 @@ tests = [
   "dns",
   "fidl",
   "filter",
-  "inspect",
   "ipv4",
   "ipv6",
   "management",
@@ -88,6 +88,31 @@ fuchsia_test_package("netstack-integration-tests") {
 
     # netemul-sandbox is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox-component",
+  ]
+}
+
+tests_v2 = [ "inspect" ]
+
+foreach(test, tests_v2) {
+  name = "netstack-${test}-integration-test"
+  fuchsia_test_component(name) {
+    manifest = "meta/${name}.cml"
+    deps = [ test ]
+  }
+}
+
+fuchsia_test_package("netstack-integration-tests-v2") {
+  test_components = []
+  foreach(test, tests_v2) {
+    test_components += [ ":netstack-${test}-integration-test" ]
+  }
+
+  deps = [
+    # netemul-sandbox-v2 is used to create hermetic environments.
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug-v2",
 
     # sampler config is tested as part of inspect integration tests.
     ":sampler-config",

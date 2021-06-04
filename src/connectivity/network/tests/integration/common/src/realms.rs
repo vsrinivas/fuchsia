@@ -30,7 +30,9 @@ impl NetstackVersion {
     pub fn get_url(&self) -> &'static str {
         match self {
             NetstackVersion::Netstack2 => {
-                todo!("specify a CFv2 component manifest for a debug netstack2")
+                // TODO(https://fxbug.dev/67854): once relative package URLs
+                // exist, change this to a relative URL.
+                "fuchsia-pkg://fuchsia.com/netstack-integration-tests-v2#meta/netstack-debug.cm"
             }
             NetstackVersion::Netstack3 => {
                 todo!("specify a CFv2 component manifest for a debug netstack3")

@@ -8,7 +8,7 @@ use anyhow::Context as _;
 use diagnostics_hierarchy::Property;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
-use netstack_testing_common::environments::{Netstack2, TestSandboxExt};
+use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{get_inspect_data, Result};
 
 /// A helper type to provide address verification in inspect NIC data.
@@ -82,14 +82,14 @@ async fn inspect_nic() -> Result {
 
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
     let network = sandbox.create_network("net").await.context("failed to create network")?;
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>("inspect_nic")
-        .context("failed to create environment")?;
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("inspect_nic")
+        .context("failed to create realm")?;
 
     const ETH_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
     const NETDEV_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
 
-    let eth = env
+    let eth = realm
         .join_network_with(
             &network,
             "eth-ep",
@@ -98,7 +98,7 @@ async fn inspect_nic() -> Result {
         )
         .await
         .context("failed to join network with ethernet endpoint")?;
-    let netdev = env
+    let netdev = realm
         .join_network_with(
             &network,
             "netdev-ep",
@@ -108,7 +108,7 @@ async fn inspect_nic() -> Result {
         .await
         .context("failed to join network with netdevice endpoint")?;
 
-    let interfaces_state = env
+    let interfaces_state = realm
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
 
@@ -164,7 +164,7 @@ async fn inspect_nic() -> Result {
     // Populate the neighbor table so we can verify inspection of its entries.
     const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
     const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
-    let () = env
+    let () = realm
         .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?
         .add_entry(eth.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
@@ -173,7 +173,7 @@ async fn inspect_nic() -> Result {
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("add_entry failed")?;
 
-    let data = get_inspect_data(&env, "netstack-debug.cmx", "NICs", "interfaces")
+    let data = get_inspect_data(&realm, "netstack", "NICs", "interfaces")
         .await
         .context("get_inspect_data failed")?;
     // Debug print the tree to make debugging easier in case of failures.
@@ -346,11 +346,11 @@ async fn inspect_nic() -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn inspect_routing_table() -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>("inspect_routing_table")
-        .context("failed to create environment")?;
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("inspect_routing_table")
+        .context("failed to create realm")?;
 
-    let netstack = env
+    let netstack = realm
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to fuchsia.netstack/Netstack")?;
 
@@ -396,7 +396,7 @@ async fn inspect_routing_table() -> Result {
         routing_table_assertion.add_child_assertion(route_assertion);
     }
 
-    let data = get_inspect_data(&env, "netstack-debug.cmx", "Routes", "routes")
+    let data = get_inspect_data(&realm, "netstack", "Routes", "routes")
         .await
         .context("get_inspect_data failed")?;
     if let Err(e) = routing_table_assertion.run(&data) {
@@ -409,11 +409,11 @@ async fn inspect_routing_table() -> Result {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn inspect_for_sampler() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let env = sandbox
-        .create_netstack_environment::<Netstack2, _>("inspect_for_sampler")
-        .expect("failed to create environment");
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("inspect_for_sampler")
+        .expect("failed to create realm");
     // Connect to netstack service to spawn a netstack instance.
-    let _netstack = env
+    let _netstack = realm
         .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("failed to connect to fuchsia.netstack/Netstack");
 
@@ -437,7 +437,7 @@ async fn inspect_for_sampler() {
         println!("tree_selector={:#?}", tree_selector);
         let expected_key = metric_config.selector.split(":").last().expect("failed to find a key");
 
-        let data = get_inspect_data(&env, "netstack-debug.cmx", tree_selector, "counters")
+        let data = get_inspect_data(&realm, "netstack", tree_selector, "counters")
             .await
             .expect("get_inspect_data failed");
         let properties: Vec<_> = data

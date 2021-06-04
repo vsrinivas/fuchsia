@@ -62,11 +62,27 @@ fuchsia_component("netemul-sandbox-component") {
   testonly = true
   component_name = "netemul-sandbox-v2"
   manifest = "meta/netemul-sandbox-v2.cml"
+  deps = [ ":bin" ]
+}
+
+# TODO(https://fxbug.dev/67854): once relative package URLs exist, remove this
+# package and embed the netemul sandbox component in test packages directly.
+fuchsia_package("netemul-sandbox") {
+  testonly = true
+  package_name = "netemul-sandbox-v2"
   deps = [
-    ":bin",
     ":netemul-devmgr",
+    ":netemul-sandbox-component",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/tun/network-tun:component-v2",
+  ]
+}
+
+isolated_devmgr_v2_component("netemul-devmgr") {
+  package_name = "netemul-sandbox-v2"
+  deps = [
+    ":network-drivers",
+    ":renamed_sys_binary",
   ]
 }
 
@@ -88,7 +104,7 @@ group("network-drivers") {
   ]
 }
 
-isolated_devmgr_v2_component("netemul-devmgr") {
+isolated_devmgr_v2_component("netemul-devmgr-test") {
   package_name = "netemul-v2-tests"
   deps = [
     ":network-drivers",
@@ -114,7 +130,7 @@ renamed_binary("renamed_sys_binary") {
 fuchsia_test_package("netemul-v2-tests") {
   test_components = [ ":netemul-sandbox-v2-tests" ]
   deps = [
-    ":netemul-devmgr",
+    ":netemul-devmgr-test",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/testing/netemul-v2/test-support:counter",
     "//src/connectivity/network/tun/network-tun:component-v2",
