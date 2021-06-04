@@ -53,7 +53,7 @@ class TrampolineBoot::Trampoline {
     // direction flag is set for REP MOVSB and the starting pointers are at the
     // laste byte rather than the first.
     void SetDirection() {
-      backwards = src + count > dst && dst + count > src;
+      backwards = dst > src && dst - src < count;
       if (backwards) {
         dst += count - 1;
         src += count - 1;
