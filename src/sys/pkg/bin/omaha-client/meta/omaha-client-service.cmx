@@ -16,6 +16,7 @@
             "fuchsia.boot.Arguments",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.SystemDataUpdater",
+            "fuchsia.feedback.ComponentDataRegister",
             "fuchsia.feedback.CrashReporter",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.stash.Store2",

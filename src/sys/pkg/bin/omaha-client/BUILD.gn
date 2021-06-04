@@ -81,6 +81,7 @@ rustc_binary("bin") {
     "src/channel.rs",
     "src/cobalt.rs",
     "src/configuration.rs",
+    "src/feedback_annotation.rs",
     "src/fidl.rs",
     "src/http_request.rs",
     "src/inspect.rs",

@@ -15,6 +15,7 @@ mod api_metrics;
 mod channel;
 mod cobalt;
 mod configuration;
+mod feedback_annotation;
 mod fidl;
 mod http_request;
 mod inspect;
@@ -123,13 +124,15 @@ async fn main_inner() -> Result<(), Error> {
     .start()
     .await;
 
-    // Notify Cobalt current channel
+    // Notify Cobalt of the current channel and set the current app id in any feedback reports.
     let notify_cobalt = channel_data.source == ChannelSource::VbMeta;
     if notify_cobalt {
         futures.push(
             cobalt::notify_cobalt_current_software_distribution(app_set.clone()).boxed_local(),
         );
     }
+
+    futures.push(feedback_annotation::publish_app_id_to_feedback(app_set.clone()).boxed_local());
 
     // Serve FIDL API
     let fidl = fidl::FidlServer::new(
