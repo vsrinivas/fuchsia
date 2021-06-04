@@ -1,0 +1,43 @@
+{{>copyright comment="#"}}
+
+{{>generated comment="#"}}
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+rustc_test("bin") {
+  name = "{{PROJECT_NAME}}"
+
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("component") {
+  testonly = true
+  component_name = "{{PROJECT_NAME}}"
+  manifest = "meta/{{PROJECT_NAME}}.cml"
+  deps = [ ":bin" ]
+}
+
+# Run with `fx test {{PROJECT_NAME}}-tests`.
+fuchsia_test_package("package") {
+  package_name = "{{PROJECT_NAME}}-tests"
+  test_components = [ ":component" ]
+}

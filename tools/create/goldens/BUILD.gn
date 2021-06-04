@@ -9,6 +9,8 @@ group("goldens") {
   testonly = true
   deps = [
     ":tests",
+    "my-component-test-cpp:tests",
+    "my-component-test-rust:tests",
     "my-component-v1-cpp",
     "my-component-v1-rust",
     "my-component-v2-cpp",
@@ -20,6 +22,8 @@ group("goldens") {
 group("tests") {
   testonly = true
   deps = [
+    ":my-component-test-cpp($host_toolchain)",
+    ":my-component-test-rust($host_toolchain)",
     ":my-component-v1-cpp($host_toolchain)",
     ":my-component-v1-rust($host_toolchain)",
     ":my-component-v2-cpp($host_toolchain)",
@@ -28,6 +32,8 @@ group("tests") {
   ]
   if (is_fuchsia) {
     deps += [
+      "my-component-test-cpp:tests",
+      "my-component-test-rust:tests",
       "my-component-v1-cpp:tests",
       "my-component-v1-rust:tests",
       "my-component-v2-cpp:tests",
@@ -95,6 +101,34 @@ golden_test("my-component-v2-rust") {
     "my-component-v2-rust/meta/my-component-v2-rust.cml",
     "my-component-v2-rust/README.md",
     "my-component-v2-rust/src/main.rs",
+  ]
+}
+
+# Create a C++ component test project named `my-component-test-cpp` and
+# compare its file contents to the golden project of the same name.
+golden_test("my-component-test-cpp") {
+  project_type = "component"
+  project_subtype = "test"
+  language = "cpp"
+  golden_files = [
+    "my-component-test-cpp/BUILD.gn",
+    "my-component-test-cpp/meta/my-component-test-cpp.cml",
+    "my-component-test-cpp/README.md",
+    "my-component-test-cpp/my_component_test_cpp.cc",
+  ]
+}
+
+# Create a Rust component test project named `my-component-test-rust` and
+# compare its file contents to the golden project of the same name.
+golden_test("my-component-test-rust") {
+  project_type = "component"
+  project_subtype = "test"
+  language = "rust"
+  golden_files = [
+    "my-component-test-rust/BUILD.gn",
+    "my-component-test-rust/meta/my-component-test-rust.cml",
+    "my-component-test-rust/README.md",
+    "my-component-test-rust/src/lib.rs",
   ]
 }
 

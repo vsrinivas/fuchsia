@@ -104,6 +104,7 @@ followed by zero or more alphanumeric characters, or the `-` character.",
 
 Supports the following project types:
     create component        # CML-based component launched by Component Manager
+    create component test   # Integration test component
     create component legacy # CMX-based component launched by appmgr
     create driver           # Driver launched in a devhost"
 )]
