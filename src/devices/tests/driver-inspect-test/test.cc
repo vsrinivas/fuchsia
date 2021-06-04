@@ -80,8 +80,8 @@ TEST_F(InspectTestCase, ReadInspectData) {
   zx::vmo inspect_vmo(out_vmo);
   ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo));
   // testBeforeDdkAdd: "OK"
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
 
   // Call test-driver to modify inspect data
   auto result = fidl::WireCall<TestInspect>(channel()).ModifyInspect();
@@ -95,11 +95,11 @@ TEST_F(InspectTestCase, ReadInspectData) {
   inspect_vmo = zx::vmo(out_vmo);
   ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo));
   // Previous values
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
   // New addition - testModify: "OK"
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      hierarchy().node(), "testModify", inspect::StringPropertyValue("OK")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "testModify", inspect::StringPropertyValue("OK")));
 }
 
 }  // namespace

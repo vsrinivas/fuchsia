@@ -62,12 +62,12 @@ TEST_F(DriverInspectTestCase, DriverProperties) {
   ASSERT_TRUE(test_driver);
 
   // name: "test"
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      test_driver->node(), "name", inspect::StringPropertyValue("test")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(test_driver->node(), "name", inspect::StringPropertyValue("test")));
 
   // status: 0
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::IntPropertyValue>(
-      test_driver->node(), "status", inspect::IntPropertyValue(ZX_OK)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(test_driver->node(), "status", inspect::IntPropertyValue(ZX_OK)));
 }
 
 TEST_F(DriverInspectTestCase, AddRemoveDriver) {
@@ -131,10 +131,10 @@ TEST_F(DeviceInspectTestCase, DeviceProperties) {
   // Check properties of test-device
   auto* test_device = hierarchy().GetByPath({"drivers", "test-driver", "devices", "test-device"});
   ASSERT_TRUE(test_device);
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      test_device->node(), "local_id", inspect::UintPropertyValue(1)));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      test_device->node(), "flags", inspect::StringPropertyValue("initializing unbindable ")));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(test_device->node(), "local_id", inspect::UintPropertyValue(1)));
+  ASSERT_NO_FATAL_FAILURES(CheckProperty(test_device->node(), "flags",
+                                         inspect::StringPropertyValue("initializing unbindable ")));
 
   device->set_local_id(0);
   device->vnode.reset();
@@ -203,23 +203,23 @@ TEST_F(DeviceInspectTestCase, CallStats) {
 
   auto* read_op_stat = call_stats->GetByPath({"read_op"});
   ASSERT_TRUE(read_op_stat);
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      read_op_stat->node(), "count", inspect::UintPropertyValue(1)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(read_op_stat->node(), "count", inspect::UintPropertyValue(1)));
 
   auto* write_op_stat = call_stats->GetByPath({"write_op"});
   ASSERT_TRUE(write_op_stat);
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      write_op_stat->node(), "count", inspect::UintPropertyValue(1)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(write_op_stat->node(), "count", inspect::UintPropertyValue(1)));
 
   auto* message_op_stat = call_stats->GetByPath({"message_op"});
   ASSERT_TRUE(message_op_stat);
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      message_op_stat->node(), "count", inspect::UintPropertyValue(1)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(message_op_stat->node(), "count", inspect::UintPropertyValue(1)));
 
   auto* device_create_stat = hierarchy().GetByPath({"call_stats", "device_create"});
   ASSERT_TRUE(device_create_stat);
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      device_create_stat->node(), "count", inspect::UintPropertyValue(1)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(device_create_stat->node(), "count", inspect::UintPropertyValue(1)));
 }
 
 TEST_F(DeviceInspectTestCase, ParentChild) {
@@ -240,11 +240,11 @@ TEST_F(DeviceInspectTestCase, ParentChild) {
   auto* child_data = hierarchy().GetByPath({"drivers", "test-driver", "devices", "test-child"});
   ASSERT_TRUE(child_data);
 
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      parent_data->node(), "child_count", inspect::UintPropertyValue(1)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(parent_data->node(), "child_count", inspect::UintPropertyValue(1)));
 
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::StringPropertyValue>(
-      child_data->node(), "parent", inspect::StringPropertyValue("test-parent (local-id:2)")));
+  ASSERT_NO_FATAL_FAILURES(CheckProperty(child_data->node(), "parent",
+                                         inspect::StringPropertyValue("test-parent (local-id:2)")));
 
   child->set_local_id(0);
   child->vnode.reset();

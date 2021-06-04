@@ -37,15 +37,15 @@ TEST_F(MyDriverCppTest, InspectTest) {
   auto device = new MyDriverCpp(fake_ddk::kFakeParent);
   // Verify is_bound = false.
   ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::BoolPropertyValue>(
-      hierarchy().node(), "is_bound", inspect::BoolPropertyValue(false)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "is_bound", inspect::BoolPropertyValue(false)));
 
   ASSERT_OK(device->Bind());
 
   // Verify is_bound = true.
   ASSERT_NO_FATAL_FAILURES(ReadInspect(device->inspect_vmo()));
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::BoolPropertyValue>(
-      hierarchy().node(), "is_bound", inspect::BoolPropertyValue(true)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(hierarchy().node(), "is_bound", inspect::BoolPropertyValue(true)));
 
   ASSERT_OK(ddk_.WaitUntilInitComplete());
   device->DdkAsyncRemove();

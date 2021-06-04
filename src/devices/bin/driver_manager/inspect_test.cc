@@ -73,33 +73,26 @@ TEST_F(DeviceInspectTestCase, DeviceProperties) {
   PrintAllProperties(test_device->node());
 
   // state : kActive
-  CheckProperty<inspect::StringPropertyValue>(test_device->node(), "state",
-                                              inspect::StringPropertyValue("kActive"));
+  CheckProperty(test_device->node(), "state", inspect::StringPropertyValue("kActive"));
 
   // protocol_id : 99
-  CheckProperty<inspect::UintPropertyValue>(test_device->node(), "protocol_id",
-                                            inspect::UintPropertyValue(99));
+  CheckProperty(test_device->node(), "protocol_id", inspect::UintPropertyValue(99));
 
   // flags : 128
-  CheckProperty<inspect::UintPropertyValue>(test_device->node(), "flags",
-                                            inspect::UintPropertyValue(128));
+  CheckProperty(test_device->node(), "flags", inspect::UintPropertyValue(128));
 
   // driver_host_local_id : 3
-  CheckProperty<inspect::UintPropertyValue>(test_device->node(), "driver_host_local_id",
-                                            inspect::UintPropertyValue(3));
+  CheckProperty(test_device->node(), "driver_host_local_id", inspect::UintPropertyValue(3));
 
   // topological_path : /dev/sys/platform-bus/test-device
-  CheckProperty<inspect::StringPropertyValue>(
-      test_device->node(), "topological_path",
-      inspect::StringPropertyValue("/dev/sys/platform-bus/test-device"));
+  CheckProperty(test_device->node(), "topological_path",
+                inspect::StringPropertyValue("/dev/sys/platform-bus/test-device"));
 
   // type : Device
-  CheckProperty<inspect::StringPropertyValue>(test_device->node(), "type",
-                                              inspect::StringPropertyValue("Device"));
+  CheckProperty(test_device->node(), "type", inspect::StringPropertyValue("Device"));
 
   // driver : ""
-  CheckProperty<inspect::StringPropertyValue>(test_device->node(), "driver",
-                                              inspect::StringPropertyValue(""));
+  CheckProperty(test_device->node(), "driver", inspect::StringPropertyValue(""));
 }
 
 TEST_F(DeviceInspectTestCase, AddRemoveDevice) {
@@ -148,8 +141,7 @@ TEST_F(DeviceInspectTestCase, PropertyChange) {
   ASSERT_TRUE(test_device);
 
   // state: kActive
-  CheckProperty<inspect::StringPropertyValue>(test_device->node(), "state",
-                                              inspect::StringPropertyValue("kActive"));
+  CheckProperty(test_device->node(), "state", inspect::StringPropertyValue("kActive"));
 
   device(test_index)->device->set_state(Device::State::kResumed);
 
@@ -157,8 +149,7 @@ TEST_F(DeviceInspectTestCase, PropertyChange) {
   ReadInspect(coordinator().inspect_manager().inspector());
   test_device = hierarchy().GetByPath({"devices", "test-device"});
   ASSERT_TRUE(test_device);
-  CheckProperty<inspect::StringPropertyValue>(test_device->node(), "state",
-                                              inspect::StringPropertyValue("kResumed"));
+  CheckProperty(test_device->node(), "state", inspect::StringPropertyValue("kResumed"));
 }
 
 class InspectDevfsTestCase : public MultipleDeviceTestCase {};

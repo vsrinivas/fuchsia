@@ -24,11 +24,11 @@ namespace inspect {
 //
 //  TEST_F(ExampleTest, CheckInspectVmo) {
 //    ASSERT_NO_FATAL_FAILURES(ReadInspect(inspect_vmo()));
-//    CheckProperty<inspect::StringPropertyValue>(
+//    CheckProperty(
 //      hierarchy().node(), "root_property1", inspect::StringPropertyValue("OK")));
 //    auto* genX_node = hierarchy().GetByPath({"child", "grandchild"});
 //    ASSERT_TRUE(genX_node);
-//    CheckProperty<inspect::IntPropertyValue>(
+//    CheckProperty(
 //      genX_node->node(), "genX_status", inspect::IntPropertyValue(ZX_OK)));
 //  }
 class InspectTestHelper {

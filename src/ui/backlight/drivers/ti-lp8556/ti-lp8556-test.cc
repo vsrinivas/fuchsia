@@ -457,14 +457,12 @@ TEST_F(Lp8556DeviceTest, Inspect) {
 
   ReadInspect(dev_->InspectVmo());
   auto& root_node = hierarchy().GetByPath({"ti-lp8556"})->node();
-  CheckProperty<inspect::DoublePropertyValue>(root_node, "brightness",
-                                              inspect::DoublePropertyValue(1.0));
+  CheckProperty(root_node, "brightness", inspect::DoublePropertyValue(1.0));
 
   EXPECT_FALSE(root_node.get_property<inspect::UintPropertyValue>("persistent_brightness"));
-  CheckProperty<inspect::UintPropertyValue>(root_node, "scale", inspect::UintPropertyValue(3589u));
-  CheckProperty<inspect::UintPropertyValue>(root_node, "calibrated_scale",
-                                            inspect::UintPropertyValue(3589u));
-  CheckProperty<inspect::BoolPropertyValue>(root_node, "power", inspect::BoolPropertyValue(true));
+  CheckProperty(root_node, "scale", inspect::UintPropertyValue(3589u));
+  CheckProperty(root_node, "calibrated_scale", inspect::UintPropertyValue(3589u));
+  CheckProperty(root_node, "power", inspect::BoolPropertyValue(true));
   EXPECT_FALSE(
       root_node.get_property<inspect::DoublePropertyValue>("max_absolute_brightness_nits"));
 }

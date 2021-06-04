@@ -494,14 +494,14 @@ TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
   ASSERT_TRUE(cpu_info);
 
   // cpu_major_revision : 40
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      cpu_info->node(), "cpu_major_revision", inspect::UintPropertyValue(40)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(cpu_info->node(), "cpu_major_revision", inspect::UintPropertyValue(40)));
   // cpu_minor_revision : 11
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      cpu_info->node(), "cpu_minor_revision", inspect::UintPropertyValue(11)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(cpu_info->node(), "cpu_minor_revision", inspect::UintPropertyValue(11)));
   // cpu_package_id : 2
-  ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
-      cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckProperty(cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
 }
 
 TEST_F(AmlCpuTestFixture, TestGetNumLogicalCores) {
