@@ -104,7 +104,7 @@ class KernelDriver {
   // return true.  If nothing matches, leave the existing driver (default null)
   // in place and return false.  The expected procedure is to apply this to
   // each ZBI item in order, so that the latest one wins (e.g. one appended by
-  // the boot loader will supersede one embedded in the original complete ZBI).
+  // the boot loader will supersede one embedded in the original ZBI).
   bool Match(const zbi_header_t& header, const void* payload) { return DoMatch(header, payload); }
 
   // This is like Match, but instead of matching a ZBI item, it matches a

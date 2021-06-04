@@ -24,37 +24,34 @@ inline constexpr zbi_header_t SanitizeHeader(zbi_header_t header) {
   return header;
 }
 
-/// Returns empty if and only if the ZBI is complete (bootable), otherwise an
-/// error string.  This takes any zbitl::View type or any type that acts like
-/// it.  Note this does not check for errors from zbi.take_error() so if Zbi is
+/// Returns empty if and only if the ZBI is bootable, otherwise an error
+/// string.  This takes any zbitl::View type or any type that acts like it.
+/// Note this does not check for errors from zbi.take_error() so if Zbi is
 /// zbitl::View then the caller must use zbi.take_error() afterwards.  This
 /// function always scans every item so all errors Zbi::iterator detects will
 /// be found.  But this function's return value only indicates if the items
 /// that were scanned before any errors were encountered added up to a complete
 /// ZBI (regardless of whether there were additional items with errors).
 template <typename Zbi>
-fitx::result<std::string_view> CheckComplete(Zbi&& zbi,
-                                             uint32_t kernel_type
+fitx::result<std::string_view> CheckBootable(Zbi&& zbi, uint32_t kernel_type
 #ifdef __aarch64__
-                                             = ZBI_TYPE_KERNEL_ARM64
+                                                        = ZBI_TYPE_KERNEL_ARM64
 #elif defined(__x86_64__)
-                                             = ZBI_TYPE_KERNEL_X64
+                                                        = ZBI_TYPE_KERNEL_X64
 
 #endif
-                                             ,
-                                             uint32_t bootfs_type = ZBI_TYPE_STORAGE_BOOTFS) {
+) {
   enum {
     kKernelAbsent,
     kKernelFirst,
     kKernelLater,
   } kernel = kKernelAbsent;
-  bool bootfs = false;
   bool empty = true;
   for (auto [header, payload] : zbi) {
     if (header->type == kernel_type) {
-      kernel = (empty && kernel == kKernelAbsent) ? kKernelFirst : kKernelLater;
-    } else if (header->type == bootfs_type) {
-      bootfs = true;
+      kernel = empty ? kKernelFirst : kKernelLater;
+      empty = false;
+      break;
     }
     empty = false;
   }
@@ -68,10 +65,7 @@ fitx::result<std::string_view> CheckComplete(Zbi&& zbi,
     case kKernelLater:
       return fitx::error("kernel item out of order: must be first");
     case kKernelFirst:
-      if (bootfs) {  // It's complete.
-        return fitx::ok();
-      }
-      return fitx::error("missing BOOTFS");
+      return fitx::ok();
   }
   ZX_ASSERT_MSG(false, "unreachable");
 }

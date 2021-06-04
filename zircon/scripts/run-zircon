@@ -26,7 +26,7 @@ function HELP {
     echo "-t <binary>          : use <binary> as the QEMU->ZBI trampoline"
     echo "-u <path>            : execute qemu startUp script, default is no script"
     echo "-V                   : try to use virtio devices"
-    echo "-z <zbi>             : boot specified complete ZBI via trampoline"
+    echo "-z <zbi>             : boot specified ZBI via trampoline"
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, oss, pa, wav, none)"
     echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"

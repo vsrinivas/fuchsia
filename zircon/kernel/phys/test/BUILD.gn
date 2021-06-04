@@ -48,17 +48,6 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  # TODO(fxbug.dev/57245): We provide a dummy resource to contrive 'completeness'
-  # in the following ZBI tests, which is a requirement for bootability under the
-  # current policy of zedboot, gigaboot, and the boot-shims using the old
-  # `zbi_check`. Once that is no longer a requirement, remove this target.
-  generated_resource("dummy.txt") {
-    testonly = true
-    visibility = [ "./*" ]
-    contents = "This space is intentionally left blank."
-    outputs = [ "$target_gen_dir/dummy.txt" ]
-  }
-
   # Build a ZBI test that uses the physboot framework.
   template("phys_zbi_test") {
     if (defined(invoker.test_deps)) {
@@ -82,7 +71,7 @@ if (current_toolchain != default_toolchain) {
 
     zbi_test(target_name) {
       args = []
-      deps = test_deps + [ ":dummy.txt" ]
+      deps = test_deps
 
       # TODO(mcgrathr): enable on hardware too
       device_types = [

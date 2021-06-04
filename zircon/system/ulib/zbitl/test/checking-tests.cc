@@ -20,8 +20,7 @@ namespace {
 using ByteView = std::basic_string_view<const uint8_t>;
 
 constexpr uint32_t kKernelType = 1u;
-constexpr uint32_t kBootfsType = 2u;
-constexpr uint32_t kMiscType = 3u;
+constexpr uint32_t kNonKernelType = 2u;
 
 static constexpr zbi_header_t kValidItemHeader = {
     .length = ZBI_ALIGNMENT,
@@ -58,7 +57,7 @@ inline void CheckTwoItemZbi(uint32_t type1, uint32_t type2, bool expect_ok) {
 
   ByteView bytes(reinterpret_cast<const uint8_t*>(&contents), sizeof(contents));
   zbitl::View<ByteView> zbi(bytes);
-  auto result = zbitl::CheckComplete(zbi, kKernelType, kBootfsType);
+  auto result = zbitl::CheckBootable(zbi, kKernelType);
   if (expect_ok) {
     EXPECT_IS_OK(result);
   } else {
@@ -67,37 +66,23 @@ inline void CheckTwoItemZbi(uint32_t type1, uint32_t type2, bool expect_ok) {
   EXPECT_VIEW_IS_OK(zbi.take_error());
 }
 
-// The set of states of interest here is the product of
-//  * kernel item states = { first, present but not first, not present }
-// with
-//  * bootfs item states = { present, not present }
-// Only (first, present) should result in a complete ZBI (all else being
-// equal).
-TEST(ZbitlCompletenessTest, CompleteZbi) {
-  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kKernelType, kBootfsType, true));
+TEST(ZbitlCheckBootableTests, BootableZbi) {
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kKernelType, kNonKernelType, true));
 }
 
-TEST(ZbitlCompletenessTest, BootfsMissing) {
-  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kKernelType, kMiscType, false));
+TEST(ZbitlCheckBootableTests, KernelNotFirst) {
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kNonKernelType, kKernelType, false));
 }
 
-TEST(ZbitlCompletenessTest, KernelNotFirst) {
-  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kBootfsType, kKernelType, false));
+TEST(ZbitlCheckBootableTests, KernelMissing) {
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kNonKernelType, kNonKernelType, false));
 }
 
-TEST(ZbitlCompletenessTest, KernelNotFirstAndBootfsMissing) {
-  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kKernelType, false));
+TEST(ZbitlCheckBootableTests, TwoKernels) {
+  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kKernelType, kKernelType, true));
 }
 
-TEST(ZbitlCompletenessTest, KernelMissing) {
-  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kBootfsType, false));
-}
-
-TEST(ZbitlCompletenessTest, KernelAndBootfsMissing) {
-  ASSERT_NO_FATAL_FAILURE(CheckTwoItemZbi(kMiscType, kMiscType, false));
-}
-
-TEST(ZbitlHeaderTest, ItemMagicAndFlagsMissing) {
+TEST(ZbitlHeaderTests, ItemMagicAndFlagsMissing) {
   // * Item fits, but magic, required flags and CRC are unset.
   // Expectation: failure.
   zbi_header_t header = kValidItemHeader;
@@ -108,13 +93,13 @@ TEST(ZbitlHeaderTest, ItemMagicAndFlagsMissing) {
   EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckItemHeader(header));
 }
 
-TEST(ZbitlHeaderTest, ValidItemHeader) {
+TEST(ZbitlHeaderTests, ValidItemHeader) {
   // * Item fits, magic is correct, and required flags and CRC are set.
   // Expectation: success.
   EXPECT_IS_OK(zbitl::ZbiTraits::CheckItemHeader(kValidItemHeader));
 }
 
-TEST(ZbitlHeaderTest, ItemCrcIsMissing) {
+TEST(ZbitlHeaderTests, ItemCrcIsMissing) {
   // * Item fits, magic is correct, required flags are set, and CRC is missing.
   // Expectation: failure.
   zbi_header_t header = kValidItemHeader;
@@ -122,7 +107,7 @@ TEST(ZbitlHeaderTest, ItemCrcIsMissing) {
   EXPECT_IS_OK(zbitl::ZbiTraits::CheckItemHeader(header));
 }
 
-TEST(ZbitlHeaderTest, ItemFlagsMissing) {
+TEST(ZbitlHeaderTests, ItemFlagsMissing) {
   // * Item fits, magic is correct, required flags are missing, and CRC is set.
   // Expectation: failure.
   zbi_header_t header = kValidItemHeader;
@@ -130,11 +115,11 @@ TEST(ZbitlHeaderTest, ItemFlagsMissing) {
   EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckItemHeader(header));
 }
 
-TEST(ZbitlHeaderTest, ValidContainerHeader) {
+TEST(ZbitlHeaderTests, ValidContainerHeader) {
   EXPECT_IS_OK(zbitl::ZbiTraits::CheckContainerHeader(kValidContainerHeader));
 }
 
-TEST(ZbitlHeaderTest, ContainerMagicMissing) {
+TEST(ZbitlHeaderTests, ContainerMagicMissing) {
   // A container header requires both item and container magic to be set.
   {
     zbi_header_t header = kValidContainerHeader;
@@ -148,27 +133,27 @@ TEST(ZbitlHeaderTest, ContainerMagicMissing) {
   }
 }
 
-TEST(ZbitlHeaderTest, ContainerFlagsMissing) {
+TEST(ZbitlHeaderTests, ContainerFlagsMissing) {
   zbi_header_t header = kValidContainerHeader;
   header.flags = 0u;
   EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
 }
 
-TEST(ZbitlHeaderTest, BadContainerType) {
+TEST(ZbitlHeaderTests, BadContainerType) {
   // Must be ZBI_TYPE_CONTAINER.
   zbi_header_t header = kValidContainerHeader;
   header.type = ZBI_TYPE_IMAGE_ARGS;
   EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
 }
 
-TEST(ZbitlHeaderTest, ContainerCrc) {
+TEST(ZbitlHeaderTests, ContainerCrc) {
   // No CRC flag must be set.
   zbi_header_t header = kValidContainerHeader;
   header.flags |= ZBI_FLAG_CRC32;
   EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
 }
 
-TEST(ZbitlHeaderTest, UnalignedContainerLength) {
+TEST(ZbitlHeaderTests, UnalignedContainerLength) {
   // Must be ZBI_ALIGNMENT-aligned.
   zbi_header_t header = kValidContainerHeader;
   header.length = ZBI_ALIGNMENT - 1;

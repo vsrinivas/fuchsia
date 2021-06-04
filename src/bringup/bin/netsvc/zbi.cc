@@ -20,10 +20,9 @@ zx_status_t netboot_prepare_zbi(zx::vmo zbi_in, std::string_view cmdline, zx::vm
 
   zbitl::View view(std::move(zbi_in));
 
-  // In this case, the netboot "kernel zbi" necessarily must be complete.
-  if (auto result = zbitl::CheckComplete(view); result.is_error()) {
+  if (auto result = zbitl::CheckBootable(view); result.is_error()) {
     std::string_view error = result.error_value();
-    printf("netbootloader: ZBI is not complete : %.*s", static_cast<int>(error.size()),
+    printf("netbootloader: ZBI is not bootable : %.*s", static_cast<int>(error.size()),
            error.data());
     view.ignore_error();
     return ZX_ERR_INTERNAL;

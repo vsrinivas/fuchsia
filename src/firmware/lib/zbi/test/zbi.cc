@@ -327,7 +327,7 @@ TEST(ZbiTests, ZbiTestCheckTestZbiTruncated) {
 TEST(ZbiTests, ZbiTestCheckCompleteTestZbi) {
   test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
 
-  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_OK);
+  ASSERT_EQ(zbi_check_bootable(zbi, nullptr), ZBI_RESULT_OK);
 
   free(zbi);
 }
@@ -336,7 +336,7 @@ TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWithErr) {
   test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
   zbi_header_t* err = nullptr;
 
-  EXPECT_EQ(zbi_check_complete(zbi, &err), ZBI_RESULT_OK);
+  EXPECT_EQ(zbi_check_bootable(zbi, &err), ZBI_RESULT_OK);
 
   ASSERT_EQ(err, nullptr);
 
@@ -344,21 +344,21 @@ TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWithErr) {
 }
 
 TEST(ZbiTests, ZbiTestCheckCompleteTestZbiNull) {
-  ASSERT_EQ(zbi_check_complete(nullptr, nullptr), ZBI_RESULT_ERROR);
+  ASSERT_EQ(zbi_check_bootable(nullptr, nullptr), ZBI_RESULT_ERROR);
 }
 
 TEST(ZbiTests, ZbiTestCheckCompleteTestZbiTruncated) {
   zbi_header_t container = ZBI_CONTAINER_HEADER(0);
   container.length = 0;
 
-  ASSERT_EQ(zbi_check_complete(&container, nullptr), ZBI_RESULT_ERR_TRUNCATED);
+  ASSERT_EQ(zbi_check_bootable(&container, nullptr), ZBI_RESULT_ERR_TRUNCATED);
 }
 
 TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWrongArch) {
   test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
   zbi->kernel_hdr.type = 0;
 
-  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_INCOMPLETE_KERNEL);
+  ASSERT_EQ(zbi_check_bootable(zbi, nullptr), ZBI_RESULT_INCOMPLETE_KERNEL);
 
   free(zbi);
 }
@@ -368,18 +368,9 @@ TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWrongArchWithErr) {
   zbi->kernel_hdr.type = 0;
   zbi_header_t* err = nullptr;
 
-  EXPECT_EQ(zbi_check_complete(zbi, &err), ZBI_RESULT_INCOMPLETE_KERNEL);
+  EXPECT_EQ(zbi_check_bootable(zbi, &err), ZBI_RESULT_INCOMPLETE_KERNEL);
 
   ASSERT_EQ(err, &zbi->kernel_hdr);
-
-  free(zbi);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiMissingBootfs) {
-  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi->bootfs_hdr.type = ZBI_TYPE_CMDLINE;
-
-  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_INCOMPLETE_BOOTFS);
 
   free(zbi);
 }

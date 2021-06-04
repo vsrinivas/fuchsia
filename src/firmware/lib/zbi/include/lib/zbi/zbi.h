@@ -43,7 +43,6 @@ typedef enum zbi_result {
   ZBI_RESULT_TOO_BIG,
 
   ZBI_RESULT_INCOMPLETE_KERNEL,
-  ZBI_RESULT_INCOMPLETE_BOOTFS,
 } zbi_result_t;
 
 typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr, void* payload, void* cookie);
@@ -84,7 +83,7 @@ zbi_result_t zbi_check(const void* base, zbi_header_t** err);
 // Validates the ZBI for the host platform.
 //
 // Same as zbi_check but also diagnoses ZBI_RESULT_INCOMPLETE_* result codes
-// if the ZBI is not a valid complete ZBI for the host platform.
+// if the ZBI is not a valid, bootable ZBI for the host platform.
 //
 // Parameters:
 //     base - The ZBI to check.
@@ -94,7 +93,7 @@ zbi_result_t zbi_check(const void* base, zbi_header_t** err);
 //     ZBI_RESULT_OK - On success.
 //     ZBI_RESULT_ERROR - If base is NULL.
 //     Not ZBI_RESULT_OK - Indicating the error.
-zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err);
+zbi_result_t zbi_check_bootable(const void* base, zbi_header_t** err);
 
 // Calls the callback with a pointer to the header and payload of each ZBI
 // entry (excluding the container).

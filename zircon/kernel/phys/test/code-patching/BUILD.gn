@@ -80,7 +80,6 @@ zbi_test("zbi-code-patching-test") {
   deps = [
     ":zbi-code-patching-test.data",
     ":zbi-code-patching-test.executable",
-    "..:dummy.txt",
   ]
 
   # TODO(mcgrathr): enable on hardware too
