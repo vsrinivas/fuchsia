@@ -107,15 +107,7 @@ impl FxVolume {
                 }
             }
         }
-        let fs = self.store.filesystem();
-        let mut transaction = fs
-            .new_transaction(
-                &[LockKey::object(self.store.store_object_id(), object_id)],
-                Options { skip_space_checks: true, ..Default::default() },
-            )
-            .await?;
-        self.store.tombstone(&mut transaction, object_id).await?;
-        transaction.commit().await;
+        self.store.tombstone(object_id).await?;
         Ok(())
     }
 }

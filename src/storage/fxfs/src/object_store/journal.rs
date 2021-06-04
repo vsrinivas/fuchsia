@@ -15,6 +15,8 @@
 // information to locate the initial extents for the journal.  The super-block is written using the
 // same per-block checksum that is used for the journal file.
 
+pub mod checksum_list;
+mod handle;
 mod reader;
 pub mod super_block;
 mod writer;
@@ -31,13 +33,15 @@ use {
             filesystem::{Filesystem, Mutations, SyncOptions},
             graveyard::Graveyard,
             journal::{
+                checksum_list::ChecksumList,
+                handle::Handle,
                 reader::{JournalReader, ReadResult},
                 super_block::SuperBlock,
                 writer::JournalWriter,
             },
             merge::{self},
             object_manager::{ObjectFlush, ObjectManager},
-            record::{ObjectItem, ObjectKey},
+            record::{ExtentKey, ObjectKey, DEFAULT_DATA_ATTRIBUTE_ID},
             transaction::{
                 AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
             },
@@ -54,6 +58,7 @@ use {
     std::{
         clone::Clone,
         iter::IntoIterator,
+        ops::Bound,
         sync::{
             atomic::{self, AtomicBool},
             Arc, Mutex,
@@ -107,7 +112,7 @@ impl JournalCheckpoint {
 }
 
 // All journal blocks are covered by a fletcher64 checksum as the last 8 bytes in a block.
-fn fletcher64(buf: &[u8], previous: u64) -> u64 {
+pub fn fletcher64(buf: &[u8], previous: u64) -> u64 {
     assert!(buf.len() % 4 == 0);
     let mut lo = previous as u32;
     let mut hi = (previous >> 32) as u32;
@@ -200,7 +205,7 @@ impl Journal {
     /// Reads a super-block and then replays journaled records.
     pub async fn replay(&self, filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
         let device = filesystem.device();
-        let (super_block, mut reader) = SuperBlock::read(device).await?;
+        let (super_block, mut reader) = SuperBlock::read(device.clone()).await?;
         log::info!("replaying journal, superblock: {:?}", super_block);
 
         let allocator = Arc::new(SimpleAllocator::new(
@@ -217,14 +222,8 @@ impl Journal {
         );
 
         while let Some(item) = reader.next_item().await? {
-            root_parent
-                .apply_mutation(
-                    Mutation::insert_object(item.key, item.value),
-                    None,
-                    0,
-                    AssocObj::None,
-                )
-                .await;
+            let mutation = Mutation::insert_object(item.key, item.value);
+            root_parent.apply_mutation(mutation, None, 0, AssocObj::None).await;
         }
 
         {
@@ -233,8 +232,6 @@ impl Journal {
             inner.super_block = super_block.clone();
         }
         self.objects.set_root_parent_store(root_parent.clone());
-        let mut mutations = Vec::new();
-        let mut journal_file_checkpoint = None;
         let mut end_block = false;
         let root_store = ObjectStore::new(
             Some(root_parent.clone()),
@@ -244,20 +241,39 @@ impl Journal {
             LSMTree::new(merge::merge),
         );
         self.objects.set_root_store(root_store);
-        let mut reader = JournalReader::new(
-            ObjectStore::open_object(
-                &root_parent,
-                super_block.journal_object_id,
-                journal_handle_options(),
-            )
-            .await?,
-            self.block_size(),
-            &super_block.journal_checkpoint,
-        );
+
+        let mut handle;
+        {
+            let root_parent_layer = root_parent.tree().mutable_layer();
+            let mut iter = root_parent_layer
+                .seek(Bound::Included(&ObjectKey::with_extent_key(
+                    super_block.journal_object_id,
+                    DEFAULT_DATA_ATTRIBUTE_ID,
+                    ExtentKey::search_key_from_offset(super_block.journal_checkpoint.file_offset),
+                )))
+                .await?;
+            handle = Handle::new(super_block.journal_object_id, device.clone());
+            while let Some(item) = iter.get() {
+                if !handle.try_push_extent_from_object_item(item)? {
+                    break;
+                }
+                iter.advance().await?;
+            }
+        }
+        let mut reader =
+            JournalReader::new(handle, self.block_size(), &super_block.journal_checkpoint);
+        let mut checksum_list = ChecksumList::new();
+        let mut mutations = Vec::new();
+        let mut current_transaction = None;
         loop {
-            let current_checkpoint = Some(reader.journal_file_checkpoint());
+            let current_checkpoint = reader.journal_file_checkpoint();
             match reader.deserialize().await? {
-                ReadResult::Reset => mutations.clear(), // Discard pending mutations
+                ReadResult::Reset => {
+                    if current_transaction.is_some() {
+                        current_transaction = None;
+                        mutations.pop();
+                    }
+                }
                 ReadResult::Some(record) => {
                     end_block = false;
                     match record {
@@ -266,48 +282,52 @@ impl Journal {
                             end_block = true;
                         }
                         JournalRecord::Mutation { object_id, mutation } => {
-                            if mutations.len() == 0 {
-                                journal_file_checkpoint = current_checkpoint;
+                            if current_transaction.is_none() {
+                                mutations.push((current_checkpoint, Vec::new()));
+                                current_transaction = mutations.last_mut();
                             }
-                            mutations.push((object_id, mutation));
+                            current_transaction.as_mut().unwrap().1.push((object_id, mutation));
                         }
                         JournalRecord::Commit => {
-                            if let Some(checkpoint) = journal_file_checkpoint.take() {
-                                if self.trace.load(atomic::Ordering::Relaxed) {
-                                    log::info!("REPLAY {}", checkpoint.file_offset);
-                                }
+                            if let Some((checkpoint, mutations)) = current_transaction.take() {
                                 for (object_id, mutation) in mutations {
-                                    // Snoop the mutations for any that might apply to the journal
-                                    // file to ensure that we accurately track changes in size.
-                                    let associated_object = match (object_id, &mutation) {
-                                        (
-                                            store_object_id,
-                                            Mutation::ObjectStore(ObjectStoreMutation {
-                                                item:
-                                                    ObjectItem {
-                                                        key: ObjectKey { object_id, .. }, ..
-                                                    },
-                                                ..
-                                            }),
-                                        ) if store_object_id
-                                            == super_block.root_parent_store_object_id
-                                            && *object_id == super_block.journal_object_id =>
-                                        {
-                                            AssocObj::Borrowed(reader.handle() as &_)
+                                    if !self.should_apply(*object_id, checkpoint) {
+                                        continue;
+                                    }
+                                    if !self
+                                        .objects
+                                        .validate_mutation(
+                                            checkpoint.file_offset,
+                                            *object_id,
+                                            &mutation,
+                                            &mut checksum_list,
+                                        )
+                                        .await?
+                                    {
+                                        if self.trace.load(atomic::Ordering::Relaxed) {
+                                            log::info!(
+                                                "Stopping replay at bad mutation: {:?}",
+                                                mutation
+                                            );
                                         }
-                                        _ => AssocObj::None,
-                                    };
+                                        break;
+                                    }
 
-                                    self.apply_mutation(
-                                        object_id,
-                                        &checkpoint,
-                                        mutation,
-                                        None,
-                                        associated_object,
-                                    )
-                                    .await;
+                                    // Snoop the mutations for any that might apply to the journal
+                                    // file so that we can pass them to the reader so that it can
+                                    // read the journal file.
+                                    if *object_id == super_block.root_parent_store_object_id {
+                                        if let Mutation::ObjectStore(ObjectStoreMutation {
+                                            item,
+                                            ..
+                                        }) = mutation
+                                        {
+                                            reader.handle().try_push_extent_from_object_item(
+                                                item.as_item_ref(),
+                                            )?;
+                                        }
+                                    }
                                 }
-                                mutations = Vec::new();
                             }
                         }
                     }
@@ -316,19 +336,52 @@ impl Journal {
                 ReadResult::ChecksumMismatch => break,
             }
         }
+
+        // Validate the checksums.
+        let journal_offset = checksum_list
+            .verify(device.as_ref(), reader.journal_file_checkpoint().file_offset)
+            .await?;
+
+        // Apply the mutations.
+        let mut last_checkpoint = if mutations.is_empty() {
+            super_block.journal_checkpoint.clone()
+        } else {
+            'outer: loop {
+                for (checkpoint, mutations) in mutations {
+                    if checkpoint.file_offset >= journal_offset {
+                        break 'outer checkpoint;
+                    }
+                    if self.trace.load(atomic::Ordering::Relaxed) {
+                        log::info!("REPLAY {}", checkpoint.file_offset);
+                    }
+                    for (object_id, mutation) in mutations {
+                        self.apply_mutation(object_id, &checkpoint, mutation, None, AssocObj::None)
+                            .await;
+                    }
+                }
+                break reader.journal_file_checkpoint();
+            }
+        };
+
+        // TODO(csuter): If we rejected some mutations because of a checksum failure, we need to do
+        // something so that when we next replay, we don't try and verify again.
+
         // Configure the journal writer so that we can continue.
         {
-            let mut checkpoint =
-                JournalCheckpoint::new(reader.read_offset(), reader.last_read_checksum());
-            if checkpoint.file_offset < super_block.super_block_journal_file_offset {
+            if last_checkpoint.file_offset < super_block.super_block_journal_file_offset {
                 return Err(anyhow!(FxfsError::Inconsistent).context(format!(
                     "journal replay cut short; journal finishes at {}, but super-block was \
                      written at {}",
-                    checkpoint.file_offset, super_block.super_block_journal_file_offset
+                    last_checkpoint.file_offset, super_block.super_block_journal_file_offset
                 )));
             }
             allocator.ensure_open().await?;
-            let handle = reader.take_handle();
+            let handle = ObjectStore::open_object(
+                &root_parent,
+                super_block.journal_object_id,
+                journal_handle_options(),
+            )
+            .await?;
             let current_journal_size = handle.get_allocated_size().await.unwrap();
             let allocator_reservation = allocator
                 .reserve(RESERVATION_SIZE.saturating_sub(current_journal_size))
@@ -338,10 +391,10 @@ impl Journal {
             let mut writer = self.writer.lock().await;
             // If the last entry wasn't an end_block, then we need to reset the stream.
             if !end_block {
-                checkpoint.checksum ^= RESET_XOR;
+                last_checkpoint.checksum ^= RESET_XOR;
             }
-            self.inner.lock().unwrap().journal_file_offset = checkpoint.file_offset;
-            writer.seek_to_checkpoint(checkpoint);
+            self.inner.lock().unwrap().journal_file_offset = last_checkpoint.file_offset;
+            writer.seek_to_checkpoint(last_checkpoint);
         }
 
         let root_store = self.objects.root_store();
@@ -916,7 +969,7 @@ mod tests {
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
         device.reopen();
-        let fs = FxFilesystem::open_with_trace(device, false).await.expect("open failed");
+        let fs = FxFilesystem::open(device).await.expect("open failed");
         {
             fsck(&fs).await.expect("fsck failed");
 

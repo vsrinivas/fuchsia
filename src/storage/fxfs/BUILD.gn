@@ -47,6 +47,8 @@ fxfs_sources = [
   "src/object_store/fsck.rs",
   "src/object_store/graveyard.rs",
   "src/object_store/journal.rs",
+  "src/object_store/journal/checksum_list.rs",
+  "src/object_store/journal/handle.rs",
   "src/object_store/journal/reader.rs",
   "src/object_store/journal/super_block.rs",
   "src/object_store/journal/writer.rs",

@@ -14,8 +14,8 @@ use {
             record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
             },
-            transaction::{Mutation, Options, Transaction},
-            LockKey, ObjectStore,
+            transaction::{Mutation, Transaction},
+            ObjectStore,
         },
     },
     anyhow::{bail, Context, Error},
@@ -131,15 +131,7 @@ impl Graveyard {
                 .open_store(store_id)
                 .await
                 .context(format!("Failed to open store {}", store_id))?;
-            let mut transaction = fs
-                .clone()
-                .new_transaction(
-                    &[LockKey::object(self.store().store_object_id(), self.object_id())],
-                    Options { skip_journal_checks: true, ..Default::default() },
-                )
-                .await?;
-            store.tombstone(&mut transaction, id).await.context("Failed to tombstone object")?;
-            transaction.commit().await;
+            store.tombstone(id).await.context("Failed to tombstone object")?;
         }
         Ok(num_purged)
     }

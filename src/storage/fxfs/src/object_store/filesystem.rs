@@ -125,11 +125,11 @@ impl FxFilesystem {
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
+        let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve_at_most(0));
         if let Some(graveyard) = filesystem.objects.graveyard() {
             // Purge the graveyard of old entries in a background task.
             graveyard.reap_async(filesystem.journal.journal_file_offset());
         }
-        let _ = filesystem.flush_reservation.set(filesystem.allocator().reserve(0).unwrap());
         Ok(filesystem)
     }
 

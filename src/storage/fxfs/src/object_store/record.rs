@@ -75,7 +75,13 @@ impl ExtentKey {
     /// we'd search for 0..101 which would set the iterator to 50..150.
     pub fn search_key(&self) -> Self {
         assert_ne!(self.range.start, self.range.end);
-        ExtentKey { range: 0..self.range.start + 1 }
+        ExtentKey::search_key_from_offset(self.range.start)
+    }
+
+    /// Similar to previous, but from an offset.  Returns a search key that will find the first
+    /// extent that touches offset..
+    pub fn search_key_from_offset(offset: u64) -> Self {
+        ExtentKey { range: 0..offset + 1 }
     }
 
     /// Returns the merge key for this extent; that is, a key which is <= this extent and any other
@@ -249,8 +255,8 @@ impl NextKey for ObjectKey {
             } = &mut key
             {
                 // We want a key such that cmp_lower_bound returns Greater for any key which starts
-                // after end, and a key such that if you search for it, you'll get an extent that
-                // whose end > range.end.
+                // after end, and a key such that if you search for it, you'll get an extent whose
+                // end > range.end.
                 *range = range.end..range.end + 1;
             }
             Some(key)
@@ -260,19 +266,65 @@ impl NextKey for ObjectKey {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Checksums {
+    None,
+    /// A vector of checksums, one per block.
+    Fletcher(Vec<u64>),
+}
+
 /// ExtentValue is the payload for an extent in the object store, which describes where the extent
 /// is physically located.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExtentValue {
     /// The device offset for the extent. A value of None indicates a deleted extent; that is, the
     /// logical range described by the extent key is considered to be deleted.
-    pub device_offset: Option<u64>,
+    pub device_offset: Option<(u64, Checksums)>,
 }
 
 impl ExtentValue {
-    /// Returns a new ExtentValue offset by |amount|.
-    pub fn offset_by(&self, amount: u64) -> Self {
-        Self { device_offset: self.device_offset.map(|o| o + amount) }
+    /// Returns a new ExtentValue offset by `amount`.  Both `amount` and `extent_len` must be
+    /// multiples of the underlying block size.
+    pub fn offset_by(&self, amount: u64, extent_len: u64) -> Self {
+        match &self.device_offset {
+            None => Self { device_offset: None },
+            Some((device_offset, checksum)) => {
+                if let Checksums::Fletcher(checksums) = checksum {
+                    if checksums.len() > 0 {
+                        let index = (amount / (extent_len / checksums.len() as u64)) as usize;
+                        return Self {
+                            device_offset: Some((
+                                device_offset + amount,
+                                Checksums::Fletcher(checksums[index..].to_vec()),
+                            )),
+                        };
+                    }
+                }
+                Self { device_offset: Some((device_offset + amount, Checksums::None)) }
+            }
+        }
+    }
+
+    /// Returns a new ExtentValue after shrinking the extent from |original_len| to |new_len|.
+    pub fn shrunk(&self, original_len: u64, new_len: u64) -> Self {
+        match &self.device_offset {
+            None => Self { device_offset: None },
+            Some((device_offset, checksum)) => {
+                if let Checksums::Fletcher(checksums) = checksum {
+                    if checksums.len() > 0 {
+                        let checksum_len =
+                            (new_len / (original_len / checksums.len() as u64)) as usize;
+                        return Self {
+                            device_offset: Some((
+                                *device_offset,
+                                Checksums::Fletcher(checksums[..checksum_len].to_vec()),
+                            )),
+                        };
+                    }
+                }
+                Self { device_offset: Some((*device_offset, Checksums::None)) }
+            }
+        }
     }
 }
 
@@ -375,7 +427,11 @@ impl ObjectValue {
     }
     /// Creates an ObjectValue for an insertion/replacement of an object extent.
     pub fn extent(device_offset: u64) -> ObjectValue {
-        ObjectValue::Extent(ExtentValue { device_offset: Some(device_offset) })
+        ObjectValue::Extent(ExtentValue { device_offset: Some((device_offset, Checksums::None)) })
+    }
+    /// Creates an ObjectValue for an insertion/replacement of an object extent.
+    pub fn extent_with_checksum(device_offset: u64, checksum: Checksums) -> ObjectValue {
+        ObjectValue::Extent(ExtentValue { device_offset: Some((device_offset, checksum)) })
     }
     /// Creates an ObjectValue for a deletion of an object extent.
     pub fn deleted_extent() -> ObjectValue {

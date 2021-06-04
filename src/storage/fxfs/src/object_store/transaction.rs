@@ -38,7 +38,7 @@ pub struct Options<'a> {
 
     /// If false (the default), check for free space and fail creating the transaction with a
     /// NoSpace error when low on space.  If skip_journal_checks is true, this setting is implied
-    /// (settting it to false will be ignored).  This setting should be set to true for any
+    /// (setting it to false will be ignored).  This setting should be set to true for any
     /// transaction that will either not affect space usage after compaction (e.g. setting
     /// attributes), or reduce space usage (e.g. unlinking).
     pub skip_space_checks: bool,

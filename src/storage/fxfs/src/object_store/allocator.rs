@@ -19,6 +19,7 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, Writer},
         object_store::{
             filesystem::{Filesystem, Mutations},
+            journal::checksum_list::ChecksumList,
             object_manager::ObjectFlush,
             transaction::{
                 AllocatedBytesMutation, AllocatorMutation, AssocObj, AssociatedObject, Mutation,
@@ -96,6 +97,16 @@ pub trait Allocator: Send + Sync {
 
     /// Returns the number of allocated bytes.
     fn get_allocated_bytes(&self) -> u64;
+
+    /// Used during replay to validate a mutation.  This should return false if the mutation is not
+    /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
+    /// data out-of-order, or because of a malicious actor.
+    async fn validate_mutation(
+        &self,
+        journal_offset: u64,
+        mutation: &Mutation,
+        checksum_list: &mut ChecksumList,
+    ) -> Result<bool, Error>;
 }
 
 pub struct Reservation {
@@ -594,6 +605,16 @@ impl Allocator for SimpleAllocator {
 
     fn get_allocated_bytes(&self) -> u64 {
         self.inner.lock().unwrap().allocated_bytes as u64
+    }
+
+    async fn validate_mutation(
+        &self,
+        _journal_offset: u64,
+        _mutation: &Mutation,
+        _checksum_list: &mut ChecksumList,
+    ) -> Result<bool, Error> {
+        // TODO(csuter): FIXME
+        Ok(true)
     }
 }
 

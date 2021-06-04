@@ -5,33 +5,28 @@
 use {
     crate::{
         lsm_tree::types::LayerIterator,
-        object_handle::{ObjectHandle, ObjectProperties},
+        object_handle::ObjectHandle,
         object_store::{
             constants::SUPER_BLOCK_OBJECT_ID,
             journal::{
+                handle::Handle,
                 reader::{JournalReader, ReadResult},
                 writer::JournalWriter,
                 JournalCheckpoint,
             },
-            record::{ObjectItem, Timestamp},
-            transaction::{self, Transaction},
+            record::ObjectItem,
             ObjectStore,
         },
     },
     anyhow::{bail, Error},
-    async_trait::async_trait,
     bincode::serialize_into,
     serde::{Deserialize, Serialize},
     std::{
-        cmp::min,
         collections::HashMap,
         ops::{Bound, Range},
         sync::Arc,
     },
-    storage_device::{
-        buffer::{Buffer, BufferRef, MutableBufferRef},
-        Device,
-    },
+    storage_device::Device,
 };
 
 const SUPER_BLOCK_BLOCK_SIZE: usize = 8192;
@@ -93,104 +88,6 @@ enum SuperBlockRecord {
     End,
 }
 
-// When we are reading the super-block we have to use something special for reading it because we
-// don't have an object store we can use.
-struct SuperBlockHandle {
-    device: Arc<dyn Device>,
-    extents: Vec<Range<u64>>,
-}
-
-#[async_trait]
-impl ObjectHandle for SuperBlockHandle {
-    fn object_id(&self) -> u64 {
-        SUPER_BLOCK_OBJECT_ID
-    }
-
-    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
-        self.device.allocate_buffer(size)
-    }
-
-    fn block_size(&self) -> u32 {
-        self.device.block_size()
-    }
-
-    async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
-        let len = buf.len();
-        let mut buf_offset = 0;
-        let mut file_offset = 0;
-        for extent in &self.extents {
-            let extent_len = extent.end - extent.start;
-            if offset < file_offset + extent_len {
-                let device_offset = extent.start + offset - file_offset;
-                let to_read = min(extent.end - device_offset, (len - buf_offset) as u64) as usize;
-                assert!(buf_offset % self.device.block_size() as usize == 0);
-                self.device
-                    .read(
-                        device_offset,
-                        buf.reborrow().subslice_mut(buf_offset..buf_offset + to_read),
-                    )
-                    .await?;
-                buf_offset += to_read;
-                if buf_offset == len {
-                    break;
-                }
-                offset += to_read as u64;
-            }
-            file_offset += extent_len;
-        }
-        Ok(len)
-    }
-
-    async fn txn_write<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _offset: u64,
-        _buf: BufferRef<'_>,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    fn get_size(&self) -> u64 {
-        unreachable!();
-    }
-
-    async fn truncate<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _length: u64,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    async fn preallocate_range<'a>(
-        &'a self,
-        _transaction: &mut Transaction<'a>,
-        _range: Range<u64>,
-    ) -> Result<Vec<Range<u64>>, Error> {
-        unreachable!();
-    }
-
-    async fn update_timestamps<'a>(
-        &'a self,
-        _transaction: Option<&mut Transaction<'a>>,
-        _ctime: Option<Timestamp>,
-        _mtime: Option<Timestamp>,
-    ) -> Result<(), Error> {
-        unreachable!();
-    }
-
-    async fn get_properties(&self) -> Result<ObjectProperties, Error> {
-        unreachable!();
-    }
-
-    async fn new_transaction_with_options<'a>(
-        &self,
-        _options: transaction::Options<'a>,
-    ) -> Result<Transaction<'a>, Error> {
-        unreachable!();
-    }
-}
-
 impl SuperBlock {
     pub(super) fn new(
         root_parent_store_object_id: u64,
@@ -212,8 +109,10 @@ impl SuperBlock {
     /// Read the super-block header, and return it and a reader that produces the records that are
     /// to be replayed in to the root parent object store.
     pub async fn read(device: Arc<dyn Device>) -> Result<(SuperBlock, ItemReader), Error> {
+        let mut handle = Handle::new(SUPER_BLOCK_OBJECT_ID, device);
+        handle.push_extent(first_extent());
         let mut reader = JournalReader::new(
-            SuperBlockHandle { device, extents: vec![first_extent()] },
+            handle,
             SUPER_BLOCK_BLOCK_SIZE as u64,
             &JournalCheckpoint::default(),
         );
@@ -271,7 +170,7 @@ impl SuperBlock {
     }
 }
 
-pub struct ItemReader(JournalReader<SuperBlockHandle>);
+pub struct ItemReader(JournalReader<Handle>);
 
 impl ItemReader {
     pub async fn next_item(&mut self) -> Result<Option<ObjectItem>, Error> {
@@ -280,7 +179,7 @@ impl ItemReader {
                 ReadResult::Reset => bail!("Unexpected reset"),
                 ReadResult::ChecksumMismatch => bail!("Checksum mismatch"),
                 ReadResult::Some(SuperBlockRecord::Extent(extent)) => {
-                    self.0.handle().extents.push(extent)
+                    self.0.handle().push_extent(extent)
                 }
                 ReadResult::Some(SuperBlockRecord::Item(item)) => return Ok(Some(item)),
                 ReadResult::Some(SuperBlockRecord::End) => return Ok(None),

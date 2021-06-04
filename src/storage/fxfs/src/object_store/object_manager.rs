@@ -10,7 +10,7 @@ use {
             allocator::Allocator,
             filesystem::Mutations,
             graveyard::Graveyard,
-            journal::JournalCheckpoint,
+            journal::{checksum_list::ChecksumList, JournalCheckpoint},
             merge::{self},
             transaction::{AssocObj, AssociatedObject, Mutation, Transaction, TxnMutation},
             ObjectStore,
@@ -148,6 +148,32 @@ impl ObjectManager {
 
     pub fn allocator(&self) -> Arc<dyn Allocator> {
         self.objects.read().unwrap().allocator.clone().unwrap()
+    }
+
+    /// Used during replay to validate a mutation.  This should return false if the mutation is not
+    /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
+    /// data out-of-order, or because of a malicious actor.  `checksum_list` contains a list of
+    /// checksums that might need to be performed but cannot be performed now in case there are
+    /// deallocations later.
+    pub async fn validate_mutation(
+        &self,
+        journal_offset: u64,
+        object_id: u64,
+        mutation: &Mutation,
+        checksum_list: &mut ChecksumList,
+    ) -> Result<bool, Error> {
+        if let Some(allocator) = {
+            let objects = self.objects.read().unwrap();
+            if object_id == objects.allocator_object_id {
+                Some(objects.allocator.clone().unwrap())
+            } else {
+                None
+            }
+        } {
+            allocator.validate_mutation(journal_offset, mutation, checksum_list).await
+        } else {
+            ObjectStore::validate_mutation(journal_offset, mutation, checksum_list).await
+        }
     }
 
     /// The journaling system should call this when a mutation needs to be applied. |replay|

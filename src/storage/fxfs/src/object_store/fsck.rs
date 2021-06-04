@@ -22,7 +22,7 @@ use {
             ObjectStore,
         },
     },
-    anyhow::{anyhow, bail, Error},
+    anyhow::{anyhow, bail, Context, Error},
     futures::try_join,
     std::{
         collections::hash_map::{Entry, HashMap},
@@ -75,7 +75,10 @@ pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
         {
             continue;
         }
-        let store = object_manager.open_store(store_id).await?;
+        let store = object_manager
+            .open_store(store_id)
+            .await
+            .context(format!("Unable to open store {}", store_id))?;
         fsck.scan_store(&store, &store.root_objects(), &graveyard).await?;
         let mut parent_objects = store.parent_objects();
         root_store_root_objects.append(&mut parent_objects);
@@ -183,7 +186,7 @@ impl Fsck {
                         data: ObjectKeyData::Attribute(_, AttributeKey::Extent(extent_key)),
                         ..
                     },
-                    ObjectValue::Extent(ExtentValue { device_offset: Some(device_offset) }),
+                    ObjectValue::Extent(ExtentValue { device_offset: Some((device_offset, _)) }),
                 ) => {
                     let item = Item::new(
                         AllocatorKey {

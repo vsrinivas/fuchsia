@@ -6,6 +6,7 @@ use {
     crate::object_store::{
         allocator::{Allocator, Reservation},
         filesystem::Mutations,
+        journal::checksum_list::ChecksumList,
         transaction::{AssocObj, Mutation, Transaction},
     },
     anyhow::Error,
@@ -102,6 +103,15 @@ impl Allocator for FakeAllocator {
     fn get_allocated_bytes(&self) -> u64 {
         let inner = self.0.lock().unwrap();
         (inner.alloc_bytes - inner.dealloc_bytes) as u64
+    }
+
+    async fn validate_mutation(
+        &self,
+        _journal_offset: u64,
+        _mutation: &Mutation,
+        _checksum_list: &mut ChecksumList,
+    ) -> Result<bool, Error> {
+        Ok(true)
     }
 }
 

@@ -57,7 +57,10 @@ fn merge_extents(
                     attribute_id,
                     left_key.range.start..right_key.range.start,
                 ),
-                value: ObjectValue::Extent(*left_value),
+                value: ObjectValue::Extent(left_value.shrunk(
+                    left_key.range.end - left_key.range.start,
+                    right_key.range.start - left_key.range.start,
+                )),
                 sequence: std::cmp::min(left.sequence(), right.sequence()),
             }),
             left: Replace(ObjectItem {
@@ -66,9 +69,10 @@ fn merge_extents(
                     attribute_id,
                     right_key.range.start..left_key.range.end,
                 ),
-                value: ObjectValue::Extent(
-                    left_value.offset_by(right_key.range.start - left_key.range.start),
-                ),
+                value: ObjectValue::Extent(left_value.offset_by(
+                    right_key.range.start - left_key.range.start,
+                    left_key.range.end - left_key.range.start,
+                )),
                 sequence: std::cmp::min(left.sequence(), right.sequence()),
             }),
             right: Keep,
@@ -88,9 +92,10 @@ fn merge_extents(
                 attribute_id,
                 left_key.range.end..right_key.range.end,
             ),
-            value: ObjectValue::Extent(
-                right_value.offset_by(left_key.range.end - right_key.range.start),
-            ),
+            value: ObjectValue::Extent(right_value.offset_by(
+                left_key.range.end - right_key.range.start,
+                right_key.range.end - right_key.range.start,
+            )),
             sequence: std::cmp::min(left.sequence(), right.sequence()),
         }),
     }
@@ -179,7 +184,7 @@ pub fn merge(
             ObjectValue::Extent(left_extent),
             ObjectValue::Extent(right_extent),
         ) if left_attr_id == right_attr_id => {
-            if let (None, None) = (left_extent.device_offset, right_extent.device_offset) {
+            if let (None, None) = (&left_extent.device_offset, &right_extent.device_offset) {
                 if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
                     // Two deletions in adjacent layers can be merged.
                     return merge_deleted_extents(
@@ -222,7 +227,7 @@ mod tests {
                 types::{Item, LayerIterator},
                 LSMTree,
             },
-            object_store::record::{ObjectItem, ObjectKey, ObjectValue, Timestamp},
+            object_store::record::{Checksums, ObjectItem, ObjectKey, ObjectValue, Timestamp},
         },
         anyhow::Error,
         fuchsia_async as fasync,
@@ -318,14 +323,14 @@ mod tests {
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1024),
-            ObjectValue::extent(0),
+            ObjectValue::extent_with_checksum(0, Checksums::Fletcher(vec![1, 2])),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
-            ObjectValue::extent(16384),
+            ObjectValue::extent_with_checksum(16384, Checksums::Fletcher(vec![3])),
         ))
         .await;
 
@@ -333,10 +338,16 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..512));
-        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(16384));
+        assert_eq!(
+            iter.get().unwrap().value,
+            &ObjectValue::extent_with_checksum(16384, Checksums::Fletcher(vec![3]))
+        );
         iter.advance().await?;
         assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 512..1024));
-        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(512));
+        assert_eq!(
+            iter.get().unwrap().value,
+            &ObjectValue::extent_with_checksum(512, Checksums::Fletcher(vec![2]))
+        );
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
@@ -350,14 +361,14 @@ mod tests {
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..2048),
-            ObjectValue::extent(0),
+            ObjectValue::extent_with_checksum(0, Checksums::Fletcher(vec![1, 2, 3, 4])),
         ))
         .await;
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
-            ObjectValue::extent(16384),
+            ObjectValue::extent_with_checksum(16384, Checksums::Fletcher(vec![5])),
         ))
         .await;
 
@@ -365,13 +376,22 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 0..1024));
-        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(0));
+        assert_eq!(
+            iter.get().unwrap().value,
+            &ObjectValue::extent_with_checksum(0, Checksums::Fletcher(vec![1, 2]))
+        );
         iter.advance().await?;
         assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1024..1536));
-        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(16384));
+        assert_eq!(
+            iter.get().unwrap().value,
+            &ObjectValue::extent_with_checksum(16384, Checksums::Fletcher(vec![5]))
+        );
         iter.advance().await?;
         assert_eq!(iter.get().unwrap().key, &ObjectKey::extent(object_id, attr_id, 1536..2048));
-        assert_eq!(iter.get().unwrap().value, &ObjectValue::extent(1536));
+        assert_eq!(
+            iter.get().unwrap().value,
+            &ObjectValue::extent_with_checksum(1536, Checksums::Fletcher(vec![4]))
+        );
         iter.advance().await?;
         assert!(iter.get().is_none());
         Ok(())
