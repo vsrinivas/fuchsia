@@ -27,10 +27,12 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
 }  // namespace
 
 Injector::Injector(sys::ComponentContext* component_context, fuchsia::ui::views::ViewRef context,
-                   fuchsia::ui::views::ViewRef target)
+                   fuchsia::ui::views::ViewRef target,
+                   fuchsia::ui::pointerinjector::DispatchPolicy policy)
     : component_context_(component_context),
       context_view_ref_(std::move(context)),
-      target_view_ref_(std::move(target)) {
+      target_view_ref_(std::move(target)),
+      policy_(policy) {
   FX_DCHECK(component_context_);
 }
 
@@ -209,11 +211,11 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
   {
     config.set_device_id(device_id);
     config.set_device_type(fuchsia::ui::pointerinjector::DeviceType::TOUCH);
-    // TOP_HIT_AND_ANCESTORS_IN_TARGET means only views from |target| down may receive events. The
-    // events may go to the view with the top hit and its ancestors up to and including |target|.
+    // TOP_HIT_AND_ANCESTORS_IN_TARGET means only views from |target_| down may receive events. The
+    // events may go to the view with the top hit and its ancestors up to and including |target_|.
     // The final decision on who gets the event is determined by Scenic and client protocols.
-    config.set_dispatch_policy(
-        fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+    // In the case of EXCLUSIVE_TARGET, the events are sent directly to |target_|.
+    config.set_dispatch_policy(policy_);
     config.set_viewport(GetCurrentViewport());
     {  // Use the root view as the |context|. It is set up to match the native resolution of the
        // display (same coordinate space as touchscreen events).

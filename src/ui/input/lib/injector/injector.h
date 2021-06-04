@@ -41,8 +41,13 @@ class Injector {
     float y_offset = 0.f;
   };
 
+  // |component_context| must be not nullptr and must outlive this object. |context|, |target| and
+  // |policy| are used to configure the injector. Please see |fuchsia.ui.pointerinjector| for full
+  // documentation.
   Injector(sys::ComponentContext* component_context, fuchsia::ui::views::ViewRef context,
-           fuchsia::ui::views::ViewRef target);
+           fuchsia::ui::views::ViewRef target,
+           fuchsia::ui::pointerinjector::DispatchPolicy policy =
+               fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
   virtual ~Injector() = default;
 
   // Not copyable or movable. Since internal closures capture |this| it's not safe.
@@ -85,6 +90,8 @@ class Injector {
   const sys::ComponentContext* const component_context_;
   const fuchsia::ui::views::ViewRef context_view_ref_;
   const fuchsia::ui::views::ViewRef target_view_ref_;
+  const fuchsia::ui::pointerinjector::DispatchPolicy policy_ =
+      fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET;
 
   // Flaps once, from false to true.
   // If scene is disturbed, then Presentation and Injector are both destroyed and recreated.
