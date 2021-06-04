@@ -12,6 +12,8 @@
 
 #include <optional>
 
+#include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
+
 namespace a11y {
 
 // An interface for a11y query existing semantic information.
@@ -63,6 +65,11 @@ class SemanticsSource {
       zx_koid_t koid, uint32_t node_id, fuchsia::accessibility::semantics::Action action,
       fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
           callback) = 0;
+
+  // Returns a std::optional<SemanticTransform> to transform coordinates from node-local space into
+  // view-root space. If the transform cannot be computed, then this method returns std::nullopt.
+  virtual std::optional<SemanticTransform> GetNodeToRootTransform(zx_koid_t,
+                                                                  uint32_t node_id) const = 0;
 };
 
 }  // namespace a11y

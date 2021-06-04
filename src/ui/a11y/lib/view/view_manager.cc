@@ -392,4 +392,15 @@ void ViewManager::PerformAccessibilityAction(
   tree_weak_ptr->PerformAccessibilityAction(node_id, action, std::move(callback));
 }
 
+std::optional<SemanticTransform> ViewManager::GetNodeToRootTransform(zx_koid_t koid,
+                                                                     uint32_t node_id) const {
+  auto it = view_wrapper_map_.find(koid);
+  if (it == view_wrapper_map_.end()) {
+    FX_LOGS(WARNING) << "Invalid view koid: " << koid;
+    return std::nullopt;
+  }
+
+  return it->second->GetNodeToRootTransform(node_id);
+}
+
 }  // namespace a11y

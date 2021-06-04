@@ -27,6 +27,9 @@ struct PointerLocation {
 // Struct for holding context(Koid, location) about Gesture.
 struct GestureContext {
   zx_koid_t view_ref_koid;
+  uint32_t last_event_pointer_id;
+  uint64_t last_event_time;
+  fuchsia::ui::input::PointerEventPhase last_event_phase;
   std::map<uint32_t /*pointer_id*/, PointerLocation> starting_pointer_locations;
   std::map<uint32_t /*pointer id*/, PointerLocation> current_pointer_locations;
 

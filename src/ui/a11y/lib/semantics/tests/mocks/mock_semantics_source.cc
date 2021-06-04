@@ -145,4 +145,13 @@ MockSemanticsSource::GetRequestedActionsForView(zx_koid_t koid) {
   return requested_actions_[koid];
 }
 
+void MockSemanticsSource::SetNodeToRootTransform(a11y::SemanticTransform semantic_transform) {
+  transform_to_return_ = std::make_optional<a11y::SemanticTransform>(semantic_transform);
+}
+
+std::optional<a11y::SemanticTransform> MockSemanticsSource::GetNodeToRootTransform(
+    zx_koid_t koid, uint32_t node_id) const {
+  return transform_to_return_;
+}
+
 }  // namespace accessibility_test

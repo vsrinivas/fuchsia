@@ -74,6 +74,14 @@ bool InitializeStartingGestureContext(
   gesture_context->starting_pointer_locations[pointer_id] =
       gesture_context->current_pointer_locations[pointer_id] = location;
 
+  gesture_context->last_event_pointer_id = pointer_id;
+
+  gesture_context->last_event_time =
+      pointer_event.has_event_time() ? pointer_event.event_time() : 0;
+
+  FX_DCHECK(pointer_event.has_phase());
+  gesture_context->last_event_phase = pointer_event.phase();
+
   return true;
 }
 

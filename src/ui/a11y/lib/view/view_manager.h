@@ -109,6 +109,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
           callback) override;
 
+  // |SemanticsSource|
+  std::optional<SemanticTransform> GetNodeToRootTransform(zx_koid_t koid,
+                                                          uint32_t node_id) const override;
+
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.
   // Returns nullptr if no such tree is found.

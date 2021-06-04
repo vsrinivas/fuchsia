@@ -47,7 +47,9 @@ void ViewWrapper::EnableSemanticUpdates(bool enabled) {
   view_semantics_->EnableSemanticUpdates(enabled);
 }
 
-fxl::WeakPtr<::a11y::SemanticTree> ViewWrapper::GetTree() { return view_semantics_->GetTree(); }
+fxl::WeakPtr<::a11y::SemanticTree> ViewWrapper::GetTree() const {
+  return view_semantics_->GetTree();
+}
 
 fuchsia::ui::views::ViewRef ViewWrapper::ViewRefClone() const { return Clone(view_ref_); }
 
@@ -121,19 +123,19 @@ void ViewWrapper::HighlightMagnificationViewport(float magnification_scale,
                                   true /* is_magnification_highlight */);
 }
 
-void ViewWrapper::HighlightNode(uint32_t node_id) {
+std::optional<SemanticTransform> ViewWrapper::GetNodeToRootTransform(uint32_t node_id) const {
   auto tree_weak_ptr = GetTree();
 
   if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewWrapper::DrawHighlight: Invalid tree pointer";
-    return;
+    FX_LOGS(ERROR) << "Invalid tree pointer";
+    return std::nullopt;
   }
 
-  auto annotated_node = tree_weak_ptr->GetNode(node_id);
+  auto* node = tree_weak_ptr->GetNode(node_id);
 
-  if (!annotated_node) {
-    FX_LOGS(ERROR) << "ViewWrapper::DrawHighlight: No node found with id: " << node_id;
-    return;
+  if (!node) {
+    FX_LOGS(ERROR) << "No node found iwth id: " << node_id;
+    return std::nullopt;
   }
 
   // Compute the translation and scaling vectors for the node's bounding box.
@@ -164,8 +166,8 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
   // translation values to account for the scrolling. This transform is part of the computation
   // described above.
 
-  uint32_t current_node_id = annotated_node->node_id();
-  SemanticTransform transform;
+  uint32_t current_node_id = node_id;
+  SemanticTransform node_to_root_transform;
   while (true) {
     auto current_node = tree_weak_ptr->GetNode(current_node_id);
     FX_DCHECK(current_node);
@@ -176,10 +178,10 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
     if (current_node_id != node_id && current_node->has_states() &&
         current_node->states().has_viewport_offset()) {
       auto translation_matrix = MakeTranslationTransform(current_node->states().viewport_offset());
-      transform.ChainLocalTransform(translation_matrix);
+      node_to_root_transform.ChainLocalTransform(translation_matrix);
     }
     if (current_node->has_transform()) {
-      transform.ChainLocalTransform(current_node->transform());
+      node_to_root_transform.ChainLocalTransform(current_node->transform());
     }
 
     // Once we have applied the root node's tranform, we shoud exit the loop.
@@ -200,9 +202,33 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
     }
   }
 
+  return node_to_root_transform;
+}
+
+void ViewWrapper::HighlightNode(uint32_t node_id) {
+  auto tree_weak_ptr = GetTree();
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "Invalid tree pointer";
+    return;
+  }
+
+  auto annotated_node = tree_weak_ptr->GetNode(node_id);
+
+  if (!annotated_node) {
+    FX_LOGS(ERROR) << "No node found with id: " << node_id;
+    return;
+  }
+
+  auto transform = GetNodeToRootTransform(node_id);
+  if (!transform) {
+    FX_LOGS(ERROR) << "Could not compute node-to-root transform for node: " << node_id;
+    return;
+  }
+
   auto bounding_box = annotated_node->location();
-  annotation_view_->DrawHighlight(bounding_box, transform.scale_vector(),
-                                  transform.translation_vector(),
+  annotation_view_->DrawHighlight(bounding_box, transform->scale_vector(),
+                                  transform->translation_vector(),
                                   false /* is_magnification_highlight */);
 }
 

@@ -12,6 +12,7 @@
 
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
+#include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
 #include "src/ui/a11y/lib/view/view_semantics.h"
 #include "src/ui/input/lib/injector/injector.h"
 
@@ -40,7 +41,7 @@ class ViewWrapper {
   // before accessing, as the pointer may be invalidated. The pointer may become invalidated if the
   // semantic provider disconnects or if an error occurred. This is not thread safe. This pointer
   // may only be used in the same thread as this service is running.
-  fxl::WeakPtr<::a11y::SemanticTree> GetTree();
+  fxl::WeakPtr<::a11y::SemanticTree> GetTree() const;
 
   // Returns a clone of the ViewRef owned by this object.
   fuchsia::ui::views::ViewRef ViewRefClone() const;
@@ -64,6 +65,10 @@ class ViewWrapper {
   void ClearAllHighlights();
   void ClearFocusHighlights();
   void ClearMagnificationHighlights();
+
+  // Returns a SemanticTransform to transform node-local coordinates to
+  // root-view space.
+  std::optional<SemanticTransform> GetNodeToRootTransform(uint32_t node_id) const;
 
   // Returns the injector for the view associated with this class. If no injector was registered,
   // turns nullptr.

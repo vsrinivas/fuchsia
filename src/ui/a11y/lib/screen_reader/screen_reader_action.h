@@ -10,6 +10,7 @@
 #include <lib/fit/promise.h>
 
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
+#include "src/ui/a11y/lib/input_injection/injector_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
@@ -30,6 +31,7 @@ class ScreenReaderAction {
   // complete an action.
   struct ActionContext {
     a11y::SemanticsSource* semantics_source;
+    a11y::InjectorManagerInterface* injector_manager;
   };
 
   explicit ScreenReaderAction(ActionContext* context, ScreenReaderContext* screen_reader_context);

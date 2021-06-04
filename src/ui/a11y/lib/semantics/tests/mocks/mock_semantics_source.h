@@ -75,6 +75,13 @@ class MockSemanticsSource : public a11y::SemanticsSource {
       fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
           callback) override;
 
+  // Set the SemanticTransform for GetNodeToRootTransform() to return.
+  void SetNodeToRootTransform(a11y::SemanticTransform semantic_transform);
+
+  // |SemanticsSource|
+  std::optional<a11y::SemanticTransform> GetNodeToRootTransform(zx_koid_t koid,
+                                                                uint32_t node_id) const override;
+
   // Returns list of actions requested on view corresponding to |koid|, in the order they were
   // requested.
   const std::vector<std::pair<uint32_t, fuchsia::accessibility::semantics::Action>>&
@@ -98,6 +105,9 @@ class MockSemanticsSource : public a11y::SemanticsSource {
 
   // Whether this provider has a visible virtual keyboard.
   bool has_visible_keyboard_ = false;
+
+  // Semantic transform to be returned by GetNodeToRootTransform().
+  std::optional<a11y::SemanticTransform> transform_to_return_ = std::nullopt;
 };
 
 }  // namespace accessibility_test

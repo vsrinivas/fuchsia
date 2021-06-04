@@ -34,9 +34,11 @@ MockSemanticProvider::MockSemanticProvider(
     fuchsia::accessibility::semantics::SemanticsManager* manager,
     fuchsia::accessibility::virtualkeyboard::Registry* registry)
     : view_ref_(CreateOrphanViewRef()) {
-  manager->RegisterViewForSemantics(Clone(view_ref_),
-                                    semantic_listener_bindings_.AddBinding(&semantic_listener_),
-                                    tree_ptr_.NewRequest());
+  if (manager) {
+    manager->RegisterViewForSemantics(Clone(view_ref_),
+                                      semantic_listener_bindings_.AddBinding(&semantic_listener_),
+                                      tree_ptr_.NewRequest());
+  }
 
   if (registry) {
     registry->Register(Clone(view_ref_), /*is_visible=*/false,
