@@ -1,0 +1,44 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.feedback.internal;
+
+using fuchsia.io;
+
+/// Protocol a Feedback protocol can compose so the serving component can expose handles to its
+/// "/data" and "/cache" for the explicit purpose of migrating data. The returned handles will have
+/// read and write access on the directory and are created by the Feedback component implementing
+/// one of the below protocols.
+///
+/// If "/data" or "/cache" cannot be opened, a nulled handle will be returned.
+///
+/// The component receiving the handles is responsible for deleting data after it has been
+/// successfully migrated.
+///
+/// Note: This protocol exists solely for the purpose of combining Feedback's components into a
+/// single component and isn't served by any component. The below protocols offer discoverable
+/// interfaces for each of the Feedback components. This should not be used for any other purposes
+/// and will be deleted after the merge has completed.
+// TODO(fxbug.dev/71830): Delete this protocol once the Feedback component merge has completed.
+protocol DirectoryMigrator {
+    GetDirectories() -> (fuchsia.io.Directory? data_dir, fuchsia.io.Directory? cache_dir);
+};
+
+/// Protocol for getting handles to "/data" and "/cache" of feedback_data.cmx.
+[Discoverable]
+protocol FeedbackDataDirectoryMigrator {
+    compose DirectoryMigrator;
+};
+
+/// Protocol for getting handles to "/data" and "/cache" of crash_reports.cmx.
+[Discoverable]
+protocol CrashReportsDirectoryMigrator {
+    compose DirectoryMigrator;
+};
+
+/// Protocol for getting handles to "/data" and "/cache" of last_reboot.cm.
+[Discoverable]
+protocol LastRebootDirectoryMigrator {
+    compose DirectoryMigrator;
+};

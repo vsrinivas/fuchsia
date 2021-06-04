@@ -1,0 +1,12 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+visibility = [ "//src/developer/forensics/feedback/*" ]
+
+fidl("fuchsia.feedback.internal") {
+  sources = [ "directory_migrator.internal.fidl" ]
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
+}
