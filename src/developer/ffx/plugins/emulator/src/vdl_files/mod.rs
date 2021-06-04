@@ -304,7 +304,7 @@ impl VDLFiles {
     }
 
     /// Launches FEMU, opens an SSH session, and waits for the FEMU instance or SSH session to exit.
-    pub fn start_emulator(&mut self, start_command: &StartCommand) -> Result<()> {
+    pub fn start_emulator(&mut self, start_command: &StartCommand) -> Result<i32> {
         self.check_start_command(&start_command)?;
         if !self.is_sdk {
             self.image_files.check()?;
@@ -445,7 +445,7 @@ impl VDLFiles {
                         launched_proto: Some(self.output_proto.display().to_string()),
                         vdl_path: Some(vdl.display().to_string()),
                     })?;
-                    return Ok(());
+                    return Ok(0);
                 }
                 Err(e) => {
                     self.stop_vdl(&KillCommand {
@@ -466,10 +466,18 @@ impl VDLFiles {
                 copy(&self.emulator_log, &persistent_emu_log)?;
                 println!("Emulator log is copied to {}", persistent_emu_log.display());
             }
-            ffx_bail!(
-                "Cannot start Fuchsia Emulator. Exit status is {}",
-                status.code().unwrap_or_default(),
-            )
+            // device_launcher will return exit code:
+            // Launcher = 1 <- default
+            // AEMUCrash = 2
+            // UserActionRequired = 3
+            // SSHConnection = 4
+            //
+            // We only bail! if device_launcher failed with a launcher related error.
+            let exit_code = status.code().unwrap_or_default();
+            if exit_code == 1 {
+                ffx_bail!("Cannot start Fuchsia Emulator.")
+            }
+            return Ok(exit_code);
         }
         if vdl_args.tuntap {
             println!("{}", Yellow.paint("To support fx tools on emulator, please run \"fx set-device fuchsia-5254-0063-5e7a\""));
@@ -529,7 +537,7 @@ impl VDLFiles {
                 vdl_path: Some(vdl.display().to_string()),
             })?;
         }
-        Ok(())
+        Ok(0)
     }
 
     /// SSH into the emulator and wait for exit signal.

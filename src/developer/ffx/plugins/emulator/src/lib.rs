@@ -25,9 +25,9 @@ pub fn emulator(cmd: EmulatorCommand) -> Result<()> {
 
 fn process_command(command: VDLCommand, is_sdk: bool) -> Result<()> {
     match command {
-        VDLCommand::Start(start_command) => {
-            VDLFiles::new(is_sdk, start_command.verbose)?.start_emulator(&start_command)?;
-        }
+        VDLCommand::Start(start_command) => std::process::exit(
+            VDLFiles::new(is_sdk, start_command.verbose)?.start_emulator(&start_command)?,
+        ),
         VDLCommand::Kill(stop_command) => {
             VDLFiles::new(is_sdk, false)?.stop_vdl(&stop_command)?;
         }
