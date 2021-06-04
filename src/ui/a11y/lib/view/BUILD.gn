@@ -40,6 +40,7 @@ source_set("view") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/a11y/lib/annotation",
+    "//src/ui/a11y/lib/input_injection",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/util",
   ]

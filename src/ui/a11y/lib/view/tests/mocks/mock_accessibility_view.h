@@ -27,10 +27,15 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
   }
 
   // |AccessibilityViewInterface |
-  std::optional<fuchsia::ui::views::ViewRef> view_ref() override { return std::nullopt; }
+  std::optional<fuchsia::ui::views::ViewRef> view_ref() override { return std::move(view_ref_); }
+
+  void set_view_ref(std::optional<fuchsia::ui::views::ViewRef> view_ref) {
+    view_ref_ = std::move(view_ref);
+  }
 
  private:
   std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
+  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
 };
 
 }  // namespace accessibility_test

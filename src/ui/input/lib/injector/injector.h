@@ -43,7 +43,7 @@ class Injector {
 
   Injector(sys::ComponentContext* component_context, fuchsia::ui::views::ViewRef context,
            fuchsia::ui::views::ViewRef target);
-  ~Injector() = default;
+  virtual ~Injector() = default;
 
   // Not copyable or movable. Since internal closures capture |this| it's not safe.
   Injector(const Injector&) = delete;
@@ -51,15 +51,19 @@ class Injector {
   Injector(Injector&&) = delete;
   Injector& operator=(Injector&&) = delete;
 
-  void SetViewport(Viewport viewport);
+  virtual void SetViewport(Viewport viewport);
   fuchsia::ui::pointerinjector::Viewport GetCurrentViewport() const;
-  void OnDeviceAdded(uint32_t device_id);
-  void OnDeviceRemoved(uint32_t device_id);
-  void OnEvent(const fuchsia::ui::input::InputEvent& event);
+  virtual void OnDeviceAdded(uint32_t device_id);
+  virtual void OnDeviceRemoved(uint32_t device_id);
+  virtual void OnEvent(const fuchsia::ui::input::InputEvent& event);
 
   // To be called when the scene is ready for injection.
   // All events are buffered until this is called to prevent test flakiness.
-  void MarkSceneReady();
+  virtual void MarkSceneReady();
+
+ protected:
+  // For mocks.
+  Injector();
 
  private:
   static constexpr uint64_t kLogFrequency = 100u;

@@ -403,4 +403,19 @@ std::optional<SemanticTransform> ViewManager::GetNodeToRootTransform(zx_koid_t k
   return it->second->GetNodeToRootTransform(node_id);
 }
 
+bool ViewManager::InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_koid_t koid) {
+  auto it = view_wrapper_map_.find(koid);
+  if (it == view_wrapper_map_.end()) {
+    return false;
+  }
+  auto* injector = it->second->view_injector();
+  if (!injector) {
+    FX_LOGS(WARNING) << "Trying to inject pointer events into view " << koid
+                     << " which does not have an instantiated injector.";
+    return false;
+  }
+  injector->OnEvent(event);
+  return true;
+}
+
 }  // namespace a11y

@@ -34,6 +34,8 @@ Injector::Injector(sys::ComponentContext* component_context, fuchsia::ui::views:
   FX_DCHECK(component_context_);
 }
 
+Injector::Injector() : component_context_(nullptr) {}
+
 void Injector::SetViewport(Viewport viewport) {
   FX_VLOGS(2) << "SetViewport: width=" << viewport.width << " height=" << viewport.height
               << " scale=" << viewport.scale << " x_offset=" << viewport.x_offset

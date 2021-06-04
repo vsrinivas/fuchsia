@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
+#include "src/ui/a11y/lib/input_injection/injector_manager.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/semantics/semantics_event_manager.h"
@@ -32,6 +33,7 @@ namespace a11y {
 class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                     public fuchsia::accessibility::virtualkeyboard::Registry,
                     public fuchsia::accessibility::virtualkeyboard::Listener,
+                    public InjectorManagerInterface,
                     public SemanticsSource,
                     public FocusHighlightManager {
  public:
@@ -112,6 +114,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // |SemanticsSource|
   std::optional<SemanticTransform> GetNodeToRootTransform(zx_koid_t koid,
                                                           uint32_t node_id) const override;
+
+  // |InjectorManagerInterface|
+  bool InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_koid_t koid) override;
 
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.

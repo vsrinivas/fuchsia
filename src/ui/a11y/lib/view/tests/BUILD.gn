@@ -38,6 +38,7 @@ executable("view_tests") {
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
+    "//src/ui/input/lib/injector/tests/mocks",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]

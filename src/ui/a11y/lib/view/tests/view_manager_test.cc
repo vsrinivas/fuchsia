@@ -30,6 +30,7 @@
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+#include "src/ui/input/lib/injector/tests/mocks/mock_injector.h"
 
 namespace accessibility_test {
 namespace {
@@ -55,11 +56,22 @@ class ViewManagerTest : public gtest::TestLoopFixture {
 
     auto annotation_view_factory = std::make_unique<MockAnnotationViewFactory>();
     annotation_view_factory_ = annotation_view_factory.get();
+    auto view_injector_factory = std::make_unique<MockViewInjectorFactory>();
+    auto mock_injector = std::make_unique<input_test::MockInjector>();
+    mock_injector_ = mock_injector.get();
+    view_injector_factory->set_injector(std::move(mock_injector));
+    auto accessibility_view = std::make_unique<MockAccessibilityView>();
+    // Not initialized, as it is only used to perform a call to a mock.
+    fuchsia::ui::views::ViewRef dummy_view_ref;
+    std::optional<fuchsia::ui::views::ViewRef> accessibility_view_view_ref =
+        std::move(dummy_view_ref);
+
+    accessibility_view->set_view_ref(std::move(accessibility_view_view_ref));
 
     view_manager_ = std::make_unique<a11y::ViewManager>(
         std::move(tree_service_factory_), std::move(view_semantics_factory),
-        std::move(annotation_view_factory), std::make_unique<MockViewInjectorFactory>(),
-        std::make_unique<MockSemanticsEventManager>(), std::make_unique<MockAccessibilityView>(),
+        std::move(annotation_view_factory), std::move(view_injector_factory),
+        std::make_unique<MockSemanticsEventManager>(), std::move(accessibility_view),
         context_provider_.context(), debug_dir());
     view_manager_->SetAnnotationsEnabled(true);
 
@@ -98,6 +110,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
   MockSemanticTreeServiceFactory* tree_service_factory_ptr_;
   MockViewSemanticsFactory* view_semantics_factory_;
   MockAnnotationViewFactory* annotation_view_factory_;
+  input_test::MockInjector* mock_injector_;
 };
 
 TEST_F(ViewManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
@@ -468,6 +481,12 @@ TEST_F(ViewManagerTest, VirtualkeyboardListenerUpdates) {
   semantic_provider_->UpdateVirtualkeyboardVisibility(false);
   RunLoopUntilIdle();
   EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
+}
+
+TEST_F(ViewManagerTest, InjectorManagerTest) {
+  fuchsia::ui::input::InputEvent event;
+  EXPECT_TRUE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
+  EXPECT_TRUE(mock_injector_->on_event_called());
 }
 
 }  // namespace

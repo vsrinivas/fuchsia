@@ -94,7 +94,7 @@ class AccessibilityView : public AccessibilityViewInterface {
   // True if the a11y view and proxy view holder have been created, and
   // their properties have been set.
   bool is_initialized_ = false;
-  
+
   // Holds a copy of the view ref of the a11y view.
   // If not present, the a11y view has not yet been connected to the scene.
   std::optional<fuchsia::ui::views::ViewRef> view_ref_;
