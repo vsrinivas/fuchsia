@@ -26,6 +26,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/blobfs",
     "//src/lib/assembly/fvm",
     "//src/lib/assembly/update_package",
+    "//src/lib/assembly/util",
     "//src/lib/assembly/vbmeta",
     "//src/lib/assembly/zbi",
     "//src/lib/zerocopy",

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use crate::errors::BuildError;
-use crate::{
-    CreationManifest, MetaContents, MetaPackage, Package, PackageManifest,
-};
+use crate::{CreationManifest, MetaContents, MetaPackage, Package, PackageManifest};
 use fuchsia_merkle::{Hash, MerkleTree};
 use std::collections::{btree_map, BTreeMap};
 use std::path::PathBuf;
@@ -72,7 +70,10 @@ pub(crate) fn build_with_file_system<'a>(
 
     let mut far_contents: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
     for (resource_path, source_path) in creation_manifest.far_contents() {
-        far_contents.insert(resource_path, file_system.read(source_path)?);
+        far_contents.insert(
+            resource_path,
+            file_system.read(source_path).map_err(|e| (e, source_path.to_string()))?,
+        );
     }
 
     let insert_generated_file =
@@ -115,7 +116,8 @@ fn get_external_content_infos<'a, 'b>(
     external_contents
         .iter()
         .map(|(resource_path, source_path)| -> Result<(String, ExternalContentInfo<'_>), BuildError> {
-            let file = file_system.open(source_path)?;
+            let file = file_system.open(source_path)
+                .map_err(|e| (e, source_path.to_string()))?;
             Ok((
                 resource_path.clone(),
                 ExternalContentInfo {

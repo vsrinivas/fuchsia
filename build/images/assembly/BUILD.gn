@@ -78,6 +78,7 @@ dep_labels = {
   kernel_image = "//zircon/kernel"
   kernel_cmdline_args = "//build/input:bootfs"
   bootfs_entries = "//build/input:bootfs"
+  vboot_multiboot = "//zircon/kernel/target/pc/multiboot:multiboot"
 
   ####
   # External labels whose outputs are compared against for validity (temporary)
@@ -85,7 +86,11 @@ dep_labels = {
   system_image_pkg = "//build/images:system_image.meta"
 
   if (build_info_product != "bringup") {
-    fuchsia_zbi = "//build/images:fuchsia"
+    if (custom_signing_script != "" || use_vboot) {
+      fuchsia_zbi = "//build/images:signed"
+    } else {
+      fuchsia_zbi = "//build/images:fuchsia"
+    }
     fuchsia_zbi_manifest = "//build/images:fuchsia_unverified"
 
     if (use_vbmeta) {
@@ -99,7 +104,7 @@ dep_labels = {
       fuchsia_vbmeta = "//build/images/bringup:bringup.vbmeta"
     }
   }
-  fuchsia_update = "//build/images:update.meta"
+  prev_update_pkg = "//build/images:update.meta"
 
   ####
   # Internal labels, in "dep" format:
@@ -165,11 +170,27 @@ files = {
   # The ZBI output
   zbi = "${target_out_dir}/fuchsia.zbi"
 
+  # If the ZBI is going to be "signed", or vendor-script-processed, then write
+  # the _actual_ ZBI to this path, and the one that will be used in the update
+  # package to the above path.
+  zbi_unsigned = "${zbi}.unsigned"
+
   # ZBI output manifest
   zbi_manifest = "${target_out_dir}/gen/zbi.json"
 
   # The vbmeta (if created)
   vbmeta = "${target_out_dir}/fuchsia.vbmeta"
+
+  # The update package output
+  update_pkg = "${target_out_dir}/update.far"
+
+  # vboot script and inputs
+  vboot_script = "//build/images/vboot/vboot_sign.py"
+  vboot_host_tool = "//prebuilt/tools/futility/${host_platform}/futility"
+  vboot_keyblock = "//third_party/vboot_reference/tests/devkeys/kernel.keyblock"
+  vboot_privkeyblock =
+      "//third_party/vboot_reference/tests/devkeys/kernel_data_key.vbprivk"
+  multiboot = "${root_build_dir}/multiboot.bin"
 
   #####
   # Files used for validation against external label outputs (temporary)
@@ -195,8 +216,16 @@ files = {
   extracted_sysimg_meta_package = "${extracted_sysimg_pkg}/meta/package"
 
   if (build_info_product != "bringup") {
-    # The zbi created by //build/images:fuchsia
-    fuchsia_zbi = "${root_build_dir}/fuchsia.zbi"
+    if (custom_signing_script != "") {
+      # The vendor-processed zbi created by //build/images:signed
+      fuchsia_zbi = "${root_build_dir}/fuchsia.zbi.signed"
+    } else if (use_vboot) {
+      # The vboot-processed zbi created by //build/images:signed
+      fuchsia_zbi = "${root_build_dir}/fuchsia.zbi.vboot"
+    } else {
+      # The zbi created by //build/images:fuchsia
+      fuchsia_zbi = "${root_build_dir}/fuchsia.zbi"
+    }
     fuchsia_zbi_manifest = "${root_build_dir}/fuchsia_unverified.zbi.json"
 
     # The vbmeta for fuchsia_zbi
@@ -211,6 +240,25 @@ files = {
     fuchsia_vbmeta = "${root_build_dir}/bringup.vbmeta"
     fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
   }
+
+  # The update package re-extraction (temporary) output dir
+  extracted_update_pkg = "${target_out_dir}/extracted_update_pkg"
+
+  # The extracted update package contents
+  extracted_update_meta_contents = "${extracted_update_pkg}/meta/contents"
+  extracted_update_meta_package = "${extracted_update_pkg}/meta/package"
+
+  # The previous update package created by //build/images:fuchsia.vbmeta
+  prev_update_pkg = "${root_build_dir}/obj/build/images/update.meta/meta.far"
+
+  # The previous update package re-extraction (temporary) output dir
+  extracted_prev_update_pkg = "${target_out_dir}/extracted_fuchsia_update_pkg"
+
+  # The extracted previous update package contents
+  extracted_prev_update_meta_contents =
+      "${extracted_prev_update_pkg}/meta/contents"
+  extracted_prev_update_meta_package =
+      "${extracted_prev_update_pkg}/meta/package"
 }
 
 #####
@@ -252,26 +300,24 @@ file_args = {
   zbi = rebase_path(files.zbi, root_build_dir)
   zbi_manifest = rebase_path(files.zbi_manifest, root_build_dir)
 
-  #####
-  # Files used for validation against external label outputs (temporary)
-  #
+  update_pkg = rebase_path(files.update_pkg, root_build_dir)
+
+  # vboot script and inputs
+  zbi_unsigned = rebase_path(files.zbi_unsigned, root_build_dir)
+  vboot_script = rebase_path(files.vboot_script, root_build_dir)
+  vboot_host_tool = rebase_path(files.vboot_host_tool, root_build_dir)
+  vboot_keyblock = rebase_path(files.vboot_keyblock, root_build_dir)
+  vboot_privkeyblock = rebase_path(files.vboot_privkeyblock, root_build_dir)
+  multiboot = rebase_path(files.multiboot, root_build_dir)
 
   #####
   # Files used for validation against external label outputs (temporary)
   #
 
   extracted_base_pkg = rebase_path(files.extracted_base_pkg, root_build_dir)
-  extracted_base_meta_contents =
-      rebase_path(files.extracted_base_meta_contents, root_build_dir)
-  extracted_base_meta_package =
-      rebase_path(files.extracted_base_meta_package, root_build_dir)
 
   system_image_pkg = rebase_path(files.system_image_pkg, root_build_dir)
   extracted_sysimg_pkg = rebase_path(files.extracted_sysimg_pkg, root_build_dir)
-  extracted_sysimg_meta_contents =
-      rebase_path(files.extracted_sysimg_meta_contents, root_build_dir)
-  extracted_sysimg_meta_package =
-      rebase_path(files.extracted_sysimg_meta_package, root_build_dir)
 
   fuchsia_zbi = rebase_path(files.fuchsia_zbi, root_build_dir)
 
@@ -279,6 +325,11 @@ file_args = {
     fuchsia_vbmeta = rebase_path(files.fuchsia_vbmeta, root_build_dir)
     fuchsia_vbmeta_salt = rebase_path(files.fuchsia_vbmeta_salt, root_build_dir)
   }
+
+  extracted_update_pkg = rebase_path(files.extracted_update_pkg, root_build_dir)
+  prev_update_pkg = rebase_path(files.prev_update_pkg, root_build_dir)
+  extracted_prev_update_pkg =
+      rebase_path(files.extracted_prev_update_pkg, root_build_dir)
 }
 
 #####
@@ -548,25 +599,54 @@ action("create_config") {
 #####
 # Generate the board config
 #
-# This is all generated from GN args.  Some values are stubs
+# This is all generated from GN args.  Some values are stubs.
 #
+# TODO(fxbug.dev/77866):  Move all of these to checked-in files.
+
+# This is copied from //build/images/BUILD.gn
+use_esp = target_cpu != "arm64" && !use_vboot
+
 generated_file(labels.board_config) {
   testonly = true
-  public_deps = []
+  public_deps = [ recovery_label ]
+  if (use_esp) {
+    public_deps += [ "//build/images:esp" ]
+  }
   outputs = [ files.board_config ]
   output_conversion = "json"
   contents = {
     board_name = board_name
     arch = target_cpu
     zbi = {
-      partition = "zircon_a"
-      name = "fuchsia"
+      partition = zircon_a_partition
+      if (custom_signing_script != "" || use_vboot) {
+        name = "zbi.signed"
+      } else {
+        name = "zbi"
+      }
       max_size = 0
       compression = zbi_compression
+
+      if (use_vboot) {
+        # Set up the vboot script and its arguments
+        signing_script = {
+          tool = file_args.vboot_script
+          extra_arguments = [
+            "--host-tool",
+            file_args.vboot_host_tool,
+            "--kernel-keyblock",
+            file_args.vboot_keyblock,
+            "--private-keyblock",
+            file_args.vboot_privkeyblock,
+            "--multiboot",
+            file_args.multiboot,
+          ]
+        }
+      }
     }
     if (use_vbmeta) {
       vbmeta = {
-        partition = "vbmeta_a"
+        partition = vbmeta_a_partition
         kernel_partition = "zircon"
         key = rebase_path(avb_key, root_build_dir)
         key_metadata = rebase_path(avb_atx_metadata, root_build_dir)
@@ -577,8 +657,107 @@ generated_file(labels.board_config) {
         salt = file_args.fuchsia_vbmeta_salt
       }
     }
+
     fvm = {
-      partition = "stub"
+      partition = fvm_partition
+    }
+
+    # For each firmware item we have as a bootloader, add the correct entry
+    # for it into the board config.
+    bootloaders = []
+    foreach(firmware, firmware_prebuilts) {
+      bootloaders += [
+        {
+          # These can be used unchanged.
+          forward_variables_from(firmware,
+                                 [
+                                   "partition",
+                                   "type",
+                                 ])
+          if (defined(type) && type != "") {
+            name = "firmware_${firmware.type}"
+          } else {
+            name = "firmware"
+          }
+
+          # The source has an optional suffix, which we need to add if present.
+          source =
+              rebase_path("${firmware.path}${firmware_prebuilts_path_suffix}",
+                          root_build_dir)
+        },
+      ]
+    }
+
+    # This is copied from //build/images/BUILD.gn, and should be moved to board
+    # config files, and not generated.
+    if (use_esp) {
+      bootloaders += [
+        {
+          type = "esp"
+          name = "bootloader"
+          partition = "bootloader"
+          source =
+              rebase_path("${root_build_dir}/fuchsia.esp.blk", root_build_dir)
+        },
+      ]
+    }
+
+    # Recovery varies by product, and needs to be moved out of board config and
+    # into its own configuration item for `ffx assembly image`
+    #
+    # TODO(fxbug.dev/77535)
+    #
+    recovery = {
+      # Inspect the recovery label's name, as the in-tree recovery and zedboot
+      # builds have different naming behavior.
+      #
+      # This different naming behavior is an artifact of the current build
+      # process and GN logic, and can all go away after `ffx assembly` is the
+      # only implementation used in-tree.
+      #
+      # At that time, these are always:
+      #  name = "recovery"
+      #  zbi = <path to ZBI that contains recovery>
+
+      # Use the `name` variable for this, because all vars that we use in this
+      # scope will end up in the generated JSON, so let's not use any temporary
+      # vars and just mutate the fields we need to have in the final until they
+      # have the right values.
+      #
+
+      # Get the 'name' field of the recovery implementation's GN target.
+      #  e.g. "zedboot" for "//build/images:zedboot"
+      name = get_label_info(recovery_label, "name")
+
+      if (name == "zedboot") {
+        # Zedboot's name is different depending on if, and how, it's post-
+        # processed for booting by the board's bootloaders.
+        if (custom_signing_script != "") {
+          name = "zedboot.signed"
+          zbi = rebase_path("${root_build_dir}/zedboot.zbi.signed",
+                            root_build_dir)
+        } else if (use_vboot) {
+          name = "zedboot.signed"
+          zbi = rebase_path("${root_build_dir}/zedboot.vboot", root_build_dir)
+        } else {
+          zbi = rebase_path("${root_build_dir}/zedboot.zbi", root_build_dir)
+        }
+
+        if (use_vbmeta) {
+          vbmeta =
+              rebase_path("${root_build_dir}/zedboot.vbmeta", root_build_dir)
+        }
+      } else {
+        # All recovery options result in a "recovery.zbi", not the default of
+        # "${name}.zbi", and need to be named "recovery" in the update package.
+        name = "recovery"
+        zbi = rebase_path("${root_build_dir}/recovery.zbi", root_build_dir)
+
+        if (use_vbmeta) {
+          vbmeta =
+              rebase_path("${root_build_dir}/recovery.vbmeta", root_build_dir)
+        }
+      }
     }
   }
 
@@ -640,11 +819,24 @@ ffx_action("images") {
   outputs += [
     files.zbi,
     files.zbi_manifest,
+    files.update_pkg,
   ]
 
   if (use_vbmeta) {
     inputs += [ files.fuchsia_vbmeta_salt ]
     outputs += [ files.vbmeta ]
+  }
+
+  # These are from custom signing of the zbi.
+  if (use_vboot) {
+    deps += [ dep_labels.vboot_multiboot ]
+    inputs += [
+      files.vboot_script,
+      files.vboot_host_tool,
+      files.vboot_keyblock,
+      files.vboot_privkeyblock,
+    ]
+    outputs += [ files.zbi_unsigned ]
   }
 }
 
@@ -710,6 +902,14 @@ group("output_validation_checks") {
     deps += [
       ":base_pkg_meta_contents_matches",
       ":base_pkg_meta_far_matches",
+
+      # Even though assembly always creates this, if there is a ZBI, the
+      # previous implementation didn't if it was making a bootfs-only image, so
+      # only attempt the comparison if there's a base package (which is inverse
+      # of bootfs-only).
+      ":update_matches",
+      ":update_pkg_meta_contents_matches",
+      ":update_pkg_meta_package_matches",
     ]
   }
   deps += [
@@ -825,5 +1025,88 @@ if (use_vbmeta) {
 
     first = files.fuchsia_vbmeta
     second = files.vbmeta
+  }
+}
+
+if (uses_base_package) {
+  verify_files_match("update_matches") {
+    testonly = true
+    deps = [
+      ":images",
+      dep_labels.prev_update_pkg,
+    ]
+
+    first = files.prev_update_pkg
+    second = files.update_pkg
+  }
+
+  # Extract update package's contents for inspection
+  compiled_action("extract_update_pkg") {
+    testonly = true
+    tool = "//src/sys/pkg/bin/far:bin"
+    tool_output_name = "far"
+
+    args = [
+      "extract",
+      "--archive=${file_args.update_pkg}",
+      "--output=${file_args.extracted_update_pkg}",
+    ]
+
+    inputs = [ files.update_pkg ]
+
+    outputs = [
+      files.extracted_update_meta_contents,
+      files.extracted_update_meta_package,
+    ]
+
+    deps = [ ":images" ]
+  }
+
+  # Extract update package's contents for inspection
+  compiled_action("extract_prev_update_pkg") {
+    testonly = true
+    tool = "//src/sys/pkg/bin/far:bin"
+    tool_output_name = "far"
+
+    args = [
+      "extract",
+      "--archive=${file_args.prev_update_pkg}",
+      "--output=${file_args.extracted_prev_update_pkg}",
+    ]
+
+    inputs = [ files.prev_update_pkg ]
+
+    outputs = [
+      files.extracted_prev_update_meta_contents,
+      files.extracted_prev_update_meta_package,
+    ]
+
+    deps = [ dep_labels.prev_update_pkg ]
+  }
+
+  verify_files_match("update_pkg_meta_contents_matches") {
+    testonly = true
+    deps = [
+      ":extract_prev_update_pkg",
+      ":extract_update_pkg",
+    ]
+
+    first = files.extracted_prev_update_meta_contents
+    second = files.extracted_update_meta_contents
+
+    display_text_diff_on_failure = true
+  }
+
+  verify_files_match("update_pkg_meta_package_matches") {
+    testonly = true
+    deps = [
+      ":extract_prev_update_pkg",
+      ":extract_update_pkg",
+    ]
+
+    first = files.extracted_prev_update_meta_package
+    second = files.extracted_update_meta_package
+
+    display_text_diff_on_failure = true
   }
 }

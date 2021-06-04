@@ -10,7 +10,6 @@ import("//build/config/clang/clang.gni")
 import("//build/dist/fini_manifest.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/args.gni")
-import("//build/images/boot.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/filesystem_limits.gni")
@@ -21,6 +20,7 @@ import("//build/images/pkgfs.gni")
 import("//build/images/shell_commands.gni")
 import("//build/images/system_image_fuchsia_packages.gni")
 import("//build/images/vbmeta.gni")
+import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
@@ -2320,7 +2320,7 @@ action("update.manifest") {
 }
 
 pm_build("update.meta") {
-  visibility = [ ":*" ]
+  visibility = [ "//build/images/*" ]
   testonly = true
   manifest = ":update.manifest"
   package_name = "update"

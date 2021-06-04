@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::{from_reader, BoardConfig, FvmFilesystemEntry, ProductConfig, VBMetaConfig};
+use crate::config::{
+    from_reader, BoardConfig, FvmFilesystemEntry, ProductConfig, VBMetaConfig, ZbiSigningScript,
+};
 use crate::vfs::RealFilesystemProvider;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use assembly_blobfs::BlobFSBuilder;
 use assembly_fvm::{Filesystem, FvmBuilder};
 use assembly_update_package::UpdatePackageBuilder;
+use assembly_util::PathToStringExt;
 use ffx_assembly_args::ImageArgs;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
@@ -18,6 +21,7 @@ use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use vbmeta::Salt;
 use zbi::ZbiBuilder;
 
@@ -50,10 +54,15 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
-    // Bail out here for now, unless asked to do otherwise.
-    if !full {
-        return Ok(());
-    }
+    // If the board specifies a vendor-specific signing script, use that to
+    // post-process the ZBI, and then use the post-processed ZBI in the update
+    // package and the
+    let zbi_for_update_path = if let Some(signing_config) = &board.zbi.signing_script {
+        info!("Vendor signing the ZBI");
+        vendor_sign_zbi(&outdir, signing_config, &zbi_path)?
+    } else {
+        zbi_path
+    };
 
     info!("Creating the update package");
     let update_package: UpdatePackage = construct_update(
@@ -61,10 +70,15 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         &gendir,
         &product,
         &board,
-        &zbi_path,
+        &zbi_for_update_path,
         vbmeta_path,
         base_package.as_ref(),
     )?;
+
+    // Bail out here for now, unless asked to do otherwise.
+    if !full {
+        return Ok(());
+    }
 
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
@@ -218,9 +232,50 @@ fn construct_zbi(
     zbi_builder.set_output_manifest(&gendir.as_ref().join("zbi.json"));
 
     // Build and return the ZBI.
-    let zbi_path = outdir.as_ref().join("fuchsia.zbi");
+    let zbi_path = if board.zbi.signing_script.is_none() {
+        outdir.as_ref().join("fuchsia.zbi")
+    } else {
+        outdir.as_ref().join("fuchsia.zbi.unsigned")
+    };
     zbi_builder.build(gendir, zbi_path.as_path())?;
     Ok(zbi_path)
+}
+
+/// If the board requires the zbi to be post-processed to make it bootable by
+/// the bootloaders, then perform that task here.
+fn vendor_sign_zbi(
+    outdir: impl AsRef<Path>,
+    signing_config: &ZbiSigningScript,
+    zbi: impl AsRef<Path>,
+) -> Result<PathBuf> {
+    // The resultant file path
+    let signed_path = outdir.as_ref().join("fuchsia.zbi");
+
+    // The parameters of the script that are required:
+    let mut args = Vec::new();
+    args.push("-z".to_string());
+    args.push(zbi.as_ref().path_to_string()?);
+    args.push("-o".to_string());
+    args.push(signed_path.path_to_string()?);
+
+    // If the script config defines extra arguments, add them:
+    args.extend_from_slice(&signing_config.extra_arguments[..]);
+
+    let output = Command::new(&signing_config.tool)
+        .args(&args)
+        .output()
+        .context(format!("Failed to run the vendor tool: {}", signing_config.tool.display()))?;
+
+    // The tool ran, but may have returned an error.
+    if output.status.success() {
+        Ok(signed_path)
+    } else {
+        Err(anyhow!(
+            "Vendor tool returned an error: {}\n{}",
+            output.status,
+            String::from_utf8_lossy(output.stderr.as_slice())
+        ))
+    }
 }
 
 fn construct_vbmeta(
@@ -282,15 +337,26 @@ fn construct_update(
         update_pkg_builder.add_file(version_file, "version")?;
     }
     update_pkg_builder.add_file(&board_name, "board")?;
-    update_pkg_builder.add_file(zbi, "zbi")?;
+    update_pkg_builder.add_file(zbi, &board.zbi.name)?;
 
     if let Some(vbmeta) = vbmeta {
         update_pkg_builder.add_file(vbmeta, "fuchsia.vbmeta")?;
     }
 
     if let Some(recovery_config) = &board.recovery {
-        update_pkg_builder.add_file(&recovery_config.zbi, "zedboot")?;
-        update_pkg_builder.add_file(&recovery_config.vbmeta, "recovery.vbmeta")?;
+        update_pkg_builder.add_file(&recovery_config.zbi, &recovery_config.name)?;
+
+        // TODO(fxbug.dev/77997)
+        // TODO(fxbug.dev/77535)
+        // TODO(fxbug.dev/76371)
+        //
+        // Determine what to do with this case:
+        //  - is it an error if fuchsia.vbmeta is present, but recovery.vbmeta isn't?
+        //  - do we generate/sign our own recovery.vbmeta?
+        //  - etc.
+        if let Some(recovery_vbmeta) = &recovery_config.vbmeta {
+            update_pkg_builder.add_file(recovery_vbmeta, "recovery.vbmeta")?;
+        }
     }
 
     // Add the bootloaders.

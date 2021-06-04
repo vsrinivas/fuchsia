@@ -140,8 +140,11 @@ pub enum MetaPackageError {
 
 #[derive(Debug, Error)]
 pub enum BuildError {
-    #[error("io")]
+    #[error("io: {}", _0)]
     IoError(#[from] io::Error),
+
+    #[error("{}: '{}'", cause, path)]
+    IoErrorWithPath { cause: io::Error, path: String },
 
     #[error("meta contents")]
     MetaContents(#[from] MetaContentsError),
@@ -160,6 +163,12 @@ pub enum BuildError {
 
     #[error("archive write")]
     ArchiveWrite(#[from] fuchsia_archive::Error),
+}
+
+impl From<(io::Error, String)> for BuildError {
+    fn from(pair: (io::Error, String)) -> Self {
+        Self::IoErrorWithPath { cause: pair.0, path: pair.1 }
+    }
 }
 
 #[derive(Debug, Error, Eq, PartialEq)]

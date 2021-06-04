@@ -149,6 +149,28 @@ pub struct ZbiConfig {
     /// The compression format for the ZBI.
     #[serde(default = "default_zbi_compression")]
     pub compression: String,
+
+    /// An optional "signing script" to sign/repackage the zbi correctly for
+    /// use with the device bootloader.
+    pub signing_script: Option<ZbiSigningScript>,
+}
+
+/// The information needed to custom-package a ZBI for use on a board with
+/// a non-standard (for Fuchsia) bootloader
+///
+/// The tool specified here _must_ take the following arguments:
+///  -z <path to ZBI>
+///  -o <output path to write to>
+///  -B <build dir, relative to tool's pwd>
+#[derive(Deserialize, Serialize)]
+pub struct ZbiSigningScript {
+    /// The path to the tool to use
+    pub tool: PathBuf,
+
+    /// Extra arguments to pass to the tool.  These are passed to the tool after
+    /// the above-documented, required, arguments, are passed to the tool.
+    #[serde(default)]
+    pub extra_arguments: Vec<String>,
 }
 
 fn default_false() -> bool {
@@ -214,11 +236,14 @@ pub enum FvmFilesystemEntry {
 /// The information required to update and flash recovery.
 #[derive(Deserialize, Serialize)]
 pub struct RecoveryConfig {
+    /// The name of the recovery image in the update package
+    pub name: String,
+
     /// The path on the host to the prebuilt recovery ZBI.
     pub zbi: PathBuf,
 
     /// The path on the host to the prebuilt recovery VBMeta.
-    pub vbmeta: PathBuf,
+    pub vbmeta: Option<PathBuf>,
 }
 
 pub fn from_reader<R, T>(reader: &mut R) -> Result<T>
@@ -326,6 +351,7 @@ mod tests {
                 ]
               },
               "recovery": {
+                "name": "recovery",
                 "zbi": "path/to/recovery.zbi",
                 "vbmeta": "path/to/recovery.vbmeta"
               }
@@ -355,6 +381,7 @@ mod tests {
                 "partition": "name"
               },
               "recovery": {
+                "name": "recovery",
                 "zbi": "path/to/recovery.zbi",
                 "vbmeta": "path/to/recovery.vbmeta"
               }
