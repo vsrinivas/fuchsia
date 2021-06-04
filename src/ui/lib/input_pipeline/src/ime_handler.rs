@@ -8,10 +8,10 @@ use {
     crate::keyboard,
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
+    fidl_fuchsia_ui_input3 as fidl_ui_input3,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
-    input_synthesis::{keymaps, usages},
+    input_synthesis::keymaps,
     std::convert::TryInto,
 };
 
@@ -98,47 +98,21 @@ fn create_key_event(
     event_time: input_device::EventTime,
     modifier_state: &keymaps::ModifierState,
 ) -> fidl_ui_input3::KeyEvent {
-    let (key, event_type, modifiers) = (&event.key, event.event_type, event.modifiers);
+    let (key, event_type, modifiers) = (&event.key, &event.event_type, &event.modifiers);
     fx_log_debug!(
         "ImeHandler::create_key_event: key:{:?}, modifier_state:{:?}, event_type: {:?}",
         key,
         &modifier_state,
-        &event_type
+        event_type
     );
-    let hid_usage = usages::input3_key_to_hid_usage(*key);
-    // TODO(fxbug.dev/73295): Conversion to key meaning should be the task of a keymapper input
-    // pipeline stage.  It is not implemented yet.  Until it is, we compute the key meaning based
-    // on the US QWERTY key map.
-    let key_meaning = match key {
-        // Nonprintable keys get their own key meaning.
-        fidl_input::Key::Enter => Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
-            fidl_ui_input3::NonPrintableKey::Enter,
-        )),
-        fidl_input::Key::Tab => {
-            Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(fidl_ui_input3::NonPrintableKey::Tab))
-        }
-        fidl_input::Key::Backspace => Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
-            fidl_ui_input3::NonPrintableKey::Backspace,
-        )),
-        // Printable keys get code points as key meanings.
-        _ => keymaps::US_QWERTY.hid_usage_to_code_point(hid_usage, modifier_state)
-            .map(fidl_ui_input3::KeyMeaning::Codepoint)
-            .map_err(|e| {
-                fx_log_err!(
-                    "ImeHandler::create_key_event: Could not convert HID usage to code point: {:?}, modifiers: {:?}",
-                    &hid_usage,
-                    modifier_state,
-                );
-                e
-            })
-            .ok(),
-    };
+    // Don't override the key meaning if already set, e.g. by prior stage.
+    let key_meaning = event.key_meaning.or(keymaps::US_QWERTY.apply(*key, modifier_state));
 
     fidl_ui_input3::KeyEvent {
         timestamp: Some(event_time.try_into().unwrap_or_default()),
-        type_: Some(event_type),
+        type_: Some(*event_type),
         key: Some(*key),
-        modifiers,
+        modifiers: *modifiers,
         key_meaning,
         ..fidl_ui_input3::KeyEvent::EMPTY
     }
@@ -303,6 +277,15 @@ mod tests {
                 &device_descriptor,
                 /* keymap= */ None,
             ),
+            testing_utilities::create_keyboard_event_with_key_meaning(
+                fidl_input::Key::C,
+                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                None,
+                event_time_u64,
+                &device_descriptor,
+                /* keymap= */ None,
+                Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(42)),
+            ),
         ];
 
         let expected_events = vec![
@@ -328,6 +311,14 @@ mod tests {
                 key: Some(fidl_input::Key::B),
                 modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(98)),
+                ..fidl_ui_input3::KeyEvent::EMPTY
+            },
+            fidl_ui_input3::KeyEvent {
+                timestamp: Some(event_time_i64),
+                type_: Some(fidl_ui_input3::KeyEventType::Pressed),
+                key: Some(fidl_input::Key::C),
+                modifiers: None,
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(42)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
         ];

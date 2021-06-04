@@ -2,15 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::usages;
 use anyhow::{format_err, Result};
 use fidl_fuchsia_input;
 use fidl_fuchsia_ui_input3;
+use fuchsia_syslog::fx_log_err;
 use lazy_static::lazy_static;
+use std::collections;
 use std::convert::Into;
 
 lazy_static! {
     /// A US QWERTY keymap.
     pub static ref US_QWERTY: Keymap<'static> = Keymap::new(&QWERTY_MAP);
+
+    /// A FR AZERTY keymap.
+    pub static ref FR_AZERTY: Keymap<'static> = Keymap::new(&FR_AZERTY_MAP);
 
     /// Standard [qwerty] keymap.
     ///
@@ -22,7 +28,7 @@ lazy_static! {
     ///    pressed
     ///
     /// [qwerty]: https://en.wikipedia.org/wiki/Keyboard_layout#QWERTY-based_Latin-script_keyboard_layouts
-    pub static ref QWERTY_MAP: Vec<Option<KeyLevels>> = vec![
+    static ref QWERTY_MAP: Vec<Option<KeyLevels>> = vec![
         // 0x00
         None,
         None,
@@ -149,6 +155,145 @@ lazy_static! {
         Some(('0', None).into()),
         Some(('.', None).into()),
     ];
+
+    /// TODO(75723): This map is incomplete, and is here only temporarily for
+    /// kicks.
+    static ref FR_AZERTY_MAP: Vec<Option<KeyLevels>> = vec![
+        // 0x00
+        None,
+        None,
+        None,
+        None,
+        // HID_USAGE_KEY_A
+        Some(('q', Some('Q'), true).into()),
+        Some(('b', Some('B'), true).into()),
+        Some(('c', Some('C'), true).into()),
+        Some(('d', Some('D'), true).into()),
+        // 0x08
+        Some(('e', Some('E'), true).into()),
+        Some(('f', Some('F'), true).into()),
+        Some(('g', Some('G'), true).into()),
+        Some(('h', Some('H'), true).into()),
+        // 0x0c
+        Some(('i', Some('I'), true).into()),
+        Some(('j', Some('J'), true).into()),
+        Some(('k', Some('K'), true).into()),
+        Some(('l', Some('L'), true).into()),
+        // 0x10
+        Some((',', Some('?'), true).into()),
+        Some(('n', Some('N'), true).into()),
+        Some(('o', Some('O'), true).into()),
+        Some(('p', Some('P'), true).into()),
+        // 0x14
+        Some(('a', Some('A'), true).into()),
+        Some(('r', Some('R'), true).into()),
+        Some(('s', Some('S'), true).into()),
+        Some(('t', Some('T'), true).into()),
+        // 0x18
+        Some(('u', Some('U'), true).into()),
+        Some(('v', Some('V'), true).into()),
+        Some(('z', Some('Z'), true).into()),
+        Some(('x', Some('X'), true).into()),
+        // 0x1c
+        Some(('y', Some('Y'), true).into()),
+        Some(('w', Some('W'), true).into()),
+        Some(('&', Some('1')).into()),
+        Some(('é', Some('2')).into()),
+        // 0x20
+        Some(('"', Some('3')).into()),
+        Some(('\'', Some('4')).into()),
+        Some(('(', Some('5')).into()),
+        Some(('-', Some('6')).into()),
+        // 0x24
+        Some(('è', Some('7')).into()),
+        Some(('—', Some('8')).into()),
+        Some(('ç', Some('9')).into()),
+        Some(('à', Some('0')).into()),
+        // 0x28
+        None,
+        None,
+        None,
+        None,
+        // 0x2c
+        Some((' ', Some(' ')).into()),
+        Some((')', Some('°')).into()),
+        Some(('=', Some('+')).into()),
+        Some(('\u{0302}', Some('\u{0308}')).into()),  // Unicode combining characters circumflex and dieresis.
+        // 0x30
+        Some(('$', Some('£')).into()),
+        Some(('\\', Some('|')).into()),  // Not present on French Azerty?
+        None,
+        Some(('m', Some('M')).into()),
+        // 0x34
+        Some(('\'', Some('"')).into()),
+        Some(('²', None).into()),
+        Some((';', Some('.')).into()),
+        Some((':', Some('/')).into()),
+        // 0x38
+        Some(('!', Some('§')).into()),
+        None,
+        None,
+        None,
+        // 0x3c
+        None,
+        None,
+        None,
+        None,
+        // 0x40
+        None,
+        None,
+        None,
+        None,
+        // 0x44
+        None,
+        None,
+        None,
+        None,
+        // 0x48
+        None,
+        None,
+        None,
+        None,
+        // 0x4c
+        None,
+        None,
+        None,
+        None,
+        // 0x50
+        None,
+        None,
+        None,
+        None,
+        // 0x54
+        Some(('/', None).into()),
+        Some(('*', None).into()),
+        Some(('-', None).into()),
+        Some(('+', None).into()),
+        // 0x58
+        None,
+        Some(('1', None).into()),
+        Some(('2', None).into()),
+        Some(('3', None).into()),
+        // 0x5c
+        Some(('4', None).into()),
+        Some(('5', None).into()),
+        Some(('6', None).into()),
+        Some(('7', None).into()),
+        // 0x60
+        Some(('8', None).into()),
+        Some(('9', None).into()),
+        Some(('0', None).into()),
+        Some(('.', None).into()),
+    ];
+}
+
+/// Gets a keymap based on the supplied `keymap` selector.  If no keymap is
+/// found the fallback is always US QWERTY.
+pub fn select_keymap(keymap: &Option<String>) -> &Keymap<'_> {
+    match keymap {
+        Some(ref k) if k == "FR_AZERTY" => &FR_AZERTY,
+        _ => &US_QWERTY,
+    }
 }
 
 /// A codepoint returned by [hid_usage_to_code_point] for HID usages that do
@@ -202,6 +347,44 @@ impl<'a> Keymap<'a> {
     /// Creates a new keymap.
     fn new(map: &'a [Option<KeyLevels>]) -> Self {
         Keymap { map }
+    }
+
+    /// Applies the keymap to the given key.
+    pub fn apply(
+        &self,
+        key: fidl_fuchsia_input::Key,
+        modifier_state: &ModifierState,
+    ) -> Option<fidl_fuchsia_ui_input3::KeyMeaning> {
+        let hid_usage = usages::input3_key_to_hid_usage(key);
+
+        use fidl_fuchsia_input::Key;
+        use fidl_fuchsia_ui_input3::{KeyMeaning, NonPrintableKey};
+        match key {
+            // Nonprintable keys get their own key meaning.
+            Key::Enter => Some(KeyMeaning::NonPrintableKey(
+                NonPrintableKey::Enter,
+            )),
+            Key::Tab => Some(KeyMeaning::NonPrintableKey(
+                NonPrintableKey::Tab,
+            )),
+            Key::Backspace => Some(KeyMeaning::NonPrintableKey(
+                NonPrintableKey::Backspace,
+            )),
+            // Printable keys get code points as key meanings.
+            _ => {
+                self.hid_usage_to_code_point(hid_usage, modifier_state)
+                .map(KeyMeaning::Codepoint)
+                .map_err(|e| {
+                    fx_log_err!(
+                        "keymaps::Keymap::apply: Could not convert HID usage to code point: {:?}, modifiers: {:?}",
+                        &hid_usage,
+                        modifier_state,
+                    );
+                    e
+                })
+                .ok()
+            }
+        }
     }
 
     /// Converts a HID usage for a key to a Unicode code point where such a code point exists, based on
@@ -299,9 +482,58 @@ impl ModifierState {
     }
 }
 
+/// Tracks the current state of all the keyboard keys.
+///
+/// This is repetitive code, so perhaps better handle it here.
+#[derive(Debug, Clone, Default)]
+pub struct KeyState {
+    pressed_keys: collections::HashSet<fidl_fuchsia_input::Key>,
+}
+
+impl KeyState {
+    /// Creates a new [KeyState]
+    pub fn new() -> Self {
+        KeyState { pressed_keys: collections::HashSet::new() }
+    }
+
+    /// Updates the key tracking state with the given key event pair.
+    pub fn update(
+        &mut self,
+        event: fidl_fuchsia_ui_input3::KeyEventType,
+        key: fidl_fuchsia_input::Key,
+    ) {
+        match event {
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed
+            | fidl_fuchsia_ui_input3::KeyEventType::Sync => {
+                self.pressed_keys.insert(key);
+            }
+            fidl_fuchsia_ui_input3::KeyEventType::Released
+            | fidl_fuchsia_ui_input3::KeyEventType::Cancel => {
+                self.pressed_keys.remove(&key);
+            }
+        }
+    }
+
+    /// Returns true if `key` is noted as pressed.
+    pub fn is_pressed(&self, key: &fidl_fuchsia_input::Key) -> bool {
+        self.pressed_keys.contains(key)
+    }
+
+    /// Returns `true` if at least one key from `keys` is pressed.
+    pub fn pressed_any(&self, keys: &[fidl_fuchsia_input::Key]) -> bool {
+        keys.iter().any(|k| self.is_pressed(k))
+    }
+
+    /// Returns `true` if all keys from `keys` are pressed.
+    pub fn pressed_all(&self, keys: &[fidl_fuchsia_input::Key]) -> bool {
+        keys.iter().all(|k| self.is_pressed(k))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     const HID_USAGE_KEY_A: u32 = 0x04;
     const HID_USAGE_KEY_1: u32 = 0x1e;
@@ -494,5 +726,75 @@ mod tests {
         );
         assert!(!modifier_state.is_shift_active());
         assert!(!modifier_state.is_caps_lock_active());
+    }
+
+    #[test]
+    fn key_state_tracker() {
+        let mut t = KeyState::new();
+        assert_eq!(false, t.is_pressed(&fidl_fuchsia_input::Key::Space));
+        t.update(fidl_fuchsia_ui_input3::KeyEventType::Pressed, fidl_fuchsia_input::Key::Space);
+        assert_eq!(true, t.is_pressed(&fidl_fuchsia_input::Key::Space));
+
+        t.update(fidl_fuchsia_ui_input3::KeyEventType::Released, fidl_fuchsia_input::Key::Space);
+
+        assert_eq!(false, t.is_pressed(&fidl_fuchsia_input::Key::Space));
+
+        t.update(fidl_fuchsia_ui_input3::KeyEventType::Sync, fidl_fuchsia_input::Key::Space);
+        assert_eq!(true, t.is_pressed(&fidl_fuchsia_input::Key::Space));
+
+        t.update(fidl_fuchsia_ui_input3::KeyEventType::Cancel, fidl_fuchsia_input::Key::Space);
+        assert_eq!(false, t.is_pressed(&fidl_fuchsia_input::Key::Space));
+    }
+
+    #[test]
+    fn key_state_tracker_any_and_all() {
+        let mut t = KeyState::new();
+
+        assert_eq!(false, t.pressed_any(&vec![]));
+        assert_eq!(true, t.pressed_all(&vec![]));
+
+        t.update(fidl_fuchsia_ui_input3::KeyEventType::Pressed, fidl_fuchsia_input::Key::Space);
+        t.update(fidl_fuchsia_ui_input3::KeyEventType::Pressed, fidl_fuchsia_input::Key::Tab);
+
+        assert_eq!(
+            true,
+            t.pressed_any(&vec![
+                fidl_fuchsia_input::Key::LeftShift,
+                fidl_fuchsia_input::Key::Space,
+            ])
+        );
+        assert_eq!(
+            false,
+            t.pressed_any(&vec![
+                fidl_fuchsia_input::Key::RightShift,
+                fidl_fuchsia_input::Key::LeftShift
+            ])
+        );
+        assert_eq!(true, t.pressed_all(&vec![fidl_fuchsia_input::Key::Space,]));
+        assert_eq!(
+            true,
+            t.pressed_all(&vec![fidl_fuchsia_input::Key::Space, fidl_fuchsia_input::Key::Tab,])
+        );
+    }
+
+    #[test_case(
+        fidl_fuchsia_input::Key::A,
+        ModifierState{..Default::default()},
+        Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(97));
+        "test basic mapping")
+    ]
+    #[test_case(
+        fidl_fuchsia_input::Key::A,
+        ModifierState{left_shift:true,..Default::default()},
+        Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(65));
+        "test basic mapping - capital letter")
+    ]
+    fn test_keymap_apply(
+        key: fidl_fuchsia_input::Key,
+        modifier_state: ModifierState,
+        expected: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+    ) {
+        let actual = US_QWERTY.apply(key, &modifier_state);
+        assert_eq!(expected, actual, "expected: {:?}, actual: {:?}", expected, actual);
     }
 }

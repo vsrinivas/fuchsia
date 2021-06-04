@@ -19,6 +19,7 @@ use {
         input_device,
         input_handler::InputHandler,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline},
+        keymap,
         mouse_handler::MouseHandler,
         shortcut_handler::ShortcutHandler,
         text_settings,
@@ -80,11 +81,13 @@ async fn input_handlers(
 
     {
         let locked_scene_manager = scene_manager.lock().await;
-        // Adds the text settings handler early in the pipeline.
-        handlers.push(Box::new(text_settings_handler));
+        // Add the text settings handler early in the pipeline to use the
+        // keymap settings in the remainder of the pipeline.
+        add_text_settings_handler(text_settings_handler, &mut handlers);
         // Touch and mouse hack handlers are inserted first.
         add_touch_hack(&locked_scene_manager, pointer_hack_listeners.clone(), &mut handlers).await;
         add_mouse_hack(&locked_scene_manager, pointer_hack_listeners.clone(), &mut handlers).await;
+        add_keymap_handler(&mut handlers);
         // Shortcut needs to go before IME.
         add_shortcut_handler(&mut handlers).await;
         add_ime(&mut handlers).await;
@@ -95,6 +98,21 @@ async fn input_handlers(
     add_mouse_handler(scene_manager, &mut handlers).await;
 
     handlers
+}
+
+/// Hooks up the text settings handler.
+fn add_text_settings_handler(
+    text_settings_handler: text_settings::Handler,
+    handlers: &mut Vec<Box<dyn InputHandler>>,
+) {
+    handlers.push(Box::new(text_settings_handler));
+}
+
+/// Hooks up the keymapper.  The keymapper requires the text settings handler to
+/// be added as well to support keymapping.  Otherwise, it defaults to applying
+/// the US QWERTY keymap.
+fn add_keymap_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
+    handlers.push(Box::new(keymap::Handler::new()))
 }
 
 async fn add_shortcut_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {

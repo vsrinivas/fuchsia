@@ -23,3 +23,15 @@ $ fx test input_pipeline_tests
 
 ## Source layout
 The main implementation is linked in `src/lib.rs`.
+
+## Implementation notes
+
+### Keymap handler
+
+Change the keymap using the following commands.  Only two keymaps are supported
+at the moment.  This will change.
+
+```
+fx ffx session keyboard --keymap FR_AZERTY
+fx ffx session keyboard --keymap US_QWERTY
+```

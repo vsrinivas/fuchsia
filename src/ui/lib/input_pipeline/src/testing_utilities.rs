@@ -44,6 +44,37 @@ pub fn create_keyboard_input_report(
     }
 }
 
+/// Creates a [`keyboard::KeyboardEvent`] with the provided keys and meaning.
+///
+/// # Parameters
+/// - `key`: The input3 key which changed state.
+/// - `event_type`: The input3 key event type (e.g. pressed, released).
+/// - `modifiers`: The input3 modifiers that are to be included as pressed.
+/// - `event_time`: The timestamp in nanoseconds when the event was recorded.
+/// - `device_descriptor`: The device descriptor to add to the event.
+#[cfg(test)]
+pub fn create_keyboard_event_with_key_meaning(
+    key: fidl_fuchsia_input::Key,
+    event_type: fidl_fuchsia_ui_input3::KeyEventType,
+    modifiers: Option<fidl_ui_input3::Modifiers>,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    keymap: Option<String>,
+    key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
+            key,
+            event_type,
+            modifiers,
+            keymap,
+            key_meaning,
+        }),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+    }
+}
+
 /// Creates a [`keyboard::KeyboardEvent`] with the provided keys.
 ///
 /// # Parameters
@@ -61,17 +92,15 @@ pub fn create_keyboard_event(
     device_descriptor: &input_device::InputDeviceDescriptor,
     keymap: Option<String>,
 ) -> input_device::InputEvent {
-    input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
-            key,
-            event_type,
-            modifiers,
-            keymap,
-            key_meaning: None,
-        }),
-        device_descriptor: device_descriptor.clone(),
+    create_keyboard_event_with_key_meaning(
+        key,
+        event_type,
+        modifiers,
         event_time,
-    }
+        device_descriptor,
+        keymap,
+        None,
+    )
 }
 
 /// Creates an [`input_device::InputDeviceDescriptor`] for a media button device.

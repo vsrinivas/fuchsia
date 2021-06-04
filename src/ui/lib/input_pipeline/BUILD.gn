@@ -43,6 +43,8 @@ rustc_library("input_pipeline") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
   sources = [
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
@@ -52,6 +54,7 @@ rustc_library("input_pipeline") {
     "src/input_handler.rs",
     "src/input_pipeline.rs",
     "src/keyboard.rs",
+    "src/keymap.rs",
     "src/lib.rs",
     "src/media_buttons.rs",
     "src/media_buttons_handler.rs",

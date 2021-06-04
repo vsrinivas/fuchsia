@@ -16,6 +16,7 @@ pub mod touch;
 
 pub mod ime_handler;
 pub mod input_handler;
+pub mod keymap;
 pub mod media_buttons_handler;
 pub mod mouse_handler;
 pub mod shortcut_handler;
