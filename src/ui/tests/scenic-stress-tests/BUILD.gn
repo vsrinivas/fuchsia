@@ -86,10 +86,39 @@ fuchsia_unittest_package("scenic-stress-tests") {
   }
 }
 
+fuchsia_unittest_package("scenic-stress-tests-short") {
+  manifest = "meta/scenic_stressor_short.cml"
+  deps = [
+    ":scenic-for-stress-tests",
+    ":scenic-stressor-bin",
+    "//src/lib/vulkan/validation_layers",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+  ]
+
+  if (escher_use_runtime_glsl) {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
+  } else {
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
+  }
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":scenic-stress-tests",
-    "//src/sys/component_manager:component-manager",
+    ":scenic-stress-tests-short",
   ]
 }

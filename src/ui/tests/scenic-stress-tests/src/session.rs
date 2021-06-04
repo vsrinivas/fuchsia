@@ -36,9 +36,9 @@ fn create_view_holder(
     view_holder
 }
 
-// In a new thread, indefinitely call Session::Present2() for a given session
+// In a new task, indefinitely call Session::Present2() for a given session
 fn autopresent(session: scenic::SessionPtr) -> fasync::Task<()> {
-    fasync::Task::blocking(async move {
+    fasync::Task::spawn(async move {
         let mut stream = {
             let session = session.lock();
             session.take_event_stream()
@@ -63,9 +63,9 @@ fn autopresent(session: scenic::SessionPtr) -> fasync::Task<()> {
     })
 }
 
-// In a new thread, listen for session events and print them out
+// In a new task, listen for session events and print them out
 fn autolisten(listener: ServerEnd<fscenic::SessionListenerMarker>) -> fasync::Task<()> {
-    fasync::Task::blocking(async move {
+    fasync::Task::spawn(async move {
         let mut stream = listener.into_stream().unwrap();
         while let Some(Ok(request)) = stream.next().await {
             match request {

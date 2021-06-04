@@ -1,0 +1,103 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/scenic_stressor",
+        args: [
+            "--num-operations",
+            "1000",
+        ],
+    },
+    children: [
+        {
+            name: "scenic",
+            url: "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/scenic-for-stress-tests.cm",
+        },
+        {
+            name: "hdcp",
+            url: "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/hdcp.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev-display-controller",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            directory: "dev-goldfish-address-space",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            directory: "dev-goldfish-control",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            directory: "dev-goldfish-sync",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            as: "config-vulkan-icd",
+            to: [ "#scenic" ],
+            subdir: "vulkan-icd/icd.d",
+        },
+        {
+            directory: "tmp",
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#hdcp",
+        },
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#hdcp",
+            to: "#scenic",
+        },
+    ],
+}
