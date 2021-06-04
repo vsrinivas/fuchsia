@@ -49,6 +49,12 @@ default_image_deps = []
 board_name_file = "$root_build_dir/board_name"
 write_file(board_name_file, "${board_name}")
 
+# Whether to build Gigaboot. Right now we wish to use it on any x86 board that
+# is not chromebook-x64, which has its own prefered bootloader.
+#
+# TODO(fxbug.dev/58072): Support Gigaboot on ARM UEFI targets is in progress.
+use_gigaboot = target_cpu != "arm64" && !use_vboot
+
 #####
 # These are the package groups that are used to build the system:
 
@@ -1370,7 +1376,11 @@ zbi("netboot") {
   }
 }
 
-if (target_cpu != "arm64" && !use_vboot) {
+# Track some firmware information locally so we can flash it without
+# re-calculating all the names and paths.
+firmware_info = []
+
+if (use_gigaboot) {
   # TODO(surajmalhotra): Remove this target once SDK no longer depends on it.
   vboot("vboot") {
     testonly = true
@@ -1404,6 +1414,7 @@ if (target_cpu != "arm64" && !use_vboot) {
           archive = true
           bootserver_pave = [ "--bootloader" ]
           bootserver_pave_zedboot = [ "--bootloader" ]
+          fastboot_flash = [ "fuchsia-esp" ]
           name = "efi"
           path = "fuchsia.esp.blk"
           type = "blk"
@@ -1414,7 +1425,17 @@ if (target_cpu != "arm64" && !use_vboot) {
   }
   default_image_deps += [ ":esp" ]
 
-  if (!use_vboot && custom_signing_script == "") {
+  esp_outputs = get_target_outputs(":esp")
+
+  firmware_info += [
+    {
+      name = "esp"
+      partition = "fuchsia-esp"
+      out_path = rebase_path(esp_outputs[0], root_build_dir)
+    },
+  ]
+
+  if (custom_signing_script == "") {
     update_manifest += [
       {
         dep = ":esp"
@@ -1423,10 +1444,6 @@ if (target_cpu != "arm64" && !use_vboot) {
     ]
   }
 }
-
-# Track some firmware information locally so we can flash it without
-# re-calculating all the names and paths.
-firmware_info = []
 
 foreach(firmware, firmware_prebuilts) {
   if (firmware.type == "") {
@@ -1896,6 +1913,7 @@ archive_args = [
   "--pre-erase-flash=${pre_erase_flash}",
   "--fastboot-path=fastboot.exe.$host_platform",
 ]
+archive_deps = [ ":fastboot" ]
 
 # A list of partitions for the flash json manifest that will be
 # generated.  The first item should be the partition name and the
@@ -1905,6 +1923,7 @@ archive_bootloader_parts = []
 
 foreach(info, firmware_info) {
   archive_args += [ "--firmware=${info.partition}:${info.out_path}" ]
+  archive_deps += [ ":${info.name}" ]
   archive_bootloader_parts += [
     {
       name = info.partition
@@ -1914,6 +1933,7 @@ foreach(info, firmware_info) {
 }
 
 if (fvm_partition != "") {
+  archive_deps += [ ":fvm.fastboot.blk" ]
   image_path = get_target_outputs(":fvm.fastboot.blk")
   archive_args += [
     "--fvm-image=" + get_path_info(image_path[0], "file"),
@@ -1928,9 +1948,11 @@ if (fvm_partition != "") {
 }
 
 action("flash_script_archive") {
+  testonly = true
   script = "//build/images/generate_flash_script.sh"
   outputs = archive_outputs
   args = archive_args
+  deps = archive_deps
 
   metadata = {
     images = [
@@ -1946,6 +1968,7 @@ action("flash_script_archive") {
 
 fastboot_manifest_archive_file = "$root_build_dir/flash_archive.json"
 generated_file("fastboot_manifest_archive") {
+  testonly = true
   outputs = [ fastboot_manifest_archive_file ]
   output_conversion = "json"
   deps = [ ":flash_script_archive" ]
@@ -2691,6 +2714,7 @@ copy("fastboot") {
 }
 
 group("archive-extras") {
+  testonly = true
   deps = [
     ":build_args_metadata",
     ":fastboot_manifest_archive",
