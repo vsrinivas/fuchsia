@@ -26,22 +26,22 @@ async fn test_logs_lifecycle() {
     // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
     // manually update the decl that the builder creates.
     let mut realm = builder.build();
-    realm.get_decl_mut(&"test".into()).unwrap().exposes.push(ExposeDecl::Protocol(
-        ExposeProtocolDecl {
-            source: ExposeSource::Framework,
-            source_name: "fuchsia.sys2.Realm".into(),
-            target: ExposeTarget::Parent,
-            target_name: "fuchsia.sys2.Realm".into(),
-        },
-    ));
-    realm.get_decl_mut(&Moniker::root()).unwrap().exposes.push(ExposeDecl::Protocol(
-        cm_rust::ExposeProtocolDecl {
-            source: ExposeSource::Child("test".to_string()),
-            source_name: "fuchsia.sys2.Realm".into(),
-            target: ExposeTarget::Parent,
-            target_name: "fuchsia.sys2.Realm".into(),
-        },
-    ));
+    let mut test_decl = realm.get_decl(&"test".into()).await.unwrap();
+    test_decl.exposes.push(ExposeDecl::Protocol(ExposeProtocolDecl {
+        source: ExposeSource::Framework,
+        source_name: "fuchsia.sys2.Realm".into(),
+        target: ExposeTarget::Parent,
+        target_name: "fuchsia.sys2.Realm".into(),
+    }));
+    realm.set_component(&"test".into(), test_decl).await.unwrap();
+    let mut root_decl = realm.get_decl(&Moniker::root()).await.unwrap();
+    root_decl.exposes.push(ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+        source: ExposeSource::Child("test".to_string()),
+        source_name: "fuchsia.sys2.Realm".into(),
+        target: ExposeTarget::Parent,
+        target_name: "fuchsia.sys2.Realm".into(),
+    }));
+    realm.set_component(&Moniker::root(), root_decl).await.unwrap();
 
     let instance = realm.create().await.expect("create instance");
     let accessor =

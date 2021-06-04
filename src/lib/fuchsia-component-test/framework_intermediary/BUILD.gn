@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("fuchsia_component_test_framework_intermediary_bin") {
   name = "fuchsia_component_test_framework_intermediary"
+  with_unit_tests = true
   sources = [
     "src/main.rs",
     "src/resolver.rs",
@@ -32,13 +33,21 @@ rustc_binary("fuchsia_component_test_framework_intermediary_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [ "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc" ]
 }
 
 fuchsia_component("fuchsia_component_test_framework_intermediary_component") {
   manifest = "meta/framework-intermediary.cml"
   component_name = "framework-intermediary"
   deps = [ ":fuchsia_component_test_framework_intermediary_bin" ]
+}
+
+fuchsia_unittest_package("realm_builder_framework_intermediary_unit_tests") {
+  manifest = "meta/unit-tests.cml"
+  deps = [ ":fuchsia_component_test_framework_intermediary_bin_test" ]
 }
 
 fuchsia_package("fuchsia-component-test") {

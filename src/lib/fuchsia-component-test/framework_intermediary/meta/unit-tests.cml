@@ -1,10 +1,9 @@
 {
     include: [
         "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/fuchsia_component_test_lib_test",
+        binary: "bin/fuchsia_component_test_framework_intermediary_bin_test",
     },
 }

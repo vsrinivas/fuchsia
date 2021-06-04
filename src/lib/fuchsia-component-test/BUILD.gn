@@ -78,6 +78,7 @@ group("tests") {
   deps = [
     ":fuchsia_component_test_unittests",
     "framework_intermediary:fuchsia-component-test",
+    "framework_intermediary:realm_builder_framework_intermediary_unit_tests",
     "tests",
   ]
 }

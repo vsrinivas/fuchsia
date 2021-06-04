@@ -5,17 +5,16 @@
 use {
     crate::error::*,
     anyhow::{format_err, Context as _},
-    cm_rust::{self, NativeIntoFidl},
+    cm_rust::{self, FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{self, DiscoverableService, ServerEnd},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ftrb,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ffrb,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
-    futures::{future::BoxFuture, FutureExt, TryFutureExt},
+    futures::{FutureExt, TryFutureExt},
     log::*,
     rand::Rng,
     std::{
-        collections::HashMap,
         convert::TryInto,
         fmt::{self, Display},
     },
@@ -74,6 +73,10 @@ impl Moniker {
         Moniker { path: vec![] }
     }
 
+    pub fn to_string(&self) -> String {
+        self.path.join("/")
+    }
+
     fn is_root(&self) -> bool {
         return self.path.is_empty();
     }
@@ -82,37 +85,30 @@ impl Moniker {
         self.path.last()
     }
 
-    fn path(&self) -> &Vec<String> {
-        &self.path
-    }
-
     fn child(&self, child_name: String) -> Self {
         let mut path = self.path.clone();
         path.push(child_name);
         Moniker { path }
     }
 
-    /// Returns the list of components comprised of this component's parent, then that component's
-    /// parent, and so on. This list does not include the root component.
-    ///
-    /// For example, `"a/b/c/d".into().ancestry()` would return `vec!["a/b/c".into(), "a/b".into(),
-    /// "a".into()]`
-    fn ancestry(&self) -> Vec<Moniker> {
-        let mut current_moniker = Moniker { path: vec![] };
-        let mut res = vec![];
-        let mut parent_path = self.path.clone();
-        parent_path.pop();
-        for part in parent_path {
-            current_moniker.path.push(part.clone());
-            res.push(current_moniker.clone());
-        }
-        res
-    }
-
     fn parent(&self) -> Option<Self> {
         let mut path = self.path.clone();
         path.pop()?;
         Some(Moniker { path })
+    }
+
+    // If self is an ancestor of other_moniker, then returns the path to reach other_moniker from
+    // self. Panics if self is not a parent of other_moniker.
+    fn downward_path_to(&self, other_moniker: &Moniker) -> Vec<String> {
+        let our_path = self.path.clone();
+        let mut their_path = other_moniker.path.clone();
+        for item in our_path {
+            if Some(&item) != their_path.get(0) {
+                panic!("downward_path_to called on non-ancestor moniker");
+            }
+            their_path.remove(0);
+        }
+        their_path
     }
 
     fn is_ancestor_of(&self, other_moniker: &Moniker) -> bool {
@@ -126,19 +122,6 @@ impl Moniker {
             }
         }
         return true;
-    }
-}
-
-#[derive(Debug, Clone)]
-struct RealmNode {
-    decl: cm_rust::ComponentDecl,
-    eager: bool,
-    children: HashMap<String, RealmNode>,
-}
-
-impl RealmNode {
-    fn new(decl: cm_rust::ComponentDecl) -> Self {
-        Self { decl, eager: false, children: HashMap::new() }
     }
 }
 
@@ -162,10 +145,16 @@ impl Drop for RealmInstance {
 
 /// A custom built realm, which can be created at runtime in a component collection
 pub struct Realm {
-    decl_tree: Option<RealmNode>,
-    framework_intermediary_proxy: ftrb::FrameworkIntermediaryProxy,
+    framework_intermediary_proxy: ffrb::FrameworkIntermediaryProxy,
     mocks_runner: mock::MocksRunner,
     collection_name: String,
+
+    /// The builder's `add_route` function used to be non-async, but then this logic was moved into
+    /// a synchronous operation with the intermediary, which means we need `async` to add routes.
+    /// To not break existing clients, store routes they wanted to add here and add them in on
+    /// `.initialize()`. Clients can then be slowly migrated to using `Realm::add_route` instead of
+    /// `RealmBuilder::add_route`.
+    routes_to_add: Vec<builder::CapabilityRoute>,
 }
 
 impl Realm {
@@ -186,7 +175,7 @@ impl Realm {
             .map_err(RealmError::FailedToUseRealm)?
             .map_err(RealmError::FailedBindToFrameworkIntermediary)?;
         let framework_intermediary_proxy = fclient::connect_to_protocol_at_dir_root::<
-            ftrb::FrameworkIntermediaryMarker,
+            ffrb::FrameworkIntermediaryMarker,
         >(&exposed_dir_proxy)
         .map_err(RealmError::ConnectToFrameworkIntermediaryService)?;
 
@@ -194,27 +183,27 @@ impl Realm {
     }
 
     fn new_with_framework_intermediary_proxy(
-        framework_intermediary_proxy: ftrb::FrameworkIntermediaryProxy,
+        framework_intermediary_proxy: ffrb::FrameworkIntermediaryProxy,
     ) -> Result<Self, Error> {
         let mocks_runner = mock::MocksRunner::new(framework_intermediary_proxy.take_event_stream());
         Ok(Self {
-            decl_tree: None,
             framework_intermediary_proxy,
             mocks_runner,
             collection_name: DEFAULT_COLLECTION_NAME.to_string(),
+            routes_to_add: vec![],
         })
     }
 
     /// Adds a new mocked component to the realm. When the component is supposed to run the
     /// provided [`Mock`] is called with the component's handles.
     pub async fn add_mocked_component(
-        &mut self,
+        &self,
         moniker: Moniker,
         mock: mock::Mock,
     ) -> Result<(), Error> {
         let mock_id = self
             .framework_intermediary_proxy
-            .register_mock()
+            .new_mock_id()
             .await
             .map_err(RealmError::FailedToUseFrameworkIntermediary)?;
         self.mocks_runner.register_mock(mock_id.clone(), mock).await;
@@ -231,84 +220,60 @@ impl Realm {
             }),
             ..cm_rust::ComponentDecl::default()
         };
-        self.add_component(moniker, decl)
+        self.set_component(&moniker, decl).await
     }
 
+    // TODO: new comment
     /// Adds a new component to the realm. Note that the provided `ComponentDecl` should not have
     /// child declarations for other components described in this `Realm`, as those will be filled
     /// in when [`Realm::create`] is called.
-    pub fn add_component(
-        &mut self,
-        moniker: Moniker,
+    pub async fn set_component(
+        &self,
+        moniker: &Moniker,
         decl: cm_rust::ComponentDecl,
     ) -> Result<(), Error> {
-        if moniker.is_root() {
-            if self.decl_tree.is_some() {
-                return Err(RealmError::RootComponentAlreadyExists.into());
-            }
-            // Validation is performed later, as we might end up adding ChildDecls to this
-            self.decl_tree = Some(RealmNode::new(decl));
-            return Ok(());
-        }
-        if self.decl_tree.is_none() {
-            return Err(RealmError::RootComponentNotSetYet.into());
-        }
-        let parent_node = self.get_node_mut(&moniker.parent().unwrap())?;
-
-        if parent_node.children.contains_key(moniker.child_name().unwrap())
-            || parent_node.decl.children.iter().any(|c| &c.name == moniker.child_name().unwrap())
-        {
-            return Err(RealmError::ComponentAlreadyExists(moniker).into());
-        }
-
-        // Validation is performed later, as we might end up adding ChildDecls to this
-        parent_node.children.insert(moniker.child_name().unwrap().clone(), RealmNode::new(decl));
-        Ok(())
+        let decl = decl.native_into_fidl();
+        self.framework_intermediary_proxy
+            .set_component(&moniker.to_string(), &mut ffrb::Component::Decl(decl))
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
 
-    fn get_node_mut<'a>(&'a mut self, moniker: &Moniker) -> Result<&'a mut RealmNode, Error> {
-        if self.decl_tree.is_none() {
-            return Err(RealmError::RootComponentNotSetYet.into());
-        }
-        let mut current_node = self.decl_tree.as_mut().unwrap();
-        let mut current_moniker = Moniker::root();
-
-        for part in moniker.path() {
-            current_moniker = current_moniker.child(part.clone());
-            current_node = match current_node.children.get_mut(part) {
-                Some(n) => n,
-                None => {
-                    if current_node.decl.children.iter().any(|c| &c.name == part) {
-                        return Err(RealmError::ComponentNotModifiable(current_moniker).into());
-                    }
-                    return Err(RealmError::ComponentDoesntExist(current_moniker).into());
-                }
-            }
-        }
-        Ok(current_node)
+    pub async fn set_component_url(&self, moniker: &Moniker, url: String) -> Result<(), Error> {
+        self.framework_intermediary_proxy
+            .set_component(&moniker.to_string(), &mut ffrb::Component::Url(url))
+            .await?
+            .map_err(|s| Error::FailedToSetDecl(moniker.clone(), s))
     }
 
     /// Returns whether or not the given component exists in this realm. This will return true if
     /// the component exists in the realm tree itself, or if the parent contains a child
     /// declaration for the moniker.
-    pub fn contains(&mut self, moniker: &Moniker) -> bool {
-        if let Ok(_) = self.get_node_mut(moniker) {
-            return true;
-        }
-        if let Some(parent) = moniker.parent() {
-            if let Ok(decl) = self.get_decl_mut(&parent) {
-                return decl.children.iter().any(|c| Some(&c.name) == moniker.child_name());
-            }
-        }
-        return false;
+    pub async fn contains(&self, moniker: &Moniker) -> Result<bool, Error> {
+        self.framework_intermediary_proxy
+            .contains(&moniker.to_string())
+            .await
+            .map_err(Error::FidlError)
     }
 
     /// Returns a mutable reference to a component decl in the realm.
-    pub fn get_decl_mut<'a>(
-        &'a mut self,
-        moniker: &Moniker,
-    ) -> Result<&'a mut cm_rust::ComponentDecl, Error> {
-        Ok(&mut self.get_node_mut(moniker)?.decl)
+    pub async fn get_decl(&mut self, moniker: &Moniker) -> Result<cm_rust::ComponentDecl, Error> {
+        self.flush_routes().await?;
+        let decl = self
+            .framework_intermediary_proxy
+            .get_component_decl(&moniker.to_string())
+            .await?
+            .map_err(|s| Error::FailedToGetDecl(moniker.clone(), s))?;
+        Ok(decl.fidl_into_native())
+    }
+
+    /// Applies any routes that were added to the RealmBuilder that produced this Realm.
+    async fn flush_routes(&mut self) -> Result<(), Error> {
+        let routes: Vec<_> = self.routes_to_add.drain(..).collect();
+        for route in routes {
+            self.add_route(route).await?;
+        }
+        Ok(())
     }
 
     /// Marks the target component as eager.
@@ -317,28 +282,11 @@ impl Realm {
     /// [`Realm::add_component`], then the component is marked as eager in the Realm's
     /// internal structure. If the target component is a component referenced in an added
     /// component's [`cm_rust::ComponentDecl`], then the `ChildDecl` for the component is modified.
-    pub fn mark_as_eager(&mut self, moniker: &Moniker) -> Result<(), Error> {
-        if moniker.is_root() {
-            return Err(RealmError::CantMarkRootAsEager.into());
-        }
-        // The referenced moniker might be a node in our local tree, or it might be a component
-        // with a source outside of our tree (like fuchsia-pkg://). Attempt to look up the node in
-        // our tree, and if it doesn't exist then look for a ChildDecl on the parent node
-        match self.get_node_mut(moniker) {
-            Ok(node) => node.eager = true,
-            Err(e) => {
-                let child_name = moniker.child_name().unwrap();
-                let parent_node = self.get_node_mut(&moniker.parent().unwrap()).map_err(|_| e)?;
-                let child_decl = parent_node
-                    .decl
-                    .children
-                    .iter_mut()
-                    .find(|c| &c.name == child_name)
-                    .ok_or(RealmError::MissingChild(moniker.clone()))?;
-                child_decl.startup = fsys::StartupMode::Eager;
-            }
-        }
-        Ok(())
+    pub async fn mark_as_eager(&self, moniker: &Moniker) -> Result<(), Error> {
+        self.framework_intermediary_proxy
+            .mark_as_eager(&moniker.to_string())
+            .await?
+            .map_err(|s| Error::FailedToMarkAsEager(moniker.clone(), s))
     }
 
     /// Sets the name of the collection that this realm will be created in
@@ -346,18 +294,61 @@ impl Realm {
         self.collection_name = collection_name.into();
     }
 
+    pub async fn add_route(&mut self, route: builder::CapabilityRoute) -> Result<(), Error> {
+        if let builder::Capability::Event(_, _) = &route.capability {
+            return builder::RealmBuilder::add_event_route(self, route).await;
+        }
+
+        let capability = match route.capability {
+            builder::Capability::Protocol(name) => {
+                ffrb::Capability::Protocol(ffrb::ProtocolCapability {
+                    name: Some(name),
+                    ..ffrb::ProtocolCapability::EMPTY
+                })
+            }
+            builder::Capability::Directory(name, path, rights) => {
+                ffrb::Capability::Directory(ffrb::DirectoryCapability {
+                    name: Some(name),
+                    path: Some(path),
+                    rights: Some(rights),
+                    ..ffrb::DirectoryCapability::EMPTY
+                })
+            }
+            builder::Capability::Storage(name, path) => {
+                ffrb::Capability::Storage(ffrb::StorageCapability {
+                    name: Some(name),
+                    path: Some(path),
+                    ..ffrb::StorageCapability::EMPTY
+                })
+            }
+            builder::Capability::Event(_, _) => unreachable!(),
+        };
+
+        let source = route.source.to_ffrb();
+        let targets = route.targets.into_iter().map(builder::RouteEndpoint::to_ffrb).collect();
+        let route = ffrb::CapabilityRoute {
+            capability: Some(capability),
+            source: Some(source),
+            targets: Some(targets),
+            ..ffrb::CapabilityRoute::EMPTY
+        };
+        self.framework_intermediary_proxy
+            .route_capability(route)
+            .await?
+            .map_err(|s| Error::FailedToRoute(s))
+    }
+
     /// Initializes the realm, but doesn't create it. Returns the root URL, the collection name,
     /// and the mocks runner. The caller should pass the URL and collection name into
     /// `fuchsial.sys2.Realm#CreateChild`, and keep the mocks runner alive until after
     /// `fuchsia.sys2.Realm#DestroyChild` has been called.
-    pub async fn initialize(self) -> Result<(String, String, mock::MocksRunner), Error> {
-        if self.decl_tree.is_none() {
-            return Err(RealmError::RootComponentNotSetYet.into());
-        }
-        let decl_tree = self.decl_tree.as_ref().unwrap().clone();
-        let root_url =
-            Self::registration_walker(self.framework_intermediary_proxy.clone(), decl_tree, vec![])
-                .await?;
+    pub async fn initialize(mut self) -> Result<(String, String, mock::MocksRunner), Error> {
+        self.flush_routes().await?;
+        let root_url = self
+            .framework_intermediary_proxy
+            .commit()
+            .await?
+            .map_err(|s| Error::FailedToCommit(s))?;
         Ok((root_url, self.collection_name, self.mocks_runner))
     }
 
@@ -379,48 +370,6 @@ impl Realm {
             .await
             .map_err(RealmError::FailedToCreateChild)?;
         Ok(RealmInstance { root, _mocks_runner: mocks_runner })
-    }
-
-    /// Walks a topology, registering each node with the component resolver.
-    fn registration_walker(
-        framework_intermediary_proxy: ftrb::FrameworkIntermediaryProxy,
-        mut current_node: RealmNode,
-        walked_path: Vec<String>,
-    ) -> BoxFuture<'static, Result<String, Error>> {
-        // This function is much cleaner written recursively, but we can't construct recursive
-        // futures as the size isn't knowable to rustc at compile time. Put the recursive call
-        // into a boxed future, as the redirection makes this possible
-        async move {
-            let mut children = current_node.children.into_iter().collect::<Vec<_>>();
-            children.sort_unstable_by_key(|t| t.0.clone());
-            for (name, node) in children {
-                let mut new_path = walked_path.clone();
-                new_path.push(name.clone());
-
-                let startup =
-                    if node.eager { fsys::StartupMode::Eager } else { fsys::StartupMode::Lazy };
-                let url =
-                    Self::registration_walker(framework_intermediary_proxy.clone(), node, new_path)
-                        .await?;
-                current_node.decl.children.push(cm_rust::ChildDecl {
-                    name,
-                    url,
-                    startup,
-                    environment: None,
-                });
-            }
-
-            let fidl_decl = current_node.decl.native_into_fidl();
-            cm_fidl_validator::validate(&fidl_decl)
-                .map_err(|e| RealmError::InvalidDecl(walked_path.into(), e, fidl_decl.clone()))?;
-
-            framework_intermediary_proxy
-                .register_decl(fidl_decl)
-                .await
-                .map_err(RealmError::FailedToUseFrameworkIntermediary)?
-                .map_err(|s| RealmError::DeclRejectedByRegistry(zx::Status::from_raw(s)).into())
-        }
-        .boxed()
     }
 }
 
@@ -636,167 +585,5 @@ impl Drop for ScopedInstance {
                 warn!("Failed to send result for destroyed scoped instance. Result={:?}", result);
             });
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::*,
-        cm_rust::*,
-        fidl::endpoints::create_proxy,
-        fidl_fuchsia_data as fdata, fuchsia_async as fasync,
-        futures::{lock::Mutex, TryStreamExt},
-        std::{collections::HashSet, sync::Arc},
-    };
-
-    struct FrameworkIntermediaryMock {
-        _stream_handling_task: fasync::Task<()>,
-
-        _decls: Arc<Mutex<HashMap<String, ComponentDecl>>>,
-        mocks: Arc<Mutex<HashSet<String>>>,
-    }
-
-    fn realm_with_mock_framework_intermediary() -> (FrameworkIntermediaryMock, Realm) {
-        let (framework_intermediary_proxy, framework_intermediary_server_end) =
-            create_proxy::<ftrb::FrameworkIntermediaryMarker>().unwrap();
-
-        let decls = Arc::new(Mutex::new(HashMap::new()));
-        let mocks = Arc::new(Mutex::new(HashSet::new()));
-
-        let decls_clone = decls.clone();
-        let mocks_clone = mocks.clone();
-        let task = fasync::Task::local(async move {
-            let mut framework_intermediary_stream =
-                framework_intermediary_server_end.into_stream().unwrap();
-            let mut mock_counter: u64 = 0;
-            let mut next_unique_component_id: u64 = 0;
-            while let Some(request) = framework_intermediary_stream.try_next().await.unwrap() {
-                match request {
-                    ftrb::FrameworkIntermediaryRequest::RegisterDecl { responder, decl } => {
-                        let native_decl = decl.fidl_into_native();
-                        let url = format!("{}://{}", mock::RUNNER_NAME, next_unique_component_id);
-                        decls_clone.lock().await.insert(url.clone(), native_decl);
-                        next_unique_component_id += 1;
-                        responder.send(&mut Ok(url)).unwrap()
-                    }
-                    ftrb::FrameworkIntermediaryRequest::RegisterMock { responder } => {
-                        let mock_id = format!("{}", mock_counter);
-                        mocks_clone.lock().await.insert(mock_id.clone());
-                        mock_counter += 1;
-                        responder.send(&mock_id).unwrap();
-                    }
-                }
-            }
-        });
-        let realm_with_mock_framework_intermediary =
-            Realm::new_with_framework_intermediary_proxy(framework_intermediary_proxy).unwrap();
-
-        (
-            FrameworkIntermediaryMock { _stream_handling_task: task, _decls: decls, mocks },
-            realm_with_mock_framework_intermediary,
-        )
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn set_root_decl() {
-        let (_fi_mock, mut realm) = realm_with_mock_framework_intermediary();
-
-        realm.add_component(Moniker::root(), ComponentDecl::default()).unwrap();
-        assert_eq!(ComponentDecl::default(), *realm.get_decl_mut(&Moniker::root()).unwrap());
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn add_component() {
-        let (fi_mock, mut realm) = realm_with_mock_framework_intermediary();
-
-        let root_decl = ComponentDecl {
-            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Parent,
-                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: OfferTarget::Child("a".to_string()),
-                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                dependency_type: DependencyType::Strong,
-            })],
-            ..ComponentDecl::default()
-        };
-        let a_decl = ComponentDecl {
-            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Parent,
-                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: OfferTarget::Child("b".to_string()),
-                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                dependency_type: DependencyType::Strong,
-            })],
-            children: vec![ChildDecl {
-                name: "b".to_string(),
-                url: "fuchsia-pkg://b".to_string(),
-                startup: fsys::StartupMode::Lazy,
-                environment: None,
-            }],
-            ..ComponentDecl::default()
-        };
-
-        realm.add_component(Moniker::root(), root_decl.clone()).unwrap();
-        realm.add_component("a".into(), a_decl.clone()).unwrap();
-
-        assert_eq!(fi_mock.mocks.lock().await.len(), 0);
-
-        assert_eq!(*realm.get_decl_mut(&Moniker::root()).unwrap(), root_decl);
-        assert_eq!(*realm.get_decl_mut(&"a".into()).unwrap(), a_decl);
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn add_mocked_component() {
-        let (fi_mock, mut realm) = realm_with_mock_framework_intermediary();
-
-        let root_decl = ComponentDecl {
-            offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Parent,
-                source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                target: OfferTarget::Child("a".to_string()),
-                target_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-                dependency_type: DependencyType::Strong,
-            })],
-            ..ComponentDecl::default()
-        };
-        let use_echo_decl = UseDecl::Protocol(UseProtocolDecl {
-            source: UseSource::Parent,
-            source_name: "fidl.examples.routing.echo.Echo".try_into().unwrap(),
-            target_path: "/svc/fidl.examples.routing.echo.Echo".try_into().unwrap(),
-        });
-
-        realm.add_component(Moniker::root(), root_decl.clone()).unwrap();
-        realm
-            .add_mocked_component(
-                "a".into(),
-                mock::Mock::new(|_: mock::MockHandles| Box::pin(async move { Ok(()) })),
-            )
-            .await
-            .unwrap();
-
-        realm.get_decl_mut(&"a".into()).unwrap().uses.push(use_echo_decl.clone());
-
-        assert_eq!(fi_mock.mocks.lock().await.len(), 1);
-        assert!(fi_mock.mocks.lock().await.contains(&"0".to_string()));
-
-        assert_eq!(*realm.get_decl_mut(&Moniker::root()).unwrap(), root_decl);
-        assert_eq!(
-            *realm.get_decl_mut(&"a".into()).unwrap(),
-            ComponentDecl {
-                program: Some(cm_rust::ProgramDecl {
-                    runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
-                    info: fdata::Dictionary {
-                        entries: Some(vec![fdata::DictionaryEntry {
-                            key: mock::MOCK_ID_KEY.to_string(),
-                            value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                        }]),
-                        ..fdata::Dictionary::EMPTY
-                    },
-                }),
-                uses: vec![use_echo_decl],
-                ..ComponentDecl::default()
-            }
-        );
     }
 }

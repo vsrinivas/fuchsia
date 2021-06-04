@@ -215,10 +215,10 @@ impl fmt::Display for DeclField {
     }
 }
 
-/// Represents a list of errors encountered durlng validation.
+/// Represents a list of errors encountered during validation.
 #[derive(Debug, Error, PartialEq)]
 pub struct ErrorList {
-    errs: Vec<Error>,
+    pub errs: Vec<Error>,
 }
 
 impl ErrorList {

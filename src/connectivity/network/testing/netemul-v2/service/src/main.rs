@@ -12,7 +12,7 @@ use {
         RealmOptions, SandboxRequest, SandboxRequestStream,
     },
     fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_process as fprocess,
-    fuchsia_async as fasync,
+    fidl_fuchsia_realm_builder as frealmbuilder, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
         self as fcomponent,
@@ -68,8 +68,8 @@ impl Into<zx::Status> for CreateRealmError {
             | CreateRealmError::CapabilitySourceNotProvided
             | CreateRealmError::CapabilityNameNotProvided
             | CreateRealmError::DuplicateCapabilityUse(_, _)
-            | CreateRealmError::RealmBuilderError(fcomponent::error::Error::Builder(
-                fcomponent::error::BuilderError::MissingRouteSource(_),
+            | CreateRealmError::RealmBuilderError(fcomponent::error::Error::FailedToRoute(
+                frealmbuilder::RealmBuilderError::MissingRouteSource,
             )) => zx::Status::INVALID_ARGS,
             CreateRealmError::RealmBuilderError(_) => zx::Status::INTERNAL,
         }
@@ -226,7 +226,8 @@ async fn create_realm_instance(
     // TODO(https://fxbug.dev/74977): once we can specify weak dependencies directly with the
     // RealmBuilder API, only mark dependencies as `weak` that originated from a `ChildUses.all`
     // configuration.
-    let cm_rust::ComponentDecl { offers, .. } = realm.get_decl_mut(&fcomponent::Moniker::root())?;
+    let mut decl = realm.get_decl(&fcomponent::Moniker::root()).await?;
+    let cm_rust::ComponentDecl { offers, .. } = &mut decl;
     for offer in offers {
         match offer {
             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
@@ -256,6 +257,7 @@ async fn create_realm_instance(
             }
         }
     }
+    let () = realm.set_component(&fcomponent::Moniker::root(), decl).await?;
     let name =
         name.map(|name| format!("{}-{}", prefix, name)).unwrap_or_else(|| prefix.to_string());
     info!("creating new ManagedRealm with name '{}'", name);

@@ -8,10 +8,10 @@ use {
     crate::{error::*, mock, Moniker, Realm},
     anyhow, cm_rust,
     fidl::endpoints::DiscoverableService,
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
-    futures::future::BoxFuture,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as ffrb, fuchsia_async as fasync,
+    futures::{future::BoxFuture, FutureExt},
     maplit::hashmap,
-    std::{collections::HashMap, convert::TryInto},
+    std::collections::HashMap,
 };
 
 /// A capability that is routed through the custom realms
@@ -77,9 +77,7 @@ impl Event {
     pub fn directory_ready(filter_name: impl Into<String>) -> Self {
         Self::DirectoryReady(filter_name.into())
     }
-}
 
-impl Event {
     fn name(&self) -> &'static str {
         match self {
             Event::Started => "started",
@@ -114,6 +112,13 @@ pub enum RouteEndpoint {
 }
 
 impl RouteEndpoint {
+    pub(crate) fn to_ffrb(self) -> ffrb::RouteEndpoint {
+        match self {
+            RouteEndpoint::AboveRoot => ffrb::RouteEndpoint::AboveRoot(ffrb::AboveRoot {}),
+            RouteEndpoint::Component(moniker) => ffrb::RouteEndpoint::Component(moniker),
+        }
+    }
+
     pub fn component(path: impl Into<String>) -> Self {
         Self::Component(path.into())
     }
@@ -262,36 +267,13 @@ impl RealmBuilder {
         M: Into<Moniker>,
     {
         let moniker = moniker.into();
-        if self.realm.contains(&moniker) {
-            // TODO: differentiate errors between "this already exists" and "this is a leaf node"
+        if self.realm.contains(&moniker).await? {
             return Err(BuilderError::ComponentAlreadyExists(moniker).into());
-        }
-
-        if moniker != Moniker::root() && !self.realm.contains(&Moniker::root()) {
-            self.realm.add_component(Moniker::root(), cm_rust::ComponentDecl::default())?;
-        }
-        let ancestry = moniker.ancestry();
-        // The ancestry is sorted from child to parent, but we need to add components to
-        // the tree in the other direction.
-        for ancestor in ancestry.into_iter().rev() {
-            if !self.realm.contains(&ancestor) {
-                self.realm.add_component(ancestor, cm_rust::ComponentDecl::default())?;
-            }
         }
 
         match source {
             ComponentSource::Url(url) => {
-                if moniker.is_root() {
-                    return Err(BuilderError::RootComponentCantHaveUrl.into());
-                }
-                let parent_moniker = moniker.parent().unwrap();
-                let parent_decl = self.realm.get_decl_mut(&parent_moniker)?;
-                parent_decl.children.push(cm_rust::ChildDecl {
-                    name: moniker.child_name().unwrap().clone(),
-                    url: url.to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                    environment: None,
-                });
+                self.realm.set_component_url(&moniker, url).await?;
             }
             ComponentSource::Mock(mock) => {
                 self.realm.add_mocked_component(moniker, mock).await?;
@@ -312,10 +294,7 @@ impl RealmBuilder {
     {
         let moniker = moniker.into();
         self.add_component(moniker.clone(), source).await?;
-        self.realm.mark_as_eager(&moniker)?;
-        for ancestor in moniker.ancestry() {
-            self.realm.mark_as_eager(&ancestor)?;
-        }
+        self.realm.mark_as_eager(&moniker).await?;
         Ok(self)
     }
 
@@ -336,202 +315,182 @@ impl RealmBuilder {
     /// Adds a capability route between two points in the realm. Does nothing if the route
     /// already exists.
     pub fn add_route(&mut self, route: CapabilityRoute) -> Result<&mut Self, Error> {
-        if let RouteEndpoint::Component(moniker) = &route.source {
-            let moniker = moniker.clone().into();
-            if !self.realm.contains(&moniker) {
-                match moniker.parent().and_then(|p| Some(self.realm.get_decl_mut(&p))) {
-                    Some(Ok(decl))
-                        if decl.children.iter().any(|c| Some(&c.name) == moniker.child_name()) =>
-                    {
-                        ()
-                    }
-                    _ => return Err(BuilderError::MissingRouteSource(moniker).into()),
-                }
-            }
-        }
-        if route.targets.is_empty() {
-            return Err(BuilderError::EmptyRouteTargets.into());
-        }
-        for target in &route.targets {
-            if &route.source == target {
-                return Err(BuilderError::RouteSourceAndTargetMatch(route.clone()).into());
-            }
-            if let RouteEndpoint::Component(moniker) = target {
-                let moniker = moniker.clone().into();
-                if !self.realm.contains(&moniker) {
-                    return Err(BuilderError::MissingRouteTarget(moniker).into());
-                }
-            }
-        }
-
-        for target in &route.targets {
-            if *target == RouteEndpoint::AboveRoot {
-                // We're routing a capability from component within our constructed realm to
-                // somewhere above it
-                let source_moniker = route.source.unwrap_component_moniker();
-
-                if let Ok(source_decl) = self.realm.get_decl_mut(&source_moniker) {
-                    Self::add_expose_for_capability(
-                        &mut source_decl.exposes,
-                        &route,
-                        None,
-                        &source_moniker,
-                    )?;
-                    Self::add_capability_decl(&mut source_decl.capabilities, &route.capability)?;
-                }
-
-                let mut current_ancestor = source_moniker;
-                while !current_ancestor.is_root() {
-                    let child_name = current_ancestor.child_name().unwrap().clone();
-                    current_ancestor = current_ancestor.parent().unwrap();
-
-                    let decl = self.realm.get_decl_mut(&current_ancestor)?;
-                    Self::add_expose_for_capability(
-                        &mut decl.exposes,
-                        &route,
-                        Some(&child_name),
-                        &current_ancestor,
-                    )?;
-                }
-            } else if route.source == RouteEndpoint::AboveRoot {
-                // We're routing a capability from above our constructed realm to a component
-                // eithin it
-                let target_moniker = target.unwrap_component_moniker();
-
-                if let Ok(target_decl) = self.realm.get_decl_mut(&target_moniker) {
-                    target_decl.uses.push(Self::new_use_decl(&route.capability));
-                }
-
-                let mut current_ancestor = target_moniker;
-                while !current_ancestor.is_root() {
-                    let child_name = current_ancestor.child_name().unwrap().clone();
-                    current_ancestor = current_ancestor.parent().unwrap();
-
-                    let decl = self.realm.get_decl_mut(&current_ancestor)?;
-                    Self::add_offer_for_capability(
-                        &mut decl.offers,
-                        &route,
-                        OfferSource::Parent,
-                        &child_name,
-                        &current_ancestor,
-                    )?;
-                }
-            } else {
-                // We're routing a capability from one component within our constructed realm to
-                // another
-                let source_moniker = route.source.unwrap_component_moniker();
-                let target_moniker = target.unwrap_component_moniker();
-
-                if let Ok(target_decl) = self.realm.get_decl_mut(&target_moniker) {
-                    target_decl.uses.push(Self::new_use_decl(&route.capability));
-                }
-                if let Ok(source_decl) = self.realm.get_decl_mut(&source_moniker) {
-                    Self::add_capability_decl(&mut source_decl.capabilities, &route.capability)?;
-                }
-
-                let mut offering_child_name = target_moniker.child_name().unwrap().clone();
-                let mut offering_ancestor = target_moniker.parent().unwrap();
-                while offering_ancestor != source_moniker
-                    && !offering_ancestor.is_ancestor_of(&source_moniker)
-                {
-                    let decl = self.realm.get_decl_mut(&offering_ancestor)?;
-                    Self::add_offer_for_capability(
-                        &mut decl.offers,
-                        &route,
-                        OfferSource::Parent,
-                        &offering_child_name,
-                        &offering_ancestor,
-                    )?;
-
-                    offering_child_name = offering_ancestor.child_name().unwrap().clone();
-                    offering_ancestor = offering_ancestor.parent().unwrap();
-                }
-
-                if offering_ancestor == source_moniker {
-                    // We don't need to add an expose chain, we reached the source moniker solely
-                    // by walking up the tree
-                    let decl = self.realm.get_decl_mut(&offering_ancestor)?;
-                    Self::add_offer_for_capability(
-                        &mut decl.offers,
-                        &route,
-                        OfferSource::Self_,
-                        &offering_child_name,
-                        &offering_ancestor,
-                    )?;
-                    return Ok(self);
-                }
-
-                // We need an expose chain to descend down the tree to our source.
-
-                if let Ok(source_decl) = self.realm.get_decl_mut(&source_moniker) {
-                    Self::add_expose_for_capability(
-                        &mut source_decl.exposes,
-                        &route,
-                        None,
-                        &source_moniker,
-                    )?;
-                }
-
-                let mut exposing_child_name = source_moniker.child_name().unwrap().clone();
-                let mut exposing_ancestor = source_moniker.parent().unwrap();
-                while exposing_ancestor != offering_ancestor {
-                    let decl = self.realm.get_decl_mut(&exposing_ancestor)?;
-                    Self::add_expose_for_capability(
-                        &mut decl.exposes,
-                        &route,
-                        Some(&exposing_child_name),
-                        &exposing_ancestor,
-                    )?;
-
-                    exposing_child_name = exposing_ancestor.child_name().unwrap().clone();
-                    exposing_ancestor = exposing_ancestor.parent().unwrap();
-                }
-
-                let decl = self.realm.get_decl_mut(&offering_ancestor)?;
-                Self::add_offer_for_capability(
-                    &mut decl.offers,
-                    &route,
-                    OfferSource::Child(exposing_child_name.clone()),
-                    &offering_child_name,
-                    &offering_ancestor,
-                )?;
-            }
-        }
+        self.realm.routes_to_add.push(route);
         Ok(self)
     }
 
     /// Builds a new [`Realm`] from this builder.
-    // TODO: rename? the building is done by this point
     pub fn build(self) -> Realm {
         self.realm
     }
 
-    fn add_capability_decl(
-        capability_decls: &mut Vec<cm_rust::CapabilityDecl>,
-        capability: &Capability,
-    ) -> Result<(), BuilderError> {
-        let capability_decl = match capability {
-            Capability::Protocol(name) => {
-                Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
-                    name: name.as_str().try_into().unwrap(),
-                    source_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
-                }))
-            }
-            Capability::Directory(name, path, rights) => {
-                Some(cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
-                    name: name.as_str().try_into().unwrap(),
-                    source_path: path.as_str().try_into().unwrap(),
-                    rights: rights.clone(),
-                }))
-            }
-            Capability::Storage(name, _) => {
-                return Err(BuilderError::StorageMustComeFromAboveRoot(name.clone()))
-            }
-            Capability::Event(_, _) => None,
+    /// Adds a capability route between two points in the realm. Only works for event capabilities,
+    /// will otherwise panic.
+    pub(crate) fn add_event_route(
+        realm: &mut Realm,
+        route: CapabilityRoute,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        // There's a cycle between futures, which is disallowed, between the following functions:
+        //
+        // - Realm::get_decl
+        // - Realm::flush_routes
+        // - Realm::add_route
+        // - RealmBuilder::add_event_route
+        //
+        // This function returns a BoxFuture to break this cycle
+        let mut realm = crate::Realm {
+            framework_intermediary_proxy: realm.framework_intermediary_proxy.clone(),
+            mocks_runner: crate::mock::MocksRunner {
+                mocks: realm.mocks_runner.mocks.clone(),
+                _event_stream_handling_task: fasync::Task::local(async { () }),
+            },
+            collection_name: realm.collection_name.clone(),
+            routes_to_add: vec![],
         };
-        if let Some(decl) = capability_decl {
-            if !capability_decls.contains(&decl) {
-                capability_decls.push(decl);
+        async move {
+            if let RouteEndpoint::Component(moniker) = &route.source {
+                let moniker = moniker.clone().into();
+                if !realm.contains(&moniker).await? {
+                    return Err(EventError::MissingRouteSource(moniker).into());
+                }
+            }
+            if route.targets.is_empty() {
+                return Err(EventError::EmptyRouteTargets.into());
+            }
+            for target in &route.targets {
+                if &route.source == target {
+                    return Err(EventError::RouteSourceAndTargetMatch(route.clone()).into());
+                }
+                if let RouteEndpoint::Component(moniker) = target {
+                    let moniker = moniker.clone().into();
+                    if !realm.contains(&moniker).await? {
+                        return Err(EventError::MissingRouteTarget(moniker).into());
+                    }
+                }
+            }
+
+            for target in &route.targets {
+                if *target == RouteEndpoint::AboveRoot {
+                    return Self::add_event_route_to_above_root(&mut realm, route).await;
+                } else if route.source == RouteEndpoint::AboveRoot {
+                    let target = target.clone();
+                    return Self::add_event_route_from_above_root(&mut realm, route, target).await;
+                } else {
+                    let target = target.clone();
+                    return Self::add_event_route_between_components(&mut realm, route, target)
+                        .await;
+                }
+            }
+            Ok(())
+        }
+        .boxed()
+    }
+
+    async fn add_event_route_to_above_root(
+        _realm: &mut Realm,
+        route: CapabilityRoute,
+    ) -> Result<(), Error> {
+        if let Capability::Event(event, _) = &route.capability {
+            return Err(EventError::EventsCannotBeExposed(event.name().to_string()).into());
+        } else {
+            panic!("non-event capability given to add_event_route: {:?}", &route.capability);
+        }
+    }
+
+    async fn add_event_route_from_above_root(
+        realm: &mut Realm,
+        route: CapabilityRoute,
+        target: RouteEndpoint,
+    ) -> Result<(), Error> {
+        // We're routing a capability from above our constructed realm to a component
+        // eithin it
+        let target_moniker = target.unwrap_component_moniker();
+
+        if realm.contains(&target_moniker).await? {
+            // We need to check if the target is mutable or immutable. We could just see if
+            // `get_decl` succeeds, but if it's immutable then the intermediary will log that an
+            // error occurred. Get the parent decl and check its ChildDecls, we can't mutate this
+            // node if it's behind a child decl.
+            if target_moniker.is_root()
+                || !realm
+                    .get_decl(&target_moniker.parent().unwrap())
+                    .await?
+                    .children
+                    .iter()
+                    .any(|c| &c.name == target_moniker.child_name().unwrap())
+            {
+                let mut target_decl = realm.get_decl(&target_moniker).await?;
+                target_decl.uses.push(Self::new_use_decl(&route.capability));
+                realm.set_component(&target_moniker, target_decl).await?;
+            }
+        }
+
+        let mut current_ancestor = target_moniker;
+        while !current_ancestor.is_root() {
+            let child_name = current_ancestor.child_name().unwrap().clone();
+            current_ancestor = current_ancestor.parent().unwrap();
+
+            let mut decl = realm.get_decl(&current_ancestor).await?;
+            Self::add_offer_for_capability(
+                &mut decl.offers,
+                &route,
+                cm_rust::OfferSource::Parent,
+                &child_name,
+                &current_ancestor,
+            )?;
+            realm.set_component(&current_ancestor, decl).await?;
+        }
+        Ok(())
+    }
+
+    async fn add_event_route_between_components(
+        realm: &mut Realm,
+        route: CapabilityRoute,
+        target: RouteEndpoint,
+    ) -> Result<(), Error> {
+        // We're routing a capability from one component within our constructed realm to
+        // another
+        let source_moniker = route.source.unwrap_component_moniker();
+        let target_moniker = target.unwrap_component_moniker();
+
+        if !source_moniker.is_ancestor_of(&target_moniker) {
+            if let Capability::Event(event, _) = &route.capability {
+                return Err(EventError::EventsCannotBeExposed(event.name().to_string()).into());
+            } else {
+                panic!("non-event capability given to add_event_route: {:?}", &route.capability);
+            }
+        }
+
+        let mut current_ancestor = source_moniker.clone();
+        for offer_child_name in source_moniker.downward_path_to(&target_moniker) {
+            let mut decl = realm.get_decl(&current_ancestor).await?;
+            Self::add_offer_for_capability(
+                &mut decl.offers,
+                &route,
+                cm_rust::OfferSource::Framework,
+                &offer_child_name,
+                &current_ancestor,
+            )?;
+            realm.set_component(&current_ancestor, decl).await?;
+            current_ancestor = current_ancestor.child(offer_child_name);
+        }
+
+        if realm.contains(&target_moniker).await? {
+            // We need to check if the target is mutable or immutable. We could just see if
+            // `get_decl` succeeds, but if it's immutable then the intermediary will log that an
+            // error occurred. Get the parent decl and check its ChildDecls, we can't mutate this
+            // node if it's behind a child decl.
+            if target_moniker.is_root()
+                || !realm
+                    .get_decl(&target_moniker.parent().unwrap())
+                    .await?
+                    .children
+                    .iter()
+                    .any(|c| &c.name == target_moniker.child_name().unwrap())
+            {
+                let mut target_decl = realm.get_decl(&target_moniker).await?;
+                target_decl.uses.push(Self::new_use_decl(&route.capability));
+                realm.set_component(&target_moniker, target_decl).await?;
             }
         }
         Ok(())
@@ -539,24 +498,6 @@ impl RealmBuilder {
 
     fn new_use_decl(capability: &Capability) -> cm_rust::UseDecl {
         match capability {
-            Capability::Protocol(name) => cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-                source: cm_rust::UseSource::Parent,
-                source_name: name.clone().try_into().unwrap(),
-                target_path: format!("/svc/{}", name).as_str().try_into().unwrap(),
-            }),
-            Capability::Directory(name, path, rights) => {
-                cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
-                    source: cm_rust::UseSource::Parent,
-                    source_name: name.as_str().try_into().unwrap(),
-                    target_path: path.as_str().try_into().unwrap(),
-                    rights: rights.clone(),
-                    subdir: None,
-                })
-            }
-            Capability::Storage(name, path) => cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
-                source_name: name.as_str().try_into().unwrap(),
-                target_path: path.as_str().try_into().unwrap(),
-            }),
             Capability::Event(event, mode) => cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
                 source: cm_rust::UseSource::Parent,
                 source_name: event.name().into(),
@@ -564,151 +505,23 @@ impl RealmBuilder {
                 filter: event.filter(),
                 mode: mode.clone(),
             }),
+            _ => panic!(
+                "attempting to do local routing for a non-event capability: {:?}",
+                capability
+            ),
         }
     }
 
     fn add_offer_for_capability(
         offers: &mut Vec<cm_rust::OfferDecl>,
         route: &CapabilityRoute,
-        offer_source: OfferSource,
+        offer_source: cm_rust::OfferSource,
         target_name: &str,
         moniker: &Moniker,
     ) -> Result<(), Error> {
         let offer_target = cm_rust::OfferTarget::Child(target_name.to_string());
         match &route.capability {
-            Capability::Protocol(name) => {
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
-                    OfferSource::Child(n) => cm_rust::OfferSource::Child(n),
-                };
-                for offer in offers.iter() {
-                    if let cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                        source,
-                        target_name,
-                        target,
-                        ..
-                    }) = offer
-                    {
-                        if name == &target_name.str() && *target == offer_target {
-                            if *source != offer_source {
-                                return Err(BuilderError::ConflictingOffers(
-                                    route.clone(),
-                                    moniker.clone(),
-                                    target.clone(),
-                                    format!("{:?}", source),
-                                )
-                                .into());
-                            } else {
-                                // The offer we want already exists
-                                return Ok(());
-                            }
-                        }
-                    }
-                }
-                offers.push(cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                    source: offer_source,
-                    source_name: name.clone().into(),
-                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: name.clone().into(),
-                    dependency_type: cm_rust::DependencyType::Strong,
-                }));
-            }
-            Capability::Directory(name, _, _) => {
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
-                    OfferSource::Child(n) => cm_rust::OfferSource::Child(n),
-                };
-                for offer in offers.iter() {
-                    if let cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                        source,
-                        target_name,
-                        target,
-                        ..
-                    }) = offer
-                    {
-                        if name == &target_name.str() && *target == offer_target {
-                            if *source != offer_source {
-                                return Err(BuilderError::ConflictingOffers(
-                                    route.clone(),
-                                    moniker.clone(),
-                                    target.clone(),
-                                    format!("{:?}", source),
-                                )
-                                .into());
-                            } else {
-                                // The offer we want already exists
-                                return Ok(());
-                            }
-                        }
-                    }
-                }
-                offers.push(cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
-                    source: offer_source,
-                    source_name: name.clone().into(),
-                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: name.clone().into(),
-                    rights: None,
-                    subdir: None,
-                    dependency_type: cm_rust::DependencyType::Strong,
-                }));
-            }
-            Capability::Storage(name, _) => {
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Self_,
-                    OfferSource::Child(_) => {
-                        return Err(BuilderError::StorageCannotBeOfferedFromChild(
-                            name.clone(),
-                            route.clone(),
-                        )
-                        .into());
-                    }
-                };
-                for offer in offers.iter() {
-                    if let cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
-                        source,
-                        target_name,
-                        target,
-                        ..
-                    }) = offer
-                    {
-                        if name == &target_name.str() && *target == offer_target {
-                            if *source != offer_source {
-                                return Err(BuilderError::ConflictingOffers(
-                                    route.clone(),
-                                    moniker.clone(),
-                                    target.clone(),
-                                    format!("{:?}", source),
-                                )
-                                .into());
-                            } else {
-                                // The offer we want already exists
-                                return Ok(());
-                            }
-                        }
-                    }
-                }
-                offers.push(cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
-                    source: offer_source,
-                    source_name: name.clone().into(),
-                    target: cm_rust::OfferTarget::Child(target_name.to_string()),
-                    target_name: name.clone().into(),
-                }));
-            }
             Capability::Event(event, mode) => {
-                let offer_source = match offer_source {
-                    OfferSource::Parent => cm_rust::OfferSource::Parent,
-                    OfferSource::Self_ => cm_rust::OfferSource::Framework,
-                    OfferSource::Child(_) => {
-                        return Err(BuilderError::EventCannotBeOfferedFromChild(
-                            event.name().to_string(),
-                            route.clone(),
-                        )
-                        .into());
-                    }
-                };
                 for offer in offers.iter() {
                     if let cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
                         source,
@@ -719,7 +532,7 @@ impl RealmBuilder {
                     {
                         if event.name() == target_name.str() && *target == offer_target {
                             if *source != offer_source {
-                                return Err(BuilderError::ConflictingOffers(
+                                return Err(EventError::ConflictingOffers(
                                     route.clone(),
                                     moniker.clone(),
                                     target.clone(),
@@ -742,144 +555,21 @@ impl RealmBuilder {
                     mode: mode.clone(),
                 }));
             }
+            _ => panic!(
+                "attempting to do local routing for a non-event capability: {:?}",
+                route.capability
+            ),
         }
         Ok(())
     }
-
-    // Adds an expose decl for `route.capability` from `source` to `exposes`, checking first that
-    // there aren't any conflicting exposes.
-    fn add_expose_for_capability(
-        exposes: &mut Vec<cm_rust::ExposeDecl>,
-        route: &CapabilityRoute,
-        source: Option<&str>,
-        moniker: &Moniker,
-    ) -> Result<(), Error> {
-        let expose_source = source
-            .map(|s| cm_rust::ExposeSource::Child(s.to_string()))
-            .unwrap_or(cm_rust::ExposeSource::Self_);
-        let target = cm_rust::ExposeTarget::Parent;
-
-        // Check to see if this expose decl already exists. If it does, and it has the same source,
-        // we're good. If it does and it has a different source, then we have an error.
-        for expose in exposes.iter() {
-            match (&route.capability, expose) {
-                (
-                    Capability::Protocol(name),
-                    cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-                        source_name,
-                        source,
-                        ..
-                    }),
-                ) if name == &source_name.str() && *source != expose_source => {
-                    return Err(BuilderError::ConflictingExposes(
-                        route.clone(),
-                        moniker.clone(),
-                        source.clone(),
-                    )
-                    .into())
-                }
-                (
-                    Capability::Directory(name, _, _),
-                    cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-                        source_name,
-                        source,
-                        ..
-                    }),
-                ) if name == &source_name.str() && *source != expose_source => {
-                    return Err(BuilderError::ConflictingExposes(
-                        route.clone(),
-                        moniker.clone(),
-                        source.clone(),
-                    )
-                    .into())
-                }
-                _ => (),
-            }
-        }
-
-        let new_decl = {
-            match &route.capability {
-                Capability::Protocol(name) => {
-                    cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-                        source: expose_source,
-                        source_name: name.clone().into(),
-                        target,
-                        target_name: name.clone().into(),
-                    })
-                }
-                Capability::Directory(name, _, _) => {
-                    cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-                        source: expose_source,
-                        source_name: name.as_str().into(),
-                        target,
-                        target_name: name.as_str().into(),
-                        rights: None,
-                        subdir: None,
-                    })
-                }
-                Capability::Storage(name, _) => {
-                    return Err(BuilderError::StorageCannotBeExposed(name.clone()).into());
-                }
-                Capability::Event(event, _) => {
-                    return Err(
-                        BuilderError::EventsCannotBeExposed(event.name().to_string()).into()
-                    );
-                }
-            }
-        };
-        if !exposes.contains(&new_decl) {
-            exposes.push(new_decl);
-        }
-
-        Ok(())
-    }
-}
-
-// This is needed because there are different enums for offer source depending on capability
-enum OfferSource {
-    Parent,
-    Self_,
-    Child(String),
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::error, cm_rust::*, fidl::endpoints::create_proxy,
-        fidl_fuchsia_data as fdata, fidl_fuchsia_realm_builder as ftrb, fuchsia_async as fasync,
-        futures::TryStreamExt, matches::assert_matches,
+        super::*, crate::error, cm_rust::*, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
+        fuchsia_async as fasync, matches::assert_matches, std::convert::TryInto,
     };
-
-    fn realm_with_mock_framework_intermediary() -> (fasync::Task<()>, Realm) {
-        let (framework_intermediary_proxy, framework_intermediary_server_end) =
-            create_proxy::<ftrb::FrameworkIntermediaryMarker>().unwrap();
-
-        let framework_intermediary_task = fasync::Task::local(async move {
-            let mut framework_intermediary_stream =
-                framework_intermediary_server_end.into_stream().unwrap();
-            let mut mock_counter: u64 = 0;
-            while let Some(request) = framework_intermediary_stream.try_next().await.unwrap() {
-                match request {
-                    ftrb::FrameworkIntermediaryRequest::RegisterDecl { responder, .. } => {
-                        responder.send(&mut Ok("some-fake-url://foobar".to_string())).unwrap()
-                    }
-                    ftrb::FrameworkIntermediaryRequest::RegisterMock { responder } => {
-                        responder.send(&format!("{}", mock_counter)).unwrap();
-                        mock_counter += 1;
-                    }
-                }
-            }
-        });
-        let realm_with_mock_framework_intermediary =
-            Realm::new_with_framework_intermediary_proxy(framework_intermediary_proxy).unwrap();
-
-        (framework_intermediary_task, realm_with_mock_framework_intermediary)
-    }
-
-    fn mocked_builder() -> (fasync::Task<()>, RealmBuilder) {
-        let (task, realm) = realm_with_mock_framework_intermediary();
-        (task, RealmBuilder::build_on(realm))
-    }
 
     async fn build_and_check_results(
         builder: RealmBuilder,
@@ -889,21 +579,36 @@ mod tests {
 
         let mut built_realm = builder.build();
 
-        for (component, decl) in expected_results {
+        for (component, local_decl) in expected_results {
+            let mut remote_decl = built_realm
+                .get_decl(&component.into())
+                .await
+                .expect("component is missing from realm");
+
+            // The assigned mock IDs may not be stable across test runs, so reset them all to 0 before
+            // we compare against expected results.
+            if let Some(program) = &mut remote_decl.program {
+                if let Some(entries) = &mut program.info.entries {
+                    for entry in entries.iter_mut() {
+                        if entry.key == crate::mock::MOCK_ID_KEY {
+                            entry.value =
+                                Some(Box::new(fdata::DictionaryValue::Str("0".to_string())));
+                        }
+                    }
+                }
+            }
+
             assert_eq!(
-                *built_realm
-                    .get_decl_mut(&component.into())
-                    .expect("component is missing from realm"),
-                decl,
+                remote_decl, local_decl,
                 "decl in realm doesn't match expectations for component  {:?}",
                 component
             );
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn component_already_exists_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         let res = builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
@@ -923,10 +628,10 @@ mod tests {
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn added_non_leaf_nodes_error() {
         {
-            let (_mocks_task, mut builder) = mocked_builder();
+            let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
             let res = builder
                 .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
@@ -937,17 +642,16 @@ mod tests {
 
             match res {
                 Ok(_) => panic!("builder commands should have errored"),
-                Err(error::Error::Realm(RealmError::ComponentNotModifiable(m)))
-                    if m == "a".into() =>
-                {
-                    ()
-                }
+                Err(error::Error::FailedToSetDecl(
+                    _,
+                    ffrb::RealmBuilderError::NodeBehindChildDecl,
+                )) => (),
                 Err(e) => panic!("unexpected error: {:?}", e),
             }
         }
 
         {
-            let (_mocks_task, mut builder) = mocked_builder();
+            let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
             let res = builder
                 .add_component("a/b", ComponentSource::url("fuchsia-pkg://a"))
@@ -968,7 +672,7 @@ mod tests {
         }
 
         {
-            let (_mocks_task, mut builder) = mocked_builder();
+            let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
             let res = builder
                 .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
@@ -994,11 +698,11 @@ mod tests {
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn missing_route_source_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1006,22 +710,23 @@ mod tests {
                 capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
                 source: RouteEndpoint::component("b"),
                 targets: vec![RouteEndpoint::component("a")],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Builder(BuilderError::MissingRouteSource(m))) if m == "b".into() => {
-                ()
-            }
+            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::MissingRouteSource)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn empty_route_targets() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1029,17 +734,23 @@ mod tests {
                 capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
                 source: RouteEndpoint::component("a"),
                 targets: vec![],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(e) => assert_matches!(e, error::Error::Builder(BuilderError::EmptyRouteTargets)),
+            Err(e) => assert_matches!(
+                e,
+                error::Error::FailedToRoute(ffrb::RealmBuilderError::RouteTargetsEmpty)
+            ),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn multiple_offer_same_source() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_component("1/src", ComponentSource::url("fuchsia-pkg://a"))
@@ -1063,12 +774,12 @@ mod tests {
         builder.build().initialize().await.unwrap();
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn same_capability_from_different_sources_in_same_node_error() {
         {
-            let (_mocks_task, mut builder) = mocked_builder();
+            let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-            let res = builder
+            builder
                 .add_component("1/a", ComponentSource::url("fuchsia-pkg://a"))
                 .await
                 .unwrap()
@@ -1091,32 +802,19 @@ mod tests {
                     capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
                     source: RouteEndpoint::component("1/b"),
                     targets: vec![RouteEndpoint::component("2/d")],
-                });
+                })
+                .unwrap();
+            let res = builder.build().initialize().await;
 
             match res {
-                Err(error::Error::Builder(BuilderError::ConflictingExposes(
-                    route,
-                    moniker,
-                    source,
-                ))) => {
-                    assert_eq!(
-                        route,
-                        CapabilityRoute {
-                            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
-                            source: RouteEndpoint::component("1/b"),
-                            targets: vec![RouteEndpoint::component("2/d")],
-                        }
-                    );
-                    assert_eq!(moniker, "1".into());
-                    assert_eq!(source, cm_rust::ExposeSource::Child("a".to_string()));
-                }
+                Err(error::Error::FailedToCommit(ffrb::RealmBuilderError::ValidationError)) => (),
                 Err(e) => panic!("unexpected error: {:?}", e),
                 Ok(_) => panic!("builder commands should have errored"),
             }
         }
 
         {
-            let (_mocks_task, mut builder) = mocked_builder();
+            let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
             builder
                 .add_component("1/a", ComponentSource::url("fuchsia-pkg://a"))
@@ -1143,14 +841,16 @@ mod tests {
                     targets: vec![RouteEndpoint::component("2/d")],
                 })
                 .unwrap();
+            let mut realm = builder.build();
+            realm.flush_routes().await.unwrap();
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn missing_route_target_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1158,41 +858,46 @@ mod tests {
                 capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
                 source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::component("b")],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Builder(BuilderError::MissingRouteTarget(m))) if m == "b".into() => {
-                ()
-            }
+            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::MissingRouteTarget)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn route_source_and_target_both_above_root_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder.add_route(CapabilityRoute {
-            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::AboveRoot],
-        });
+        builder
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![RouteEndpoint::AboveRoot],
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
             Err(e) => assert_matches!(
                 e,
-                error::Error::Builder(BuilderError::RouteSourceAndTargetMatch(_))
+                error::Error::FailedToRoute(ffrb::RealmBuilderError::RouteSourceAndTargetMatch)
             ),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn expose_event_from_child_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1200,21 +905,23 @@ mod tests {
                 capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
                 source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::AboveRoot],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Builder(BuilderError::EventsCannotBeExposed(e)))
-                if e == "started" => {}
+            Err(error::Error::Event(error::EventError::EventsCannotBeExposed(_))) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn offer_event_from_child_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1225,21 +932,23 @@ mod tests {
                 capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
                 source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::component("b")],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Builder(BuilderError::EventCannotBeOfferedFromChild(e, _)))
-                if e == "started" => {}
+            Err(error::Error::Event(error::EventError::EventsCannotBeExposed(_))) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn expose_storage_from_child_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1247,20 +956,23 @@ mod tests {
                 capability: Capability::storage("foo", "/foo"),
                 source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::AboveRoot],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Builder(BuilderError::StorageCannotBeExposed(s))) if s == "foo" => {}
+            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::UnableToExpose)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn offer_storage_from_child_error() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        let res = builder
+        builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
             .await
             .unwrap()
@@ -1271,19 +983,21 @@ mod tests {
                 capability: Capability::storage("foo", "/foo"),
                 source: RouteEndpoint::component("a"),
                 targets: vec![RouteEndpoint::component("b")],
-            });
+            })
+            .unwrap();
+        let mut realm = builder.build();
+        let res = realm.flush_routes().await;
 
         match res {
             Ok(_) => panic!("builder commands should have errored"),
-            Err(error::Error::Builder(BuilderError::StorageCannotBeOfferedFromChild(s, _)))
-                if s == "foo" => {}
+            Err(error::Error::FailedToRoute(ffrb::RealmBuilderError::UnableToExpose)) => (),
             Err(e) => panic!("unexpected error: {:?}", e),
         }
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn verify_events_routing() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
         builder
             .add_component(
                 "a",
@@ -1421,7 +1135,7 @@ mod tests {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
                                     value: Some(Box::new(fdata::DictionaryValue::Str(
-                                        "1".to_string(),
+                                        "0".to_string(),
                                     ))),
                                 }]),
                                 ..fdata::Dictionary::EMPTY
@@ -1455,9 +1169,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn verify_storage_routing() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
         builder
             .add_component(
                 "a",
@@ -1521,9 +1235,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn two_sibling_realm_no_mocks() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
@@ -1572,9 +1286,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn two_sibling_realm_both_mocks() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_component(
@@ -1658,7 +1372,7 @@ mod tests {
                                 entries: Some(vec![fdata::DictionaryEntry {
                                     key: mock::MOCK_ID_KEY.to_string(),
                                     value: Some(Box::new(fdata::DictionaryValue::Str(
-                                        "1".to_string(),
+                                        "0".to_string(),
                                     ))),
                                 }]),
                                 ..fdata::Dictionary::EMPTY
@@ -1677,9 +1391,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn mock_with_child() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_component(
@@ -1753,9 +1467,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn three_sibling_realm_one_mock() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_component("a", ComponentSource::url("fuchsia-pkg://a"))
@@ -1869,9 +1583,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn three_siblings_two_targets() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_eager_component("a", ComponentSource::url("fuchsia-pkg://a"))
@@ -1962,9 +1676,9 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fasync::run_singlethreaded(test)]
     async fn two_cousins_realm_one_mock() {
-        let (_mocks_task, mut builder) = mocked_builder();
+        let mut builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
             .add_component("a/b", ComponentSource::url("fuchsia-pkg://a-b"))

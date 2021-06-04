@@ -29,7 +29,7 @@ impl Registry {
     pub async fn validate_and_register(
         self: &Arc<Self>,
         decl: fsys::ComponentDecl,
-    ) -> Result<String, Error> {
+    ) -> Result<String, cm_fidl_validator::ErrorList> {
         cm_fidl_validator::validate(&decl)?;
 
         let mut next_unique_component_id_guard = self.next_unique_component_id.lock().await;

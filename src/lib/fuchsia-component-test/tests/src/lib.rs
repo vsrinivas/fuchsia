@@ -89,7 +89,7 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
     let (send_echo_server_called, receive_echo_server_called) = oneshot::channel();
     let sender = Arc::new(Mutex::new(Some(send_echo_server_called)));
 
-    let mut builder = RealmBuilder::new().await?;
+    let mut builder = RealmBuilder::new().await.unwrap();
     builder
         .add_eager_component("parent-1/echo-client", ComponentSource::url(ECHO_CLIENT_URL))
         .await?
@@ -113,9 +113,9 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
                 RouteEndpoint::component("parent-2/echo-server"),
             ],
         })?;
-    let _child_instance = builder.build().create().await?;
+    let _child_instance = builder.build().create().await.unwrap();
 
-    receive_echo_server_called.await??;
+    receive_echo_server_called.await.unwrap().unwrap();
     Ok(())
 }
 

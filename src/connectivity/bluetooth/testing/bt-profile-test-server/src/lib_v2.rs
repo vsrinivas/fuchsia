@@ -656,8 +656,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_profile_server_added() {
         let test_harness = ProfileTestHarnessV2::new().await;
-        let mut topology = test_harness.builder.build();
-        let pts = topology.contains(&super::test_profile_server_moniker());
+        let topology = test_harness.builder.build();
+        let pts = topology
+            .contains(&super::test_profile_server_moniker())
+            .await
+            .expect("failed to check realm contents");
         assert!(pts);
         topology.create().await.expect("build failed");
     }
@@ -706,11 +709,14 @@ mod tests {
     ) {
         // check that the piconet member exists
         let pico_member_moniker = vec![member_spec.name.to_string()].into();
-        assert!(topology.contains(&pico_member_moniker));
+        assert!(topology
+            .contains(&pico_member_moniker)
+            .await
+            .expect("failed to check realm contents"));
 
         // check that the mock piconet member has an expose declaration for the profile protocol
         let pico_member_decl =
-            topology.get_decl_mut(&pico_member_moniker).expect("piconet member had no decl");
+            topology.get_decl(&pico_member_moniker).await.expect("piconet member had no decl");
         let profile_capability_name =
             CapabilityName(super::mock_profile_service_path(&member_spec));
         let mut expose_proto_decl = ExposeProtocolDecl {
@@ -738,14 +744,14 @@ mod tests {
         {
             expose_proto_decl.source = ExposeSource::Child(member_spec.name.to_string());
             let root_expose_decl = ExposeDecl::Protocol(expose_proto_decl);
-            let root = topology.get_decl_mut(&vec![].into()).expect("failed to get root");
+            let root = topology.get_decl(&vec![].into()).await.expect("failed to get root");
             assert!(root.exposes.contains(&root_expose_decl));
         }
 
         // Check that the root offers ProfileTest to the piconet member from
         // the Profile Test Server
         let profile_test_name = CapabilityName(bredr::ProfileTestMarker::SERVICE_NAME.to_string());
-        let root = topology.get_decl_mut(&vec![].into()).expect("failed to get root");
+        let root = topology.get_decl(&vec![].into()).await.expect("failed to get root");
         let offer_profile_test = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Child(super::test_profile_server_moniker().to_string()),
             source_name: profile_test_name.clone(),
@@ -778,8 +784,11 @@ mod tests {
             .expect("failed to add profile");
 
         let mut topology = test_harness.builder.build();
-        assert!(topology.contains(&profile_moniker));
-        assert!(topology.contains(&vec![interposer_name.clone()].into()));
+        assert!(topology.contains(&profile_moniker).await.expect("failed to check realm contents"));
+        assert!(topology
+            .contains(&vec![interposer_name.clone()].into())
+            .await
+            .expect("failed to check realm contents"));
 
         // validate routes
 
@@ -793,7 +802,8 @@ mod tests {
             target_name: profile_capability_name.clone(),
         });
         let interposer = topology
-            .get_decl_mut(&vec![interposer_name.clone()].into())
+            .get_decl(&vec![interposer_name.clone()].into())
+            .await
             .expect("interposer not found!");
         interposer.exposes.contains(&profile_expose);
 
@@ -817,7 +827,7 @@ mod tests {
             target_name: profile_capability_name.clone(),
             dependency_type: DependencyType::Strong,
         });
-        let root = topology.get_decl_mut(&vec![].into()).expect("unable to get root decl");
+        let root = topology.get_decl(&vec![].into()).await.expect("unable to get root decl");
         assert!(root.offers.contains(&profile_offer));
 
         // ProfileTest is offered by root to interposer from Profile Test Server
@@ -866,7 +876,7 @@ mod tests {
             .expect("failed to add profile");
 
         let mut topology = test_harness.builder.build();
-        assert!(topology.contains(&profile_moniker));
+        assert!(topology.contains(&profile_moniker).await.expect("failed to check realm contents"));
 
         // Validate the additional capability routes. See `test_add_profile` for validation
         // of Profile, ProfileTest, and LogSink routes.
@@ -897,7 +907,7 @@ mod tests {
             dependency_type: DependencyType::Strong,
         });
 
-        let root = topology.get_decl_mut(&vec![].into()).expect("unable to get root decl");
+        let root = topology.get_decl(&vec![].into()).await.expect("unable to get root decl");
         assert!(root.exposes.contains(&fake_capability_expose1));
         assert!(root.exposes.contains(&fake_capability_expose2));
         assert!(root.offers.contains(&fake_capability_offer3));

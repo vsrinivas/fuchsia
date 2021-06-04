@@ -113,11 +113,11 @@ impl From<ftrb::MockComponentStartInfo> for MockHandles {
 }
 
 pub struct MocksRunner {
-    mocks: Arc<Mutex<HashMap<String, Mock>>>,
+    pub(crate) mocks: Arc<Mutex<HashMap<String, Mock>>>,
 
     // We want the async task handling run requests from the framework intermediary to run as long
     // as this MocksRunner is alive, so hold on to the task for it in this struct.
-    _event_stream_handling_task: fasync::Task<()>,
+    pub(crate) _event_stream_handling_task: fasync::Task<()>,
 }
 
 impl MocksRunner {

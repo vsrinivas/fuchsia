@@ -4,8 +4,7 @@
 
 use {
     crate::{builder, Moniker},
-    anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon as zx,
+    anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_realm_builder as ffrb,
     thiserror::{self, Error},
 };
 
@@ -16,60 +15,33 @@ pub enum Error {
 
     #[error("error encountered while assembling realm")]
     Realm(#[from] RealmError),
+
+    #[error("error encountered while assembling realm")]
+    Event(#[from] EventError),
+
+    #[error("an internal error was encountered while working with the framework intermediary")]
+    FidlError(#[from] fidl::Error),
+
+    #[error("failed to set component decl for {0}: {1:?}")]
+    FailedToSetDecl(Moniker, ffrb::RealmBuilderError),
+
+    #[error("failed to retrieve component decl for {0}: {1:?}")]
+    FailedToGetDecl(Moniker, ffrb::RealmBuilderError),
+
+    #[error("failed to mark component {0} as eager: {1:?}")]
+    FailedToMarkAsEager(Moniker, ffrb::RealmBuilderError),
+
+    #[error("failed to commit realm: {0:?}")]
+    FailedToCommit(ffrb::RealmBuilderError),
+
+    #[error("failed to route capability: {0:?}")]
+    FailedToRoute(ffrb::RealmBuilderError),
 }
 
 #[derive(Debug, Error)]
 pub enum BuilderError {
-    #[error("can't add {} to the realm because {} already exists, and added components must be leaf nodes in the generated realm", _0, _1)]
-    AddedComponentsMustBeLeafNodes(Moniker, Moniker),
-
     #[error("can't add {} to the realm as a component with that name already exists", _0)]
     ComponentAlreadyExists(Moniker),
-
-    #[error("can't route a capability to the same place it comes from: {:?}", _0)]
-    RouteSourceAndTargetMatch(builder::CapabilityRoute),
-
-    #[error("route source {} doesn't exist", _0)]
-    MissingRouteSource(Moniker),
-
-    #[error("route targets cannot be empty")]
-    EmptyRouteTargets,
-
-    #[error("route target {} doesn't exist", _0)]
-    MissingRouteTarget(Moniker),
-
-    #[error("route already exists: {:?}", _0)]
-    RouteAlreadyExists(builder::CapabilityRoute),
-
-    #[error("the root component cannot have a url source")]
-    RootComponentCantHaveUrl,
-
-    #[error("component name is invalid: {:?}", _0)]
-    InvalidName(cm_rust::Error),
-
-    #[error("failed to add route because {:?} is already being exposed by {:?} from {:?}", _0.capability, _1, _2)]
-    ConflictingExposes(builder::CapabilityRoute, Moniker, cm_rust::ExposeSource),
-
-    #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
-    ConflictingOffers(builder::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
-    #[error(
-        "failed to add storage route because storage {0} cannot be offered from a child: {0:?}"
-    )]
-    StorageCannotBeOfferedFromChild(String, builder::CapabilityRoute),
-
-    #[error(
-        "failed to add event route because an event {0} cannot be offered from a child: {0:?}"
-    )]
-    EventCannotBeOfferedFromChild(String, builder::CapabilityRoute),
-
-    #[error("failed to add route because an event ({0}) cannot be exposed")]
-    EventsCannotBeExposed(String),
-
-    #[error("failed to add route because storage ({0}) cannot be exposed")]
-    StorageCannotBeExposed(String),
-
-    #[error("storage ({0}) must come from abvoe root")]
-    StorageMustComeFromAboveRoot(String),
 }
 
 #[derive(Debug, Error)]
@@ -92,38 +64,34 @@ pub enum RealmError {
     #[error("failed to use the framework intermediary: {:?}", _0)]
     FailedToUseFrameworkIntermediary(fidl::Error),
 
-    #[error("root component has already been added")]
-    RootComponentAlreadyExists,
-
-    #[error("root component has not been set yet")]
-    RootComponentNotSetYet,
-
-    #[error("can't add component {}, as one of its parents doesn't exist", _0)]
-    ParentComponentDoesntExist(Moniker),
-
-    #[error("can't add {} to the realm as something with that name already exists", _0)]
-    ComponentAlreadyExists(Moniker),
-
-    #[error("component doesn't exist: {}", _0)]
-    ComponentDoesntExist(Moniker),
-
-    #[error("the parent for the component {} doesn't have the child", _0)]
-    MissingChild(Moniker),
-
     #[error("failed to create child component: {:?}", _0)]
     FailedToCreateChild(anyhow::Error),
+}
 
-    #[error("unable to create component {}, decl is invalid: {:?}, {:?}", _0, _1, _2)]
-    InvalidDecl(Moniker, cm_fidl_validator::ErrorList, fsys::ComponentDecl),
+#[derive(Debug, Error)]
+pub enum EventError {
+    #[error("route source {} doesn't exist", _0)]
+    MissingRouteSource(Moniker),
 
-    #[error("the framework intermediary rejected a component decl: {:?}", _0)]
-    DeclRejectedByRegistry(zx::Status),
+    #[error("route targets cannot be empty")]
+    EmptyRouteTargets,
 
-    #[error("the root component can not be marked as eager")]
-    CantMarkRootAsEager,
+    #[error("can't route a capability to the same place it comes from: {:?}", _0)]
+    RouteSourceAndTargetMatch(builder::CapabilityRoute),
 
-    #[error("cannot modify component {}, as it comes from a URL", _0)]
-    ComponentNotModifiable(Moniker),
+    #[error("route target {} doesn't exist", _0)]
+    MissingRouteTarget(Moniker),
+
+    #[error(
+        "failed to add event route because an event {0} cannot be offered from a child: {0:?}"
+    )]
+    EventCannotBeOfferedFromChild(String, builder::CapabilityRoute),
+
+    #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
+    ConflictingOffers(builder::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
+
+    #[error("failed to add route because an event ({0}) cannot be exposed")]
+    EventsCannotBeExposed(String),
 }
 
 // TODO: Define an error type for ScopedInstance

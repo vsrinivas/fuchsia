@@ -4,13 +4,65 @@
 
 library fuchsia.realm.builder;
 
+using fuchsia.component;
 using fuchsia.component.runner;
 using fuchsia.component.types;
 using fuchsia.io;
+using fuchsia.io2;
 using fuchsia.sys2;
-using zx;
+
+enum RealmBuilderError : uint32 {
+    /// An attempt was made to interact with a component declaration for a
+    /// component which is located behind a child declaration, and is thus not
+    /// directly available to RealmBuilder.
+    NODE_BEHIND_CHILD_DECL = 0;
+
+    /// An attempt was made to retrieve a child of a component which does not
+    /// exist.
+    NO_SUCH_CHILD = 1;
+
+    /// The root component cannot have a URL-based source.
+    ROOT_CANNOT_BE_SET_TO_URL = 2;
+
+    /// The root component cannot be marked as eager.
+    ROOT_CANNOT_BE_EAGER = 3;
+
+    /// RealmBuilder failed to parse the FIDL from one of the arguments.
+    BAD_FIDL = 4;
+
+    /// A required field was missing in the input.
+    MISSING_FIELD = 5;
+
+    /// The set of targets for a route is not allowed to be empty.
+    ROUTE_TARGETS_EMPTY = 6;
+
+    /// The source for the route does not exist.
+    MISSING_ROUTE_SOURCE = 7;
+
+    /// A target for the route does not exist.
+    MISSING_ROUTE_TARGET = 8;
+
+    /// A target for the route is equal to the source, and it is impossible to
+    /// route a component's capability to itself.
+    ROUTE_SOURCE_AND_TARGET_MATCH = 9;
+
+    /// A component manifest has failed validation.
+    VALIDATION_ERROR = 10;
+
+    /// The requested route is impossible because the capability type cannot be
+    /// exposed.
+    UNABLE_TO_EXPOSE = 11;
+
+    /// The source of the route is invalid because currently "above root" is the
+    /// only supported source for storage capabilities.
+    STORAGE_SOURCE_INVALID = 12;
+
+    /// There is no component in this realm with the given moniker.
+    MONIKER_NOT_FOUND = 13;
+};
 
 const uint32 MAX_MOCK_ID_LENGTH = 1000;
+const uint32 MAX_LEN_ROUTE_ENDPOINTS = 100;
 
 /// The handles a mock component uses to consume capabilities from and provide
 /// capabilities to the framework.
@@ -19,24 +71,111 @@ resource table MockComponentStartInfo {
     2: request<fuchsia.io.Directory> outgoing_dir;
 };
 
-/// The protocol used to coordinate state between the realm builder library and
-/// the framework intermediary child component. This is necessary because the
-/// realm builder library is likely running in a component using a test runner,
-/// and thus the outgoing directory handle is unavailable and the library
-/// cannot expose the runner and resolver services itself. To work around this,
-/// a child component using the elf runner exposes these services and this
-/// protocol is used to interact with the child.
+/// A component to be added to the realm, which is either a component
+/// declaration that RealmBuilder should provide or an external URL that should
+/// be referenced in a child decl.
+flexible union Component {
+    1: fuchsia.sys2.ComponentDecl decl;
+    2: string:fuchsia.component.types.MAX_URL_LENGTH url;
+};
+
+/// A capability route, denoting where a capability comes from and where it goes
+/// to.
+table CapabilityRoute {
+    1: Capability capability;
+    2: RouteEndpoint source;
+    3: vector<RouteEndpoint>:MAX_LEN_ROUTE_ENDPOINTS targets;
+};
+
+/// A capability to be routed
+flexible union Capability {
+    1: ProtocolCapability protocol;
+    2: DirectoryCapability directory;
+    3: StorageCapability storage;
+};
+
+/// A protocol capability
+table ProtocolCapability {
+    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+};
+
+/// A directory capability
+table DirectoryCapability {
+    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+    2: string:fuchsia.component.MAX_PATH_LENGTH path;
+    3: fuchsia.io2.Rights rights;
+};
+
+/// A storage capability
+table StorageCapability {
+    1: string:fuchsia.component.MAX_NAME_LENGTH name;
+    2: string:fuchsia.component.MAX_PATH_LENGTH path;
+};
+
+/// The endpoint of a capability route, describing either the provider or
+/// consumer of a capability.
+flexible union RouteEndpoint {
+    1: string:fuchsia.component.MAX_PATH_LENGTH component;
+    2: AboveRoot above_root;
+};
+
+/// The capability route's endpoint exists above the constructed realm, and is
+/// offered to the realm's collection or will be accessed by the parent using
+/// `fuchsia.sys2#Realm`.
+struct AboveRoot {
+};
+
+/// This stateful protocol can be used to construct a new component realm at
+/// runtime. This new realm is built iteratively by calling the methods on this
+/// protocol to add new components and capability routes between them. Due to
+/// the stateful nature of this protocol, one realm may be constructed per
+/// connection.
+///
+/// Once the realm details are successfully processed, `Commit` should be called
+/// to produce a URL which can be used to create the component.
 [Discoverable]
 protocol FrameworkIntermediary {
-    /// Registers a new component declaration, and returns the URL at which the
-    /// framework intermediary will make this declaration available to the
-    /// framework.
-    RegisterDecl(fuchsia.sys2.ComponentDecl decl) -> (string:fuchsia.component.types.MAX_URL_LENGTH component_url) error zx.status;
+    /// Sets the component to the provided component source. If the source is
+    /// a `Component::decl` then a new node is added to the internal tree
+    /// structure maintained for this connection. If the source is a
+    /// `Component::url` then a new ChildDecl is added to the parent of the
+    /// moniker. If any parents for the component do not exist then they are
+    /// added. If a different component already exists under this moniker,
+    /// then it is replaced.
+    SetComponent(string:fuchsia.component.MAX_MONIKER_LENGTH moniker, Component component) -> () error RealmBuilderError;
+
+    /// Returns the current value of a component decl in the realm being
+    /// constructed. Note that this cannot retrieve decls through external
+    /// URLs, so for example if `SetComponent` is called with `Component::url`
+    /// and then `GetComponentDecl` is called with the same moniker, an error
+    /// will be returned.
+    GetComponentDecl(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> (fuchsia.sys2.ComponentDecl component_decl) error RealmBuilderError;
+
+    /// Adds a capability route to the realm being constructed, adding any
+    /// necessary offers, exposes, uses, and capability declarations to any
+    /// component involved in the route. Note that components added with
+    /// `Component::url` can not be modified, and they are presumed to already
+    /// have the declarations needed for the route to be valid. If an error is
+    /// returned some of the components in the route may have been updated while
+    /// others were not.
+    RouteCapability(CapabilityRoute route) -> () error RealmBuilderError;
+
+    /// Marks the component and any ancestors of it as eager, ensuring that the
+    /// component is started immediately once the realm is bound to.
+    MarkAsEager(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> () error RealmBuilderError;
+
+    /// Returns true if the component exists in this realm.
+    Contains(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> (bool exists);
+
+    /// Assembles the realm being constructed and returns the URL for the root
+    /// component in the realm, which may then be used to create a new component
+    /// in any collection where fuchsia-test-component is properly set up.
+    Commit() -> (string:fuchsia.component.types.MAX_URL_LENGTH root_component_url) error RealmBuilderError;
 
     /// Registers a new mock component. When a mock component with the returned
     /// ID in its program.mock_id field is run, `OnMockRunRequest` is called
     /// over the same channel that the mock was registered on.
-    RegisterMock() -> (string:MAX_MOCK_ID_LENGTH mock_id);
+    NewMockId() -> (string:MAX_MOCK_ID_LENGTH mock_id);
 
     /// The component framework is requesting that a mock component start
     /// running
