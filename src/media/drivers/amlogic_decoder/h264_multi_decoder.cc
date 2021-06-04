@@ -434,7 +434,6 @@ zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_
   memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
   ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
   secondary_firmware_->CacheFlush(0, kSecondaryFirmwareBufferSize);
-  BarrierAfterFlush();
   return ZX_OK;
 }
 
@@ -478,7 +477,6 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
       firmware_ = create_result.take_value();
       memcpy(firmware_->virt_base(), data, kFirmwareSize);
       firmware_->CacheFlush(0, kFirmwareSize);
-      BarrierAfterFlush();
     }
     status = LoadSecondaryFirmware(data, firmware_size);
     if (status != ZX_OK) {
