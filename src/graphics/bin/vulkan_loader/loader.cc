@@ -31,7 +31,13 @@ void LoaderImpl::OnIcdListChanged(LoaderApp* app) {
       it = callbacks_.erase(it);
     }
   }
-  if (callbacks_.empty()) {
+  if (!app->HavePendingActions()) {
+    for (auto& handle : connect_manifest_handles_) {
+      app_->ServeManifestFs(std::move(handle));
+    }
+    connect_manifest_handles_.clear();
+  }
+  if (!waiting_for_callbacks()) {
     app_->RemoveObserver(this);
   }
 }
@@ -43,21 +49,38 @@ void LoaderImpl::Get(std::string name, GetCallback callback) {
 
 void LoaderImpl::ConnectToDeviceFs(zx::channel channel) { app_->ServeDeviceFs(std::move(channel)); }
 
+void LoaderImpl::ConnectToManifestFs(fuchsia::vulkan::loader::ConnectToManifestOptions options,
+                                     zx::channel channel) {
+  if (!(options & fuchsia::vulkan::loader::ConnectToManifestOptions::WAIT_FOR_IDLE) ||
+      !app_->HavePendingActions()) {
+    app_->ServeManifestFs(std::move(channel));
+    return;
+  }
+
+  bool was_waiting_for_callbacks = waiting_for_callbacks();
+  connect_manifest_handles_.push_back(std::move(channel));
+  if (waiting_for_callbacks() && !was_waiting_for_callbacks) {
+    app_->AddObserver(this);
+  }
+}
+
 void LoaderImpl::GetSupportedFeatures(GetSupportedFeaturesCallback callback) {
   fuchsia::vulkan::loader::Features features =
       fuchsia::vulkan::loader::Features::CONNECT_TO_DEVICE_FS |
-      fuchsia::vulkan::loader::Features::GET;
+      fuchsia::vulkan::loader::Features::GET |
+      fuchsia::vulkan::loader::Features::CONNECT_TO_MANIFEST_FS;
   callback(features);
 }
 
 void LoaderImpl::AddCallback(std::string name, fit::function<void(zx::vmo)> callback) {
+  bool was_waiting_for_callbacks = waiting_for_callbacks();
   std::optional<zx::vmo> vmo = app_->GetMatchingIcd(name);
   if (vmo) {
     callback(*std::move(vmo));
     return;
   }
   callbacks_.emplace_back(std::make_pair(std::move(name), std::move(callback)));
-  if (callbacks_.size() == 1) {
+  if (waiting_for_callbacks() && !was_waiting_for_callbacks) {
     app_->AddObserver(this);
   }
 }

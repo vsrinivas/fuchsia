@@ -21,7 +21,7 @@ class GoldfishDevice : public GpuDevice {
   static std::unique_ptr<GoldfishDevice> Create(LoaderApp* app, int dir_fd, std::string name,
                                                 inspect::Node* parent);
 
-  const IcdList& icd_list() const override { return icd_list_; }
+  IcdList& icd_list() override { return icd_list_; }
 
  private:
   explicit GoldfishDevice(LoaderApp* app) : GpuDevice(app) {}

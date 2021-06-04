@@ -98,6 +98,11 @@ resource("metadata") {
   outputs = [ "data/test_metadata/metadata.json" ]
 }
 
+resource("manifest-json") {
+  sources = [ "libvulkan_fake.json" ]
+  outputs = [ "data/libvulkan_fake.json" ]
+}
+
 fuchsia_component("test_vulkan_driver") {
   testonly = true
   manifest = "meta/test_vulkan_driver.cml"
@@ -110,6 +115,7 @@ fuchsia_test_package("vulkan_loader_tests") {
     ":vulkan_loader_unittest",
   ]
   deps = [
+    ":manifest-json",
     ":test_vulkan_driver",
     ":vulkan_loader_test_driver",
     ":vulkan_loader_test_lib_provider",

@@ -18,6 +18,7 @@
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/observer_list.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -44,7 +45,10 @@ class LoaderApp {
    private:
     friend class LoaderApp;
 
-    explicit PendingActionToken(LoaderApp* app) : app_(app) { app->pending_action_count_++; }
+    explicit PendingActionToken(LoaderApp* app) : app_(app) {
+      std::lock_guard lock(app->pending_action_mutex_);
+      app->pending_action_count_++;
+    }
 
     LoaderApp* app_;
 
@@ -59,6 +63,7 @@ class LoaderApp {
 
   zx_status_t InitDeviceFs();
   zx_status_t ServeDeviceFs(zx::channel dir_request);
+  zx_status_t ServeManifestFs(zx::channel dir_request);
 
   std::shared_ptr<IcdComponent> CreateIcdComponent(std::string component_url);
 
@@ -80,9 +85,17 @@ class LoaderApp {
 
   std::unique_ptr<PendingActionToken> GetPendingActionToken();
 
+  fbl::RefPtr<fs::PseudoDir> manifest_fs_root_node() { return manifest_fs_root_node_; }
+
+  bool HavePendingActions() const {
+    std::lock_guard lock(pending_action_mutex_);
+    return pending_action_count_ > 0 || icd_notification_pending_;
+  }
+
  private:
   friend class LoaderActionToken;
   void NotifyIcdsChangedOnMainThread();
+  void NotifyIcdsChangedLocked() FXL_REQUIRE(pending_action_mutex_);
 
   FIT_DECLARE_THREAD_CHECKER(main_thread_);
 
@@ -93,13 +106,17 @@ class LoaderApp {
 
   inspect::Node icds_node_;
 
-  std::atomic_bool icd_notification_pending_{};
+  mutable std::mutex pending_action_mutex_;
+  bool icd_notification_pending_ FXL_GUARDED_BY(pending_action_mutex_) = false;
 
-  // Keep track of the number of pending operations that have to potential to modify the tree.
-  std::atomic<uint64_t> pending_action_count_{};
+  // Keep track of the number of pending operations that have the potential to modify the tree.
+  uint64_t pending_action_count_ FXL_GUARDED_BY(pending_action_mutex_) = 0;
 
   fs::SynchronousVfs device_fs_;
   fbl::RefPtr<fs::PseudoDir> device_root_node_;
+
+  fs::SynchronousVfs manifest_fs_;
+  fbl::RefPtr<fs::PseudoDir> manifest_fs_root_node_;
 
   std::unique_ptr<fsl::DeviceWatcher> gpu_watcher_;
   std::unique_ptr<fsl::DeviceWatcher> goldfish_watcher_;

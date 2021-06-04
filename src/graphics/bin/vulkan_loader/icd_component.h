@@ -16,6 +16,7 @@
 #include "rapidjson/document.h"
 #include "sdk/lib/sys/inspect/cpp/component.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/storage/vfs/cpp/pseudo_file.h"
 
 class LoaderApp;
 
@@ -60,6 +61,19 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
     return stage_;
   }
 
+  std::optional<std::string> GetManifestFileName() {
+    std::lock_guard lock(vmo_lock_);
+    if (!vmo_info_)
+      return {};
+    return child_instance_name_ + vmo_info_->library_path + ".json";
+  }
+
+  void AddManifestToFs();
+  void RemoveManifestFromFs();
+  const std::string& child_instance_name() const { return child_instance_name_; }
+
+  fbl::RefPtr<fs::PseudoFile> manifest_file() { return manifest_file_; }
+
  private:
   struct VmoInfo {
     std::string library_path;
@@ -78,6 +92,8 @@ class IcdComponent : public std::enable_shared_from_this<IcdComponent> {
   fuchsia::sys2::RealmPtr realm_;
   std::string child_instance_name_;
   inspect::StringProperty initialization_status_;
+
+  fbl::RefPtr<fs::PseudoFile> manifest_file_;
 
   mutable std::mutex vmo_lock_;
   LookupStages stage_ FXL_GUARDED_BY(vmo_lock_) = LookupStages::kStarted;

@@ -24,6 +24,7 @@ std::unique_ptr<MagmaDevice> MagmaDevice::Create(LoaderApp* app, int dir_fd, std
 bool MagmaDevice::Initialize(int dir_fd, std::string name, inspect::Node* parent) {
   FIT_DCHECK_IS_THREAD_VALID(main_thread_);
   node() = parent->CreateChild("magma-" + name);
+  icd_list_.Initialize(&node());
   auto pending_action_token = app()->GetPendingActionToken();
   fdio_t* dir_fdio = fdio_unsafe_fd_to_io(dir_fd);
   if (!dir_fdio) {

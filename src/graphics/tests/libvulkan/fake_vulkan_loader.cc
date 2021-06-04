@@ -63,6 +63,9 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
     callback(features);
   }
 
+  void ConnectToManifestFs(fuchsia::vulkan::loader::ConnectToManifestOptions options,
+                           zx::channel channel) override {}
+
   fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
 };
 

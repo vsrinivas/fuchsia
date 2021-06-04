@@ -16,12 +16,18 @@ class IcdList {
  public:
   IcdList();
 
-  void Add(std::shared_ptr<IcdComponent> component) { components_.push_back(std::move(component)); }
+  void Initialize(inspect::Node* parent_node);
+
+  void Add(std::shared_ptr<IcdComponent> component);
+
+  // Updates information about which component is active whenever a component changes state.
+  bool UpdateCurrentComponent();
 
   // Finds an ICD in the list with a `library_path` matching this string.
   std::optional<zx::vmo> GetVmoMatchingSystemLib(const std::string& library_path) const;
 
  private:
+  inspect::StringProperty active_icd_;
   std::vector<std::shared_ptr<IcdComponent>> components_;
 };
 

@@ -140,7 +140,8 @@ TEST(Icd, BadManifest) {
   auto good_doc = parser.ParseFromString(R"({
     "file_path": "bin/pkg-server",
     "library_path": "pkg-server2",
-    "version": 1
+    "version": 1,
+    "manifest_path": "data"
 })",
                                          "test1");
   EXPECT_TRUE(IcdComponent::ValidateMetadataJson("a", good_doc));
@@ -148,14 +149,16 @@ TEST(Icd, BadManifest) {
   auto bad_doc1 = parser.ParseFromString(R"({
     "file_path": "bin/pkg-server",
     "library_path": "pkg-server2",
-    "version": 2
+    "version": 2,
+    "manifest_path": "data"
 })",
                                          "tests2");
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("b", bad_doc1));
 
   auto bad_doc2 = parser.ParseFromString(R"({
     "library_path": "pkg-server2",
-    "version": 1
+    "version": 1,
+    "manifest_path": "data"
 })",
                                          "test3");
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("c", bad_doc2));
@@ -163,7 +166,8 @@ TEST(Icd, BadManifest) {
   auto bad_doc3 = parser.ParseFromString(R"({
     "file_path": "bin/pkg-server",
     "library_path": 1,
-    "version": 1
+    "version": 1,
+    "manifest_path": "data"
 })",
                                          "tests4");
   EXPECT_FALSE(IcdComponent::ValidateMetadataJson("d", bad_doc3));

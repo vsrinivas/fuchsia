@@ -22,6 +22,7 @@ std::unique_ptr<GoldfishDevice> GoldfishDevice::Create(LoaderApp* app, int dir_f
 
 bool GoldfishDevice::Initialize(int dir_fd, std::string name, inspect::Node* parent) {
   node() = parent->CreateChild("goldfish-" + name);
+  icd_list_.Initialize(&node());
   auto pending_action_token = app()->GetPendingActionToken();
   fdio_t* dir_fdio = fdio_unsafe_fd_to_io(dir_fd);
   if (!dir_fdio) {

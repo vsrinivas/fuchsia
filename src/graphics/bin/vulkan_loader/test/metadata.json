@@ -1,5 +1,6 @@
 {
     "file_path": "bin/pkg-server",
     "library_path": "pkg-server2",
+    "manifest_path": "data/libvulkan_fake.json",
     "version": 1
 }

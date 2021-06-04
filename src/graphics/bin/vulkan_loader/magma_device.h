@@ -22,7 +22,7 @@ class MagmaDevice : public GpuDevice {
   static std::unique_ptr<MagmaDevice> Create(LoaderApp* app, int dir_fd, std::string name,
                                              inspect::Node* parent);
 
-  const IcdList& icd_list() const override { return icd_list_; }
+  IcdList& icd_list() override { return icd_list_; }
 
  private:
   explicit MagmaDevice(LoaderApp* app) : GpuDevice(app) {}

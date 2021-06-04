@@ -20,11 +20,13 @@ LoaderApp::LoaderApp(sys::ComponentContext* context, async_dispatcher_t* dispatc
       dispatcher_(dispatcher),
       inspector_(context),
       device_fs_(dispatcher),
+      manifest_fs_(dispatcher),
       fdio_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   fdio_loop_.StartThread("fdio_loop");
   inspector_.Health().StartingUp();
   devices_node_ = inspector_.root().CreateChild("devices");
   icds_node_ = inspector_.root().CreateChild("icds");
+  manifest_fs_root_node_ = fbl::MakeRefCounted<fs::PseudoDir>();
 }
 LoaderApp::~LoaderApp() {}
 
@@ -59,6 +61,12 @@ zx_status_t LoaderApp::ServeDeviceFs(zx::channel dir_request) {
   auto options = fs::VnodeConnectionOptions::ReadWrite();
   return device_fs_.Serve(device_root_node_,
                           fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+}
+
+zx_status_t LoaderApp::ServeManifestFs(zx::channel dir_request) {
+  auto options = fs::VnodeConnectionOptions::ReadWrite();
+  return manifest_fs_.Serve(manifest_fs_root_node_,
+                            fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
 }
 
 zx_status_t LoaderApp::InitDeviceWatcher() {
@@ -119,14 +127,30 @@ std::shared_ptr<IcdComponent> LoaderApp::CreateIcdComponent(std::string componen
 
 void LoaderApp::NotifyIcdsChanged() {
   // This can be called on any thread.
-  if (!icd_notification_pending_.exchange(true)) {
-    async::PostTask(dispatcher_, [this]() { this->NotifyIcdsChangedOnMainThread(); });
-  }
+  std::lock_guard lock(pending_action_mutex_);
+  NotifyIcdsChangedLocked();
+}
+
+void LoaderApp::NotifyIcdsChangedLocked() {
+  if (icd_notification_pending_)
+    return;
+  icd_notification_pending_ = true;
+  async::PostTask(dispatcher_, [this]() { this->NotifyIcdsChangedOnMainThread(); });
 }
 
 void LoaderApp::NotifyIcdsChangedOnMainThread() {
   FIT_DCHECK_IS_THREAD_VALID(main_thread_);
-  icd_notification_pending_ = false;
+  {
+    std::lock_guard lock(pending_action_mutex_);
+    icd_notification_pending_ = false;
+  }
+  bool have_icd = false;
+  for (auto& device : devices_) {
+    have_icd |= device->icd_list().UpdateCurrentComponent();
+  }
+  if (have_icd) {
+    inspector_.Health().Ok();
+  }
   for (auto& observer : observer_list_)
     observer.OnIcdListChanged(this);
 }
@@ -136,13 +160,15 @@ std::optional<zx::vmo> LoaderApp::GetMatchingIcd(const std::string& name) {
   for (auto& device : devices_) {
     auto res = device->icd_list().GetVmoMatchingSystemLib(name);
     if (res) {
-      inspector_.Health().Ok();
       return std::optional<zx::vmo>(std::move(res));
     }
   }
-  // If not actions are pending then assume there will never be a match.
-  if (pending_action_count_ == 0) {
-    return zx::vmo();
+  {
+    std::lock_guard lock(pending_action_mutex_);
+    // If not actions are pending then assume there will never be a match.
+    if (pending_action_count_ == 0) {
+      return zx::vmo();
+    }
   }
   return {};
 }
@@ -152,7 +178,8 @@ std::unique_ptr<LoaderApp::PendingActionToken> LoaderApp::GetPendingActionToken(
 }
 
 LoaderApp::PendingActionToken::~PendingActionToken() {
+  std::lock_guard lock(app_->pending_action_mutex_);
   if (--app_->pending_action_count_ == 0) {
-    app_->NotifyIcdsChanged();
+    app_->NotifyIcdsChangedLocked();
   }
 }

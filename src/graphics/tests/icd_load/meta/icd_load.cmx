@@ -4,7 +4,10 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "bin/icd_load"
+        "binary": "bin/icd_load",
+        "env_vars": [
+            "VK_LOADER_DEBUG=all"
+        ]
     },
     "sandbox": {
         "features": [

@@ -11,6 +11,14 @@ flexible bits Features {
     GET = 1;
     /// Implements ConnectToDeviceFs().
     CONNECT_TO_DEVICE_FS = 2;
+    /// Implements ConnectToManifestFs().
+    CONNECT_TO_MANIFEST_FS = 4;
+};
+
+flexible bits ConnectToManifestOptions {
+    /// Wait for the loader to finish processing current ICD loading/unloading
+    /// operations before completing the connection.
+    WAIT_FOR_IDLE = 1;
 };
 
 /// Service to provide Vulkan libraries to the loader.
@@ -20,6 +28,14 @@ protocol Loader {
     /// service. Returns a VMO suitable for loading as a dynamic library on
     /// success, a null handle on failure.
     Get(string:64 name) -> (zx.handle:VMO? lib);
+
+    /// Connects to a FS serving fuchsia.io containing all Vulkan ICD manifests.
+    /// See
+    /// https://github.com/KhronosGroup/Vulkan-Loader/blob/master/loader/LoaderAndLayerInterface.md#icd-manifest-file-format
+    /// for a description of the manifest file format.  Manifests will always
+    /// appear in this directory after the relevant device appears in
+    /// ConnectToDeviceFs().
+    ConnectToManifestFs(ConnectToManifestOptions options, zx.handle:CHANNEL channel);
 
     /// Connects to a FS serving fuchsia.io containing all device nodes
     /// potentially relevant to ICDs.  /dev/<devname> will be served under

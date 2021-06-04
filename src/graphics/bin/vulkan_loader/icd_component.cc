@@ -16,6 +16,7 @@
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/schema.h"
 #include "src/graphics/bin/vulkan_loader/app.h"
+#include "src/lib/files/file.h"
 #include "src/lib/json_parser/json_parser.h"
 
 namespace {
@@ -27,9 +28,10 @@ const char* kSchema = R"(
  "properties": {
    "version": {"type":"number", "maximum": 1, "minimum": 1},
    "library_path": {"type":"string"},
-   "file_path": {"type":"string"}
+   "file_path": {"type":"string"},
+   "manifest_path": {"type":"string"}
  },
- "required": ["version", "library_path", "file_path"]
+ "required": ["version", "library_path", "file_path", "manifest_path"]
 }
 )";
 
@@ -38,6 +40,7 @@ const char* kCollectionName = "icd-loaders";
 }  // namespace
 
 IcdComponent::~IcdComponent() {
+  RemoveManifestFromFs();
   if (realm_ && !child_instance_name_.empty()) {
     fuchsia::sys2::ChildRef child_ref;
 
@@ -45,6 +48,22 @@ IcdComponent::~IcdComponent() {
     child_ref.collection = kCollectionName;
     realm_->DestroyChild(std::move(child_ref),
                          [](fit::result<void, fuchsia::component::Error> result) {});
+  }
+}
+
+void IcdComponent::AddManifestToFs() {
+  assert(manifest_file_);
+  std::optional<std::string> manifest_file_name = GetManifestFileName();
+  assert(manifest_file_name);
+  app_->manifest_fs_root_node()->AddEntry(*manifest_file_name, manifest_file_);
+}
+
+void IcdComponent::RemoveManifestFromFs() {
+  if (!manifest_file_)
+    return;
+  std::optional<std::string> manifest_file_name = GetManifestFileName();
+  if (manifest_file_name) {
+    app_->manifest_fs_root_node()->RemoveEntry(*manifest_file_name, manifest_file_.get());
   }
 }
 
@@ -201,6 +220,22 @@ void IcdComponent::ReadFromComponent(fit::deferred_callback failure_callback,
   std::string library_path = doc["library_path"].GetString();
   node_.CreateString("file_path", file_path, &value_list_);
   node_.CreateString("library_path", library_path, &value_list_);
+  initialization_status_.Set("opening manifest");
+  std::string manifest_result;
+  std::string manifest_path = doc["manifest_path"].GetString();
+  if (!files::ReadFileToStringAt(contents_dir_fd.get(), doc["manifest_path"].GetString(),
+                                 &manifest_result)) {
+    FX_LOGS(ERROR) << component_url_ << " Failed to read manifest path " << manifest_path;
+    return;
+  }
+  node_.CreateString("manifest_contents", manifest_result, &value_list_);
+  manifest_file_ =
+      fbl::MakeRefCounted<fs::BufferedPseudoFile>([manifest_result](fbl::String* out_string) {
+        *out_string = manifest_result.c_str();
+        return ZX_OK;
+      });
+  // Manifest file will be added to the filesystem in IcdList::UpdateCurrentComponent.
+
   fbl::unique_fd fd;
 
   initialization_status_.Set("opening VMO");

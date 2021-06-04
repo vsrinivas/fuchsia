@@ -1,0 +1,7 @@
+{
+    "ICD": {
+        "api_version": "1.1.0",
+        "library_path": "libvulkan_fake.so"
+    },
+    "file_format_version": "1.0.0"
+}

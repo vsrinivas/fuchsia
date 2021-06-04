@@ -101,6 +101,34 @@ TEST(VulkanLoader, Features) {
   EXPECT_EQ(ZX_OK, loader->GetSupportedFeatures(&features));
   constexpr fuchsia::vulkan::loader::Features kExpectedFeatures =
       fuchsia::vulkan::loader::Features::CONNECT_TO_DEVICE_FS |
-      fuchsia::vulkan::loader::Features::GET;
+      fuchsia::vulkan::loader::Features::GET |
+      fuchsia::vulkan::loader::Features::CONNECT_TO_MANIFEST_FS;
   EXPECT_EQ(kExpectedFeatures, features);
+}
+
+TEST(VulkanLoader, ManifestFs) {
+  fuchsia::vulkan::loader::LoaderSyncPtr loader;
+  EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.vulkan.loader.Loader",
+                                        loader.NewRequest().TakeChannel().release()));
+
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  EXPECT_EQ(ZX_OK, loader->ConnectToManifestFs(
+                       fuchsia::vulkan::loader::ConnectToManifestOptions::WAIT_FOR_IDLE,
+                       dir.NewRequest().TakeChannel()));
+
+  int dir_fd;
+  EXPECT_EQ(ZX_OK, fdio_fd_create(dir.TakeChannel().release(), &dir_fd));
+
+  // "0" is because this is the first ICD loaded.
+  int manifest_fd = openat(dir_fd, "0pkg-server2.json", O_RDONLY);
+
+  EXPECT_LE(0, manifest_fd);
+
+  constexpr int kManifestFileSize = 135;
+  char manifest_data[kManifestFileSize + 1];
+  ssize_t read_size = read(manifest_fd, manifest_data, sizeof(manifest_data) - 1);
+  EXPECT_EQ(kManifestFileSize, read_size);
+
+  close(manifest_fd);
+  close(dir_fd);
 }

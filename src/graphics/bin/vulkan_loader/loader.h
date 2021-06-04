@@ -30,9 +30,15 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader, public LoaderAp
   // fuchsia::vulkan::loader::Loader impl
   void Get(std::string name, GetCallback callback) override;
   void ConnectToDeviceFs(zx::channel channel) override;
+  void ConnectToManifestFs(fuchsia::vulkan::loader::ConnectToManifestOptions options,
+                           zx::channel channel) override;
   void GetSupportedFeatures(GetSupportedFeaturesCallback callback) override;
 
   void AddCallback(std::string name, fit::function<void(zx::vmo)> callback);
+
+  bool waiting_for_callbacks() const {
+    return !callbacks_.empty() || !connect_manifest_handles_.empty();
+  }
 
   LoaderApp* app_;
 
@@ -41,6 +47,7 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader, public LoaderAp
       bindings_;
 
   std::list<std::pair<std::string, fit::function<void(zx::vmo)>>> callbacks_;
+  std::vector<zx::channel> connect_manifest_handles_;
 };
 
 #endif  // SRC_GRAPHICS_BIN_VULKAN_LOADER_LOADER_H_
