@@ -65,6 +65,10 @@ pub struct BoardConfig {
     /// The information required to construct and flash the ZBI.
     pub zbi: ZbiConfig,
 
+    /// The information required to construct the BlobFS.
+    #[serde(default)]
+    pub blobfs: BlobFSConfig,
+
     /// The information required to construct and flash the FVM.
     pub fvm: FvmConfig,
 
@@ -183,6 +187,19 @@ fn default_zbi_name() -> String {
 
 fn default_zbi_compression() -> String {
     "zstd".to_string()
+}
+
+/// The information required to construct a BlobFS.
+#[derive(Default, Deserialize, Serialize)]
+pub struct BlobFSConfig {
+    /// The layout format of the blobs.
+    /// Typically "padded" or "compact"
+    #[serde(default = "default_blob_layout")]
+    pub layout: String,
+}
+
+fn default_blob_layout() -> String {
+    "compact".to_string()
 }
 
 /// The information required to construct a FVM.

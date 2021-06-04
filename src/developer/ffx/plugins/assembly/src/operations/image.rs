@@ -82,7 +82,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
-        Some(construct_blobfs(&outdir, &gendir, &product, &base_package, &update_package)?)
+        Some(construct_blobfs(&outdir, &gendir, &product, &board, &base_package, &update_package)?)
     } else {
         info!("Skipping blobfs creation");
         None
@@ -402,10 +402,11 @@ fn construct_blobfs(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
+    board: &BoardConfig,
     base_package: &BasePackage,
     update_package: &UpdatePackage,
 ) -> Result<PathBuf> {
-    let mut blobfs_builder = BlobFSBuilder::new();
+    let mut blobfs_builder = BlobFSBuilder::new(&board.blobfs.layout);
 
     // Add the base and cache packages.
     for package_manifest_path in &product.base_packages {

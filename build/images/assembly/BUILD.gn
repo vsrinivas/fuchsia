@@ -658,6 +658,10 @@ generated_file(labels.board_config) {
       }
     }
 
+    blobfs = {
+      layout = blob_layout_format
+    }
+
     fvm = {
       partition = fvm_partition
     }

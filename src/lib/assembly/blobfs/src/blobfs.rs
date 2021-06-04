@@ -22,13 +22,14 @@ use std::path::Path;
 /// ```
 ///
 pub struct BlobFSBuilder {
+    layout: String,
     manifest: BlobManifest,
 }
 
 impl BlobFSBuilder {
     /// Construct a new BlobFSBuilder.
-    pub fn new() -> Self {
-        BlobFSBuilder { manifest: BlobManifest::default() }
+    pub fn new(layout: impl AsRef<str>) -> Self {
+        BlobFSBuilder { layout: layout.as_ref().to_string(), manifest: BlobManifest::default() }
     }
 
     /// Add a package to blobfs by inserting every blob mentioned in the
@@ -53,7 +54,8 @@ impl BlobFSBuilder {
 
         // Build the arguments vector.
         let blobs_json_path = gendir.as_ref().join("blobs.json");
-        let blobfs_args = build_blobfs_args(&blob_manifest_path, blobs_json_path, output)?;
+        let blobfs_args =
+            build_blobfs_args(self.layout.clone(), &blob_manifest_path, blobs_json_path, output)?;
 
         // Run the blobfs tool.
         // TODO(fxbug.dev/76378): Take the tool location from a config.
@@ -68,6 +70,7 @@ impl BlobFSBuilder {
 
 /// Build the list of arguments to pass to the blobfs tool.
 fn build_blobfs_args(
+    blob_layout: String,
     blob_manifest_path: impl AsRef<Path>,
     blobs_json_path: impl AsRef<Path>,
     output_path: impl AsRef<Path>,
@@ -81,7 +84,7 @@ fn build_blobfs_args(
         "--manifest".to_string(),
         blob_manifest_path.as_ref().path_to_string()?,
         "--blob_layout_format".to_string(),
-        "compact".to_string(),
+        blob_layout,
     ])
 }
 
@@ -93,7 +96,9 @@ mod tests {
 
     #[test]
     fn blobfs_args() {
-        let args = build_blobfs_args("blob.manifest", "blobs.json", "blob.blk").unwrap();
+        let args =
+            build_blobfs_args("compact".to_string(), "blob.manifest", "blobs.json", "blob.blk")
+                .unwrap();
         assert_eq!(
             args,
             vec![
@@ -123,7 +128,7 @@ mod tests {
 
         // Build blobfs.
         let output = NamedTempFile::new().unwrap();
-        let mut builder = BlobFSBuilder::new();
+        let mut builder = BlobFSBuilder::new("compact");
         builder.add_file(&filepath).unwrap();
         builder.build(&gendir.path(), &output.path()).unwrap();
 
