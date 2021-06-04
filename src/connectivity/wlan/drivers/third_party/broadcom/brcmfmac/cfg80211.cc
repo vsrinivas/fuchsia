@@ -2597,6 +2597,7 @@ static void brcmf_escan_timeout(struct brcmf_cfg80211_info* cfg) {
 static zx_status_t brcmf_cfg80211_is_valid_sync_id(net_device* ndev,
                                                    const brcmf_escan_result_le* result,
                                                    uint32_t size) {
+  std::lock_guard sync_id_lock(ndev->scan_sync_id_mutex);
   if (size < sizeof(result->sync_id) + offsetof(brcmf_escan_result_le, sync_id)) {
     BRCMF_ERR("Invalid escan result, not enough data in result, %u available", size);
     return false;
@@ -3284,6 +3285,10 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
 
   uint16_t sync_id = 0;
   BRCMF_DBG(SCAN, "About to scan! Txn ID %lu", req->txn_id);
+  // Lock here so that we ensure that the sync_id is stored in ndev before we start processing
+  // results. Otherwise this thread might get suspended and results would come in and be discareded
+  // because the sync_id would not match.
+  std::lock_guard sync_id_lock(ndev->scan_sync_id_mutex);
   result = brcmf_cfg80211_scan(ndev, req, &sync_id);
   if (result == ZX_OK) {
     ndev->scan_txn_id = req->txn_id;
