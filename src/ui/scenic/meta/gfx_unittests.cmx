@@ -11,7 +11,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/gfx_unittests"
+        "binary": "bin/gfx_unittests"
     },
     "sandbox": {
         "services": [

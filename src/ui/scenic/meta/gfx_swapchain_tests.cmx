@@ -14,7 +14,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/gfx_swapchain_tests"
+        "binary": "bin/gfx_swapchain_tests"
     },
     "sandbox": {
         "services": [

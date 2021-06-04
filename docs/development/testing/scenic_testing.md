@@ -55,7 +55,7 @@ executed if you run `fx test <test_package>` on host.
 
 Examples of test packages:
 
-- **scenic_tests:** [//src/ui/scenic:scenic_tests](/src/ui/scenic/BUILD.gn)
+- **allocation_unittests:** [//src/ui/scenic:allocation_unittests](/src/ui/scenic/BUILD.gn)
 - **escher_tests:** [//src/ui/lib/escher:escher_tests](/src/ui/lib/escher/BUILD.gn)
 
 #### Reference the test package {#reference-test-package}
@@ -97,7 +97,25 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From host workstation, ensure `fx serve` is running, then:
 
   ```
-  fx test scenic_tests escher_tests
+    fx test \
+      escher_tests \
+      allocation_unittests \
+      display_unittests \
+      flatland_unittests \
+      flatland_buffers_unittests \
+      flatland_display_compositor_pixeltests \
+      flatland_display_compositor_pixeltests_with_fake_display \
+      flatland_engine_unittests \
+      flatland_renderer_unittests \
+      gfx_apptests \
+      gfx_pixeltests \
+      gfx_swapchain_tests \
+      gfx_unittests \
+      gfx_util_unittests \
+      gfx_viewstate_apptests \
+      input_unittests \
+      scenic_unittests \
+      scheduling_unittests
   ```
 
   Or from Fuchsia target device:
@@ -109,8 +127,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
 * Run a specific test binary:
 
   From host workstation, ensure `fx serve` is running, then use the following
-  command to run the `gfx_unittests` test component from the `scenic_tests`
-  package:
+  command to run the `gfx_unittests` test component:
 
   ```
   fx test gfx_unittests
@@ -143,7 +160,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From your host workstation:
 
   ```
-  fx test fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_unittests.cmx
+  fx test fuchsia-pkg://fuchsia.com/gfx_unittests#meta/gfx_unittests.cmx
   ```
 
   Note: `gfx_unittests.cmx` can be swapped for [any test component](/src/ui/scenic/BUILD.gn) . There is also fuzzy matching!
@@ -161,7 +178,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   Then run the pixel tests:
 
   ```
-  fx test fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_pixeltests.cmx
+  fx test fuchsia-pkg://fuchsia.com/gfx_pixeltests#meta/gfx_pixeltests.cmx
   ```
 
   Alternatively, run:

@@ -16,7 +16,7 @@ namespace {
 
 #if !ESCHER_USE_RUNTIME_GLSL
 static void LoadShadersFromDisk(HackFilesystemPtr fs) {
-  // NOTE: this and ../shaders/shaders.gni must be kept in sync.
+  // NOTE: this and ../shaders/BUILD.gn must be kept in sync.
   const std::vector<HackFilePath> paths = {
       // Flatland renderer.
       "shaders/shaders_flatland_flat_main_frag14695981039346656037.spirv",

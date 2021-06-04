@@ -162,39 +162,39 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_renderer_unittests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/flatland_renderer_unittests#meta/flatland_renderer_unittests.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/flatland_unittests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/flatland_unittests#meta/flatland_unittests.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_apptests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/gfx_apptests#meta/gfx_apptests.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_pixeltests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/gfx_pixeltests#meta/gfx_pixeltests.cmx"
         },
         {
             "max_severity": "FATAL",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_unittests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/gfx_unittests#meta/gfx_unittests.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/gfx_viewstate_apptests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/gfx_viewstate_apptests#meta/gfx_viewstate_apptests.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/input_unittests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/input_unittests#meta/input_unittests.cmx"
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/scenic_unittests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/scenic_unittests#meta/scenic_unittests.cmx"
         },
         {
             "max_severity": "FATAL",
-            "url": "fuchsia-pkg://fuchsia.com/scenic_tests#meta/scheduling_unittests.cmx"
+            "url": "fuchsia-pkg://fuchsia.com/scheduling_unittests#meta/scheduling_unittests.cmx"
         },
         {
             "max_severity": "ERROR",

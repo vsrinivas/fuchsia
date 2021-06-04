@@ -11,7 +11,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/gfx_pixeltests"
+        "binary": "bin/gfx_pixeltests"
     },
     "sandbox": {
         "features": [

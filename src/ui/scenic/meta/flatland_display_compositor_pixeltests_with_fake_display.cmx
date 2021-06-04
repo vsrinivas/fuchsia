@@ -15,7 +15,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/flatland_display_compositor_pixeltests_with_fake_display"
+        "binary": "bin/flatland_display_compositor_pixeltests_with_fake_display"
     },
     "sandbox": {
         "services": [

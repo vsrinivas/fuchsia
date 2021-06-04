@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/flatland_unittests"
+        "binary": "bin/flatland_unittests"
     },
     "sandbox": {
         "services": [

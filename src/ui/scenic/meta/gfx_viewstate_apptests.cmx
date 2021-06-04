@@ -12,7 +12,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/gfx_viewstate_apptests"
+        "binary": "bin/gfx_viewstate_apptests"
     },
     "sandbox": {
         "services": [

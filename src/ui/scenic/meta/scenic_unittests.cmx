@@ -12,7 +12,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/scenic_unittests"
+        "binary": "bin/scenic_unittests"
     },
     "sandbox": {
         "services": [

@@ -2,13 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
-import("//src/ui/lib/escher/shaders/shaders.gni")
 import("//src/ui/scenic/lib/gfx/build_args.gni")
 
 # Runtime is the set of package dependencies typically desired for the
@@ -34,8 +32,24 @@ group("tests") {
   testonly = true
 
   public_deps = [
+    ":allocation_unittests",
+    ":display_unittests",
+    ":flatland_buffers_unittests",
+    ":flatland_display_compositor_pixeltests",
+    ":flatland_display_compositor_pixeltests_with_fake_display",
+    ":flatland_engine_unittests",
+    ":flatland_renderer_unittests",
+    ":flatland_unittests",
     ":fuzzers",
-    ":scenic_tests",
+    ":gfx_apptests",
+    ":gfx_pixeltests",
+    ":gfx_swapchain_tests",
+    ":gfx_unittests",
+    ":gfx_util_unittests",
+    ":gfx_viewstate_apptests",
+    ":input_unittests",
+    ":scenic_unittests",
+    ":scheduling_unittests",
     "integration_tests",
     "lib/focus/tests",
     "lib/gfx/tests",
@@ -59,147 +73,196 @@ group("fuzzers") {
   ]
 }
 
-test_package("scenic_tests") {
-  deps = [
-    "lib/allocation/tests",
-    "lib/display/tests",
-    "lib/flatland/buffers/tests",
-    "lib/flatland/engine/tests",
-    "lib/flatland/engine/tests/pixeltests",
-    "lib/flatland/renderer/tests",
-    "lib/flatland/tests",
-    "lib/gfx/tests",
-    "lib/gfx/util/tests",
-    "lib/input/tests",
-    "lib/scenic/tests",
-    "lib/scheduling/tests",
-  ]
+scenic_test_deps = [ "//src/lib/vulkan:vulkan_validation_layers" ]
+if (escher_use_runtime_glsl) {
+  scenic_test_deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
+} else {
+  scenic_test_deps +=
+      [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
+}
 
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "allocation_unittests"
-    },
-    {
-      name = "display_unittests"
-    },
-    {
-      name = "flatland_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "flatland_buffers_unittests"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-
-      # Ensures that only devices that have access
-      # to display controller image capture features
-      # can run this test suite.
-      name = "flatland_display_compositor_pixeltests"
-      environments = [
-        astro_env,
-        sherlock_env,
-        vim3_env,
-      ]
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "flatland_display_compositor_pixeltests_with_fake_display"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "flatland_engine_unittests"
-    },
-    {
-      name = "flatland_renderer_unittests"
-      environments = basic_envs + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "gfx_apptests"
-    },
-    {
-      name = "gfx_pixeltests"
-      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "gfx_swapchain_tests"
-      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "gfx_unittests"
-      environments = basic_envs + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "gfx_util_unittests"
-    },
-    {
-      name = "gfx_viewstate_apptests"
-      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
-    },
-    {
-      name = "input_unittests"
-    },
-    {
-      name = "scenic_unittests"
-    },
-    {
-      name = "scheduling_unittests"
-    },
-  ]
-
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-
-  if (escher_use_runtime_glsl) {
-    resources += escher_shaders_resources
-  } else {
-    resources += escher_shaders_spirv_resources
+fuchsia_unittest_package("allocation_unittests") {
+  manifest = "meta/allocation_unittests.cmx"
+  deps = [ "lib/allocation/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
-# For migration purposes only.  To be moved to src/ui/scenic/bin:scenic
-package("scenic_pkg") {
-  package_name = "scenic"
+fuchsia_unittest_package("display_unittests") {
+  deps = [ "lib/display/tests:unittests" ] + scenic_test_deps
+}
 
+fuchsia_unittest_package("flatland_unittests") {
+  manifest = "meta/flatland_unittests.cmx"
+  deps = [ "lib/flatland/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("flatland_buffers_unittests") {
+  manifest = "meta/flatland_buffers_unittests.cmx"
+  deps = [ "lib/flatland/buffers/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("flatland_display_compositor_pixeltests") {
+  manifest = "meta/flatland_display_compositor_pixeltests.cmx"
+  deps =
+      [ "lib/flatland/engine/tests/pixeltests:pixeltests_with_real_display" ] +
+      scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+
+    # Ensures that only devices that have access
+    # to display controller image capture features
+    # can run this test suite.
+    environments = [
+      astro_env,
+      sherlock_env,
+      vim3_env,
+    ]
+  }
+}
+
+fuchsia_unittest_package(
+    "flatland_display_compositor_pixeltests_with_fake_display") {
+  manifest = "meta/flatland_display_compositor_pixeltests_with_fake_display.cmx"
+  deps =
+      [ "lib/flatland/engine/tests/pixeltests:pixeltests_with_fake_display" ] +
+      scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("flatland_engine_unittests") {
+  manifest = "meta/flatland_engine_unittests.cmx"
+  deps = [ "lib/flatland/engine/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("flatland_renderer_unittests") {
+  manifest = "meta/flatland_renderer_unittests.cmx"
+  deps = [ "lib/flatland/renderer/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = basic_envs + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_unittest_package("gfx_apptests") {
+  manifest = "meta/gfx_apptests.cmx"
+  deps = [ "lib/gfx/tests:apptests" ] + scenic_test_deps
+}
+
+fuchsia_unittest_package("gfx_pixeltests") {
+  manifest = "meta/gfx_pixeltests.cmx"
+  deps = [ "lib/gfx/tests:pixeltests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_unittest_package("gfx_swapchain_tests") {
+  manifest = "meta/gfx_swapchain_tests.cmx"
+  deps = [ "lib/gfx/tests:swapchain_tests" ] + scenic_test_deps
+  test_specs = {
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_unittest_package("gfx_unittests") {
+  manifest = "meta/gfx_unittests.cmx"
+  deps = [ "lib/gfx/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+    environments = basic_envs + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_unittest_package("gfx_util_unittests") {
+  deps = [ "lib/gfx/util/tests:unittests" ] + scenic_test_deps
+}
+
+fuchsia_unittest_package("gfx_viewstate_apptests") {
+  manifest = "meta/gfx_viewstate_apptests.cmx"
+  deps = [ "lib/gfx/tests:viewstate_apptests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_unittest_package("input_unittests") {
+  manifest = "meta/input_unittests.cmx"
+  deps = [ "lib/input/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("scenic_unittests") {
+  manifest = "meta/scenic_unittests.cmx"
+  deps = [ "lib/scenic/tests:unittests" ] + scenic_test_deps
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("scheduling_unittests") {
+  manifest = "meta/scheduling_unittests.cmx"
+  deps = [ "lib/scheduling/tests:unittests" ] + scenic_test_deps
+}
+
+# For migration purposes only.  To be moved to src/ui/scenic/bin:scenic
+fuchsia_component("scenic_component") {
+  component_name = "scenic"
+  manifest = "bin/meta/scenic.cmx"
   deps = [ "bin" ]
 
-  binaries = [
-    {
-      name = "scenic"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("bin/meta/scenic.cmx")
-      dest = "scenic.cmx"
-    },
-  ]
-
-  resources = []
-
   if (escher_use_runtime_glsl) {
-    resources += escher_shaders_resources
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_resources" ]
   } else {
-    resources += escher_shaders_spirv_resources
+    deps += [ "//src/ui/lib/escher/shaders:escher_shaders_spirv_resources" ]
   }
 
-  # If configured, include the vulkan validation layers.
   if (scenic_enable_vulkan_validation) {
-    loadable_modules = vulkan_validation_layers.loadable_modules
-    public_deps = vulkan_validation_layers.public_deps
-    resources += vulkan_validation_layers.resources
+    deps += [ "//src/lib/vulkan:vulkan_validation_layers" ]
   }
+}
+
+fuchsia_package("scenic_pkg") {
+  package_name = "scenic"
+  deps = [ ":scenic_component" ]
 }

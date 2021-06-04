@@ -6,8 +6,11 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "test/flatland_buffers_unittests"
+        "binary": "bin/flatland_buffers_unittests"
     },
     "sandbox": {
         "services": [

@@ -4,46 +4,99 @@
 
 import("//build/dist/resource.gni")
 import("//build/testing/host_test_data.gni")
-import("//src/ui/lib/escher/shaders/shaders.gni")
+
+shader_files = [
+  # Flatland renderer.
+  "flatland/flat_main.frag",
+  "flatland/flat_main.vert",
+
+  # Paper renderer.
+  "model_renderer/main.vert",
+  "paper/common/use.glsl",
+  "paper/frag/main_ambient_light.frag",
+  "paper/frag/main_point_light.frag",
+  "paper/vert/main_shadow_volume_extrude.vert",
+
+  # Only used by Escher tests.
+  "test/main.frag",
+  "test/shadow_map_generation.frag",
+  "test/shadow_map_lighting.frag",
+
+  # Compute shaders.
+  "compute/pose_buffer_latching.comp",
+]
+
+spirv_files = [
+  # Flatland renderer.
+  "shaders_flatland_flat_main_frag14695981039346656037.spirv",
+  "shaders_flatland_flat_main_vert14695981039346656037.spirv",
+
+  # Paper renderer.
+  "shaders_model_renderer_main_vert15064700897732225279.spirv",
+  "shaders_model_renderer_main_vert4304586084079301274.spirv",
+  "shaders_model_renderer_main_vert7456302057085141907.spirv",
+  "shaders_paper_frag_main_ambient_light_frag4304586084079301274.spirv",
+  "shaders_paper_frag_main_ambient_light_frag7456302057085141907.spirv",
+  "shaders_paper_frag_main_ambient_light_frag9217636760892358205.spirv",
+  "shaders_paper_frag_main_point_light_frag15064700897732225279.spirv",
+  "shaders_paper_vert_main_shadow_volume_extrude_vert15276133142244279294.spirv",
+  "shaders_paper_vert_main_shadow_volume_extrude_vert9217636760892358205.spirv",
+
+  # Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
+  "shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",
+
+  # Tests
+  "shaders_model_renderer_main_vert12890958529260787213.spirv",
+  "shaders_test_main_frag12890958529260787213.spirv",
+  "shaders_test_main_frag4304586084079301274.spirv",
+]
+
+test_spirv_files = [
+  # shader_program_unittest.cc
+]
 
 if (is_host) {
   # Copies shaders needed for escher linux tests to a specific test data
   # directory near the test binary.
-  group_deps = []
-  foreach(shader, escher_shaders_resources) {
-    shader_target_name = "shader_" + get_path_info(shader.path, "file")
-    host_test_data(shader_target_name) {
-      sources = [ shader.path ]
-      outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
+  shader_host_test_data_targets = []
+  foreach(shader, shader_files) {
+    target_name = get_path_info(shader, "file")
+    shader_host_test_data_targets += [ ":$target_name" ]
+    host_test_data(target_name) {
+      sources = [ shader ]
+      outputs = [ "$root_out_dir/test_data/escher/shaders/$shader" ]
     }
-    group_deps += [ ":$shader_target_name" ]
   }
 
-  spirv_resources =
-      escher_shaders_spirv_resources + escher_test_shaders_spirv_resources
-  foreach(shader, spirv_resources) {
-    shader_target_name = "shader_" + get_path_info(shader.path, "file")
-    host_test_data(shader_target_name) {
-      sources = [ shader.path ]
-      outputs = [ "$root_out_dir/test_data/escher/" + shader.dest ]
-    }
-    group_deps += [ ":$shader_target_name" ]
+  host_test_data("spirvs") {
+    sources = rebase_path(spirv_files + test_spirv_files, ".", "spirv")
+    outputs = [ "$root_out_dir/test_data/escher/shaders/{{source_file_part}}" ]
   }
 
   group("host_shader_data") {
     testonly = true
-    deps = group_deps
+    deps = [ ":spirvs" ] + shader_host_test_data_targets
   }
 }
 
 resource_group("escher_shaders_resources") {
-  files = escher_shaders_files
+  files = []
+  foreach(shader, shader_files) {
+    files += [
+      {
+        source = shader
+        dest = "data/shaders/$shader"
+      },
+    ]
+  }
 }
 
-resource_group("escher_shaders_spirv_resources") {
-  files = escher_shaders_spirv_files
+resource("escher_shaders_spirv_resources") {
+  sources = rebase_path(spirv_files, ".", "spirv")
+  outputs = [ "data/shaders/{{source_file_part}}" ]
 }
 
-resource_group("escher_test_shaders_spirv_resources") {
-  files = escher_test_shaders_spirv_files
+resource("escher_test_shaders_spirv_resources") {
+  sources = rebase_path(test_spirv_files, ".", "spirv")
+  outputs = [ "data/shaders/{{source_file_part}}" ]
 }

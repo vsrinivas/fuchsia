@@ -11,7 +11,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/flatland_renderer_unittests"
+        "binary": "bin/flatland_renderer_unittests"
     },
     "sandbox": {
         "services": [

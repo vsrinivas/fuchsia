@@ -4,6 +4,6 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/gfx_apptests"
+        "binary": "bin/gfx_apptests"
     }
 }
