@@ -42,6 +42,7 @@ use {
             merge::{self},
             object_manager::{ObjectFlush, ObjectManager},
             record::{ExtentKey, ObjectKey, DEFAULT_DATA_ATTRIBUTE_ID},
+            round_down,
             transaction::{
                 AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
             },
@@ -249,7 +250,10 @@ impl Journal {
                 .seek(Bound::Included(&ObjectKey::with_extent_key(
                     super_block.journal_object_id,
                     DEFAULT_DATA_ATTRIBUTE_ID,
-                    ExtentKey::search_key_from_offset(super_block.journal_checkpoint.file_offset),
+                    ExtentKey::search_key_from_offset(round_down(
+                        super_block.journal_checkpoint.file_offset,
+                        BLOCK_SIZE,
+                    )),
                 )))
                 .await?;
             handle = Handle::new(super_block.journal_object_id, device.clone());
