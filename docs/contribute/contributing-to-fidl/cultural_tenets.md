@@ -49,7 +49,7 @@ Another example, when authoring an [RFC] on behalf of the FIDL team, we are
 implicitly stating that all of the team is supportive of the general direction
 of the design (though often details are discussed on the CL). This implies that
 before an RFC moves to the [iterate] step some alignment has been reached
-within the team, possibly through pre-work occuring in [another medium][medium]
+within the team, possibly through pre-work occurring in [another medium][medium]
 than a Gerrit CL such as a Google Doc.
 
 Failure to align internally spills our indecisiveness or doubts onto our users,
