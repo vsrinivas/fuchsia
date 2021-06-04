@@ -35,27 +35,33 @@ pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin> {
 
 pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Unpin> {
     pub(crate) target: Rc<Target>,
-    pub(crate) usb: Option<T>,
-    pub(crate) usb_factory: Box<dyn InterfaceFactory<T>>,
+    pub(crate) interface: Option<T>,
+    pub(crate) interface_factory: Box<dyn InterfaceFactory<T>>,
     remote_proxy: Once<RemoteControlProxy>,
     admin_proxy: Once<AdminProxy>,
 }
 
 impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
-    pub(crate) fn new(target: Rc<Target>, usb_factory: Box<dyn InterfaceFactory<T>>) -> Self {
-        Self { target, usb: None, usb_factory, remote_proxy: Once::new(), admin_proxy: Once::new() }
-    }
-
-    async fn clear_usb(&mut self) {
-        self.usb = None;
-        self.usb_factory.close().await;
-    }
-
-    async fn usb(&mut self) -> Result<&mut T> {
-        if self.usb.is_none() {
-            self.usb.replace(self.usb_factory.open(&self.target).await?);
+    pub(crate) fn new(target: Rc<Target>, interface_factory: Box<dyn InterfaceFactory<T>>) -> Self {
+        Self {
+            target,
+            interface: None,
+            interface_factory,
+            remote_proxy: Once::new(),
+            admin_proxy: Once::new(),
         }
-        Ok(self.usb.as_mut().expect("usb interface not available"))
+    }
+
+    async fn clear_interface(&mut self) {
+        self.interface = None;
+        self.interface_factory.close().await;
+    }
+
+    async fn interface(&mut self) -> Result<&mut T> {
+        if self.interface.is_none() {
+            self.interface.replace(self.interface_factory.open(&self.target).await?);
+        }
+        Ok(self.interface.as_mut().expect("interface interface not available"))
     }
 
     pub(crate) async fn handle_fastboot_requests_from_stream(
@@ -66,13 +72,13 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
             match self.handle_fastboot_request(req).await {
                 Ok(_) => (),
                 Err(e) => {
-                    self.clear_usb().await;
+                    self.clear_interface().await;
                     return Err(e);
                 }
             }
         }
         // Make sure the serial is no longer in use.
-        self.clear_usb().await;
+        self.clear_interface().await;
         Ok(())
     }
 
@@ -139,7 +145,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             }
             FastbootRequest::GetVar { name, responder } => {
-                match get_var(self.usb().await?, &name).await {
+                match get_var(self.interface().await?, &name).await {
                     Ok(value) => responder.send(&mut Ok(value))?,
                     Err(e) => {
                         log::error!("Error getting variable '{}': {:?}", name, e);
@@ -151,7 +157,8 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
             }
             FastbootRequest::Flash { partition_name, path, listener, responder } => {
                 let upload_listener = UploadProgressListener::new(listener)?;
-                match flash(self.usb().await?, &path, &partition_name, &upload_listener).await {
+                match flash(self.interface().await?, &path, &partition_name, &upload_listener).await
+                {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!(
@@ -168,7 +175,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             }
             FastbootRequest::Erase { partition_name, responder } => {
-                match erase(self.usb().await?, &partition_name).await {
+                match erase(self.interface().await?, &partition_name).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error erasing \"{}\": {:?}", partition_name, e);
@@ -178,7 +185,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                     }
                 }
             }
-            FastbootRequest::Reboot { responder } => match reboot(self.usb().await?).await {
+            FastbootRequest::Reboot { responder } => match reboot(self.interface().await?).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
                     log::error!("Error rebooting: {:?}", e);
@@ -188,9 +195,9 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             },
             FastbootRequest::RebootBootloader { listener, responder } => {
-                match reboot_bootloader(self.usb().await?).await {
+                match reboot_bootloader(self.interface().await?).await {
                     Ok(_) => {
-                        self.clear_usb().await;
+                        self.clear_interface().await;
                         match try_join!(
                             self.target
                                 .events
@@ -225,7 +232,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             }
             FastbootRequest::ContinueBoot { responder } => {
-                match continue_boot(self.usb().await?).await {
+                match continue_boot(self.interface().await?).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error continuing boot: {:?}", e);
@@ -236,7 +243,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             }
             FastbootRequest::SetActive { slot, responder } => {
-                match set_active(self.usb().await?, &slot).await {
+                match set_active(self.interface().await?, &slot).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error setting active: {:?}", e);
@@ -247,7 +254,8 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             }
             FastbootRequest::Stage { path, listener, responder } => {
-                match stage(self.usb().await?, &path, &UploadProgressListener::new(listener)?).await
+                match stage(self.interface().await?, &path, &UploadProgressListener::new(listener)?)
+                    .await
                 {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
@@ -259,7 +267,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 }
             }
             FastbootRequest::Oem { command, responder } => {
-                match oem(self.usb().await?, &command).await {
+                match oem(self.interface().await?, &command).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
                         log::error!("Error sending oem \"{}\": {:?}", command, e);
@@ -398,7 +406,7 @@ mod test {
                 Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                 Err(e) => log::error!("There was an error handling fastboot requests: {:?}", e),
             }
-            assert!(fb.usb.is_none());
+            assert!(fb.interface.is_none());
         })
         .detach();
         (target, proxy)

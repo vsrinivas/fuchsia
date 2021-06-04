@@ -5,7 +5,10 @@
 use {
     crate::constants::FASTBOOT_CHECK_INTERVAL,
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
-    crate::fastboot::client::{FastbootImpl, InterfaceFactory},
+    crate::fastboot::{
+        client::{FastbootImpl, InterfaceFactory},
+        network::{NetworkFactory, NetworkInterface},
+    },
     crate::target::Target,
     anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
@@ -32,6 +35,7 @@ use {
 };
 
 pub mod client;
+pub mod network;
 
 lazy_static! {
     /// This is used to lock serial numbers that are in use from being interrupted by the discovery
@@ -44,10 +48,19 @@ const FLASH_TIMEOUT_RATE: &str = "fastboot.flash.timeout_rate";
 const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 
 pub(crate) struct Fastboot(pub(crate) FastbootImpl<Interface>);
+#[allow(dead_code)]
+pub(crate) struct FastbootNetwork(pub(crate) FastbootImpl<NetworkInterface>);
 
 impl Fastboot {
     pub(crate) fn new(target: Rc<Target>) -> Self {
         Self(FastbootImpl::new(target, Box::new(UsbFactory { serial: None })))
+    }
+}
+
+impl FastbootNetwork {
+    #[allow(dead_code)]
+    pub(crate) fn new(target: Rc<Target>) -> Self {
+        Self(FastbootImpl::new(target, Box::new(NetworkFactory::new())))
     }
 }
 

@@ -88,6 +88,7 @@ if (is_host) {
       "src/events.rs",
       "src/fastboot/client.rs",
       "src/fastboot/mod.rs",
+      "src/fastboot/network.rs",
       "src/lib.rs",
       "src/logger/mod.rs",
       "src/logger/streamer.rs",
