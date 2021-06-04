@@ -12,6 +12,7 @@
 #include <lib/ddk/driver.h>
 #include <zircon/assert.h>
 
+#include <thread>
 #include <unordered_map>
 
 namespace wlan::simulation {
@@ -77,6 +78,9 @@ class FakeDevMgr {
   const_iterator cbegin() const { return devices_.cbegin(); }
   const_iterator cend() const { return devices_.cend(); }
 
+  void DeviceInitReply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args);
+  void DeviceUnbindReply(zx_device_t* device);
   zx_status_t DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out);
   void DeviceAsyncRemove(zx_device_t* device);
   std::optional<wlan_sim_dev_info_t> FindFirst(const Predicate& pred);
@@ -92,10 +96,15 @@ class FakeDevMgr {
 
  private:
   bool DeviceUnreference(devices_t::iterator iter);
+  void DeviceUnbind(zx_device_t* device);
 
   // The device counter starts from 2, because 0 and 1 are reserved for fake root device.
   uint64_t dev_counter_ = 2;
   devices_t devices_;
+  std::thread::id init_thread_id_;
+  std::thread::id unbind_thread_id_;
+  bool init_reply_;
+  bool unbind_reply_;
 };
 }  // namespace wlan::simulation
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_DEVICE_DEVICE_H_

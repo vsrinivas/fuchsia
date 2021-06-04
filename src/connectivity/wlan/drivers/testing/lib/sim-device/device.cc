@@ -6,6 +6,7 @@
 
 #include <lib/ddk/debug.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 
 namespace wlan::simulation {
@@ -55,11 +56,20 @@ FakeDevMgr::~FakeDevMgr() {
   }
 }
 
+void FakeDevMgr::DeviceInitReply(zx_device_t* device, zx_status_t status,
+                                 const device_init_reply_args_t* args) {
+  // FakeDevMgr relies on synchronous completion of the init() reply.
+  ZX_DEBUG_ASSERT(std::this_thread::get_id() == init_thread_id_);
+  init_reply_ = true;
+}
+
+void FakeDevMgr::DeviceUnbindReply(zx_device_t* device) {
+  // FakeDevMgr relies on synchronous completion of the unbind() reply.
+  ZX_DEBUG_ASSERT(std::this_thread::get_id() == unbind_thread_id_);
+  unbind_reply_ = true;
+}
+
 zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
-  // We use refcounting to maintain the fake device tree, and do not invoke the unbind hook.
-  if (args && args->ops) {
-    ZX_ASSERT(args->ops->unbind == nullptr);
-  }
   wlan_sim_dev_info_t dev_info = {
       .parent = parent,
       .dev_args = (args == nullptr ? device_add_args_t{} : *args),
@@ -81,7 +91,41 @@ zx_status_t FakeDevMgr::DeviceAdd(zx_device_t* parent, device_add_args_t* args, 
 
   DBG_PRT("%s: Added SIM device. proto %d # devices: %lu Handle: %p\n", __func__,
           args ? args->proto_id : 0, devices_.size(), out ? *out : nullptr);
+
+  // TODO(fxbug.dev/76420) - Add async support for Init()
+  if (args && args->ops && args->ops->init) {
+    init_thread_id_ = std::this_thread::get_id();
+    init_reply_ = false;
+    args->ops->init(args->ctx);
+    ZX_ASSERT(init_reply_ == true);
+  }
+
   return ZX_OK;
+}
+
+void FakeDevMgr::DeviceUnbind(zx_device_t* device) {
+  auto iter = devices_.find(DeviceId::FromDevice(device));
+  if (iter == devices_.end()) {
+    DBG_PRT("%s device %p does not exist\n", __func__, device);
+    return;
+  }
+
+  auto args = iter->second.dev_args;
+  if (args.ops && args.ops->unbind) {
+    unbind_thread_id_ = std::this_thread::get_id();
+    unbind_reply_ = false;
+    (*args.ops->unbind)(args.ctx);
+    ZX_ASSERT(unbind_reply_ == true);
+  }
+
+  // Invoke unbind on its child devices.
+  for (const auto& [key, value] : devices_) {
+    if (value.parent != device) {
+      continue;
+    }
+
+    DeviceUnbind(key.as_device());
+  }
 }
 
 void FakeDevMgr::DeviceAsyncRemove(zx_device_t* device) {
@@ -90,6 +134,9 @@ void FakeDevMgr::DeviceAsyncRemove(zx_device_t* device) {
     DBG_PRT("%s device %p does not exist\n", __func__, device);
     return;
   }
+
+  // TODO(fxbug.dev/76420) - Add async support for DeviceUnbind()
+  DeviceUnbind(device);
 
   while (true) {
     const auto parent_device = iter->second.parent;
