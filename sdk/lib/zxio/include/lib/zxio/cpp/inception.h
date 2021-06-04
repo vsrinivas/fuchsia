@@ -117,4 +117,58 @@ zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_sock
 // The |handle| should be a Zircon debuglog object.
 zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 
+// generic  --------------------------------------------------------------------
+
+using zxio_object_type_t = uint32_t;
+
+// clang-format off
+#define ZXIO_OBJECT_TYPE_NONE            ((zxio_object_type_t) 0)
+#define ZXIO_OBJECT_TYPE_DIR             ((zxio_object_type_t) 1)
+#define ZXIO_OBJECT_TYPE_SERVICE         ((zxio_object_type_t) 2)
+#define ZXIO_OBJECT_TYPE_FILE            ((zxio_object_type_t) 3)
+#define ZXIO_OBJECT_TYPE_DEVICE          ((zxio_object_type_t) 4)
+#define ZXIO_OBJECT_TYPE_TTY             ((zxio_object_type_t) 5)
+#define ZXIO_OBJECT_TYPE_VMOFILE         ((zxio_object_type_t) 6)
+#define ZXIO_OBJECT_TYPE_VMO             ((zxio_object_type_t) 7)
+#define ZXIO_OBJECT_TYPE_DEBUGLOG        ((zxio_object_type_t) 8)
+#define ZXIO_OBJECT_TYPE_PIPE            ((zxio_object_type_t) 9)
+#define ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET ((zxio_object_type_t)10)
+#define ZXIO_OBJECT_TYPE_STREAM_SOCKET   ((zxio_object_type_t)11)
+// clang-format on
+
+// Allocates storage for a zxio_t object of a given type.
+//
+// This function should store a pointer to zxio_storage_t space suitable for an
+// object of the given type into |*out_storage| and return ZX_OK.
+// If the allocation fails, this should store the null value into |*out_storage|
+// and return an error value. Returning a status other than ZX_OK or failing to store
+// a non-null value into |*out_storage| are considered allocation failures.
+//
+// This function may also store additional data related to the allocation in
+// |*out_context| which will be returned in functions that use this allocator.
+// This can be useful if the allocator is allocating zxio_storage_t within a
+// larger allocation to keep track of that allocation.
+using zxio_storage_alloc = zx_status_t (*)(zxio_object_type_t type, zxio_storage_t** out_storage,
+                                           void** out_context);
+
+// Creates a new zxio_t object wrapping |handle| into storage provided by the specified
+// allocation function |allocator|.
+//
+// On success, returns ZX_OK and initializes a zxio_t instance into the storage provided by the
+// allocator. This also stores the context provided by the allocator into |*out_context|.
+//
+// If |allocator| returns an error or fails to allocate storage, returns
+// ZX_ERR_NO_MEMORY and consumes |handle|. The allocator's error value is not
+// preserved. The allocator may store additional context into |*out_context| on
+// errors if needed.
+//
+// See zxio_create() for other error values and postconditions.
+zx_status_t zxio_create_with_allocator(zx::handle handle, zxio_storage_alloc allocator,
+                                       void** out_context);
+
+// Like zxio_create_with_allocator but the caller supplies handle info for the
+// handle.
+zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_basic_t& handle_info,
+                                       zxio_storage_alloc allocator, void** out_context);
+
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_

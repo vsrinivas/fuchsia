@@ -16,6 +16,22 @@ constexpr zx_off_t kInitialSeek = 4;
 
 constexpr const char* ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
+TEST(Vmo, Create) {
+  zx::vmo backing;
+  ASSERT_OK(zx::vmo::create(kSize, 0u, &backing));
+
+  zxio_storage_t storage;
+  ASSERT_OK(zxio_create(backing.release(), &storage));
+  zxio_t* io = &storage.io;
+
+  zxio_node_attributes_t attr = {};
+  ASSERT_OK(zxio_attr_get(io, &attr));
+  EXPECT_EQ(kSize, attr.content_size);
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_attr_set(io, &attr));
+
+  ASSERT_OK(zxio_close(io));
+}
+
 class VmoTest : public zxtest::Test {
  public:
   void SetUp() override {

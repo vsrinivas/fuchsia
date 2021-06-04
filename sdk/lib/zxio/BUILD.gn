@@ -24,9 +24,11 @@ library_headers("headers") {
 
 static_library("zxio") {
   sources = [
+    "create.cc",
     "debuglog.cc",
     "extensions.cc",
     "get_vmo.cc",
+    "inception.cc",
     "null.cc",
     "pipe.cc",
     "remote.cc",

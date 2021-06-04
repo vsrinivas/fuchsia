@@ -7,6 +7,7 @@
 
 #include <lib/zxio/types.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -32,6 +33,30 @@ __BEGIN_CDECLS
 // the same zxio object.
 
 // Node
+
+// Creates a new zxio_t object wrapping |handle| into the provided storage.
+//
+// On success, this function returns ZX_OK and initializes a zxio_t instance in
+// |storage->io|. The caller is responsible for calling zxio_close() on this
+// object when done with it.
+//
+// Always consumes |handle|. If zxio does not know how to wrap a handle, returns
+// ZX_ERR_NOT_SUPPORTED and initializes a zxio_t into |storage|. The caller
+// can extract |handle| with zxio_release() or close the handle and object
+// with zxio_close().
+//
+// In other error cases, consumes |handle| and initializes a null zxio into
+// |storage|.
+//
+// May block to communicate with the server about the state of the object.
+zx_status_t zxio_create(zx_handle_t handle, zxio_storage_t* storage);
+
+// Like zxio_create but the caller provides information about the handle.
+zx_status_t zxio_create_with_info(zx_handle_t handle, const zx_info_handle_basic_t* chandle_info,
+                                  zxio_storage_t* storage);
+
+// TODO(https://fxbug.dev/43267): Add zxio_create_...() variant for a channel
+// expecting an incoming OnOpen / Describe message.
 
 // Attempt to close |io|.
 //
