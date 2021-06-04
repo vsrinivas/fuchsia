@@ -4,7 +4,6 @@
 
 library fuchsia.bluetooth.le;
 
-[Deprecated]
 enum PeripheralError {
     /// The operation or parameters requested are not supported on the current hardware.
     NOT_SUPPORTED = 1;
@@ -92,7 +91,9 @@ protocol AdvertisingHandle {
 protocol AdvertisedPeripheral {
     /// Called when a remote LE central connects to this peripheral when
     /// connectable advertising is enabled via
-    /// [`fuchsia.bluetooth.le/Peripheral.Advertise`].
+    /// [`fuchsia.bluetooth.le/Peripheral.Advertise`]. When this call is made,
+    /// the system has paused advertising, and will not continue until it
+    /// receives a response.
     ///
     /// The returned [`fuchsia.bluetooth.le/Connection`] protocol can be used to
     /// interact with the peer. It also represents a peripheral's ownership over
@@ -103,52 +104,41 @@ protocol AdvertisedPeripheral {
     /// + request `peer` Information about the central that initiated the
     ///   connection.
     /// + request `connection` Represents the connection.
-    /// - response An empty response should be sent immediately to
-    ///   acknowledge the connection (for flow control).
+    /// - response An empty response should be sent to acknowledge the
+    ///   connection and resume advertising (for flow control).
     OnConnected(Peer peer, Connection connection) -> ();
 };
 
 [Discoverable]
 protocol Peripheral {
     /// Start advertising continuously as a LE peripheral. If advertising cannot
-    /// be initiated then `advertised_peripheral` will be closed with an
-    /// epitaph.
+    /// be initiated then `advertised_peripheral` will be closed and an error
+    /// will be returned.
     ///
-    /// This method can get called any number of times and successive calls can
-    /// be made to reconfigure the advertising parameters.
+    /// This method may be called any number of times. To reconfigure an
+    /// advertisement, first close the original advertisement and then initiate
+    /// a new advertisement after an empty response is returned.
     ///
     /// If the client closes its end of the
     /// [`fuchsia.bluetooth.le/AdvertisedPeripheral`] channel,
     /// advertising will be stopped. If the handle is closed before the request
     /// is fulfilled, advertising may be briefly enabled before it is
-    /// terminated.
-    ///
-    /// The following epitaphs may be sent by the `advertised_peripheral`
-    /// protocol on error:
-    /// + `ZX_ERR_OUT_OF_RANGE`: The encoded advertising or scan response data
-    ///    is too long. Specify fewer or shorter fields.
-    /// + `ZX_ERR_INVALID_ARGS`: The requested parameters are invalid.
-    /// + `ZX_ERR_NOT_SUPPORTED`: The operation or parameters are not supported
-    ///   on the current hardware.
-    /// + `ZX_ERR_CANCELED`: The request to advertise was canceled, for example
-    ///    by issuing a new request.
-    /// + `ZX_ERR_INTERNAL`: Advertising could not be initiated due to a system
-    ///    error.
+    /// terminated. AdvertisedPeripheral lifetime is bounded by the lifetime of
+    /// the Peripheral protocol, but this may be changed in the future
+    /// (fxbug.dev/77644).
     ///
     /// + request `parameters` Parameters used while configuring the advertising
     ///   instance.
     /// + request `advertised_peripheral` Protocol that remains valid for the
     ///   duration of this advertising session.
-    /// - response An empty response will be returned when the advertisement has
-    ///   been completed (after the `advertised_peripheral` protocol has been
-    ///   closed). An empty response will be sent when the advertisement is
-    ///   successfully stopped (due to error or release of the
-    ///   `advertised_peripheral` protocol). To prevent overlapping similar
-    ///   advertisements and transient errors with limited advertising
-    ///   resources, waiting for a response is recommended before calling
-    ///   `Advertise` again.
-    [Transitional = "Not yet implemented"]
-    Advertise(AdvertisingParameters parameters, AdvertisedPeripheral advertised_peripheral) -> ();
+    /// - response An empty response will be sent when the advertisement is
+    ///   successfully stopped (due to release of the `advertised_peripheral`
+    ///   protocol). To prevent overlapping similar advertisements and transient
+    ///   errors with limited advertising resources, waiting for a response is
+    ///   recommended before calling `Advertise` again.
+    /// * error If an error occurs, `advertised_peripheral` will be closed and a
+    ///   `PeripheralError` will be returned.
+    Advertise(AdvertisingParameters parameters, AdvertisedPeripheral advertised_peripheral) -> () error PeripheralError;
 
     /// Start advertising as a LE peripheral. An empty response is sent to indicate when advertising
     /// has successfully initiated. If advertising cannot be initiated, then the response will
@@ -183,7 +173,7 @@ protocol Peripheral {
     /// indicate that the connection to the peer has been lost.
     ///
     /// + request `peer` Information about the central that initiated the connection.
-    /// + request `handle` Represents the connection.
+    /// + request `connection` Represents the connection.
     [Deprecated]
     -> OnPeerConnected(Peer peer, Connection connection);
 };
