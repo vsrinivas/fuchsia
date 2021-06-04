@@ -216,6 +216,14 @@ async fn vmex_resource_allowed() -> Result<(), Error> {
     Ok(())
 }
 
+// The `vmex_resource_denied` test here is disabled since eng builds have a permissive * allowlist
+// for `VmexResource` to support out-of-tree tests that need to be able to JIT without having to
+// enumerate every single test component in-tree that e.g. Chromium wants to run from out-of-tree.
+// Unfortunately, this means that it's impossible to make a component that will be denied
+// `VmexResource` on eng builds, which means we can't test this behavior using the approach
+// taken in this testsuite, so we simply disable this test for the time being.
+// TODO(https://fxbug.dev/78074): enable this test or something exercising equivalent coverage
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn vmex_resource_denied() -> Result<(), Error> {
     assert_launch_denied(&VMEX_RESOURCE_DENIED_URL).await;
@@ -243,5 +251,21 @@ async fn deprecated_shell_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn deprecated_shell_denied() -> Result<(), Error> {
     assert_launch_denied(&DEPRECATED_SHELL_DENIED_URL).await;
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn deprecated_exec_allowed() -> Result<(), Error> {
+    assert_launch_allowed(&DEPRECATED_EXEC_ALLOWED_URL).await;
+    Ok(())
+}
+
+// Disabled because we can't reasonably test this on eng builds, because we need to be permissive
+// to allow tests that use JITs to run.  See similar discussion around `vmex_resource_denied`.
+// TODO(https://fxbug.dev/78074): enable this test or something exercising equivalent coverage
+#[ignore]
+#[fasync::run_singlethreaded(test)]
+async fn deprecated_exec_denied() -> Result<(), Error> {
+    assert_launch_denied(&DEPRECATED_EXEC_DENIED_URL).await;
     Ok(())
 }

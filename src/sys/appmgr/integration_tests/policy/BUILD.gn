@@ -34,6 +34,7 @@ foreach(case,
           "vmex_resource",
           "deprecated_shell",
           "pkgfs_versions",
+          "deprecated_ambient_replace_as_exec",
         ]) {
   foreach(suffix,
           [

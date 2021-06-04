@@ -1,6 +1,22 @@
+# Note: because numerous out-of-tree tests for JITs need executable memory,
+# this policy is intentionally permissive, like the one for
+# deprecated-ambient-replace-as-executable:
+*
+
+# That said, it is useful to try to at least keep inventory of what would need
+# to be allowlisted if you wanted to make use of a more restrictive policy, so
+# we enumerate some things below.  This list may not be exhaustive.
 # Components that use VmexResource themselves
+#   Virtualization
 fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx
+#   Dart and Flutter JITs
+fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cmx
+fuchsia-pkg://fuchsia.com/dart_jit_product_runner#meta/dart_jit_product_runner.cmx
+fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cmx
+fuchsia-pkg://fuchsia.com/flutter_jit_product_runner#meta/flutter_jit_product_runner.cmx
+#   V8/Chromium JITs
+# Too many to list
 
 # Tests that involve virtualization, which transitively involve spawning an
 # environment containing a VmexResource
@@ -9,7 +25,6 @@ fuchsia-pkg://fuchsia.com/guest_interaction_tests#meta/server_daemon_test.cmx
 fuchsia-pkg://fuchsia.com/hypervisor-tests-pkg#meta/hypervisor_tests.cmx
 fuchsia-pkg://fuchsia.com/netdump-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx
-fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netstack3-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/ping3-tests#meta/netemul-sandbox.cmx
