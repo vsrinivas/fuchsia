@@ -15,7 +15,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, OfferDecl, OfferDeclCommon},
     from_enum::FromEnum,
-    moniker::PartialMoniker,
+    moniker::PartialChildMoniker,
     std::sync::Arc,
 };
 
@@ -68,14 +68,14 @@ where
         instance: &str,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
         let target = self.collection_component.upgrade()?;
-        let (child_moniker, child_component): (PartialMoniker, Arc<C>) = {
+        let (child_moniker, child_component): (PartialChildMoniker, Arc<C>) = {
             target
                 .live_children_in_collection(&self.collection_name)
                 .await?
                 .into_iter()
                 .find_map(move |(m, c)| if m.name() == instance { Some((m, c)) } else { None })
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
-                    child_moniker: PartialMoniker::new(
+                    child_moniker: PartialChildMoniker::new(
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
@@ -175,14 +175,14 @@ where
         instance: &str,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError> {
         let target = self.collection_component.upgrade()?;
-        let (child_moniker, child_component): (PartialMoniker, Arc<C>) = {
+        let (child_moniker, child_component): (PartialChildMoniker, Arc<C>) = {
             target
                 .live_children_in_collection(&self.collection_name)
                 .await?
                 .into_iter()
                 .find_map(move |(m, c)| if m.name() == instance { Some((m, c)) } else { None })
                 .ok_or_else(|| RoutingError::ExposeFromChildInstanceNotFound {
-                    child_moniker: PartialMoniker::new(
+                    child_moniker: PartialChildMoniker::new(
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
@@ -253,7 +253,7 @@ where
 {
     let mut instances = Vec::new();
     let component = component.upgrade()?;
-    let components: Vec<(PartialMoniker, Arc<C>)> =
+    let components: Vec<(PartialChildMoniker, Arc<C>)> =
         component.live_children_in_collection(collection_name).await?;
     for (partial_moniker, component) in components {
         match component.decl().await {

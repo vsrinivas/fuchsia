@@ -10,17 +10,17 @@ use {
         hooks::{Event, EventPayload},
     },
     async_trait::async_trait,
-    moniker::PartialMoniker,
+    moniker::PartialChildMoniker,
     std::sync::Arc,
 };
 
 /// Marks a child of a component as deleted, after shutting it down.
 pub struct MarkDeletedAction {
-    moniker: PartialMoniker,
+    moniker: PartialChildMoniker,
 }
 
 impl MarkDeletedAction {
-    pub fn new(moniker: PartialMoniker) -> Self {
+    pub fn new(moniker: PartialChildMoniker) -> Self {
         Self { moniker }
     }
 }
@@ -38,7 +38,7 @@ impl Action for MarkDeletedAction {
 
 async fn do_mark_deleted(
     component: &Arc<ComponentInstance>,
-    moniker: PartialMoniker,
+    moniker: PartialChildMoniker,
 ) -> Result<(), ModelError> {
     let child = {
         let state = component.lock_state().await;

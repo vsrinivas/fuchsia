@@ -15,7 +15,7 @@ use {
         CapabilityDecl, CapabilityName, ExposeDecl, ExposeProtocolDecl, ExposeTarget, OfferDecl,
         OfferProtocolDecl, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
     },
-    moniker::PartialMoniker,
+    moniker::PartialChildMoniker,
 };
 
 /// A verifier for protocol capability routes.
@@ -86,7 +86,7 @@ impl<'a> CapabilityRouteVerifier<'a> for ProtocolCapabilityRouteVerifier {
     fn is_matching_offer(
         &self,
         target_state: &CapabilityRouteState<'a, ProtocolFields>,
-        target_moniker: &'a PartialMoniker,
+        target_moniker: &'a PartialChildMoniker,
         offer_decl: &'a OfferProtocolDecl,
     ) -> bool {
         if let OfferTarget::Child(child_name) = &offer_decl.target {
@@ -210,7 +210,7 @@ mod tests {
             component_tree::{BuildTreeResult, ComponentTreeBuilder, NodePath},
         },
         cm_rust::{CapabilityPath, DependencyType, ExposeSource, OfferSource, UseSource},
-        moniker::PartialMoniker,
+        moniker::PartialChildMoniker,
         std::collections::HashMap,
     };
 
@@ -361,7 +361,7 @@ mod tests {
         let tree = build_tree_result.tree.unwrap();
 
         let child_node =
-            tree.get_node(&NodePath::new(vec![PartialMoniker::new(child_name, None)]))?;
+            tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(child_name, None)]))?;
         let route = verifier.verify_route(&tree, &child_use_protocol, &child_node)?;
         assert_eq!(route.len(), 3);
         assert_eq!(route[0].to_string(), "use by `/child` as `protocol_name` from parent");
@@ -393,7 +393,7 @@ mod tests {
         let tree = build_tree_result.tree.unwrap();
 
         let child_node =
-            tree.get_node(&NodePath::new(vec![PartialMoniker::new(child_name, None)]))?;
+            tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(child_name, None)]))?;
         let verify_result = verifier.verify_route(&tree, &child_use_protocol, &child_node);
         assert!(verify_result.is_err());
         assert_eq!(
@@ -435,7 +435,7 @@ mod tests {
         let tree = build_tree_result.tree.unwrap();
 
         let child_node =
-            tree.get_node(&NodePath::new(vec![PartialMoniker::new(child_name, None)]))?;
+            tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(child_name, None)]))?;
         let verify_result = verifier.verify_route(&tree, &child_use_protocol, &child_node);
         assert!(verify_result.is_err());
         assert_eq!(
@@ -460,8 +460,8 @@ mod tests {
         let tree = build_tree_result.tree.unwrap();
 
         let using_node = tree.get_node(&NodePath::new(vec![
-            PartialMoniker::new("foo".to_string(), None),
-            PartialMoniker::new("baz".to_string(), None),
+            PartialChildMoniker::new("foo".to_string(), None),
+            PartialChildMoniker::new("baz".to_string(), None),
         ]))?;
         assert_eq!(using_node.decl.uses.len(), 1);
         let use_decl = &using_node.decl.uses[0];
@@ -526,7 +526,7 @@ mod tests {
         let tree = build_tree_result.tree.unwrap();
 
         let child_node =
-            tree.get_node(&NodePath::new(vec![PartialMoniker::new(child_name, None)]))?;
+            tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(child_name, None)]))?;
         let mut results = verifier.verify_all_routes(&tree, &child_node);
 
         assert_eq!(results.len(), 2);

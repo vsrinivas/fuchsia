@@ -52,7 +52,7 @@ use {
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
     log::warn,
-    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialChildMoniker},
     std::iter::Iterator,
     std::{
         boxed::Box,
@@ -434,7 +434,7 @@ impl ComponentInstance {
             }
             None => {
                 let partial_moniker =
-                    PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
+                    PartialChildMoniker::new(child_decl.name.clone(), Some(collection_name));
                 Err(ModelError::instance_already_exists(self.abs_moniker.clone(), partial_moniker))
             }
         }
@@ -444,7 +444,7 @@ impl ComponentInstance {
     /// destroy action.
     pub async fn remove_dynamic_child(
         self: &Arc<Self>,
-        partial_moniker: &PartialMoniker,
+        partial_moniker: &PartialChildMoniker,
     ) -> Result<impl Future<Output = Result<(), ModelError>>, ModelError> {
         let tup = {
             let state = self.lock_resolved_state().await?;
@@ -718,7 +718,7 @@ impl ComponentInstanceInterface for ComponentInstance {
 
     async fn get_live_child<'a>(
         self: &'a Arc<Self>,
-        moniker: &PartialMoniker,
+        moniker: &PartialChildMoniker,
     ) -> Result<Option<Arc<Self>>, ComponentInstanceError> {
         let state = self.lock_resolved_state().await?;
         Ok(state.get_live_child(moniker))
@@ -727,7 +727,7 @@ impl ComponentInstanceInterface for ComponentInstance {
     async fn live_children_in_collection<'a>(
         self: &'a Arc<Self>,
         collection: &'a str,
-    ) -> Result<Vec<(PartialMoniker, Arc<ComponentInstance>)>, ComponentInstanceError> {
+    ) -> Result<Vec<(PartialChildMoniker, Arc<ComponentInstance>)>, ComponentInstanceError> {
         let state = self.lock_resolved_state().await?;
         Ok(state.live_children_in_collection(collection))
     }
@@ -821,7 +821,7 @@ pub struct ResolvedInstanceState {
     /// All child instances, indexed by instanced moniker.
     children: HashMap<ChildMoniker, Arc<ComponentInstance>>,
     /// Child instances that have not been deleted, indexed by child moniker.
-    live_children: HashMap<PartialMoniker, (InstanceId, Arc<ComponentInstance>)>,
+    live_children: HashMap<PartialChildMoniker, (InstanceId, Arc<ComponentInstance>)>,
     /// The next unique identifier for a dynamic children created in this realm.
     /// (Static instances receive identifier 0.)
     next_dynamic_instance_id: InstanceId,
@@ -874,12 +874,12 @@ impl ResolvedInstanceState {
     /// Returns an iterator over live children.
     pub fn live_children(
         &self,
-    ) -> impl Iterator<Item = (&PartialMoniker, &Arc<ComponentInstance>)> {
+    ) -> impl Iterator<Item = (&PartialChildMoniker, &Arc<ComponentInstance>)> {
         self.live_children.iter().map(|(k, v)| (k, &v.1))
     }
 
     /// Returns a reference to a live child.
-    pub fn get_live_child(&self, m: &PartialMoniker) -> Option<Arc<ComponentInstance>> {
+    pub fn get_live_child(&self, m: &PartialChildMoniker) -> Option<Arc<ComponentInstance>> {
         self.live_children.get(m).map(|(_, v)| v.clone())
     }
 
@@ -887,7 +887,7 @@ impl ResolvedInstanceState {
     pub fn live_children_in_collection(
         &self,
         collection: &str,
-    ) -> Vec<(PartialMoniker, Arc<ComponentInstance>)> {
+    ) -> Vec<(PartialChildMoniker, Arc<ComponentInstance>)> {
         self.live_children()
             .filter(move |(m, _)| match m.collection() {
                 Some(name) if name == collection => true,
@@ -897,9 +897,9 @@ impl ResolvedInstanceState {
             .collect()
     }
 
-    /// Return all children that match the `PartialMoniker` regardless of
+    /// Return all children that match the `PartialChildMoniker` regardless of
     /// whether that child is live.
-    pub fn get_all_children_by_name(&self, m: &PartialMoniker) -> Vec<Arc<ComponentInstance>> {
+    pub fn get_all_children_by_name(&self, m: &PartialChildMoniker) -> Vec<Arc<ComponentInstance>> {
         self.children
             .iter()
             .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
@@ -908,16 +908,16 @@ impl ResolvedInstanceState {
     }
 
     /// Returns a live child's instance id.
-    pub fn get_live_child_instance_id(&self, m: &PartialMoniker) -> Option<InstanceId> {
+    pub fn get_live_child_instance_id(&self, m: &PartialChildMoniker) -> Option<InstanceId> {
         self.live_children.get(m).map(|(i, _)| *i)
     }
 
-    /// Given a `PartialMoniker` returns the `ChildMoniker`
-    pub fn get_live_child_moniker(&self, m: &PartialMoniker) -> Option<ChildMoniker> {
+    /// Given a `PartialChildMoniker` returns the `ChildMoniker`
+    pub fn get_live_child_moniker(&self, m: &PartialChildMoniker) -> Option<ChildMoniker> {
         self.live_children.get(m).map(|(i, _)| ChildMoniker::from_partial(m, *i))
     }
 
-    pub fn get_all_child_monikers(&self, m: &PartialMoniker) -> Vec<ChildMoniker> {
+    pub fn get_all_child_monikers(&self, m: &PartialChildMoniker) -> Vec<ChildMoniker> {
         self.children
             .iter()
             .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
@@ -945,7 +945,7 @@ impl ResolvedInstanceState {
     pub fn extend_moniker_with(
         &self,
         moniker: &AbsoluteMoniker,
-        partial: &PartialMoniker,
+        partial: &PartialChildMoniker,
     ) -> Option<AbsoluteMoniker> {
         match self.get_live_child_instance_id(partial) {
             Some(instance_id) => {
@@ -967,7 +967,7 @@ impl ResolvedInstanceState {
     }
 
     /// Marks a live child deleting. No-op if the child is already deleting.
-    pub fn mark_child_deleted(&mut self, partial_moniker: &PartialMoniker) {
+    pub fn mark_child_deleted(&mut self, partial_moniker: &PartialChildMoniker) {
         self.live_children.remove(&partial_moniker);
     }
 

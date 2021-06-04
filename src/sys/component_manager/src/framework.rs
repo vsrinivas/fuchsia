@@ -27,7 +27,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
-    moniker::{AbsoluteMoniker, PartialMoniker},
+    moniker::{AbsoluteMoniker, PartialChildMoniker},
     std::{
         cmp,
         path::PathBuf,
@@ -265,7 +265,7 @@ impl RealmCapabilityHost {
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
-        let partial_moniker = PartialMoniker::new(child.name, child.collection);
+        let partial_moniker = PartialChildMoniker::new(child.name, child.collection);
         let destroy_fut =
             component.remove_dynamic_child(&partial_moniker).await.map_err(|e| match e {
                 ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
@@ -385,7 +385,7 @@ impl RealmCapabilityHost {
                 return fcomponent::Error::Internal;
             }
         })?;
-        let partial_moniker = PartialMoniker::new(child.name, child.collection);
+        let partial_moniker = PartialChildMoniker::new(child.name, child.collection);
         Ok(state.get_live_child(&partial_moniker).map(|r| r.clone()))
     }
 }
@@ -583,7 +583,7 @@ mod tests {
 
         // Verify that the component topology matches expectations.
         let actual_children = get_live_children(test.component()).await;
-        let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
+        let mut expected_children: HashSet<PartialChildMoniker> = HashSet::new();
         expected_children.insert("coll:a".into());
         expected_children.insert("coll:b".into());
         assert_eq!(actual_children, expected_children);
@@ -793,7 +793,7 @@ mod tests {
         // Child is not marked deleted yet, but should be shut down.
         {
             let actual_children = get_live_children(test.component()).await;
-            let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
+            let mut expected_children: HashSet<PartialChildMoniker> = HashSet::new();
             expected_children.insert("coll:a".into());
             expected_children.insert("coll:b".into());
             assert_eq!(actual_children, expected_children);
@@ -815,7 +815,7 @@ mod tests {
         // Child is marked deleted now.
         {
             let actual_children = get_live_children(test.component()).await;
-            let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
+            let mut expected_children: HashSet<PartialChildMoniker> = HashSet::new();
             expected_children.insert("coll:b".into());
             assert_eq!(actual_children, expected_children);
             assert_eq!("(system(coll:b))", test.hook.print());

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::MonikerError, partial_moniker::PartialMoniker},
+    crate::{error::MonikerError, partial_child_moniker::PartialChildMoniker},
     cm_types::Name,
     core::cmp::{Ord, Ordering},
     std::{fmt, str::FromStr},
@@ -93,12 +93,12 @@ impl ChildMoniker {
     }
 
     /// Converts this instanced moniker to a regular child moniker by stripping the instance id.
-    pub fn to_partial(&self) -> PartialMoniker {
-        PartialMoniker::new(self.name.clone(), self.collection.clone())
+    pub fn to_partial(&self) -> PartialChildMoniker {
+        PartialChildMoniker::new(self.name.clone(), self.collection.clone())
     }
 
     /// Converts this child moniker to an instanced moniker.
-    pub fn from_partial(m: &PartialMoniker, instance: InstanceId) -> Self {
+    pub fn from_partial(m: &PartialChildMoniker, instance: InstanceId) -> Self {
         Self::new(m.name.clone(), m.collection.clone(), instance)
     }
 

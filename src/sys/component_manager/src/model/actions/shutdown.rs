@@ -15,7 +15,7 @@ use {
     },
     futures::future::select_all,
     maplit::hashset,
-    moniker::{ChildMoniker, PartialMoniker},
+    moniker::{ChildMoniker, PartialChildMoniker},
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
@@ -115,7 +115,7 @@ impl ShutdownJob {
         // This representation must be reconciled with the runtime state of the
         // component. This means mapping children in the declaration with the one
         // or more children that may exist in collections and one or more
-        // instances with a matching PartialMoniker that may exist.
+        // instances with a matching PartialChildMoniker that may exist.
         // `dependency_map` maps server => clients (aka provider => consumers, or source => targets)
         let dependency_map = process_component_dependencies(state.decl());
         let mut source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo> = HashMap::new();
@@ -325,7 +325,7 @@ fn get_shutdown_monikers(
     for node in nodes {
         match node {
             DependencyNode::Child(name) => {
-                let dep_moniker = PartialMoniker::new(name.to_string(), None);
+                let dep_moniker = PartialChildMoniker::new(name.to_string(), None);
                 let matching_children = component_state.get_all_child_monikers(&dep_moniker);
                 for m in matching_children {
                     deps.insert(ParentOrChildMoniker::ChildMoniker(m));
@@ -674,7 +674,7 @@ mod tests {
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_sys2 as fsys,
-        moniker::{AbsoluteMoniker, PartialMoniker},
+        moniker::{AbsoluteMoniker, PartialChildMoniker},
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,
@@ -1874,7 +1874,7 @@ mod tests {
             let state = component_a.lock_state().await;
             match *state {
                 InstanceState::Resolved(ref s) => {
-                    s.get_live_child(&PartialMoniker::from("b")).expect("child b not found")
+                    s.get_live_child(&PartialChildMoniker::from("b")).expect("child b not found")
                 }
                 _ => panic!("not resolved"),
             }

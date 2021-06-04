@@ -77,7 +77,7 @@ use {
         task::{Context, Poll},
         Future,
     },
-    moniker::{ChildMoniker, PartialMoniker},
+    moniker::{ChildMoniker, PartialChildMoniker},
     std::any::Any,
     std::collections::HashMap,
     std::fmt::Debug,
@@ -105,7 +105,7 @@ pub enum ActionKey {
     Start,
     Stop,
     Shutdown,
-    MarkDeleted(PartialMoniker),
+    MarkDeleted(PartialChildMoniker),
     DeleteChild(ChildMoniker),
     Destroy,
 }

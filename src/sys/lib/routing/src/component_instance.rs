@@ -10,7 +10,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::ComponentDecl,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
     std::fmt,
     std::{
         clone::Clone,
@@ -55,14 +55,14 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     /// Returns a live child of this instance.
     async fn get_live_child<'a>(
         self: &'a Arc<Self>,
-        moniker: &PartialMoniker,
+        moniker: &PartialChildMoniker,
     ) -> Result<Option<Arc<Self>>, ComponentInstanceError>;
 
     /// Returns a vector of the live children in `collection`.
     async fn live_children_in_collection<'a>(
         self: &'a Arc<Self>,
         collection: &'a str,
-    ) -> Result<Vec<(PartialMoniker, Arc<Self>)>, ComponentInstanceError>;
+    ) -> Result<Vec<(PartialChildMoniker, Arc<Self>)>, ComponentInstanceError>;
 }
 
 /// A wrapper for a weak reference to a type implementing `ComponentInstanceInterface`. Provides the

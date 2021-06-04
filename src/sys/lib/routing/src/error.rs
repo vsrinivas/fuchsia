@@ -7,7 +7,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::{CapabilityName, EventMode},
     fidl_fuchsia_component as fcomponent, fuchsia_zircon_status as zx,
-    moniker::{AbsoluteMoniker, PartialMoniker},
+    moniker::{AbsoluteMoniker, PartialChildMoniker},
     thiserror::Error,
 };
 
@@ -74,7 +74,7 @@ pub enum RoutingError {
     )]
     StorageDirectorySourceChildNotFound {
         storage_moniker: AbsoluteMoniker,
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
     },
 
     #[error(
@@ -85,7 +85,7 @@ pub enum RoutingError {
         capability_id
     )]
     StorageFromChildExposeNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
     },
@@ -183,7 +183,7 @@ pub enum RoutingError {
         capability_name
     )]
     EnvironmentFromChildExposeNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_type: &'static str,
         capability_name: CapabilityName,
@@ -198,7 +198,7 @@ pub enum RoutingError {
         capability_name
     )]
     EnvironmentFromChildInstanceNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_name: CapabilityName,
         capability_type: &'static str,
@@ -228,7 +228,7 @@ pub enum RoutingError {
         capability_id
     )]
     OfferFromChildInstanceNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
     },
@@ -254,7 +254,7 @@ pub enum RoutingError {
         capability_id
     )]
     OfferFromChildExposeNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
     },
@@ -307,7 +307,7 @@ pub enum RoutingError {
         capability_id
     )]
     ExposeFromChildInstanceNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
     },
@@ -333,7 +333,7 @@ pub enum RoutingError {
         capability_id
     )]
     ExposeFromChildExposeNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
     },
@@ -354,7 +354,7 @@ pub enum RoutingError {
         capability_id
     )]
     UseFromChildExposeNotFound {
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         moniker: AbsoluteMoniker,
         capability_id: String,
     },
@@ -413,7 +413,7 @@ impl RoutingError {
 
     pub fn storage_directory_source_child_not_found(
         storage_moniker: &AbsoluteMoniker,
-        child_moniker: &PartialMoniker,
+        child_moniker: &PartialChildMoniker,
     ) -> Self {
         Self::StorageDirectorySourceChildNotFound {
             storage_moniker: storage_moniker.clone(),
@@ -422,7 +422,7 @@ impl RoutingError {
     }
 
     pub fn storage_from_child_expose_not_found(
-        child_moniker: &PartialMoniker,
+        child_moniker: &PartialChildMoniker,
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
@@ -488,7 +488,7 @@ impl RoutingError {
     }
 
     pub fn offer_from_child_instance_not_found(
-        child_moniker: &PartialMoniker,
+        child_moniker: &PartialChildMoniker,
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
@@ -500,7 +500,7 @@ impl RoutingError {
     }
 
     pub fn offer_from_child_expose_not_found(
-        child_moniker: &PartialMoniker,
+        child_moniker: &PartialChildMoniker,
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
@@ -519,7 +519,7 @@ impl RoutingError {
     }
 
     pub fn expose_from_child_instance_not_found(
-        child_moniker: &PartialMoniker,
+        child_moniker: &PartialChildMoniker,
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {
@@ -531,7 +531,7 @@ impl RoutingError {
     }
 
     pub fn expose_from_child_expose_not_found(
-        child_moniker: &PartialMoniker,
+        child_moniker: &PartialChildMoniker,
         moniker: &AbsoluteMoniker,
         capability_id: impl Into<String>,
     ) -> Self {

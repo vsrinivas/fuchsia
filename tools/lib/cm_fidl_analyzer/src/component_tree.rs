@@ -4,7 +4,7 @@
 
 use {
     cm_rust::{ChildDecl, ComponentDecl, EnvironmentDecl},
-    moniker::{AbsoluteMoniker, PartialMoniker},
+    moniker::{AbsoluteMoniker, PartialChildMoniker},
     routing::environment::{DebugRegistry, EnvironmentExtends, RunnerRegistry},
     serde::{Deserialize, Serialize},
     std::{
@@ -30,10 +30,10 @@ pub enum ComponentTreeError {
 }
 
 /// A representation of a component's position in the component topology. The last segment of
-/// a component's `NodePath` is its `PartialMoniker` as designated by its parent component, and the
+/// a component's `NodePath` is its `PartialChildMoniker` as designated by its parent component, and the
 /// prefix is the parent component's `NodePath`.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
-pub struct NodePath(Vec<PartialMoniker>);
+pub struct NodePath(Vec<PartialChildMoniker>);
 
 /// A representation of a v2 component containing a `ComponentDecl` as well as the `NodePath`s of
 /// the component itself and of its parent and children (if any).
@@ -127,14 +127,14 @@ pub struct BreadthFirstWalker<'a> {
 }
 
 impl NodePath {
-    pub fn new(monikers: Vec<PartialMoniker>) -> Self {
+    pub fn new(monikers: Vec<PartialChildMoniker>) -> Self {
         let mut node_path = NodePath::default();
         node_path.0 = monikers;
         node_path
     }
 
     /// Returns a new `NodePath` which extends `self` by appending `moniker` at the end of the path.
-    pub fn extended(&self, moniker: PartialMoniker) -> Self {
+    pub fn extended(&self, moniker: PartialChildMoniker) -> Self {
         let mut node_path = NodePath::new(self.0.clone());
         node_path.0.push(moniker);
         node_path
@@ -209,7 +209,7 @@ impl NodeEnvironment {
 
 impl ComponentNode {
     /// Returns a string representing the path to this `ComponentNode` from the root node.
-    /// Each path segment is the `PartialMoniker` of a component relative to its parent.
+    /// Each path segment is the `PartialChildMoniker` of a component relative to its parent.
     /// The root node is represented as "/".
     pub fn short_display(&self) -> String {
         self.node_path.to_string()
@@ -219,7 +219,7 @@ impl ComponentNode {
         self.url.clone()
     }
 
-    pub fn moniker(&self) -> Option<&PartialMoniker> {
+    pub fn moniker(&self) -> Option<&PartialChildMoniker> {
         self.node_path.0.last()
     }
 
@@ -245,7 +245,7 @@ impl ComponentNode {
         decl: ComponentDecl,
         url: String,
         parent: Option<NodePath>,
-        moniker: Option<PartialMoniker>,
+        moniker: Option<PartialChildMoniker>,
         environment: NodeEnvironment,
     ) -> Self {
         ComponentNode {
@@ -258,7 +258,7 @@ impl ComponentNode {
         }
     }
 
-    fn get_node_path(parent: Option<NodePath>, moniker: Option<PartialMoniker>) -> NodePath {
+    fn get_node_path(parent: Option<NodePath>, moniker: Option<PartialChildMoniker>) -> NodePath {
         if let Some(postfix) = moniker {
             if let Some(prefix) = parent {
                 return prefix.extended(postfix);
@@ -327,7 +327,7 @@ impl ComponentTree {
     pub fn get_child_node(
         &self,
         node: &ComponentNode,
-        moniker: PartialMoniker,
+        moniker: PartialChildMoniker,
     ) -> Result<&ComponentNode, ComponentTreeError> {
         Ok(self.get_node(&node.node_path.extended(moniker))?)
     }
@@ -400,7 +400,7 @@ impl ComponentTreeBuilder {
                             child_decl.clone(),
                             child.url.clone(),
                             Some(node.node_path.clone()),
-                            Some(PartialMoniker::new(child.name.clone(), None)),
+                            Some(PartialChildMoniker::new(child.name.clone(), None)),
                             environment,
                         );
                         self.add_descendants(tree, &mut child_node);
@@ -573,11 +573,11 @@ mod tests {
         let empty_node_path = NodePath::default();
         assert_eq!(empty_node_path.to_string(), "/");
 
-        let foo_moniker = PartialMoniker::new("foo".to_string(), None);
+        let foo_moniker = PartialChildMoniker::new("foo".to_string(), None);
         let foo_node_path = empty_node_path.extended(foo_moniker);
         assert_eq!(foo_node_path.to_string(), "/foo");
 
-        let bar_moniker = PartialMoniker::new("bar".to_string(), None);
+        let bar_moniker = PartialChildMoniker::new("bar".to_string(), None);
         let bar_node_path = foo_node_path.extended(bar_moniker);
         assert_eq!(bar_node_path.to_string(), "/foo/bar");
     }
@@ -586,8 +586,8 @@ mod tests {
     // `short_display()` and `url()` methods.
     #[test]
     fn build_node() {
-        let foo_moniker = PartialMoniker::new("foo".to_string(), None);
-        let bar_moniker = PartialMoniker::new("bar".to_string(), None);
+        let foo_moniker = PartialChildMoniker::new("foo".to_string(), None);
+        let bar_moniker = PartialChildMoniker::new("bar".to_string(), None);
 
         let root_url = "root_url".to_string();
         let leaf_url = "leaf_url".to_string();
@@ -654,18 +654,18 @@ mod tests {
 
     // Builds a tree with 4 nodes using `build_multi_node_tree()`. Checks that the `node_path`,
     // `parent`, and `children` fields of each node are populated correctly and can be looked up
-    // by a sequence of PartialMonikers. Also checks that lookup fails with an invalid sequence
-    // of PartialMonikers.
+    // by a sequence of PartialChildMonikers. Also checks that lookup fails with an invalid sequence
+    // of PartialChildMonikers.
     #[test]
     fn build_tree_and_look_up_multi_node() -> Result<(), ComponentTreeError> {
         let tree_result = build_multi_node_tree();
         assert!(tree_result.errors.is_empty());
         let tree = tree_result.tree.unwrap();
 
-        let foo_path = NodePath::new(vec![PartialMoniker::new("foo".to_string(), None)]);
-        let bar_path = NodePath::new(vec![PartialMoniker::new("bar".to_string(), None)]);
-        let baz_path = foo_path.extended(PartialMoniker::new("baz".to_string(), None));
-        let other_path = NodePath::new(vec![PartialMoniker::new("other".to_string(), None)]);
+        let foo_path = NodePath::new(vec![PartialChildMoniker::new("foo".to_string(), None)]);
+        let bar_path = NodePath::new(vec![PartialChildMoniker::new("bar".to_string(), None)]);
+        let baz_path = foo_path.extended(PartialChildMoniker::new("baz".to_string(), None));
+        let other_path = NodePath::new(vec![PartialChildMoniker::new("other".to_string(), None)]);
 
         let root_node = tree.get_root_node()?;
         assert_eq!(root_node.node_path.to_string(), "/");
@@ -741,7 +741,8 @@ mod tests {
         assert!(build_result.errors.is_empty());
         let tree = build_result.tree.unwrap();
 
-        let foo_node = tree.get_node(&NodePath::new(vec![PartialMoniker::new(foo_name, None)]))?;
+        let foo_node =
+            tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(foo_name, None)]))?;
         assert_eq!(foo_node.environment().name(), Some(foo_env_name).as_deref());
         assert_eq!(foo_node.environment().extends(), &foo_extends.into());
         assert!(foo_node.environment().runner_registry().get_runner(&foo_runner_name).is_some());
@@ -785,9 +786,9 @@ mod tests {
         assert!(tree_result.errors.is_empty());
         let tree = tree_result.tree.unwrap();
 
-        let foo_path = NodePath::new(vec![PartialMoniker::new("foo".to_string(), None)]);
-        let bar_path = NodePath::new(vec![PartialMoniker::new("bar".to_string(), None)]);
-        let baz_path = foo_path.extended(PartialMoniker::new("baz".to_string(), None));
+        let foo_path = NodePath::new(vec![PartialChildMoniker::new("foo".to_string(), None)]);
+        let bar_path = NodePath::new(vec![PartialChildMoniker::new("bar".to_string(), None)]);
+        let baz_path = foo_path.extended(PartialChildMoniker::new("baz".to_string(), None));
 
         let root_parent = tree.try_get_parent(tree.get_root_node()?)?;
         assert!(root_parent.is_none());
@@ -812,9 +813,9 @@ mod tests {
         assert!(tree_result.errors.is_empty());
         let tree = tree_result.tree.unwrap();
 
-        let foo_path = NodePath::new(vec![PartialMoniker::new("foo".to_string(), None)]);
-        let bar_path = NodePath::new(vec![PartialMoniker::new("bar".to_string(), None)]);
-        let baz_path = foo_path.extended(PartialMoniker::new("baz".to_string(), None));
+        let foo_path = NodePath::new(vec![PartialChildMoniker::new("foo".to_string(), None)]);
+        let bar_path = NodePath::new(vec![PartialChildMoniker::new("bar".to_string(), None)]);
+        let baz_path = foo_path.extended(PartialChildMoniker::new("baz".to_string(), None));
 
         let root_children = tree.get_children(tree.get_root_node()?)?;
         assert_eq!(display_nodes(root_children), vec!["/foo", "/bar"]);

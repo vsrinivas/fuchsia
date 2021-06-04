@@ -17,7 +17,7 @@ use {
         OfferTarget, RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
     },
     from_enum::FromEnum,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
     std::{marker::PhantomData, sync::Arc},
 };
 
@@ -811,7 +811,7 @@ where
             UseSource::Child(name) => {
                 let moniker = target.abs_moniker();
                 let child_component = {
-                    let partial = PartialMoniker::new(name.clone(), None);
+                    let partial = PartialChildMoniker::new(name.clone(), None);
                     target.get_live_child(&partial).await?.ok_or_else(|| {
                         RoutingError::use_from_child_not_found(
                             moniker,
@@ -924,7 +924,7 @@ where
             },
             RegistrationSource::Child(child) => {
                 let child_component = {
-                    let partial = PartialMoniker::new(child.clone(), None);
+                    let partial = PartialChildMoniker::new(child.clone(), None);
                     target.get_live_child(&partial).await?.ok_or_else(|| {
                         RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker: partial,
@@ -1097,7 +1097,7 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
-                let partial = PartialMoniker::new(child.clone(), None);
+                let partial = PartialChildMoniker::new(child.clone(), None);
                 component.get_live_child(&partial).await?.ok_or_else(|| {
                     RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker: partial,
@@ -1187,7 +1187,7 @@ where
                 }
                 ExposeSource::Child(child) => {
                     let child_component = {
-                        let child_moniker = PartialMoniker::new(child.clone(), None);
+                        let child_moniker = PartialChildMoniker::new(child.clone(), None);
                         target.get_live_child(&child_moniker).await?.ok_or_else(|| {
                             RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
@@ -1317,7 +1317,7 @@ pub trait ErrorNotFoundFromParent {
 pub trait ErrorNotFoundInChild {
     fn error_not_found_in_child(
         decl_site_moniker: AbsoluteMoniker,
-        child_moniker: PartialMoniker,
+        child_moniker: PartialChildMoniker,
         capability_name: CapabilityName,
     ) -> RoutingError;
 }

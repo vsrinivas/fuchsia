@@ -136,7 +136,7 @@ pub mod tests {
         cm_rust_testing::ComponentDeclBuilder,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
-        moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
+        moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
         std::sync::atomic::Ordering,
         std::sync::Weak,
     };
@@ -345,7 +345,7 @@ pub mod tests {
         let component_root = test.look_up(vec![].into()).await;
         let component_a = match *component_root.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&PartialMoniker::from("a")).expect("child a not found")
+                s.get_live_child(&PartialChildMoniker::from("a")).expect("child a not found")
             }
             _ => panic!("not resolved"),
         };
@@ -476,7 +476,7 @@ pub mod tests {
         // Get component_b without resolving it.
         let component_b = match *component_a.lock_state().await {
             InstanceState::Resolved(ref s) => {
-                s.get_live_child(&PartialMoniker::from("b")).expect("child b not found")
+                s.get_live_child(&PartialChildMoniker::from("b")).expect("child b not found")
             }
             _ => panic!("not resolved"),
         };

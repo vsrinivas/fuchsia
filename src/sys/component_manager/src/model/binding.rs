@@ -159,7 +159,7 @@ mod tests {
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::{join, lock::Mutex, prelude::*},
         matches::assert_matches,
-        moniker::PartialMoniker,
+        moniker::PartialChildMoniker,
         std::{collections::HashSet, convert::TryFrom},
     };
 
@@ -286,7 +286,7 @@ mod tests {
 
         // Validate children. system is resolved, but not echo.
         let actual_children = get_live_children(&*model.root).await;
-        let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
+        let mut expected_children: HashSet<PartialChildMoniker> = HashSet::new();
         expected_children.insert("system".into());
         expected_children.insert("echo".into());
         assert_eq!(actual_children, expected_children);

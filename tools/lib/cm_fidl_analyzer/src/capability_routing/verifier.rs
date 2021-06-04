@@ -8,7 +8,7 @@ use {
     },
     crate::component_tree::{ComponentNode, ComponentTree, NodePath},
     cm_rust::CapabilityName,
-    moniker::PartialMoniker,
+    moniker::PartialChildMoniker,
 };
 
 /// Represents the state of a capability route at a node of the v2 `ComponentTree`.
@@ -124,7 +124,7 @@ pub trait CapabilityRouteVerifier<'a> {
             CapabilitySourceType::Child(child_name) => {
                 let child = &target_state.tree.get_child_node(
                     &target_state.node,
-                    PartialMoniker::new(child_name.clone(), None),
+                    PartialChildMoniker::new(child_name.clone(), None),
                 )?;
                 let expose_decl = self.find_expose_decl(target_state, &child)?;
                 self.state_from_expose(target_state, expose_decl, &child)
@@ -418,7 +418,7 @@ pub trait CapabilityRouteVerifier<'a> {
     fn is_matching_offer(
         &self,
         target_state: &CapabilityRouteState<'a, Self::FieldsType>,
-        target_moniker: &'a PartialMoniker,
+        target_moniker: &'a PartialChildMoniker,
         offer_decl: &'a Self::OfferDeclType,
     ) -> bool;
 

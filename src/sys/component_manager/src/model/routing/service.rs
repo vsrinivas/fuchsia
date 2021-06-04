@@ -225,7 +225,7 @@ mod tests {
         ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::*,
         cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
-        moniker::{AbsoluteMoniker, PartialMoniker},
+        moniker::{AbsoluteMoniker, PartialChildMoniker},
         std::{
             collections::{HashMap, HashSet},
             convert::TryInto,
@@ -251,7 +251,7 @@ mod tests {
                     .get(instance)
                     .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
                         capability_id: "my.service.Service".to_string(),
-                        child_moniker: PartialMoniker::new(instance.to_string(), None),
+                        child_moniker: PartialChildMoniker::new(instance.to_string(), None),
                         moniker: AbsoluteMoniker::root(),
                     })?
                     .clone(),

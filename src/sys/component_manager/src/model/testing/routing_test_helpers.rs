@@ -34,7 +34,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
-    moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
+    moniker::{AbsoluteMoniker, PartialChildMoniker, RelativeMoniker},
     routing::{
         component_id_index::ComponentInstanceId, component_instance::ComponentInstanceInterface,
     },
@@ -337,7 +337,8 @@ impl RoutingTest {
             .bind(&component.abs_moniker, &BindReason::Eager)
             .await
             .expect("bind instance failed");
-        let partial_moniker = PartialMoniker::new(name.to_string(), Some(collection.to_string()));
+        let partial_moniker =
+            PartialChildMoniker::new(name.to_string(), Some(collection.to_string()));
         let nf =
             component.remove_dynamic_child(&partial_moniker).await.expect("failed to remove child");
         // Wait for destruction to fully complete.

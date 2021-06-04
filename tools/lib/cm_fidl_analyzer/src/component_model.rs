@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     fuchsia_zircon_status as zx_status,
-    moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
+    moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
     routing::{
         capability_source::{CapabilitySourceInterface, NamespaceCapabilities},
         component_id_index::ComponentIdIndex,
@@ -287,7 +287,7 @@ pub struct ComponentInstanceForAnalyzer {
     abs_moniker: AbsoluteMoniker,
     decl: ComponentDecl,
     parent: WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer>,
-    children: RwLock<HashMap<PartialMoniker, Arc<ComponentInstanceForAnalyzer>>>,
+    children: RwLock<HashMap<PartialChildMoniker, Arc<ComponentInstanceForAnalyzer>>>,
     environment: Arc<EnvironmentForAnalyzer>,
     policy_checker: GlobalPolicyChecker,
     component_id_index: Arc<ComponentIdIndex>,
@@ -330,7 +330,7 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
 
     async fn get_live_child<'a>(
         self: &'a Arc<Self>,
-        moniker: &PartialMoniker,
+        moniker: &PartialChildMoniker,
     ) -> Result<Option<Arc<Self>>, ComponentInstanceError> {
         match self.children.read().expect("failed to acquire read lock").get(moniker) {
             Some(child) => Ok(Some(Arc::clone(child))),
@@ -342,7 +342,7 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
     async fn live_children_in_collection<'a>(
         self: &'a Arc<Self>,
         _collection: &'a str,
-    ) -> Result<Vec<(PartialMoniker, Arc<Self>)>, ComponentInstanceError> {
+    ) -> Result<Vec<(PartialChildMoniker, Arc<Self>)>, ComponentInstanceError> {
         Ok(vec![])
     }
 }
@@ -414,10 +414,10 @@ mod tests {
         let model = block_on(async { ModelBuilderForAnalyzer::new().build(tree, config).await })?;
         assert_eq!(model.len(), 2);
 
-        let child_moniker = PartialMoniker::new("child".to_string(), None);
+        let child_moniker = PartialChildMoniker::new("child".to_string(), None);
         let root_id = NodePath::new(vec![]);
         let child_id = root_id.extended(child_moniker.clone());
-        let other_id = root_id.extended(PartialMoniker::new("other".to_string(), None));
+        let other_id = root_id.extended(PartialChildMoniker::new("other".to_string(), None));
 
         let root_instance = model.get_instance(&root_id)?;
         let child_instance = model.get_instance(&child_id)?;

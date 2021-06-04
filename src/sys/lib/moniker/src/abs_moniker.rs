@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        child_moniker::ChildMoniker, error::MonikerError, partial_moniker::PartialMoniker,
-        relative_moniker::RelativeMoniker,
+        child_moniker::ChildMoniker, error::MonikerError,
+        partial_child_moniker::PartialChildMoniker, relative_moniker::RelativeMoniker,
     },
     core::cmp::{self, Ord, Ordering},
     itertools,
@@ -52,7 +52,7 @@ impl AbsoluteMoniker {
         }
         let path = input[1..]
             .split('/')
-            .map(PartialMoniker::parse)
+            .map(PartialChildMoniker::parse)
             .map(|p| p.map(|ok_p| ChildMoniker::from_partial(&ok_p, 0)))
             .collect::<Result<_, MonikerError>>()?;
         Ok(Self::new(path))

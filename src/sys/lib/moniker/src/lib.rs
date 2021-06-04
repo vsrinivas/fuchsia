@@ -6,7 +6,7 @@ mod abs_moniker;
 mod child_moniker;
 mod error;
 mod extended_moniker;
-mod partial_moniker;
+mod partial_child_moniker;
 mod relative_moniker;
 
 pub use self::{
@@ -14,6 +14,6 @@ pub use self::{
     child_moniker::{ChildMoniker, InstanceId},
     error::MonikerError,
     extended_moniker::ExtendedMoniker,
-    partial_moniker::PartialMoniker,
+    partial_child_moniker::PartialChildMoniker,
     relative_moniker::RelativeMoniker,
 };
