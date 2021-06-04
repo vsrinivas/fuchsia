@@ -194,6 +194,10 @@ zbi_test("bootsvc-integration-tests") {
     "userboot=bin/bootsvc",
     "bootsvc.next=bin/bootsvc-integration-test,testargument",
     "kernel.root-job.behavior=shutdown",
+
+    # This tells the legacy boot shims to synthesize a ZBI_TYPE_SERIAL_NUMBER
+    # item.  On real devices the native ZBI bootloader supplies that item.
+    "bootloader.zbi.serial-number=fake0123456789",
   ]
   deps = [
     # We need a zircon kernel to get off the ground at all.

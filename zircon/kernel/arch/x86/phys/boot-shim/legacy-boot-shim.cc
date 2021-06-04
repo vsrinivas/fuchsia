@@ -7,11 +7,13 @@
 #include <inttypes.h>
 #include <lib/arch/x86/extension.h>
 #include <lib/arch/x86/system.h>
+#include <lib/boot-options/word-view.h>
 #include <lib/zbitl/error_stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include <hwreg/x86msr.h>
+#include <ktl/string_view.h>
 #include <phys/allocation.h>
 #include <phys/arch.h>
 #include <phys/main.h>
@@ -23,9 +25,15 @@
 
 namespace {
 
+// These synthetic command-line arguments are always injected between the
+// incoming ZBI's items and the legacy boot loader's actual command line.
 constexpr ktl::string_view kBootLoaderNamePrefix = "bootloader.name=";
 constexpr ktl::string_view kBootLoaderInfoPrefix = " bootloader.info=";
 constexpr ktl::string_view kBootLoaderBuildIdPrefix = " bootloader.build-id=";
+
+// If "bootloader.zbi.serial-number=foo" appears in a command line item in the
+// ZBI, then we'll synthesize a ZBI_TYPE_SERIAL_NUMBER item containing "foo".
+constexpr ktl::string_view kSerialNumberEq = "bootloader.zbi.serial-number=";
 
 // This runs in a first pass that counts the size and has to run before any
 // memory allocation can be done, then a second pass that actually copies.
@@ -40,6 +48,7 @@ constexpr auto AssembleCmdline = [](auto&& add) {
 
   add(kBootLoaderBuildIdPrefix);
   add(Symbolize::GetInstance()->BuildIdString());
+  add(" ");
 
   add(gLegacyBoot.cmdline);
 
@@ -66,6 +75,29 @@ uint32_t MemConfigPayloadSize() { return gLegacyBoot.mem_config.size_bytes(); }
 void FillMemconfigPayload(ktl::span<ktl::byte> payload) {
   auto bytes = cpp20::as_bytes(gLegacyBoot.mem_config);
   memcpy(payload.data(), bytes.data(), bytes.size());
+}
+
+zbitl::ByteView SerialNumberFromCmdline(BootZbi::InputZbi zbi) {
+  zbitl::ByteView result;
+  for (auto [header, payload] : zbi) {
+    if (header->type == ZBI_TYPE_CMDLINE) {
+      ktl::string_view line{
+          reinterpret_cast<const char*>(payload.data()),
+          payload.size(),
+      };
+      for (ktl::string_view word : WordView(line)) {
+        if (word.starts_with(kSerialNumberEq)) {
+          word.remove_prefix(kSerialNumberEq.size());
+          result = {
+              reinterpret_cast<const ktl::byte*>(word.data()),
+              word.size(),
+          };
+        }
+      }
+    }
+  }
+  zbi.ignore_error();
+  return result;
 }
 
 }  // namespace
@@ -116,6 +148,10 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
     abort();
   }
 
+  // Scan the ZBI-embedded command line switches for one meant specifically to
+  // tell the shim to synthesize a ZBI_TYPE_SERIAL_NUMBER item.
+  zbitl::ByteView serial_number = SerialNumberFromCmdline(zbi);
+
   // Precalculate the space needed for extra "boot loader" ZBI items
   // synthesized from the legacy boot loader information.
   uint32_t extra = 0;
@@ -131,6 +167,10 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   const uint32_t cmdline_size = CmdlinePayloadSize();
   if (cmdline_size != 0) {
     extra += sizeof(zbi_header_t) + cmdline_size;
+  }
+
+  if (!serial_number.empty()) {
+    extra += sizeof(zbi_header_t) + ZBI_ALIGN(serial_number.size_bytes());
   }
 
   if (auto result = boot.Load(extra); result.is_error()) {
@@ -164,6 +204,16 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
     } else {
       printf("%s: Failed to append %" PRIu32 " bytes of CMDLINE data to ZBI: ",
              Symbolize::kProgramName_, cmdline_size);
+      zbitl::PrintViewError(result.error_value());
+      abort();
+    }
+  }
+
+  if (!serial_number.empty()) {
+    auto result = boot.DataZbi().Append({.type = ZBI_TYPE_SERIAL_NUMBER}, serial_number);
+    if (result.is_error()) {
+      printf("%s: Failed to append %zu bytes of SERIAL_NUMBER data to ZBI: ",
+             Symbolize::kProgramName_, serial_number.size_bytes());
       zbitl::PrintViewError(result.error_value());
       abort();
     }

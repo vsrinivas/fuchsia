@@ -121,6 +121,7 @@ if (toolchain.environment == "kernel.phys32") {
       "..:address-space",
       "..:legacy-boot",
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys:arch-header",
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:symbolize",
@@ -179,6 +180,7 @@ qemu_shims = [
 ]
 
 qemu_shim_tests = [
+  "bootsvc-integration-tests",
   "core-tests",
   "phys-unittests",
 ]
@@ -223,4 +225,8 @@ qemu_shim_test("core-tests") {
   # isn't necessarily really quick, so don't impose the short timeout used for
   # raw phys tests.
   timeout = false
+}
+
+qemu_shim_test("bootsvc-integration-tests") {
+  deps = [ "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests.zbi($default_toolchain)" ]
 }
