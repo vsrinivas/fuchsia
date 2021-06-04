@@ -332,6 +332,10 @@ class CrashReporterTest : public UnitTestFixture {
     if (minidump.has_value()) {
       native_report.set_minidump(std::move(minidump.value()));
     }
+    native_report.set_process_name("crashing_process");
+    native_report.set_process_koid(123u);
+    native_report.set_thread_name("crashing_thread");
+    native_report.set_thread_koid(1234u);
 
     SpecificCrashReport specific_report;
     specific_report.set_native(std::move(native_report));
@@ -669,6 +673,10 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_ok());
   CheckAnnotationsOnServer({
+      {"crash.process.name", "crashing_process"},
+      {"crash.process.koid", "123"},
+      {"crash.thread.name", "crashing_thread"},
+      {"crash.thread.koid", "1234"},
       {"should_process", "true"},
   });
   CheckAttachmentsOnServer({"uploadFileMinidump", kDefaultAttachmentBundleKey});
@@ -687,6 +695,10 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
 
   ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
   CheckAnnotationsOnServer({
+      {"crash.process.name", "crashing_process"},
+      {"crash.process.koid", "123"},
+      {"crash.thread.name", "crashing_thread"},
+      {"crash.thread.koid", "1234"},
       {"signature", "fuchsia-no-minidump"},
   });
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});

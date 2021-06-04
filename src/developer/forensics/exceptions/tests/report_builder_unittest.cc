@@ -63,14 +63,17 @@ TEST_F(CrashReportBuilderTest, ProcessTerminated) {
   builder_.SetProcessTerminated();
 
   auto crash_report = builder_.Consume();
-  ASSERT_FALSE(crash_report.has_specific_report());
-  ASSERT_TRUE(crash_report.has_crash_signature());
+  ASSERT_TRUE(crash_report.has_specific_report());
 
   ASSERT_TRUE(crash_report.has_program_name());
   ASSERT_EQ(crash_report.program_name(), "unknown_process");
 
   ASSERT_FALSE(crash_report.has_program_uptime());
 
+  ASSERT_TRUE(crash_report.specific_report().is_native());
+  EXPECT_FALSE(crash_report.specific_report().native().has_minidump());
+
+  ASSERT_TRUE(crash_report.has_crash_signature());
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-no-minidump-process-terminated");
 }
 
@@ -78,9 +81,12 @@ TEST_F(CrashReportBuilderTest, ExpiredException) {
   builder_.SetExceptionExpired();
 
   auto crash_report = builder_.Consume();
-  ASSERT_FALSE(crash_report.has_specific_report());
-  ASSERT_TRUE(crash_report.has_crash_signature());
+  ASSERT_TRUE(crash_report.has_specific_report());
 
+  ASSERT_TRUE(crash_report.specific_report().is_native());
+  EXPECT_FALSE(crash_report.specific_report().native().has_minidump());
+
+  ASSERT_TRUE(crash_report.has_crash_signature());
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-no-minidump-exception-expired");
 }
 

@@ -68,28 +68,23 @@ std::string Logname(std::string name) {
 
 namespace {
 
-// The crash server expects a specific key for client-provided program uptimes.
+// The crash server expects certain keys from the client for certain fields.
 const char kProgramUptimeMillisKey[] = "ptime";
-
-// The crash server expects a specific key for client-provided event keys.
 const char kEventIdKey[] = "comments";
-
-// The crash server expects a specific key for client-provided crash signatures.
 const char kCrashSignatureKey[] = "signature";
-
-// The crash server expects specific key and values for some annotations and attachments for Dart.
 const char kDartTypeKey[] = "type";
 const char kDartTypeValue[] = "DartError";
 const char kDartExceptionMessageKey[] = "error_message";
 const char kDartExceptionRuntimeTypeKey[] = "error_runtime_type";
 const char kDartExceptionStackTraceKey[] = "DartError";
-
-// The crash server expects a specific key for client-provided report time.
-constexpr char kReportTimeMillis[] = "reportTimeMillis";
-
-// The crash server expects a specific key for client-provided information about whether a crash is
-// fatal.
+const char kReportTimeMillis[] = "reportTimeMillis";
 const char kIsFatalKey[] = "isFatal";
+const char kProcessNameKey[] = "crash.process.name";
+const char kThreadNameKey[] = "crash.thread.name";
+
+// Extra keys that the crash server does *not* have a dependency on.
+const char kProcessKoidKey[] = "crash.process.koid";
+const char kThreadKoidKey[] = "crash.thread.koid";
 
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
                                       AnnotationMap* annotations,
@@ -144,7 +139,23 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   }
 
   // Native-specific annotations.
-  // TODO(fxbug.dev/6564): add module annotations from minidump.
+  if (report.has_specific_report() && report.specific_report().is_native()) {
+    const auto& native_report = report.specific_report().native();
+    if (native_report.has_process_name()) {
+      annotations->Set(kProcessNameKey, native_report.process_name());
+    }
+    if (native_report.has_process_koid()) {
+      annotations->Set(kProcessKoidKey, native_report.process_koid());
+    }
+    if (native_report.has_thread_name()) {
+      annotations->Set(kThreadNameKey, native_report.thread_name());
+    }
+    if (native_report.has_thread_koid()) {
+      annotations->Set(kThreadKoidKey, native_report.thread_koid());
+    }
+
+    // TODO(fxbug.dev/6564): add module annotations from minidump.
+  }
 
   // Default attachments common to all crash reports.
   if (report.has_attachments()) {

@@ -11,6 +11,7 @@
 #include <lib/zx/thread.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <type_traits>
@@ -172,19 +173,30 @@ inline void ValidateCrashSignature(const fuchsia::feedback::CrashReport& report,
 }
 
 inline void ValidateCrashReport(const fuchsia::feedback::CrashReport& report,
-                                const std::string& program_name,
-                                const std::map<std::string, std::string>& annotations) {
+                                const std::string& expected_program_name,
+                                const std::string& expected_process_name,
+                                const zx_koid_t expected_process_koid,
+                                const std::string& expected_thread_name,
+                                const zx_koid_t expected_thread_koid,
+                                const std::map<std::string, std::string>& expected_annotations) {
   ASSERT_TRUE(report.has_program_name());
-  EXPECT_EQ(report.program_name(), program_name);
+  EXPECT_EQ(report.program_name(), expected_program_name);
 
-  if (!annotations.empty()) {
+  ASSERT_TRUE(report.has_specific_report());
+  ASSERT_TRUE(report.specific_report().is_native());
+  EXPECT_EQ(report.specific_report().native().process_name(), expected_process_name);
+  EXPECT_EQ(report.specific_report().native().process_koid(), expected_process_koid);
+  EXPECT_EQ(report.specific_report().native().thread_name(), expected_thread_name);
+  EXPECT_EQ(report.specific_report().native().thread_koid(), expected_thread_koid);
+
+  if (!expected_annotations.empty()) {
     ASSERT_TRUE(report.has_annotations());
 
     // Infer the type of |matchers|.
     auto matchers = std::vector({MatchesAnnotation("", "")});
     matchers.clear();
 
-    for (const auto& [k, v] : annotations) {
+    for (const auto& [k, v] : expected_annotations) {
       matchers.push_back(MatchesAnnotation(k.c_str(), v.c_str()));
     }
 
@@ -307,13 +319,9 @@ TEST_F(HandlerTest, NoException) {
   ASSERT_EQ(crash_reporter().reports().size(), 1u);
   auto& report = crash_reporter().reports().front();
 
-  ValidateCrashReport(report, kComponentUrl,
+  ValidateCrashReport(report, kComponentUrl, process_name, process_koid, thread_name, thread_koid,
                       {
-                          {"crash.process.name", process_name},
-                          {"crash.process.koid", std::to_string(process_koid)},
                           {"crash.realm-path", "/realm/path"},
-                          {"crash.thread.name", thread_name},
-                          {"crash.thread.koid", std::to_string(thread_koid)},
                       });
   ValidateCrashSignature(report, "fuchsia-no-minidump-exception-expired");
 

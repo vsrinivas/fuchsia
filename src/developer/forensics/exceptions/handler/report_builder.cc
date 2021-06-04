@@ -116,27 +116,23 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   using namespace fuchsia::feedback;
   CrashReport crash_report;
 
+  // Always fatal crash.
   crash_report.set_is_fatal(true);
 
+  // Program name.
   const std::string program_name =
       (component_url_.has_value()) ? component_url_.value() : process_name_.value();
   crash_report.set_program_name(program_name.substr(0, fuchsia::feedback::MAX_PROGRAM_NAME_LENGTH));
 
-  auto AddAnnotation = [&crash_report](const std::string& key, const std::string& value) {
-    crash_report.mutable_annotations()->push_back(Annotation{.key = key, .value = value});
-  };
-
-  AddAnnotation("crash.process.name", process_name_.value());
-  AddAnnotation("crash.thread.name", thread_name_.value());
-  if (process_koid_.has_value()) {
-    AddAnnotation("crash.process.koid", std::to_string(process_koid_.value()));
-  }
+  // Program uptime.
   if (process_uptime_.has_value()) {
     crash_report.set_program_uptime(process_uptime_.value());
   }
-  if (thread_koid_.has_value()) {
-    AddAnnotation("crash.thread.koid", std::to_string(thread_koid_.value()));
-  }
+
+  // Extra annotations.
+  auto AddAnnotation = [&crash_report](const std::string& key, const std::string& value) {
+    crash_report.mutable_annotations()->push_back(Annotation{.key = key, .value = value});
+  };
   if (!component_url_.has_value()) {
     AddAnnotation("debug.crash.component.url.set", "false");
   }
@@ -144,8 +140,7 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
     AddAnnotation("crash.realm-path", realm_path_.value());
   }
 
-  FX_CHECK(minidump_.has_value() || exception_expired_ || process_already_terminated_);
-
+  // Crash signature overwrite on channel/port overflow.
   if (policy_error_.has_value()) {
     switch (policy_error_.value()) {
       case PolicyError::kChannelOverflow:
@@ -159,24 +154,33 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
     }
   }
 
-  if (minidump_.has_value()) {
-    NativeCrashReport native_crash_report;
+  // Process and thread names/koids.
+  NativeCrashReport native_crash_report;
+  native_crash_report.set_process_name(process_name_.value());
+  if (process_koid_.has_value()) {
+    native_crash_report.set_process_koid(process_koid_.value());
+  }
+  native_crash_report.set_thread_name(thread_name_.value());
+  if (thread_koid_.has_value()) {
+    native_crash_report.set_thread_koid(thread_koid_.value());
+  }
 
+  // Minidump.
+  FX_CHECK(minidump_.has_value() || exception_expired_ || process_already_terminated_);
+  if (minidump_.has_value()) {
     fuchsia::mem::Buffer mem_buffer;
     minidump_.value().get_size(&mem_buffer.size);
     mem_buffer.vmo = std::move(minidump_.value());
     minidump_ = std::nullopt;
-
     native_crash_report.set_minidump(std::move(mem_buffer));
-    crash_report.set_specific_report(
-        SpecificCrashReport::WithNative(std::move(native_crash_report)));
-  } else {
-    if (exception_expired_) {
-      crash_report.set_crash_signature("fuchsia-no-minidump-exception-expired");
-    } else if (process_already_terminated_) {
-      crash_report.set_crash_signature("fuchsia-no-minidump-process-terminated");
-    }
+  } else if (exception_expired_) {
+    crash_report.set_crash_signature("fuchsia-no-minidump-exception-expired");
+  } else if (process_already_terminated_) {
+    crash_report.set_crash_signature("fuchsia-no-minidump-process-terminated");
   }
+
+  crash_report.set_specific_report(SpecificCrashReport::WithNative(std::move(native_crash_report)));
+
   return crash_report;
 }
 

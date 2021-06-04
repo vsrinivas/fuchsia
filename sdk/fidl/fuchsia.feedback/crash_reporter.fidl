@@ -122,10 +122,25 @@ table GenericCrashReport {
     1: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
 };
 
+const uint32 MAX_PROCESS_NAME_LENGTH = 64;
+const uint32 MAX_THREAD_NAME_LENGTH = 64;
+
 /// Represents a crash report for a native exception out of which the client has built a minidump.
 resource table NativeCrashReport {
     /// The core dump in the Minidump format.
     1: fuchsia.mem.Buffer minidump;
+
+    /// The name of the crashed process.
+    2: string:MAX_PROCESS_NAME_LENGTH process_name;
+
+    /// The kernel object id of the crashed process.
+    3: zx.koid process_koid;
+
+    /// The name of the crashed thread.
+    4: string:MAX_THREAD_NAME_LENGTH thread_name;
+
+    /// The kernel object id of the crashed thread.
+    5: zx.koid thread_koid;
 };
 
 const uint32 MAX_EXCEPTION_TYPE_LENGTH = 128;
