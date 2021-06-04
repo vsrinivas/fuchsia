@@ -90,6 +90,11 @@ class IntegrationTest : public TestBase {
     return controller()->primary_client_ == nullptr;
   }
 
+  bool virtcon_client_dead() {
+    fbl::AutoLock l(controller()->mtx());
+    return controller()->vc_client_ == nullptr;
+  }
+
   void client_proxy_send_vsync() {
     fbl::AutoLock l(controller()->mtx());
     controller()->active_client_->OnDisplayVsync(0, 0, nullptr, 0);
@@ -117,7 +122,11 @@ class IntegrationTest : public TestBase {
 
   // |TestBase|
   void TearDown() override {
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return this->primary_client_dead(); }));
+    // Wait until the display core has processed all client disconnections before sending the last
+    // vsync.
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+        [this]() { return primary_client_dead() && virtcon_client_dead(); }));
+
     // Send one last vsync, to make sure any blank configs take effect.
     display()->SendVsync();
     EXPECT_EQ(0, controller()->TEST_imported_images_count());
