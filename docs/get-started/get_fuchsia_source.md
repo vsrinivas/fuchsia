@@ -37,6 +37,8 @@ The Fuchsia project requires `curl`, `unzip`, and `git` to be up-to-date:
 
 *   For **macOS**, install the Xcode command line tools:
 
+    Note: You may skip this step if `ffx platform preflight` discovers Xcode tools installed.
+
     ```posix-terminal
     xcode-select --install
     ```
