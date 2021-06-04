@@ -13,9 +13,8 @@ class Interface_TestBase
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Method(MethodRequestView request,
-                      ::fidl::WireServer<::fidl_test_doccomments::Interface>::
-                          MethodCompleter::Sync& completer) override {
-    NotImplemented_("Method", completer);
+                      MethodCompleter::Sync& _completer) override {
+    NotImplemented_("Method", _completer);
   }
 };
 }  // namespace testing

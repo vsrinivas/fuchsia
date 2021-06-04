@@ -513,8 +513,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocolrequest::Parent::GetChild>*>(msg.bytes());
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                GetChildCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocolrequest::Parent::GetChild>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_protocolrequest::Parent>*>(
                 interface)
@@ -529,8 +530,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_protocolrequest::Parent::GetChildRequest>*>(
                 msg.bytes());
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                GetChildRequestCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocolrequest::Parent::GetChildRequest>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_protocolrequest::Parent>*>(
                 interface)
@@ -549,8 +551,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                TakeChildCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocolrequest::Parent::TakeChild>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_protocolrequest::Parent>*>(
                 interface)
@@ -569,8 +572,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                TakeChildRequestCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocolrequest::Parent::TakeChildRequest>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_protocolrequest::Parent>*>(
                 interface)
@@ -604,18 +608,19 @@ fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-    GetChildCompleterBase::Reply(
+::fidl::Result fidl::internal::
+    WireCompleterBase<::fidl_test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>
       _response{::fidl::internal::AllowUnownedInputRef{}, std::move(c)};
-  return ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-      GetChildCompleterBase::SendReply(&_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_protocolrequest::Parent::GetChild>::
+      SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-    GetChildCompleterBase::Reply(
+::fidl::Result fidl::internal::
+    WireCompleterBase<::fidl_test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::BufferSpan _buffer,
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
   ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>::
@@ -626,20 +631,21 @@ fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-    GetChildRequestCompleterBase::Reply(
-        ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>::
+    Reply(::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _response{::fidl::internal::AllowUnownedInputRef{}, std::move(r)};
-  return ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-      GetChildRequestCompleterBase::SendReply(&_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_protocolrequest::Parent::GetChildRequest>::
+      SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-    GetChildRequestCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
-        ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>::
+    Reply(::fidl::BufferSpan _buffer,
+          ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
   ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
                                       std::move(r));

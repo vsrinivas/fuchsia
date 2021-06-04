@@ -194,8 +194,8 @@ fidl::internal::WireServerDispatcher<::fidl_test_error::Example>::TryDispatch(
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_error::Example>::FooCompleter::Sync
-                completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_error::Example::Foo>::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<::fidl_test_error::Example>*>(
                 interface)
                 ->Foo(primary, completer);
@@ -229,16 +229,16 @@ fidl::WireServer<::fidl_test_error::Example>::dispatch_message(
 
 #ifdef __Fuchsia__
 ::fidl::Result
-fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
+fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl_test_error::wire::ExampleFooResult result) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_error::Example::Foo>>
       _response{::fidl::internal::AllowUnownedInputRef{}, result};
-  return ::fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::
+  return ::fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::
       SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result fidl::WireServer<
-    ::fidl_test_error::Example>::FooCompleterBase::ReplySuccess(int64_t y) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::fidl_test_error::wire::ExampleFooResponse _response;
   _response.y = std::move(y);
 
@@ -247,23 +247,23 @@ fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
           FromExternal(&_response)));
 }
 
-::fidl::Result fidl::WireServer<
-    ::fidl_test_error::Example>::FooCompleterBase::ReplyError(uint32_t error) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_error::Example::Foo>::ReplyError(uint32_t error) {
   return Reply(::fidl_test_error::wire::ExampleFooResult::WithErr(
       ::fidl::ObjectView<uint32_t>::FromExternal(&error)));
 }
 
 ::fidl::Result
-fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::Reply(
+fidl::internal::WireCompleterBase<::fidl_test_error::Example::Foo>::Reply(
     ::fidl::BufferSpan _buffer,
     ::fidl_test_error::wire::ExampleFooResult result) {
   ::fidl::WireResponse<::fidl_test_error::Example::Foo>::UnownedEncodedMessage
       _response(_buffer.data, _buffer.capacity, result);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
-::fidl::Result
-fidl::WireServer<::fidl_test_error::Example>::FooCompleterBase::ReplySuccess(
-    ::fidl::BufferSpan _buffer, int64_t y) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_error::Example::Foo>::ReplySuccess(::fidl::BufferSpan _buffer,
+                                                   int64_t y) {
   ::fidl_test_error::wire::ExampleFooResponse response;
   response.y = std::move(y);
   return Reply(

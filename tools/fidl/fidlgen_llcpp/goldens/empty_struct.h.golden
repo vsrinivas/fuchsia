@@ -1308,6 +1308,36 @@ class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final {
   ::fidl::ClientEnd<::fidl_test_emptystruct::EmptyProtocol> client_end_;
 };
 
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(const ::fidl_test_emptystruct::wire::Empty& e);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                       const ::fidl_test_emptystruct::wire::Empty& e);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>;
+};
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -1321,61 +1351,18 @@ class ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_emptystruct::EmptyProtocol;
 
-  using SendCompleter = ::fidl::Completer<>;
-  class SendRequestView {
-   public:
-    SendRequestView(
-        ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
-            request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>* request_;
-  };
+  using SendCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_emptystruct::EmptyProtocol::Send>;
+  using SendRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_emptystruct::EmptyProtocol::Send>;
 
   virtual void Send(SendRequestView request,
                     SendCompleter::Sync& _completer) = 0;
 
-  class SendAndReceiveCompleterBase : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(const ::fidl_test_emptystruct::wire::Empty& e);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                         const ::fidl_test_emptystruct::wire::Empty& e);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
-  using SendAndReceiveCompleter =
-      ::fidl::Completer<SendAndReceiveCompleterBase>;
-  class SendAndReceiveRequestView {
-   public:
-    SendAndReceiveRequestView(
-        ::fidl::WireRequest<
-            ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
-        request_;
-  };
+  using SendAndReceiveCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
+  using SendAndReceiveRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
 
   virtual void SendAndReceive(SendAndReceiveRequestView request,
                               SendAndReceiveCompleter::Sync& _completer) = 0;

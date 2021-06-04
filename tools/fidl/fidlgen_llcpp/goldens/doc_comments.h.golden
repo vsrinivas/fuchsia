@@ -1493,21 +1493,10 @@ class ::fidl::WireServer<::fidl_test_doccomments::Interface>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_doccomments::Interface;
 
-  using MethodCompleter = ::fidl::Completer<>;
-  class MethodRequestView {
-   public:
-    MethodRequestView(
-        ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>*
-            request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request_;
-  };
+  using MethodCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_doccomments::Interface::Method>;
+  using MethodRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_doccomments::Interface::Method>;
 
   /// method comment #1
   ///

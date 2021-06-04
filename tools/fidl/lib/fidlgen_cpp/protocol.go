@@ -120,6 +120,10 @@ var (
 	WireResult          = fidlNs.member("WireResult")
 	WireUnownedResult   = fidlNs.member("WireUnownedResult")
 	WireResponseContext = fidlNs.member("WireResponseContext")
+	WireCompleter       = internalNs.member("WireCompleter")
+	WireCompleterBase   = internalNs.member("WireCompleterBase")
+	WireMethodTypes     = internalNs.member("WireMethodTypes")
+	WireRequestView     = internalNs.member("WireRequestView")
 )
 
 type wireTypeNames struct {
@@ -308,27 +312,33 @@ func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 }
 
 type wireMethod struct {
-	WireCompleter       name
-	WireCompleterBase   name
-	WireRequest         name
-	WireRequestView     name
-	WireResponse        name
-	WireResponseContext name
-	WireResult          name
-	WireUnownedResult   name
+	WireCompleterAlias   name
+	WireCompleter        name
+	WireCompleterBase    name
+	WireMethodTypes      name
+	WireRequest          name
+	WireRequestView      name
+	WireRequestViewAlias name
+	WireResponse         name
+	WireResponseContext  name
+	WireResult           name
+	WireUnownedResult    name
 }
 
 func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, methodMarker name) wireMethod {
 	s := wireTypes.WireServer.nest(name)
 	return wireMethod{
-		WireCompleter:       s.appendName("Completer"),
-		WireCompleterBase:   s.appendName("CompleterBase"),
-		WireRequest:         WireRequest.template(methodMarker),
-		WireRequestView:     s.appendName("RequestView"),
-		WireResponse:        WireResponse.template(methodMarker),
-		WireResponseContext: WireResponseContext.template(methodMarker),
-		WireResult:          WireResult.template(methodMarker),
-		WireUnownedResult:   WireUnownedResult.template(methodMarker),
+		WireCompleterAlias:   s.appendName("Completer"),
+		WireCompleter:        WireCompleter.template(methodMarker),
+		WireCompleterBase:    WireCompleterBase.template(methodMarker),
+		WireMethodTypes:      WireMethodTypes.template(methodMarker),
+		WireRequest:          WireRequest.template(methodMarker),
+		WireRequestView:      WireRequestView.template(methodMarker),
+		WireRequestViewAlias: s.appendName("RequestView"),
+		WireResponse:         WireResponse.template(methodMarker),
+		WireResponseContext:  WireResponseContext.template(methodMarker),
+		WireResult:           WireResult.template(methodMarker),
+		WireUnownedResult:    WireUnownedResult.template(methodMarker),
 	}
 }
 
@@ -365,6 +375,14 @@ type Method struct {
 	// Protocol is a reference to the containing protocol, for the
 	// convenience of golang templates.
 	Protocol *Protocol
+}
+
+func (m Method) WireRequestViewArg() string {
+	return m.appendName("RequestView").Name()
+}
+
+func (m Method) WireCompleterArg() string {
+	return m.appendName("Completer").nest("Sync").Name()
 }
 
 type messageDirection int

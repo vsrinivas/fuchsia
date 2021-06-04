@@ -13,15 +13,13 @@ class EmptyProtocol_TestBase
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Send(SendRequestView request,
-                    ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-                        SendCompleter::Sync& completer) override {
-    NotImplemented_("Send", completer);
+                    SendCompleter::Sync& _completer) override {
+    NotImplemented_("Send", _completer);
   }
   virtual void SendAndReceive(
       SendAndReceiveRequestView request,
-      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-          SendAndReceiveCompleter::Sync& completer) override {
-    NotImplemented_("SendAndReceive", completer);
+      SendAndReceiveCompleter::Sync& _completer) override {
+    NotImplemented_("SendAndReceive", _completer);
   }
 };
 }  // namespace testing

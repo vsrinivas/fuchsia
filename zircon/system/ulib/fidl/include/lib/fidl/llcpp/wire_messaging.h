@@ -79,6 +79,27 @@ class WireCaller;
 template <typename FidlProtocol>
 struct WireServerDispatcher;
 
+template <typename FidlMethod>
+class WireRequestView {
+ public:
+  WireRequestView(fidl::WireRequest<FidlMethod>* request) : request_(request) {}
+  fidl::WireRequest<FidlMethod>* operator->() const { return request_; }
+
+ private:
+  fidl::WireRequest<FidlMethod>* request_;
+};
+
+template <typename FidlMethod>
+class WireCompleterBase;
+
+template <typename FidlMethod>
+struct WireMethodTypes {
+  using Completer = fidl::Completer<>;
+};
+
+template <typename FidlMethod>
+using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
+
 }  // namespace internal
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|

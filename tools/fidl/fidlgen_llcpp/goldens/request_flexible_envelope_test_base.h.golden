@@ -14,15 +14,13 @@ class Protocol_TestBase
                                ::fidl::CompleterBase& completer) = 0;
   virtual void RequestStrictResponseFlexible(
       RequestStrictResponseFlexibleRequestView request,
-      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-          RequestStrictResponseFlexibleCompleter::Sync& completer) override {
-    NotImplemented_("RequestStrictResponseFlexible", completer);
+      RequestStrictResponseFlexibleCompleter::Sync& _completer) override {
+    NotImplemented_("RequestStrictResponseFlexible", _completer);
   }
   virtual void RequestFlexibleResponseStrict(
       RequestFlexibleResponseStrictRequestView request,
-      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-          RequestFlexibleResponseStrictCompleter::Sync& completer) override {
-    NotImplemented_("RequestFlexibleResponseStrict", completer);
+      RequestFlexibleResponseStrictCompleter::Sync& _completer) override {
+    NotImplemented_("RequestFlexibleResponseStrict", _completer);
   }
 };
 }  // namespace testing

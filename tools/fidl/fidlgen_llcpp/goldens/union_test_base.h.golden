@@ -14,18 +14,16 @@ class TestProtocol_TestBase
                                ::fidl::CompleterBase& completer) = 0;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
       StrictXUnionHenceResponseMayBeStackAllocatedRequestView request,
-      ::fidl::WireServer<::fidl_test_union::TestProtocol>::
-          StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
-              completer) override {
-    NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated", completer);
+      StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& _completer)
+      override {
+    NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated", _completer);
   }
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
       FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView request,
-      ::fidl::WireServer<::fidl_test_union::TestProtocol>::
-          FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
-              completer) override {
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& _completer)
+      override {
     NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated",
-                    completer);
+                    _completer);
   }
 };
 }  // namespace testing

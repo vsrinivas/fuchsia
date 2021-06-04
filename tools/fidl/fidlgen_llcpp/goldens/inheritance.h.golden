@@ -659,6 +659,33 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final {
   ::fidl::ClientEnd<::fidl_test_inheritance::Super> client_end_;
 };
 
+template <>
+class ::fidl::internal::WireCompleterBase<::fidl_test_inheritance::Super::Foo>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(int64_t y);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::fidl_test_inheritance::Super::Foo> {
+  using Completer = fidl::Completer<
+      ::fidl::internal::WireCompleterBase<::fidl_test_inheritance::Super::Foo>>;
+};
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -672,38 +699,10 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Super;
 
-  class FooCompleterBase : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(int64_t y);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
-  using FooCompleter = ::fidl::Completer<FooCompleterBase>;
-  class FooRequestView {
-   public:
-    FooRequestView(
-        ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>* operator->()
-        const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>* request_;
-  };
+  using FooCompleter =
+      ::fidl::internal::WireCompleter<::fidl_test_inheritance::Super::Foo>;
+  using FooRequestView =
+      ::fidl::internal::WireRequestView<::fidl_test_inheritance::Super::Foo>;
 
   virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
 
@@ -1326,6 +1325,33 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final {
   ::fidl::ClientEnd<::fidl_test_inheritance::Sub> client_end_;
 };
 
+template <>
+class ::fidl::internal::WireCompleterBase<::fidl_test_inheritance::Sub::Foo>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(int64_t y);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::fidl_test_inheritance::Sub::Foo> {
+  using Completer = fidl::Completer<
+      ::fidl::internal::WireCompleterBase<::fidl_test_inheritance::Sub::Foo>>;
+};
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -1339,37 +1365,10 @@ class ::fidl::WireServer<::fidl_test_inheritance::Sub>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Sub;
 
-  class FooCompleterBase : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(int64_t y);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
-  using FooCompleter = ::fidl::Completer<FooCompleterBase>;
-  class FooRequestView {
-   public:
-    FooRequestView(
-        ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>* operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>* request_;
-  };
+  using FooCompleter =
+      ::fidl::internal::WireCompleter<::fidl_test_inheritance::Sub::Foo>;
+  using FooRequestView =
+      ::fidl::internal::WireRequestView<::fidl_test_inheritance::Sub::Foo>;
 
   virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
 

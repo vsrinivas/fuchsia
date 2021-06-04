@@ -1702,6 +1702,34 @@ class ::fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol> final {
   ::fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol> client_end_;
 };
 
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::fidl_test_nullable::SimpleProtocol::Add> : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(int32_t sum);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer, int32_t sum);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::fidl_test_nullable::SimpleProtocol::Add> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::fidl_test_nullable::SimpleProtocol::Add>>;
+};
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -1715,38 +1743,10 @@ class ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_nullable::SimpleProtocol;
 
-  class AddCompleterBase : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(int32_t sum);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int32_t sum);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
-  using AddCompleter = ::fidl::Completer<AddCompleterBase>;
-  class AddRequestView {
-   public:
-    AddRequestView(
-        ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>* operator->()
-        const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>* request_;
-  };
+  using AddCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_nullable::SimpleProtocol::Add>;
+  using AddRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_nullable::SimpleProtocol::Add>;
 
   virtual void Add(AddRequestView request, AddCompleter::Sync& _completer) = 0;
 

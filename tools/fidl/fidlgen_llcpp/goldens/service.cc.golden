@@ -66,8 +66,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_service::SecondProtocol::MethodOnSecond>*>(
                 msg.bytes());
-            ::fidl::WireServer<::fidl_test_service::SecondProtocol>::
-                MethodOnSecondCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_service::SecondProtocol::MethodOnSecond>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_service::SecondProtocol>*>(
                 interface)
@@ -173,8 +174,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_service::FirstProtocol::MethodOnFirst>*>(
                 msg.bytes());
-            ::fidl::WireServer<::fidl_test_service::FirstProtocol>::
-                MethodOnFirstCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_service::FirstProtocol::MethodOnFirst>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_service::FirstProtocol>*>(
                 interface)

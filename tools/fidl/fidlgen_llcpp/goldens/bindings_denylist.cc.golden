@@ -192,9 +192,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                     LibfuzzerNeedsNonemptyProtocol>*>(msg.bytes());
-            ::fidl::WireServer<
-                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-                LibfuzzerNeedsNonemptyProtocolCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                    LibfuzzerNeedsNonemptyProtocol>::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*>(interface)
                 ->LibfuzzerNeedsNonemptyProtocol(primary, completer);
@@ -231,17 +231,17 @@ fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    LibfuzzerNeedsNonemptyProtocolCompleterBase::Reply() {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol>::Reply() {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>>
       _response{::fidl::internal::AllowUnownedInputRef{}};
-  return ::fidl::WireServer<
-      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-      LibfuzzerNeedsNonemptyProtocolCompleterBase::SendReply(
-          &_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>::
+      SendReply(&_response.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 

@@ -146,9 +146,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<
-                ::fidl_test_placementofattributes::ExampleProtocol>::
-                MethodCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_placementofattributes::ExampleProtocol::Method>::
+                Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_placementofattributes::ExampleProtocol>*>(interface)
                 ->Method(primary, completer);

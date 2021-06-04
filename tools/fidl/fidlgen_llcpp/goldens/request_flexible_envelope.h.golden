@@ -1655,6 +1655,72 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol> client_end_;
 };
 
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestStrictResponseFlexible> : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
+  ::fidl::Result Reply(
+      ::fidl::BufferSpan _buffer,
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestStrictResponseFlexible> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexible>>;
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestFlexibleResponseStrict> : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                       ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestFlexibleResponseStrict> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrict>>;
+};
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -1668,91 +1734,27 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_requestflexibleenvelope::Protocol;
 
-  class RequestStrictResponseFlexibleCompleterBase
-      : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
-    ::fidl::Result Reply(
-        ::fidl::BufferSpan _buffer,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
   using RequestStrictResponseFlexibleCompleter =
-      ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
-  class RequestStrictResponseFlexibleRequestView {
-   public:
-    RequestStrictResponseFlexibleRequestView(
-        ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>* request_;
-  };
+      ::fidl::internal::WireCompleter<
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>;
+  using RequestStrictResponseFlexibleRequestView =
+      ::fidl::internal::WireRequestView<
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>;
 
   virtual void RequestStrictResponseFlexible(
       RequestStrictResponseFlexibleRequestView request,
       RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
 
-  class RequestFlexibleResponseStrictCompleterBase
-      : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
-    ::fidl::Result Reply(
-        ::fidl::BufferSpan _buffer,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
   using RequestFlexibleResponseStrictCompleter =
-      ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
-  class RequestFlexibleResponseStrictRequestView {
-   public:
-    RequestFlexibleResponseStrictRequestView(
-        ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>* request_;
-  };
+      ::fidl::internal::WireCompleter<
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>;
+  using RequestFlexibleResponseStrictRequestView =
+      ::fidl::internal::WireRequestView<
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>;
 
   virtual void RequestFlexibleResponseStrict(
       RequestFlexibleResponseStrictRequestView request,

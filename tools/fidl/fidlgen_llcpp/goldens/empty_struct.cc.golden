@@ -377,8 +377,9 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-                SendCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_emptystruct::EmptyProtocol::Send>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>*>(
                 interface)
@@ -397,8 +398,9 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-                SendAndReceiveCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>*>(
                 interface)
@@ -433,20 +435,21 @@ fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-    SendAndReceiveCompleterBase::Reply(
-        const ::fidl_test_emptystruct::wire::Empty& e) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
+    Reply(const ::fidl_test_emptystruct::wire::Empty& e) {
   ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       _response{::fidl::internal::AllowUnownedInputRef{}, e};
-  return ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-      SendAndReceiveCompleterBase::SendReply(&_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
+      SendReply(&_response.GetOutgoingMessage());
 }
 
-::fidl::Result fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::
-    SendAndReceiveCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
-        const ::fidl_test_emptystruct::wire::Empty& e) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
+    Reply(::fidl::BufferSpan _buffer,
+          const ::fidl_test_emptystruct::wire::Empty& e) {
   ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, e);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

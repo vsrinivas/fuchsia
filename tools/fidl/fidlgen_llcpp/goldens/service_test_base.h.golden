@@ -14,9 +14,8 @@ class SecondProtocol_TestBase
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnSecond(
       MethodOnSecondRequestView request,
-      ::fidl::WireServer<::fidl_test_service::SecondProtocol>::
-          MethodOnSecondCompleter::Sync& completer) override {
-    NotImplemented_("MethodOnSecond", completer);
+      MethodOnSecondCompleter::Sync& _completer) override {
+    NotImplemented_("MethodOnSecond", _completer);
   }
 };
 
@@ -28,9 +27,8 @@ class FirstProtocol_TestBase
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnFirst(
       MethodOnFirstRequestView request,
-      ::fidl::WireServer<::fidl_test_service::FirstProtocol>::
-          MethodOnFirstCompleter::Sync& completer) override {
-    NotImplemented_("MethodOnFirst", completer);
+      MethodOnFirstCompleter::Sync& _completer) override {
+    NotImplemented_("MethodOnFirst", _completer);
   }
 };
 }  // namespace testing

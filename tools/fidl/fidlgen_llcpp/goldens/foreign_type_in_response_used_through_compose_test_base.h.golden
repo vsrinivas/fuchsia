@@ -13,11 +13,9 @@ class Top_TestBase
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-  virtual void GetFoo(
-      GetFooRequestView request,
-      ::fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::
-                             Top>::GetFooCompleter::Sync& completer) override {
-    NotImplemented_("GetFoo", completer);
+  virtual void GetFoo(GetFooRequestView request,
+                      GetFooCompleter::Sync& _completer) override {
+    NotImplemented_("GetFoo", _completer);
   }
 };
 }  // namespace testing

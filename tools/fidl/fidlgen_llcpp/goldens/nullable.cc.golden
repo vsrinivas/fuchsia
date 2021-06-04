@@ -214,8 +214,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
-                AddCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_nullable::SimpleProtocol::Add>::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>*>(
                 interface)
@@ -250,19 +250,20 @@ fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::AddCompleterBase::Reply(
-    int32_t sum) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>
       _response{::fidl::internal::AllowUnownedInputRef{}, sum};
-  return ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
-      AddCompleterBase::SendReply(&_response.GetOutgoingMessage());
+  return ::fidl::internal::
+      WireCompleterBase<::fidl_test_nullable::SimpleProtocol::Add>::SendReply(
+          &_response.GetOutgoingMessage());
 }
 
-::fidl::Result
-fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::AddCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, int32_t sum) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_nullable::SimpleProtocol::Add>::Reply(::fidl::BufferSpan
+                                                          _buffer,
+                                                      int32_t sum) {
   ::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, sum);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

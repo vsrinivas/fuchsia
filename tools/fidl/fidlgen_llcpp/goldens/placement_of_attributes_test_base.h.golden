@@ -13,11 +13,9 @@ class ExampleProtocol_TestBase
   virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-  virtual void Method(
-      MethodRequestView request,
-      ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>::
-          MethodCompleter::Sync& completer) override {
-    NotImplemented_("Method", completer);
+  virtual void Method(MethodRequestView request,
+                      MethodCompleter::Sync& _completer) override {
+    NotImplemented_("Method", _completer);
   }
 };
 }  // namespace testing

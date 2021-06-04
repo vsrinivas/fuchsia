@@ -11,11 +11,9 @@ class Example_TestBase : public ::fidl::WireServer<::fidl_test_error::Example> {
   virtual ~Example_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-  virtual void Foo(
-      FooRequestView request,
-      ::fidl::WireServer<::fidl_test_error::Example>::FooCompleter::Sync&
-          completer) override {
-    NotImplemented_("Foo", completer);
+  virtual void Foo(FooRequestView request,
+                   FooCompleter::Sync& _completer) override {
+    NotImplemented_("Foo", _completer);
   }
 };
 }  // namespace testing

@@ -1094,24 +1094,10 @@ class ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_placementofattributes::ExampleProtocol;
 
-  using MethodCompleter = ::fidl::Completer<>;
-  class MethodRequestView {
-   public:
-    MethodRequestView(
-        ::fidl::WireRequest<
-            ::fidl_test_placementofattributes::ExampleProtocol::Method>*
-            request)
-        : request_(request) {}
-    ::fidl::WireRequest<
-        ::fidl_test_placementofattributes::ExampleProtocol::Method>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<
-        ::fidl_test_placementofattributes::ExampleProtocol::Method>* request_;
-  };
+  using MethodCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>;
+  using MethodRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_placementofattributes::ExampleProtocol::Method>;
 
   virtual void Method(MethodRequestView request,
                       MethodCompleter::Sync& _completer) = 0;

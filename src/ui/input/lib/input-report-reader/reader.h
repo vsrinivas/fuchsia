@@ -17,7 +17,8 @@
 
 namespace input {
 
-namespace fuchsia_input_report = fuchsia_input_report;
+using ReadInputReportsCompleterBase =
+    fidl::internal::WireCompleterBase<fuchsia_input_report::InputReportsReader::ReadInputReports>;
 
 template <class Report>
 class InputReportReader;

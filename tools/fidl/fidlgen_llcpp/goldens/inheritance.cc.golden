@@ -190,8 +190,8 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::DispatchEvent(
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleter::
-                Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_inheritance::Super::Foo>::Sync completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_inheritance::Super>*>(interface)
                 ->Foo(primary, completer);
@@ -224,17 +224,18 @@ fidl::WireServer<::fidl_test_inheritance::Super>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<
-    ::fidl_test_inheritance::Super>::FooCompleterBase::Reply(int64_t y) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_inheritance::Super::Foo>::Reply(int64_t y) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>
       _response{::fidl::internal::AllowUnownedInputRef{}, y};
-  return ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleterBase::
-      SendReply(&_response.GetOutgoingMessage());
+  return ::fidl::internal::
+      WireCompleterBase<::fidl_test_inheritance::Super::Foo>::SendReply(
+          &_response.GetOutgoingMessage());
 }
 
 ::fidl::Result
-fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleterBase::Reply(
+fidl::internal::WireCompleterBase<::fidl_test_inheritance::Super::Foo>::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>::
       UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, y);
@@ -440,8 +441,8 @@ fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Sub>::TryDispatch(
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleter::Sync
-                completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_inheritance::Sub::Foo>::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<::fidl_test_inheritance::Sub>*>(
                 interface)
                 ->Foo(primary, completer);
@@ -474,17 +475,18 @@ fidl::WireServer<::fidl_test_inheritance::Sub>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<
-    ::fidl_test_inheritance::Sub>::FooCompleterBase::Reply(int64_t y) {
+::fidl::Result fidl::internal::WireCompleterBase<
+    ::fidl_test_inheritance::Sub::Foo>::Reply(int64_t y) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>
       _response{::fidl::internal::AllowUnownedInputRef{}, y};
-  return ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleterBase::
-      SendReply(&_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_inheritance::Sub::Foo>::SendReply(&_response
+                                                         .GetOutgoingMessage());
 }
 
 ::fidl::Result
-fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleterBase::Reply(
+fidl::internal::WireCompleterBase<::fidl_test_inheritance::Sub::Foo>::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
   ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>::UnownedEncodedMessage
       _response(_buffer.data, _buffer.capacity, y);

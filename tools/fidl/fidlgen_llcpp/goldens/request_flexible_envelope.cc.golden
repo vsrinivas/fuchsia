@@ -478,8 +478,9 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-                RequestStrictResponseFlexibleCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_requestflexibleenvelope::Protocol::
+                    RequestStrictResponseFlexible>::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
                 ->RequestStrictResponseFlexible(primary, completer);
@@ -499,8 +500,9 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
               return decoded.status();
             }
             auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-                RequestFlexibleResponseStrictCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_requestflexibleenvelope::Protocol::
+                    RequestFlexibleResponseStrict>::Sync completer(txn);
             reinterpret_cast<::fidl::WireServer<
                 ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
                 ->RequestFlexibleResponseStrict(primary, completer);
@@ -536,22 +538,25 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexibleCompleterBase::Reply(
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
+::fidl::Result
+fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestStrictResponseFlexible>::
+    Reply(::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>>
       _response{::fidl::internal::AllowUnownedInputRef{}, f};
-  return ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-      RequestStrictResponseFlexibleCompleterBase::SendReply(
-          &_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexible>::SendReply(&_response
+                                                         .GetOutgoingMessage());
 }
 
-::fidl::Result fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-    RequestStrictResponseFlexibleCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
+::fidl::Result
+fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestStrictResponseFlexible>::
+    Reply(::fidl::BufferSpan _buffer,
+          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                            RequestStrictResponseFlexible>::UnownedEncodedMessage
       _response(_buffer.data, _buffer.capacity, f);
@@ -560,22 +565,25 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrictCompleterBase::Reply(
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
+::fidl::Result
+fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestFlexibleResponseStrict>::
+    Reply(::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>>
       _response{::fidl::internal::AllowUnownedInputRef{}, f};
-  return ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-      RequestFlexibleResponseStrictCompleterBase::SendReply(
-          &_response.GetOutgoingMessage());
+  return ::fidl::internal::WireCompleterBase<
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrict>::SendReply(&_response
+                                                         .GetOutgoingMessage());
 }
 
-::fidl::Result fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
-    RequestFlexibleResponseStrictCompleterBase::Reply(
-        ::fidl::BufferSpan _buffer,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
+::fidl::Result
+fidl::internal::WireCompleterBase<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestFlexibleResponseStrict>::
+    Reply(::fidl::BufferSpan _buffer,
+          ::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrict>::UnownedEncodedMessage
       _response(_buffer.data, _buffer.capacity, f);

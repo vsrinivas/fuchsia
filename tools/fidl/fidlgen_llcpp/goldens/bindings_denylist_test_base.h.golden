@@ -15,9 +15,8 @@ class OnlyLibfuzzerAndDeps_TestBase
                                ::fidl::CompleterBase& completer) = 0;
   virtual void LibfuzzerNeedsNonemptyProtocol(
       LibfuzzerNeedsNonemptyProtocolRequestView request,
-      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-          LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) override {
-    NotImplemented_("LibfuzzerNeedsNonemptyProtocol", completer);
+      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) override {
+    NotImplemented_("LibfuzzerNeedsNonemptyProtocol", _completer);
   }
 };
 

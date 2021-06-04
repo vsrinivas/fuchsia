@@ -27,9 +27,8 @@ class {{ $protocol.TestBase.Name }} : public {{ $protocol.WireServer }} {
   {{- range $protocol.Methods }}
     {{- if .HasRequest }}
     virtual void {{ .Name }}(
-        {{ .WireRequestView.Self }} request, {{ .WireCompleter }}::Sync& completer) override {
-          NotImplemented_("{{ .Name }}", completer);
-    }
+        {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer) override {
+          NotImplemented_("{{ .Name }}", _completer); }
     {{- end }}
   {{- end }}
 };

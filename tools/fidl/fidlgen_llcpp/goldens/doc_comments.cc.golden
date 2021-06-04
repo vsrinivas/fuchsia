@@ -153,8 +153,9 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
              ::fidl::Transaction* txn) {
             auto* primary = reinterpret_cast<::fidl::WireRequest<
                 ::fidl_test_doccomments::Interface::Method>*>(msg.bytes());
-            ::fidl::WireServer<::fidl_test_doccomments::Interface>::
-                MethodCompleter::Sync completer(txn);
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_doccomments::Interface::Method>::Sync
+                completer(txn);
             reinterpret_cast<
                 ::fidl::WireServer<::fidl_test_doccomments::Interface>*>(
                 interface)

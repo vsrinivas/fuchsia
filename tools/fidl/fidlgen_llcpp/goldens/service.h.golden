@@ -473,22 +473,10 @@ class ::fidl::WireServer<::fidl_test_service::SecondProtocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_service::SecondProtocol;
 
-  using MethodOnSecondCompleter = ::fidl::Completer<>;
-  class MethodOnSecondRequestView {
-   public:
-    MethodOnSecondRequestView(
-        ::fidl::WireRequest<
-            ::fidl_test_service::SecondProtocol::MethodOnSecond>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>*
-        request_;
-  };
+  using MethodOnSecondCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_service::SecondProtocol::MethodOnSecond>;
+  using MethodOnSecondRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_service::SecondProtocol::MethodOnSecond>;
 
   virtual void MethodOnSecond(MethodOnSecondRequestView request,
                               MethodOnSecondCompleter::Sync& _completer) = 0;
@@ -1090,22 +1078,10 @@ class ::fidl::WireServer<::fidl_test_service::FirstProtocol>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_service::FirstProtocol;
 
-  using MethodOnFirstCompleter = ::fidl::Completer<>;
-  class MethodOnFirstRequestView {
-   public:
-    MethodOnFirstRequestView(
-        ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
-            request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
-        request_;
-  };
+  using MethodOnFirstCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_service::FirstProtocol::MethodOnFirst>;
+  using MethodOnFirstRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_service::FirstProtocol::MethodOnFirst>;
 
   virtual void MethodOnFirst(MethodOnFirstRequestView request,
                              MethodOnFirstCompleter::Sync& _completer) = 0;

@@ -732,6 +732,36 @@ class ::fidl::WireSyncClient<
       client_end_;
 };
 
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(const ::bottom::wire::Foo& foo);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                       const ::bottom::wire::Foo& foo);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
+};
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -747,44 +777,10 @@ class ::fidl::WireServer<
   using _EnclosingProtocol =
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top;
 
-  class GetFooCompleterBase : public ::fidl::CompleterBase {
-   public:
-    // In the following methods, the return value indicates internal errors
-    // during the reply, such as encoding or writing to the transport. Note that
-    // any error will automatically lead to the destruction of the binding,
-    // after which the |on_unbound| callback will be triggered with a detailed
-    // reason.
-    //
-    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-    //
-    // Because the reply status is identical to the unbinding status, it can be
-    // safely ignored.
-    ::fidl::Result Reply(const ::bottom::wire::Foo& foo);
-    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                         const ::bottom::wire::Foo& foo);
-
-   protected:
-    using ::fidl::CompleterBase::CompleterBase;
-  };
-  using GetFooCompleter = ::fidl::Completer<GetFooCompleterBase>;
-  class GetFooRequestView {
-   public:
-    GetFooRequestView(
-        ::fidl::WireRequest<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-            request)
-        : request_(request) {}
-    ::fidl::WireRequest<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-        request_;
-  };
+  using GetFooCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+  using GetFooRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 
   virtual void GetFoo(GetFooRequestView request,
                       GetFooCompleter::Sync& _completer) = 0;

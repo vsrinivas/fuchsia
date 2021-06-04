@@ -6,36 +6,45 @@ package codegen
 
 const fragmentMethodCompleterBaseTmpl = `
 
-{{- define "MethodCompleterBaseDeclaration" }}
-class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
-  public:
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the binding,
-  // after which the |on_unbound| callback will be triggered with a detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be safely ignored.
-  ::fidl::Result Reply({{ RenderParams .ResponseArgs }});
-      {{- if .Result }}
-  ::fidl::Result ReplySuccess({{ RenderParams .Result.ValueMembers }});
-  ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error);
-      {{- end }}
-      {{- if .ResponseArgs }}
-  ::fidl::Result Reply({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }});
+{{- define "MethodDetailsDeclaration" }}
+{{ EnsureNamespace "" }}
+{{- if .HasResponse }}
+  template<>
+  class {{ .WireCompleterBase }} : public ::fidl::CompleterBase {
+    public:
+    // In the following methods, the return value indicates internal errors during
+    // the reply, such as encoding or writing to the transport.
+    // Note that any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be safely ignored.
+    ::fidl::Result Reply({{ RenderParams .ResponseArgs }});
         {{- if .Result }}
-  ::fidl::Result ReplySuccess(
-      {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }});
+    ::fidl::Result ReplySuccess({{ RenderParams .Result.ValueMembers }});
+    ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error);
         {{- end }}
-      {{- end }}
+        {{- if .ResponseArgs }}
+    ::fidl::Result Reply({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }});
+          {{- if .Result }}
+    ::fidl::Result ReplySuccess(
+        {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }});
+          {{- end }}
+        {{- end }}
 
-  protected:
-    using ::fidl::CompleterBase::CompleterBase;
-};
+    protected:
+      using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  template<>
+  struct {{ .WireMethodTypes }} {
+    using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
+  };
+{{- end }}
 {{- end }}
 
-{{- define "MethodCompleterBaseDefinition" }}
+{{- define "MethodDetailsDefinition" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
@@ -65,7 +74,6 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
         ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
   }
 {{- end }}
-
 {{- if .ResponseArgs }}
 
   ::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(

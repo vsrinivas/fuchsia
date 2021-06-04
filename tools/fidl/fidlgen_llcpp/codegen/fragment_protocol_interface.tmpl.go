@@ -7,7 +7,10 @@ package codegen
 // fragmentProtocolInterfaceTmpl contains the definition for fidl::WireServer<Protocol>.
 const fragmentProtocolInterfaceTmpl = `
 {{- define "ProtocolInterfaceDeclaration" }}
-{{ "" }}
+{{- range .ClientMethods }}
+  {{- template "MethodDetailsDeclaration" . }}
+{{- end }}
+
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -23,24 +26,12 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 {{ "" }}
   {{- range .Methods }}
     {{- if .HasRequest }}
-      {{- if .HasResponse }}
-        {{- template "MethodCompleterBaseDeclaration" . }}
-  using {{ .WireCompleter.Self }} = ::fidl::Completer<{{ .WireCompleterBase.Self }}>;
-    {{- else }}
-  using {{ .WireCompleter.Self }} = ::fidl::Completer<>;
-    {{- end }}
-  class {{ .WireRequestView.Self }} {
-   public:
-    {{ .WireRequestView.Self }}({{ .WireRequest }}* request) : request_(request) {}
-    {{ .WireRequest }}* operator->() const { return request_; }
-
-   private:
-    {{ .WireRequest }}* request_;
-  };
+    using {{ .WireCompleterAlias.Self }} = {{ .WireCompleter }};
+    using {{ .WireRequestViewAlias.Self }} = {{ .WireRequestView }};
 
   {{ .Docs }}
   virtual void {{ .Name }}(
-      {{ .WireRequestView.Self }} request, {{ .WireCompleter.Self }}::Sync& _completer)
+    {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer)
       {{- if .Transitional -}}
         { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
       {{- else -}}

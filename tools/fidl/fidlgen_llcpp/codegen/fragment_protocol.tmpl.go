@@ -166,7 +166,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{- if .Methods }}
   {{- range .TwoWayMethods -}}
-    {{- template "MethodCompleterBaseDefinition" . }}
+    {{- template "MethodDetailsDefinition" . }}
   {{- end }}
 
   {{- range .Methods }}

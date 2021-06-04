@@ -13,9 +13,8 @@ class SimpleProtocol_TestBase
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Add(AddRequestView request,
-                   ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
-                       AddCompleter::Sync& completer) override {
-    NotImplemented_("Add", completer);
+                   AddCompleter::Sync& _completer) override {
+    NotImplemented_("Add", _completer);
   }
 };
 }  // namespace testing
