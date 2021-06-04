@@ -1207,12 +1207,9 @@ mod tests {
             config_management::{Credential, NetworkIdentifier, SecurityType},
             mode_management::phy_manager::{self, PhyManagerError},
             regulatory_manager::REGION_CODE_LEN,
-            util::{
-                logger::set_logger_for_test,
-                testing::{
-                    create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_random_bss_desc, poll_sme_req,
-                },
+            util::testing::{
+                create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
+                generate_random_bss_desc, poll_sme_req, set_logger_for_test,
             },
         },
         async_trait::async_trait,

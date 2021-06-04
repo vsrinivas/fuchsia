@@ -359,7 +359,7 @@ mod tests {
         super::*,
         crate::{
             client::types as client_types, regulatory_manager::REGION_CODE_LEN,
-            util::logger::set_logger_for_test,
+            util::testing::set_logger_for_test,
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},

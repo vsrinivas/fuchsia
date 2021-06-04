@@ -504,12 +504,9 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::network_config::{Credential, PROB_HIDDEN_DEFAULT},
-            util::{
-                logger::set_logger_for_test,
-                testing::{
-                    generate_random_bss_desc, generate_random_bss_info,
-                    validate_sme_scan_request_and_send_results,
-                },
+            util::testing::{
+                generate_random_bss_desc, generate_random_bss_info, set_logger_for_test,
+                validate_sme_scan_request_and_send_results,
             },
         },
         anyhow::Error,

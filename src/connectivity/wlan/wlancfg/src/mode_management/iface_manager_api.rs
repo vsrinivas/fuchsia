@@ -229,7 +229,7 @@ mod tests {
         super::*,
         crate::{
             access_point::types, config_management::network_config::Credential,
-            util::logger::set_logger_for_test,
+            util::testing::set_logger_for_test,
         },
         anyhow::format_err,
         fidl::endpoints::create_proxy,

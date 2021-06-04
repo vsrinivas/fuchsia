@@ -30,6 +30,7 @@ use {
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::component,
+    fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
     futures::{
         self,
@@ -204,7 +205,7 @@ fn run_regulatory_manager(
 }
 
 fn main() -> Result<(), Error> {
-    util::logger::init();
+    syslog::init().expect("Syslog init should not fail");
 
     let mut executor = fasync::LocalExecutor::new().context("error create event loop")?;
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()

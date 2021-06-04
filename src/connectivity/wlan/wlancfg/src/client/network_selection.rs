@@ -612,7 +612,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             util::{
-                logger::set_logger_for_test,
+                testing::set_logger_for_test,
                 testing::{
                     create_mock_cobalt_sender_and_receiver, generate_channel,
                     generate_random_bss_desc, generate_random_channel,

@@ -713,11 +713,10 @@ mod tests {
             config_management::network_config::{self, Credential, FailureReason},
             util::{
                 listener,
-                logger::set_logger_for_test,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
                     generate_random_bss_desc, generate_random_bss_info, poll_sme_req,
-                    validate_sme_scan_request_and_send_results,
+                    set_logger_for_test, validate_sme_scan_request_and_send_results,
                 },
             },
             validate_cobalt_events, validate_no_cobalt_events,

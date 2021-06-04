@@ -101,11 +101,11 @@ rustc_binary("bin") {
     "src/util/listener/client.rs",
     "src/util/listener/generic.rs",
     "src/util/listener/mod.rs",
-    "src/util/logger.rs",
     "src/util/mod.rs",
     "src/util/state_machine.rs",
     "src/util/testing/cobalt.rs",
     "src/util/testing/generate_struct.rs",
+    "src/util/testing/logger.rs",
     "src/util/testing/mod.rs",
     "src/util/testing/sme_stream.rs",
   ]

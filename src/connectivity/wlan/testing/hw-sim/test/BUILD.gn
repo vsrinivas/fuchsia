@@ -195,6 +195,11 @@ fuchsia_component("run-without-regulatory-manager") {
 }
 
 fuchsia_test_package("wlan-hw-sim-test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [
     ":configure-legacy-privacy-off",
     ":configure-legacy-privacy-on",
@@ -235,5 +240,8 @@ fuchsia_test_package("rate-selection-package") {
 
   test_specs = {
     environments = [ nuc_env ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
