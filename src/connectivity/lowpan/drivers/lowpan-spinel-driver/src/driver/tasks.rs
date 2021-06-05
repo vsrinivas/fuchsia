@@ -55,12 +55,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         // Wait for our turn.
         let _lock = self.wait_for_api_task_lock("handle_netstack_added_address").await?;
 
-        let is_existing_address = {
+        let should_skip = {
             let driver_state = self.driver_state.lock();
-            driver_state.address_table.contains(&addr_entry)
+            !driver_state.is_active_and_ready() || driver_state.address_table.contains(&addr_entry)
         };
 
-        if !is_existing_address {
+        if !should_skip {
             let addr_entry = &addr_entry;
             self.frame_handler
                 .send_request(CmdPropValueInsert(PropIpv6::AddressTable.into(), addr_entry.clone()))
