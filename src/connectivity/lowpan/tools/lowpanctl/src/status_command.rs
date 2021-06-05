@@ -136,6 +136,10 @@ async fn print_device_status(
         println!("\trssi: {}", rssi);
     }
 
+    if let Some(x) = device_test.get_thread_rloc16().await.ok() {
+        println!("\trloc16: 0x{:04x?}", x);
+    }
+
     Ok(())
 }
 
