@@ -18,6 +18,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <Warm/Warm.h>
 
+#include "platform_auth_delegate.h"
 #include "weave_inspector.h"
 
 namespace nl {
@@ -108,6 +109,14 @@ WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
       FX_LOGS(ERROR) << "PlatformCASEAuthDelegate init failed: " << ErrorStr(err);
       return err;
     }
+
+#if WEAVE_CONFIG_ENABLE_KEY_EXPORT_RESPONDER
+    err = InitKeyExportDelegate();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "PlatformKeyExportDelegate init failed: " << ErrorStr(err);
+      return err;
+    }
+#endif  // WEAVE_CONFIG_ENABLE_KEY_EXPORT_RESPONDER
 
     // Perform dynamic configuration of the core Weave objects based on stored settings.
     //

@@ -32,9 +32,9 @@ fuchsia_unittest_component("group-key-store-test") {
   deps = [ ":group_key_store_unittests" ]
 }
 
-fuchsia_unittest_component("platform-case-auth-delegate-test") {
-  manifest = rebase_path("meta/platform_case_auth_delegate_unittests.cmx")
-  deps = [ ":platform_case_auth_delegate_unittests" ]
+fuchsia_unittest_component("platform-auth-delegate-test") {
+  manifest = rebase_path("meta/platform_auth_delegate_unittests.cmx")
+  deps = [ ":platform_auth_delegate_unittests" ]
 }
 
 fuchsia_unittest_component("platform-manager-test") {
@@ -86,9 +86,9 @@ test("group_key_store_unittests") {
   deps = [ ":common_test_deps" ]
 }
 
-test("platform_case_auth_delegate_unittests") {
-  output_name = "platform_case_auth_delegate_unittests"
-  sources = [ "platform_case_auth_delegate_unittests.cpp" ]
+test("platform_auth_delegate_unittests") {
+  output_name = "platform_auth_delegate_unittests"
+  sources = [ "platform_auth_delegate_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
@@ -169,7 +169,7 @@ fuchsia_test_package("weavestack-adaptation-unittests") {
     ":configuration-manager-test",
     ":connectivity-manager-test",
     ":group-key-store-test",
-    ":platform-case-auth-delegate-test",
+    ":platform-auth-delegate-test",
     ":platform-manager-test",
     ":thread-stack-manager-test",
     ":warm-platform-support-test",
