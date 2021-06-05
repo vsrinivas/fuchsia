@@ -50,7 +50,7 @@ impl fmt::Debug for LocalExecutor {
 impl LocalExecutor {
     /// Create a new single-threaded executor running with actual time.
     pub fn new() -> Result<Self, zx::Status> {
-        let inner = Arc::new(Inner::new(ExecutorTime::RealTime)?);
+        let inner = Arc::new(Inner::new(ExecutorTime::RealTime, /* is_local */ true)?);
         inner.clone().set_local(TimerHeap::new());
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });
@@ -154,9 +154,10 @@ impl TestExecutor {
 
     /// Create a new single-threaded executor running with fake time.
     pub fn new_with_fake_time() -> Result<Self, zx::Status> {
-        let inner = Arc::new(Inner::new(ExecutorTime::FakeTime(AtomicI64::new(
-            Time::INFINITE_PAST.into_nanos(),
-        )))?);
+        let inner = Arc::new(Inner::new(
+            ExecutorTime::FakeTime(AtomicI64::new(Time::INFINITE_PAST.into_nanos())),
+            /* is_local */ true,
+        )?);
         inner.clone().set_local(TimerHeap::new());
         let main_task =
             Arc::new(MainTask { executor: Arc::downgrade(&inner), notifier: Notifier::default() });

@@ -67,7 +67,7 @@ pub enum ExecutorTime {
 pub(super) struct Inner {
     pub(super) port: zx::Port,
     pub(super) done: AtomicBool,
-    pub(super) threadiness: Threadiness,
+    is_local: bool,
     receivers: Mutex<PacketReceiverMap<Arc<dyn PacketReceiver>>>,
     task_count: AtomicUsize,
     active_tasks: Mutex<HashMap<usize, Arc<Task>>>,
@@ -77,13 +77,13 @@ pub(super) struct Inner {
 }
 
 impl Inner {
-    pub fn new(time: ExecutorTime) -> Result<Self, zx::Status> {
+    pub fn new(time: ExecutorTime, is_local: bool) -> Result<Self, zx::Status> {
         let collector = Collector::new();
         collector.task_created(MAIN_TASK_ID);
         Ok(Inner {
             port: zx::Port::create()?,
             done: AtomicBool::new(false),
-            threadiness: Threadiness::default(),
+            is_local,
             receivers: Mutex::new(PacketReceiverMap::new()),
             task_count: AtomicUsize::new(MAIN_TASK_ID + 1),
             active_tasks: Mutex::new(HashMap::new()),
@@ -128,10 +128,12 @@ impl Inner {
     }
 
     pub fn spawn_local(self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
-        self.threadiness.require_singlethreaded().expect(
-            "Error: called `spawn_local` after calling `run` on executor. \
-             Use `spawn` or `run_singlethreaded` instead.",
-        );
+        if !self.is_local {
+            panic!(
+                "Error: called `spawn_local` on multithreaded executor. \
+                Use `spawn` or a `LocalExecutor` instead."
+            );
+        }
         Inner::spawn(
             self,
             // Unsafety: we've confirmed that the boxed futures here will never be used
@@ -347,52 +349,6 @@ impl EHandle {
             let waker_and_bool = Arc::downgrade(waker_and_bool);
             timer_heap.push(TimeWaker { time, waker_and_bool })
         })
-    }
-}
-
-/// The executor has not been run in multithreaded mode and no thread-unsafe
-/// futures have been spawned.
-const THREADINESS_ANY: usize = 0;
-/// The executor has not been run in multithreaded mode, but thread-unsafe
-/// futures have been spawned, so it cannot ever be run in multithreaded mode.
-const THREADINESS_SINGLE: usize = 1;
-/// The executor has been run in multithreaded mode.
-/// No thread-unsafe futures can be spawned.
-const THREADINESS_MULTI: usize = 2;
-
-/// Tracks the multithreaded-compatibility state of the executor.
-pub(super) struct Threadiness(AtomicUsize);
-
-impl Default for Threadiness {
-    fn default() -> Self {
-        Threadiness(AtomicUsize::new(THREADINESS_ANY))
-    }
-}
-
-impl Threadiness {
-    fn try_become(&self, target: usize) -> Result<(), ()> {
-        match self.0.compare_exchange(
-            /* current */ THREADINESS_ANY,
-            /* new */ target,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(_) => Ok(()),
-            Err(x) if x == target => Ok(()),
-            Err(_) => Err(()),
-        }
-    }
-
-    /// Attempts to switch the threadiness to singlethreaded-only mode.
-    /// Will fail iff a prior call to `require_multithreaded` was made.
-    pub fn require_singlethreaded(&self) -> Result<(), ()> {
-        self.try_become(THREADINESS_SINGLE)
-    }
-
-    /// Attempts to switch the threadiness to multithreaded mode.
-    /// Will fail iff a prior call to `require_singlethreaded` was made.
-    pub fn require_multithreaded(&self) -> Result<(), ()> {
-        self.try_become(THREADINESS_MULTI)
     }
 }
 

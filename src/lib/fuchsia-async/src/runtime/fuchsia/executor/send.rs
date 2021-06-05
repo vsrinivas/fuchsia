@@ -51,7 +51,7 @@ impl SendExecutor {
     /// Create a new multi-threaded executor.
     // TODO(fxbug.dev/76550) move the number of threads here
     pub fn new() -> Result<Self, zx::Status> {
-        let inner = Arc::new(Inner::new(ExecutorTime::RealTime)?);
+        let inner = Arc::new(Inner::new(ExecutorTime::RealTime, /* is_local */ false)?);
         inner.clone().set_local(TimerHeap::new());
         Ok(Self { inner, threads: Vec::default() })
     }
@@ -64,10 +64,6 @@ impl SendExecutor {
         F::Output: Send + 'static,
     {
         self.inner.require_real_time().expect("Error: called `run` on an executor using fake time");
-        self.inner.threadiness.require_multithreaded().expect(
-            "Error: called `run` on executor after using `spawn_local`. \
-             Use `run_singlethreaded` instead.",
-        );
 
         let pair = Arc::new((Mutex::new(None), Condvar::new()));
         let pair2 = pair.clone();
