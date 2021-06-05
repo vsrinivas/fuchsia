@@ -407,7 +407,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	if err := runner.Run(ctx, args, os.Stdout, os.Stderr); err != nil {
+	if err := runner.RunWithStdin(ctx, args, os.Stdout, os.Stderr, nil); err != nil {
 		return fmt.Errorf("command %s with timeout %s failed: %w", args, r.timeout, err)
 	}
 	return nil
