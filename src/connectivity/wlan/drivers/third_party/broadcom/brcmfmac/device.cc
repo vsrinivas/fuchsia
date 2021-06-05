@@ -105,8 +105,10 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
                                                             : "unknown type";
 
   if (req->has_init_mac_addr) {
-    BRCMF_DBG(WLANPHY, "Creating %s interface (mac: " MAC_FMT_STR ")", role,
-              MAC_FMT_ARGS(req->init_mac_addr));
+    BRCMF_DBG(WLANPHY, "Creating %s interface", role);
+#if !defined(NDEBUG)
+    BRCMF_DBG(WLANPHY, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->init_mac_addr));
+#endif /* !defined(NDEBUG) */
   } else {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);
   }
@@ -184,9 +186,12 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
 
   // Log the new iface's role, name, and MAC address
   net_device* ndev = wdev->netdev;
+
+  BRCMF_DBG(WLANPHY, "Created %s iface with netdev:%s id:%d", role, ndev->name, iface_id);
+#if !defined(NDEBUG)
   const uint8_t* mac_addr = ndev_to_if(ndev)->mac_addr;
-  BRCMF_DBG(WLANPHY, "Created %s iface with netdev:%s id:%d MAC address " MAC_FMT_STR, role,
-            ndev->name, iface_id, MAC_FMT_ARGS(mac_addr));
+  BRCMF_DBG(WLANPHY, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
+#endif /* !defined(NDEBUG) */
   return ZX_OK;
 }
 

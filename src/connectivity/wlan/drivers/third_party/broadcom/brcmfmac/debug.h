@@ -207,6 +207,10 @@ class Debug {
 
   // Enabled debug log categories. Include WLANIF messages in the log output (at level INFO) to
   // aid in recognizing important events.
+  //
+  // All changes made to this filter must be approved by privacy to ensure sensitive data is not
+  // unintentionally printed in logs.
+  //
   // http://fxbug.dev/29792 - Remove WLANIF once things have stabilized.
   static constexpr uint32_t kBrcmfMsgFilter =
       static_cast<uint32_t>(Filter::kWLANIF) | static_cast<uint32_t>(Filter::kWLANPHY);
