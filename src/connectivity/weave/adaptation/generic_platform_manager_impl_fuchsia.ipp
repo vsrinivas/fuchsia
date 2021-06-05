@@ -216,8 +216,22 @@ template <class ImplClass>
 void GenericPlatformManagerImpl_Fuchsia<ImplClass>::HandleSessionSuccess(
     WeaveSecurityManager* sm, WeaveConnection* con, void* req_state, uint16_t session_key_id,
     uint64_t peer_node_id, uint8_t enc_type) {
+  // Post event to notify listeners of the new session auth mode.
   GenericPlatformManagerImpl<ImplClass>::HandleSessionEstablished(
       sm, con, req_state, session_key_id, peer_node_id, enc_type);
+
+#if WEAVE_CONFIG_ENABLE_KEY_EXPORT_RESPONDER
+  // When establishing a session to the core router, add bastion-type services
+  // to the session to allow them to make requests via the shared-session.
+  if (!con && peer_node_id == kServiceEndpoint_CoreRouter && sm->FabricState->IsSharedSession(session_key_id, peer_node_id)) {
+    WEAVE_ERROR err = sm->FabricState->AddSharedSessionEndNode(kServiceEndpoint_Bastion, kServiceEndpoint_CoreRouter, session_key_id);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Failed to add shared-session end node: " << ErrorStr(err);
+    }
+  }
+#endif  // WEAVE_CONFIG_ENABLE_KEY_EXPORT_RESPONDER
+
+  // Notify inspector to update session auth mode state.
   WeaveSessionKey* session_key;
   FabricState.GetSessionKey(session_key_id, peer_node_id, session_key);
   WeaveAuthMode auth_mode =
