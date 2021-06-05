@@ -192,7 +192,7 @@ command { AT+CHUP }
 
 # Call Waiting Notification
 # HFP 1.8 4.34.2
-response { CCWA: number: String, ty: Integer }
+response { +CCWA: number: String, ty: Integer }
 
 # Additional Call Services
 # HFP 1.8 4.34.2
