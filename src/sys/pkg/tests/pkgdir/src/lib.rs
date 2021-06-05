@@ -11,6 +11,7 @@ use {
 };
 
 mod open;
+mod read;
 
 async fn dirs_to_test() -> impl Iterator<Item = DirectoryProxy> {
     let proxy = connect_to_protocol::<HarnessMarker>().unwrap();

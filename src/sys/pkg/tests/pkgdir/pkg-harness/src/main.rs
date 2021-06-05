@@ -116,16 +116,16 @@ async fn make_test_package() -> Package {
     let exceeds_max_buf_contents =
         repeat_by_n('a', (fidl_fuchsia_io::MAX_BUF + 1).try_into().unwrap());
 
-    let contents = "contents".as_bytes();
+    // Each file's contents is the file's path as bytes for testing simplicity.
     let mut builder = PackageBuilder::new("test-package")
-        .add_resource_at("file", contents)
-        .add_resource_at("dir/file", contents)
-        .add_resource_at("dir/dir/file", contents)
-        .add_resource_at("dir/dir/dir/file", contents)
-        .add_resource_at("meta/file", contents)
-        .add_resource_at("meta/dir/file", contents)
-        .add_resource_at("meta/dir/dir/file", contents)
-        .add_resource_at("meta/dir/dir/dir/file", contents)
+        .add_resource_at("file", "file".as_bytes())
+        .add_resource_at("dir/file", "dir/file".as_bytes())
+        .add_resource_at("dir/dir/file", "dir/dir/file".as_bytes())
+        .add_resource_at("dir/dir/dir/file", "dir/dir/dir/file".as_bytes())
+        .add_resource_at("meta/file", "meta/file".as_bytes())
+        .add_resource_at("meta/dir/file", "meta/dir/file".as_bytes())
+        .add_resource_at("meta/dir/dir/file", "meta/dir/dir/file".as_bytes())
+        .add_resource_at("meta/dir/dir/dir/file", "meta/dir/dir/dir/file".as_bytes())
         .add_resource_at("exceeds_max_buf", exceeds_max_buf_contents.as_bytes())
         .add_resource_at("meta/exceeds_max_buf", exceeds_max_buf_contents.as_bytes());
 
