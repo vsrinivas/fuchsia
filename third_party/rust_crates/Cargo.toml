@@ -220,9 +220,13 @@ handlebars = "3.5.4"
 home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
 indoc = "0.3.3"
+# TODO(http://fxbug.dev/70292): Not for use on Fuchsia, this pulls in the
+# latest Tokio, which we're not ready to update yet.
+inotify = { version = "0.9.3", default-features = false }
 # TODO(https://github.com/rust-lang/rust/issues/58590): nix is not generally
 # visible in fuchsia so we don't depend on #[cfg(unix)] things on target
 nix = "0.20"
+notify = "5.0.0-pre.10"
 pathdiff = "0.2.0"
 parking = "2"
 pem = "0.8.3"

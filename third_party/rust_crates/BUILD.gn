@@ -308,6 +308,12 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+if (!(current_os == "fuchsia")) {
+  group("inotify") {
+    deps = [ ":inotify-v0_9_3" ]
+  }
+}
+
 group("itertools") {
   deps = [ ":itertools-v0_8_0" ]
 }
@@ -378,6 +384,12 @@ group("nom") {
 
 group("nom_locate") {
   deps = [ ":nom_locate-v2_0_0" ]
+}
+
+if (!(current_os == "fuchsia")) {
+  group("notify") {
+    deps = [ ":notify-v5_0_0-pre_10" ]
+  }
 }
 
 group("num") {
@@ -2404,6 +2416,7 @@ rust_library("crossbeam-channel-v0_5_1") {
     "-Cmetadata=4f2cca7fb0f4b481",
     "-Cextra-filename=-4f2cca7fb0f4b481",
     "--cfg=feature=\"crossbeam-utils\"",
+    "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
 }
@@ -3495,6 +3508,28 @@ rust_library("fragile-v1_0_0") {
   ]
 }
 
+rust_library("fsevent-sys-v4_0_0") {
+  crate_name = "fsevent_sys"
+  crate_root = "//third_party/rust_crates/vendor/fsevent-sys/src/lib.rs"
+  output_name = "fsevent_sys-2cc9241b509ff4e3"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":libc-v0_2_88" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=2cc9241b509ff4e3",
+    "-Cextra-filename=-2cc9241b509ff4e3",
+  ]
+}
+
 rust_library("fuchsia-cprng-v0_1_1") {
   crate_name = "fuchsia_cprng"
   crate_root = "//src/lib/zircon/rust/fuchsia-cprng/src/lib.rs"
@@ -4463,6 +4498,52 @@ rust_library("inflate-v0_4_5") {
   ]
 }
 
+rust_library("inotify-v0_9_3") {
+  crate_name = "inotify"
+  crate_root = "//third_party/rust_crates/vendor/inotify/src/lib.rs"
+  output_name = "inotify-95428818c5e4383a"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":inotify-sys-v0_1_5" ]
+  deps += [ ":libc-v0_2_88" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=95428818c5e4383a",
+    "-Cextra-filename=-95428818c5e4383a",
+  ]
+}
+
+rust_library("inotify-sys-v0_1_5") {
+  crate_name = "inotify_sys"
+  crate_root = "//third_party/rust_crates/vendor/inotify-sys/src/lib.rs"
+  output_name = "inotify_sys-5a7221e0cdb60ab6"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":libc-v0_2_88" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=5a7221e0cdb60ab6",
+    "-Cextra-filename=-5a7221e0cdb60ab6",
+  ]
+}
+
 rust_library("instant-v0_1_9") {
   crate_name = "instant"
   crate_root = "//third_party/rust_crates/vendor/instant/src/lib.rs"
@@ -5312,6 +5393,42 @@ rust_library("normalize-line-endings-v0_3_0") {
     "--edition=2015",
     "-Cmetadata=4054253ee9a0f431",
     "-Cextra-filename=-4054253ee9a0f431",
+  ]
+}
+
+rust_library("notify-v5_0_0-pre_10") {
+  crate_name = "notify"
+  crate_root = "//third_party/rust_crates/vendor/notify/src/lib.rs"
+  output_name = "notify-c3db97053c7ffc03"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":crossbeam-channel-v0_5_1" ]
+  deps += [ ":filetime-v0_2_14" ]
+  deps += [ ":libc-v0_2_88" ]
+  deps += [ ":walkdir-v2_3_1" ]
+  if (current_os == "linux") {
+    deps += [ ":inotify-v0_9_3" ]
+    deps += [ ":mio-v0_7_11" ]
+  }
+  if (current_os == "mac") {
+    deps += [ ":fsevent-sys-v4_0_0" ]
+  }
+  if (false) {
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=c3db97053c7ffc03",
+    "-Cextra-filename=-c3db97053c7ffc03",
   ]
 }
 
