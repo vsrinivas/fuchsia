@@ -110,7 +110,12 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_VMO:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
+    case ZXIO_OBJECT_TYPE_DEBUGLOG:
+      io = fbl::MakeRefCounted<fdio_internal::zxio>();
+      break;
     default:
+      // Unknown type - allocate a generic fdio object so that zxio_create can
+      // initialize a zxio object holding the object for us.
       io = fbl::MakeRefCounted<fdio_internal::zxio>();
       break;
   }
@@ -207,14 +212,6 @@ zx::status<fdio_ptr> fdio::create(zx::handle handle) {
       return fdio::create_with_describe(fidl::ClientEnd<fio::Node>(zx::channel(std::move(handle))));
     case ZX_OBJ_TYPE_SOCKET:
       return fdio_internal::pipe::create(zx::socket(std::move(handle)));
-    case ZX_OBJ_TYPE_LOG: {
-      fdio_ptr io = fbl::MakeRefCounted<fdio_internal::zxio>();
-      if (io) {
-        status = zxio_debuglog_init(&io->zxio_storage(), zx::debuglog(std::move(handle)));
-        ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
-      }
-      return zx::ok(io);
-    }
     default:
       return zx::error(ZX_ERR_INVALID_ARGS);
   }

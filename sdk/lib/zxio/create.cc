@@ -60,6 +60,10 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
     return ZX_ERR_INVALID_ARGS;
   }
   switch (handle_info->type) {
+    case ZX_OBJ_TYPE_LOG: {
+      zxio_debuglog_init(storage, zx::debuglog(std::move(handle)));
+      return ZX_OK;
+    }
     case ZX_OBJ_TYPE_VMO: {
       zx::vmo vmo(std::move(handle));
       zx::stream stream;

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/zxio.h>
 
@@ -15,17 +16,36 @@
 
 namespace {
 
+zx::status<zx::debuglog> GetDebugLogHandle() {
+  zx::status log_service = service::Connect<fuchsia_boot::WriteOnlyLog>();
+  if (!log_service.is_ok()) {
+    return zx::error(log_service.status_value());
+  }
+  auto response = fidl::WireCall(*log_service).Get();
+  if (!response.ok()) {
+    return zx::error(response.status());
+  }
+  return zx::ok(zx::debuglog(std::move(response.value().log)));
+}
+
+TEST(DebugLog, Create) {
+  zx::status log = GetDebugLogHandle();
+  ASSERT_OK(log.status_value());
+  zxio_storage_t storage;
+  ASSERT_OK(zxio_create(log->release(), &storage));
+  zxio_t* io = &storage.io;
+
+  ASSERT_OK(zxio_close(io));
+}
+
 class DebugLogTest : public zxtest::Test {
  protected:
   void SetUp() override final {
-    ASSERT_OK(zx::channel::create(0, &local_, &remote_));
-    constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
-    ASSERT_OK(fdio_service_connect(kWriteOnlyLogPath, remote_.release()));
-    zx::debuglog handle;
-    ASSERT_OK(fuchsia_boot_WriteOnlyLogGet(local_.get(), handle.reset_and_get_address()));
+    zx::status log = GetDebugLogHandle();
+    ASSERT_OK(log.status_value());
 
     storage_ = std::make_unique<zxio_storage_t>();
-    ASSERT_OK(zxio_debuglog_init(storage_.get(), std::move(handle)));
+    ASSERT_OK(zxio_debuglog_init(storage_.get(), std::move(*log)));
     logger_ = &storage_->io;
     ASSERT_NE(logger_, nullptr);
   }

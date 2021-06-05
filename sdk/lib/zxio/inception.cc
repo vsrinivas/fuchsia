@@ -29,6 +29,10 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
       type = ZXIO_OBJECT_TYPE_VMO;
       break;
     }
+    case ZX_OBJ_TYPE_LOG: {
+      type = ZXIO_OBJECT_TYPE_DEBUGLOG;
+      break;
+    }
   }
   zx_status_t status = allocator(type, &storage, out_context);
   if (status != ZX_OK || storage == nullptr) {
