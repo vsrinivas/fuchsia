@@ -645,4 +645,9 @@ class Strings {
         name: 'visit',
         desc: 'The label for the "visit" text field.',
       );
+  static String get error => Intl.message(
+        'Error',
+        name: 'error',
+        desc: 'The label for the "error" text field.',
+      );
 }

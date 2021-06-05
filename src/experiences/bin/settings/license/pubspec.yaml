@@ -3,3 +3,6 @@
 # found in the LICENSE file.
 
 name: license_settings
+flutter:
+  assets:
+    - assets/license.json

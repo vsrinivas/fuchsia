@@ -12,18 +12,27 @@ dart_library("lib") {
   sources = [
     "main.dart",
     "src/license.dart",
-    "src/license_model.dart",
   ]
   deps = [
     "//sdk/dart/fuchsia_logger",
+    "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
   ]
 }
 
+resource("license-text") {
+  sources = [ "assets/license.json" ]
+  outputs = [ "data/license.json" ]
+}
+
 flutter_component("component") {
+  main_dart = "main.dart"
   component_name = "license_settings"
   manifest = "meta/license_settings.cmx"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    ":license-text",
+  ]
 }
 
 fuchsia_package("license_settings") {
