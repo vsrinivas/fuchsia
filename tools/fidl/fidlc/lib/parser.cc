@@ -525,9 +525,6 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
     }
 
     case CASE_TOKEN(Token::Kind::kLeftParen): {
-      if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights))
-        return Fail();
-
       ASTScope scope(this);
       ConsumeToken(OfKind(Token::Kind::kLeftParen));
       constant = ParseConstant();
@@ -637,10 +634,8 @@ std::unique_ptr<raw::TypeConstructorOld> Parser::ParseTypeConstructorOld() {
     if (identifier->components.back()->span().data() == "handle") {
       if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
         handle_subtype_identifier = ParseIdentifier();
-        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kEnableHandleRights)) {
-          if (MaybeConsumeToken(OfKind(Token::Kind::kComma))) {
-            handle_rights = ParseConstant();
-          }
+        if (MaybeConsumeToken(OfKind(Token::Kind::kComma))) {
+          handle_rights = ParseConstant();
         }
         ConsumeToken(OfKind(Token::Kind::kRightAngle));
         if (!Ok())

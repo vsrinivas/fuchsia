@@ -42,7 +42,6 @@ resource_definition handle : uint32 {
   // rights and the new syntax for the ZX library
   auto zx_flags = flags;
   zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
   TestLibrary zx_lib("zx.fidl", zx, main_lib.OwnedShared(), zx_flags);
   zx_lib.Compile();
   main_lib.AddDependentLibrary(std::move(zx_lib));

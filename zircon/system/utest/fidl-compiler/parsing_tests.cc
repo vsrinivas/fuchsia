@@ -181,7 +181,6 @@ resource struct Handles {
 
 TEST(ParsingTests, GoodParsingHandleConstraintTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;

@@ -700,7 +700,6 @@ type TypeDecl = struct {
 TEST(NewSyntaxTests, GoodLayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
   //  been commented out until their respective features (client/server_end)
@@ -1030,7 +1029,6 @@ type TypeDecl= struct {
 TEST(NewSyntaxTests, GoodConstraintsOnHandles) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;

@@ -22,7 +22,6 @@ using fidl::flat::GetType;
 
 TEST(HandleTests, GoodHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
   auto library = WithLibraryZx(R"FIDL(
 library example;
 
@@ -60,7 +59,6 @@ resource struct MyStruct {
 
 TEST(HandleTests, GoodNoHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -100,7 +98,6 @@ resource struct MyStruct {
 TEST(HandleTests, BadInvalidHandleRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -121,7 +118,6 @@ protocol P {
 
 TEST(HandleTests, BadInvalidHandleRightsTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -140,7 +136,6 @@ protocol P {
 
 TEST(HandleTests, GoodPlainHandleTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -169,7 +164,6 @@ resource struct MyStruct {
 
 TEST(HandleTests, GoodHandleFidlDefinedTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -216,7 +210,6 @@ resource struct MyStruct {
 TEST(HandleTests, BadInvalidFidlDefinedHandleSubtype) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -236,7 +229,6 @@ type MyStruct = struct {
 
 TEST(HandleTests, BadInvalidFidlDefinedHandleSubtypeOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   auto library = WithLibraryZx(R"FIDL(
 library example;
@@ -291,7 +283,6 @@ struct MyStruct {
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
 TEST(HandleTests, GoodResourceDefinitionOnlySubtypeNoRightsTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -340,7 +331,6 @@ resource struct MyStruct {
 TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -368,7 +358,6 @@ type MyStruct = resource struct {
 
 TEST(HandleTests, BadResourceDefinitionMissingRightsPropertyTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -397,7 +386,6 @@ resource struct MyStruct {
 TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -420,7 +408,6 @@ type MyStruct = resource struct {
 
 TEST(HandleTests, BadResourceDefinitionMissingSubtypePropertyTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -468,7 +455,6 @@ type MyStruct = resource struct {
 
 TEST(HandleTests, BadResourceSubtypeNotEnumOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -548,7 +534,6 @@ resource struct MyStruct {
 TEST(HandleTests, BadResourceDefinitionNonBitsRights) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -577,7 +562,6 @@ type MyStruct = resource struct {
 
 TEST(HandleTests, BadResourceDefinitionNonBitsRightsOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;

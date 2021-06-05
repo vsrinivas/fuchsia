@@ -990,7 +990,6 @@ const uint32 SMALL_SIZE = 4;
 TEST(ConstsTests, BadUnknownEnumMemberTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1010,7 +1009,6 @@ const dee EnumType = EnumType.D;
 
 TEST(ConstsTests, BadUnknownEnumMemberTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1031,7 +1029,6 @@ const EnumType dee = EnumType.D;
 TEST(ConstsTests, BadUnknownBitsMemberTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1051,7 +1048,6 @@ const dee BitsType = BitsType.D;
 
 TEST(ConstsTests, BadUnknownBitsMemberTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1071,7 +1067,6 @@ const BitsType dee = BitsType.D;
 
 TEST(ConstsTests, GoodOrOperatorTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1095,7 +1090,6 @@ const uint16 Result = MyBits.A | MyBits.B | MyBits.D;
 TEST(ConstsTests, BadOrOperatorDifferentTypesTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1112,7 +1106,6 @@ const two_fifty_seven uint8 = one | two_fifty_six;
 
 TEST(ConstsTests, BadOrOperatorDifferentTypesTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1129,7 +1122,6 @@ const uint8 two_fifty_seven = one | two_fifty_six;
 
 TEST(ConstsTests, GoodOrOperatorDifferentTypesTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1149,7 +1141,6 @@ const uint16 two_fifty_seven = one | two_fifty_six;
 TEST(ConstsTests, BadOrOperatorNonPrimitiveTypesTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1165,7 +1156,6 @@ const result string = HI | THERE;
 
 TEST(ConstsTests, BadOrOperatorNonPrimitiveTypesTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1181,7 +1171,6 @@ const string result = HI | THERE;
 
 TEST(ConstsTests, GoodOrOperatorParenthesesTest) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1213,7 +1202,6 @@ const MyBits bitsValue = MyBits.A | ( ( ( MyBits.A | MyBits.B ) | MyBits.D ) | M
 TEST(ConstsTests, BadOrOperatorMissingRightParenTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library = TestLibrary(R"FIDL(
 library example;
@@ -1229,7 +1217,6 @@ const fifteen uint16 = ( three | seven | eight;
 
 TEST(ConstsTests, BadOrOperatorMissingRightParenTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library = TestLibrary(R"FIDL(
 library example;
@@ -1246,7 +1233,6 @@ const uint16 fifteen = ( three | seven | eight;
 TEST(ConstsTests, BadOrOperatorMissingLeftParenTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library = TestLibrary(R"FIDL(
 library example;
@@ -1263,7 +1249,6 @@ const fifteen uint16 = three | seven | eight );
 
 TEST(ConstsTests, BadOrOperatorMissingLeftParenTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library = TestLibrary(R"FIDL(
 library example;
@@ -1281,7 +1266,6 @@ const uint16 fifteen = three | seven | eight );
 TEST(ConstsTests, BadOrOperatorMisplacedParenTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library = TestLibrary(R"FIDL(
 library example;
@@ -1297,7 +1281,6 @@ const fifteen uint16 = ( three | seven | ) eight;
 
 TEST(ConstsTests, BadOrOperatorMisplacedParenTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library = TestLibrary(R"FIDL(
 library example;
@@ -1314,7 +1297,6 @@ const uint16 fifteen = ( three | seven | ) eight;
 TEST(ConstsTests, BadIdentifierConstMismatchedTypesTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1337,7 +1319,6 @@ const b AnotherEnum = a;
 
 TEST(ConstsTests, BadIdentifierConstMismatchedTypesTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1361,7 +1342,6 @@ const AnotherEnum b = a;
 TEST(ConstsTests, BadEnumBitsConstMismatchedTypesTest) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;
@@ -1383,7 +1363,6 @@ const a OneEnum = AnotherEnum.B;
 
 TEST(ConstsTests, BadEnumBitsConstMismatchedTypesTestOld) {
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   TestLibrary library(R"FIDL(
 library example;

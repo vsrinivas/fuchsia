@@ -893,7 +893,6 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
       if (syntax == fidl::utils::Syntax::kNew) {
         experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
       }
-      experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
       TestLibrary library(remove_markers(marked_source), experimental_flags);
       std::unique_ptr<fidl::raw::File> ast;
       if (!library.Parse(&ast)) {

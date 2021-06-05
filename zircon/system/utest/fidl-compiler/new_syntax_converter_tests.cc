@@ -703,7 +703,6 @@ alias foo = zx.handle:<VMO,zx.rights.DUPLICATE | zx.rights.TRANSFER,optional>;
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -1521,7 +1520,6 @@ type S = resource struct {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -1554,7 +1552,6 @@ type S = resource struct {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -1747,7 +1744,6 @@ b vector<zx.handle:<VMO,zx.rights.DUPLICATE,optional>>:<16,optional>
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
 }
@@ -1912,7 +1908,6 @@ type T = resource table {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -2204,7 +2199,6 @@ type U = strict resource union {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -2359,7 +2353,6 @@ type Foo = resource struct {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -2437,7 +2430,6 @@ type Foo = resource struct {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -2543,7 +2535,6 @@ type Foo = resource struct {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -2673,7 +2664,6 @@ type Foo = resource struct {
 )FIDL";
 
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, flags));
@@ -2753,7 +2743,6 @@ type Foo = resource struct {
   std::vector<std::string> deps;
   deps.emplace_back(dep1);
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
@@ -2852,7 +2841,6 @@ type Foo = resource struct {
   deps.emplace_back(dep1);
   deps.emplace_back(dep2);
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
@@ -2951,7 +2939,6 @@ type Foo = resource struct {
   deps.emplace_back(dep1);
   deps.emplace_back(dep2);
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
@@ -3055,7 +3042,6 @@ type Foo = resource struct {
   std::vector<std::string> deps;
   deps.emplace_back(dep1);
   fidl::ExperimentalFlags flags;
-  flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version, deps, flags));
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version, deps, flags));
