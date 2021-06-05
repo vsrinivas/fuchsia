@@ -27,6 +27,7 @@ rustc_library("testing") {
     "//src/sys/component_manager/*",
     "//src/sys/lib/cm_rust/testing:*",
     "//src/sys/lib/routing/testing/*",
+    "//tools/lib/cm_fidl_analyzer/tests:*",
   ]
 
   sources = [ "src/lib.rs" ]

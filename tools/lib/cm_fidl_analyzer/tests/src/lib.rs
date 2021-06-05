@@ -4,3 +4,4 @@
 
 pub mod rights;
 pub mod routing;
+pub mod storage;

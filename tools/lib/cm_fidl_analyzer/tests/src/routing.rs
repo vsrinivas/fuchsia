@@ -160,7 +160,16 @@ impl RoutingTestForAnalyzer {
                 expected_res,
             ),
             CheckUse::Service { .. } => unimplemented![],
-            CheckUse::Storage { .. } => unimplemented![],
+            CheckUse::Storage { path, expected_res, .. } => (
+                decl.uses
+                    .iter()
+                    .find_map(|u| match u {
+                        UseDecl::Storage(d) if d.target_path == path => Some(u.clone()),
+                        _ => None,
+                    })
+                    .ok_or(TestModelError::UseDeclNotFound),
+                expected_res,
+            ),
             CheckUse::StorageAdmin { .. } => unimplemented![],
         }
     }

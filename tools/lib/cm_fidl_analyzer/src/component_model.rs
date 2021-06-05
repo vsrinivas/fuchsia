@@ -9,7 +9,9 @@ use {
     fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialChildMoniker},
     routing::{
-        capability_source::{CapabilitySourceInterface, NamespaceCapabilities},
+        capability_source::{
+            CapabilitySourceInterface, NamespaceCapabilities, StorageCapabilitySource,
+        },
         component_id_index::ComponentIdIndex,
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
@@ -19,7 +21,7 @@ use {
         environment::{DebugRegistry, EnvironmentExtends, EnvironmentInterface, RunnerRegistry},
         error::{ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
-        route_capability, RouteRequest, RouteSource,
+        route_capability, route_storage_and_backing_directory, RouteRequest, RouteSource,
     },
     std::{
         collections::HashMap,
@@ -175,17 +177,26 @@ impl ComponentModelForAnalyzer {
         use_decl: &UseDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
-        let request = match use_decl.clone() {
+        let source = match use_decl.clone() {
             UseDecl::Directory(use_directory_decl) => {
-                RouteRequest::UseDirectory(use_directory_decl)
+                route_capability(RouteRequest::UseDirectory(use_directory_decl), target).await?
             }
-            UseDecl::Event(use_event_decl) => RouteRequest::UseEvent(use_event_decl),
-            UseDecl::Protocol(use_protocol_decl) => RouteRequest::UseProtocol(use_protocol_decl),
-            UseDecl::Service(use_service_decl) => RouteRequest::UseService(use_service_decl),
-            UseDecl::Storage(use_storage_decl) => RouteRequest::UseStorage(use_storage_decl),
+            UseDecl::Event(use_event_decl) => {
+                route_capability(RouteRequest::UseEvent(use_event_decl), target).await?
+            }
+            UseDecl::Protocol(use_protocol_decl) => {
+                route_capability(RouteRequest::UseProtocol(use_protocol_decl), target).await?
+            }
+            UseDecl::Service(use_service_decl) => {
+                route_capability(RouteRequest::UseService(use_service_decl), target).await?
+            }
+            UseDecl::Storage(use_storage_decl) => {
+                let (storage_source, _) =
+                    route_storage_and_backing_directory(use_storage_decl, target).await?;
+                RouteSource::StorageBackingDirectory(storage_source)
+            }
             _ => unimplemented![],
         };
-        let source = route_capability(request, target).await?;
         self.check_use_source(&source).await
     }
 
@@ -216,6 +227,7 @@ impl ComponentModelForAnalyzer {
         match route_source {
             RouteSource::Directory(source, _) => self.check_directory_source(source).await,
             RouteSource::Protocol(source) => self.check_protocol_source(source).await,
+            RouteSource::StorageBackingDirectory(source) => self.check_storage_source(source).await,
             _ => unimplemented![],
         }
     }
@@ -248,6 +260,18 @@ impl ComponentModelForAnalyzer {
             CapabilitySourceInterface::Namespace { .. } => Ok(()),
             _ => unimplemented![],
         }
+    }
+
+    /// If the source of a storage backing directory is a component instance, checks that that
+    /// instance is executable.
+    async fn check_storage_source(
+        &self,
+        source: &StorageCapabilitySource<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        if let Some(provider) = &source.storage_provider {
+            self.check_executable(provider).await?
+        }
+        Ok(())
     }
 
     // A helper function which prepares a route request for capabilities which can be used
