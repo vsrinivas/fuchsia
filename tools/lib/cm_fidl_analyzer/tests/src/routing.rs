@@ -41,6 +41,7 @@ pub struct RoutingTestBuilderForAnalyzer {
     namespace_capabilities: Vec<CapabilityDecl>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AbsoluteMoniker>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    component_id_index_path: Option<String>,
 }
 
 #[async_trait]
@@ -60,6 +61,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
             namespace_capabilities: Vec::new(),
             capability_policy: HashMap::new(),
             debug_capability_policy: HashMap::new(),
+            component_id_index_path: None,
         }
     }
 
@@ -85,6 +87,10 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         self.debug_capability_policy.insert(key, allowlist);
     }
 
+    fn set_component_id_index_path(&mut self, index_path: String) {
+        self.component_id_index_path = Some(index_path);
+    }
+
     async fn build(self) -> RoutingTestForAnalyzer {
         let mut config = RuntimeConfig::default();
         config.namespace_capabilities = self.namespace_capabilities;
@@ -93,6 +99,8 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         security_policy.capability_policy = self.capability_policy;
         security_policy.debug_capability_policy = self.debug_capability_policy;
         config.security_policy = security_policy;
+
+        config.component_id_index_path = self.component_id_index_path;
 
         let tree = ComponentTreeBuilder::new(self.decls_by_url)
             .build(self.root_url)
@@ -258,19 +266,34 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
         }
     }
 
-    // This is a no-op for the static model.
+    // File and directory operations
+    //
+    // All file and directory operations are no-ops for the static model.
     #[allow(unused_variables)]
     async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {}
 
-    // This is a no-op for the static model.
     #[allow(unused_variables)]
     async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
         Ok(())
     }
 
-    // This is a no-op for the static model.
     #[allow(unused_variables)]
     fn install_namespace_directory(&self, path: &str) {}
+
+    #[allow(unused_variables)]
+    fn add_subdir_to_data_directory(&self, subdir: &str) {}
+
+    #[allow(unused_variables)]
+    async fn check_test_subdir_contents(&self, path: &str, expected: Vec<String>) {}
+
+    #[allow(unused_variables)]
+    async fn check_namespace_subdir_contents(&self, path: &str, expected: Vec<String>) {}
+
+    #[allow(unused_variables)]
+    async fn check_test_subdir_contains(&self, path: &str, expected: String) {}
+
+    #[allow(unused_variables)]
+    async fn check_test_dir_tree_contains(&self, expected: String) {}
 }
 
 mod tests {

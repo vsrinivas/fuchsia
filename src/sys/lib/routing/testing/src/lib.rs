@@ -5,6 +5,7 @@
 pub mod component_id_index;
 pub mod policy;
 pub mod rights;
+pub mod storage;
 
 use {
     async_trait::async_trait,
@@ -24,6 +25,7 @@ use {
     maplit::hashmap,
     moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
     routing::{
+        component_id_index::ComponentInstanceId,
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         event::EventSubscription,
         rights::READ_RIGHTS,
@@ -123,6 +125,39 @@ impl CheckUse {
     }
 }
 
+// This function should reproduce the logic of `crate::storage::generate_storage_path`.
+pub fn generate_storage_path(
+    subdir: Option<String>,
+    relative_moniker: &RelativeMoniker,
+    instance_id: Option<&ComponentInstanceId>,
+) -> PathBuf {
+    if let Some(id) = instance_id {
+        return [id].iter().collect();
+    }
+    assert!(relative_moniker.up_path().is_empty());
+    let mut down_path = relative_moniker.down_path().iter();
+    let mut dir_path = vec![];
+    if let Some(subdir) = subdir {
+        dir_path.push(subdir);
+    }
+    if let Some(p) = down_path.next() {
+        dir_path.push(p.as_str().to_string());
+    }
+    while let Some(p) = down_path.next() {
+        dir_path.push("children".to_string());
+        dir_path.push(p.as_str().to_string());
+    }
+
+    // Storage capabilities used to have a hardcoded set of types, which would be appended
+    // here. To maintain compatibility with the old paths (and thus not lose data when this was
+    // migrated) we append "data" here. This works because this is the only type of storage
+    // that was actually used in the wild.
+    //
+    // This is only temporary, until the storage instance id migration changes this layout.
+    dir_path.push("data".to_string());
+    dir_path.into_iter().collect()
+}
+
 /// A `RoutingTestModel` attempts to use capabilities from instances in a component model
 /// and checks the result of the attempt against an expectation.
 #[async_trait]
@@ -143,6 +178,22 @@ pub trait RoutingTestModel {
 
     /// Installs a new directory at `path` in the test's namespace.
     fn install_namespace_directory(&self, path: &str);
+
+    /// Creates a subdirectory in the outgoing dir's /data directory.
+    fn add_subdir_to_data_directory(&self, subdir: &str);
+
+    /// Asserts that the subdir given by `path` within the test directory contains exactly the
+    /// filenames in `expected`.
+    async fn check_test_subdir_contents(&self, path: &str, expected: Vec<String>);
+
+    /// Asserts that the directory at absolute `path` contains exactly the filenames in `expected`.
+    async fn check_namespace_subdir_contents(&self, path: &str, expected: Vec<String>);
+
+    /// Asserts that the subdir given by `path` within the test directory contains a file named `expected`.
+    async fn check_test_subdir_contains(&self, path: &str, expected: String);
+
+    /// Asserts that the tree in the test directory under `path` contains a file named `expected`.
+    async fn check_test_dir_tree_contains(&self, expected: String);
 }
 
 /// Builds an implementation of `RoutingTestModel` from a set of `ComponentDecl`s.
@@ -170,6 +221,9 @@ pub trait RoutingTestModelBuilder {
         key: CapabilityAllowlistKey,
         allowlist: HashSet<(AbsoluteMoniker, String)>,
     );
+
+    /// Sets the path to the component ID index for the test model.
+    fn set_component_id_index_path(&mut self, index_path: String);
 
     async fn build(self) -> Self::Model;
 }

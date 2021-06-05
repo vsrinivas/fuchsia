@@ -32,6 +32,7 @@ rustc_library("routing_test_helpers") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
   ]
 
@@ -40,5 +41,6 @@ rustc_library("routing_test_helpers") {
     "src/lib.rs",
     "src/policy.rs",
     "src/rights.rs",
+    "src/storage.rs",
   ]
 }

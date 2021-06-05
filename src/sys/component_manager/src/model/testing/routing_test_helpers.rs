@@ -16,7 +16,7 @@ use {
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
     },
-    ::routing_test_helpers::{RoutingTestModel, RoutingTestModelBuilder},
+    ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
     async_trait::async_trait,
     cm_rust::*,
     cm_types::Url,
@@ -186,6 +186,10 @@ impl RoutingTestModelBuilder for RoutingTestBuilder {
         self.debug_capability_policy.insert(key, allowlist);
     }
 
+    fn set_component_id_index_path(&mut self, index_path: String) {
+        self.component_id_index_path = Some(index_path);
+    }
+
     async fn build(self) -> RoutingTest {
         self.build().await
     }
@@ -345,11 +349,6 @@ impl RoutingTest {
         nf.await.expect("failed to destroy child");
     }
 
-    /// Creates a sub directory in the outgoing dir's /data directory
-    pub fn add_subdir_to_data_directory(&self, subdir: &str) {
-        fs::create_dir_all(self.test_dir.path().join(subdir)).unwrap()
-    }
-
     pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {
         let component_name = self.bind_instance_and_wait_start(&moniker).await.unwrap();
         let component_resolved_url = Self::resolved_url(&component_name);
@@ -369,11 +368,7 @@ impl RoutingTest {
         instance_id: Option<&ComponentInstanceId>,
         relative_path: &str,
     ) -> Vec<String> {
-        let dir_path = capability_util::generate_storage_path(
-            subdir.map(|s| s.to_string()),
-            &relation,
-            instance_id,
-        );
+        let dir_path = generate_storage_path(subdir.map(|s| s.to_string()), &relation, instance_id);
         let mut dir_path = dir_path.parent().unwrap().to_path_buf();
         if !relative_path.is_empty() {
             dir_path.push(relative_path);
@@ -822,6 +817,32 @@ impl RoutingTestModel for RoutingTest {
         Self::install_default_out_files(&mut out_dir);
         out_dir.add_directory_proxy(&self.test_dir_proxy);
         out_dir.host_fn()(ServerEnd::new(server_chan));
+    }
+
+    fn add_subdir_to_data_directory(&self, subdir: &str) {
+        fs::create_dir_all(self.test_dir.path().join(subdir)).unwrap()
+    }
+
+    async fn check_test_subdir_contents(&self, path: &str, expected: Vec<String>) {
+        assert_eq!(self.list_directory(path).await, expected)
+    }
+
+    async fn check_namespace_subdir_contents(&self, path: &str, expected: Vec<String>) {
+        let dir_proxy = io_util::open_directory_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
+            .expect("failed to open directory");
+        assert_eq!(list_directory(&dir_proxy).await, expected)
+    }
+
+    async fn check_test_subdir_contains(&self, path: &str, expected: String) {
+        assert!(self.list_directory(path).await.contains(&expected))
+    }
+
+    async fn check_test_dir_tree_contains(&self, expected: String) {
+        assert!(list_directory_recursive(&self.test_dir_proxy)
+            .await
+            .iter()
+            .find(|&name| name.starts_with(&expected))
+            .is_some());
     }
 }
 
@@ -1403,39 +1424,6 @@ pub mod capability_util {
                 panic!("Attempted to open exposed dir of unresolved component: {}", abs_moniker);
             }
         }
-    }
-
-    // This function should reproduce the logic of `crate::storage::generate_storage_path`
-    pub fn generate_storage_path(
-        subdir: Option<String>,
-        relative_moniker: &RelativeMoniker,
-        instance_id: Option<&ComponentInstanceId>,
-    ) -> PathBuf {
-        if let Some(id) = instance_id {
-            return [id].iter().collect();
-        }
-        assert!(relative_moniker.up_path().is_empty());
-        let mut down_path = relative_moniker.down_path().iter();
-        let mut dir_path = vec![];
-        if let Some(subdir) = subdir {
-            dir_path.push(subdir);
-        }
-        if let Some(p) = down_path.next() {
-            dir_path.push(p.as_str().to_string());
-        }
-        while let Some(p) = down_path.next() {
-            dir_path.push("children".to_string());
-            dir_path.push(p.as_str().to_string());
-        }
-
-        // Storage capabilities used to have a hardcoded set of types, which would be appended
-        // here. To maintain compatibility with the old paths (and thus not lose data when this was
-        // migrated) we append "data" here. This works because this is the only type of storage
-        // that was actually used in the wild.
-        //
-        // This is only temporary, until the storage instance id migration changes this layout.
-        dir_path.push("data".to_string());
-        dir_path.into_iter().collect()
     }
 
     /// Function to convert a CapabilityPath to a pseudo_fs_mt::Path
