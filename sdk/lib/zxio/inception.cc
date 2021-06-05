@@ -33,6 +33,10 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
       type = ZXIO_OBJECT_TYPE_DEBUGLOG;
       break;
     }
+    case ZX_OBJ_TYPE_SOCKET: {
+      type = ZXIO_OBJECT_TYPE_PIPE;
+      break;
+    }
   }
   zx_status_t status = allocator(type, &storage, out_context);
   if (status != ZX_OK || storage == nullptr) {

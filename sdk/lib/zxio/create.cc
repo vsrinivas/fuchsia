@@ -83,6 +83,15 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
       }
       return zxio_vmo_init(storage, std::move(vmo), std::move(stream));
     }
+    case ZX_OBJ_TYPE_SOCKET: {
+      zx::socket socket(std::move(handle));
+      zx_info_socket_t info;
+      zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return zxio_pipe_init(storage, std::move(socket), info);
+    }
     default: {
       zxio_handle_holder_init(storage, std::move(handle));
       return ZX_ERR_NOT_SUPPORTED;

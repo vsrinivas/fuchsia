@@ -25,6 +25,7 @@ test("zxio") {
     "file_v2-test.cc",
     "inception-test.cc",
     "null-test.cc",
+    "pipe-test.cc",
     "posix-mode-test.cc",
     "remote-test.cc",
     "remote_v2-test.cc",
