@@ -61,6 +61,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/service.rs",
     "src/watchable_map.rs",
+    "src/watcher_service.rs",
   ]
 }
 

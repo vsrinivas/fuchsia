@@ -33,7 +33,12 @@ pub struct PhyDevice {
     pub device: wlan_dev::Device,
 }
 
+pub struct IfaceDevice {
+    pub phy_ownership: PhyOwnership,
+}
+
 pub type PhyMap = WatchableMap<u16, PhyDevice>;
+pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 
 /// Handles newly-discovered PHYs.
 ///

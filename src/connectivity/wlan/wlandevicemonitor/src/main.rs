@@ -7,6 +7,7 @@ mod device_watch;
 mod inspect;
 mod service;
 mod watchable_map;
+mod watcher_service;
 
 use {
     anyhow::Error,
@@ -14,7 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_inspect::Inspector,
-    futures::{future::try_join, FutureExt, StreamExt, TryFutureExt},
+    futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt},
     log::{error, info},
     std::sync::Arc,
 };
@@ -31,9 +32,10 @@ pub struct ServiceCfg {
 async fn serve_fidl(
     mut fs: ServiceFs<ServiceObjLocal<'_, ()>>,
     phys: Arc<device::PhyMap>,
+    watcher_service: watcher_service::WatcherService<device::PhyDevice, device::IfaceDevice>,
 ) -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |reqs| {
-        let fut = service::serve_monitor_requests(reqs, phys.clone())
+        let fut = service::serve_monitor_requests(reqs, phys.clone(), watcher_service.clone())
             .unwrap_or_else(|e| error!("error serving device monitor API: {}", e));
         fasync::Task::spawn(fut).detach()
     });
@@ -48,8 +50,13 @@ async fn main() -> Result<(), Error> {
     let cfg: ServiceCfg = argh::from_env();
     info!("{:?}", cfg);
 
-    let (phys, _phy_events) = device::PhyMap::new();
+    let (phys, phy_events) = device::PhyMap::new();
     let phys = Arc::new(phys);
+    let (ifaces, iface_events) = device::IfaceMap::new();
+    let ifaces = Arc::new(ifaces);
+
+    let (watcher_service, watcher_fut) =
+        watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
 
     let mut fs = ServiceFs::new_local();
 
@@ -67,9 +74,14 @@ async fn main() -> Result<(), Error> {
             .right_future()
     };
 
-    let fidl_fut = serve_fidl(fs, phys);
+    let fidl_fut = serve_fidl(fs, phys, watcher_service);
 
-    let ((), ()) = try_join(fidl_fut, phy_server.map_ok(|_: void::Void| ())).await?;
+    let ((), (), ()) = try_join3(
+        fidl_fut,
+        phy_server.map_ok(|_: void::Void| ()),
+        watcher_fut.map_ok(|_: void::Void| ()),
+    )
+    .await?;
     error!("Exiting");
     Ok(())
 }

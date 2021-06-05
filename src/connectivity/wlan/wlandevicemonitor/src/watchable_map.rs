@@ -79,7 +79,6 @@ where
     }
 
     /// Take a snapshot and push it to the queue
-    #[cfg(test)]
     pub fn request_snapshot(&self) {
         let inner = self.inner.lock();
         inner
