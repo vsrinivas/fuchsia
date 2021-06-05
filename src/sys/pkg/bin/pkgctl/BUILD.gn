@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 
 # `pkgctl` is conceptually a binary, but it built as a lib here so it can be
 # aggregated into //src/sys/pkg/bin/multi-universal-tool to save disk space.

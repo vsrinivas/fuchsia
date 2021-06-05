@@ -186,7 +186,7 @@ fuzzers_package("my-fuzzers") {
 It is not necessary to include a list if the package has no fuzzers written in the corresponding
 languages.
 
-A `fuzzers_package` can use all the same parameters as a [`package`][gn-package].
+A `fuzzers_package` can use all the same parameters as a [`fuchsia_package`][gn-package].
 
 For example:
 
@@ -295,7 +295,7 @@ Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [fx-build]: /docs/development/build/fx.md#execute-a-build
 [fx-set]: /docs/development/build/fx.md#configure-a-build
 [gn-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_deps
-[gn-package]: /build/package.gni
+[gn-package]: /docs/development/components/build.md
 [gn-targets]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Targets
 [gn-templates]: https://gn.googlesource.com/gn/+/HEAD/docs/language.md#Templates
 [go_fuzzer.gni]: /build/go/go_fuzzer.gni

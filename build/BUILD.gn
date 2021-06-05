@@ -18,33 +18,6 @@ group("tests") {
   ]
 }
 
-group("deprecated_package") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of uses of the legacy package() template.
-  #
-  # The new templates and their many benefits are thoroughly documented here:
-  # https://fuchsia.dev/fuchsia-src/development/components/build
-  #
-  # Please don't add new usages of legacy package().
-  # Please do use the new templates for new targets.
-  # Please do migrate existing targets to the new templates.
-  # Please do tag your migrations with: fxbug.dev/65068
-  #
-  # Maintainers will accept changes to the allowlist below that support
-  # refactors, such as moving a legacy target to a different directory.
-
-  # To regenerate:
-  # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
-  visibility = [ "//src/ui/scenic/*" ]
-}
-
 group("non_hermetic_deps") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \

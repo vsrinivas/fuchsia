@@ -142,10 +142,10 @@ template("rustc_test_internal") {
         data_deps += [ "//build/toolchain/runtime:static-rust-libtest-deps" ]
       }
 
-      deps += [ "//build/test:rust_test_metadata" ]
+      deps += [ "//build/rust:rust_test_metadata" ]
       deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
       metadata = {
-        cmx_patches_walk = [ "//build/test:rust_test_metadata" ]
+        cmx_patches_walk = [ "//build/rust:rust_test_metadata" ]
 
         # Used by the fuchsia_test_component_manifest() template.
         test_component_manifest_cml = [

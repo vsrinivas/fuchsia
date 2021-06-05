@@ -1,9 +1,8 @@
 # Packaging
 
 The generated JSON file from the previous section must be bundled together with
-the Fuchsia program so that it can be found at program runtime.  This is done
-by the regular Fuchsia build rules, such as those in
-[package.gni](/build/package.gni).
+the Fuchsia program so that it can be found at program runtime.
+See: [Provide data files to components][provide-data-guide].
 
 We have established some conventions for packaging resources (i.e. localized
 assets). The schema is intended to be extensible to other asset types, and also
@@ -71,3 +70,4 @@ translated messages, the correct directory path would be
 `assets/locales/fr/l10n.json` for the translated messages for French.  It is
 also required to package the ICU data, is defined in the `icudtl.dat` section.
 
+[provide-data-guide]: /docs/development/components/data.md

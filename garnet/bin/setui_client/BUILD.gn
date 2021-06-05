@@ -5,7 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
   name = "setui_client"

@@ -6,7 +6,6 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//src/ui/lib/escher/build_args.gni")
 
 rustc_test("scenic-stressor-bin") {

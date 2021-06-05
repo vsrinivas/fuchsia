@@ -1,7 +1,10 @@
 # Migrating legacy package build rules {#legacy-package-migration}
 
+Note: this migration is complete! The guide below is kept for archival
+purposes.
+
 This document provides instructions on migrating the component build rules in
-your `BUILD.gn` files from the legacy [`package()`](/build/package.gni) template
+your `BUILD.gn` files from the legacy [`package()`] template
 to the new [`fuchsia_package()`](/build/components/fuchsia_package.gni).
 
 For more details on using the new component build rules, see the
@@ -233,7 +236,7 @@ unable to resolve, see [Troubleshooting](#troubleshooting).
 ## Test package considerations
 
 The example below highlights some key differences between the legacy
-[`test_package()`](/build/test/test_package.gni) template and the new
+[`test_package()`] template and the new
 [`fuchsia_test_package()`](/build/components/fuchsia_test_package.gni).
 
 * {Pre-migration}

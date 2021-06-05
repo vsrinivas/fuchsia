@@ -39,8 +39,8 @@ group("hello_world") {
 }
 ```
 
-To learn more about how GN defines Fuchsia packages,
-see the [`build/package.gni`](/build/package.gni) file.
+To learn more about how GN defines Fuchsia packages, see:
+[Building components][building-components].
 
 ### Component manifest {#component-manifest}
 
@@ -158,3 +158,4 @@ hello-world-cpp
 hello-world-rust
 ```
 
+[building-components]: /docs/development/components/build.md
