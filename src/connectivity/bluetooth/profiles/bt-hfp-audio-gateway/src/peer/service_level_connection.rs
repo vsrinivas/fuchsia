@@ -704,7 +704,7 @@ pub(crate) mod tests {
 
     /// Builds and returns a connected service level connection. Returns the SLC and
     /// the remote end of the channel.
-    fn create_and_connect_slc() -> (ServiceLevelConnection, Channel) {
+    pub fn create_and_connect_slc() -> (ServiceLevelConnection, Channel) {
         let mut slc = ServiceLevelConnection::new();
         let (local, remote) = Channel::create();
         slc.connect(local);

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::format_err,
     async_utils::hanging_get::client::HangingGetStream,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
@@ -102,25 +103,31 @@ impl PeerTask {
         Ok((task, sender))
     }
 
+    /// Always give preference to connection requests received from the peer device.
     fn on_connection_request(
         &mut self,
         _protocol: Vec<ProtocolDescriptor>,
         channel: fuchsia_bluetooth::types::Channel,
     ) {
-        // TODO (fxbug.dev/64566): improve connection handling
         info!("connection request from peer {:?}", self.id);
+        if self.connection.connected() {
+            info!("overwriting existing connection");
+        }
         self.connection.connect(channel);
     }
 
-    async fn connect(&mut self, mut params: bredr::ConnectParameters) {
-        let result = self.profile_proxy.connect(&mut self.id.into(), &mut params).await;
-
-        match result {
-            Ok(Ok(channel)) => {
-                self.connection.connect(channel.try_into().expect("Channel to be valid"))
-            }
-            r => info!("Error connecting to peer {:?}: {:?}", self.id, r),
+    /// Make a connection to the peer only if there is not an existing connection.
+    async fn connect(&mut self, mut params: bredr::ConnectParameters) -> Result<(), anyhow::Error> {
+        if self.connection.connected() {
+            return Ok(());
         }
+        let channel = self
+            .profile_proxy
+            .connect(&mut self.id.into(), &mut params)
+            .await?
+            .map_err(|e| format_err!("Profile connection request error: {:?}", e))?;
+        self.connection.connect(channel.try_into()?);
+        Ok(())
     }
 
     async fn on_search_result(
@@ -137,7 +144,9 @@ impl PeerTask {
         });
 
         if self.connection_behavior.autoconnect {
-            self.connect(params).await;
+            if let Err(e) = self.connect(params).await {
+                info!("Error connecting to peer {:?}: {:?}", self.id, e);
+            }
         }
     }
 
@@ -534,6 +543,7 @@ mod tests {
             stream::{FusedStream, Stream},
             SinkExt,
         },
+        matches::assert_matches,
         proptest::prelude::*,
     };
 
@@ -544,8 +554,8 @@ mod tests {
             indicators::{AgIndicatorsReporting, HfIndicators},
             service_level_connection::{
                 tests::{
-                    create_and_initialize_slc, expect_data_received_by_peer, expect_peer_ready,
-                    serialize_at_response,
+                    create_and_connect_slc, create_and_initialize_slc,
+                    expect_data_received_by_peer, expect_peer_ready, serialize_at_response,
                 },
                 SlcState,
             },
@@ -1141,5 +1151,75 @@ mod tests {
         // No request is received on stream.
         let result = exec.run_until_stalled(&mut profile.next());
         assert!(result.is_pending());
+    }
+
+    #[test]
+    fn connect_request_triggers_connection() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let connection = ServiceLevelConnection::new();
+        let (local, mut remote) = Channel::create();
+        let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        assert!(!peer.connection.connected());
+
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+
+        let event_fut = sender.send(PeerRequest::Profile(ProfileEvent::PeerConnected {
+            id: PeerId(0),
+            protocol: vec![],
+            channel: local,
+        }));
+        exec.run_singlethreaded(event_fut).unwrap();
+
+        // The peer task is pending with no further work to do at this time.
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_pending());
+
+        // Closing the SLC connection will result in the completion of the peer task.
+        drop(sender);
+
+        let result = exec.run_until_stalled(&mut run_fut);
+        let peer = result.expect("run to complete");
+        assert!(peer.connection.connected());
+        assert!(exec.run_until_stalled(&mut remote.next()).is_pending());
+    }
+
+    #[test]
+    fn connect_request_replaces_connection() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        // SLC is connected at the start of the test.
+        let (connection, mut old_remote) = create_and_connect_slc();
+        let (peer, mut sender, receiver, _profile) = setup_peer_task(Some(connection));
+
+        assert!(peer.connection.connected());
+
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+
+        // create a new connection for the SLC
+        let (local, mut new_remote) = Channel::create();
+        let event_fut = sender.send(PeerRequest::Profile(ProfileEvent::PeerConnected {
+            id: PeerId(0),
+            protocol: vec![],
+            channel: local,
+        }));
+        exec.run_singlethreaded(event_fut).unwrap();
+
+        // The peer task is pending with no further work to do at this time.
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_pending());
+
+        // Closing the SLC connection will result in the completion of the peer task.
+        drop(sender);
+
+        let result = exec.run_until_stalled(&mut run_fut);
+        let peer = result.expect("run to complete");
+        assert!(peer.connection.connected());
+        let result = exec.run_until_stalled(&mut old_remote.next());
+        // old_remote is closed
+        assert_matches!(result, Poll::Ready(None));
+        // new_remote is open
+        assert!(exec.run_until_stalled(&mut new_remote.next()).is_pending());
     }
 }
