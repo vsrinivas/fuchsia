@@ -1,6 +1,9 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
+            },
             "system-services": [
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats"
@@ -14,10 +17,8 @@
         "binary": "bin/memory_monitor_inspect_integration_tests"
     },
     "sandbox": {
-        "features": [
-            "hub"
-        ],
         "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
             "fuchsia.sys.Environment",

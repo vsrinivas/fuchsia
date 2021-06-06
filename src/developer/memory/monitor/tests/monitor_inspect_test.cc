@@ -6,12 +6,12 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect/cpp/reader.h>
-#include <lib/inspect/service/cpp/reader.h>
-#include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <sstream>
 
 #include <gmock/gmock.h>
 #include <src/lib/files/file.h>
@@ -24,12 +24,8 @@ namespace component {
 namespace {
 
 using ::fxl::Substitute;
+using inspect::contrib::DiagnosticsData;
 using sys::testing::EnclosingEnvironment;
-using ::testing::ElementsAre;
-using ::testing::IsEmpty;
-using ::testing::Not;
-using ::testing::UnorderedElementsAre;
-using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/memory_monitor_inspect_integration_tests#meta/"
@@ -58,9 +54,6 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
-    if (!ready) {
-      printf("The output directory is not ready\n");
-    }
   }
 
   void CheckShutdown() {
@@ -72,31 +65,31 @@ class InspectTest : public sys::testing::TestWithEnvironment {
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
-  fit::result<inspect::Hierarchy> GetInspectHierarchy() {
-    files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/diagnostics/fuchsia.inspect.Tree",
-                                kTestProcessName, std::string_view(test_case_)));
-    if (glob.size() == 0) {
-      return fit::error();
-    }
-    auto path = std::string(*glob.begin());
-
-    fuchsia::inspect::TreePtr tree_ptr;
-    zx_status_t status;
-    status = fdio_service_connect(path.c_str(), tree_ptr.NewRequest().TakeChannel().release());
-    if (status != ZX_OK) {
-      return fit::error();
-    }
-
-    EXPECT_TRUE(tree_ptr.is_bound());
-
+  fit::result<DiagnosticsData> GetInspect() {
+    auto archive = real_services()->Connect<fuchsia::diagnostics::ArchiveAccessor>();
+    std::stringstream selector;
+    selector << test_case_ << "/" << kTestProcessName << ":root";
+    inspect::contrib::ArchiveReader reader(std::move(archive), {selector.str()});
+    fit::result<std::vector<DiagnosticsData>, std::string> result;
     async::Executor executor(dispatcher());
-    fit::result<inspect::Hierarchy> ret;
     executor.schedule_task(
-        inspect::ReadFromTree(std::move(tree_ptr)).then([&](fit::result<inspect::Hierarchy>& res) {
-          ret = std::move(res);
-        }));
-    RunLoopUntil([&] { return ret.is_ok() || ret.is_error(); });
-    return ret;
+        reader.SnapshotInspectUntilPresent({kTestProcessName})
+            .then([&](fit::result<std::vector<DiagnosticsData>, std::string>& rest) {
+              result = std::move(rest);
+            }));
+    RunLoopUntil([&] { return result.is_ok() || result.is_error(); });
+
+    if (result.is_error()) {
+      EXPECT_FALSE(result.is_error()) << "Error was " << result.error();
+      return fit::error();
+    }
+
+    if (result.value().size() != 1) {
+      EXPECT_EQ(1u, result.value().size()) << "Expected only one component";
+      return fit::error();
+    }
+
+    return fit::ok(std::move(result.value()[0]));
   }
 
  private:
@@ -105,55 +98,54 @@ class InspectTest : public sys::testing::TestWithEnvironment {
   const char* test_case_;
 };
 
-TEST_F(InspectTest, FirstLaunch) {
-  auto result = GetInspectHierarchy();
-  ASSERT_TRUE(result.is_ok());
-  auto hierarchy = result.take_value();
-  EXPECT_THAT(hierarchy,
-              AllOf(NodeMatches(AllOf(NameMatches("root"),
-                                      PropertyList(UnorderedElementsAre(
-                                          StringIs("current", Not(IsEmpty())),
-                                          StringIs("current_digest", Not(IsEmpty())),
-                                          StringIs("high_water", Not(IsEmpty())),
-                                          StringIs("high_water_digest", Not(IsEmpty())))))),
+void expect_string_not_empty(const DiagnosticsData& data, const std::vector<std::string>& path) {
+  auto& value = data.GetByPath(path);
+  EXPECT_EQ(value.GetType(), rapidjson::kStringType) << path.back() << " is not a string";
+  EXPECT_NE(value.GetStringLength(), 0u) << path.back() << " is empty";
+}
 
-                    ChildrenMatch(UnorderedElementsAre(
-                        NodeMatches(AllOf(NameMatches("values"), PropertyList(Not(IsEmpty()))))))));
+void expect_object_not_empty(const DiagnosticsData& data, const std::vector<std::string>& path) {
+  auto& value = data.GetByPath(path);
+  EXPECT_EQ(value.GetType(), rapidjson::kObjectType) << path.back() << " is not an object";
+  EXPECT_FALSE(value.ObjectEmpty()) << path.back() << " is empty";
+}
+
+TEST_F(InspectTest, FirstLaunch) {
+  auto result = GetInspect();
+  ASSERT_TRUE(result.is_ok());
+  auto data = result.take_value();
+  expect_string_not_empty(data, {"root", "current"});
+  expect_string_not_empty(data, {"root", "current_digest"});
+  expect_string_not_empty(data, {"root", "high_water"});
+  expect_string_not_empty(data, {"root", "high_water_digest"});
+  expect_object_not_empty(data, {"root", "values"});
 }
 
 TEST_F(InspectTest, SecondLaunch) {
-  // Make sure that the high_water_previous_boot property is made visible only upon the second
-  // run.
-  auto result = GetInspectHierarchy();
+  // Make sure that the *_previous_boot properties are made visible only upon
+  // the second run.
+  auto result = GetInspect();
   ASSERT_TRUE(result.is_ok());
-  auto hierarchy = result.take_value();
-  EXPECT_THAT(hierarchy,
-              AllOf(NodeMatches(AllOf(NameMatches("root"),
-                                      PropertyList(UnorderedElementsAre(
-                                          StringIs("current", Not(IsEmpty())),
-                                          StringIs("current_digest", Not(IsEmpty())),
-                                          StringIs("high_water", Not(IsEmpty())),
-                                          StringIs("high_water_digest", Not(IsEmpty())))))),
+  auto data = result.take_value();
+  expect_string_not_empty(data, {"root", "current"});
+  expect_string_not_empty(data, {"root", "current_digest"});
+  expect_string_not_empty(data, {"root", "high_water"});
+  expect_string_not_empty(data, {"root", "high_water_digest"});
+  expect_object_not_empty(data, {"root", "values"});
 
-                    ChildrenMatch(UnorderedElementsAre(
-                        NodeMatches(AllOf(NameMatches("values"), PropertyList(Not(IsEmpty()))))))));
   CheckShutdown();
   Connect();
-  result = GetInspectHierarchy();
+
+  result = GetInspect();
   ASSERT_TRUE(result.is_ok());
-  hierarchy = result.take_value();
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(NodeMatches(AllOf(
-                NameMatches("root"),
-                PropertyList(UnorderedElementsAre(
-                    StringIs("current", Not(IsEmpty())), StringIs("current_digest", Not(IsEmpty())),
-                    StringIs("high_water_previous_boot", Not(IsEmpty())),
-                    StringIs("high_water_digest_previous_boot", Not(IsEmpty())),
-                    StringIs("high_water", Not(IsEmpty())),
-                    StringIs("high_water_digest", Not(IsEmpty())))))),
-            ChildrenMatch(UnorderedElementsAre(
-                NodeMatches(AllOf(NameMatches("values"), PropertyList(Not(IsEmpty()))))))));
+  data = result.take_value();
+  expect_string_not_empty(data, {"root", "current"});
+  expect_string_not_empty(data, {"root", "current_digest"});
+  expect_string_not_empty(data, {"root", "high_water"});
+  expect_string_not_empty(data, {"root", "high_water_previous_boot"});
+  expect_string_not_empty(data, {"root", "high_water_digest"});
+  expect_string_not_empty(data, {"root", "high_water_digest_previous_boot"});
+  expect_object_not_empty(data, {"root", "values"});
 }
 
 }  // namespace
