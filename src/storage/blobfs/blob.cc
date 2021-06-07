@@ -1204,6 +1204,12 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
   // call into this code and taking an exclusive lock would deadlock.
   fs::SharedLock lock(mutex_);
 
+  if (!paged_vmo()) {
+    // Races with calling FreePagedVmo() on another thread can result in stale read requests. Ignore
+    // them if the VMO is gone.
+    return;
+  }
+
   ZX_DEBUG_ASSERT(IsDataLoaded());
 
   if (is_corrupt_) {

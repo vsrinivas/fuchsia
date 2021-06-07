@@ -48,11 +48,22 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   //
   // Note that offset + length will be page-aligned so can extend beyond the end of the file.
   //
+  // Race conditions
+  // ---------------
+  //
   // Since the OnNoPagedVmoClones() is not synchronized with page requests, these requests can come
-  // in after there are no clones. If the paged VMO is destroyed the requests should be dropped
-  // silently (even reporting a failure to the kernel will fail). But if the VMO could be used in
-  // the future (even if it isn't cloned now), page requests should be fulfilled to the extent
-  // possible to avoid accumulating failed state in the kernel (See OnNoPagedVmoClones() for more).
+  // in after there are no clones.
+  //
+  // Additionally, because this function is called outside of the Vfs' lock, this function can be
+  // called even if the VMO handle is detached and freed. If the VMO handle is freed, it is safe to
+  // drop this request (there's no way to even report an error without a handle). More
+  // theoretically, if the VMO was freed, then a new one created, and then we get a stale read for
+  // the first one, the kernel might not actually need the pages but unnecessary read won't be
+  // harmful.
+  //
+  // If the VMO still exists and could possibly be used in the future (even if it isn't cloned now),
+  // all page requests should be fulfilled to the extent possible to avoid accumulating failed state
+  // in the kernel (See OnNoPagedVmoClones() for more).
   virtual void VmoRead(uint64_t offset, uint64_t length) = 0;
 
  protected:
@@ -105,12 +116,11 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   //     the has_clones_reference_.
   void DidClonePagedVmo() __TA_REQUIRES(mutex_);
 
-  // Releases the vmo_ and unregisters for paging notifications from the PagedVfs. This must not
-  // be called if this node has_clones(). In that case, the paged vmo must be "detached" from the
-  // pager first before being destroyed or we will keep getting paging requests for the VMO (even
-  // though we have no references to it).
+  // Releases the vmo_ and unregisters for paging notifications from the PagedVfs. This will
+  // detach the VMO from the pager and unregister from paging notifications.
   //
-  // TODO(fxbug.dev/77019) Implement detaching properly and describe here what to do instead.
+  // If there are any clones of the vmo alive, all future paging requests on those vmo clones will
+  // fail.
   void FreePagedVmo() __TA_REQUIRES(mutex_);
 
   // Implementors of this class can override this function to response to the event that there

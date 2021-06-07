@@ -92,10 +92,17 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* nod
   return zx::ok(std::move(create_info));
 }
 
-void PagedVfs::UnregisterPagedVmo(uint64_t paged_vmo_id) {
+void PagedVfs::FreePagedVmo(VmoCreateInfo info) {
+  // The system calls to detach the pager and free the VMO can be done outside the lock. There is
+  // a race where the VMO is destroyed but still in the map and a previously-pending read comes into
+  // PagerVmoRead(). But this is unavoidable because the Vnode::VmoRead call happens outside the
+  // live nodes lock.
+  pager_.detach_vmo(info.vmo);
+  info.vmo = zx::vmo();
+
   std::lock_guard lock(live_nodes_lock_);
 
-  auto found = paged_nodes_.find(paged_vmo_id);
+  auto found = paged_nodes_.find(info.id);
   if (found == paged_nodes_.end()) {
     ZX_DEBUG_ASSERT(false);  // Should always be found.
     return;
@@ -112,8 +119,14 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
     std::lock_guard lock(live_nodes_lock_);
 
     auto found = paged_nodes_.find(node_id);
-    if (found == paged_nodes_.end())
-      return;  // Possible race with completion message on another thread, ignore.
+    if (found == paged_nodes_.end()) {
+      // When we detach a paged VMO from the pager, there could still be pager requests that
+      // we've already dequeued but haven't proceeded yet. These requests will be internally
+      // canceled by the kernel. We can't use the COMPLETE message from the kernel because there
+      // can be multiple pager threads which may process requests out-of-order. So just ignore stale
+      // reads (there's nothing else we can do anyway).
+      return;
+    }
 
     node = fbl::RefPtr<PagedVnode>(found->second);
   }

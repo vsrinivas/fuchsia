@@ -135,6 +135,17 @@ class PagingTestFile : public PagedVnode {
     return ZX_OK;
   }
 
+  // Allows tests to force-free the underlying VMO, even if it has mappings.
+  void ForceFreePagedVmo() {
+    std::lock_guard lock(mutex_);
+
+    if (!shared_->GetVmoPresent())
+      return;  // Already gone, nothing to do.
+
+    FreePagedVmo();
+    shared_->SignalVmoPresenceChanged(false);
+  }
+
  protected:
   void OnNoPagedVmoClones() override __TA_REQUIRES(mutex_) {
     PagedVnode::OnNoPagedVmoClones();  // Do normal behavior of releasing the VMO.
@@ -344,11 +355,6 @@ TEST_F(PagingTest, ReadError) {
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, vmo.read(buf, 0, std::size(buf)));
 }
 
-#if 0
-// TODO(fxbug.dev/77019): Implement properly detaching VMOs. We should have a synchronous option
-// that would be used in the destructor if the PagedVnode is deleted with open clones (this may
-// hammen during filesystem shutdown). The result should be that reads fail with ZX_ERR_BAD_STATE.
-// Currently we don't call zx_pager_detach_vmo() and reading from the clone hangs forever.
 TEST_F(PagingTest, FreeWhileClonesExist) {
   fbl::unique_fd root_dir_fd(CreateVfs(1));
   ASSERT_TRUE(root_dir_fd);
@@ -359,14 +365,14 @@ TEST_F(PagingTest, FreeWhileClonesExist) {
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(file1_fd.get(), vmo.reset_and_get_address()));
 
-  WRITE SOMETHING HERE TO DETACH THE VMO.
+  // Force releasing the VMO even though a clone still exists.
+  file1_->ForceFreePagedVmo();
 
   // After detaching the VMO, it should report there is no VMO and reads from it should fail.
   EXPECT_FALSE(file1_->HasClones());
   uint8_t read_byte;
   ASSERT_EQ(ZX_ERR_BAD_STATE, vmo.read(&read_byte, 0, 1));
 }
-#endif
 
 // TODO(bug 51111):
 //  - Test closing a file frees the PagedVnode object.
