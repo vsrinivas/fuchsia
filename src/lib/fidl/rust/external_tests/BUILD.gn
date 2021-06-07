@@ -10,7 +10,6 @@ fidl("fidl.rust.test.external") {
   testonly = true
   sources = [ "handle_rights.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
-  experimental_flags = [ "enable_handle_rights" ]
 }
 
 rustc_test("fidl_rust_external_tests_bin") {

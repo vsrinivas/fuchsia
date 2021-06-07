@@ -21,5 +21,4 @@ fidl("bindings_test") {
   ]
 
   public_deps = [ "//zircon/vdso/zx" ]
-  experimental_flags = [ "enable_handle_rights" ]
 }

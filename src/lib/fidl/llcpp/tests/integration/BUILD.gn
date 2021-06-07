@@ -95,7 +95,6 @@ fuchsia_unittest_package("fidl_llcpp_flexible_tests") {
 }
 
 fidl("llcpptest.handlerights.test") {
-  experimental_flags = [ "enable_handle_rights" ]
   sources = [ "handle_rights.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

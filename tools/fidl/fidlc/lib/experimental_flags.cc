@@ -22,8 +22,6 @@ bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
 }
 
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
-    {"enable_handle_rights",
-     Flag::kEnableHandleRights},  // TODO(fxbug.dev/41920) This is deprecated, remove it.
     {"old_syntax_only", Flag::kOldSyntaxOnly},
     {"allow_new_syntax", Flag::kAllowNewSyntax},
     {"new_syntax_only", Flag::kNewSyntaxOnly},

@@ -34,6 +34,5 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/union.test.fidl",
   ]
 
-  experimental_flags = [ "enable_handle_rights" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

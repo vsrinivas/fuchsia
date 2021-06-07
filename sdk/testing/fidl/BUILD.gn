@@ -55,7 +55,6 @@ cts_fidl("frobinator") {
 
   name = "fidl.test.frobinator"
 
-  experimental_flags = [ "enable_handle_rights" ]
   sources = [ "frobinator.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

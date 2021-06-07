@@ -9,7 +9,6 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 fidl("bindingstest") {
-  experimental_flags = [ "enable_handle_rights" ]
   public_deps = [ "//zircon/vdso/zx" ]
   sources = [ "test.test.fidl" ]
 }

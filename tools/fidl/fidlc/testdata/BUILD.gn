@@ -43,7 +43,6 @@ foreach(filename, standalone_libraries) {
     testonly = true
     sources = [ filename ]
     public_deps = [ "//zircon/vdso/zx" ]
-    experimental_flags = [ "enable_handle_rights" ]
     host_llcpp = true
   }
 }
