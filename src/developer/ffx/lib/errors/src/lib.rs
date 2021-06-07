@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_developer_bridge::DaemonError;
+
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All
 /// other error types are printed with full context and a BUG prefix, guiding the user to file bugs
@@ -12,6 +14,30 @@
 pub enum FfxError {
     #[error("{}", .0)]
     Error(#[source] anyhow::Error, i32 /* Error status code */),
+
+    #[error("{}", match .err {
+        DaemonError::TargetCacheError => format!("Target {} could not be looked up in the cache due to an unspecified error. Retry your request, and if that fails run `ffx doctor`.", target_string(.target)),
+        DaemonError::TargetStateError => format!("Target {} is not in a state capable of the requested operation. Inspect `ffx target list` to determine if it is in the expected state.", target_string(.target)),
+        DaemonError::RcsConnectionError => format!("Target {} was not reachable. Run `ffx doctor` for diagnostic information.", target_string(.target)),
+        DaemonError::Timeout => format!("Timeout attempting to reach target {}", target_string(.target)),
+        DaemonError::TargetCacheEmpty => format!("Target {} was not found in the target cache", target_string(.target)),
+        DaemonError::TargetAmbiguous => format!("Target specification {} matched multiple targets. Use `ffx target list` to list known targets, and use a more specific matcher.", target_string(.target)),
+        DaemonError::TargetNotFound => format!("Target {} was not found.", target_string(.target)),
+        DaemonError::TargetInFastboot => format!("Target {} was found in Fastboot. Reboot or flash the target to continue.", target_string(.target)),
+        DaemonError::NonFastbootDevice => format!("Target {} was found, but is not in Fastboot, please boot the target into Fastboot to continue.", target_string(.target)),
+        DaemonError::ServiceNotFound => "The requested ffx service was not found. Run `ffx doctor --restart-daemon`.".to_string(),
+        DaemonError::ServiceOpenError => "The requested ffx service failed to open. Run `ffx doctor --restart-daemon`.".to_string(),
+        DaemonError::BadServiceRegisterState => "The requested service could not be registered. Run `ffx doctor --restart-daemon`.".to_string(),
+        DaemonError::TargetInZedboot => format!("Target {} was found in Zedboot. Reboot the target to continue.", target_string(.target)),
+    })]
+    DaemonError { err: DaemonError, target: Option<String> },
+}
+
+fn target_string(matcher: &Option<String>) -> String {
+    format!(
+        "\"{}\"",
+        matcher.as_ref().filter(|s| !s.is_empty()).unwrap_or(&"unspecified".to_string())
+    )
 }
 
 // Utility macro for constructing a FfxError::Error with a simple error string.
@@ -176,5 +202,31 @@ mod test {
     fn test_err_ext_exit_code_arbitrary_error() {
         let err = anyhow!(ERR_STR);
         assert_eq!(err.exit_code(), 1);
+    }
+
+    #[test]
+    fn test_daemon_error_strings_containing_target_name() {
+        fn assert_contains_target_name(err: DaemonError) {
+            let name: Option<String> = Some("fuchsia-f00d".to_string());
+            assert!(format!("{}", FfxError::DaemonError { err, target: name.clone() })
+                .contains(name.as_ref().unwrap()));
+        }
+        assert_contains_target_name(DaemonError::TargetCacheError);
+        assert_contains_target_name(DaemonError::TargetStateError);
+        assert_contains_target_name(DaemonError::RcsConnectionError);
+        assert_contains_target_name(DaemonError::Timeout);
+        assert_contains_target_name(DaemonError::TargetCacheEmpty);
+        assert_contains_target_name(DaemonError::TargetAmbiguous);
+        assert_contains_target_name(DaemonError::TargetNotFound);
+        assert_contains_target_name(DaemonError::TargetInFastboot);
+        assert_contains_target_name(DaemonError::NonFastbootDevice);
+        assert_contains_target_name(DaemonError::TargetInZedboot);
+    }
+
+    #[test]
+    fn test_target_string() {
+        assert_eq!(target_string(&None), "\"unspecified\"");
+        assert_eq!(target_string(&Some("".to_string())), "\"unspecified\"");
+        assert_eq!(target_string(&Some("kittens".to_string())), "\"kittens\"");
     }
 }

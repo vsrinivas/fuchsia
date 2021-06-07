@@ -4,10 +4,10 @@
 
 use {
     anyhow::Result,
-    errors::ffx_bail,
+    errors::FfxError,
     ffx_core::ffx_plugin,
     ffx_get_ssh_address_args::GetSshAddressCommand,
-    fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, TargetAddrInfo},
+    fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     netext::scope_id_to_name,
     std::io::{stdout, Write},
@@ -34,15 +34,7 @@ async fn get_ssh_address_impl<W: Write>(
     let res = daemon_proxy
         .get_ssh_address(target.as_deref(), timeout.as_nanos() as i64)
         .await?
-        .or_else(|e| match e {
-            DaemonError::TargetInZedboot => ffx_bail!("Targets in zedboot do not support ssh"),
-            DaemonError::TargetInFastboot => ffx_bail!("Targets in fastboot do not support ssh"),
-            _ => ffx_bail!(
-                "Failed to get SSH address of {}: {:?}",
-                target.unwrap_or("a unique target".to_string()),
-                e
-            ),
-        })?;
+        .map_err(|e| FfxError::DaemonError { err: e, target: target })?;
 
     let (ip, scope, port) = match res {
         TargetAddrInfo::Ip(info) => {
