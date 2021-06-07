@@ -27,6 +27,9 @@ if (!is_host) {
       "//tools/cmc",
       "//tools/fidl/fidlc:fidl-format",
 
+      # For `fx klog`.
+      "//tools/loglistener:host",
+
       # For `fx lint`.
       "//tools/fidl/fidlc:fidl-lint",
 
