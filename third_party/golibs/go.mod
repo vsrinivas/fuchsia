@@ -3,7 +3,7 @@ module go.fuchsia.dev/fuchsia
 go 1.16
 
 require (
-	cloud.google.com/go v0.82.0 // indirect
+	cloud.google.com/go v0.83.0 // indirect
 	cloud.google.com/go/storage v1.15.0
 	github.com/creack/pty v1.1.13
 	github.com/dustin/go-humanize v1.0.0
@@ -25,14 +25,14 @@ require (
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210601080250-7ecdf8ef093b
+	golang.org/x/sys v0.0.0-20210603125802-9665404d3644
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	gonum.org/v1/gonum v0.9.1
 	google.golang.org/api v0.47.0
-	google.golang.org/genproto v0.0.0-20210601170153-0befbe3492e2 // indirect
+	google.golang.org/genproto v0.0.0-20210604141403-392c879c8b08 // indirect
 	google.golang.org/grpc v1.38.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.4.0
-	gvisor.dev/gvisor v0.0.0-20210602064239-96421fff8e2b
+	gvisor.dev/gvisor v0.0.0-20210605221106-312a22670d51
 )

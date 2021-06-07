@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.82.0
+# cloud.google.com/go v0.83.0
 ## explicit
 cloud.google.com/go
 cloud.google.com/go/compute/metadata
@@ -165,7 +165,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210601080250-7ecdf8ef093b
+# golang.org/x/sys v0.0.0-20210603125802-9665404d3644
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -233,7 +233,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210601170153-0befbe3492e2
+# google.golang.org/genproto v0.0.0-20210604141403-392c879c8b08
 ## explicit
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -334,7 +334,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
-# gvisor.dev/gvisor v0.0.0-20210602064239-96421fff8e2b
+# gvisor.dev/gvisor v0.0.0-20210605221106-312a22670d51
 ## explicit
 gvisor.dev/gvisor/pkg/atomicbitops
 gvisor.dev/gvisor/pkg/buffer
