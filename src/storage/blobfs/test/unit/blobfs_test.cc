@@ -5,8 +5,10 @@
 #include "src/storage/blobfs/blobfs.h"
 
 #include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 
+#include <chrono>
 #include <sstream>
 
 #include <block-client/cpp/fake-device.h>
@@ -329,23 +331,6 @@ std::unique_ptr<BlobInfo> CreateBlob(const fbl::RefPtr<fs::Vnode>& root, size_t 
   return info;
 }
 
-bool CheckMap(const std::string& str, const std::map<size_t, uint64_t>& found,
-              const std::map<size_t, uint64_t>& expected) {
-  auto result =
-      found.size() == expected.size() && std::equal(found.begin(), found.end(), expected.begin());
-  if (!result) {
-    std::stringstream expected_str, found_str;
-    for (const auto& p : found) {
-      found_str << str << " [" << p.first << "] = " << p.second << '\n';
-    }
-    for (const auto& p : expected) {
-      expected_str << str << " [" << p.first << "] = " << p.second << '\n';
-    }
-    std::cout << "Expected " << expected_str.str() + "\nFound " + found_str.str() + "\n";
-  }
-  return result;
-}
-
 // In this test we try to simulate fragmentation and test fragmentation metrics. We create
 // fragmentation by first creating few blobs, deleting a subset of those blobs and then finally
 // creating a huge blob that occupies all the blocks freed by blob deletion. We measure/verify
@@ -359,21 +344,59 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     std::map<size_t, uint64_t> extents_per_blob;
     std::map<size_t, uint64_t> free_fragments;
     std::map<size_t, uint64_t> in_use_fragments;
+
+    static bool MapsMatch(const std::map<size_t, uint64_t>& a,
+                          const std::map<size_t, uint64_t>& b) {
+      return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
+    }
+
+    static bool Match(const Stats& a, const Stats& b) {
+      return a.total_nodes == b.total_nodes && a.blobs_in_use == b.blobs_in_use &&
+             a.extent_containers_in_use == b.extent_containers_in_use &&
+             MapsMatch(a.extents_per_blob, b.extents_per_blob) &&
+             MapsMatch(a.free_fragments, b.free_fragments) &&
+             MapsMatch(a.in_use_fragments, b.in_use_fragments);
+    }
   };
 
   // We have to do things this way because InMemoryLogger is not thread-safe.
   class Logger : public cobalt_client::InMemoryLogger {
    public:
-    void Wait() { sync_completion_wait(&sync_, ZX_TIME_INFINITE); }
+    bool WaitUntilStatsEq(const Stats& expected) {
+      const auto timeout = std::chrono::seconds(10);
+      const auto start = std::chrono::steady_clock::now();
+      const auto end = start + timeout;
+      for (auto now = start; now < end; now = std::chrono::steady_clock::now()) {
+        auto sync_timeout = std::chrono::duration_cast<std::chrono::microseconds>(end - now);
+        if (sync_completion_wait(&sync_, zx::usec(sync_timeout.count()).get()) != ZX_OK) {
+          break;
+        }
+        if (Stats::Match(found_, expected)) {
+          return true;
+        }
+      }
+      return false;
+    }
 
-    void Signal() {
-      // Wake up only when all six types of fragmentaion metrics have been logged.
-      // This is sensitive to number of metrics logged. Though, in this test case we are interested
-      // in only 6 different types of the metrics, it can happen that a metrics might get logged
-      // twice and thus making the count == 6. The test will break if we start logging this metrics
-      // more often and/or from different context.
-      if (log_count_ >= 6) {
-        log_count_ -= 6;
+    void MaybeSignal() {
+      // Wake up if all of the relevant metrics have been logged more than past the last wakeup
+      // watermark.
+      constexpr const std::array<fs_metrics::Event, 6> kRelevantEvents{
+          fs_metrics::Event::kFragmentationTotalNodes,
+          fs_metrics::Event::kFragmentationInUseFragments,
+          fs_metrics::Event::kFragmentationFreeFragments,
+          fs_metrics::Event::kFragmentationInodesInUse,
+          fs_metrics::Event::kFragmentationExtentContainersInUse,
+          fs_metrics::Event::kFragmentationExtentsPerFile,
+      };
+      uint64_t min_value = 0;
+      for (auto event : kRelevantEvents) {
+        if (!min_value || log_counts_[event] < min_value) {
+          min_value = log_counts_[event];
+        }
+      }
+      if (min_value > last_signal_watermark_) {
+        last_signal_watermark_ = min_value;
         sync_completion_signal(&sync_);
       }
     }
@@ -383,7 +406,6 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     void UpdateMetrics(Blobfs* fs) {
       ResetSignal();
       fs->UpdateFragmentationMetrics();
-      Wait();
     }
 
     bool LogInteger(const cobalt_client::MetricOptions& metric_info, int64_t value) override {
@@ -392,29 +414,27 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
       }
 
       auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
+      log_counts_[id]++;
       switch (id) {
         case fs_metrics::Event::kFragmentationTotalNodes: {
           if (value != 0)
             found_.total_nodes = value;
-          ++log_count_;
           break;
         }
         case fs_metrics::Event::kFragmentationInodesInUse: {
           if (value != 0)
             found_.blobs_in_use = value;
-          ++log_count_;
           break;
         }
         case fs_metrics::Event::kFragmentationExtentContainersInUse: {
           if (value != 0)
             found_.extent_containers_in_use = value;
-          ++log_count_;
           break;
         }
         default:
           break;
       }
-      Signal();
+      MaybeSignal();
       return true;
     }
 
@@ -424,11 +444,12 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
         return false;
       }
       if (num_buckets == 0) {
-        Signal();
+        MaybeSignal();
         return true;
       }
 
       auto id = static_cast<fs_metrics::Event>(metric_info.metric_id);
+      log_counts_[id]++;
       std::map<size_t, uint64_t>* map = nullptr;
       switch (id) {
         case fs_metrics::Event::kFragmentationExtentsPerFile: {
@@ -455,8 +476,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
         if (buckets[i].count > 0)
           (*map)[i] = buckets[i].count;
       }
-      ++log_count_;
-      Signal();
+      MaybeSignal();
       return true;
     }
 
@@ -466,11 +486,10 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     Stats found_;
     sync_completion_t sync_;
 
-    // We might get called for logging other blobfs metrics. But in this test we care about only
-    // fragmentation metrics. So |log_count_| keeps track of how many times fragmentaion metrics
-    // have been logged.
-    // See: Signal().
-    uint64_t log_count_ = 0;
+    std::map<fs_metrics::Event, uint64_t> log_counts_;
+    // The last signal was delivered when the min of the relevant entries in log_counts_ was this
+    // value.
+    uint64_t last_signal_watermark_ = 0;
   };
 
   std::unique_ptr<Logger> logger = std::make_unique<Logger>();
@@ -501,12 +520,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.free_fragments[6] = 2;
     logger_ptr->UpdateMetrics(setup.blobfs());
     auto found = logger_ptr->GetStats();
-    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-    ASSERT_EQ(found.total_nodes, expected.total_nodes);
-    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 
   fbl::RefPtr<fs::Vnode> root;
@@ -530,12 +544,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.free_fragments[6] = 1;
     logger_ptr->UpdateMetrics(setup.blobfs());
     auto found = logger_ptr->GetStats();
-    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-    ASSERT_EQ(found.total_nodes, expected.total_nodes);
-    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 
   // Delete few blobs. Notice the pattern we delete. With these deletions free(0) and used(1)
@@ -557,12 +566,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.in_use_fragments[1] = kSmallBlobCount - kBlobsDeleted;
     logger_ptr->UpdateMetrics(setup.blobfs());
     auto found = logger_ptr->GetStats();
-    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-    ASSERT_EQ(found.total_nodes, expected.total_nodes);
-    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 
   // Create a huge(10 blocks) blob that potentially fills atleast three free fragments that we
@@ -590,12 +594,7 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
     expected.in_use_fragments[2] = 1;
     logger_ptr->UpdateMetrics(setup.blobfs());
     auto found = logger_ptr->GetStats();
-    ASSERT_TRUE(CheckMap("extent_per_blob", found.extents_per_blob, expected.extents_per_blob));
-    ASSERT_TRUE(CheckMap("free_fragments", found.free_fragments, expected.free_fragments));
-    ASSERT_TRUE(CheckMap("in_use_fragments", found.in_use_fragments, expected.in_use_fragments));
-    ASSERT_EQ(found.total_nodes, expected.total_nodes);
-    ASSERT_EQ(found.blobs_in_use, expected.blobs_in_use);
-    ASSERT_EQ(found.extent_containers_in_use, expected.extent_containers_in_use);
+    ASSERT_TRUE(logger_ptr->WaitUntilStatsEq(expected));
   }
 }
 
