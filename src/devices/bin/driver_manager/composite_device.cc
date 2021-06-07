@@ -64,7 +64,7 @@ zx_status_t CompositeDevice::Create(
     size_t parts_count = fidl_fragment.parts_count;
     if (parts_count != 1) {
       LOGF(ERROR, "Composite fragments with multiple parts are deprecated. %s has %zd parts.",
-           name.data());
+           name.data(), parts_count);
       return ZX_ERR_INVALID_ARGS;
     }
 
