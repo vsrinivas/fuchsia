@@ -208,8 +208,10 @@ void AddCrashServerAnnotations(const std::string& program_name,
       .Set("channel", product.channel);
 
   // Program.
-  // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
+  // TODO(fxbug.dev/57502): for historical reasons, we used ptype to benefit from Chrome's "Process
+  // type" handling in the crash server UI. Remove once the UI can fallback on "Program".
   annotations->Set("ptype", program_name);
+  annotations->Set("program", program_name);
 
   // We set the report time only if we were able to get an accurate one.
   if (current_time.has_value()) {

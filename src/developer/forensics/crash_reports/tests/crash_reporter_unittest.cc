@@ -227,6 +227,7 @@ class CrashReporterTest : public UnitTestFixture {
     std::map<std::string, testing::Matcher<std::string>> expected_annotations = {
         {"product", "Fuchsia"},
         {"version", kBuildVersion},
+        {"program", testing::StartsWith("crashing_program")},
         {"ptype", testing::StartsWith("crashing_program")},
         {"osName", "Fuchsia"},
         {"osVersion", kBuildVersion},
