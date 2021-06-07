@@ -5861,6 +5861,17 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
     goto default_conf_out;
   }
 
+  // Disable Wireless Network Management (802.11v) firmware offload.
+  bcme_status_t fwerr;
+  err = brcmf_fil_iovar_int_set(ifp, "wnm", 0, &fwerr);
+  if (err == ZX_OK || err == ZX_ERR_NOT_SUPPORTED) {
+    // Note: if iovar is not supported, then WNM is effectively disabled.
+    BRCMF_DBG(INFO, "WNM is disabled in firmware");
+  } else {
+    // Proceed even if WNM could not be disabled.
+    BRCMF_WARN("Could not disable WNM, firmware error %s", brcmf_fil_get_errstr(fwerr));
+  }
+
   err = brcmf_cfg80211_change_iface(cfg, ndev, wdev->iftype, nullptr);
   if (err != ZX_OK) {
     goto default_conf_out;

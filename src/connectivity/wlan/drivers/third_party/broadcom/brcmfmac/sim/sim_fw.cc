@@ -122,6 +122,7 @@ static const IovarMetadata kIovarInfoTable[] = {
     {"vht_mode", sizeof(uint32_t), nullptr, &SimFirmware::IovarVhtModeGet},
     {"wme_ac_sta", sizeof(edcf_acparam_t) * 4, nullptr, &SimFirmware::IovarWmeAcStaGet},
     {"wme_apsd", sizeof(uint32_t), nullptr, &SimFirmware::IovarWmeApsdGet},
+    {"wnm", sizeof(uint32_t), &SimFirmware::IovarWnmSet, &SimFirmware::IovarWnmGet},
     {"wpa_auth", sizeof(uint32_t), &SimFirmware::IovarWpaAuthSet, &SimFirmware::IovarWpaAuthGet},
     {"wsec", sizeof(uint32_t), &SimFirmware::IovarWsecSet, &SimFirmware::IovarWsecGet},
     {"wsec_key", sizeof(brcmf_wsec_key_le), &SimFirmware::IovarWsecKeySet,
@@ -2367,6 +2368,22 @@ zx_status_t SimFirmware::IovarSnrGet(uint16_t ifidx, void* value_out, size_t val
   }
   int32_t sim_snr = 40;
   memcpy(value_out, &sim_snr, sizeof(sim_snr));
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarWnmSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                     size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  wnm_ = *(reinterpret_cast<const uint32_t*>(value));
+  return ZX_OK;
+}
+zx_status_t SimFirmware::IovarWnmGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  memcpy(value_out, &wnm_, sizeof(uint32_t));
   return ZX_OK;
 }
 

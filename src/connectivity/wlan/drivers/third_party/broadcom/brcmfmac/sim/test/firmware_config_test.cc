@@ -139,6 +139,18 @@ TEST_F(FirmwareConfigTest, ArpNdOffloadApConfigTestWithSoftApFeat) {
   ArpNdOffloadConfigValidate(WLAN_INFO_MAC_ROLE_AP, kArpNdOffloadDisabled);
 }
 
+TEST_F(FirmwareConfigTest, WnmDisabledClient) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  const auto get_status = brcmf_fil_iovar_int_get(ifp, "wnm", &iovar, nullptr);
+  ASSERT_EQ(get_status, ZX_OK);
+  EXPECT_EQ(0U, iovar);
+}
+
 TEST_F(FirmwareConfigTest, MchanDisabledClient) {
   Init();
   SimInterface ifc;

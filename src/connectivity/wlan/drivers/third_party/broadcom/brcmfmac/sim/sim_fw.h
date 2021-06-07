@@ -311,6 +311,8 @@ class SimFirmware {
   zx_status_t IovarVhtModeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarWmeAcStaGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarWmeApsdGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarWnmSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarWnmGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarWpaAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                               size_t value_len);
   zx_status_t IovarWpaAuthGet(uint16_t ifidx, void* value_out, size_t value_len);
@@ -575,6 +577,7 @@ class SimFirmware {
   uint32_t fakefrag_ = 0;
   int32_t stbc_tx_ = 0;     // 0 = disabled, 1 = enabled, -1 = auto
   uint32_t txstreams_ = 1;  // Number of Tx streams
+  uint32_t wnm_ = 1;        // This feature is enabled by default in firmware.
 
   std::unordered_map<std::string, SimIovar> iovar_table_;
 };
