@@ -17,6 +17,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <map>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -33,11 +34,13 @@
 
 #ifdef __Fuchsia__
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
 
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
+namespace fio2 = fuchsia_io2;
 #endif  // __Fuchsia__
 
 namespace fs {
@@ -234,6 +237,9 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // ZX_ERR_NOT_SUPPORTED, which will cause |Read|, |Write|, and |Append| operations to be called as
   // methods on the vnode. Other errors are considered fatal and will terminate the connection.
   virtual zx_status_t CreateStream(uint32_t stream_options, zx::stream* out_stream);
+
+  zx_status_t InsertInotifyFilter(fio2::wire::InotifyWatchMask filter, uint32_t watch_descriptor,
+                                  zx::socket socket) __TA_EXCLUDES(gInotifyLock);
 #endif
 
   // Closes the vnode. Will be called once for each successful Open().
@@ -425,9 +431,26 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   size_t open_count() const __TA_REQUIRES_SHARED(mutex_) { return open_count_; }
 
  private:
+#ifdef __Fuchsia__
+  zx_status_t CheckInotifyFilterAndNotify(fio2::wire::InotifyWatchMask event)
+      __TA_EXCLUDES(gInotifyLock);
+#endif
   Vfs* vfs_ __TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ __TA_GUARDED(mutex_) = 0;
   size_t open_count_ __TA_GUARDED(mutex_) = 0;
+#ifdef __Fuchsia__
+  struct InotifyFilter {
+    fio2::wire::InotifyWatchMask filter_;
+    uint32_t watch_descriptor_;
+    zx::socket socket_;
+    InotifyFilter(fio2::wire::InotifyWatchMask filter, uint32_t wd, zx::socket socket)
+        : filter_{filter}, watch_descriptor_{wd} {
+      socket_ = std::move(socket);
+    }
+  };
+  static std::mutex gInotifyLock;
+  static std::map<const Vnode*, std::vector<InotifyFilter>> gInotifyMap;
+#endif
 };
 
 // Opens a vnode by reference.

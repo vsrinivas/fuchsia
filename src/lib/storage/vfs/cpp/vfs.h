@@ -19,11 +19,15 @@
 #include <mutex>
 #include <set>
 #include <string_view>
+#include <utility>
+#include <variant>
 
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 #ifdef __Fuchsia__
+#include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/function.h>
@@ -47,7 +51,9 @@
 #include <fbl/ref_ptr.h>
 
 namespace fs {
-
+#ifdef __Fuchsia__
+namespace fio2 = fuchsia_io2;
+#endif
 namespace internal {
 
 class Connection;
@@ -78,6 +84,7 @@ struct VdirCookie {
 class Vfs {
  public:
   class OpenResult;
+  class TraversePathResult;
 
   Vfs();
 
@@ -101,6 +108,10 @@ class Vfs {
   // Sets whether this file system is read-only.
   void SetReadonly(bool value) __TA_EXCLUDES(vfs_lock_);
 
+  // Used for inotify filter addition to traverse a vnode, without actually
+  // opening it.
+  TraversePathResult TraversePathFetchVnode(fbl::RefPtr<Vnode> vndir, std::string_view path)
+      __TA_EXCLUDES(vfs_lock_);
 #ifdef __Fuchsia__
   using ShutdownCallback = fit::callback<void(zx_status_t status)>;
   using CloseAllConnectionsForVnodeCallback = fit::callback<void()>;
@@ -141,6 +152,12 @@ class Vfs {
   // that have been validated.
   zx_status_t Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,
                     Vnode::ValidatedOptions options) __TA_EXCLUDES(vfs_lock_);
+
+  // Adds a inotify filter to the vnode.
+  zx_status_t AddInotifyFilterToVnode(fbl::RefPtr<Vnode> vnode, const fbl::RefPtr<Vnode>& parent,
+                                      fio2::wire::InotifyWatchMask filter,
+                                      uint32_t watch_descriptor, zx::socket socket)
+      __TA_EXCLUDES(vfs_lock_);
 
   // Called by a VFS connection when it is closed remotely. The VFS is now responsible for
   // destroying the connection.
@@ -228,6 +245,8 @@ class Vfs {
                         VnodeConnectionOptions options, Rights parent_rights, uint32_t mode)
       __TA_REQUIRES(vfs_lock_);
 
+  TraversePathResult TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vndir, std::string_view path)
+      __TA_REQUIRES(vfs_lock_);
   // Attempt to create an entry with name |name| within the |vndir| directory.
   //
   // - Upon success, returns a reference to the new vnode via |out_vn|, and return ZX_OK.
@@ -329,6 +348,72 @@ class Vfs::OpenResult {
   //
   template <typename T>
   OpenResult(T&& v) : variants_(std::forward<T>(v)) {}
+
+  // Applies the |visitor| function to the variant payload. It simply forwards the visitor into the
+  // underlying |std::variant|. Returns the return value of |visitor|. Refer to C++ documentation
+  // for |std::visit|.
+  template <class Visitor>
+  constexpr auto visit(Visitor&& visitor) -> decltype(visitor(std::declval<zx_status_t>())) {
+    return std::visit(std::forward<Visitor>(visitor), variants_);
+  }
+
+  Ok& ok() { return std::get<Ok>(variants_); }
+  bool is_ok() const { return std::holds_alternative<Ok>(variants_); }
+
+  Error& error() { return std::get<Error>(variants_); }
+  bool is_error() const { return std::holds_alternative<Error>(variants_); }
+
+#ifdef __Fuchsia__
+  Remote& remote() { return std::get<Remote>(variants_); }
+  bool is_remote() const { return std::holds_alternative<Remote>(variants_); }
+
+  RemoteRoot& remote_root() { return std::get<RemoteRoot>(variants_); }
+  bool is_remote_root() const { return std::holds_alternative<RemoteRoot>(variants_); }
+#endif  // __Fuchsia__
+
+ private:
+#ifdef __Fuchsia__
+  using Variants = std::variant<Error, Remote, RemoteRoot, Ok>;
+#else
+  using Variants = std::variant<Error, Ok>;
+#endif  // __Fuchsia__
+
+  Variants variants_ = {};
+};
+
+class Vfs::TraversePathResult {
+ public:
+  // When this variant is active, the indicated error occurred.
+  using Error = zx_status_t;
+
+#ifdef __Fuchsia__
+  // When this variant is active, the path being traversed contains a remote node. |path| is the
+  // remaining portion of the path yet to be traversed. The caller should forward the remainder of
+  // this request to that vnode.
+  struct Remote {
+    fbl::RefPtr<Vnode> vnode;
+    std::string_view path;
+  };
+
+  // When this variant is active, the path being traversed is a remote node itself.
+  struct RemoteRoot {
+    fbl::RefPtr<Vnode> vnode;
+  };
+#endif  // __Fuchsia__
+
+  // When this variant is active, we have successfully traversed and reached a vnode under this
+  // filesystem.
+  struct Ok {
+    fbl::RefPtr<Vnode> vnode;
+  };
+
+  // Forwards the constructor arguments into the underlying |std::variant|. This allows
+  // |TraversePathResult| to be constructed directly from one of the variants, e.g.
+  //
+  // TraversePathResult r = TraversePathResult::Error{ZX_ERR_ACCESS_DENIED};
+  //
+  template <typename T>
+  TraversePathResult(T&& v) : variants_(std::forward<T>(v)) {}
 
   // Applies the |visitor| function to the variant payload. It simply forwards the visitor into the
   // underlying |std::variant|. Returns the return value of |visitor|. Refer to C++ documentation

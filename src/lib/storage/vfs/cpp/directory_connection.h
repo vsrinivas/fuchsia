@@ -56,7 +56,7 @@ class DirectoryConnection final : public Connection,
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) final;
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) final;
   void AddInotifyFilter(AddInotifyFilterRequestView request,
-                        AddInotifyFilterCompleter::Sync& completer) final {}
+                        AddInotifyFilterCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/DirectoryAdmin| operations.

@@ -32,6 +32,7 @@
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace fio = fuchsia_io;
+namespace fio2 = fuchsia_io2;
 
 namespace fs {
 
@@ -63,6 +64,31 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, fidl::ServerEnd<fio::Nod
   });
 }
 
+// Performs a path walk and adds inotify filter to the obtained vnode.
+void AddInotifyFilterAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, std::string_view path,
+                        fio2::wire::InotifyWatchMask filter, uint32_t watch_descriptor,
+                        zx::socket socket) {
+  // TODO Not handling remote handoff currently.
+  vfs->TraversePathFetchVnode(parent, path).visit([&](auto&& result) {
+    using ResultT = std::decay_t<decltype(result)>;
+    using TraversePathResult = fs::Vfs::TraversePathResult;
+    if constexpr (std::is_same_v<ResultT, TraversePathResult::Error>) {
+      return;
+    } else if constexpr (std::is_same_v<ResultT, TraversePathResult::Remote>) {
+      // Remote handoff to a remote filesystem node.
+      // TODO remote handoffs not supported for inotify currently.
+      return;
+    } else if constexpr (std::is_same_v<ResultT, TraversePathResult::RemoteRoot>) {
+      // Remote handoff to a remote filesystem node.
+      // TODO remote handoffs not supported for inotify currently.
+      return;
+    } else if constexpr (std::is_same_v<ResultT, TraversePathResult::Ok>) {
+      // We have got the vnode to add the filter to.
+      vfs->AddInotifyFilterToVnode(result.vnode, parent, filter, watch_descriptor,
+                                   std::move(socket));
+    }
+  });
+}
 }  // namespace
 
 namespace internal {
@@ -138,6 +164,13 @@ void DirectoryConnection::NodeSetFlags(NodeSetFlagsRequestView request,
   } else {
     completer.Reply(ZX_OK);
   }
+}
+
+void DirectoryConnection::AddInotifyFilter(AddInotifyFilterRequestView request,
+                                           AddInotifyFilterCompleter::Sync& completer) {
+  AddInotifyFilterAt(vfs(), vnode(), std::string_view(request->path.data(), request->path.size()),
+                     request->filter, request->watch_descriptor, std::move(request->socket));
+  completer.Reply();
 }
 
 void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {

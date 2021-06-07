@@ -166,7 +166,7 @@ pub(in crate::directory) enum BaseDirectoryRequest {
         #[allow(unused)]
         path: String,
         #[allow(unused)]
-        filters: fidl_fuchsia_io2::InotifyWatchMask,
+        filter: fidl_fuchsia_io2::InotifyWatchMask,
         #[allow(unused)]
         watch_descriptor: u32,
         #[allow(unused)]
@@ -259,11 +259,11 @@ impl From<DirectoryRequest> for DirectoryRequestType {
             }
             DirectoryRequest::AddInotifyFilter {
                 path,
-                filters,
+                filter,
                 watch_descriptor,
                 socket,
                 responder,
-            } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, responder }),
+            } => Base(AddInotifyFilter { path, filter, watch_descriptor, socket, responder }),
             DirectoryRequest::AdvisoryLock { request, responder } => {
                 Base(AdvisoryLock { request, responder })
             }

@@ -491,7 +491,7 @@ protocol Directory {
 
     /// Adds a new inotify filter for an object relative to this directory object.
     ///
-    /// + 'filters` is a mask of different inotify events that need to be watched by the server
+    /// + 'filter` is a mask of different inotify events that need to be watched by the server
     ///   for a specific file/directory.
     ///
     /// + `path` may contain multiple segments, separated by "/" characters,
@@ -502,13 +502,13 @@ protocol Directory {
     ///   Server shouldn't trust the client-assigned watch_descriptor. They should just send it
     ///   back to the client in the socket.
     ///   This value is not used by server, but it is returned back as part of InotifyEvent,
-    ///   to help the client correlate filters with events on these filters.
+    ///   to help the client correlate filter with events on this filter.
     ///
     /// + `socket` is shared between different filter objects i.e every new filter will
     ///   have a different server end of the socket and there will be a single client end per
     ///   inotify instance on inotify init.
     ///
-    AddInotifyFilter(fuchsia.io2.Path path, fuchsia.io2.InotifyWatchMask filters,
+    AddInotifyFilter(fuchsia.io2.Path path, fuchsia.io2.InotifyWatchMask filter,
                      uint32 watch_descriptor, zx.handle:SOCKET socket) -> ();
 
     /// Detaches an object from this directory object.

@@ -20,6 +20,8 @@
 
 #ifdef __Fuchsia__
 
+#include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <threads.h>
@@ -36,6 +38,7 @@
 #include "src/lib/storage/vfs/cpp/stream_file_connection.h"
 
 namespace fio = fuchsia_io;
+namespace fio2 = fuchsia_io2;
 
 #endif
 
@@ -260,6 +263,48 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
   return ZX_OK;
 }
 
+Vfs::TraversePathResult Vfs::TraversePathFetchVnode(fbl::RefPtr<Vnode> vndir,
+                                                    std::string_view path) {
+  std::lock_guard lock(vfs_lock_);
+  return TraversePathFetchVnodeLocked(std::move(vndir), path);
+}
+
+Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vndir,
+                                                          std::string_view path) {
+  FS_PRETTY_TRACE_DEBUG("VfsTraversePathFetchVnode: path='", Path(path.data(), path.size()));
+  if (zx_status_t result = Vfs::Walk(vndir, path, &vndir, &path); result != ZX_OK) {
+    return result;
+  }
+#ifdef __Fuchsia__
+  if (vndir->IsRemote()) {
+    // remote filesystem, return handle and path to caller
+    return TraversePathResult::Remote{.vnode = std::move(vndir), .path = path};
+  }
+#endif
+  zx_status_t result;
+  {
+    bool must_be_dir = false;
+    if ((result = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
+      return result;
+    } else if (path == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  fbl::RefPtr<Vnode> vn;
+  if ((result = LookupNode(std::move(vndir), path, &vn)) != ZX_OK) {
+    return result;
+  }
+
+#ifdef __Fuchsia__
+  if (vn->IsRemote()) {
+    // Found a mount point: Traverse across remote.
+    return TraversePathResult::RemoteRoot{.vnode = std::move(vn)};
+  }
+#endif
+  return TraversePathResult::Ok{.vnode = std::move(vn)};
+}
+
 zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool must_be_dir) {
   {
     std::lock_guard lock(vfs_lock_);
@@ -473,6 +518,16 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Nod
     return result.error();
   }
   return Serve(std::move(vnode), std::move(channel), result.value());
+}
+
+zx_status_t Vfs::AddInotifyFilterToVnode(fbl::RefPtr<Vnode> vnode,
+                                         const fbl::RefPtr<Vnode>& parent_vnode,
+                                         fio2::wire::InotifyWatchMask filter,
+                                         uint32_t watch_descriptor, zx::socket socket) {
+  // TODO we need parent vnode for inotify events when a directory is being watched for events on
+  // its directory entries.
+  vnode->InsertInotifyFilter(filter, watch_descriptor, std::move(socket));
+  return ZX_OK;
 }
 
 zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, fidl::ServerEnd<fuchsia_io::Node> server_end,

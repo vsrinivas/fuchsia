@@ -49,7 +49,7 @@ class Server final : public fio::testing::Directory_TestBase {
 
   void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {
-    filter_ = request->filters;
+    filter_ = request->filter;
     if (add_inotify_filter_async_) {
       async::PostDelayedTask(
           dispatcher_,
