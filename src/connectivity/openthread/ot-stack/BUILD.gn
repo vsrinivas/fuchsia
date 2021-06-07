@@ -45,6 +45,8 @@ source_set("app") {
     "//zircon/system/ulib/svc",
   ]
 
+  deps = [ "//third_party/openthread:lib-ot-core" ]
+
   include_dirs =
       [ "//src/connectivity/openthread/third_party/openthread/platform" ]
 
