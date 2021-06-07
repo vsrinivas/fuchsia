@@ -46,6 +46,36 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   return ZX_OK;
 }
 
+// Allocates an fdio_t instance containing storage for a zxio_t object.
+static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_storage,
+                                 void** out_context) {
+  fdio_ptr io;
+  // The type of storage (fdio subclass) depends on the type of the object until
+  // https://fxbug.dev/43267 is resolved, so this has to switch on the type.
+  switch (type) {
+    case ZXIO_OBJECT_TYPE_VMO:
+      io = fbl::MakeRefCounted<fdio_internal::remote>();
+      break;
+    case ZXIO_OBJECT_TYPE_DEBUGLOG:
+      io = fbl::MakeRefCounted<fdio_internal::zxio>();
+      break;
+    case ZXIO_OBJECT_TYPE_PIPE:
+      io = fbl::MakeRefCounted<fdio_internal::pipe>();
+      break;
+    default:
+      // Unknown type - allocate a generic fdio object so that zxio_create can
+      // initialize a zxio object holding the object for us.
+      io = fbl::MakeRefCounted<fdio_internal::zxio>();
+      break;
+  }
+  if (io == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  *out_storage = &io->zxio_storage();
+  *out_context = fbl::ExportToRawPtr(&io);
+  return ZX_OK;
+}
+
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
   switch (info.which()) {
     case fio::wire::NodeInfo::Tag::kDirectory:
@@ -100,36 +130,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   }
 }
 
-// Allocates an fdio_t instance containing storage for a zxio_t object.
-static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_storage,
-                                 void** out_context) {
-  fdio_ptr io;
-  // The type of storage (fdio subclass) depends on the type of the object until
-  // https://fxbug.dev/43267 is resolved, so this has to switch on the type.
-  switch (type) {
-    case ZXIO_OBJECT_TYPE_VMO:
-      io = fbl::MakeRefCounted<fdio_internal::remote>();
-      break;
-    case ZXIO_OBJECT_TYPE_DEBUGLOG:
-      io = fbl::MakeRefCounted<fdio_internal::zxio>();
-      break;
-    case ZXIO_OBJECT_TYPE_PIPE:
-      io = fbl::MakeRefCounted<fdio_internal::pipe>();
-      break;
-    default:
-      // Unknown type - allocate a generic fdio object so that zxio_create can
-      // initialize a zxio object holding the object for us.
-      io = fbl::MakeRefCounted<fdio_internal::zxio>();
-      break;
-  }
-  if (io == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  *out_storage = &io->zxio_storage();
-  *out_context = fbl::ExportToRawPtr(&io);
-  return ZX_OK;
-}
-
 zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node) {
   auto response = fidl::WireCall(node).Describe();
   zx_status_t status = response.status();
@@ -181,39 +181,21 @@ zx::status<fdio_ptr> fdio::create(zx::handle handle) {
   if (status != ZX_OK) {
     return zx::error(status);
   }
+  if (info.type == ZX_OBJ_TYPE_CHANNEL) {
+    return fdio::create_with_describe(fidl::ClientEnd<fio::Node>(zx::channel(std::move(handle))));
+  }
+  // zxio understands how to wrap all non-channel types.
   void* context = nullptr;
   status = zxio_create_with_allocator(std::move(handle), info, ZxioAllocator, &context);
-  switch (status) {
-    case ZX_OK: {
-      return zx::ok(fbl::ImportFromRawPtr(static_cast<fdio*>(context)));
-    }
-    case ZX_ERR_NO_MEMORY: {
-      // If zxio_create_with_allocator returns ZX_ERR_NO_MEMORY, it has not
-      // allocated any object and we do not have any cleanup to do.
-      ZX_ASSERT(context == nullptr);
-      return zx::error(status);
-    }
-    case ZX_ERR_NOT_SUPPORTED: {
-      // If zxio_create_with_allocator() returns ZX_ERR_NOT_SUPPORTED, grab the handle
-      // back to wrap it ourselves.
-      fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
-      zx::handle retrieved_handle;
-      status = io->unwrap(retrieved_handle.reset_and_get_address());
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      handle = std::move(retrieved_handle);
-      break;
-    }
-    default: {
-      return zx::error(status);
-    }
+  if (status == ZX_ERR_NO_MEMORY) {
+    // If zxio_create_with_allocator returns ZX_ERR_NO_MEMORY, it has not
+    // allocated any object and we do not have any cleanup to do.
+    ZX_ASSERT(context == nullptr);
+    return zx::error(status);
   }
-
-  switch (info.type) {
-    case ZX_OBJ_TYPE_CHANNEL:
-      return fdio::create_with_describe(fidl::ClientEnd<fio::Node>(zx::channel(std::move(handle))));
-    default:
-      return zx::error(ZX_ERR_INVALID_ARGS);
+  fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
+  return zx::ok(std::move(io));
 }
