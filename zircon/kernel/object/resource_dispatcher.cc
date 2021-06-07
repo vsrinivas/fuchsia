@@ -343,7 +343,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
         printf("\n");
         break;
       case ZX_RSRC_KIND_MMIO:
@@ -353,7 +353,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
         printf("\n");
         break;
       case ZX_RSRC_KIND_SMC:
@@ -363,7 +363,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
         printf("\n");
         break;
       case ZX_RSRC_KIND_SYSTEM:
@@ -373,7 +373,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).c_str());
         printf("\n");
         break;
     }

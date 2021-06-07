@@ -209,7 +209,7 @@ void PmmArena::CountStates(size_t state_count[VmPageStateIndex(vm_page_state::CO
 
 void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) const {
   printf("  arena %p: name '%s' base %#" PRIxPTR " size %s (0x%zx) flags 0x%x\n", this, name(),
-         base(), pretty::FormattedBytes(size()).str(), size(), flags());
+         base(), pretty::FormattedBytes(size()).c_str(), size(), flags());
   printf("\tpage_array %p search_hint %lu\n", page_array_, search_hint_);
 
   // dump all of the pages

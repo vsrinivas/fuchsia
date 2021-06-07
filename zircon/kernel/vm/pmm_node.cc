@@ -732,15 +732,15 @@ void PmmNode::DumpMemAvailState() const {
 
   printf("watermarks: [");
   for (unsigned i = 0; i < mem_avail_state_watermark_count_; i++) {
-    printf("%s%s", FormattedBytes(mem_avail_state_watermarks_[i] * PAGE_SIZE).str(),
+    printf("%s%s", FormattedBytes(mem_avail_state_watermarks_[i] * PAGE_SIZE).c_str(),
            i + 1 == mem_avail_state_watermark_count_ ? "]\n" : ", ");
   }
-  printf("debounce: %s\n", FormattedBytes(mem_avail_state_debounce_ * PAGE_SIZE).str());
+  printf("debounce: %s\n", FormattedBytes(mem_avail_state_debounce_ * PAGE_SIZE).c_str());
   printf("current state: %u\n", mem_avail_state_cur_index_);
   printf("current bounds: [%s, %s]\n",
-         FormattedBytes(mem_avail_state_lower_bound_ * PAGE_SIZE).str(),
-         FormattedBytes(mem_avail_state_upper_bound_ * PAGE_SIZE).str());
-  printf("free memory: %s\n", FormattedBytes(free_count_ * PAGE_SIZE).str());
+         FormattedBytes(mem_avail_state_lower_bound_ * PAGE_SIZE).c_str(),
+         FormattedBytes(mem_avail_state_upper_bound_ * PAGE_SIZE).c_str());
+  printf("free memory: %s\n", FormattedBytes(free_count_ * PAGE_SIZE).c_str());
 }
 
 uint64_t PmmNode::DebugNumPagesTillMemState(uint8_t mem_state_idx) const {

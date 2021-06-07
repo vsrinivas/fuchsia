@@ -411,10 +411,10 @@ static void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_h
   FormattedBytes size_str(vmo.size(), format_unit);
 
   FormattedBytes alloc_size;
-  const char *alloc_str = "phys";
+  const char* alloc_str = "phys";
   if (vmo.is_paged()) {
     alloc_size.SetSize(vmo.AttributedPages() * PAGE_SIZE, format_unit);
-    alloc_str = alloc_size.str();
+    alloc_str = alloc_size.c_str();
   }
 
   char child_str[21];
@@ -449,7 +449,7 @@ static void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_h
       "%7s "   // allocated bytes
       "%s\n",  // name
       handle_str, rights_str, koid, &vmo, child_str, vmo.num_children(), vmo.num_mappings(),
-      vmo.share_count(), size_str.str(), alloc_str, name);
+      vmo.share_count(), size_str.c_str(), alloc_str, name);
 }
 
 // If |hidden_only| is set, will only dump VMOs that are not mapped
@@ -529,8 +529,8 @@ void DumpProcessVmObjects(zx_koid_t id, pretty::SizeUnit format_unit) {
         return ZX_OK;
       });
   printf("  total: %d VMOs, size %s, alloc %s\n", count,
-         FormattedBytes(total_size, format_unit).str(),
-         FormattedBytes(total_alloc, format_unit).str());
+         FormattedBytes(total_size, format_unit).c_str(),
+         FormattedBytes(total_alloc, format_unit).c_str());
 
   // Call DumpVmObject() on all VMOs under the process's VmAspace.
   printf("Mapped VMOs:\n");

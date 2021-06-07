@@ -10,6 +10,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <string_view>
+
 #include <pretty/sizes.h>
 
 namespace pretty {
@@ -52,13 +54,20 @@ class FormattedBytes {
   FormattedBytes& operator=(const FormattedBytes&) = default;
 
   // Update the string to the given size.
-  void SetSize(size_t size) { format_size(buff_, sizeof(buff_), size); }
-  void SetSize(size_t size, SizeUnit unit) {
+  FormattedBytes& SetSize(size_t size) {
+    format_size(buff_, sizeof(buff_), size);
+    return *this;
+  }
+  FormattedBytes& SetSize(size_t size, SizeUnit unit) {
     format_size_fixed(buff_, sizeof(buff_), size, static_cast<char>(unit));
+    return *this;
   }
 
-  // Return the formatted string as a C-style NULL terminated string.
-  const char* str() const { return buff_; }
+  // Return the formatted string.
+  std::string_view str() const { return buff_; }
+
+  // Return the formatted string as a C-style NUL-terminated string.
+  const char* c_str() const { return buff_; }
 
  private:
   // The formatted string.
