@@ -23,6 +23,7 @@ private:
 public:
   constexpr {{ .Name }}() : FlexibleEnumValue(0) {}
   constexpr explicit {{ .Name }}({{ .Type }} value) : FlexibleEnumValue(value) {}
+  constexpr {{ .Name }}(const ValueType& value) : FlexibleEnumValue(value) {}
   constexpr {{ .Name }}(const {{ .Name }}& other) : FlexibleEnumValue(other.value_) {}
   constexpr {{ .Name }}& operator=({{ .Name }} other) {
     value_ = other.value_;

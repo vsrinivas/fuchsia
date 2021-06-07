@@ -36,6 +36,8 @@ class MyFlexibleEnumWithCustomUnknown final
   constexpr MyFlexibleEnumWithCustomUnknown() : FlexibleEnumValue(0) {}
   constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value)
       : FlexibleEnumValue(value) {}
+  constexpr MyFlexibleEnumWithCustomUnknown(const ValueType& value)
+      : FlexibleEnumValue(value) {}
   constexpr MyFlexibleEnumWithCustomUnknown(
       const MyFlexibleEnumWithCustomUnknown& other)
       : FlexibleEnumValue(other.value_) {}
@@ -87,6 +89,7 @@ class MyFlexibleEnum final
   constexpr MyFlexibleEnum() : FlexibleEnumValue(0) {}
   constexpr explicit MyFlexibleEnum(uint32_t value)
       : FlexibleEnumValue(value) {}
+  constexpr MyFlexibleEnum(const ValueType& value) : FlexibleEnumValue(value) {}
   constexpr MyFlexibleEnum(const MyFlexibleEnum& other)
       : FlexibleEnumValue(other.value_) {}
   constexpr MyFlexibleEnum& operator=(MyFlexibleEnum other) {

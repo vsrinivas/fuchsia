@@ -25,7 +25,6 @@ class FlexibleEnumValue {
   constexpr FlexibleEnumValue& operator=(const FlexibleEnumValue&) noexcept = default;
   constexpr FlexibleEnumValue& operator=(FlexibleEnumValue&&) noexcept = default;
   constexpr operator UnderlyingT() const { return value_; }
-  constexpr operator EnumT() const { return EnumT(value_); }
   constexpr bool IsUnknown() const {
     EnumT e{value_};
     return e.IsUnknown();
