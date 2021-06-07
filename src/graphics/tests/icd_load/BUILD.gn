@@ -38,9 +38,26 @@ fuchsia_component("icd_load_cmp") {
   manifest = "meta/icd_load.cmx"
 }
 
+# icd_load and icd_load_v2 are identical, except that they use component
+# framework v1 and v2, respectively.
+fuchsia_component("icd_load_v2_cmp") {
+  testonly = true
+  component_name = "icd_load_v2"
+  deps = [
+    ":icd_load_bin",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
+  ]
+
+  manifest = "meta/icd_load.cml"
+}
+
 fuchsia_test_package("icd-load") {
   package_name = "icd_load"
-  test_components = [ ":icd_load_cmp" ]
+  test_components = [
+    ":icd_load_cmp",
+    ":icd_load_v2_cmp",
+  ]
   test_specs = {
     environments = magma_libvulkan_hardware_envs
   }

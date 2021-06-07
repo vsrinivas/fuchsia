@@ -1,0 +1,12 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+        },
+    ],
+}
