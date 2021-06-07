@@ -209,6 +209,46 @@ TEST(FindName, FindMember) {
   EXPECT_EQ(d.kBase2Offset, results[1].member().object_path().BaseOffsetInDerived());
 }
 
+// Tests that we implicitly search the object pointer ("this" in C++) for variables without
+// qualification.
+TEST(FindName, FindMemberOnThis) {
+  const char kMemberName[] = "member";
+
+  auto int_type = MakeInt32Type();
+  auto class_type = MakeCollectionType(DwarfTag::kClassType, "MyClass", {{kMemberName, int_type}});
+
+  // Make lots of qualifiers to test stripping them when evaluating the class. Produce
+  // "MyClass const * const"
+  auto const_class_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, class_type);
+  auto ptr_const_class_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, const_class_type);
+  auto const_ptr_const_class_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, ptr_const_class_type);
+
+  // This parameter to the function defines the "object pointer". It need not be called "this".
+  auto param = fxl::MakeRefCounted<Variable>(DwarfTag::kFormalParameter, "self",
+                                             const_ptr_const_class_type, VariableLocation());
+
+  // Make a member function. It has to have the "object pointer" set.
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  function->set_object_pointer(param);
+
+  // Evaluate the unqualified name in the context of the function.
+  FindNameContext context;
+  context.block = function.get();
+
+  FindNameOptions options(FindNameOptions::kNoKinds);
+  options.find_vars = true;
+
+  // Do the actual lookup.
+  FoundName found = FindName(context, options, ParsedIdentifier(kMemberName));
+  ASSERT_TRUE(found.is_found());
+
+  ASSERT_EQ(FoundName::kMemberVariable, found.kind());
+  EXPECT_EQ(const_ptr_const_class_type.get(), found.object_ptr()->type().Get()->AsType());
+  EXPECT_EQ(class_type->data_members()[0].Get()->AsDataMember(), found.member().data_member());
+}
+
 TEST(FindName, FindAnonUnion) {
   // Makes this type:
   //   struct Outer {

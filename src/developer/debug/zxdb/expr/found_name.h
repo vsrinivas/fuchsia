@@ -70,7 +70,8 @@ class FoundName {
   fxl::RefPtr<Variable> variable_ref() { return variable_; }
 
   // Used when kind == kMemberVariable. The object_ptr() will be valid if there's a variable
-  // associated with the member, and will be null otherwise.
+  // associated with the member, and will be null otherwise. This won't necessarily be a collection,
+  // it could be a "const pointer to a const collection" or some other complex type.
   //
   // See FoundMember for how to resolve the value as there are some subtleties.
   const Variable* object_ptr() const { return object_ptr_.get(); }

@@ -584,7 +584,9 @@ void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& opt
   if (!modified || modified->tag() != DwarfTag::kPointerType)
     return;  // Not a pointer.
 
-  const Collection* this_coll = modified->modified().Get()->AsCollection();
+  // The pointed-to type may itself be non-concrete.
+  const Collection* this_coll =
+      GetConcreteType(context, modified->modified().Get()->AsType())->AsCollection();
   if (!this_coll)
     return;  // "this" is not a collection, probably corrupt.
 
