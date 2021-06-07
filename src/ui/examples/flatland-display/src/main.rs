@@ -12,7 +12,7 @@ use fidl::endpoints::create_proxy;
 use fuchsia_framebuffer::{
     sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
 };
-use std::{thread, time::Duration};
+use std::{convert::TryInto, thread, time::Duration};
 
 // TODO(fxbug.dev/76640): move somewhere common, like fuchsia-flatland library.
 struct LinkTokenPair {
@@ -137,10 +137,11 @@ async fn main() {
 
             // Compute the same row-pitch as Flatland will compute internally.
             assert!(allocation.settings.has_image_format_constraints);
-            let row_pitch: u64 =
+            let row_pitch: usize =
                 minimum_row_bytes(allocation.settings.image_format_constraints, IMAGE_WIDTH)
                     .expect("failed to compute row-pitch")
-                    .into();
+                    .try_into()
+                    .unwrap();
 
             // TODO(fxbug.dev/76640): should look at pixel-format, instead of assuming 32-bit BGRA
             // pixels.  For now, format is hard-coded anyway.
@@ -149,12 +150,35 @@ async fn main() {
             let blue_pixel: [u8; 4] = [255, 0, 0, 255];
             let red_pixel: [u8; 4] = [0, 0, 255, 255];
 
-            let offset = allocation.buffers[0].vmo_usable_start;
+            // The size used to map a VMO must be a multiple of the page size.  Ensure that the VMO
+            // is at least one page in size, and that the size returned by sysmem is no larger than
+            // this.  Neither of these should ever fail.
+            const PAGE_SIZE: usize = 4096;
+            {
+                let vmo_size: usize =
+                    vmo.get_size().expect("failed to obtain VMO size").try_into().unwrap();
+                let sysmem_size: usize =
+                    allocation.settings.buffer_settings.size_bytes.try_into().unwrap();
+                assert!(PAGE_SIZE <= vmo_size);
+                assert!(PAGE_SIZE >= sysmem_size);
+            }
 
-            vmo.write(&fuchsia_pixel, offset).expect("failed to write pixel");
-            vmo.write(&white_pixel, offset + 4).expect("failed to write pixel");
-            vmo.write(&blue_pixel, offset + row_pitch).expect("failed to write pixel");
-            vmo.write(&red_pixel, offset + row_pitch + 4).expect("failed to write pixel");
+            // create_from_vmo() uses an offset of 0 when mapping the VMO; verify that this matches
+            // the sysmem allocation.
+            let offset: usize = allocation.buffers[0].vmo_usable_start.try_into().unwrap();
+            assert_eq!(offset, 0);
+
+            let mapping = mapped_vmo::Mapping::create_from_vmo(
+                &vmo,
+                PAGE_SIZE,
+                zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,
+            )
+            .expect("failed to map VMO");
+
+            mapping.write_at(0, &fuchsia_pixel);
+            mapping.write_at(4, &white_pixel);
+            mapping.write_at(row_pitch, &blue_pixel);
+            mapping.write_at(row_pitch + 4, &red_pixel);
         }
         None => unreachable!(),
     }
