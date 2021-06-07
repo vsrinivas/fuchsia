@@ -7,7 +7,10 @@ import("//build/fidl/fidl.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":virtual_camera_agent_unittest" ]
+  deps = [
+    ":stream_storage_unittest",
+    ":virtual_camera_agent_unittest",
+  ]
 }
 
 fidl("fuchsia.camera.test.virtualcamera") {
@@ -15,14 +18,43 @@ fidl("fuchsia.camera.test.virtualcamera") {
   sources = [ "virtual_camera.test.fidl" ]
 }
 
+source_set("virtual_camera_hal_controller") {
+  sources = [
+    "virtual_camera_hal_controller.cc",
+    "virtual_camera_hal_controller.h",
+  ]
+  public_deps = [
+    ":stream_storage",
+    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/lib/fidl/cpp",
+  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("stream_storage") {
+  sources = [
+    "stream_storage.cc",
+    "stream_storage.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera2.hal",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
 source_set("virtual_camera_agent") {
   sources = [
     "virtual_camera_agent.cc",
     "virtual_camera_agent.h",
   ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/camera/lib/stream_utils:stream_configs",
+  ]
   public_deps = [
     ":fuchsia.camera.test.virtualcamera",
+    ":stream_storage",
+    ":virtual_camera_hal_controller",
     "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/lib/sys/cpp",
     "//src/camera/bin/device_watcher:fuchsia.camera.test",
@@ -33,6 +65,7 @@ executable("virtual_camera_bin") {
   output_name = "virtual_camera"
   sources = [ "main.cc" ]
   deps = [
+    ":stream_storage",
     ":virtual_camera_agent",
     "//sdk/lib/modular/cpp",
     "//sdk/lib/sys/cpp",
@@ -58,6 +91,7 @@ executable("virtual_camera_agent_unittest_bin") {
   deps = [
     ":virtual_camera_agent",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/camera/lib/stream_utils:stream_configs",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
@@ -67,4 +101,22 @@ executable("virtual_camera_agent_unittest_bin") {
 fuchsia_unittest_package("virtual_camera_agent_unittest") {
   manifest = "meta/virtual_camera_agent_unittest.cmx"
   deps = [ ":virtual_camera_agent_unittest_bin" ]
+}
+
+executable("stream_storage_unittest_bin") {
+  testonly = true
+  sources = [ "stream_storage_unittest.cc" ]
+  deps = [
+    ":stream_storage",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/camera/lib/stream_utils:stream_configs",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+fuchsia_unittest_package("stream_storage_unittest") {
+  manifest = "meta/stream_storage_unittest.cmx"
+  deps = [ ":stream_storage_unittest_bin" ]
 }

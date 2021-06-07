@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/stream_storage_unittest_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.LogSink"
+        ]
+    }
+}

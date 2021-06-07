@@ -11,12 +11,17 @@
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <set>
+
+#include "src/camera/bin/virtual_camera/stream_storage.h"
+#include "src/camera/bin/virtual_camera/virtual_camera_hal_controller.h"
+
 namespace camera {
 
 class VirtualCameraAgent : public fuchsia::hardware::camera::Device,
                            public fuchsia::camera::test::virtualcamera::VirtualCameraDevice {
  public:
-  explicit VirtualCameraAgent(sys::ComponentContext* component_context);
+  VirtualCameraAgent(sys::ComponentContext* component_context, StreamStorage& stream_storage);
 
   // fuchsia::hardware::camera::Device impl.
   void GetChannel(zx::channel channel) override;
@@ -24,11 +29,15 @@ class VirtualCameraAgent : public fuchsia::hardware::camera::Device,
 
   // fuchsia::camera::virtualcamera::VirtualCameraDevice impl.
   void AddToDeviceWatcher(AddToDeviceWatcherCallback callback) override;
+  void AddStreamConfig(uint64_t index,
+                       fuchsia::camera::test::virtualcamera::StreamConfig config) override;
 
  private:
   sys::ComponentContext* component_context_;
+  StreamStorage& stream_storage_;
   fidl::Binding<fuchsia::hardware::camera::Device> hardware_device_binding_;
   fidl::InterfacePtr<fuchsia::camera::test::DeviceWatcherTester> device_watcher_tester_;
+  std::set<std::unique_ptr<VirtualCameraHalController>> hal_controllers_;
 };
 
 }  // namespace camera

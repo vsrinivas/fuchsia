@@ -7,6 +7,7 @@
 #include <lib/modular/cpp/agent.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/camera/bin/virtual_camera/stream_storage.h"
 #include "src/camera/bin/virtual_camera/virtual_camera_agent.h"
 
 int main(int argc, char** argv) {
@@ -15,7 +16,8 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   modular::Agent agent(component_context->outgoing(), [&loop] { loop.Quit(); });
-  camera::VirtualCameraAgent virtual_camera_agent(component_context.get());
+  camera::StreamStorage stream_storage;
+  camera::VirtualCameraAgent virtual_camera_agent(component_context.get(), stream_storage);
   loop.Run();
   return 0;
 }

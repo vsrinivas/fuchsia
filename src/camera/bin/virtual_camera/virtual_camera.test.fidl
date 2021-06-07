@@ -10,6 +10,12 @@ enum Error {
     ALREADY_ADDED_TO_DEVICE_WATCHER = 1;
 };
 
+// Parameters that can be set for a stream created with |AddStreamConfig|.
+table StreamConfig {
+    1: uint32 width;
+    2: uint32 height;
+};
+
 /// This interface provides a way for test clients to set up fake streams
 /// using the 'virtual' camera.
 [Discoverable]
@@ -19,4 +25,9 @@ protocol VirtualCameraDevice {
     // in the system. Must be called before proceeding with tests otherwise
     // the virtual camera won't be available to camera clients.
     AddToDeviceWatcher() -> () error Error;
+
+    // Adds a |StreamConfig| at the given |index|. |index| is used to refer
+    // to the config in future operations. If this is called multiple times
+    // with the same |index|, the older value will be overwritten.
+    AddStreamConfig(uint64 index, StreamConfig config);
 };
