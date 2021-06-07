@@ -16,6 +16,7 @@ sdk://fidl/fuchsia.bluetooth.a2dp
 sdk://fidl/fuchsia.bluetooth.control
 sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.gatt2
+sdk://fidl/fuchsia.bluetooth.hfp
 sdk://fidl/fuchsia.bluetooth.le
 sdk://fidl/fuchsia.bluetooth.sys
 sdk://fidl/fuchsia.buildinfo
