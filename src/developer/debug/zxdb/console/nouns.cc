@@ -571,7 +571,11 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     row.push_back(OutputBuffer(Syntax::kSpecial, std::to_string(pair.first)));
     row.emplace_back(ExecutionScopeToString(context, settings.scope));
     row.emplace_back(BreakpointSettings::StopModeToString(settings.stop_mode));
-    row.emplace_back(BoolToString(settings.enabled));
+    if (settings.enabled) {
+      row.emplace_back("true");
+    } else {
+      row.emplace_back(Syntax::kError, "false");
+    }
     row.emplace_back(BreakpointSettings::TypeToString(settings.type));
 
     if (include_size) {

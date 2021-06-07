@@ -356,7 +356,14 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* b
 
   if (!settings.enabled) {
     result.Append(Syntax::kVariable, ClientSettings::Breakpoint::kEnabled);
-    result.Append(std::string("=") + BoolToString(settings.enabled) + " ");
+    result.Append("=");
+    if (settings.enabled) {
+      result.Append("true");
+    } else {
+      // Highlight disabled breakpoints since that's an unusual condition.
+      result.Append(Syntax::kError, "false");
+    }
+    result.Append(" ");
   }
 
   // Include type only for non-software (the normal ones) breakpoints.
