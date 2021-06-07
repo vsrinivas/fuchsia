@@ -120,6 +120,7 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/devices/tests/bind-test:*",
     "//src/devices/tests/bind-test-v2:*",
     "//src/devices/tests/libdriver-integration-test:*",
+    "//src/devices/tests/string-bind-test:*",
     "//src/devices/usb/drivers/usb-bus:*",
     "//src/devices/usb/drivers/usb-peripheral:*",
     "//src/devices/usb/drivers/usb-peripheral-test:*",

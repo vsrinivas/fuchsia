@@ -23,5 +23,6 @@ group("tests") {
     "fx-logger:tests",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
+    "string-bind-test",
   ]
 }
