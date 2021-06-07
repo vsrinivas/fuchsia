@@ -6,8 +6,8 @@ stack backtrace:
 [[[ELF module #0x2 "libstd-771befcd97ac0955.so" BuildID=69f7458ba652c884 0x34db40f8000]]]
 [[[ELF module #0x3 "<vDSO>" BuildID=b60aa30791277c5b 0x82377173f000]]]
 [[[ELF module #0x4 "libc.so" BuildID=8ce60b04bdfd0610 0x80e2c31bb000]]]
-   #0.3  0x0000034db41abba4 in std::backtrace_rs::backtrace::libunwind::trace(core::ops::function::&mut FnMut<(&std::backtrace_rs::backtrace::Frame)>) library/std/src/../../backtrace/src/backtrace/libunwind.rs:96 <libstd-771befcd97ac0955.so>+0xb3ba4
-   #0.2  0x0000034db41abba4 in std::backtrace_rs::backtrace::trace_unsynchronized<closure-1>(std::sys_common::backtrace::_print_fmt::closure-1) library/std/src/../../backtrace/src/backtrace/mod.rs:66 <libstd-771befcd97ac0955.so>+0xb3ba4
+   #0.3  0x0000034db41abba4 in std::backtrace_rs::backtrace::libunwind::trace(core::ops::function::&mut FnMut<(&std::backtrace_rs::backtrace::Frame)>) library/backtrace/src/backtrace/libunwind.rs:96 <libstd-771befcd97ac0955.so>+0xb3ba4
+   #0.2  0x0000034db41abba4 in std::backtrace_rs::backtrace::trace_unsynchronized<closure-1>(std::sys_common::backtrace::_print_fmt::closure-1) library/backtrace/src/backtrace/mod.rs:66 <libstd-771befcd97ac0955.so>+0xb3ba4
    #0.1  0x0000034db41abba4 in std::sys_common::backtrace::_print_fmt(core::fmt::Formatter*, std::backtrace_rs::print::PrintFmt) library/std/src/sys_common/backtrace.rs:79 <libstd-771befcd97ac0955.so>+0xb3ba4
    #0    0x0000034db41abba4 in std::sys_common::backtrace::_print::$({{impl}})::fmt(std::sys_common::backtrace::_print::DisplayBacktrace*, core::fmt::Formatter*) library/std/src/sys_common/backtrace.rs:58 <libstd-771befcd97ac0955.so>+0xb3ba4
    #1    0x0000034db4213d30 in core::fmt::write(core::fmt::&mut Write, core::fmt::Arguments) library/core/src/fmt/mod.rs:1117 <libstd-771befcd97ac0955.so>+0x11bd30
