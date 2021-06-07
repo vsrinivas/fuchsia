@@ -5,5 +5,12 @@
 //! Types to track and manage indices of packages.
 
 // TODO(fxbug.dev/77361) use this module, remove this allow.
+mod dynamic;
+mod package;
 #[allow(dead_code)]
 mod retained;
+
+pub use dynamic::{
+    enumerate_package_blobs, fulfill_meta_far_blob, load_cache_packages, DynamicIndex,
+    DynamicIndexError,
+};

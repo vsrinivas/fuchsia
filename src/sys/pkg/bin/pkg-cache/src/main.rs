@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        blob_location::BlobLocation, dynamic_index::DynamicIndex, pkgfs_inspect::PkgfsInspectState,
-    },
+    crate::{blob_location::BlobLocation, index::DynamicIndex, pkgfs_inspect::PkgfsInspectState},
     anyhow::{anyhow, Context as _, Error},
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
@@ -23,7 +21,6 @@ use {
 mod blob_location;
 mod blobs;
 mod cache_service;
-mod dynamic_index;
 mod gc_service;
 mod index;
 mod pkgfs_inspect;
@@ -92,7 +89,7 @@ async fn main_inner() -> Result<(), Error> {
         );
 
         let load_cache_packages_fut =
-            dynamic_index::load_cache_packages(&mut dynamic_index, &pkgfs_system, &pkgfs_versions)
+            index::load_cache_packages(&mut dynamic_index, &pkgfs_system, &pkgfs_versions)
                 .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)));
 
         future::join4(

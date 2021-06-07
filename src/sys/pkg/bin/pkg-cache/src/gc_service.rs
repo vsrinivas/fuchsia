@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::dynamic_index::DynamicIndex,
+    crate::index::DynamicIndex,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_space::{
         ErrorCode as SpaceErrorCode, ManagerRequest as SpaceManagerRequest,

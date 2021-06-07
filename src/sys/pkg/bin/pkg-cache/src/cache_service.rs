@@ -5,7 +5,7 @@
 use {
     crate::{
         blobs::{open_blob, BlobKind, OpenBlob, OpenBlobError, OpenBlobSuccess},
-        dynamic_index::{fulfill_meta_far_blob, DynamicIndex, DynamicIndexError},
+        index::{fulfill_meta_far_blob, DynamicIndex, DynamicIndexError},
     },
     anyhow::{anyhow, Context as _, Error},
     cobalt_sw_delivery_registry as metrics,

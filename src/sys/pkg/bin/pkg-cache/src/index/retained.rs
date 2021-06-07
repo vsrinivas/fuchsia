@@ -124,25 +124,24 @@ pub async fn populate_retained_index(
     let mut packages = HashMap::with_capacity(meta_hashes.len());
 
     for meta_hash in meta_hashes {
-        let content_hashes =
-            match crate::dynamic_index::enumerate_package_blobs(blobfs, meta_hash).await {
-                Ok(Some((_path, content_hashes))) => {
-                    let mut content_hashes = content_hashes.iter().copied().collect::<Vec<Hash>>();
-                    content_hashes.sort_unstable();
-                    Some(content_hashes)
-                }
-                Ok(None) => None,
-                Err(e) => {
-                    // The package isn't readable yet, so the system updater will need to fetch it.
-                    // Assume None for now and let the package fetch flow populate this later.
-                    fx_log_err!(
-                        "failed to enumerate content blobs for package {}: {:#}",
-                        meta_hash,
-                        anyhow::anyhow!(e)
-                    );
-                    None
-                }
-            };
+        let content_hashes = match crate::index::enumerate_package_blobs(blobfs, meta_hash).await {
+            Ok(Some((_path, content_hashes))) => {
+                let mut content_hashes = content_hashes.iter().copied().collect::<Vec<Hash>>();
+                content_hashes.sort_unstable();
+                Some(content_hashes)
+            }
+            Ok(None) => None,
+            Err(e) => {
+                // The package isn't readable yet, so the system updater will need to fetch it.
+                // Assume None for now and let the package fetch flow populate this later.
+                fx_log_err!(
+                    "failed to enumerate content blobs for package {}: {:#}",
+                    meta_hash,
+                    anyhow::anyhow!(e)
+                );
+                None
+            }
+        };
 
         packages.insert(*meta_hash, content_hashes);
     }
