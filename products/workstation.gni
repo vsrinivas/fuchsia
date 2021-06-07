@@ -42,6 +42,7 @@ cache_package_labels -= [ "//src/ui/tools/tiles" ]
 
 cache_package_labels += [
   "//src/chromium:web_engine",
+  "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/bin/simple_browser:simple-browser",
   "//src/experiences/bin/simple_browser:web_engine_config",
   "//src/experiences/session_shells/ermine",
