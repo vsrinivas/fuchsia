@@ -78,11 +78,13 @@ class DeviceImplTest : public gtest::RealLoopFixture {
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry;
     fake_listener_registry_.GetHandler()(registry.NewRequest());
 
+    MetricsReporter::Initialize(*context_);
+
     zx::event bad_state_event;
     ASSERT_EQ(zx::event::create(0, &bad_state_event), ZX_OK);
-    auto device_promise = DeviceImpl::Create(dispatcher(), executor_, MetricsReporter(*context_),
-                                             std::move(controller), allocator.Unbind(),
-                                             std::move(registry), std::move(bad_state_event));
+    auto device_promise =
+        DeviceImpl::Create(dispatcher(), executor_, std::move(controller), allocator.Unbind(),
+                           std::move(registry), std::move(bad_state_event));
     bool device_created = false;
     executor_.schedule_task(device_promise.then(
         [this, &device_created](
@@ -149,18 +151,16 @@ class DeviceImplTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(DeviceImplTest, CreateStreamNullConnection) {
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
-  StreamImpl stream(dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
-                    nullptr, nop_stream_requested, nop_buffers_requested, nop);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
+  StreamImpl stream(dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_,
+                    fake_legacy_config_, nullptr, nop_stream_requested, nop_buffers_requested, nop);
 }
 
 TEST_F(DeviceImplTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera3::Stream> stream;
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   StreamImpl stream_impl(
-      dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
+      dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_, fake_legacy_config_,
       stream.NewRequest(),
       [&](fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request), allocator_);
@@ -182,10 +182,9 @@ TEST_F(DeviceImplTest, GetFrames) {
   constexpr uint32_t kMaxCampingBuffers = 1;
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
-      dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
+      dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_, fake_legacy_config_,
       stream.NewRequest(),
       [&](fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request), allocator_);
@@ -318,10 +317,9 @@ TEST_F(DeviceImplTest, GetFramesInvalidCall) {
     stream_errored = true;
   });
   std::unique_ptr<FakeLegacyStream> fake_legacy_stream;
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
-      dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
+      dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_, fake_legacy_config_,
       stream.NewRequest(),
       [&](fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request), allocator_);
@@ -989,10 +987,9 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
   fuchsia::camera3::StreamPtr stream;
   constexpr uint32_t kMaxCampingBuffers = 1;
   std::array<std::unique_ptr<FakeLegacyStream>, kCycleCount> legacy_stream_fakes;
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
-      dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
+      dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_, fake_legacy_config_,
       stream.NewRequest(),
       [&](fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request), allocator_);
@@ -1148,10 +1145,9 @@ TEST_F(DeviceImplTest, GetFramesMultiClient) {
   original_stream.set_error_handler(MakeErrorHandler("Stream"));
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
-      dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
+      dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_, fake_legacy_config_,
       original_stream.NewRequest(),
       [&](fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index) {
         auto result = FakeLegacyStream::Create(std::move(request), allocator_);
@@ -1264,10 +1260,9 @@ TEST_F(DeviceImplTest, LegacyStreamPropertiesRestored) {
   stream->SetResolution(kLegacyStreamFormatAssociation.resolution);
   std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
   bool legacy_stream_created = false;
-  MetricsReporter metrics(*context_);
-  auto config_metrics = metrics.CreateConfiguration(0, 1);
+  auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   auto stream_impl = std::make_unique<StreamImpl>(
-      dispatcher(), config_metrics->stream(0), fake_properties_, fake_legacy_config_,
+      dispatcher(), config_metrics->GetStreamRecord(0), fake_properties_, fake_legacy_config_,
       std::move(request),
       [&](fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index) {
         auto result =

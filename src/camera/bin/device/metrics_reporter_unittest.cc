@@ -13,6 +13,8 @@
 namespace camera {
 namespace {
 
+inline constexpr const char kRootInspectorNodeName[] = "root";
+
 using ::inspect::testing::BoolIs;
 using ::inspect::testing::ChildrenMatch;
 using ::inspect::testing::NameMatches;
@@ -26,8 +28,12 @@ using ::testing::IsSupersetOf;
 
 class MetricsReporterTest : public ::gtest::TestLoopFixture {
  public:
+  MetricsReporterTest() {
+    MetricsReporter::Initialize(*component_context_provider_.context());
+  }
+
   inspect::Hierarchy GetHierarchy() {
-    zx::vmo duplicate = metrics_.inspector().DuplicateVmo();
+    zx::vmo duplicate = MetricsReporter::Get().inspector().DuplicateVmo();
     if (!duplicate) {
       return inspect::Hierarchy();
     }
@@ -43,102 +49,135 @@ class MetricsReporterTest : public ::gtest::TestLoopFixture {
 
  protected:
   sys::testing::ComponentContextProvider component_context_provider_;
-  MetricsReporter metrics_{*component_context_provider_.context()};
 };
 
 TEST_F(MetricsReporterTest, InitialState) {
   auto hierarchy = GetHierarchy();
 
   // Expect metrics with default values in the root node.
-  EXPECT_THAT(hierarchy, NodeMatches(NameMatches("root")));
+  EXPECT_THAT(hierarchy, NodeMatches(NameMatches(kRootInspectorNodeName)));
 
   // Expect empty child nodes for streams
-  EXPECT_THAT(
-      hierarchy,
-      ChildrenMatch(UnorderedElementsAre(AllOf(NodeMatches(AllOf(
-          NameMatches("configurations"), PropertyList(IsEmpty()), PropertyList(IsEmpty())))))));
+  EXPECT_THAT(hierarchy,
+              ChildrenMatch(UnorderedElementsAre(AllOf(
+                  // configuration node
+                  NodeMatches(AllOf(
+                      NameMatches(kConfigurationInspectorNodeName),
+                      PropertyList(IsEmpty()),
+                      PropertyList(IsEmpty())))))));
 }
 
 TEST_F(MetricsReporterTest, StreamFrameMetrics) {
-  auto config = metrics_.CreateConfiguration(0, 3);
+  auto config = MetricsReporter::Get().CreateConfigurationRecord(0, 3);
 
   // Expect nodes for each stream.
   EXPECT_THAT(
       GetHierarchy(),
       ChildrenMatch(UnorderedElementsAre(AllOf(
-          NodeMatches(NameMatches("configurations")),
+          // configuration node
+          NodeMatches(NameMatches(kConfigurationInspectorNodeName)),
           ChildrenMatch(UnorderedElementsAre(AllOf(
+              // configuration 0
               NodeMatches(NameMatches("0")),
               ChildrenMatch(UnorderedElementsAre(AllOf(
-                  NodeMatches(NameMatches("streams")),
+                  // stream node
+                  NodeMatches(NameMatches(kStreamInspectorNodeName)),
                   ChildrenMatch(UnorderedElementsAre(
-                      NodeMatches(AllOf(NameMatches("0"),
-                                        PropertyList(IsSupersetOf({UintIs("frames received", 0),
-                                                                   UintIs("frames dropped", 0)})))),
-                      NodeMatches(AllOf(NameMatches("1"),
-                                        PropertyList(IsSupersetOf({UintIs("frames received", 0),
-                                                                   UintIs("frames dropped", 0)})))),
+                      // stream 0
+                      NodeMatches(AllOf(
+                          NameMatches("0"),
+                          PropertyList(IsSupersetOf(
+                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
+                      // stream 1
+                      NodeMatches(AllOf(
+                          NameMatches("1"),
+                          PropertyList(IsSupersetOf(
+                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
+                      // stream 2
                       NodeMatches(AllOf(
                           NameMatches("2"),
-                          PropertyList(IsSupersetOf({UintIs("frames received", 0),
-                                                     UintIs("frames dropped", 0)}))))))))))))))));
+                          PropertyList(IsSupersetOf(
+                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)}))))
+                  ))))))))))));
 
-  // Recevie 4 frames and drop 1 on stream 1
-  config->stream(1).FrameReceived();
-  config->stream(1).FrameReceived();
-  config->stream(1).FrameReceived();
-  config->stream(1).FrameReceived();
-  config->stream(1).FrameDropped();
+  // Receive 4 frames and drop 1 on stream 1
+  config->GetStreamRecord(1).FrameReceived();
+  config->GetStreamRecord(1).FrameReceived();
+  config->GetStreamRecord(1).FrameReceived();
+  config->GetStreamRecord(1).FrameReceived();
+  config->GetStreamRecord(1).FrameDropped();
 
   EXPECT_THAT(
       GetHierarchy(),
       ChildrenMatch(UnorderedElementsAre(AllOf(
-          NodeMatches(NameMatches("configurations")),
+          // configuration node
+          NodeMatches(NameMatches(kConfigurationInspectorNodeName)),
           ChildrenMatch(UnorderedElementsAre(AllOf(
+              // configuration 0
               NodeMatches(NameMatches("0")),
               ChildrenMatch(UnorderedElementsAre(AllOf(
-                  NodeMatches(NameMatches("streams")),
+                  // stream node
+                  NodeMatches(NameMatches(kStreamInspectorNodeName)),
                   ChildrenMatch(UnorderedElementsAre(
-                      NodeMatches(AllOf(NameMatches("0"),
-                                        PropertyList(IsSupersetOf({UintIs("frames received", 0),
-                                                                   UintIs("frames dropped", 0)})))),
-                      NodeMatches(AllOf(NameMatches("1"),
-                                        PropertyList(IsSupersetOf({UintIs("frames received", 4),
-                                                                   UintIs("frames dropped", 1)})))),
+                      // stream 0
+                      NodeMatches(AllOf(
+                          NameMatches("0"),
+                          PropertyList(IsSupersetOf(
+                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)})))),
+                      // stream 1
+                      NodeMatches(AllOf(
+                          NameMatches("1"),
+                          PropertyList(IsSupersetOf(
+                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 4),
+                               UintIs(kStreamInspectorFramesDroppedPropertyName, 1)})))),
+                      // stream 2
                       NodeMatches(AllOf(
                           NameMatches("2"),
-                          PropertyList(IsSupersetOf({UintIs("frames received", 0),
-                                                     UintIs("frames dropped", 0)}))))))))))))))));
+                          PropertyList(IsSupersetOf(
+                              {UintIs(kStreamInspectorFramesReceivedPropertyName, 0),
+                               UintIs(kStreamInspectorFramesDroppedPropertyName, 0)}))))
+                  ))))))))))));
 }
 
 TEST_F(MetricsReporterTest, StreamProperties) {
-  auto config = metrics_.CreateConfiguration(0, 1);
+  auto config = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
   fuchsia::camera3::StreamProperties2 properties;
   properties.set_frame_rate({30, 10});
   properties.set_supports_crop_region(true);
   properties.mutable_supported_resolutions()->push_back({1024, 768});
   properties.mutable_supported_resolutions()->push_back({1920, 1080});
-  config->stream(0).SetProperties(properties);
+  config->GetStreamRecord(0).SetProperties(properties);
 
   // Expect nodes for each stream.
   EXPECT_THAT(
       GetHierarchy(),
       ChildrenMatch(UnorderedElementsAre(AllOf(
-          NodeMatches(NameMatches("configurations")),
+          // configuration node
+          NodeMatches(NameMatches(kConfigurationInspectorNodeName)),
           ChildrenMatch(UnorderedElementsAre(AllOf(
+              // configuration 0
               NodeMatches(NameMatches("0")),
               ChildrenMatch(UnorderedElementsAre(AllOf(
-                  NodeMatches(NameMatches("streams")),
+                  // stream node
+                  NodeMatches(NameMatches(kStreamInspectorNodeName)),
                   ChildrenMatch(UnorderedElementsAre(AllOf(
+                      // stream 0
                       NodeMatches(AllOf(
                           NameMatches("0"),
-                          PropertyList(IsSupersetOf({StringIs("frame rate", "30/10"),
-                                                     BoolIs("supports crop region", true)})))),
-                      ChildrenMatch(UnorderedElementsAre(
-                          AllOf(NodeMatches(AllOf(NameMatches("supported resolutions"),
-                                                  PropertyList(UnorderedElementsAre(
-                                                      StringIs("1024x768", ""),
-                                                      StringIs("1920x1080", "")))))))))))))))))))));
+                          PropertyList(IsSupersetOf(
+                              {StringIs(kStreamInspectorFrameratePropertyName, "30/10"),
+                               BoolIs(kStreamInspectorCropPropertyName, true)})))),
+                      ChildrenMatch(UnorderedElementsAre(AllOf(
+                          // resolution node
+                          NodeMatches(AllOf(
+                              NameMatches(kStreamInspectorResolutionNodeName),
+                              PropertyList(UnorderedElementsAre(
+                                  StringIs("1024x768", ""),
+                                  StringIs("1920x1080", "")))))))))))))))))))));
 }
 
 }  // namespace

@@ -36,7 +36,7 @@ class StreamImpl {
   using BuffersRequestedCallback = fit::function<void(fuchsia::sysmem::BufferCollectionTokenHandle,
                                                       fit::function<void(uint32_t)>)>;
 
-  StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& metrics,
+  StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRecord& record,
              const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
@@ -141,7 +141,7 @@ class StreamImpl {
   };
 
   async_dispatcher_t* dispatcher_;
-  MetricsReporter::Stream& metrics_;
+  MetricsReporter::StreamRecord& record_;
   const fuchsia::camera3::StreamProperties2& properties_;
   const fuchsia::camera2::hal::StreamConfig& legacy_config_;
   fuchsia::camera2::StreamPtr legacy_stream_;

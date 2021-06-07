@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "src/camera/bin/device/messages.h"
+#include "src/camera/bin/device/metrics_reporter.h"
 #include "src/camera/bin/device/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 
@@ -67,11 +68,9 @@ fit::promise<std::vector<ConfigPtr>, zx_status_t> FetchConfigs(
 }  // namespace
 
 DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
-                       MetricsReporter metrics, fuchsia::sysmem::AllocatorHandle allocator,
-                       zx::event bad_state_event)
+                       fuchsia::sysmem::AllocatorHandle allocator, zx::event bad_state_event)
     : dispatcher_(dispatcher),
       executor_(executor),
-      metrics_(std::move(metrics)),
       sysmem_allocator_(std::move(allocator)),
       bad_state_event_(std::move(bad_state_event)),
       button_listener_binding_(this) {}
@@ -79,11 +78,11 @@ DeviceImpl::DeviceImpl(async_dispatcher_t* dispatcher, fit::executor& executor,
 DeviceImpl::~DeviceImpl() = default;
 
 fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
-    async_dispatcher_t* dispatcher, fit::executor& executor, MetricsReporter metrics,
+    async_dispatcher_t* dispatcher, fit::executor& executor,
     fuchsia::camera2::hal::ControllerHandle controller, fuchsia::sysmem::AllocatorHandle allocator,
     fuchsia::ui::policy::DeviceListenerRegistryHandle registry, zx::event bad_state_event) {
-  auto device = std::make_unique<DeviceImpl>(dispatcher, executor, std::move(metrics),
-                                             std::move(allocator), std::move(bad_state_event));
+  auto device = std::make_unique<DeviceImpl>(dispatcher, executor, std::move(allocator),
+                                             std::move(bad_state_event));
   ZX_ASSERT(device->controller_.Bind(std::move(controller)) == ZX_OK);
 
   // Bind the controller interface and get some initial startup information.
@@ -115,13 +114,14 @@ fit::promise<std::unique_ptr<DeviceImpl>, zx_status_t> DeviceImpl::Create(
               }
 
               auto num_streams = result.value().streams().size();
-              auto config_metrics = device->metrics_.CreateConfiguration(config_index, num_streams);
+              auto config_metrics = MetricsReporter::Get().CreateConfigurationRecord(
+                  config_index, num_streams);
               for (uint32_t stream_index = 0; stream_index < result.value().streams().size();
                    ++stream_index) {
-                config_metrics->stream(stream_index)
+                config_metrics->GetStreamRecord(stream_index)
                     .SetProperties(result.value().streams()[stream_index]);
               }
-              device->configuration_metrics_.push_back(std::move(config_metrics));
+              device->records_.push_back(std::move(config_metrics));
               device->configurations_.push_back(result.take_value());
               device->configs_.push_back(std::move(*config));
             }
@@ -179,9 +179,9 @@ void DeviceImpl::OnControllerDisconnected(zx_status_t status) {
 void DeviceImpl::RemoveClient(uint64_t id) { clients_.erase(id); }
 
 void DeviceImpl::SetConfiguration(uint32_t index) {
-  configuration_metrics_[current_configuration_index_]->SetActive(false);
+  records_[current_configuration_index_]->SetActive(false);
   current_configuration_index_ = index;
-  configuration_metrics_[current_configuration_index_]->SetActive(true);
+  records_[current_configuration_index_]->SetActive(true);
 
   std::vector<fit::promise<void, zx_status_t>> deallocation_promises;
   for (auto& event : deallocation_events_) {
@@ -270,7 +270,7 @@ void DeviceImpl::ConnectToStream(uint32_t index,
   auto on_no_clients = [this, index]() { streams_[index] = nullptr; };
 
   streams_[index] = std::make_unique<StreamImpl>(
-      dispatcher_, configuration_metrics_[current_configuration_index_]->stream(index),
+      dispatcher_, records_[current_configuration_index_]->GetStreamRecord(index),
       configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
       std::move(on_stream_requested), std::move(on_buffers_requested), std::move(on_no_clients));

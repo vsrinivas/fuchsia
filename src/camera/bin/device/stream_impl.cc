@@ -29,14 +29,14 @@ static fuchsia::math::Size ConvertToSize(fuchsia::sysmem::ImageFormat_2 format) 
 
 }  // namespace
 
-StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& metrics,
+StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRecord& record,
                        const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
                        StreamRequestedCallback on_stream_requested,
                        BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients)
     : dispatcher_(dispatcher),
-      metrics_(metrics),
+      record_(record),
       properties_(properties),
       legacy_config_(legacy_config),
       on_stream_requested_(std::move(on_stream_requested)),
@@ -101,7 +101,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   if (info.metadata.has_timestamp()) {
     TRACE_FLOW_END("camera", "camera_stream_on_frame_available", info.metadata.timestamp());
   }
-  metrics_.FrameReceived();
+  record_.FrameReceived();
 
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
     FX_LOGS(WARNING) << "Driver reported a bad frame. This will not be reported to clients.";
@@ -142,7 +142,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   // Discard the frame if there are too many frames outstanding.
   // TODO(fxbug.dev/64801): Recycle LRU frames.
   if (frame_waiters_.size() == max_camping_buffers_) {
-    metrics_.FrameDropped();
+    record_.FrameDropped();
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
   }
