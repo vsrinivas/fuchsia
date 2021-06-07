@@ -16,5 +16,6 @@ group("tests") {
     "camera-gym:tests",
     "device:tests",
     "device_watcher:tests",
+    "virtual_camera:tests",
   ]
 }

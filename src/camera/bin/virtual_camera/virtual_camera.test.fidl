@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera.test.virtualcamera;
+
+// Set of possible errors for methods on the |VirtualCameraDevice| protocol.
+enum Error {
+    // Occurs when |AddToDeviceWatcher| is called and the device has already been added.
+    ALREADY_ADDED_TO_DEVICE_WATCHER = 1;
+};
+
+/// This interface provides a way for test clients to set up fake streams
+/// using the 'virtual' camera.
+[Discoverable]
+protocol VirtualCameraDevice {
+    // Makes the virtual camera available to the |DeviceWatcher| agent.
+    // This allows the fake streams to be picked up by other components
+    // in the system. Must be called before proceeding with tests otherwise
+    // the virtual camera won't be available to camera clients.
+    AddToDeviceWatcher() -> () error Error;
+};
