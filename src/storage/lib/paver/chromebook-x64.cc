@@ -4,9 +4,10 @@
 
 #include "src/storage/lib/paver/chromebook-x64.h"
 
+#include <zircon/hw/gpt.h>
+
 #include <set>
 
-#include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <gpt/cros.h>
 
 #include "src/lib/uuid/uuid.h"
@@ -28,8 +29,11 @@ constexpr size_t kKibibyte = 1024;
 constexpr size_t kMebibyte = kKibibyte * 1024;
 constexpr size_t kGibibyte = kMebibyte * 1024;
 
-// Chromebook uses the legacy partition scheme.
-constexpr PartitionScheme kPartitionScheme = PartitionScheme::kLegacy;
+// Minimum size for the ChromeOS state partition.
+constexpr size_t kMinStateSize = 5 * kGibibyte;
+
+// Chromebook uses the new partition scheme.
+constexpr PartitionScheme kPartitionScheme = PartitionScheme::kNew;
 
 zx::status<Uuid> CrosPartitionType(Partition type) {
   switch (type) {
@@ -38,7 +42,7 @@ zx::status<Uuid> CrosPartitionType(Partition type) {
     case Partition::kZirconR:
       return zx::ok(Uuid(GUID_CROS_KERNEL_VALUE));
     default:
-      return GptPartitionType(type);
+      return GptPartitionType(type, kPartitionScheme);
   }
 }
 
@@ -63,37 +67,13 @@ zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize
   }
   std::unique_ptr<GptDevicePartitioner>& gpt_partitioner = status_or_gpt->gpt;
 
-  GptDevice* gpt = gpt_partitioner->GetGpt();
-  block::wire::BlockInfo info = gpt_partitioner->GetBlockInfo();
-
-  if (!is_ready_to_pave(gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info),
-                        SZ_ZX_PART)) {
-    auto pauser = BlockWatcherPauser::Create(gpt_partitioner->svc_root());
-    if (pauser.is_error()) {
-      ERROR("Failed to pause the block watcher");
-      return pauser.take_error();
-    }
-
-    auto status = zx::make_status(config_cros_for_fuchsia(
-        gpt, reinterpret_cast<fuchsia_hardware_block_BlockInfo*>(&info), SZ_ZX_PART));
-    if (status.is_error()) {
-      ERROR("Failed to configure CrOS for Fuchsia.\n");
-      return status.take_error();
-    }
-    if (auto status = zx::make_status(gpt->Sync()); status.is_error()) {
-      ERROR("Failed to sync CrOS for Fuchsia.\n");
-      return status.take_error();
-    }
-    __UNUSED auto unused =
-        RebindGptDriver(gpt_partitioner->svc_root(), gpt_partitioner->Channel()).status_value();
-  }
-
   // Determine if the firmware supports A/B in Zircon.
   auto active_slot = abr::QueryBootConfig(gpt_partitioner->devfs_root(), svc_root);
   bool supports_abr = active_slot.is_ok();
-
   auto partitioner =
       WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner), supports_abr));
+
+  // If the GPT is a new GPT, initialize the device's partition tables.
   if (status_or_gpt->initialize_partition_tables) {
     if (auto status = partitioner->InitPartitionTables(); status.is_error()) {
       return status.take_error();
@@ -105,10 +85,15 @@ zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize
 }
 
 bool CrosDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kZirconA),
-                                           PartitionSpec(paver::Partition::kZirconB),
-                                           PartitionSpec(paver::Partition::kZirconR),
-                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+  const PartitionSpec supported_specs[] = {
+      PartitionSpec(paver::Partition::kZirconA),
+      PartitionSpec(paver::Partition::kZirconB),
+      PartitionSpec(paver::Partition::kZirconR),
+      PartitionSpec(paver::Partition::kVbMetaA),
+      PartitionSpec(paver::Partition::kVbMetaB),
+      PartitionSpec(paver::Partition::kVbMetaR),
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager),
+  };
 
   for (const auto& supported : supported_specs) {
     if (SpecMatches(spec, supported)) {
@@ -131,18 +116,17 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
   size_t minimum_size_bytes = 0;
   switch (spec.partition) {
     case Partition::kZirconA:
-      minimum_size_bytes = 64 * kMebibyte;
-      break;
     case Partition::kZirconB:
-      minimum_size_bytes = 64 * kMebibyte;
-      break;
     case Partition::kZirconR:
-      // NOTE(abdulla): is_ready_to_pave() is called with SZ_ZX_PART, which requires all kernel
-      // partitions to be the same size.
       minimum_size_bytes = 64 * kMebibyte;
       break;
     case Partition::kFuchsiaVolumeManager:
       minimum_size_bytes = 16 * kGibibyte;
+      break;
+    case Partition::kVbMetaA:
+    case Partition::kVbMetaB:
+    case Partition::kVbMetaR:
+      minimum_size_bytes = 64 * kKibibyte;
       break;
     default:
       ERROR("Cros partitioner cannot add unknown partition type\n");
@@ -154,7 +138,33 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
   if (type.is_error()) {
     return type.take_error();
   }
-  return gpt_->AddPartition(name, type.value(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
+
+  zx_status_t status = ZX_OK;
+  zx::status<std::unique_ptr<PartitionClient>> result;
+  do {
+    if (status != ZX_OK) {
+      // If AddPartition fails because we're out of space (ZX_ERR_NO_RESOURCES), we try to shrink
+      // the ChromeOS STATE partition in order to make room.
+      auto shrink_result = ShrinkCrosState();
+      if (shrink_result.is_error()) {
+        // Shrink failed for some reason - bail out.
+        ERROR("Failed to shrink CrOS state: %s", shrink_result.status_string());
+        return shrink_result.take_error();
+      }
+
+      bool did_shrink = *shrink_result;
+      if (!did_shrink) {
+        // The STATE partition is as small as we can make it, so bail out.
+        ERROR("Refusing to shrink CrOS state partition below its minimum size.");
+        return zx::error(ZX_ERR_NO_RESOURCES);
+      }
+    }
+
+    result =
+        gpt_->AddPartition(name, type.value(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
+    status = result.is_ok() ? ZX_OK : result.error_value();
+  } while (status == ZX_ERR_NO_RESOURCES);
+  return result;
 }
 
 zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartition(
@@ -186,6 +196,20 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartitio
       }
       return zx::ok(std::move(status->partition));
     }
+    case Partition::kVbMetaA:
+    case Partition::kVbMetaB:
+    case Partition::kVbMetaR: {
+      const auto filter = [&spec](const gpt_partition_t& part) {
+        const char* name = PartitionName(spec.partition, kPartitionScheme);
+        auto status = CrosPartitionType(spec.partition);
+        return status.is_ok() && FilterByTypeAndName(part, status.value(), name);
+      };
+      auto status = gpt_->FindPartition(filter);
+      if (status.is_error()) {
+        return status.take_error();
+      }
+      return zx::ok(std::move(status->partition));
+    }
     default:
       ERROR("Cros partitioner cannot find unknown partition type\n");
       return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -198,8 +222,8 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // Special partition finalization is only necessary for Zircon partitions, and only when we don't
-  // support A/B.
+  // Special partition finalization is only necessary for Zircon partitions, and only when we
+  // don't support A/B.
   if (spec.partition != Partition::kZirconA || supports_abr_) {
     return zx::ok();
   }
@@ -276,20 +300,30 @@ zx::status<> CrosDevicePartitioner::InitPartitionTables() const {
   // Wipe partitions.
   // CrosDevicePartitioner operates on partition names.
   const std::set<std::string_view> partitions_to_wipe{
+      GPT_VBMETA_A_NAME,
+      GPT_VBMETA_B_NAME,
+      GPT_VBMETA_R_NAME,
+      GPT_ZIRCON_A_NAME,
+      GPT_ZIRCON_B_NAME,
+      GPT_ZIRCON_R_NAME,
+      GPT_FVM_NAME,
+      // Partition names from the legacy scheme.
       GUID_ZIRCON_A_NAME,
       GUID_ZIRCON_B_NAME,
       GUID_ZIRCON_R_NAME,
       GUID_FVM_NAME,
-      // These additional partition names are based on the previous naming scheme.
+      // These additional partition names are based on the legacy, legacy naming scheme.
       "ZIRCON-A",
       "ZIRCON-B",
       "ZIRCON-R",
       "fvm",
+      "SYSCFG",
   };
   auto status = gpt_->WipePartitions([&partitions_to_wipe](const gpt_partition_t& part) {
     char cstring_name[GPT_NAME_LEN] = {};
     utf16_to_cstring(cstring_name, part.name, GPT_NAME_LEN);
-    return partitions_to_wipe.find(cstring_name) != partitions_to_wipe.end();
+    bool result = partitions_to_wipe.find(cstring_name) != partitions_to_wipe.end();
+    return result;
   });
   if (status.is_error()) {
     ERROR("Failed to wipe partitions: %s\n", status.status_string());
@@ -297,10 +331,13 @@ zx::status<> CrosDevicePartitioner::InitPartitionTables() const {
   }
 
   // Add partitions with default content type.
-  const std::array<PartitionSpec, 4> partitions_to_add = {
+  const std::array<PartitionSpec, 7> partitions_to_add = {
       PartitionSpec(Partition::kZirconA),
       PartitionSpec(Partition::kZirconB),
       PartitionSpec(Partition::kZirconR),
+      PartitionSpec(Partition::kVbMetaA),
+      PartitionSpec(Partition::kVbMetaB),
+      PartitionSpec(Partition::kVbMetaR),
       PartitionSpec(Partition::kFuchsiaVolumeManager),
   };
   for (auto spec : partitions_to_add) {
@@ -334,6 +371,48 @@ zx::status<> CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
   }
 
   return zx::ok();
+}
+
+zx::status<bool> CrosDevicePartitioner::ShrinkCrosState() const {
+  constexpr const char* name = "STATE";
+  const auto filter = [](const gpt_partition_t& part) {
+    constexpr uuid::Uuid kCrosStateGuid(GUID_CROS_STATE_VALUE);
+    constexpr uuid::Uuid kLinuxStateGuid(GUID_LINUX_FILESYSTEM_DATA_VALUE);
+    return FilterByTypeAndName(part, kCrosStateGuid, name) ||
+           FilterByTypeAndName(part, kLinuxStateGuid, name);
+  };
+
+  auto status = gpt_->FindPartition(filter);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  gpt_partition_t* part = status->gpt_partition;
+  size_t minimum_size_blocks = kMinStateSize / gpt_->GetBlockInfo().block_size;
+  size_t cur_size_blocks = (part->last - part->first) + 1;
+
+  // Halve the partition's size. STATE should always be at the end of the disk, so cut the first
+  // half out.
+  size_t new_size_blocks = std::max(cur_size_blocks / 2, minimum_size_blocks);
+  part->first += new_size_blocks;
+
+  // Bail out if the partition is already as small as it can be.
+  if (new_size_blocks == cur_size_blocks) {
+    return zx::ok(false);
+  }
+
+  // Pause the block watcher before touching the GPT.
+  auto pauser = BlockWatcherPauser::Create(gpt_->svc_root());
+  if (pauser.is_error()) {
+    ERROR("Failed to pause the block watcher");
+    return pauser.take_error();
+  }
+  zx_status_t result = gpt_->GetGpt()->Sync();
+  if (result != ZX_OK) {
+    return zx::error(result);
+  }
+
+  return zx::ok(true);
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> ChromebookX64PartitionerFactory::New(

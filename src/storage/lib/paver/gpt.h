@@ -122,7 +122,8 @@ class GptDevicePartitioner {
   fuchsia_hardware_block::wire::BlockInfo block_info_;
 };
 
-zx::status<uuid::Uuid> GptPartitionType(Partition type);
+zx::status<uuid::Uuid> GptPartitionType(Partition type,
+                                        PartitionScheme scheme = PartitionScheme::kLegacy);
 
 zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
                              zx::unowned_channel chan);

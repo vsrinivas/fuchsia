@@ -18,7 +18,6 @@
 
 #include <iostream>
 
-#include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
@@ -114,15 +113,16 @@ TEST(X64AbrTests, CreateFails) {
 
 class ChromebookX64AbrTests : public zxtest::Test {
   static constexpr int kBlockSize = 512;
-  static constexpr uint64_t kZxPartBlocks = SZ_ZX_PART / kBlockSize;
-  static constexpr uint64_t kMinFvmSize = (8LU * (1 << 30)) / kBlockSize;
-  static constexpr uint64_t kSysCfgSize = (1 << 20) / 512;
+  static constexpr size_t kKibibyte = 1024;
+  static constexpr size_t kMebibyte = kKibibyte * 1024;
+  static constexpr size_t kGibibyte = kMebibyte * 1024;
+  static constexpr uint64_t kZxPartBlocks = 64 * kMebibyte / kBlockSize;
+  static constexpr uint64_t kMinFvmSize = 16 * kGibibyte;
   // we need at least 3 * SZ_ZX_PART for zircon a/b/r, and kMinFvmSize for fvm.
   static constexpr uint64_t kDiskBlocks = 4 * kZxPartBlocks + kMinFvmSize;
   static constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
   static constexpr uint8_t kZirconType[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
-  static constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
-  static constexpr uint8_t kSysCfgGuid[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
+  static constexpr uint8_t kFvmType[GPT_GUID_LEN] = GPT_FVM_TYPE_GUID;
 
  protected:
   ChromebookX64AbrTests()
@@ -167,15 +167,17 @@ class ChromebookX64AbrTests : public zxtest::Test {
     ASSERT_OK(gpt->Sync());
     // 2 (GPT header and MBR header) blocks + number of blocks in entry array.
     uint64_t cur_start = 2 + gpt->EntryArrayBlockCount();
-    ASSERT_OK(gpt->AddPartition("zircon-a", kZirconType, kZirconType, cur_start, kZxPartBlocks, 0));
+    ASSERT_OK(gpt->AddPartition(GPT_ZIRCON_A_NAME, kZirconType, kZirconType, cur_start,
+                                kZxPartBlocks, 0));
     cur_start += kZxPartBlocks;
-    ASSERT_OK(gpt->AddPartition("zircon-b", kZirconType, kZirconType, cur_start, kZxPartBlocks, 0));
+    ASSERT_OK(gpt->AddPartition(GPT_ZIRCON_B_NAME, kZirconType, kZirconType, cur_start,
+                                kZxPartBlocks, 0));
     cur_start += kZxPartBlocks;
-    ASSERT_OK(gpt->AddPartition("zircon-r", kZirconType, kZirconType, cur_start, kZxPartBlocks, 0));
+    ASSERT_OK(gpt->AddPartition(GPT_ZIRCON_R_NAME, kZirconType, kZirconType, cur_start,
+                                kZxPartBlocks, 0));
     cur_start += kZxPartBlocks;
-    ASSERT_OK(gpt->AddPartition("fvm", kFvmType, kFvmType, cur_start, kMinFvmSize, 0));
+    ASSERT_OK(gpt->AddPartition(GPT_FVM_NAME, kFvmType, kFvmType, cur_start, kMinFvmSize, 0));
     cur_start += kMinFvmSize;
-    ASSERT_OK(gpt->AddPartition("syscfg", kSysCfgGuid, kSysCfgGuid, cur_start, kSysCfgSize, 0));
 
     int active_partition = -1;
     auto current_slot = "_x";

@@ -146,7 +146,6 @@ source_set("chromebook-x64") {
     ":gpt",
     ":paver-core",
     "//src/lib/uuid",
-    "//zircon/system/ulib/chromeos-disk-setup",
   ]
 }
 

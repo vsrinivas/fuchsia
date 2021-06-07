@@ -56,7 +56,6 @@ test("test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/chromeos-disk-setup",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",

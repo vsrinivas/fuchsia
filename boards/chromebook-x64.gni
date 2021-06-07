@@ -11,6 +11,11 @@ board_name = "chromebook-x64"
 update_kernels = [ "zbi.signed" ]
 
 use_vboot = true
+use_vbmeta = true
+avb_key =
+    "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
+avb_atx_metadata =
+    "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
 
 # Some users leave a USB key (containing zedboot) plugged into their
 # device at all times. To avoid unintentionally breaking remote workflows,

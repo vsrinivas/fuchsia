@@ -31,29 +31,51 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
 
 }  // namespace
 
-zx::status<Uuid> GptPartitionType(Partition type) {
-  switch (type) {
-    case Partition::kBootloaderA:
-      return zx::ok(Uuid(GUID_EFI_VALUE));
-    case Partition::kZirconA:
-      return zx::ok(Uuid(GUID_ZIRCON_A_VALUE));
-    case Partition::kZirconB:
-      return zx::ok(Uuid(GUID_ZIRCON_B_VALUE));
-    case Partition::kZirconR:
-      return zx::ok(Uuid(GUID_ZIRCON_R_VALUE));
-    case Partition::kVbMetaA:
-      return zx::ok(Uuid(GUID_VBMETA_A_VALUE));
-    case Partition::kVbMetaB:
-      return zx::ok(Uuid(GUID_VBMETA_B_VALUE));
-    case Partition::kVbMetaR:
-      return zx::ok(Uuid(GUID_VBMETA_R_VALUE));
-    case Partition::kAbrMeta:
-      return zx::ok(Uuid(GUID_ABR_META_VALUE));
-    case Partition::kFuchsiaVolumeManager:
-      return zx::ok(Uuid(GUID_FVM_VALUE));
-    default:
-      ERROR("Partition type is invalid\n");
-      return zx::error(ZX_ERR_INVALID_ARGS);
+zx::status<Uuid> GptPartitionType(Partition type, PartitionScheme s) {
+  if (s == PartitionScheme::kLegacy) {
+    switch (type) {
+      case Partition::kBootloaderA:
+        return zx::ok(Uuid(GUID_EFI_VALUE));
+      case Partition::kZirconA:
+        return zx::ok(Uuid(GUID_ZIRCON_A_VALUE));
+      case Partition::kZirconB:
+        return zx::ok(Uuid(GUID_ZIRCON_B_VALUE));
+      case Partition::kZirconR:
+        return zx::ok(Uuid(GUID_ZIRCON_R_VALUE));
+      case Partition::kVbMetaA:
+        return zx::ok(Uuid(GUID_VBMETA_A_VALUE));
+      case Partition::kVbMetaB:
+        return zx::ok(Uuid(GUID_VBMETA_B_VALUE));
+      case Partition::kVbMetaR:
+        return zx::ok(Uuid(GUID_VBMETA_R_VALUE));
+      case Partition::kAbrMeta:
+        return zx::ok(Uuid(GUID_ABR_META_VALUE));
+      case Partition::kFuchsiaVolumeManager:
+        return zx::ok(Uuid(GUID_FVM_VALUE));
+      default:
+        ERROR("Partition type is invalid\n");
+        return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  } else {
+    switch (type) {
+      case Partition::kBootloaderA:
+        return zx::ok(Uuid(GUID_EFI_VALUE));
+      case Partition::kZirconA:
+      case Partition::kZirconB:
+      case Partition::kZirconR:
+        return zx::ok(Uuid(GPT_ZIRCON_ABR_TYPE_GUID));
+      case Partition::kVbMetaA:
+      case Partition::kVbMetaB:
+      case Partition::kVbMetaR:
+        return zx::ok(Uuid(GPT_VBMETA_ABR_TYPE_GUID));
+      case Partition::kAbrMeta:
+        return zx::ok(Uuid(GPT_DURABLE_BOOT_TYPE_GUID));
+      case Partition::kFuchsiaVolumeManager:
+        return zx::ok(Uuid(GPT_FVM_TYPE_GUID));
+      default:
+        ERROR("Partition type is invalid\n");
+        return zx::error(ZX_ERR_INVALID_ARGS);
+    }
   }
 }
 

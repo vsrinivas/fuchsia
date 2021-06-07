@@ -45,6 +45,11 @@ class CrosDevicePartitioner : public DevicePartitioner {
   CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt, bool supports_abr)
       : gpt_(std::move(gpt)), supports_abr_(supports_abr) {}
 
+  // Halve the size of the ChromeOS STATE partition in an attempt to (relatively) non-destructively
+  // make room for Fuchsia. The minimum size of the state partition is kMinStateSize.
+  // Returns true if partition was shrunk, false if it was not.
+  zx::status<bool> ShrinkCrosState() const;
+
   std::unique_ptr<GptDevicePartitioner> gpt_;
   bool supports_abr_;
 };
