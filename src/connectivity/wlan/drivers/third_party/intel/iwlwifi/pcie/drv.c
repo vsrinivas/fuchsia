@@ -1018,7 +1018,7 @@ zx_status_t iwl_pci_probe(struct iwl_pci_dev* pdev, const struct iwl_pci_device_
 #endif  // NEEDS_PORTING
 
   iwl_pci_set_drvdata(pdev, iwl_trans);
-  ret = iwl_drv_start(iwl_trans);
+  ret = iwl_drv_start(iwl_trans, &iwl_trans->drv);
   if (ret != ZX_OK) {
     IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(ret));
     goto out_free_trans;

@@ -1733,7 +1733,7 @@ free:
   }
 }
 
-zx_status_t iwl_drv_start(struct iwl_trans* trans) {
+zx_status_t iwl_drv_start(struct iwl_trans* trans, struct iwl_drv** out_drv) {
   struct iwl_drv* drv;
   zx_status_t status = ZX_OK;
 
@@ -1794,7 +1794,7 @@ zx_status_t iwl_drv_start(struct iwl_trans* trans) {
   }
 #endif
 
-  trans->drv = drv;
+  *out_drv = drv;
   return status;
 
 err_fw:
@@ -1813,6 +1813,10 @@ err:
 }
 
 void iwl_drv_stop(struct iwl_drv* drv) {
+  if (!drv) {
+    return;
+  }
+
   sync_completion_wait(&drv->request_firmware_complete, ZX_SEC(5));
 
   _iwl_op_mode_stop(drv);

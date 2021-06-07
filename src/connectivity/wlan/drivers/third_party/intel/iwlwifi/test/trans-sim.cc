@@ -287,7 +287,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, struct device* dev,
     goto remove_dev;
   }
 
-  status = iwl_drv_start(iwl_trans);
+  status = iwl_drv_start(iwl_trans, &iwl_trans->drv);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to start driver: %s", zx_status_get_string(status));
     goto remove_dev;

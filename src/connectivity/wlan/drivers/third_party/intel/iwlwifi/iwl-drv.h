@@ -106,9 +106,9 @@ zx_status_t iwl_drv_init(void);
  * starts the driver: fetches the firmware. This should be called by bus
  * specific system flows implementations. For example, the bus specific probe
  * function should do bus related operations only, and then call to this
- * function. On success, writes the new driver object to trans->drv.
+ * function. On success, returns the new driver object in out_drv.
  */
-zx_status_t iwl_drv_start(struct iwl_trans* trans);
+zx_status_t iwl_drv_start(struct iwl_trans* trans, struct iwl_drv** out_drv);
 
 /**
  * iwl_drv_stop - stop the drv
