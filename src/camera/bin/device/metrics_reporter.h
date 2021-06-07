@@ -52,6 +52,25 @@ class MetricsReporter {
     };
 
   public:
+    // An object of the ImageFormatRecord class stores the output format of an associated stream.
+    class ImageFormatRecord {
+      public:
+        explicit ImageFormatRecord(inspect::Node& parent);
+
+        // Stores the image format property.
+        //
+        // |format| Reference to ImageFormat_2 object.
+        void Set(const fuchsia::sysmem::ImageFormat_2& format);
+
+      private:
+        inspect::Node node_;
+        inspect::StringProperty pixel_format_;
+        inspect::StringProperty output_resolution_;
+        inspect::StringProperty display_resolution_;
+        inspect::StringProperty color_space_;
+        inspect::StringProperty pixel_aspect_ratio_;
+    };
+
     // An object of the StreamRecord class monitors each stream, collects metrics, and reports them
     // via the Cobalt logger if it is enabled.  Some of collected metrics are available via the
     // Inspect API.
@@ -78,6 +97,8 @@ class MetricsReporter {
         inspect::BoolProperty supports_crop_region_;
         inspect::Node supported_resolutions_node_;
         std::vector<inspect::StringProperty> supported_resolutions_;
+
+        ImageFormatRecord format_record_;
 
         inspect::UintProperty frames_received_;
         inspect::UintProperty frames_dropped_;
@@ -129,10 +150,16 @@ class MetricsReporter {
 
 inline constexpr const char kConfigurationInspectorActivePropertyName[] = "active";
 inline constexpr const char kConfigurationInspectorNodeName[] = "configurations";
+inline constexpr const char kFormatInspectorAspectRatioPropertyName[] = "aspect ratio";
+inline constexpr const char kFormatInspectorColorSpacePropertyName[] = "color space";
+inline constexpr const char kFormatInspectorDisplayResolutionPropertyName[] = "display resolution";
+inline constexpr const char kFormatInspectorOutputResolutionPropertyName[] = "output resolution";
+inline constexpr const char kFormatInspectorPixelformatPropertyName[] = "pixel format";
 inline constexpr const char kStreamInspectorCropPropertyName[] = "supports crop region";
 inline constexpr const char kStreamInspectorFrameratePropertyName[] = "frame rate";
 inline constexpr const char kStreamInspectorFramesDroppedPropertyName[] = "frames dropped";
 inline constexpr const char kStreamInspectorFramesReceivedPropertyName[] = "frames received";
+inline constexpr const char kStreamInspectorImageFormatNodeName[] = "image format";
 inline constexpr const char kStreamInspectorNodeName[] = "streams";
 inline constexpr const char kStreamInspectorResolutionNodeName[] = "supported resolutions";
 

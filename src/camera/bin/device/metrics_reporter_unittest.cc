@@ -69,7 +69,6 @@ TEST_F(MetricsReporterTest, InitialState) {
 
 TEST_F(MetricsReporterTest, StreamFrameMetrics) {
   auto config = MetricsReporter::Get().CreateConfigurationRecord(0, 3);
-
   // Expect nodes for each stream.
   EXPECT_THAT(
       GetHierarchy(),
@@ -145,7 +144,25 @@ TEST_F(MetricsReporterTest, StreamFrameMetrics) {
 
 TEST_F(MetricsReporterTest, StreamProperties) {
   auto config = MetricsReporter::Get().CreateConfigurationRecord(0, 1);
+
+  fuchsia::sysmem::ImageFormat_2 format = {
+    .pixel_format = {
+      .type = fuchsia::sysmem::PixelFormatType::NV12,
+      .has_format_modifier = false
+    },
+    .coded_width = 1920,
+    .coded_height = 1080,
+    .bytes_per_row = 3840,
+    .display_width = 1920,
+    .display_height = 1080,
+    .color_space = { .type = fuchsia::sysmem::ColorSpaceType::SRGB },
+    .has_pixel_aspect_ratio = true,
+    .pixel_aspect_ratio_width = 2,
+    .pixel_aspect_ratio_height = 3
+  };
+
   fuchsia::camera3::StreamProperties2 properties;
+  properties.set_image_format(format);
   properties.set_frame_rate({30, 10});
   properties.set_supports_crop_region(true);
   properties.mutable_supported_resolutions()->push_back({1024, 768});
@@ -171,13 +188,28 @@ TEST_F(MetricsReporterTest, StreamProperties) {
                           PropertyList(IsSupersetOf(
                               {StringIs(kStreamInspectorFrameratePropertyName, "30/10"),
                                BoolIs(kStreamInspectorCropPropertyName, true)})))),
-                      ChildrenMatch(UnorderedElementsAre(AllOf(
-                          // resolution node
-                          NodeMatches(AllOf(
+                      ChildrenMatch(UnorderedElementsAre(
+                          AllOf(NodeMatches(AllOf(
                               NameMatches(kStreamInspectorResolutionNodeName),
                               PropertyList(UnorderedElementsAre(
                                   StringIs("1024x768", ""),
-                                  StringIs("1920x1080", "")))))))))))))))))))));
+                                  StringIs("1920x1080", "")))))),
+                          AllOf(NodeMatches(AllOf(
+                              NameMatches(kStreamInspectorImageFormatNodeName),
+                              PropertyList(UnorderedElementsAre(
+                                  StringIs(kFormatInspectorPixelformatPropertyName, "NV12"),
+                                  StringIs(kFormatInspectorOutputResolutionPropertyName,
+                                           "1920x1080, stride = 3840"),
+                                  StringIs(kFormatInspectorDisplayResolutionPropertyName,
+                                           "1920x1080, stride = 1920"),
+                                  StringIs(kFormatInspectorColorSpacePropertyName, "SRGB"),
+                                  StringIs(kFormatInspectorAspectRatioPropertyName, "2x3")
+                                  )))))
+                      )) // stream 0 ChildrenMatch
+                  ))) // stream node ChildrenMatch
+              ))) // configuration 0 ChildrenMatch
+          ))) // configuration node ChildrenMatch
+      ))));
 }
 
 }  // namespace
