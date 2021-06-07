@@ -45,7 +45,7 @@ executable("fake_vulkan_loader_bin") {
 
 resource("icd-json") {
   sources = [ "libvulkan_fake.json" ]
-  outputs = [ "data/libvulkan_fake.json" ]
+  outputs = [ "data/manifest/libvulkan_fake.json" ]
 }
 
 shared_library("libvulkan_fake") {
@@ -70,11 +70,32 @@ fuchsia_component("libvulkan_test_driver") {
   manifest = "meta/libvulkan_test_driver.cml"
 }
 
+# This component uses ConnectToManifestFs to load ICD manifests rather than
+# connecting through the filesystem.
+fuchsia_component("libvulkan_test_driver_manifest_fs") {
+  testonly = true
+  component_name = "libvulkan_test_driver_manifest_fs"
+  deps = [
+    ":icd-json",
+    ":libvulkan_test_bin",
+    "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
+    "//src/lib/vulkan/validation_layers",
+  ]
+
+  manifest = "meta/libvulkan_test_driver_manifest_fs.cml"
+}
+
 fuchsia_component("libvulkan_test_cmp") {
   testonly = true
   component_name = "libvulkan_test"
 
   manifest = "meta/libvulkan_test.cml"
+}
+
+fuchsia_component("libvulkan_test_manifest_fs") {
+  testonly = true
+
+  manifest = "meta/libvulkan_test_manifest_fs.cml"
 }
 
 fuchsia_component("fake_vulkan_loader") {
@@ -85,13 +106,26 @@ fuchsia_component("fake_vulkan_loader") {
   manifest = "meta/fake_vulkan_loader.cml"
 }
 
+fuchsia_component("fake_vulkan_loader_manifest_fs") {
+  testonly = true
+  component_name = "fake_vulkan_loader_manifest_fs"
+  deps = [ ":fake_vulkan_loader_bin" ]
+
+  manifest = "meta/fake_vulkan_loader_manifest_fs.cml"
+}
+
 fuchsia_test_package("libvulkan-test") {
   package_name = "libvulkan_test"
-  test_components = [ ":libvulkan_test_cmp" ]
+  test_components = [
+    ":libvulkan_test_cmp",
+    ":libvulkan_test_manifest_fs",
+  ]
   deps = [
     ":fake_vulkan_loader",
+    ":fake_vulkan_loader_manifest_fs",
     ":libvulkan_fake",
     ":libvulkan_test_driver",
+    ":libvulkan_test_driver_manifest_fs",
   ]
 }
 

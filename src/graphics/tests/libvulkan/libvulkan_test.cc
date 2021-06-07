@@ -17,13 +17,6 @@
 #include "src/lib/fxl/test/test_settings.h"
 
 TEST(Libvulkan, LoadIcd) {
-  zx::channel client_end, server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
-  fdio_ns_t* ns;
-  EXPECT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
-  EXPECT_EQ(ZX_OK, fdio_ns_bind(ns, "/config/vulkan/icd.d", client_end.release()));
-  EXPECT_EQ(ZX_OK, fdio_open("/pkg/data", fuchsia::io::OPEN_RIGHT_READABLE, server_end.release()));
-
   VkInstanceCreateInfo create_info{};
   VkInstance instance;
   // libvulkan_fake will be opened and should validate that it was called correctly.
@@ -35,6 +28,18 @@ TEST(Libvulkan, LoadIcd) {
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {
     return EXIT_FAILURE;
+  }
+
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  if (!command_line.HasOption("use-manifest-fs")) {
+    zx::channel client_end, server_end;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
+    fdio_ns_t* ns;
+    EXPECT_EQ(ZX_OK, fdio_ns_get_installed(&ns));
+    EXPECT_EQ(ZX_OK, fdio_ns_bind(ns, "/config/vulkan/icd.d", client_end.release()));
+    EXPECT_EQ(ZX_OK, fdio_open("/pkg/data/manifest", fuchsia::io::OPEN_RIGHT_READABLE,
+                               server_end.release()));
   }
 
   testing::InitGoogleTest(&argc, argv);

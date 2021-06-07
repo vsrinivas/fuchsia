@@ -1,0 +1,13 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/libvulkan_test",
+        args: [ "--use-manifest-fs" ],
+    },
+    use: [
+        { protocol: "fuchsia.vulkan.loader.Loader" },
+    ],
+}

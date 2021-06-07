@@ -17,7 +17,7 @@
 // This is a fake Vulkan loader service that implements just enough for the libvulkan.so to work.
 class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
  public:
-  LoaderImpl() = default;
+  explicit LoaderImpl(bool use_manifest_fs) : use_manifest_fs_(use_manifest_fs) {}
   ~LoaderImpl() final = default;
 
   // Adds a binding for fuchsia::vulkan::loader::Loader to |outgoing|
@@ -54,27 +54,39 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
   void ConnectToDeviceFs(zx::channel channel) override {
     // The fake libvulkan implementation expects to be able to read
     // libvulkan_fake.json from the device fs.
-    fdio_open("/pkg/data", fuchsia::io::OPEN_RIGHT_READABLE, channel.release());
+    fdio_open("/pkg/data/manifest", fuchsia::io::OPEN_RIGHT_READABLE, channel.release());
   }
   void GetSupportedFeatures(GetSupportedFeaturesCallback callback) override {
     fuchsia::vulkan::loader::Features features =
         fuchsia::vulkan::loader::Features::CONNECT_TO_DEVICE_FS |
         fuchsia::vulkan::loader::Features::GET;
+
+    if (use_manifest_fs_) {
+      features |= fuchsia::vulkan::loader::Features::CONNECT_TO_MANIFEST_FS;
+    }
     callback(features);
   }
 
   void ConnectToManifestFs(fuchsia::vulkan::loader::ConnectToManifestOptions options,
-                           zx::channel channel) override {}
+                           zx::channel channel) override {
+    if (use_manifest_fs_) {
+      fdio_open("/pkg/data/manifest", fuchsia::io::OPEN_RIGHT_READABLE, channel.release());
+    } else {
+      bindings_.CloseAll();
+    }
+  }
 
+  bool use_manifest_fs_ = false;
   fidl::BindingSet<fuchsia::vulkan::loader::Loader> bindings_;
 };
 
 int main(int argc, const char* const* argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  fxl::SetLogSettingsFromCommandLine(fxl::CommandLineFromArgcArgv(argc, argv));
+  auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
+  fxl::SetLogSettingsFromCommandLine(command_line);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  LoaderImpl loader_impl;
+  LoaderImpl loader_impl(command_line.HasOption("use-manifest-fs"));
   loader_impl.Add(context->outgoing());
   loop.Run();
   return 0;
