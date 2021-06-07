@@ -1238,7 +1238,7 @@
   reviewed: '2021-05-19'
 
 - name: 'RFC-0096'
-  title: 'user input architecture'
+  title: 'User input architecture'
   short_description: 'The high-level architecture for delivering user input events (keyboard, mouse, touch, etc.) on Fuchsia on systems with a graphical user interface and multiple runtimes.'
   authors: ['neelsa@google.com']
   file: '0096_user_input_arch.md'
