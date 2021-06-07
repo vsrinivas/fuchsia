@@ -74,8 +74,8 @@ std::array<uint8_t, kBytesPerDoublePixel> GetDoublePixelAtPostion(uint32_t width
   const uint16_t kRowStep = kMaxVal / (width - 1);
   const uint16_t kHeightStep = kMaxVal / (height - 1);
 
-  uint16_t blue_pixel = kRowStep * x_pos;
-  uint16_t green_pixel = kHeightStep * y_pos;
+  uint16_t blue_pixel = static_cast<uint16_t>(kRowStep * x_pos);
+  uint16_t green_pixel = static_cast<uint16_t>(kHeightStep * y_pos);
 
   return (y_pos % 2 == 0) ? PixelValuesToDoublePixel(kRedPixel, green_pixel)
                           : PixelValuesToDoublePixel(green_pixel, blue_pixel);

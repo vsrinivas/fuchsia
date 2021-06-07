@@ -601,7 +601,6 @@ config("Wno-conversion") {
     "//src/bringup/bin/bootsvc/*",
     "//src/bringup/bin/netsvc/*",
     "//src/bringup/bin/ptysvc/*",
-    "//src/camera/lib/image_utils:raw12_writer_unittest_bin",
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat:nc",
     "//src/developer/debug/third_party/libunwindstack/*",
     "//src/developer/debug/zxdb/*",
