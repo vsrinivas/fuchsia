@@ -88,7 +88,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
       return ZX_OK;
     case I8250Register::INTERRUPT_ENABLE:
       if (io.access_size != 1) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -97,7 +97,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
       return ZX_OK;
     case I8250Register::LINE_CONTROL:
       if (io.access_size != 1) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       {
         std::lock_guard<std::mutex> lock(mutex_);

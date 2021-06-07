@@ -154,7 +154,7 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
       break;
     case kPm1EnablePortOffset: {
       if (value.access_size != 2) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       std::lock_guard<std::mutex> lock(mutex_);
       enable_ = value.u16;
@@ -218,7 +218,7 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
     }
     case kCmosIndexPort: {
       if (value.access_size != 1) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       std::lock_guard<std::mutex> lock(mutex_);
       index_ = value.u8;
@@ -346,7 +346,7 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
     case kI8042DataPort:
     case kI8042CommandPort: {
       if (value.access_size != 1) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       std::lock_guard<std::mutex> lock(mutex_);
       command_ = value.u8;

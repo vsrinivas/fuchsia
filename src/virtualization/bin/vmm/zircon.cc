@@ -120,7 +120,7 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
   zbitl::View view(std::move(zbi_fd));
   if (auto result = zbitl::CheckBootable(view); result.is_error()) {
     FX_LOGS(ERROR) << "Unbootable ZBI: " << result.error_value();
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
   auto first = view.begin();
   auto second = std::next(first);

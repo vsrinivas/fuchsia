@@ -195,7 +195,7 @@ static zx_status_t read_device_tree(const int fd, const PhysMem& phys_mem, const
   int ret = fdt_check_header(*dtb);
   if (ret != 0) {
     FX_LOGS(ERROR) << "Invalid device tree " << ret;
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
   return ZX_OK;
 }

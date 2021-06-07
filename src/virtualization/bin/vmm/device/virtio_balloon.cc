@@ -116,7 +116,7 @@ class StatsStream : public StreamBase {
       return;
     }
 
-    zx_status_t status = ZX_ERR_IO_DATA_INTEGRITY;
+    zx_status_t status = ZX_ERR_IO;
     std::vector<fuchsia::virtualization::MemStat> mem_stats;
     if (queue_.NextChain(&chain_) && chain_.NextDescriptor(&desc_) &&
         desc_.len % sizeof(virtio_balloon_stat_t) == 0) {

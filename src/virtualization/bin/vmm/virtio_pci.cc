@@ -298,7 +298,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL: {
       if (value.access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
 
       std::lock_guard<std::mutex> lock(mutex_);
@@ -308,7 +308,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
 
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL: {
       if (value.access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
 
       std::lock_guard<std::mutex> lock(mutex_);
@@ -317,7 +317,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
     case VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES: {
       if (value.access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
 
       std::lock_guard<std::mutex> lock(mutex_);
@@ -328,7 +328,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
     case VIRTIO_PCI_COMMON_CFG_DEVICE_STATUS: {
       if (value.access_size != 1) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
 
       uint32_t negotiated_features;
@@ -345,7 +345,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SEL: {
       if (value.access_size != 2) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       if (value.u16 >= device_config_->num_queues) {
         return ZX_ERR_OUT_OF_RANGE;
@@ -357,7 +357,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE: {
       if (value.access_size != 2) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       const uint16_t idx = queue_sel();
       if (idx >= device_config_->num_queues) {
@@ -371,7 +371,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW ... VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH: {
       if (value.access_size != 4) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       const uint16_t idx = queue_sel();
       if (idx >= device_config_->num_queues) {
@@ -387,7 +387,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE: {
       if (value.access_size != 2) {
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return ZX_ERR_IO;
       }
       const uint16_t idx = queue_sel();
       if (idx >= device_config_->num_queues) {

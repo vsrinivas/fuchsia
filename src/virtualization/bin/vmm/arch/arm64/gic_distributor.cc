@@ -328,7 +328,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
 
 zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
   if (!gicd_access_valid(addr, value->access_size)) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
 
   switch (static_cast<GicdRegister>(addr)) {
@@ -439,7 +439,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 
 zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   if (!gicd_access_valid(addr, value.access_size)) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
 
   switch (static_cast<GicdRegister>(addr)) {
@@ -652,7 +652,7 @@ zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
 
 zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
   if (!gicr_access_valid(addr, value->access_size)) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
 
   switch (static_cast<GicrRegister>(addr)) {
@@ -690,7 +690,7 @@ zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
 
 zx_status_t GicRedistributor::Write(uint64_t addr, const IoValue& value) {
   if (!gicr_access_valid(addr, value.access_size)) {
-    return ZX_ERR_IO_DATA_INTEGRITY;
+    return ZX_ERR_IO;
   }
 
   switch (static_cast<GicrRegister>(addr)) {
