@@ -38,6 +38,9 @@ declare_args() {
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#
 #   deps (optional)
 #     List of labels representing go_library targets this target depends on.
 #

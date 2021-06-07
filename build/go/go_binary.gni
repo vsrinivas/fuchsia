@@ -19,6 +19,9 @@ import("//build/go/go_build.gni")
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#
 #   sdk_deps (optional)
 #     List of labels representing elements that should be added to SDKs
 #     alongside the present binary.

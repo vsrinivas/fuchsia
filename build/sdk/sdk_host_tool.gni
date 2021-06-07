@@ -12,6 +12,9 @@ import("//build/sdk/sdk_atom_alias.gni")
 #     Publication level of the executable in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#
 #   binary (optional)
 #     Path to the tool binary. Defaults to "$root_out_dir/$output_name".
 #
@@ -31,6 +34,11 @@ template("sdk_host_tool") {
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
+  }
+
+  sdk_name = output_name
+  if (defined(invoker.sdk_name)) {
+    sdk_name = invoker.sdk_name
   }
 
   binary = "$root_out_dir/$output_name"
@@ -91,7 +99,7 @@ template("sdk_host_tool") {
   }
 
   if (host_os == "linux" || host_os == "mac") {
-    file_base = "tools/$current_cpu/$output_name"
+    file_base = "tools/$current_cpu/$sdk_name"
   }
 
   sdk_atom(target_name) {
