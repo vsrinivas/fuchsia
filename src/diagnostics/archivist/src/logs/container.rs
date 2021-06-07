@@ -15,7 +15,7 @@ use crate::{
     },
 };
 use fidl::endpoints::RequestStream;
-use fidl_fuchsia_diagnostics::{Interest, Selector, StreamMode};
+use fidl_fuchsia_diagnostics::{Interest, StreamMode};
 use fidl_fuchsia_logger::{
     LogInterestSelector, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
 };
@@ -208,14 +208,9 @@ impl LogsArtifactsContainer {
     pub fn update_interest(&self, interest_selectors: &[LogInterestSelector]) {
         let mut new_interest = Interest::EMPTY;
         for selector in interest_selectors {
-            // TODO(fxbug.dev/66997) matching api for ComponentSelector from selectors crate
-            let to_match = Arc::new(Selector {
-                component_selector: Some(selector.selector.clone()),
-                ..Selector::EMPTY
-            });
-            if selectors::match_component_moniker_against_selector(
+            if selectors::match_moniker_against_component_selector(
                 &self.identity.relative_moniker,
-                &to_match,
+                &selector.selector,
             )
             .unwrap_or_default()
             {
@@ -270,5 +265,96 @@ impl LogsArtifactsContainer {
     #[cfg(test)]
     pub fn buffer(&self) -> &ArcList<Message> {
         &self.buffer
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        events::types::{ComponentIdentifier, MonikerSegment},
+        logs::budget::BudgetManager,
+    };
+    use fidl_fuchsia_diagnostics::{ComponentSelector, Severity, StringSelector};
+    use fidl_fuchsia_logger::LogSinkMarker;
+    use matches::assert_matches;
+
+    #[fuchsia::test]
+    async fn update_interest() {
+        let moniker_segment_1 = "foo".to_string();
+        let moniker_segment_2 = "bar".to_string();
+        // Initialize container
+        let budget_manager = BudgetManager::new(0);
+        let container = Arc::new(LogsArtifactsContainer::new(
+            Arc::new(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::Moniker(vec![
+                    MonikerSegment {
+                        name: moniker_segment_1.clone(),
+                        collection: None,
+                        instance_id: "0".to_string(),
+                    },
+                    MonikerSegment {
+                        name: moniker_segment_2.clone(),
+                        collection: None,
+                        instance_id: "0".to_string(),
+                    },
+                ]),
+                "fuchsia-pkg://test",
+            )),
+            &[],
+            LogStreamStats::default(),
+            budget_manager.handle(),
+        ));
+        let container_for_task = container.clone();
+
+        // Connect out LogSink under test and take its events channel.
+        let (sender, _recv) = mpsc::unbounded();
+        let (log_sink, stream) =
+            fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
+        container_for_task.handle_log_sink(stream, sender);
+
+        // Verify we get the initial empty interest.
+        let mut event_stream = log_sink.take_event_stream();
+        assert_eq!(
+            event_stream.next().await.unwrap().unwrap().into_on_register_interest().unwrap(),
+            Interest::EMPTY,
+        );
+
+        // We shouldn't see this interest update since it doesn't match the
+        // moniker.
+        container.update_interest(&[LogInterestSelector {
+            selector: ComponentSelector {
+                moniker_segments: Some(vec![StringSelector::ExactMatch("foo".to_string())]),
+                ..ComponentSelector::EMPTY
+            },
+            interest: Interest { min_severity: Some(Severity::Info), ..Interest::EMPTY },
+        }]);
+
+        assert_matches!(event_stream.next().now_or_never(), None);
+
+        // We should see this interest update.
+        container.update_interest(&[LogInterestSelector {
+            selector: ComponentSelector {
+                moniker_segments: Some(vec![
+                    StringSelector::ExactMatch(moniker_segment_1),
+                    StringSelector::ExactMatch(moniker_segment_2),
+                ]),
+                ..ComponentSelector::EMPTY
+            },
+            interest: Interest { min_severity: Some(Severity::Info), ..Interest::EMPTY },
+        }]);
+
+        // Verify we see the last interest we set.
+        assert_eq!(
+            event_stream
+                .next()
+                .await
+                .unwrap()
+                .unwrap()
+                .into_on_register_interest()
+                .unwrap()
+                .min_severity,
+            Some(Severity::Info),
+        );
     }
 }

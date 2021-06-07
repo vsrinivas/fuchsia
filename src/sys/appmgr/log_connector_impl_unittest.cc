@@ -101,5 +101,32 @@ TEST_F(LogConnectorImplTest, AttributedSourceIdentity) {
             connections[0].source_identity.realm_path());
 }
 
+// Test that log sinks at the root are attributed without the "sys" prefix so
+// that they are aligned with how lifecycle events are attributed.
+TEST_F(LogConnectorImplTest, AttributedSysSourceIdentity) {
+  const char kRootRealm[] = "app";
+  LogConnectorImpl root(kRootRealm);
+  std::vector<fuchsia::sys::internal::LogConnection> connections;
+  FakeLogConnectionListener root_log_consumer(
+      &root, /* on_new_connection */ [&](fuchsia::sys::internal::LogConnection conn) {
+        connections.push_back(std::move(conn));
+      });
+
+  const char kSysRealm[] = "sys";
+  const char kRealm[] = "foo";
+  auto child = root.NewChild(kSysRealm);
+  auto grandchild = child->NewChild(kRealm);
+
+  fuchsia::logger::LogSinkPtr child_log_sink;
+  const char kFakeComponentUrl[] = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
+  // Add connection and wait until we intercept it
+  grandchild->AddLogConnection(kFakeComponentUrl, "-1", child_log_sink.NewRequest());
+  RunLoopUntil([&] { return connections.size() == 1; });
+
+  EXPECT_EQ(kFakeComponentUrl, connections[0].source_identity.component_url());
+  EXPECT_EQ("test.cmx", connections[0].source_identity.component_name());
+  EXPECT_EQ(std::vector<std::string>({kRealm}), connections[0].source_identity.realm_path());
+}
+
 }  // namespace
 }  // namespace component

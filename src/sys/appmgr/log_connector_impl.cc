@@ -108,6 +108,13 @@ void LogConnectorImpl::AddLogConnection(
   }
   std::reverse(realm_path.begin(), realm_path.end());
 
+  // Align log identity realm paths with event realm paths. In other words, strip the "sys"
+  // realm name if we are referring to a component under the root sys realm (not a test one).
+  if (realm_path.size() > 0 && realm_path[0].compare("sys") == 0 && current &&
+      current->realm_label_.compare("app") == 0) {
+    realm_path.erase(realm_path.begin());
+  }
+
   auto component_name = Util::GetLabelFromURL(component_url);
   fuchsia::sys::internal::SourceIdentity identity;
   identity.set_instance_id(instance_id);
