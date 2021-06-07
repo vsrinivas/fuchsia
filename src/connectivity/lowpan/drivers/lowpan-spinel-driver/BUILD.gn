@@ -93,7 +93,10 @@ rustc_binary("bin") {
 fuchsia_package_with_single_component("lowpan-spinel-driver") {
   deps = [
     ":bin",
-    ":config-default",
+    #   TODO(fxbug.dev/78178): Commenting out to avoid name conflict
+    #   in internal build. Need to figure out the reason for name conflict.
+    #   Functionality remains unaffected.
+    #    ":config-default",
   ]
   manifest = "meta/lowpan-spinel-driver.cmx"
 }
