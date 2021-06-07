@@ -6,6 +6,7 @@ if (is_host) {
   libs = [
     "addr",
     "async-once",
+    "errors",
     "netext",
     "pkg",
     "services",

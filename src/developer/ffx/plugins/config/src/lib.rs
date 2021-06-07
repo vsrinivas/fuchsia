@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    errors::{ffx_bail, ffx_bail_with_code},
     ffx_config::{
         add, api::query::ConfigQuery, api::ConfigError, env_file, environment::Environment, get,
         print_config, raw, remove, set, set_metrics_status, show_metrics_status, ConfigLevel,
@@ -12,7 +13,7 @@ use {
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
         EnvCommand, EnvSetCommand, GetCommand, MappingMode, RemoveCommand, SetCommand, SubCommand,
     },
-    ffx_core::{ffx_bail, ffx_bail_with_code, ffx_plugin},
+    ffx_core::ffx_plugin,
     serde_json::Value,
     std::collections::HashMap,
     std::fs::File,

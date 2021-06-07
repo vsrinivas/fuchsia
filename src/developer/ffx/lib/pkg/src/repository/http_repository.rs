@@ -8,7 +8,7 @@
 //! - [TUF](https://theupdateframework.io/)
 
 use anyhow::Result;
-use ffx_core::ffx_bail;
+use errors::ffx_bail;
 use fuchsia_hyper::{new_https_client, HttpsClient};
 use futures_lite::io::AsyncWriteExt;
 use hyper::body::HttpBody;

@@ -57,56 +57,6 @@ impl From<PluginResult> for Result<()> {
     }
 }
 
-// Error type for wrapping errors known to an `ffx` command and whose occurrence should
-// not a priori be considered a bug in ffx.
-// TODO(fxbug.dev/57592): consider extending this to allow custom types from plugins.
-#[derive(thiserror::Error, Debug)]
-pub enum FfxError {
-    #[error("{}", .0)]
-    Error(#[source] anyhow::Error, i32 /* Error status code */),
-}
-
-// Utility macro for constructing a FfxError::Error with a simple error string.
-#[macro_export]
-macro_rules! ffx_error {
-    ($error_message: expr) => {{
-        $crate::FfxError::Error(anyhow::anyhow!($error_message), 1)
-    }};
-    ($fmt:expr, $($arg:tt)*) => {
-        $crate::ffx_error!(format!($fmt, $($arg)*));
-    };
-}
-
-#[macro_export]
-macro_rules! ffx_error_with_code {
-    ($error_code:expr, $error_message:expr $(,)?) => {{
-        $crate::FfxError::Error(anyhow::anyhow!($error_message), $error_code)
-    }};
-    ($error_code:expr, $fmt:expr, $($arg:tt)*) => {
-        $crate::ffx_error_with_code!($error_code, format!($fmt, $($arg)*));
-    };
-}
-
-#[macro_export]
-macro_rules! ffx_bail {
-    ($msg:literal $(,)?) => {
-        anyhow::bail!($crate::ffx_error!($msg))
-    };
-    ($fmt:expr, $($arg:tt)*) => {
-        anyhow::bail!($crate::ffx_error!($fmt, $($arg)*));
-    };
-}
-
-#[macro_export]
-macro_rules! ffx_bail_with_code {
-    ($code:literal, $msg:literal $(,)?) => {
-        anyhow::bail!($crate::ffx_error_with_code!($code, $msg))
-    };
-    ($code:expr, $fmt:expr, $($arg:tt)*) => {
-        anyhow::bail!($crate::ffx_error_with_code!($code, $fmt, $($arg)*));
-    };
-}
-
 impl<T: ?Sized + TryStream> TryStreamUtilExt for T where T: TryStream {}
 
 pub trait TryStreamUtilExt: TryStream {

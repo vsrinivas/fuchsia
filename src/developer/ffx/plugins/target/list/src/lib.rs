@@ -5,7 +5,8 @@
 use {
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, Result},
-    ffx_core::{ffx_bail_with_code, ffx_plugin},
+    errors::ffx_bail_with_code,
+    ffx_core::ffx_plugin,
     ffx_list_args::ListCommand,
     fidl_fuchsia_developer_bridge as bridge,
     std::convert::TryFrom,

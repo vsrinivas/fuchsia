@@ -4,8 +4,9 @@
 
 use {
     anyhow::{anyhow, Context, Result},
+    errors::ffx_error,
     ffx_config::get,
-    ffx_core::{ffx_error, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_repository_target_register_args::RegisterCommand,
     fidl_fuchsia_developer_bridge::{RepositoriesProxy, RepositoryError, RepositoryTarget},
 };

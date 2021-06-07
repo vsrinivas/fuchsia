@@ -8,7 +8,8 @@ mod repository;
 mod tuf_repo;
 
 use anyhow::{Context, Result};
-use ffx_core::{ffx_error, ffx_plugin};
+use errors::ffx_error;
+use ffx_core::ffx_plugin;
 use ffx_packaging_args::{BuildCommand, DownloadCommand, PackageCommand, SubCommand};
 use pkg::repository::http_repository::package_download;
 use repository::Repository;

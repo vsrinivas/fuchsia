@@ -6,7 +6,8 @@ mod output_directory;
 
 use {
     anyhow::{anyhow, format_err, Context, Result},
-    ffx_core::{ffx_bail, ffx_plugin},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
     ffx_test_args::{ListCommand, ResultCommand, RunCommand, TestCommand, TestSubcommand},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_test::CaseIteratorMarker,

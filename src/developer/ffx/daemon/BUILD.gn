@@ -30,6 +30,7 @@ if (is_host) {
       "//src/developer/ffx/daemon/services:ffx_daemon_services_lib",
       "//src/developer/ffx/lib/addr:lib",
       "//src/developer/ffx/lib/async-once:lib",
+      "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/netext:lib",
       "//src/developer/ffx/lib/services:lib",
       "//src/developer/ffx/lib/timeout:lib",

@@ -5,11 +5,12 @@
 use {
     anyhow::{Context, Result},
     cs::{io::Directory, v2::V2Component, Subcommand},
+    errors::ffx_error,
     ffx_component::SELECTOR_FORMAT_HELP,
     ffx_component_select_args::{
         CapabilityStruct, ComponentSelectCommand, MonikerStruct, SubcommandEnum,
     },
-    ffx_core::{ffx_error, ffx_plugin},
+    ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
     selectors,

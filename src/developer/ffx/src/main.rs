@@ -7,8 +7,9 @@ use {
     anyhow::{anyhow, Context, Result},
     async_once::Once,
     async_trait::async_trait,
+    errors::{ffx_bail, ffx_error, ResultExt as _},
     ffx_core::metrics::{add_fx_launch_event, init_metrics_svc},
-    ffx_core::{ffx_bail, ffx_error, FfxError, Injector},
+    ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
@@ -407,35 +408,27 @@ async fn run() -> Result<i32> {
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    match run().await {
-        Ok(return_code) => {
-            // TODO add event for timing here at end
-            std::process::exit(return_code)
-        }
-        Err(err) => {
-            let error_code = if let Some(ffx_err) = err.downcast_ref::<FfxError>() {
-                eprintln!("{}", ffx_err);
-                match ffx_err {
-                    FfxError::Error(_, code) => *code,
-                }
-            } else {
-                eprintln!("BUG: An internal command error occurred.\n{:?}", err);
-                1
-            };
-            let err_msg = format!("{}", err);
-            // TODO(66918): make configurable, and evaluate chosen time value.
-            if let Err(e) = add_crash_event(&err_msg)
-                .on_timeout(Duration::from_secs(2), || {
-                    log::error!("analytics timed out reporting crash event");
-                    Ok(())
-                })
-                .await
-            {
-                log::error!("analytics failed to submit crash event: {}", e);
-            }
-            std::process::exit(error_code);
+    let result = run().await;
+
+    // unwrap because if stderr is not writable, the program should try to exit right away.
+    errors::write_result(&result, &mut std::io::stderr()).unwrap();
+
+    // Report BUG errors as crash events
+    if result.is_err() && result.ffx_error().is_none() {
+        let err_msg = format!("{}", result.as_ref().unwrap_err());
+        // TODO(66918): make configurable, and evaluate chosen time value.
+        if let Err(e) = add_crash_event(&err_msg)
+            .on_timeout(Duration::from_secs(2), || {
+                log::error!("analytics timed out reporting crash event");
+                Ok(())
+            })
+            .await
+        {
+            log::error!("analytics failed to submit crash event: {}", e);
         }
     }
+
+    std::process::exit(result.exit_code());
 }
 
 #[cfg(test)]

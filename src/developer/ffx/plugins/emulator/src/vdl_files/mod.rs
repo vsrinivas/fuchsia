@@ -9,7 +9,7 @@ use crate::types::{
 use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
-use ffx_core::ffx_bail;
+use errors::ffx_bail;
 use ffx_emulator_args::{KillCommand, StartCommand};
 use regex::Regex;
 use shared_child::SharedChild;

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Result},
-    ffx_core::ffx_error,
+    errors::ffx_error,
     serde::Deserialize,
     std::{fs, io::BufReader},
 };

@@ -243,7 +243,7 @@ pub async fn get_sdk() -> Result<sdk::Sdk> {
             sdk::Sdk::from_sdk_dir(manifest)
         }
     } else {
-        ffx_core::ffx_bail!(
+        errors::ffx_bail!(
             "SDK directory could not be found. Please set with \
              `ffx sdk set root <PATH_TO_SDK_DIR>`\n\
              If you are developing in the fuchsia tree, use the Fuchsia build directory, and \

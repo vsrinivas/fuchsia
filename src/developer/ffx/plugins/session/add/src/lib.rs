@@ -4,7 +4,8 @@
 
 use {
     anyhow::{format_err, Result},
-    ffx_core::{ffx_bail, ffx_plugin},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
     ffx_session_add_args::SessionAddCommand,
     fidl_fuchsia_element::{ManagerProxy, Spec},
     fidl_fuchsia_session::{ElementManagerProxy, ElementSpec},

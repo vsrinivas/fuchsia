@@ -4,7 +4,8 @@
 
 use {
     anyhow::Result,
-    ffx_core::{ffx_bail, ffx_plugin},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
     ffx_get_ssh_address_args::GetSshAddressCommand,
     fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, TargetAddrInfo},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},

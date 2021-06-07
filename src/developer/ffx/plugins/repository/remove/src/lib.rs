@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
-    ffx_core::{ffx_bail, ffx_plugin},
-    ffx_repository_remove_args::RemoveCommand,
-    fidl_fuchsia_developer_bridge::RepositoriesProxy,
+    anyhow::Result, errors::ffx_bail, ffx_core::ffx_plugin,
+    ffx_repository_remove_args::RemoveCommand, fidl_fuchsia_developer_bridge::RepositoriesProxy,
 };
 
 #[ffx_plugin(RepositoriesProxy = "daemon::service")]

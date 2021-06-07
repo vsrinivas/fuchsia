@@ -4,8 +4,9 @@
 
 use {
     anyhow::{Context, Result},
+    errors::ffx_error,
     ffx_component::SELECTOR_FORMAT_HELP,
-    ffx_core::{ffx_error, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_knock_args::KnockCommand,
     fidl::handle::Channel,
     fidl_fuchsia_developer_remotecontrol as rc, fuchsia_zircon_status as zx_status, selectors,

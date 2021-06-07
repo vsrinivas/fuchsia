@@ -6,7 +6,7 @@ use {
     crate::manifest::done_time,
     anyhow::{anyhow, bail, Context, Result},
     chrono::Utc,
-    ffx_core::{ffx_bail, ffx_error},
+    errors::{ffx_bail, ffx_error},
     flate2::read::GzDecoder,
     std::fs::{create_dir_all, File},
     std::io::{copy, Write},

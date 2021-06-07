@@ -5,7 +5,8 @@
 use {
     anyhow::{anyhow, Context, Result},
     blocking::Unblock,
-    ffx_core::{ffx_error, ffx_plugin},
+    errors::ffx_error,
+    ffx_core::ffx_plugin,
     ffx_starnix_shell_args::ShellStarnixCommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_starnix_developer::{

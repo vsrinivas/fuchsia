@@ -4,8 +4,9 @@
 
 use {
     anyhow::Result,
+    errors::ffx_bail,
     fatfs,
-    ffx_core::{ffx_bail, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_efi_args::{EfiCommand, EfiSubcommand},
     std::{
         cmp::max,

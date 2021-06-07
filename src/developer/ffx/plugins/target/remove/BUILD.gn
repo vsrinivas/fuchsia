@@ -13,5 +13,5 @@ ffx_plugin("ffx_target_remove") {
     "src/args.rs",
     "src/lib.rs",
   ]
-  deps = []
+  deps = [ "//src/developer/ffx/lib/errors:lib" ]
 }

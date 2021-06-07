@@ -9,7 +9,7 @@ use {
     },
     anyhow::{anyhow, Result},
     async_trait::async_trait,
-    ffx_core::{ffx_bail, ffx_error},
+    errors::{ffx_bail, ffx_error},
     ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},

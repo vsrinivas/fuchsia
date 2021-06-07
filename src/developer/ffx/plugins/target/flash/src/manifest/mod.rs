@@ -13,7 +13,7 @@ use {
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
     chrono::{DateTime, Duration, Utc},
-    ffx_core::ffx_bail,
+    errors::ffx_bail,
     ffx_flash_args::FlashCommand,
     fidl::{
         endpoints::{create_endpoints, ServerEnd},

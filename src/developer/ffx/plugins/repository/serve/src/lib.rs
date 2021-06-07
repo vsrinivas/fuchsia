@@ -4,7 +4,8 @@
 
 use {
     anyhow::Result,
-    ffx_core::{ffx_bail, ffx_plugin},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
     ffx_repository_serve_args::ServeCommand,
     fidl_fuchsia_developer_bridge::RepositoriesProxy,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},

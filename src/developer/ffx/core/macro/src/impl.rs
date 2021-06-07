@@ -364,7 +364,7 @@ fn generate_daemon_service_proxy(
                     ).map_ok_or_else(|e| anyhow::Result::<()>::Err(anyhow::anyhow!(e)), move |fidl_result| {
                         fidl_result
                         .map(|_| ())
-                        .map_err(|_| ffx_core::ffx_error!(format!(
+                        .map_err(|_| errors::ffx_error!(format!(
 "The daemon service '{}' did not match any services on the daemon.
 If you are not developing this plugin or the service it connects to, then this is a bug.
 
@@ -463,7 +463,7 @@ fn generate_proxy_from_selector(
                 .map_err(|e| {
                     match e {
                         fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
-                            ffx_core::ffx_error!(format!(
+                            errors::ffx_error!(format!(
 "The plugin service selector '{}' did not match any services on the target.
 If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
 
@@ -471,7 +471,7 @@ Plugin developers: you can use `ffx component select '<selector>'` to explore th
                             #mapping)).into()
                         }
                         fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
-                            ffx_core::ffx_error!(
+                            errors::ffx_error!(
                                 format!(
 "Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
 If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.

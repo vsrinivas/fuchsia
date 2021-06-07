@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
-    ffx_core::{ffx_error, ffx_plugin},
-    ffx_target_remove_args::RemoveCommand,
+    anyhow::Result, errors::ffx_error, ffx_core::ffx_plugin, ffx_target_remove_args::RemoveCommand,
     fidl_fuchsia_developer_bridge as bridge,
 };
 

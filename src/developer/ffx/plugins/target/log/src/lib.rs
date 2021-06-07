@@ -8,8 +8,9 @@ use {
     blocking::Unblock,
     chrono::{DateTime, Local, TimeZone, Utc},
     diagnostics_data::{LogsData, Severity, Timestamp},
+    errors::{ffx_bail, ffx_error},
     ffx_config::{get, get_sdk},
-    ffx_core::{ffx_bail, ffx_error, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_utils::{
@@ -596,6 +597,7 @@ mod test {
     use {
         super::*,
         diagnostics_data::Timestamp,
+        errors::ResultExt as _,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl_fuchsia_developer_bridge::DaemonRequest,
         fidl_fuchsia_developer_remotecontrol::{
@@ -1328,7 +1330,7 @@ mod test {
         )
         .await
         .unwrap_err()
-        .downcast_ref::<ffx_core::FfxError>()
+        .ffx_error()
         .is_some());
     }
 
@@ -1353,7 +1355,7 @@ mod test {
         )
         .await
         .unwrap_err()
-        .downcast_ref::<ffx_core::FfxError>()
+        .ffx_error()
         .is_some());
     }
 }

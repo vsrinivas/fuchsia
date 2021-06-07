@@ -12,6 +12,7 @@ ffx_plugin("ffx_flash") {
   args_deps = [ "//third_party/rust_crates:serde" ]
 
   deps = [
+    "//src/developer/ffx/lib/errors:lib",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:flate2",

@@ -5,9 +5,10 @@
 use {
     anyhow::{Context, Result},
     cs::{io::Directory, v2::V2Component, Only, Subcommand},
+    errors::ffx_error,
     ffx_component::COMPONENT_LIST_HELP,
     ffx_component_list_args::ComponentListCommand,
-    ffx_core::{ffx_error, ffx_plugin},
+    ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
 };

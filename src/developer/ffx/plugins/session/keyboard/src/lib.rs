@@ -4,7 +4,8 @@
 
 use {
     anyhow::{Context, Result},
-    ffx_core::{ffx_bail, ffx_plugin},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
     ffx_session_keyboard_args::Command,
     fidl_fuchsia_input_keymap::ConfigurationProxy,
 };

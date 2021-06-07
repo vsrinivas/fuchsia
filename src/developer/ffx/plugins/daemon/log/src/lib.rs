@@ -4,8 +4,9 @@
 
 use {
     anyhow::Result,
+    errors::ffx_bail,
     ffx_config::get,
-    ffx_core::{ffx_bail, ffx_plugin},
+    ffx_core::ffx_plugin,
     ffx_daemon_log_args::LogCommand,
     std::fs::File,
     std::io::{BufRead, BufReader},

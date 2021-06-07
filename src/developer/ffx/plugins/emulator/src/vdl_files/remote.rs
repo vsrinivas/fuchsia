@@ -5,7 +5,7 @@
 use super::VDLFiles;
 use crate::types::{FuchsiaPaths, InTreePaths};
 use anyhow::Result;
-use ffx_core::ffx_bail;
+use errors::ffx_bail;
 use ffx_emulator_args::RemoteCommand;
 use home::home_dir;
 use std::fs::create_dir_all;

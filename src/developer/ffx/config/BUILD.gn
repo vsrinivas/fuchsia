@@ -14,7 +14,9 @@ if (is_host) {
     deps = [
       "macro:config-macros",
       "//src/connectivity/overnet/lib/hoist",
-      "//src/developer/ffx/core:lib",
+
+      # "//src/developer/ffx/core:lib",
+      "//src/developer/ffx/lib/errors:lib",
       "//src/lib/analytics/rust:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",

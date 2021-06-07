@@ -4,7 +4,8 @@
 
 use {
     anyhow::{bail, Result},
-    ffx_core::{ffx_bail, ffx_plugin},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
     ffx_reboot_args::RebootCommand,
     fidl_fuchsia_developer_bridge::{TargetControlProxy, TargetRebootError, TargetRebootState},
 };
