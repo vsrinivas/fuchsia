@@ -257,9 +257,11 @@ if (toolchain.environment == "kernel.phys" ||
     sources = [ "boot-zbi.cc" ]
     public_deps = [
       ":allocation",
+      ":symbolize",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/pretty",
       "//zircon/system/ulib/zbitl",
       "//zircon/system/ulib/zxc",
     ]

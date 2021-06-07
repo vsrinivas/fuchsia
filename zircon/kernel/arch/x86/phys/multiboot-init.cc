@@ -16,7 +16,6 @@
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/symbolize.h>
-#include <pretty/sizes.h>
 
 #include "legacy-boot.h"
 

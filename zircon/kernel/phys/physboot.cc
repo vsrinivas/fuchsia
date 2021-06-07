@@ -113,18 +113,6 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
       zbi.storage().size(),
   };
 
-  printf("physboot: Kernel @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n",
-         boot.KernelLoadAddress(), boot.KernelLoadAddress() + boot.KernelLoadSize(),
-         pretty::FormattedBytes(boot.KernelLoadSize()).c_str());
-  printf("physboot:  Entry @  0x%016" PRIxPTR "\n", boot.KernelEntryAddress());
-  printf("physboot:    BSS @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n",
-         boot.KernelLoadAddress() + boot.KernelLoadSize(),
-         boot.KernelLoadAddress() + boot.KernelMemorySize(),
-         pretty::FormattedBytes(boot.KernelHeader()->reserve_memory_size).c_str());
-  printf("physboot: ZBI    @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n", boot.DataLoadAddress(),
-         boot.DataLoadAddress() + boot.DataLoadSize(),
-         pretty::FormattedBytes(boot.DataLoadSize()).c_str());
-
   boot.Boot();
 }
 

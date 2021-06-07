@@ -27,16 +27,14 @@ const char Symbolize::kProgramName_[] = "zbi-boot-shim";
 // protocol with an old-style fixed entry point address.  The kernel it loads
 // must be in the new uniform format.
 
-// TODO(fxbug.dev/68762): x86 needs page table setup
+void ZbiMain(void* zbi, arch::EarlyTicks boot_ticks) {
+  InitMemory(zbi);
 
-void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
-  InitMemory(ptr);
-
-  auto zbi_ptr = static_cast<const zbi_header_t*>(ptr);
-  BootZbi::InputZbi zbi(zbitl::StorageFromRawHeader(zbi_ptr));
+  BootZbi::InputZbi input_zbi_view(
+      zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi)));
 
   BootZbi boot;
-  if (auto result = boot.Init(zbi); result.is_error()) {
+  if (auto result = boot.Init(input_zbi_view); result.is_error()) {
     printf("boot-shim: Not a bootable ZBI: ");
     zbitl::PrintViewCopyError(result.error_value());
     abort();
@@ -48,11 +46,5 @@ void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
     abort();
   }
 
-#define ADDR "0x%016" PRIx64
-  printf("boot-shim: ZBI kernel @ [" ADDR ", " ADDR ")\n", boot.KernelLoadAddress(),
-         boot.KernelLoadAddress() + boot.KernelLoadSize());
-  printf("boot-shim: ZBI data   @ [" ADDR ", " ADDR ")\n", boot.DataLoadAddress(),
-         boot.DataLoadAddress() + boot.DataLoadSize());
-  printf("boot-shim: Booting ZBI kernel at entry point " ADDR "...\n", boot.KernelEntryAddress());
   boot.Boot();
 }

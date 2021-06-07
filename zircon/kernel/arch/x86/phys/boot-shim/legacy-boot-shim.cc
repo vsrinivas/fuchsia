@@ -221,19 +221,5 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
 
   EnablePaging();
 
-#define ADDR "0x%016" PRIx64
-  printf("%s: ZBI kernel @ [" ADDR ", " ADDR ")\n", Symbolize::kProgramName_,
-         boot.KernelLoadAddress(), boot.KernelLoadAddress() + boot.KernelLoadSize());
-  printf("%s: ZBI data   @ [" ADDR ", " ADDR ")\n", Symbolize::kProgramName_,
-         boot.DataLoadAddress(), boot.DataLoadAddress() + boot.DataLoadSize());
-  if (boot.Relocating()) {
-    printf("%s: Relocated  @ [" ADDR ", " ADDR ")\n", Symbolize::kProgramName_,
-
-           TrampolineBoot::kFixedLoadAddress,
-           TrampolineBoot::kFixedLoadAddress + boot.KernelLoadSize());
-  }
-  printf("%s: Booting ZBI kernel at entry point " ADDR "...\n", Symbolize::kProgramName_,
-
-         boot.KernelEntryAddress());
   boot.Boot();
 }

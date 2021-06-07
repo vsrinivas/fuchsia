@@ -14,6 +14,7 @@
 #include <cstring>
 
 #include <ktl/byte.h>
+#include <phys/symbolize.h>
 
 // This describes the "trampoline" area that is set up in some memory that's
 // safely out of the way: not part of this shim's own image, which might be
@@ -191,5 +192,20 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
     BootZbi::Boot();
   }
 
+  LogAddresses();
+  LogFixedAddresses();
+  LogBoot(KernelEntryAddress());
+
   trampoline_->Boot(KernelImage(), KernelLoadSize(), DataZbi().storage().data());
+}
+
+// This output lines up with what BootZbi::LogAddresses() prints.
+void TrampolineBoot::LogFixedAddresses() const {
+#define ADDR "0x%016" PRIx64
+  const auto& name = Symbolize::kProgramName_;
+  const uint64_t kernel = kFixedLoadAddress;
+  const uint64_t bss = kernel + KernelLoadSize();
+  const uint64_t end = kernel + KernelMemorySize();
+  printf("%s: Relocated @ [" ADDR ", " ADDR ")\n", name, kernel, bss);
+  printf("%s:       BSS @ [" ADDR ", " ADDR ")\n", name, bss, end);
 }

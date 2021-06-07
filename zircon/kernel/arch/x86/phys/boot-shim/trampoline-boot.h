@@ -27,12 +27,12 @@ class TrampolineBoot : public BootZbi {
 
   fitx::result<Error> Load(uint32_t extra_data_capacity = 0);
 
-  bool Relocating() const { return trampoline_; }
-
   [[noreturn]] void Boot();
 
  private:
   class Trampoline;
+
+  void LogFixedAddresses() const;
 
   Trampoline* trampoline_ = nullptr;
 };

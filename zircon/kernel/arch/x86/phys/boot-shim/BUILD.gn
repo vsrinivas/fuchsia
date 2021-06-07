@@ -74,6 +74,7 @@ if (toolchain.environment == "kernel.phys" ||
     public_deps = [ "//zircon/kernel/phys:boot-zbi" ]
     deps = [
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys/lib/memalloc",
     ]
   }

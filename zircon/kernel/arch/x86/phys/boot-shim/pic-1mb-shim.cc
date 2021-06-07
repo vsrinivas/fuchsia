@@ -37,15 +37,5 @@ void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
     abort();
   }
 
-#define ADDR "0x%016" PRIx64
-  printf("pic-1mb-boot-shim: ZBI kernel @ [" ADDR ", " ADDR ")\n", boot.KernelLoadAddress(),
-         boot.KernelLoadAddress() + boot.KernelLoadSize());
-  printf("pic-1mb-boot-shim: ZBI data   @ [" ADDR ", " ADDR ")\n", boot.DataLoadAddress(),
-         boot.DataLoadAddress() + boot.DataLoadSize());
-  printf("pic-1mb-boot-shim: Relocated  @ [" ADDR ", " ADDR ")\n",
-         TrampolineBoot::kFixedLoadAddress,
-         TrampolineBoot::kFixedLoadAddress + boot.KernelLoadSize());
-  printf("pic-1mb-boot-shim: Booting ZBI kernel at entry point " ADDR "...\n",
-         boot.KernelEntryAddress());
   boot.Boot();
 }

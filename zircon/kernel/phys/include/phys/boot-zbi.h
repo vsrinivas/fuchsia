@@ -109,6 +109,10 @@ class BootZbi {
 
   uint64_t DataLoadSize() { return static_cast<uint64_t>(data_.size_bytes()); }
 
+ protected:
+  void LogAddresses();
+  void LogBoot(uint64_t entry) const;
+
  private:
   // These are set on construction by Init().
   InputZbi zbi_;
