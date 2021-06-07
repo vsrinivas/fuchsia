@@ -123,7 +123,8 @@ func Write(root fidlgen.Root, out io.Writer) error {
 // supplied writer, and formats the data as JSON.
 func WriteJSON(root fidlgen.Root, out io.Writer) error {
 	e := json.NewEncoder(out)
-	e.SetIndent("", "  ")
+	// 4-level indent is chosen to match `fx format-code`.
+	e.SetIndent("", "    ")
 	e.SetEscapeHTML(false)
 	return e.Encode(serialize(Elements(root)))
 }

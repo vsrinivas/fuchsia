@@ -63,12 +63,14 @@ func fidlConstToValue(fc *fidlgen.Constant) Value {
 // ElementStr is a generic stringly-typed view of an Element. The aim is to
 // keep the structure as flat as possible, and omit fields which have no
 // bearing to the Kind of element represented.
+//
+// Keep the element ordering sorted.
 type ElementStr struct {
-	Name         `json:"name"`
-	Kind         `json:"kind"`
 	Decl         `json:"declaration,omitempty"`
-	Strictness   `json:"strictness,omitempty"`
+	Kind         `json:"kind"`
+	Name         `json:"name"`
 	Resourceness `json:"resourceness,omitempty"`
+	Strictness   `json:"strictness,omitempty"`
 	Value        `json:"value,omitempty"`
 }
 
