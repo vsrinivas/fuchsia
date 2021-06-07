@@ -132,3 +132,32 @@ TEST(VulkanLoader, ManifestFs) {
   close(manifest_fd);
   close(dir_fd);
 }
+
+TEST(VulkanLoader, GoldfishSyncDeviceFs) {
+  fuchsia::vulkan::loader::LoaderSyncPtr loader;
+  EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.vulkan.loader.Loader",
+                                        loader.NewRequest().TakeChannel().release()));
+
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  EXPECT_EQ(ZX_OK, loader->ConnectToDeviceFs(dir.NewRequest().TakeChannel()));
+
+  zx::vmo vmo_out;
+  // Waiting for this will ensure that the device exists.
+  EXPECT_EQ(ZX_OK, loader->Get("pkg-server2", &vmo_out));
+
+  const char* kDeviceClassList[] = {
+      "class/goldfish-sync",
+      "class/goldfish-pipe",
+      "class/goldfish-address-space",
+  };
+
+  for (auto& device_class : kDeviceClassList) {
+    fuchsia::io::NodeSyncPtr device_ptr;
+    EXPECT_EQ(ZX_OK, fdio_service_connect_at(dir.channel().get(), device_class,
+                                             device_ptr.NewRequest().TakeChannel().release()));
+
+    // Check that the directory is connected to something.
+    fuchsia::io::NodeInfo result;
+    EXPECT_EQ(ZX_OK, device_ptr->Describe(&result)) << " class " << device_class;
+  }
+}

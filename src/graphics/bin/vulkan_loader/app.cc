@@ -34,7 +34,7 @@ zx_status_t LoaderApp::InitDeviceFs() {
   device_root_node_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
   const char* kDevClassList[] = {"gpu", "goldfish-pipe", "goldfish-control",
-                                 "goldfish-address-space"};
+                                 "goldfish-address-space", "goldfish-sync"};
 
   auto class_node = fbl::MakeRefCounted<fs::PseudoDir>();
   device_root_node_->AddEntry("class", class_node);

@@ -94,17 +94,22 @@ int main(int argc, const char* const* argv) {
   auto root = fbl::MakeRefCounted<fs::PseudoDir>();
 
   // Add a dev directory that the loader can watch for devices to be added.
-  auto dev_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  root->AddEntry("dev-gpu", dev_dir);
+  auto dev_gpu_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  root->AddEntry("dev-gpu", dev_gpu_dir);
   FakeMagmaDevice magma_device;
-  dev_dir->AddEntry("000", fbl::MakeRefCounted<fs::Service>([&magma_device](zx::channel channel) {
-                      magma_device.GetHandler()(
-                          fidl::InterfaceRequest<fuchsia::gpu::magma::Device>(std::move(channel)));
-                      return ZX_OK;
-                    }));
+  dev_gpu_dir->AddEntry(
+      "000", fbl::MakeRefCounted<fs::Service>([&magma_device](zx::channel channel) {
+        magma_device.GetHandler()(
+            fidl::InterfaceRequest<fuchsia::gpu::magma::Device>(std::move(channel)));
+        return ZX_OK;
+      }));
 
   auto dev_goldfish_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   root->AddEntry("dev-goldfish-pipe", dev_goldfish_dir);
+
+  auto dev_dir = fbl::MakeRefCounted<fs::PseudoDir>();
+  root->AddEntry("dev", dev_gpu_dir);
+
   zx::channel dir_request = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   auto options = fs::VnodeConnectionOptions::ReadExec();
   options.rights.write = 1;
