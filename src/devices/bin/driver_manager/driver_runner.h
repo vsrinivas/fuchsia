@@ -96,6 +96,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::string TopoName() const;
   zx::status<std::vector<fuchsia_driver_framework::wire::DriverCapabilities>> CreateCapabilities(
       fidl::AnyAllocator& allocator) const;
+  void OnBind() const;
   bool Unbind(std::unique_ptr<AsyncRemove>& async_remove);
   void Remove();
   void AddToParents();

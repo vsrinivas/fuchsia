@@ -326,6 +326,15 @@ zx::status<std::vector<fdf::wire::DriverCapabilities>> Node::CreateCapabilities(
   return zx::ok(std::move(capabilities));
 }
 
+void Node::OnBind() const {
+  if (controller_ref_) {
+    zx_status_t status = (*controller_ref_)->OnBind();
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to send OnBind event: %s", zx_status_get_string(status));
+    }
+  }
+}
+
 bool Node::Unbind(std::unique_ptr<AsyncRemove>& async_remove) {
   bool has_driver = UnbindAndReset(driver_ref_);
   if (has_driver) {
@@ -668,6 +677,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
       LOGF(ERROR, "Failed to start driver '%s': %s", driver_node->name().data(),
            zx_status_get_string(start_result.error_value()));
     }
+    node.OnBind();
   };
   auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
   if (!match_result.ok()) {

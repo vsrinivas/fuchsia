@@ -59,6 +59,9 @@ table NodeAddArgs {
 protocol NodeController {
     /// Removes the node and all of its children.
     Remove();
+
+    /// Event that is triggered when the associated `Node` is bound to a driver.
+    -> OnBind();
 };
 
 /// Error codes for the Node protocol.
