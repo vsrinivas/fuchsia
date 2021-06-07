@@ -171,4 +171,11 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, zxio_storage_alloc all
 zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_basic_t& handle_info,
                                        zxio_storage_alloc allocator, void** out_context);
 
+// Like zxio_create_with_allocator but the caller supplies information about
+// |channel| provided by the server through a Describe call or OnOpen event.
+//
+// Always consumes |channel|. May mutate |*info| on success.
+zx_status_t zxio_create_with_allocator(zx::channel channel, fuchsia_io::wire::NodeInfo* info,
+                                       zxio_storage_alloc allocator, void** out_context);
+
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_

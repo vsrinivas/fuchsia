@@ -9,6 +9,8 @@
 #include <lib/zxio/zxio.h>
 #include <zircon/syscalls.h>
 
+#include "sdk/lib/zxio/private.h"
+
 namespace {
 
 // A zxio_handle_holder is a zxio object instance that holds on to a handle and
@@ -111,4 +113,26 @@ zx_status_t zxio_create(zx_handle_t raw_handle, zxio_storage_t* storage) {
     return status;
   }
   return zxio_create_with_info(handle.release(), &info, storage);
+}
+
+namespace fio = fuchsia_io;
+
+zx_status_t zxio_create_with_nodeinfo(zx::channel channel, fio::wire::NodeInfo* info,
+                                      zxio_storage_t* storage) {
+  switch (info->which()) {
+    case fio::wire::NodeInfo::Tag::kPipe: {
+      auto& pipe = info->mutable_pipe();
+      zx::socket socket = std::move(pipe.socket);
+      zx_info_socket_t socket_info;
+      zx_status_t status =
+          socket.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info), nullptr, nullptr);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return zxio_pipe_init(storage, std::move(socket), socket_info);
+    }
+    default:
+      zxio_handle_holder_init(storage, std::move(channel));
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
