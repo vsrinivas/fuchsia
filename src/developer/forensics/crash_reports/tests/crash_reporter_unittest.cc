@@ -328,7 +328,8 @@ class CrashReporterTest : public UnitTestFixture {
 
   // Files one native crash report.
   ::fit::result<void, zx_status_t> FileOneNativeCrashReport(
-      std::optional<fuchsia::mem::Buffer> minidump) {
+      std::optional<fuchsia::mem::Buffer> minidump,
+      const std::optional<std::string>& crash_signature) {
     NativeCrashReport native_report;
     if (minidump.has_value()) {
       native_report.set_minidump(std::move(minidump.value()));
@@ -344,6 +345,10 @@ class CrashReporterTest : public UnitTestFixture {
     CrashReport report;
     report.set_program_name("crashing_program_native");
     report.set_specific_report(std::move(specific_report));
+
+    if (crash_signature.has_value()) {
+      report.set_crash_signature(crash_signature.value());
+    }
 
     return FileOneCrashReport(std::move(report));
   }
@@ -672,7 +677,7 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReport) {
   fuchsia::mem::Buffer minidump;
   fsl::VmoFromString("minidump", &minidump);
 
-  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump)).is_ok());
+  ASSERT_TRUE(FileOneNativeCrashReport(std::move(minidump), std::nullopt).is_ok());
   CheckAnnotationsOnServer({
       {"crash.process.name", "crashing_process"},
       {"crash.process.koid", "123"},
@@ -694,13 +699,35 @@ TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidump) {
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
-  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt).is_ok());
+  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt, std::nullopt).is_ok());
   CheckAnnotationsOnServer({
       {"crash.process.name", "crashing_process"},
       {"crash.process.koid", "123"},
       {"crash.thread.name", "crashing_thread"},
       {"crash.thread.koid", "1234"},
       {"signature", "fuchsia-no-minidump"},
+  });
+  CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
+}
+
+TEST_F(CrashReporterTest, Succeed_OnNativeInputCrashReportWithoutMinidumpButCrashSignature) {
+  SetUpCrashReporterDefaultConfig({kUploadSuccessful});
+  SetUpChannelProviderServer(
+      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
+          .current = kDefaultChannel,
+          .target = std::nullopt,
+      }));
+  SetUpDataProviderServer(
+      std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
+  SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
+
+  ASSERT_TRUE(FileOneNativeCrashReport(std::nullopt, "some-signature").is_ok());
+  CheckAnnotationsOnServer({
+      {"crash.process.name", "crashing_process"},
+      {"crash.process.koid", "123"},
+      {"crash.thread.name", "crashing_thread"},
+      {"crash.thread.koid", "1234"},
+      {"signature", "some-signature"},
   });
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 }

@@ -172,7 +172,10 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
       *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no minidump to attach to Crashpad report";
-      annotations->Set(kCrashSignatureKey, "fuchsia-no-minidump");
+      // We don't want to overwrite the client-provided signature.
+      if (!report.has_crash_signature()) {
+        annotations->Set(kCrashSignatureKey, "fuchsia-no-minidump");
+      }
     }
   }
 
