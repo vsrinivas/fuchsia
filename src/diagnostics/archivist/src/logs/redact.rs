@@ -28,7 +28,8 @@ pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     MAC: de:ad:BE:EF:42:5a, \
     SSID: <ssid-666F6F>, \
     HTTP: http://fuchsia.dev/fuchsia/testing?q=Test, \
-    HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test";
+    HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test, \
+    HEX: 1234567890abcdefABCDEF0123456789,";
 
 // NOTE: The integers in this string are brittle but deterministic. See the comment in the impl
 // of Redactor for explanation.
@@ -38,7 +39,7 @@ pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     IPv462: ::ffff:<REDACTED-IPV4: 7>, \
     IPv6: <REDACTED-IPV6: 5>, IPv6_WithPort: [<REDACTED-IPV6: 5>]:8080, IPv6C: <REDACTED-IPV6: 6>, IPv6LL: fe80::<REDACTED-IPV6-LL: 4>, \
     UUID: <REDACTED-UUID>, MAC: de:ad:BE:<REDACTED-MAC: 8>, SSID: <REDACTED-SSID: 9>, \
-    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>";
+    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>, HEX: <REDACTED-HEX: 10>,";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -174,6 +175,12 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
         replacement: "<REDACTED-URL>",
         use_map: MapType::No,
     },
+    // Long hex strings
+    RedactionPattern {
+        matcher: r#"\b[0-9a-fA-F]{32}\b"#,
+        replacement: "<REDACTED-HEX: {}>",
+        use_map: MapType::ReplaceAll,
+    },
 ];
 
 impl Redactor {
@@ -208,17 +215,17 @@ impl Redactor {
                 match replacer.use_map {
                     MapType::No => replacer.matcher.replace_all(&redacted, replacer.replacement),
                     MapType::ReplaceAll => {
-                        replacer.matcher.replace_all(&redacted, |caps: &'_ Captures<'_>| {
+                        replacer.matcher.replace_all(&redacted, |captures: &'_ Captures<'_>| {
                             let mut cache = self.redaction_cache.lock();
-                            let id = cache.get_id(caps[0].to_string());
-                            replacer.replacement.replace("{}", &id)
+                            let id = cache.get_id(captures[0].to_string());
+                            replacer.replacement.replace("{}", id)
                         })
                     }
                     MapType::Mac => {
-                        replacer.matcher.replace_all(&redacted, |caps: &'_ Captures<'_>| {
-                            let oui = caps.name("oui");
+                        replacer.matcher.replace_all(&redacted, |captures: &'_ Captures<'_>| {
+                            let oui = captures.name("oui");
                             let mut cache = self.redaction_cache.lock();
-                            let id = cache.get_id(caps[0].to_string());
+                            let id = cache.get_id(captures[0].to_string());
                             format!(
                                 "{}<{}{}>",
                                 oui.map_or("regex error", |o| o.as_str()),
@@ -305,8 +312,11 @@ mod test {
         };
     }
 
-    // Each entry in test_redaction uses its own instance of Redactor so all numbers are 1.
-    // Except MAC which contains two slightly different addresses, to verify we map the entire
+    // Each entry in test_redaction uses its own instance of Redactor so all strings restart
+    //  numbering at 1. Within a string, numbers may be out of order because they depend on the
+    //  order that redact matchers are executed (e.g. long_hex). See the comment in the impl
+    //  of Redactor for explanation.
+    // MAC contains two slightly different addresses, to verify we map the entire
     //  address and not just the part we replace.
     test_redaction! {
         email: "Email: alice@website.tld" => "Email: <REDACTED-EMAIL>",
@@ -329,6 +339,8 @@ mod test {
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
                 "Combined: Email <REDACTED-EMAIL>, IPv4 <REDACTED-IPV4: 1>",
         preserve: "service::fidl service:fidl" => "service::fidl service:fidl",
+        long_hex: "456 1234567890abcdefABCDEF0123456789 1.2.3.4" => 
+                  "456 <REDACTED-HEX: 2> <REDACTED-IPV4: 1>",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
     }
 
@@ -343,6 +355,8 @@ mod test {
             ("IPv6: 2001:503:eEa3:0:0:0:0:30", "IPv6: <REDACTED-IPV6: 4>"),
             ("IPv4.1: 8.9.10.42", "IPv4.1: <REDACTED-IPV4: 5>"),
             ("IPv4.2: 8.8.8.8", "IPv4.2: <REDACTED-IPV4: 1>"),
+            ("456 1234567890abcdefABCDEF0123456789 12.34.56.78",
+             "456 <REDACTED-HEX: 6> <REDACTED-IPV4: 2>"),
         ];
 
         let inputs =
