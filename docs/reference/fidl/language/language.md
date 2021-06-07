@@ -363,23 +363,33 @@ _T_ can be any FIDL type.
 *   Transfers a Zircon capability by handle value.
 *   Stored as a 32-bit unsigned integer.
 *   Nullable by encoding as a zero-valued handle.
+*   Handles may optionally be associated with a type and set of required zircon rights
 
 #### Use
 
 Handles are denoted:
 
-*   **`zx.handle`** : non-nullable Zircon handle of
-    unspecified type
-*   **`zx.handle?`** : nullable Zircon handle of
-    unspecified type
-*   **`zx.handle:H`** : non-nullable Zircon handle
-    of type _H_
-*   **`zx.handle:H?`** : nullable Zircon handle of
-    type _H_
+*   **`zx.handle`** : non-nullable Zircon handle of unspecified type
+*   **`zx.handle?`** : nullable Zircon handle of unspecified type
+*   **`zx.handle:H`** : non-nullable Zircon handle of type _H_
+*   **`zx.handle:H?`** : nullable Zircon handle of type _H_
+*   **`zx.handle:<H, R>`** : non-nullable Zircon handle of type _H_ with rights
+    _R_
+*   **`zx.handle:<H, R>?`** : nullable Zircon handle of type _H_ with rights
+    _R_
 
 _H_ can be any [object](/docs/reference/kernel_objects/objects.md) supported by
 Zircon, e.g. `channel`, `thread`, `vmo`. Please refer to the
 [grammar](grammar.md) for a full list.
+
+_R_ can be any [right](/docs/concepts/kernel/rights.md) supported by Zircon.
+Rights are bits-typed values, defined in the [`zx`](/zircon/vdso/rights.fidl)
+FIDL library, e.g. `zx.rights.READ`. In both the incoming and outgoing
+directions, handles are validated to have the correct Zircon object type and at
+least as many rights as are specified in FIDL. If the handle has more rights
+than is specified in FIDL, then its rights will be reduced by a call to
+`zx_handle_replace`. See further details on
+[RFC-0028: Handle rights](/docs/contribute/governance/rfcs/0028_handle_rights.md).
 
 Structs, tables, and unions containing handles must be marked with the
 [`resource` modifier](#value-vs-resource).
