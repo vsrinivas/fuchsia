@@ -484,7 +484,10 @@ default_rust_proc_macro_configs = default_shared_library_configs + [
 # libraries are considered e2e tests.
 e2e_test_libs = [ "//sdk/testing/sl4f/client" ]
 if (is_linux) {
-  e2e_test_libs += [ "//tools/emulator($host_toolchain)" ]
+  e2e_test_libs += [
+    "//tools/emulator($host_toolchain)",
+    "//tools/fvdl/e2e/e2etest($host_toolchain)",
+  ]
 }
 
 # Known unit tests for e2e test libraries.

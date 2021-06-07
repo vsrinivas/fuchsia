@@ -75,6 +75,7 @@ group("non_hermetic_deps") {
     "//tools/debug/covargs/api/third_party/codecoverage/*",
     "//tools/femu-control/femu-grpc/*",
     "//tools/fidlcat/lib/*",
+    "//tools/fvdl/e2e/*",
     "//tools/integration/fint/*",
     "//tools/symbolizer/*",
     "//tools/virtual_device/proto/*",
