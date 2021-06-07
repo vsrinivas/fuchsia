@@ -72,8 +72,9 @@ template("fini_manifest") {
 
     script = "//build/dist/convert_manifest_to_fini.py"
 
-    inputs = [ intermediate_file ]
+    sources = [ intermediate_file ]
     outputs = [ manifest_file ]
+    inputs = [ "//build/dist/distribution_manifest.py" ]
 
     args = [
       "--input",

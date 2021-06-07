@@ -66,7 +66,10 @@ template("distribution_manifest") {
     # for the schema of `distribution_entries` and `distribution_entries_files`,
     # which correspond to "regular" and "file" entries, respectively.
     data_keys = [
+      # A list of scopes describing files that may be added to runtime.
       "distribution_entries",
+
+      # A list of scopes representing data files listing distributable objects.
       "distribution_entries_files",
     ]
     walk_keys = [ "distribution_entries_barrier" ]
@@ -89,8 +92,9 @@ template("distribution_manifest") {
     script = "//build/dist/expand_and_find_conflicting_dist_entries.py"
     depfile = "${manifest_file}.d"
 
-    inputs = [ intermediate_file ]
+    sources = [ intermediate_file ]
     outputs = [ manifest_file ]
+    inputs = [ "//build/dist/distribution_manifest.py" ]
 
     args = [
       "--input",

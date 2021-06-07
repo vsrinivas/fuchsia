@@ -7,6 +7,8 @@
 import argparse
 import json
 
+import distribution_manifest
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -20,16 +22,12 @@ def main():
     args = parser.parse_args()
 
     with open(args.input, 'r') as input_file:
-        dist = [
-            {
-                'source': src,
-                'destination': dst,
-                'label': args.label
-            } for dst, _, src in (
-                line.strip().partition('=') for line in input_file.readlines())
-        ]
+        dist_entries = distribution_manifest.convert_fini_manifest_to_distribution_entries(
+            input_file.readlines(), args.label)
+
     with open(args.output, 'w') as output_file:
-        json.dump(dist, output_file)
+        output_file.write(
+            distribution_manifest.distribution_entries_to_string(dist_entries))
 
 
 if __name__ == '__main__':
