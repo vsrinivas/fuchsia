@@ -1381,24 +1381,6 @@ zbi("netboot") {
 firmware_info = []
 
 if (use_gigaboot) {
-  # TODO(surajmalhotra): Remove this target once SDK no longer depends on it.
-  vboot("vboot") {
-    testonly = true
-    output_name = "fuchsia"
-    deps = [ ":fuchsia" ]
-
-    metadata = {
-      images = [
-        {
-          name = "zircon-vboot"
-          path = "fuchsia.vboot"
-          type = "vboot"
-        },
-      ]
-    }
-  }
-  default_image_deps += [ ":vboot" ]
-
   # EFI ESP images.
   esp("esp") {
     output_name = "fuchsia"
