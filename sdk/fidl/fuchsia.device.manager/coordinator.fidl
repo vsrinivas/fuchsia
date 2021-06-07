@@ -335,5 +335,5 @@ protocol BindDebugger {
     /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
     /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
     GetDeviceProperties(string:DEVICE_PATH_MAX device_path)
-        -> (vector<DeviceProperty>:PROPERTIES_MAX props) error zx.status;
+        -> (DevicePropertyList property_list) error zx.status;
 };

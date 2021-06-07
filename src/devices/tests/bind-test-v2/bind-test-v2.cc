@@ -137,7 +137,7 @@ TEST_F(BindCompilerV2Test, ValidDevice) {
   ASSERT_EQ(bind_debugger_->GetDeviceProperties(child_device_path, &result), ZX_OK);
 
   ASSERT_TRUE(result.is_response());
-  auto props = result.response().props;
+  auto props = result.response().property_list.props;
 
   zx_device_prop_t expected_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},

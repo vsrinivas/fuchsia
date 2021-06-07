@@ -1739,8 +1739,47 @@ void Coordinator::GetDeviceProperties(GetDevicePropertiesRequestView request,
         .value = prop.value,
     });
   }
-  completer.ReplySuccess(
-      ::fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props));
+
+  if (device->str_props().size() > fuchsia_device_manager_PROPERTIES_MAX) {
+    completer.ReplyError(ZX_ERR_BUFFER_TOO_SMALL);
+    return;
+  }
+
+  fidl::FidlAllocator allocator;
+  std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props;
+  for (const auto& str_prop : device->str_props()) {
+    if (str_prop.value.valueless_by_exception()) {
+      completer.ReplyError(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    auto fidl_str_prop = fuchsia_device_manager::wire::DeviceStrProperty{
+        .key = fidl::StringView(allocator, str_prop.key),
+    };
+
+    if (std::holds_alternative<uint32_t>(str_prop.value)) {
+      auto* prop_val = std::get_if<uint32_t>(&str_prop.value);
+      fidl_str_prop.value = fuchsia_device_manager::wire::PropertyValue::WithIntValue(
+          fidl::ObjectView<uint32_t>(allocator, *prop_val));
+    } else if (std::holds_alternative<std::string>(str_prop.value)) {
+      auto* prop_val = std::get_if<std::string>(&str_prop.value);
+      fidl_str_prop.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
+          fidl::ObjectView<fidl::StringView>(allocator, fidl::StringView(allocator, *prop_val)));
+    } else if (std::holds_alternative<bool>(str_prop.value)) {
+      auto* prop_val = std::get_if<bool>(&str_prop.value);
+      fidl_str_prop.value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(
+          fidl::ObjectView<bool>(allocator, *prop_val));
+    }
+
+    str_props.push_back(fidl_str_prop);
+  }
+
+  fuchsia_device_manager::wire::DevicePropertyList property_list = {
+      .props = fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty>::FromExternal(props),
+      .str_props = fidl::VectorView<fuchsia_device_manager::wire::DeviceStrProperty>::FromExternal(
+          str_props),
+  };
+  completer.ReplySuccess(property_list);
 }
 
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {

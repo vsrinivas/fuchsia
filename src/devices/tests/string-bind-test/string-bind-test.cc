@@ -58,7 +58,6 @@ class StringBindTest : public testing::Test {
 
     ASSERT_GE(result->path.size(), kDevPrefix.size());
     ASSERT_EQ(strncmp(result->path.data(), kDevPrefix.c_str(), kDevPrefix.size()), 0);
-
     relative_device_path_ = std::string(result->path.data() + kDevPrefix.size(),
                                         result->path.size() - kDevPrefix.size());
 
@@ -130,7 +129,6 @@ TEST_F(StringBindTest, DriverBytecode) {
   }
 }
 
-// TODO(fxb/77860): Check string properties.
 TEST_F(StringBindTest, DeviceProperties) {
   std::string child_device_path(relative_device_path_ + "/" + kChildDeviceName);
 
@@ -138,7 +136,6 @@ TEST_F(StringBindTest, DeviceProperties) {
   ASSERT_EQ(ZX_OK, bind_debugger_->GetDeviceProperties(child_device_path, &result));
 
   ASSERT_TRUE(result.is_response());
-  auto props = result.response().props;
 
   constexpr zx_device_prop_t kExpectedProps[] = {
       {BIND_PROTOCOL, 0, 3},
@@ -146,10 +143,22 @@ TEST_F(StringBindTest, DeviceProperties) {
       {BIND_PCI_DID, 0, 1234},
   };
 
+  auto props = result.response().property_list.props;
   ASSERT_EQ(props.size(), countof(kExpectedProps));
   for (size_t i = 0; i < props.size(); i++) {
     ASSERT_EQ(props[i].id, kExpectedProps[i].id);
     ASSERT_EQ(props[i].reserved, kExpectedProps[i].reserved);
     ASSERT_EQ(props[i].value, kExpectedProps[i].value);
   }
+
+  auto& str_props = result.response().property_list.str_props;
+  ASSERT_EQ(static_cast<size_t>(2), str_props.size());
+
+  ASSERT_STREQ("stringbind.lib.kinglet", str_props[0].key.data());
+  ASSERT_TRUE(str_props[0].value.is_str_value());
+  ASSERT_STREQ("firecrest", str_props[0].value.str_value().data());
+
+  ASSERT_STREQ("stringbind.lib.bobolink", str_props[1].key.data());
+  ASSERT_TRUE(str_props[1].value.is_int_value());
+  ASSERT_EQ(static_cast<uint32_t>(10), str_props[1].value.int_value());
 }
