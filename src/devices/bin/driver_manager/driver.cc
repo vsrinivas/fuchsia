@@ -165,9 +165,10 @@ zx_status_t load_driver_vmo(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_
   zx_status_t status = di_read_driver_info_etc(&vmo_handle, di_vmo_read, &context, found_driver);
 
   if (status == ZX_ERR_NOT_FOUND) {
-    LOGF(INFO, "Missing info from driver '%s'", libname);
+    LOGF(INFO, "Missing info from driver '%s'", libname.data());
   } else if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to read info from driver '%s': %s", libname, zx_status_get_string(status));
+    LOGF(ERROR, "Failed to read info from driver '%s': %s", libname.data(),
+         zx_status_get_string(status));
   }
   return status;
 }

@@ -544,7 +544,7 @@ static uint64_t DrmModifierToSysmemModifier(uint64_t modifier) {
     case I915_FORMAT_MOD_Yf_TILED:
       return fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
   }
-  LOG_VERBOSE("Unhandle DRM modifier: 0x%x", modifier);
+  LOG_VERBOSE("Unhandle DRM modifier: 0x%lx", modifier);
   return fuchsia_sysmem::wire::kFormatModifierInvalid;
 }
 

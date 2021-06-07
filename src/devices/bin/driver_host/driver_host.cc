@@ -490,8 +490,8 @@ void DevhostControllerConnection::CreateDevice(CreateDeviceRequestView request,
   fbl::RefPtr<zx_driver_t> drv;
   zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(request->driver), &drv);
   if (r != ZX_OK) {
-    LOGF(ERROR, "Failed to load driver '%.*s': %s", driver_path.size(), driver_path.data(),
-         zx_status_get_string(r));
+    LOGF(ERROR, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
+         driver_path.data(), zx_status_get_string(r));
     return;
   }
   if (!drv->has_create_op()) {
@@ -554,7 +554,8 @@ void DevhostControllerConnection::CreateDevice(CreateDeviceRequestView request,
   }
 
   // TODO: inform devcoord
-  VLOGF(1, "Created device %p '%.*s'", new_device.get(), driver_path.size(), driver_path.data());
+  VLOGF(1, "Created device %p '%.*s'", new_device.get(), static_cast<int>(driver_path.size()),
+        driver_path.data());
   r = DeviceControllerConnection::BeginWait(std::move(newconn),
                                             driver_host_context_->loop().dispatcher());
   if (r != ZX_OK) {

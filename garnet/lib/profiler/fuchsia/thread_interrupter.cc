@@ -22,13 +22,22 @@
     }                                                                   \
   } while (0)
 
-#define log_zx_error(status, ...)                                                   \
-  do {                                                                              \
-    fx_logger_t* logger = fx_log_get_logger();                                      \
-    if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) {             \
-      fx_logger_logf(logger, (FX_LOG_ERROR), nullptr, "%d(%s)" __VA_ARGS__, status, \
-                     zx_status_get_string(status));                                 \
-    }                                                                               \
+#define log_zx_error(status, msg)                                      \
+  do {                                                                      \
+    fx_logger_t* logger = fx_log_get_logger();                              \
+    if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) {     \
+      fx_logger_logf(logger, (FX_LOG_ERROR), nullptr, "%d(%s)" msg, status, \
+                     zx_status_get_string(status));            \
+    }                                                                       \
+  } while (0)
+
+#define log_zx_error_msg(status, msg, ...)                                      \
+  do {                                                                      \
+    fx_logger_t* logger = fx_log_get_logger();                              \
+    if (logger && fx_logger_get_min_severity(logger) <= FX_LOG_ERROR) {     \
+      fx_logger_logf(logger, (FX_LOG_ERROR), nullptr, "%d(%s)" msg, status, \
+                     zx_status_get_string(status), __VA_ARGS__);            \
+    }                                                                       \
   } while (0)
 
 static zx_koid_t get_koid(zx_handle_t thread_handle) {
@@ -187,7 +196,7 @@ void ThreadInterrupter::ThreadInterrupt() {
       zx_handle_t thread;
       status = zx_object_get_child(process_handle, tid, ZX_RIGHT_SAME_RIGHTS, &thread);
       if (status != ZX_OK) {
-        log_zx_error(status, "failed to get a handle to [%ld.%ld]", pid, tid);
+        log_zx_error_msg(status, "failed to get a handle to [%ld.%ld]", pid, tid);
         continue;  // Skip this thread.
       }
 
@@ -223,7 +232,7 @@ void ThreadInterrupter::ThreadInterrupt() {
       status = zx_object_wait_one(thread, signals, deadline, &observed);
 
       if (status != ZX_OK) {
-        log_zx_error(status, "failure waiting for thread %ld.%ld to suspend, skipping", pid, tid);
+        log_zx_error_msg(status, "failure waiting for thread %ld.%ld to suspend, skipping", pid, tid);
         continue;  // Skip this thread.
       }
 

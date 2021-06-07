@@ -783,8 +783,8 @@ int Device::RunCompatibilityTests() {
       // The Remove did not complete.
       TEST_LOGF(ERROR,
                 "[  FAILED  ] %s: Timed out waiting for device to be removed, check if"
-                " device_remove() was called in the unbind routine of the driver",
-                test_driver_name, status);
+                " device_remove() was called in the unbind routine of the driver: %s",
+                test_driver_name, zx_status_get_string(status));
       test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_UNBIND_TIMEOUT;
     } else {
       TEST_LOGF(ERROR, "[  FAILED  ] %s: Error waiting for device to be removed: %s",
@@ -802,8 +802,8 @@ int Device::RunCompatibilityTests() {
       // The Bind did not complete.
       TEST_LOGF(ERROR,
                 "[  FAILED  ] %s: Timed out waiting for driver to be bound, check if there"
-                " is blocking IO in the driver's bind()",
-                test_driver_name, status);
+                " is blocking IO in the driver's bind(): %s",
+                test_driver_name, zx_status_get_string(status));
       test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_TIMEOUT;
     } else {
       TEST_LOGF(ERROR, "[  FAILED  ] %s: Error waiting for driver to be bound: %s",

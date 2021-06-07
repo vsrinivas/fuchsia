@@ -428,14 +428,15 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   }
   auto name = request->args.name().get();
   if (name.find('.') != std::string_view::npos) {
-    LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'", name.size(), name.data());
+    LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'",
+         static_cast<int>(name.size()), name.data());
     completer.ReplyError(fdf::wire::NodeError::kNameInvalid);
     return;
   }
   for (auto& child : children_) {
     if (child->name() == name) {
-      LOGF(ERROR, "Failed to add Node '%.*s', name already exists among siblings", name.size(),
-           name.data());
+      LOGF(ERROR, "Failed to add Node '%.*s', name already exists among siblings",
+           static_cast<int>(name.size()), name.data());
       completer.ReplyError(fdf::wire::NodeError::kNameAlreadyExists);
       return;
     }
@@ -448,8 +449,9 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     for (auto& offer : request->args.offers()) {
       auto inserted = names.emplace(offer.data(), offer.size()).second;
       if (!inserted) {
-        LOGF(ERROR, "Failed to add Node '%.*s', offer '%.*s' already exists", name.size(),
-             name.data(), offer.size(), offer.data());
+        LOGF(ERROR, "Failed to add Node '%.*s', offer '%.*s' already exists",
+             static_cast<int>(name.size()), name.data(), static_cast<int>(offer.size()),
+             offer.data());
         completer.ReplyError(fdf::wire::NodeError::kOfferAlreadyExists);
         return;
       }
@@ -462,21 +464,23 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     std::unordered_set<std::string_view> names;
     for (auto& symbol : request->args.symbols()) {
       if (!symbol.has_name()) {
-        LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name", name.size(),
-             name.data());
+        LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name",
+             static_cast<int>(name.size()), name.data());
         completer.ReplyError(fdf::wire::NodeError::kSymbolNameMissing);
         return;
       }
       if (!symbol.has_address()) {
-        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' is missing an address", name.size(),
-             name.data(), symbol.name().size(), symbol.name().data());
+        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' is missing an address",
+             static_cast<int>(name.size()), name.data(), static_cast<int>(symbol.name().size()),
+             symbol.name().data());
         completer.ReplyError(fdf::wire::NodeError::kSymbolAddressMissing);
         return;
       }
       auto inserted = names.emplace(symbol.name().data(), symbol.name().size()).second;
       if (!inserted) {
-        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' already exists", name.size(),
-             name.data(), symbol.name().size(), symbol.name().data());
+        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' already exists",
+             static_cast<int>(name.size()), name.data(), static_cast<int>(symbol.name().size()),
+             symbol.name().data());
         completer.ReplyError(fdf::wire::NodeError::kSymbolAlreadyExists);
         return;
       }
@@ -558,8 +562,8 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   std::string url(request->start_info.resolved_url().get());
   auto it = driver_args_.find(url);
   if (it == driver_args_.end()) {
-    LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver", url.size(),
-         url.data());
+    LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver",
+         static_cast<int>(url.size()), url.data());
     completer.Close(ZX_ERR_UNAVAILABLE);
     return;
   }
@@ -570,8 +574,8 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   // Launch a driver host, or use an existing driver host.
   if (start_args::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
     if (&node == root_node_.get()) {
-      LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate", url.size(),
-           url.data());
+      LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate",
+           static_cast<int>(url.size()), url.data());
       completer.Close(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -633,8 +637,8 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   driver->set_driver_ref(std::move(bind_driver));
   auto watch = driver->Watch(dispatcher_);
   if (watch.is_error()) {
-    LOGF(ERROR, "Failed to watch channel for driver '%.*s': %s", url.size(), url.data(),
-         watch.status_string());
+    LOGF(ERROR, "Failed to watch channel for driver '%.*s': %s", static_cast<int>(url.size()),
+         url.data(), watch.status_string());
     completer.Close(watch.error_value());
     return;
   }

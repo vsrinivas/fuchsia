@@ -43,7 +43,8 @@ zx::status<std::unique_ptr<TunPair>> TunPair::Create(
   zx::status right =
       DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, tun->config_.mac_right);
   if (right.is_error()) {
-    FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s", right.status_value());
+    FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s",
+            right.status_string());
     return right.take_error();
   }
   tun->right_ = std::move(right.value());

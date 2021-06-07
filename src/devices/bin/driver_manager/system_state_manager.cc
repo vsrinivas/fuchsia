@@ -44,7 +44,7 @@ void SystemStateManager::SetTerminationSystemState(
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
-  LOGF(INFO, "Setting shutdown system state to %d", request->state);
+  LOGF(INFO, "Setting shutdown system state to %hhu", request->state);
   dev_coord_->set_shutdown_system_state(request->state);
   completer.ReplySuccess();
 }

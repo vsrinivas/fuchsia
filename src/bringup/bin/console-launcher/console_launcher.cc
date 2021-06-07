@@ -86,17 +86,17 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
   zx_status_t status = GetRootJob(&root_job);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
+    FX_LOGF(ERROR, nullptr, "Failed to get root job: %s", zx_status_get_string(status));
     return zx::error(status);
   }
   status = zx::job::create(root_job, 0u, &launcher.shell_job_);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "Failed to create shell_job: %s", zx_status_get_string(status));
+    FX_LOGF(ERROR, nullptr, "Failed to create shell_job: %s", zx_status_get_string(status));
     return zx::error(status);
   }
   status = launcher.shell_job_.set_property(ZX_PROP_NAME, "zircon-shell", 16);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, "Failed to set shell_job job name: %s", zx_status_get_string(status));
+    FX_LOGF(ERROR, nullptr, "Failed to set shell_job job name: %s", zx_status_get_string(status));
     return zx::error(status);
   }
 

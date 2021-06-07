@@ -119,7 +119,7 @@ void UnbindTask::ScheduleUnbindChildren() {
 }
 
 void UnbindTask::Run() {
-  LOGF(INFO, "Running unbind task for device %p '%s', do_unbind %b", device_.get(),
+  LOGF(INFO, "Running unbind task for device %p '%s', do_unbind %d", device_.get(),
        device_->name().data(), do_unbind_);
 
   if (device_->state() == Device::State::kInitializing) {

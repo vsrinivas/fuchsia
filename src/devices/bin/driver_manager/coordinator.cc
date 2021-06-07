@@ -1955,7 +1955,7 @@ void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,
     // Call remove on the device's driver host if it contains the driver.
     if (dev.libname().compare(driver_path) == 0) {
       LOGF(INFO, "Device %s found in restart driver hosts.", dev.name().data());
-      LOGF(INFO, "Shutting down host: %d.", dev.host()->koid());
+      LOGF(INFO, "Shutting down host: %ld.", dev.host()->koid());
 
       // Unbind and Remove all the devices in the Driver Host.
       ScheduleUnbindRemoveAllDevices(dev.host());
