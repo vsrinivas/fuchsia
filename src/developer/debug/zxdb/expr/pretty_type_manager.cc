@@ -211,6 +211,26 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
                     std::make_unique<PrettyStruct>(GetterList{}));
   cpp_.emplace_back(InternalGlob("std::__2::shared_mutex"),
                     std::make_unique<PrettyStruct>(GetterList{}));
+
+  // Streams. Show istringstreams as their current input location, ostringstreams and stringstreams
+  // as their full string contents. All other streams get elided as their contents is very long and
+  // not very interesting.
+  cpp_.emplace_back(InternalGlob("std::__2::basic_ostringstream<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{{"str", "__sb_.__str_"}}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_stringstream<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{{"str", "__sb_.__str_"}}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_istringstream<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{{"next", "__sb_.__ninp_"}}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_stringbuf<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{{"buf", "__str_"}}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_ostream<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_istream<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_istream<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{}));
+  cpp_.emplace_back(InternalGlob("std::__2::basic_streambuf<*>"),
+                    std::make_unique<PrettyStruct>(GetterList{}));
 }
 
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {
