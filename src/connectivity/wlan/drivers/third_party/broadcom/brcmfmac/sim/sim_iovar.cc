@@ -19,8 +19,14 @@
 namespace wlan::brcmfmac {
 
 SimIovar::SimIovar(std::optional<size_t> value_len, SimFirmware* caller_fw,
-                   IovarSetHandler set_func, IovarGetHandler get_func)
-    : value_len_(value_len), caller_fw_(caller_fw), set_func_(set_func), get_func_(get_func) {}
+                   IovarSetHandler set_func, IovarGetHandler get_func,
+                   std::optional<size_t> iftbl_offset, std::optional<void*> var_addr)
+    : value_len_(value_len),
+      caller_fw_(caller_fw),
+      set_func_(set_func),
+      get_func_(get_func),
+      iftbl_offset_(iftbl_offset),
+      var_addr_(var_addr) {}
 
 zx_status_t SimIovar::Set(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len) {
   if (set_func_ == nullptr) {
@@ -35,8 +41,14 @@ zx_status_t SimIovar::Set(uint16_t ifidx, int32_t bsscfgidx, const void* value, 
     BRCMF_ERR("Value length does not match in set function.");
     return ZX_ERR_IO_REFUSED;
   }
+  SimIovarSetReq req = {.ifidx = ifidx,
+                        .bsscfgidx = bsscfgidx,
+                        .value = value,
+                        .value_len = value_len,
+                        .iftbl_offset = iftbl_offset_,
+                        .var_addr = var_addr_};
 
-  return (caller_fw_->*set_func_)(ifidx, bsscfgidx, value, value_len);
+  return (caller_fw_->*set_func_)(&req);
 }
 
 zx_status_t SimIovar::Get(uint16_t ifidx, void* value, size_t value_len) {
@@ -54,7 +66,12 @@ zx_status_t SimIovar::Get(uint16_t ifidx, void* value, size_t value_len) {
     return ZX_ERR_IO_REFUSED;
   }
 
-  return (caller_fw_->*get_func_)(ifidx, value, value_len);
+  SimIovarGetReq req = {.ifidx = ifidx,
+                        .value = value,
+                        .value_len = value_len,
+                        .iftbl_offset = iftbl_offset_,
+                        .var_addr = var_addr_};
+  return (caller_fw_->*get_func_)(&req);
 }
 
 }  // namespace wlan::brcmfmac

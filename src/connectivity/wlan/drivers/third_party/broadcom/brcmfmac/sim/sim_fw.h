@@ -245,90 +245,51 @@ class SimFirmware {
   // This function returns the wsec_key_list for an iface to outside.
   std::vector<brcmf_wsec_key_le> GetKeyList(uint16_t ifidx);
 
+  zx_status_t SetupIovarTable();
   // Direct handlers for different iovars.
-  zx_status_t IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                               size_t value_len);
-  zx_status_t IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarAmpduBaWsizeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                   size_t value_len);
-  zx_status_t IovarAmpduBaWsizeGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarArpolGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarAssocInfoGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarAssocMgrCmdSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                  size_t value_len);
-  zx_status_t IovarAssocRespIesGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarAssocRetryMaxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                    size_t value_len);
-  zx_status_t IovarAssocRetryMaxGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarAuthGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarBcnTimeoutGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarBcnTimeoutSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                 size_t value_len);
-  zx_status_t IovarBssSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarIfaceVarSet(SimIovarSetReq* req);
+  zx_status_t IovarIfaceVarGet(SimIovarGetReq* req);
+  zx_status_t IovarSet(SimIovarSetReq* req);
+  zx_status_t IovarGet(SimIovarGetReq* req);
+  zx_status_t IovarAssocInfoGet(SimIovarGetReq* req);
+  zx_status_t IovarAssocMgrCmdSet(SimIovarSetReq* req);
+  zx_status_t IovarAssocRespIesGet(SimIovarGetReq* req);
+  zx_status_t IovarBssSet(SimIovarSetReq* req);
 
-  zx_status_t IovarCapGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarChanspecSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                               size_t value_len);
-  zx_status_t IovarChanspecGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarCountrySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                              size_t value_len);
-  zx_status_t IovarCountryGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarCrashSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarCurEtheraddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                   size_t value_len);
-  zx_status_t IovarCurEtheraddrGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarEscanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarInterfaceRemoveSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                      size_t value_len);
-  zx_status_t IovarJoinSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarMchanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarMchanGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarMpcSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarMpcGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarNmodeGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarPfnMacaddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                 size_t value_len);
-  zx_status_t IovarPfnMacaddrGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarRrmGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarRxchainGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarSnrGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarSsidSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarStbcTxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                             size_t value_len);
-  zx_status_t IovarStbcTxGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarTlvSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarTlvGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarTxstreamsSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                size_t value_len);
-  zx_status_t IovarTxstreamsGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarVerGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarVhtModeGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWmeAcStaGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWmeApsdGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWnmSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarWnmGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWpaAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                              size_t value_len);
-  zx_status_t IovarWpaAuthGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWsecSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarWsecGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWsecKeySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                              size_t value_len);
-  zx_status_t IovarWsecKeyGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarWstatsCountersGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarCapGet(SimIovarGetReq* req);
+  zx_status_t IovarChanspecSet(SimIovarSetReq* req);
+  zx_status_t IovarCrashSet(SimIovarSetReq* req);
+  zx_status_t IovarCurEtheraddrSet(SimIovarSetReq* req);
+  zx_status_t IovarCurEtheraddrGet(SimIovarGetReq* req);
+  zx_status_t IovarEscanSet(SimIovarSetReq* req);
+  zx_status_t IovarInterfaceRemoveSet(SimIovarSetReq* req);
+  zx_status_t IovarJoinSet(SimIovarSetReq* req);
+  zx_status_t IovarNmodeGet(SimIovarGetReq* req);
+  zx_status_t IovarMpcSet(SimIovarSetReq* req);
+  zx_status_t IovarPfnMacaddrSet(SimIovarSetReq* req);
+  zx_status_t IovarPfnMacaddrGet(SimIovarGetReq* req);
+  zx_status_t IovarRrmGet(SimIovarGetReq* req);
+  zx_status_t IovarRxchainGet(SimIovarGetReq* req);
+  zx_status_t IovarSnrGet(SimIovarGetReq* req);
+  zx_status_t IovarSsidSet(SimIovarSetReq* req);
+  zx_status_t IovarStbcTxSet(SimIovarSetReq* req);
+  zx_status_t IovarStbcTxGet(SimIovarGetReq* req);
+  zx_status_t IovarTxstreamsSet(SimIovarSetReq* req);
+  zx_status_t IovarTxstreamsGet(SimIovarGetReq* req);
+  zx_status_t IovarVerGet(SimIovarGetReq* req);
+  zx_status_t IovarVhtModeGet(SimIovarGetReq* req);
+  zx_status_t IovarWmeAcStaGet(SimIovarGetReq* req);
+  zx_status_t IovarWmeApsdGet(SimIovarGetReq* req);
+  zx_status_t IovarWsecKeySet(SimIovarSetReq* req);
+  zx_status_t IovarWsecKeyGet(SimIovarGetReq* req);
+  zx_status_t IovarWstatsCountersGet(SimIovarGetReq* req);
 
  private:
   struct Client {
-    // When we receive an authentication request of a client, if it's a reasonable request, we will
-    // directly create the client with AUTHENTICATED state, and if it's not a reasonable request, we
-    // will not record anything for this client, so the first state of a client is AUTHENTICATED, no
-    // INIT or HOME state needed.
+    // When we receive an authentication request of a client, if it's a reasonable request, we
+    // will directly create the client with AUTHENTICATED state, and if it's not a reasonable
+    // request, we will not record anything for this client, so the first state of a client is
+    // AUTHENTICATED, no INIT or HOME state needed.
     enum State { AUTHENTICATED, ASSOCIATED };
 
     Client(common::MacAddr mac_addr, State state) : mac_addr(mac_addr), state(state) {}
@@ -358,10 +319,9 @@ class SimFirmware {
    * chanspec - The operating channel of this interface
    * bsscfgidx - input from the driver indicating the bss index
    * allocated - maintained by SIM FW to indicate entry is allocated
-   * iface_id - the iface id allocated by SIM FW - in this case always the array index of the table
-   * cur_key_idx - The index indicates which key we are using for this iface
-   * wsec_key_list - Storing keys for this iface
-   * ap_mode - is the iface in SoftAP(true) or Client(false) mode
+   * iface_id - the iface id allocated by SIM FW - in this case always the array index of the
+   * table cur_key_idx - The index indicates which key we are using for this iface wsec_key_list -
+   * Storing keys for this iface ap_mode - is the iface in SoftAP(true) or Client(false) mode
    * ap_config - SoftAP specific config (set when interface is configured as SoftAP)
    */
 

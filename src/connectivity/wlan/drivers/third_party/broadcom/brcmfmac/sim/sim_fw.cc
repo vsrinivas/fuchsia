@@ -66,69 +66,95 @@ struct IovarMetadata {
   std::optional<size_t> value_len_;
   IovarSetHandler set_handler_;
   IovarGetHandler get_handler_;
+  // Set this field to the offset of the member in sim_iface_entry_t if using the generic
+  // IovarIfaceVarGet/IovarIfaceVarSet methods
+  std::optional<size_t> ifentry_offset = std::nullopt;
+  // Set this field to the address of the member variable if using the generic IovarGet/IovarSet
+  // methods
+  std::optional<void*> var_addr = std::nullopt;
 };
 
 /* Steps to add an iovar handler:
  *
- * 1. Define the handler function as SimFirmware::Iovar<Name>{Set, Get} in sim-fw.{h, cc}.
- * 2. If the iovar exists in kIovarInfoTable: modify the corresponding entry by replacing the
+ * 1. If the iovar corresponds to a member variable in SimFirmware, use the generic handlers,
+ * IovarSet(), IovarGet() and set the size and address of the variable OR
+ * if the iovar corresponds to a member in sim_iface_entry_t , use the generic handlers,
+ * IovarIfaceVarSet(), IovarIfaceVarGet() and set the size and offset of the variable.
+ * 2. Or else define the handler function as SimFirmware::Iovar<Name>{Set, Get} in sim-fw.{h, cc}.
+ * 3. If the iovar exists in kIovarInfoTable: modify the corresponding entry by replacing the
  * nullptr with your new handler.
- *    Else: Increase the kIovarInfoTableCount and add an entry for your new iovar in
- * kIovarInfoTable.
  */
 
-// The table initialized with information of all iovars. Note: passing std::nullopt to the second
-// field means that the size check is customized by handler functions, passing std::nullptr to the
-// third or the fourth field means that the handler is not supported.
-static const IovarMetadata kIovarInfoTable[] = {
-    {"allmulti", sizeof(uint32_t), &SimFirmware::IovarAllmultiSet, &SimFirmware::IovarAllmultiGet},
-    {"ampdu_ba_wsize", sizeof(uint32_t), &SimFirmware::IovarAmpduBaWsizeSet,
-     &SimFirmware::IovarAmpduBaWsizeGet},
-    {"arp_ol", sizeof(uint32_t), &SimFirmware::IovarArpolSet, &SimFirmware::IovarArpolGet},
-    {"arpoe", sizeof(uint32_t), &SimFirmware::IovarArpoeSet, &SimFirmware::IovarArpoeGet},
-    {"assoc_info", sizeof(brcmf_cfg80211_assoc_ielen_le), nullptr, &SimFirmware::IovarAssocInfoGet},
-    {"assoc_mgr_cmd", sizeof(assoc_mgr_cmd_t), &SimFirmware::IovarAssocMgrCmdSet, nullptr},
-    {"assoc_resp_ies", std::nullopt, nullptr, &SimFirmware::IovarAssocRespIesGet},
-    {"assoc_retry_max", sizeof(uint32_t), &SimFirmware::IovarAssocRetryMaxSet,
-     &SimFirmware::IovarAssocRetryMaxGet},
-    {"auth", sizeof(uint16_t), &SimFirmware::IovarAuthSet, &SimFirmware::IovarAuthGet},
-    {"bcn_timeout", sizeof(uint32_t), &SimFirmware::IovarBcnTimeoutSet,
-     &SimFirmware::IovarBcnTimeoutGet},
-    {"bss", sizeof(brcmf_bss_ctrl), &SimFirmware::IovarBssSet, nullptr},
-    {"cap", strlen(kFirmwareCap) + 1, nullptr, &SimFirmware::IovarCapGet},
-    {"chanspec", sizeof(uint16_t), &SimFirmware::IovarChanspecSet, &SimFirmware::IovarChanspecGet},
-    {"country", sizeof(brcmf_fil_country_le), &SimFirmware::IovarCountrySet,
-     &SimFirmware::IovarCountryGet},
-    {"crash", sizeof(uint32_t), &SimFirmware::IovarCrashSet, nullptr},
-    {"cur_etheraddr", ETH_ALEN, &SimFirmware::IovarCurEtheraddrSet,
-     &SimFirmware::IovarCurEtheraddrGet},
-    {"escan", sizeof(brcmf_escan_params_le), &SimFirmware::IovarEscanSet, nullptr},
-    {"interface_remove", 0, &SimFirmware::IovarInterfaceRemoveSet, nullptr},
-    {"join", sizeof(brcmf_ext_join_params_le), &SimFirmware::IovarJoinSet, nullptr},
-    {"mchan", sizeof(uint32_t), &SimFirmware::IovarMchanSet, &SimFirmware::IovarMchanGet},
-    {"mpc", sizeof(uint32_t), &SimFirmware::IovarMpcSet, &SimFirmware::IovarMpcGet},
-    {"ndoe", sizeof(uint32_t), &SimFirmware::IovarNdoeSet, &SimFirmware::IovarNdoeGet},
-    {"nmode", sizeof(uint32_t), nullptr, &SimFirmware::IovarNmodeGet},
-    {"pfn_macaddr", ETH_ALEN, &SimFirmware::IovarPfnMacaddrSet, &SimFirmware::IovarPfnMacaddrGet},
-    {"rrm", sizeof(uint32_t), nullptr, &SimFirmware::IovarRrmGet},
-    {"rxchain", sizeof(uint32_t), nullptr, &SimFirmware::IovarRxchainGet},
-    {"snr", sizeof(int32_t), nullptr, &SimFirmware::IovarSnrGet},
-    {"ssid", sizeof(brcmf_ssid_le), &SimFirmware::IovarSsidSet, nullptr},
-    {"stbc_tx", sizeof(int32_t), &SimFirmware::IovarStbcTxSet, &SimFirmware::IovarStbcTxGet},
-    {"tlv", sizeof(uint32_t), &SimFirmware::IovarTlvSet, &SimFirmware::IovarTlvGet},
-    {"txstreams", sizeof(uint32_t), &SimFirmware::IovarTxstreamsSet,
-     &SimFirmware::IovarTxstreamsGet},
-    {"ver", strlen(kFirmwareVer) + 1, nullptr, &SimFirmware::IovarVerGet},
-    {"vht_mode", sizeof(uint32_t), nullptr, &SimFirmware::IovarVhtModeGet},
-    {"wme_ac_sta", sizeof(edcf_acparam_t) * 4, nullptr, &SimFirmware::IovarWmeAcStaGet},
-    {"wme_apsd", sizeof(uint32_t), nullptr, &SimFirmware::IovarWmeApsdGet},
-    {"wnm", sizeof(uint32_t), &SimFirmware::IovarWnmSet, &SimFirmware::IovarWnmGet},
-    {"wpa_auth", sizeof(uint32_t), &SimFirmware::IovarWpaAuthSet, &SimFirmware::IovarWpaAuthGet},
-    {"wsec", sizeof(uint32_t), &SimFirmware::IovarWsecSet, &SimFirmware::IovarWsecGet},
-    {"wsec_key", sizeof(brcmf_wsec_key_le), &SimFirmware::IovarWsecKeySet,
-     &SimFirmware::IovarWsecKeyGet},
-    {"wstats_counters", sizeof(wl_wstats_cnt_t), nullptr, &SimFirmware::IovarWstatsCountersGet},
-};
+zx_status_t SimFirmware::SetupIovarTable() {
+  // The table initialized with information of all iovars. Note: passing std::nullopt to the second
+  // field means that the size check is customized by handler functions, passing std::nullptr to the
+  // third or the fourth field means that the handler is not supported.
+  static const IovarMetadata kIovarInfoTable[] = {
+      {"allmulti", sizeof(sim_iface_entry_t::allmulti), &SimFirmware::IovarIfaceVarSet,
+       &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, allmulti)},
+      {"ampdu_ba_wsize", sizeof(uint32_t), &SimFirmware::IovarSet, &SimFirmware::IovarGet,
+       std::nullopt, &ampdu_ba_wsize_},
+      {"arp_ol", sizeof(uint32_t), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt,
+       &arp_ol_},
+      {"arpoe", sizeof(uint32_t), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt,
+       &arpoe_},
+      {"assoc_info", sizeof(brcmf_cfg80211_assoc_ielen_le), nullptr,
+       &SimFirmware::IovarAssocInfoGet},
+      {"assoc_mgr_cmd", sizeof(assoc_mgr_cmd_t), &SimFirmware::IovarAssocMgrCmdSet, nullptr},
+      {"assoc_resp_ies", std::nullopt, nullptr, &SimFirmware::IovarAssocRespIesGet},
+      {"assoc_retry_max", sizeof(assoc_max_retries_), &SimFirmware::IovarSet,
+       &SimFirmware::IovarGet, std::nullopt, &assoc_max_retries_},
+      {"auth", sizeof(sim_iface_entry_t::auth_type), &SimFirmware::IovarIfaceVarSet,
+       &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, auth_type)},
+      {"bcn_timeout", sizeof(uint32_t), &SimFirmware::IovarSet, &SimFirmware::IovarGet,
+       std::nullopt, &beacon_timeout_},
+      {"bss", sizeof(brcmf_bss_ctrl), &SimFirmware::IovarBssSet, nullptr},
+      {"cap", strlen(kFirmwareCap) + 1, nullptr, &SimFirmware::IovarCapGet},
+      {"chanspec", sizeof(sim_iface_entry_t::chanspec), &SimFirmware::IovarChanspecSet,
+       &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, chanspec)},
+      {"country", sizeof(brcmf_fil_country_le), &SimFirmware::IovarSet, &SimFirmware::IovarGet,
+       std::nullopt, &country_code_},
+      {"crash", sizeof(uint32_t), &SimFirmware::IovarCrashSet, nullptr},
+      {"cur_etheraddr", ETH_ALEN, &SimFirmware::IovarCurEtheraddrSet,
+       &SimFirmware::IovarCurEtheraddrGet},
+      {"escan", sizeof(brcmf_escan_params_le), &SimFirmware::IovarEscanSet, nullptr},
+      {"interface_remove", 0, &SimFirmware::IovarInterfaceRemoveSet, nullptr},
+      {"join", sizeof(brcmf_ext_join_params_le), &SimFirmware::IovarJoinSet, nullptr},
+      {"mchan", sizeof(mchan_), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt,
+       &mchan_},
+      {"mpc", sizeof(mpc_), &SimFirmware::IovarMpcSet, &SimFirmware::IovarGet, std::nullopt, &mpc_},
+      {"ndoe", sizeof(ndoe_), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt, &ndoe_},
+      {"nmode", sizeof(uint32_t), nullptr, &SimFirmware::IovarNmodeGet},
+      {"pfn_macaddr", ETH_ALEN, &SimFirmware::IovarPfnMacaddrSet, &SimFirmware::IovarPfnMacaddrGet},
+      {"rrm", sizeof(uint32_t), nullptr, &SimFirmware::IovarRrmGet},
+      {"rxchain", sizeof(uint32_t), nullptr, &SimFirmware::IovarRxchainGet},
+      {"snr", sizeof(int32_t), nullptr, &SimFirmware::IovarSnrGet},
+      {"ssid", sizeof(brcmf_ssid_le), &SimFirmware::IovarSsidSet, nullptr},
+      {"stbc_tx", sizeof(int32_t), &SimFirmware::IovarStbcTxSet, &SimFirmware::IovarStbcTxGet},
+      {"tlv", sizeof(sim_iface_entry_t::tlv), &SimFirmware::IovarIfaceVarSet,
+       &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, tlv)},
+      {"txstreams", sizeof(txstreams_), &SimFirmware::IovarTxstreamsSet, &SimFirmware::IovarGet,
+       std::nullopt, &txstreams_},
+      {"ver", strlen(kFirmwareVer) + 1, nullptr, &SimFirmware::IovarVerGet},
+      {"vht_mode", sizeof(uint32_t), nullptr, &SimFirmware::IovarVhtModeGet},
+      {"wme_ac_sta", sizeof(edcf_acparam_t) * 4, nullptr, &SimFirmware::IovarWmeAcStaGet},
+      {"wme_apsd", sizeof(uint32_t), nullptr, &SimFirmware::IovarWmeApsdGet},
+      {"wnm", sizeof(wnm_), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt, &wnm_},
+      {"wpa_auth", sizeof(sim_iface_entry_t::wpa_auth), &SimFirmware::IovarIfaceVarSet,
+       &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, wpa_auth)},
+      {"wsec", sizeof(sim_iface_entry_t::wsec), &SimFirmware::IovarIfaceVarSet,
+       &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, wsec)},
+      {"wsec_key", sizeof(brcmf_wsec_key_le), &SimFirmware::IovarWsecKeySet,
+       &SimFirmware::IovarWsecKeyGet},
+      {"wstats_counters", sizeof(wl_wstats_cnt_t), nullptr, &SimFirmware::IovarWstatsCountersGet},
+  };
+
+  for (const auto& it : kIovarInfoTable) {
+    iovar_table_.insert({it.name_, SimIovar(it.value_len_, this, it.set_handler_, it.get_handler_,
+                                            it.ifentry_offset, it.var_addr)});
+  }
+  return ZX_OK;
+}
 
 SimFirmware::SimFirmware(brcmf_simdev* simdev) : simdev_(simdev), hw_(simdev->env) {
   // Configure the chanspec encode/decoder
@@ -148,9 +174,8 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev) : simdev_(simdev), hw_(simdev->en
     ZX_PANIC("Unable to create default interface");
   }
 
-  for (const auto& it : kIovarInfoTable) {
-    iovar_table_.insert(
-        {it.name_, SimIovar(it.value_len_, this, it.set_handler_, it.get_handler_)});
+  if (SetupIovarTable() != ZX_OK) {
+    ZX_PANIC("Unable to setup Iovar Table");
   }
 }
 
@@ -1906,152 +1931,64 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
 }
 
 /* Iovar handler function definitions */
-zx_status_t SimFirmware::IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                          size_t value_len) {
-  auto allmulti = reinterpret_cast<const uint32_t*>(value);
-  iface_tbl_[ifidx].allmulti = *allmulti;
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
+zx_status_t SimFirmware::IovarIfaceVarSet(SimIovarSetReq* req) {
+  ZX_ASSERT_MSG(req->iftbl_offset.has_value(), "offset in sim_iface_entry_t not set");
+  if (!iface_tbl_[req->ifidx].allocated) {
     return ZX_ERR_BAD_STATE;
   }
-  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
-  *result_ptr = iface_tbl_[ifidx].allmulti;
+  char* base = (char*)&iface_tbl_[req->ifidx];
+  memcpy(base + req->iftbl_offset.value(), req->value, req->value_len);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarAmpduBaWsizeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                              size_t value_len) {
-  auto ampdu_ba_wsize = reinterpret_cast<const uint32_t*>(value);
-  ampdu_ba_wsize_ = *ampdu_ba_wsize;
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarAmpduBaWsizeGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
+zx_status_t SimFirmware::IovarIfaceVarGet(SimIovarGetReq* req) {
+  ZX_ASSERT_MSG(req->iftbl_offset.has_value(), "offset in sim_iface_entry_t not set");
+  if (!iface_tbl_[req->ifidx].allocated) {
     return ZX_ERR_BAD_STATE;
   }
-  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
-  *result_ptr = ampdu_ba_wsize_;
+  char* base = (char*)&iface_tbl_[req->ifidx];
+  memcpy(req->value, base + req->iftbl_offset.value(), req->value_len);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                      size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  ndoe_ = *(reinterpret_cast<const uint32_t*>(value));
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(value_out, &ndoe_, sizeof(uint32_t));
+zx_status_t SimFirmware::IovarSet(SimIovarSetReq* req) {
+  ZX_ASSERT_MSG(req->var_addr.has_value(), "Variable address is not set");
+  memcpy(req->var_addr.value(), req->value, req->value_len);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                       size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  arpoe_ = *(reinterpret_cast<const uint32_t*>(value));
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(value_out, &arpoe_, sizeof(uint32_t));
+zx_status_t SimFirmware::IovarGet(SimIovarGetReq* req) {
+  ZX_ASSERT_MSG(req->var_addr.has_value(), "Variable address is not set");
+  memcpy(req->value, req->var_addr.value(), req->value_len);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                       size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
+zx_status_t SimFirmware::IovarCurEtheraddrSet(SimIovarSetReq* req) {
+  if (req->value_len != ETH_ALEN) {
     return ZX_ERR_INVALID_ARGS;
   }
-  arp_ol_ = *(reinterpret_cast<const uint32_t*>(value));
-  return ZX_OK;
+  return SetMacAddr(req->ifidx, reinterpret_cast<const uint8_t*>(req->value));
 }
-zx_status_t SimFirmware::IovarArpolGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(value_out, &arp_ol_, sizeof(uint32_t));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarCountrySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                         size_t value_len) {
-  auto cc_req = reinterpret_cast<const brcmf_fil_country_le*>(value);
-  country_code_ = *cc_req;
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarCountryGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  memcpy(value_out, &country_code_, sizeof(brcmf_fil_country_le));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarCurEtheraddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                              size_t value_len) {
-  if (value_len != ETH_ALEN) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  return SetMacAddr(ifidx, reinterpret_cast<const uint8_t*>(value));
-}
-zx_status_t SimFirmware::IovarCurEtheraddrGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (iface_tbl_[ifidx].mac_addr_set)
-    memcpy(value_out, iface_tbl_[ifidx].mac_addr.byte, ETH_ALEN);
+zx_status_t SimFirmware::IovarCurEtheraddrGet(SimIovarGetReq* req) {
+  if (iface_tbl_[req->ifidx].mac_addr_set)
+    memcpy(req->value, iface_tbl_[req->ifidx].mac_addr.byte, ETH_ALEN);
   else
-    memcpy(value_out, mac_addr_.data(), ETH_ALEN);
+    memcpy(req->value, mac_addr_.data(), ETH_ALEN);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarPfnMacaddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                            size_t value_len) {
-  auto pfn_mac = reinterpret_cast<const brcmf_pno_macaddr_le*>(value);
+zx_status_t SimFirmware::IovarPfnMacaddrSet(SimIovarSetReq* req) {
+  auto pfn_mac = reinterpret_cast<const brcmf_pno_macaddr_le*>(req->value);
   memcpy(pfn_mac_addr_.byte, pfn_mac->mac, ETH_ALEN);
   return ZX_OK;
 }
-zx_status_t SimFirmware::IovarPfnMacaddrGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  memcpy(value_out, pfn_mac_addr_.byte, ETH_ALEN);
+zx_status_t SimFirmware::IovarPfnMacaddrGet(SimIovarGetReq* req) {
+  memcpy(req->value, pfn_mac_addr_.byte, ETH_ALEN);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarWsecSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                      size_t value_len) {
-  auto wsec = reinterpret_cast<const uint32_t*>(value);
-  iface_tbl_[ifidx].wsec = *wsec;
-  BRCMF_ERR("set wsec value: %u", *wsec);
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarWsecGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  BRCMF_ERR("get wsec value: %u", iface_tbl_[ifidx].wsec);
-  memcpy(value_out, &iface_tbl_[ifidx].wsec, sizeof(uint32_t));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarBcnTimeoutSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                            size_t value_len) {
-  auto bcn_timeout = reinterpret_cast<const uint32_t*>(value);
-  beacon_timeout_ = *bcn_timeout;
-  BRCMF_DBG(SIM, "set bcn timeout value: %u secs", beacon_timeout_);
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarBcnTimeoutGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  BRCMF_DBG(SIM, "get Beacon Timeout value: %u", beacon_timeout_);
-  memcpy(value_out, &beacon_timeout_, sizeof(uint32_t));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarStbcTxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                        size_t value_len) {
-  auto stbc_tx = reinterpret_cast<const int32_t*>(value);
+zx_status_t SimFirmware::IovarStbcTxSet(SimIovarSetReq* req) {
+  auto stbc_tx = reinterpret_cast<const int32_t*>(req->value);
   if (*stbc_tx != -1 && *stbc_tx != 0 && *stbc_tx != 1) {
     BRCMF_ERR("stbc_tx: %d has to be 0, 1 or -1", *stbc_tx);
     return ZX_ERR_INVALID_ARGS;
@@ -2065,15 +2002,14 @@ zx_status_t SimFirmware::IovarStbcTxSet(uint16_t ifidx, int32_t bsscfgidx, const
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarStbcTxGet(uint16_t ifidx, void* value_out, size_t value_len) {
+zx_status_t SimFirmware::IovarStbcTxGet(SimIovarGetReq* req) {
   BRCMF_DBG(SIM, "get stbc_tx value: %u", stbc_tx_);
-  memcpy(value_out, &stbc_tx_, sizeof(int32_t));
+  memcpy(req->value, &stbc_tx_, sizeof(stbc_tx_));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarTxstreamsSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                           size_t value_len) {
-  auto txstreams = reinterpret_cast<const uint32_t*>(value);
+zx_status_t SimFirmware::IovarTxstreamsSet(SimIovarSetReq* req) {
+  auto txstreams = reinterpret_cast<const uint32_t*>(req->value);
   if (*txstreams >= 1) {
     txstreams_ = *txstreams;
     BRCMF_DBG(SIM, "set txstreams value: %u", *txstreams);
@@ -2083,21 +2019,20 @@ zx_status_t SimFirmware::IovarTxstreamsSet(uint16_t ifidx, int32_t bsscfgidx, co
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx_status_t SimFirmware::IovarTxstreamsGet(uint16_t ifidx, void* value_out, size_t value_len) {
+zx_status_t SimFirmware::IovarTxstreamsGet(SimIovarGetReq* req) {
   BRCMF_DBG(SIM, "get txstreams value: %u", txstreams_);
-  memcpy(value_out, &txstreams_, sizeof(uint32_t));
+  memcpy(req->value, &txstreams_, sizeof(txstreams_));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarWsecKeySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                         size_t value_len) {
-  auto wk_req = reinterpret_cast<const brcmf_wsec_key_le*>(value);
+zx_status_t SimFirmware::IovarWsecKeySet(SimIovarSetReq* req) {
+  auto wk_req = reinterpret_cast<const brcmf_wsec_key_le*>(req->value);
   // Ensure that Primary Key does not have a mac address (all zeros)
   if (wk_req->flags == BRCMF_PRIMARY_KEY) {
     ZX_ASSERT_MSG(std::memcmp(wk_req->ea, kZeroMac.byte, ETH_ALEN) == 0,
                   "Group Key Mac should be all zeros");
   }
-  std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
+  std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[req->ifidx].wsec_key_list;
   auto key_iter = std::find_if(key_list.begin(), key_list.end(),
                                [=](brcmf_wsec_key_le& k) { return k.index == wk_req->index; });
   // If the key with same index exists, override it, if not, add a new key.
@@ -2106,69 +2041,33 @@ zx_status_t SimFirmware::IovarWsecKeySet(uint16_t ifidx, int32_t bsscfgidx, cons
   } else {
     // Use the first key index as current key index, in real case it will only change by AP.
     if (key_list.empty())
-      iface_tbl_[ifidx].cur_key_idx = wk_req->index;
+      iface_tbl_[req->ifidx].cur_key_idx = wk_req->index;
 
     key_list.push_back(*wk_req);
   }
   return ZX_OK;
 }
-zx_status_t SimFirmware::IovarWsecKeyGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[ifidx].wsec_key_list;
+zx_status_t SimFirmware::IovarWsecKeyGet(SimIovarGetReq* req) {
+  std::vector<brcmf_wsec_key_le>& key_list = iface_tbl_[req->ifidx].wsec_key_list;
   auto key_iter = std::find_if(key_list.begin(), key_list.end(), [=](brcmf_wsec_key_le& k) {
-    return k.index == iface_tbl_[ifidx].cur_key_idx;
+    return k.index == iface_tbl_[req->ifidx].cur_key_idx;
   });
   if (key_iter == key_list.end()) {
     return ZX_ERR_NOT_FOUND;
   }
-  memcpy(value_out, &(*key_iter), sizeof(brcmf_wsec_key_le));
+  memcpy(req->value, &(*key_iter), sizeof(brcmf_wsec_key_le));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarAssocRetryMaxSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                               size_t value_len) {
-  auto assoc_max_retries = reinterpret_cast<const uint32_t*>(value);
-  assoc_max_retries_ = *assoc_max_retries;
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarAssocRetryMaxGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  memcpy(value_out, &assoc_max_retries_, sizeof(assoc_max_retries_));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarChanspecSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                          size_t value_len) {
-  auto chanspec = reinterpret_cast<const uint16_t*>(value);
+zx_status_t SimFirmware::IovarChanspecSet(SimIovarSetReq* req) {
+  auto chanspec = reinterpret_cast<const uint16_t*>(req->value);
   // TODO(karthikrish) Add multi channel support in SIM Env. For now ensure all IFs use the same
   // channel
-  return (SetIFChanspec(ifidx, *chanspec));
-}
-zx_status_t SimFirmware::IovarChanspecGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_BAD_STATE;
-  }
-  memcpy(value_out, &iface_tbl_[ifidx].chanspec, sizeof(uint16_t));
-  return ZX_OK;
+  return (SetIFChanspec(req->ifidx, *chanspec));
 }
 
-zx_status_t SimFirmware::IovarMchanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                       size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  mchan_ = *(reinterpret_cast<const uint32_t*>(value));
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarMchanGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(value_out, &mchan_, sizeof(uint32_t));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarMpcSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                     size_t value_len) {
-  auto mpc = reinterpret_cast<const uint32_t*>(value);
+zx_status_t SimFirmware::IovarMpcSet(SimIovarSetReq* req) {
+  auto mpc = reinterpret_cast<const uint32_t*>(req->value);
   // Ensure that mpc is never enabled when AP has been started
   if (softap_ifidx_ != std::nullopt) {
     // Ensure that mpc is 0 if the SoftAP has been started
@@ -2177,70 +2076,27 @@ zx_status_t SimFirmware::IovarMpcSet(uint16_t ifidx, int32_t bsscfgidx, const vo
   mpc_ = *mpc;
   return ZX_OK;
 }
-zx_status_t SimFirmware::IovarMpcGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  memcpy(value_out, &mpc_, sizeof(uint32_t));
-  return ZX_OK;
+
+zx_status_t SimFirmware::IovarInterfaceRemoveSet(SimIovarSetReq* req) {
+  return HandleIfaceRequest(false, req->value, req->value_len, req->bsscfgidx);
 }
 
-zx_status_t SimFirmware::IovarWpaAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                         size_t value_len) {
-  auto wpa_auth = reinterpret_cast<const uint32_t*>(value);
-  iface_tbl_[ifidx].wpa_auth = *wpa_auth;
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarWpaAuthGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  memcpy(value_out, &iface_tbl_[ifidx].wpa_auth, sizeof(uint32_t));
-  return ZX_OK;
+zx_status_t SimFirmware::IovarSsidSet(SimIovarSetReq* req) {
+  return HandleIfaceRequest(true, req->value, req->value_len, req->bsscfgidx);
 }
 
-zx_status_t SimFirmware::IovarAuthSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                      size_t value_len) {
-  auto auth = reinterpret_cast<const uint16_t*>(value);
-  iface_tbl_[ifidx].auth_type = *auth;
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarAuthGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  memcpy(value_out, &iface_tbl_[ifidx].auth_type, sizeof(iface_tbl_[ifidx].auth_type));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarTlvSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                     size_t value_len) {
-  auto tlv = reinterpret_cast<const uint32_t*>(value);
-  iface_tbl_[ifidx].tlv = *tlv;
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarTlvGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_BAD_STATE;
-  }
-  memcpy(value_out, &iface_tbl_[ifidx].tlv, sizeof(uint32_t));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarInterfaceRemoveSet(uint16_t ifidx, int32_t bsscfgidx,
-                                                 const void* value, size_t value_len) {
-  return HandleIfaceRequest(false, value, value_len, bsscfgidx);
-}
-
-zx_status_t SimFirmware::IovarSsidSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                      size_t value_len) {
-  return HandleIfaceRequest(true, value, value_len, bsscfgidx);
-}
-
-zx_status_t SimFirmware::IovarEscanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                       size_t value_len) {
+zx_status_t SimFirmware::IovarEscanSet(SimIovarSetReq* req) {
   // For now scanning on softAP iface is not supported yet.
-  if (ifidx != kClientIfidx) {
+  if (req->ifidx != kClientIfidx) {
     BRCMF_ERR("Not scanning with client iface.");
     return ZX_ERR_INVALID_ARGS;
   }
-  return HandleEscanRequest(reinterpret_cast<const brcmf_escan_params_le*>(value), value_len);
+  return HandleEscanRequest(reinterpret_cast<const brcmf_escan_params_le*>(req->value),
+                            req->value_len);
 }
 
-zx_status_t SimFirmware::IovarJoinSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                      size_t value_len) {
-  if (ifidx != kClientIfidx) {
+zx_status_t SimFirmware::IovarJoinSet(SimIovarSetReq* req) {
+  if (req->ifidx != kClientIfidx) {
     BRCMF_ERR("Not joining with client iface.");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -2252,23 +2108,21 @@ zx_status_t SimFirmware::IovarJoinSet(uint16_t ifidx, int32_t bsscfgidx, const v
     return ZX_ERR_BAD_STATE;
   }
   // Don't cast yet because last element is variable length
-  return HandleJoinRequest(value, value_len);
+  return HandleJoinRequest(req->value, req->value_len);
 }
 
-zx_status_t SimFirmware::IovarBssSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                     size_t value_len) {
-  auto bss_info = reinterpret_cast<const brcmf_bss_ctrl*>(value);
+zx_status_t SimFirmware::IovarBssSet(SimIovarSetReq* req) {
+  auto bss_info = reinterpret_cast<const brcmf_bss_ctrl*>(req->value);
   // We do not know how non-zero value is handled in real FW.
   ZX_ASSERT(bss_info->value == 0);
   return StopInterface(bss_info->bsscfgidx);
 }
 
-zx_status_t SimFirmware::IovarAssocMgrCmdSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                             size_t value_len) {
+zx_status_t SimFirmware::IovarAssocMgrCmdSet(SimIovarSetReq* req) {
   BRCMF_DBG(SIM, "Receive assoc_mgr_cmd in sim-fw.");
-  ZX_ASSERT_MSG(ifidx == kClientIfidx, "SAE authentication only supported on client iface.");
+  ZX_ASSERT_MSG(req->ifidx == kClientIfidx, "SAE authentication only supported on client iface.");
 
-  auto cmd = reinterpret_cast<const assoc_mgr_cmd_t*>(value);
+  auto cmd = reinterpret_cast<const assoc_mgr_cmd_t*>(req->value);
   if (cmd->version != ASSOC_MGR_CURRENT_VERSION) {
     BRCMF_INFO("Version number doesn't match the current one, but ignoring it in sim-fw for now.");
   }
@@ -2306,7 +2160,8 @@ zx_status_t SimFirmware::IovarAssocMgrCmdSet(uint16_t ifidx, int32_t bsscfgidx, 
       ZX_ASSERT_MSG(false, "Not supporting this command for assoc_mgr_cmd yet.");
       break;
     case ASSOC_MGR_CMD_SEND_AUTH: {
-      ZX_ASSERT_MSG(ifidx == kClientIfidx, "SAE authentication only supported on client iface.");
+      ZX_ASSERT_MSG(req->ifidx == kClientIfidx,
+                    "SAE authentication only supported on client iface.");
 
       auto sae_frame = reinterpret_cast<const brcmf_sae_auth_frame*>(&cmd->params);
       if (memcmp(sae_frame->mac_hdr.addr1.byte, assoc_state_.opts->bssid.byte, ETH_ALEN) ||
@@ -2340,55 +2195,38 @@ zx_status_t SimFirmware::IovarAssocMgrCmdSet(uint16_t ifidx, int32_t bsscfgidx, 
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarCrashSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                       size_t value_len) {
+zx_status_t SimFirmware::IovarCrashSet(SimIovarSetReq* req) {
   // No need to check the value of 'crash' iovar.
   ResetSimFirmware();
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarVerGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  strlcpy(static_cast<char*>(value_out), kFirmwareVer, value_len);
+zx_status_t SimFirmware::IovarVerGet(SimIovarGetReq* req) {
+  strlcpy(static_cast<char*>(req->value), kFirmwareVer, req->value_len);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarRxchainGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
+zx_status_t SimFirmware::IovarRxchainGet(SimIovarGetReq* req) {
+  if (!iface_tbl_[req->ifidx].allocated) {
     return ZX_ERR_BAD_STATE;
   }
   // rxchain 1 indicates antenna index 0.
   const uint32_t sim_rxchain = 1;
-  memcpy(value_out, &sim_rxchain, sizeof(uint32_t));
+  memcpy(req->value, &sim_rxchain, sizeof(uint32_t));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarSnrGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
+zx_status_t SimFirmware::IovarSnrGet(SimIovarGetReq* req) {
+  if (!iface_tbl_[req->ifidx].allocated) {
     return ZX_ERR_BAD_STATE;
   }
   int32_t sim_snr = 40;
-  memcpy(value_out, &sim_snr, sizeof(sim_snr));
+  memcpy(req->value, &sim_snr, sizeof(sim_snr));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarWnmSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
-                                     size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  wnm_ = *(reinterpret_cast<const uint32_t*>(value));
-  return ZX_OK;
-}
-zx_status_t SimFirmware::IovarWnmGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(value_out, &wnm_, sizeof(uint32_t));
-  return ZX_OK;
-}
-
-zx_status_t SimFirmware::IovarWstatsCountersGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (!iface_tbl_[ifidx].allocated) {
+zx_status_t SimFirmware::IovarWstatsCountersGet(SimIovarGetReq* req) {
+  if (!iface_tbl_[req->ifidx].allocated) {
     return ZX_ERR_BAD_STATE;
   }
   wl_wstats_cnt_t wstats_cnt = {
@@ -2409,53 +2247,53 @@ zx_status_t SimFirmware::IovarWstatsCountersGet(uint16_t ifidx, void* value_out,
   const uint32_t rate_num_frames = 80;
   wstats_cnt.rx11g[rate_index] = rate_num_frames;
 
-  memcpy(value_out, &wstats_cnt, sizeof(wl_wstats_cnt_t));
+  memcpy(req->value, &wstats_cnt, sizeof(wl_wstats_cnt_t));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarAssocInfoGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  auto result_ptr = static_cast<brcmf_cfg80211_assoc_ielen_le*>(value_out);
+zx_status_t SimFirmware::IovarAssocInfoGet(SimIovarGetReq* req) {
+  auto result_ptr = static_cast<brcmf_cfg80211_assoc_ielen_le*>(req->value);
   result_ptr->req_len = 0;
   result_ptr->resp_len = assoc_resp_ies_len_;
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarAssocRespIesGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  if (value_len < assoc_resp_ies_len_) {
+zx_status_t SimFirmware::IovarAssocRespIesGet(SimIovarGetReq* req) {
+  if (req->value_len < assoc_resp_ies_len_) {
     BRCMF_ERR("Buffer length is too small for the prepared assoc response ies.");
     return ZX_ERR_IO_REFUSED;
   }
-  memcpy(value_out, assoc_resp_ies_, assoc_resp_ies_len_);
+  memcpy(req->value, assoc_resp_ies_, assoc_resp_ies_len_);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarCapGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  strlcpy(static_cast<char*>(value_out), kFirmwareCap, value_len);
+zx_status_t SimFirmware::IovarCapGet(SimIovarGetReq* req) {
+  strlcpy(static_cast<char*>(req->value), kFirmwareCap, req->value_len);
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarNmodeGet(uint16_t ifidx, void* value_out, size_t value_len) {
+zx_status_t SimFirmware::IovarNmodeGet(SimIovarGetReq* req) {
   // TODO: Provide means to simulate hardware without nmode.
-  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+  uint32_t* result_ptr = static_cast<uint32_t*>(req->value);
   *result_ptr = 1;
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarVhtModeGet(uint16_t ifidx, void* value_out, size_t value_len) {
+zx_status_t SimFirmware::IovarVhtModeGet(SimIovarGetReq* req) {
   // TODO: Provide means to simulate hardware without vhtmode.
-  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+  uint32_t* result_ptr = static_cast<uint32_t*>(req->value);
   *result_ptr = 1;
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarRrmGet(uint16_t ifidx, void* value_out, size_t value_len) {
+zx_status_t SimFirmware::IovarRrmGet(SimIovarGetReq* req) {
   // TODO: Provide means to simulate hardware without rrm.
-  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+  uint32_t* result_ptr = static_cast<uint32_t*>(req->value);
   *result_ptr = 1;
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarWmeAcStaGet(uint16_t ifidx, void* value_out, size_t value_len) {
+zx_status_t SimFirmware::IovarWmeAcStaGet(SimIovarGetReq* req) {
   // Note: the below mocked AC parameters are slightly different from default values
   //       because we set different values for each AC to make sure in the test that
   //       the right ACs are parsed.
@@ -2481,12 +2319,12 @@ zx_status_t SimFirmware::IovarWmeAcStaGet(uint16_t ifidx, void* value_out, size_
   params[3].ecw = 2 + (4 << 4);             // ecw_min + (ecw_max << 4)
   params[3].txop = 47;
 
-  memcpy(value_out, params, sizeof(params));
+  memcpy(req->value, params, sizeof(params));
   return ZX_OK;
 }
 
-zx_status_t SimFirmware::IovarWmeApsdGet(uint16_t ifidx, void* value_out, size_t value_len) {
-  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+zx_status_t SimFirmware::IovarWmeApsdGet(SimIovarGetReq* req) {
+  uint32_t* result_ptr = static_cast<uint32_t*>(req->value);
   *result_ptr = 1;
   return ZX_OK;
 }
