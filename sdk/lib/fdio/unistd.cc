@@ -586,7 +586,7 @@ zx_status_t fdio_wait(const fdio_ptr& io, uint32_t events, zx::time deadline,
   io->wait_begin(events, &h, &signals);
   if (h == ZX_HANDLE_INVALID) {
     // Wait operation is not applicable to the handle.
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_WRONG_TYPE;
   }
 
   zx_signals_t pending;

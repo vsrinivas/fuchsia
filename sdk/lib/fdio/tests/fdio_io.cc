@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/socket.h>
+#include <lib/zx/vmo.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
@@ -37,6 +39,19 @@ TEST(IOTest, WaitFD) {
   pending = 0;
   EXPECT_OK(fdio_wait_fd(fd.get(), FDIO_EVT_PEER_CLOSED, &pending, ZX_TIME_INFINITE_PAST));
   EXPECT_TRUE(pending & FDIO_EVT_PEER_CLOSED);
+}
+
+
+TEST(IOTest, WaitOnUnwaitableFD) {
+  constexpr size_t kSize = 4096;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
+
+  fbl::unique_fd fd;
+  ASSERT_OK(fdio_fd_create(vmo.release(), fd.reset_and_get_address()));
+
+  EXPECT_STATUS(fdio_wait_fd(fd.get(), FDIO_EVT_READABLE, nullptr, ZX_TIME_INFINITE_PAST),
+                ZX_ERR_WRONG_TYPE);
 }
 
 TEST(IOTest, HandleFD) {
