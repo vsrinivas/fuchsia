@@ -49,7 +49,7 @@ alias procarg = uint32;
 // zx_signals_t.
 alias signals = uint32;
 
-// TODO(fxbug.dev/7802): These are currently duplicated with zircon/types.h.
+// TODO(fxbug.dev/51002): These are currently duplicated with zircon/types.h.
 // Eventually the definitions in zircon/types.h will be generated from this
 // source.
 const uint64 CHANNEL_MAX_MSG_BYTES = 65536;
