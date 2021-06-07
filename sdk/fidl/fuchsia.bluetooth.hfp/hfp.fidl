@@ -60,11 +60,11 @@ strict union CallAction {
     4: TransferActive transfer_active;
 };
 
-/// Represents a Binary-Coded Decimal (BCD) Number as specified in TS 124.008
-/// 10.5.4.7
+/// Represents a text string of V.250 dialing digits.
+/// See TS 127.007v06.08.00, Section 6.2 for more information.
 alias Number = string:256;
 
-/// Represents a specific phone book memory location
+/// Represents a specific phone book memory location.
 alias Memory = string:256;
 
 [Discoverable]
@@ -74,6 +74,8 @@ protocol Hfp {
     /// There can only be one call manager registered at a time. If one is
     /// registered at the time a call to `Register` is made, the newer
     /// CallManager channel will be closed.
+    ///
+    /// A call manager can be unregistered by closing either end of the channel.
     Register(CallManager manager);
 };
 
@@ -210,7 +212,7 @@ protocol HeadsetGain {
 };
 
 /// Represents the valid states of a call.
-enum CallState {
+flexible enum CallState {
     /// There is a callsetup procedure in progress for an outgoing call.
     /// This state should not be set by the Call protocol client.
     /// It is the initial state of an unanswered outgoing call.
@@ -260,39 +262,39 @@ resource table NextCall {
 };
 
 /// Dual-tone multi-frequency signaling codes.
-enum DtmfCode : uint32 {
+enum DtmfCode : uint8 {
     /// Represented by ASCII "1" in AT commands.
-    ONE = 1;
+    ONE = 49;
     /// Represented by ASCII "2" in AT commands.
-    TWO = 2;
+    TWO = 50;
     /// Represented by ASCII "3" in AT commands.
-    THREE = 3;
+    THREE = 51;
     /// Represented by ASCII "4" in AT commands.
-    FOUR = 4;
+    FOUR = 52;
     /// Represented by ASCII "5" in AT commands.
-    FIVE = 5;
+    FIVE = 53;
     /// Represented by ASCII "6" in AT commands.
-    SIX = 6;
+    SIX = 54;
     /// Represented by ASCII "7" in AT commands.
-    SEVEN = 7;
+    SEVEN = 55;
     /// Represented by ASCII "8" in AT commands.
-    EIGHT = 8;
+    EIGHT = 56;
     /// Represented by ASCII "9" in AT commands.
-    NINE = 9;
+    NINE = 57;
     /// Represented by ASCII "#" in AT commands.
-    NUMBER_SIGN = 10;
+    NUMBER_SIGN = 35;
     /// Represented by ASCII "0" in AT commands.
-    ZERO = 11;
+    ZERO = 48;
     /// Represented by ASCII "*" in AT commands.
-    ASTERISK = 12;
+    ASTERISK = 42;
     /// Represented by ASCII "A" in AT commands.
-    A = 13;
+    A = 65;
     /// Represented by ASCII "B" in AT commands.
-    B = 14;
+    B = 66;
     /// Represented by ASCII "C" in AT commands.
-    C = 15;
+    C = 67;
     /// Represented by ASCII "D" in AT commands.
-    D = 16;
+    D = 68;
 };
 
 /// Controls the lifecycle of a call that has been routed through a headset.
