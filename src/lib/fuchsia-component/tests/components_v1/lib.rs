@@ -472,9 +472,8 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
         dir_proxy.into_channel().expect("failed to extract channel from proxy").into_zx_channel();
 
     // Connect to the default instance of CounterService and make calls to the "counter" member.
-    let service_proxy = fuchsia_component::client::connect_to_unified_service_at_dir::<
-        CounterServiceMarker,
-    >(&dir_request)?;
+    let service_proxy =
+        fuchsia_component::client::connect_to_service_at_dir::<CounterServiceMarker>(&dir_request)?;
     let counter_proxy = service_proxy.counter().expect("failed conencting to counter member");
     let value: u32 =
         counter_proxy.get_and_increment().await.expect("first call to get_and_increment failed");

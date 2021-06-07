@@ -9,8 +9,7 @@
 
 use {
     fidl_fuchsia_examples_services as fexamples, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2 as fsys2, fuchsia_component::client::connect_to_unified_service_instance,
-    log::*,
+    fidl_fuchsia_sys2 as fsys2, fuchsia_component::client::connect_to_service_instance, log::*,
 };
 
 const COLLECTION_NAME: &'static str = "account_providers";
@@ -26,8 +25,11 @@ async fn read_and_write_to_multiple_service_instances() {
 
     // Debit both bank accounts by $5.
     for (account, expected_owner) in &[("a", "A"), ("b", "B")] {
-        let proxy = connect_to_unified_service_instance::<fexamples::BankAccountMarker>(account)
-            .expect("failed to connect to service instance");
+        let proxy = connect_to_service_instance::<fexamples::BankAccountMarker>(&format!(
+            "{}/default",
+            account
+        ))
+        .expect("failed to connect to service instance");
         let read_only_account = proxy.read_only().expect("read_only protocol");
         let owner = read_only_account.get_owner().await.expect("failed to get owner");
         assert_eq!(owner, *expected_owner);

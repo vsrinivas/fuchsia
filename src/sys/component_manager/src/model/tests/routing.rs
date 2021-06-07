@@ -2365,7 +2365,7 @@ async fn use_service_from_sibling_collection() {
                 target.clone(),
                 CheckUse::Service {
                     path: "/svc/my.service.Service".try_into().unwrap(),
-                    instance: "foo".to_string(),
+                    instance: "foo/default".to_string(),
                     member: "echo".to_string(),
                     expected_res: ExpectedResult::Ok,
                 },

@@ -32,7 +32,7 @@ async fn main() -> Result<(), Error> {
     let app = launch(&launcher, server_url, None).context("Failed to launch echo service")?;
 
     let echo = app
-        .connect_to_unified_service::<EchoServiceMarker>()
+        .connect_to_service::<EchoServiceMarker>()
         .context("Failed to connect to echo service")?;
 
     let foo = echo.foo().context("failed to connect to foo member")?;

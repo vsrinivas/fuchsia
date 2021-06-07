@@ -91,7 +91,7 @@ async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
     )?;
 
     let ext4_service =
-        app.connect_to_unified_service::<ServiceMarker>().expect("Failed to connect to service");
+        app.connect_to_service::<ServiceMarker>().expect("Failed to connect to service");
     let ext4 = ext4_service.server()?;
 
     let mut file_buf = io::BufReader::new(fs::File::open("/pkg/data/nest.img")?);

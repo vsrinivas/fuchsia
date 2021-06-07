@@ -18,10 +18,7 @@ use {
     fuchsia_zircon::{Channel, Status},
     log::*,
     moniker::AbsoluteMoniker,
-    std::{
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{path::PathBuf, sync::Arc},
     vfs::{
         directory::{
             dirents_sink,
@@ -32,9 +29,6 @@ use {
         execution_scope::ExecutionScope,
     },
 };
-
-/// The name of a Service's default instance.
-const DEFAULT_INSTANCE: &'static str = "default";
 
 /// Serve a Service directory that allows clients to list instances in a collection and to open
 /// instances, triggering capability routing.
@@ -118,15 +112,10 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
                     return;
                 }
             };
-            let relative_path = if path.is_empty() {
-                PathBuf::from(DEFAULT_INSTANCE)
-            } else {
-                Path::new(DEFAULT_INSTANCE).join(path.into_string())
-            };
             if let Err(err) = open_capability_at_source(OpenRequest {
                 flags,
                 open_mode: mode,
-                relative_path,
+                relative_path: PathBuf::from(path.into_string()),
                 source,
                 target: &target,
                 server_chan: &mut server_end,
@@ -392,18 +381,18 @@ mod tests {
         assert!(instance_names.contains("bar"));
 
         // Open one of the entries.
-        let instance_dir = io_util::directory::open_directory(
+        let collection_dir = io_util::directory::open_directory(
             &service_proxy,
             "foo",
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         )
         .await
-        .expect("failed to open instance dir");
+        .expect("failed to open collection dir");
 
         // Make sure we're reading the expected directory.
-        let entries = files_async::readdir(&instance_dir)
+        let entries = files_async::readdir(&collection_dir)
             .await
-            .expect("failed to read members of instance dir");
-        assert!(entries.into_iter().find(|d| d.name == "member").is_some());
+            .expect("failed to read instances of collection dir");
+        assert!(entries.into_iter().find(|d| d.name == "default").is_some());
     }
 }

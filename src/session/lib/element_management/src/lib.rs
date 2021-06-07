@@ -307,9 +307,7 @@ impl Element {
     pub fn connect_to_unified_service<US: UnifiedServiceMarker>(
         &self,
     ) -> Result<US::Proxy, anyhow::Error> {
-        fuchsia_component::client::connect_to_unified_service_at_dir::<US>(
-            &self.directory_channel(),
-        )
+        fuchsia_component::client::connect_to_service_at_dir::<US>(&self.directory_channel())
     }
 
     /// Connect to a service by passing a channel for the server.
