@@ -60,7 +60,6 @@ var additionalSkipDirs = []string{
 	"topaz/public/dart/composition_delegate/test",
 	"zircon/kernel/lib/devicetree/tests",
 	"zircon/system/ulib/bitmap/test",
-	"zircon/system/ulib/chromeos-disk-setup/test",
 	"zircon/system/ulib/elfload/test",
 	"zircon/system/ulib/fs/test",
 	"zircon/system/ulib/ktrace/test",

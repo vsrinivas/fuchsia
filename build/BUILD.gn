@@ -251,7 +251,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/bitmap/*",
     "//zircon/system/ulib/block-client/*",
     "//zircon/system/ulib/c/*",
-    "//zircon/system/ulib/chromeos-disk-setup/*",
     "//zircon/system/ulib/closure-queue/*",
     "//zircon/system/ulib/cmdline/*",
     "//zircon/system/ulib/cobalt-client/*",
