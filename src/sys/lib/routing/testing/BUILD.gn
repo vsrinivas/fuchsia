@@ -42,5 +42,6 @@ rustc_library("routing_test_helpers") {
     "src/policy.rs",
     "src/rights.rs",
     "src/storage.rs",
+    "src/storage_admin.rs",
   ]
 }

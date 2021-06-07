@@ -6,6 +6,7 @@ pub mod component_id_index;
 pub mod policy;
 pub mod rights;
 pub mod storage;
+pub mod storage_admin;
 
 use {
     async_trait::async_trait,
