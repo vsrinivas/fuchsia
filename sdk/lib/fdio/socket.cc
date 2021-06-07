@@ -1475,6 +1475,12 @@ static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
 namespace fdio_internal {
 
 struct datagram_socket : public zxio {
+  static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
+  static constexpr zx_signals_t kSignalOutgoing = ZX_USER_SIGNAL_1;
+  static constexpr zx_signals_t kSignalError = ZX_USER_SIGNAL_2;
+  static constexpr zx_signals_t kSignalShutdownRead = ZX_USER_SIGNAL_4;
+  static constexpr zx_signals_t kSignalShutdownWrite = ZX_USER_SIGNAL_5;
+
   zx_status_t borrow_channel(zx_handle_t* h) override {
     *h = zxio_datagram_socket().client.channel().get();
     return ZX_OK;
@@ -1482,32 +1488,32 @@ struct datagram_socket : public zxio {
 
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
     *handle = zxio_datagram_socket().event.get();
-    zx_signals_t signals = ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_ERROR;
+
+    zx_signals_t signals = ZX_EVENTPAIR_PEER_CLOSED | kSignalError;
     if (events & POLLIN) {
-      signals |= ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_SHUTDOWN_READ;
+      signals |= kSignalIncoming | kSignalShutdownRead;
     }
     if (events & POLLOUT) {
-      signals |= ZXSIO_SIGNAL_OUTGOING | ZXSIO_SIGNAL_SHUTDOWN_WRITE;
+      signals |= kSignalOutgoing | kSignalShutdownWrite;
     }
     if (events & POLLRDHUP) {
-      signals |= ZXSIO_SIGNAL_SHUTDOWN_READ;
+      signals |= kSignalShutdownRead;
     }
     *out_signals = signals;
   }
 
   void wait_end(zx_signals_t signals, uint32_t* out_events) override {
     uint32_t events = 0;
-    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_SHUTDOWN_READ)) {
+    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | kSignalIncoming | kSignalShutdownRead)) {
       events |= POLLIN;
     }
-    if (signals &
-        (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_OUTGOING | ZXSIO_SIGNAL_SHUTDOWN_WRITE)) {
+    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | kSignalOutgoing | kSignalShutdownWrite)) {
       events |= POLLOUT;
     }
-    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_ERROR)) {
+    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | kSignalError)) {
       events |= POLLERR;
     }
-    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | ZXSIO_SIGNAL_SHUTDOWN_READ)) {
+    if (signals & (ZX_EVENTPAIR_PEER_CLOSED | kSignalShutdownRead)) {
       events |= POLLRDHUP;
     }
     *out_events = events;
@@ -1798,6 +1804,9 @@ static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
 namespace fdio_internal {
 
 struct stream_socket : public pipe {
+  static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
+  static constexpr zx_signals_t kSignalConnected = ZX_USER_SIGNAL_3;
+
   enum class State {
     kUnconnected,
     kListening,
@@ -1845,11 +1854,11 @@ struct stream_socket : public pipe {
 
     if (events & POLLOUT) {
       // signal when connect() operation is finished.
-      zx_signals |= ZXSIO_SIGNAL_CONNECTED;
+      zx_signals |= kSignalConnected;
     }
     if (events & POLLIN) {
       // signal when a listening socket gets an incoming connection.
-      zx_signals |= ZXSIO_SIGNAL_INCOMING;
+      zx_signals |= kSignalIncoming;
     }
     *out_signals = zx_signals;
   }
@@ -1870,17 +1879,17 @@ struct stream_socket : public pipe {
           return;
 
         case State::kListening:
-          if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
+          if (zx_signals & kSignalIncoming) {
             events |= POLLIN;
           }
           use_inner = false;
           break;
         case State::kConnecting:
-          if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
+          if (zx_signals & kSignalConnected) {
             state_ = State::kConnected;
             events |= POLLOUT;
           }
-          zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
+          zx_signals &= ~kSignalConnected;
           use_inner = false;
           break;
         case State::kConnected:
@@ -2153,10 +2162,10 @@ struct stream_socket : public pipe {
       case State::kConnecting: {
         zx_signals_t observed;
         zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
-            ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
+            kSignalConnected, zx::time::infinite_past(), &observed);
         switch (status) {
           case ZX_OK:
-            if (observed & ZXSIO_SIGNAL_CONNECTED) {
+            if (observed & kSignalConnected) {
               state_ = State::kConnected;
             }
             __FALLTHROUGH;
@@ -2273,8 +2282,8 @@ zx::status<fdio_ptr> fdio_stream_socket_create(zx::socket socket,
     return zx::error(status);
   }
   zx::status state = [&socket]() -> zx::status<fdio_internal::stream_socket::State> {
-    zx_status_t status =
-        socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), nullptr);
+    zx_status_t status = socket.wait_one(fdio_internal::stream_socket::kSignalConnected,
+                                         zx::time::infinite_past(), nullptr);
     // TODO(tamird): Transferring a listening or connecting socket to another process doesn't work
     // correctly since those states can't be observed here.
     switch (status) {

@@ -138,14 +138,14 @@ func (r *socketReader) Len() int {
 	return n
 }
 
-func eventsToSignals(events waiter.EventMask) zx.Signals {
+func eventsToDatagramSignals(events waiter.EventMask) zx.Signals {
 	signals := zx.SignalNone
 	if events&waiter.EventIn != 0 {
-		signals |= zxsocket.SignalIncoming
+		signals |= zxsocket.SignalDatagramIncoming
 		events &^= waiter.EventIn
 	}
 	if events&waiter.EventErr != 0 {
-		signals |= zxsocket.SignalError
+		signals |= zxsocket.SignalDatagramError
 		events &^= waiter.EventErr
 	}
 	if events != 0 {
@@ -154,10 +154,23 @@ func eventsToSignals(events waiter.EventMask) zx.Signals {
 	return signals
 }
 
+func eventsToStreamSignals(events waiter.EventMask) zx.Signals {
+	signals := zx.SignalNone
+	if events&waiter.EventIn != 0 {
+		signals |= zxsocket.SignalStreamIncoming
+		events &^= waiter.EventIn
+	}
+	if events != 0 {
+		panic(fmt.Sprintf("unexpected events=%b", events))
+	}
+	return signals
+}
+
 type signaler struct {
-	supported  waiter.EventMask
-	readiness  func(waiter.EventMask) waiter.EventMask
-	signalPeer func(zx.Signals, zx.Signals) error
+	supported       waiter.EventMask
+	eventsToSignals func(waiter.EventMask) zx.Signals
+	readiness       func(waiter.EventMask) waiter.EventMask
+	signalPeer      func(zx.Signals, zx.Signals) error
 
 	mu struct {
 		sync.Mutex
@@ -186,8 +199,8 @@ func (s *signaler) update() error {
 		return nil
 	}
 
-	set := eventsToSignals(observed &^ s.mu.asserted)
-	clear := eventsToSignals(s.mu.asserted &^ observed)
+	set := s.eventsToSignals(observed &^ s.mu.asserted)
+	clear := s.eventsToSignals(s.mu.asserted &^ observed)
 	if set == 0 && clear == 0 {
 		return nil
 	}
@@ -1033,8 +1046,9 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 			netProto:   netProto,
 			ns:         ns,
 			pending: signaler{
-				readiness:  ep.Readiness,
-				signalPeer: localS.Handle().SignalPeer,
+				eventsToSignals: eventsToStreamSignals,
+				readiness:       ep.Readiness,
+				signalPeer:      localS.Handle().SignalPeer,
 			},
 		},
 		local:   localS,
@@ -1126,11 +1140,11 @@ func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) 
 	var flags tcpip.ShutdownFlags
 
 	if how&socket.ShutdownModeRead != 0 {
-		signals |= zxsocket.SignalShutdownRead
+		signals |= zxsocket.SignalDatagramShutdownRead
 		flags |= tcpip.ShutdownRead
 	}
 	if how&socket.ShutdownModeWrite != 0 {
-		signals |= zxsocket.SignalShutdownWrite
+		signals |= zxsocket.SignalDatagramShutdownWrite
 		flags |= tcpip.ShutdownWrite
 	}
 	if flags == 0 {
@@ -1199,12 +1213,12 @@ func (eps *endpointWithSocket) close() {
 		eps.terminal.mu.Unlock()
 		switch err.(type) {
 		case *tcpip.ErrConnectionRefused:
-			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalConnectionRefused); err != nil {
-				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalConnectionRefused) = %s", err))
+			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalStreamConnectionRefused); err != nil {
+				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalStreamConnectionRefused) = %s", err))
 			}
 		case *tcpip.ErrConnectionReset:
-			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalConnectionReset); err != nil {
-				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalConnectionReset) = %s", err))
+			if err := eps.local.Handle().SignalPeer(0, zxsocket.SignalStreamConnectionReset); err != nil {
+				panic(fmt.Sprintf("Handle().SignalPeer(0, zxsocket.SignalStreamConnectionReset) = %s", err))
 			}
 		}
 
@@ -1291,10 +1305,10 @@ func (eps *endpointWithSocket) startReadWriteLoops(connected bool) {
 	select {
 	case <-eps.closing:
 	default:
-		// TODO(https://fxbug.dev/76279): Remove SignalOutgoing after ABI transition.
-		var signals zx.Signals = zxsocket.SignalOutgoing
+		// TODO(https://fxbug.dev/76279): Remove SignalStreamOutgoing after ABI transition.
+		var signals zx.Signals = zxsocket.SignalStreamOutgoing
 		if connected {
-			signals |= zxsocket.SignalConnected
+			signals |= zxsocket.SignalStreamConnected
 		}
 		if err := eps.local.Handle().SignalPeer(0, signals); err != nil {
 			panic(err)
@@ -2402,9 +2416,10 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 				netProto:   netProto,
 				ns:         sp.ns,
 				pending: signaler{
-					supported:  waiter.EventIn | waiter.EventErr,
-					readiness:  ep.Readiness,
-					signalPeer: localE.SignalPeer,
+					supported:       waiter.EventIn | waiter.EventErr,
+					eventsToSignals: eventsToDatagramSignals,
+					readiness:       ep.Readiness,
+					signalPeer:      localE.SignalPeer,
 				},
 			},
 			local: localE,
@@ -2426,8 +2441,8 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 
 	sp.ns.onAddEndpoint(&s.endpoint)
 
-	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
-		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalOutgoing) = %s", err))
+	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalDatagramOutgoing); err != nil {
+		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalDatagramOutgoing) = %s", err))
 	}
 
 	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponse{

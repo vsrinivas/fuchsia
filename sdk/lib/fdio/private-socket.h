@@ -7,18 +7,6 @@
 
 #include "internal.h"
 
-// SIO signals
-#define ZXSIO_SIGNAL_INCOMING ZX_USER_SIGNAL_0
-#define ZXSIO_SIGNAL_OUTGOING ZX_USER_SIGNAL_1
-#define ZXSIO_SIGNAL_ERROR ZX_USER_SIGNAL_2
-#define ZXSIO_SIGNAL_CONNECTED ZX_USER_SIGNAL_3
-#define ZXSIO_SIGNAL_SHUTDOWN_READ ZX_USER_SIGNAL_4
-#define ZXSIO_SIGNAL_SHUTDOWN_WRITE ZX_USER_SIGNAL_5
-// TODO(https://fxbug.dev/75717): Remove after ABI transition. These signals are reserved until
-// then.
-#define ZXSIO_SIGNAL_CONNECTION_REFUSED ZX_USER_SIGNAL_6
-#define ZXSIO_SIGNAL_CONNECTION_RESET ZX_USER_SIGNAL_7
-
 bool fdio_is_socket(fdio_t* io);
 
 #endif  // LIB_FDIO_PRIVATE_SOCKET_H_
