@@ -31,4 +31,4 @@ accept fuchsia.BIND_PCI_DID {
   fuchsia.brcmfmac.BIND_PCI_DID.BCM4366_5G,
   fuchsia.brcmfmac.BIND_PCI_DID.BCM4371,
 }
-fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
+fuchsia.BIND_COMPOSITE == 1;

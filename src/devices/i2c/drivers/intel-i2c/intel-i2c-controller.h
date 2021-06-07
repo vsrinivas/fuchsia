@@ -135,7 +135,7 @@ using IntelI2cControllerType = ddk::Device<IntelI2cController, ddk::Initializabl
 class IntelI2cController : public IntelI2cControllerType,
                            public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {
  public:
-  IntelI2cController(zx_device_t* parent) : IntelI2cControllerType(parent), pci_(parent) {}
+  explicit IntelI2cController(zx_device_t* parent) : IntelI2cControllerType(parent), pci_(parent, "pci") {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -308,6 +309,10 @@ void UsbXhci::DdkInit(ddk::InitTxn txn) {
 
 zx_status_t UsbXhci::InitPci() {
   zx_status_t status;
+
+  if (!pci_.is_valid()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   fbl::AllocChecker ac;
   xhci_ = std::unique_ptr<xhci_t>(new (&ac) xhci_t);

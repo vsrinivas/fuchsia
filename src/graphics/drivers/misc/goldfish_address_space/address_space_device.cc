@@ -72,7 +72,8 @@ zx_status_t AddressSpaceDevice::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-AddressSpaceDevice::AddressSpaceDevice(zx_device_t* parent) : DeviceType(parent), pci_(parent) {}
+AddressSpaceDevice::AddressSpaceDevice(zx_device_t* parent)
+    : DeviceType(parent), pci_(parent, "pci") {}
 
 AddressSpaceDevice::~AddressSpaceDevice() = default;
 

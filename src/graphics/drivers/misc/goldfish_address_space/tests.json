@@ -4,7 +4,7 @@
     "expected": "abort",
     "device": {
       "fuchsia.BIND_PROTOCOL": "fuchsia.acpi.BIND_PROTOCOL.DEVICE",
-      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+      "fuchsia_BIND_COMPOSITE": "1"
     }
   },
   {
@@ -14,7 +14,7 @@
       "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
       "fuchsia.BIND_PCI_VID": "0x607D",
       "fuchsia.BIND_PCI_DID": "0xF153",
-      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+      "fuchsia.BIND_COMPOSITE": "1"
     }
   }
 ]

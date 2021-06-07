@@ -59,7 +59,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
  public:
   explicit UsbXhci(zx_device_t* parent, std::unique_ptr<dma_buffer::BufferFactory> buffer_factory)
       : UsbXhciType(parent),
-        pci_(parent),
+        pci_(parent, "pci"),
         pdev_(parent),
         buffer_factory_(std::move(buffer_factory)),
         ddk_interaction_loop_(&kAsyncLoopConfigNeverAttachToThread),

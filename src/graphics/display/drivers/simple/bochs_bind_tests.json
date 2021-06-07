@@ -2,7 +2,7 @@
     {
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "abort",
         "name": "Protocol"
@@ -12,7 +12,7 @@
             "fuchsia.BIND_PCI_DID": "0x1111",
             "fuchsia.BIND_PCI_VID": "0x1234",
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "match",
         "name": "Bochs"

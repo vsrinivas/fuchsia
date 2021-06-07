@@ -9,10 +9,10 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
-#include <lib/ddk/hw/reg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -355,7 +355,14 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&edev->tx_lock, mtx_plain);
   cnd_init(&edev->tx_cond);
 
-  if ((res = device_get_protocol(dev, ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
+  zx_device_t* fragment = NULL;
+  if (!device_get_fragment(dev, "pci", &fragment)) {
+    zxlogf(ERROR, "rtl8111: no pci fragment found");
+    res = ZX_ERR_NOT_FOUND;
+    goto fail;
+  }
+
+  if ((res = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &edev->pci)) != ZX_OK) {
     zxlogf(ERROR, "rtl8111: no pci protocol");
     goto fail;
   }

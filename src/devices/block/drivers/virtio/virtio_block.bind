@@ -10,4 +10,4 @@ accept fuchsia.BIND_PCI_DID {
   fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK,
   fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_BLOCK,
 }
-fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
+fuchsia.BIND_COMPOSITE == 1;

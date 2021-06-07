@@ -8,10 +8,10 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
-#include <lib/ddk/hw/reg.h>
 #include <lib/pci/hw.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
@@ -1002,7 +1002,14 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&nvme->lock, mtx_plain);
   mtx_init(&nvme->admin_lock, mtx_plain);
 
-  if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &nvme->pci)) {
+  zx_status_t status = ZX_OK;
+  zx_device_t* fragment = NULL;
+  if (!device_get_fragment(dev, "pci", &fragment)) {
+    status = ZX_ERR_NOT_FOUND;
+    goto fail;
+  }
+
+  if ((status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &nvme->pci)) != ZX_OK) {
     goto fail;
   }
 
@@ -1011,7 +1018,7 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  zx_status_t status = pci_configure_irq_mode(&nvme->pci, 1, NULL);
+  status = pci_configure_irq_mode(&nvme->pci, 1, NULL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "nvme: could not configure irqs");
     goto fail;

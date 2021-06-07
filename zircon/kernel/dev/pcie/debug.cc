@@ -461,7 +461,8 @@ static void dump_pcie_capabilities(fbl::RefPtr<PcieDevice> dev, void* ctx) {
         is_first = false;
         params->indent_level += 10;
       } else {
-        LSPCI_PRINTF("%s (%#02x)\n", get_cap_str(cap.id()), cap.id());
+        LSPCI_PRINTF("%s (id = %#02x, offset = %#02x)\n", get_cap_str(cap.id()), cap.id(),
+                     cap.base());
       }
     }
   }

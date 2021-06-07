@@ -6,8 +6,8 @@
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
-#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/mmio-buffer.h>
 
 #include <cstdint>
 
@@ -133,7 +133,7 @@ zx_status_t PciModernBackend::Init() {
   fbl::AutoLock guard(&lock());
 
   // try to parse capabilities
-  uint8_t off;
+  uint8_t off = 0;
   zx_status_t st;
   for (st = pci().GetFirstCapability(PCI_CAP_ID_VENDOR, &off); st == ZX_OK;
        st = pci().GetNextCapability(PCI_CAP_ID_VENDOR, off, &off)) {

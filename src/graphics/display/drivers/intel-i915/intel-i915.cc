@@ -12,8 +12,8 @@
 #include <inttypes.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/device-protocol/pci.h>
 #include <lib/ddk/hw/inout.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -2146,14 +2146,19 @@ void Controller::FinishInit() {
 zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) {
   zxlogf(TRACE, "Binding to display controller");
 
-  zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_SYSMEM, &sysmem_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not get Display SYSMEM protocol");
+  zx_device_t* fragment = nullptr;
+  zx_status_t status = ZX_ERR_NOT_FOUND;
+  if (!device_get_fragment(parent(), "sysmem", &fragment) ||
+      (status = device_get_protocol(fragment, ZX_PROTOCOL_SYSMEM, &sysmem_)) != ZX_OK) {
+    zxlogf(ERROR, "Could not get Display SYSMEM protocol: %s", zx_status_get_string(status));
     return status;
   }
 
-  if (device_get_protocol(parent_, ZX_PROTOCOL_PCI, &pci_)) {
-    return ZX_ERR_NOT_SUPPORTED;
+  status = ZX_ERR_NOT_FOUND;
+  if (!device_get_fragment(parent(), "pci", &fragment) ||
+      (status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
+    zxlogf(ERROR, "Could not get Display PCI protocol: %s", zx_status_get_string(status));
+    return status;
   }
 
   pci_config_read16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);

@@ -271,8 +271,10 @@ zx_status_t RunPcieDeviceComponentsTest(zx_device_t* parent) {
 zx_status_t RunPcieDriverTest(zx_device_t* parent) {
   zx_status_t status = ZX_OK;
 
+  zx_device_t* fragment;
   pci_protocol_t pci = {};
-  if (device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci) == ZX_OK) {
+  if (device_get_fragment(parent, "pci", &fragment) &&
+      (status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci) == ZX_OK)) {
     BRCMF_INFO("Running PCIE tests");
 
     // Unit tests for the different components of the driver.

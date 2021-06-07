@@ -25,7 +25,7 @@ using UsbXhciType = ddk::Device<UsbXhci, ddk::Initializable, ddk::Suspendable, d
 // This is the main class for the USB XHCI host controller driver.
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
  public:
-  explicit UsbXhci(zx_device_t* parent) : UsbXhciType(parent), pci_(parent), pdev_(parent) {}
+  explicit UsbXhci(zx_device_t* parent) : UsbXhciType(parent), pci_(parent, "pci"), pdev_(parent) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

@@ -6,7 +6,7 @@
       "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
       "fuchsia.BIND_PCI_VID": "0x8086",
       "fuchsia.BIND_PCI_DID": "0x2668",
-      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+      "fuchsia.BIND_COMPOSITE": "1"
     }
   },
   {
@@ -16,7 +16,7 @@
       "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
       "fuchsia.BIND_PCI_VID": "0xffff",
       "fuchsia.BIND_PCI_DID": "0xffff",
-      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+      "fuchsia.BIND_COMPOSITE": "1"
     }
   }
 ]

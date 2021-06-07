@@ -155,8 +155,10 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   pci_dev_ = pci_dev;
 
   // The device had better be a PCI device, or we are very confused.
-  res = device_get_protocol(pci_dev_, ZX_PROTOCOL_PCI, reinterpret_cast<void*>(&pci_));
-  if (res != ZX_OK) {
+  res = ZX_ERR_NOT_FOUND;
+  zx_device_t* fragment;
+  if (!device_get_fragment(pci_dev_, "pci", &fragment) ||
+      (res = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
     LOG(ERROR, "PCI device does not support PCI protocol! (res %d)", res);
     return res;
   }

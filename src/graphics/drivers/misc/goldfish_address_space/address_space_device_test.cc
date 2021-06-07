@@ -179,7 +179,14 @@ class AddressSpaceDeviceTest : public zxtest::Test {
                                 .size = kAreaSize,
                                 .handle = vmo_area.release()});
 
-    ddk_.SetProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto());
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[1], 1);
+    fragments[0].name = "pci";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        .id = ZX_PROTOCOL_PCI,
+        .proto = {.ops = mock_pci_.GetProto()->ops, .ctx = mock_pci_.GetProto()->ctx},
+    });
+
+    ddk_.SetFragments(std::move(fragments));
     dut_ = std::make_unique<AddressSpaceDevice>(fake_ddk::FakeParent());
   }
 

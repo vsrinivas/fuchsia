@@ -2,7 +2,7 @@
     {
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "abort",
         "name": "Protocol"
@@ -13,7 +13,7 @@
             "fuchsia.BIND_PCI_INTERFACE": "0x01",
             "fuchsia.BIND_PCI_SUBCLASS": "fuchsia.pci.massstorage.BIND_PCI_SUBCLASS.SATA",
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "match",
         "name": "Vendor"

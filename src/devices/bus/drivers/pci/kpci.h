@@ -34,17 +34,15 @@ struct kpci_device {
 namespace pci {
 
 class KernelPci;
-using KernelPciType = ddk::Device<pci::KernelPci, ddk::Rxrpcable, ddk::GetProtocolable>;
+using KernelPciType = ddk::Device<pci::KernelPci, ddk::GetProtocolable>;
 class KernelPci : public KernelPciType,
                   public ddk::PciProtocol<pci::KernelPci>,
                   ddk::SysmemProtocol<pci::KernelPci> {
  public:
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
-  zx_status_t DdkRxrpc(zx_handle_t ch);
   void DdkRelease();
 
   static zx_status_t CreateComposite(zx_device_t* parent, kpci_device device);
-  static zx_status_t CreateSimple(zx_device_t* parent, kpci_device device);
   zx_status_t RpcReply(zx_handle_t ch, zx_status_t status, zx_handle_t* handle, PciRpcMsg* req,
                        PciRpcMsg* resp);
 
@@ -82,23 +80,6 @@ class KernelPci : public KernelPciType,
 
  private:
   KernelPci(zx_device_t* parent, kpci_device device) : KernelPciType(parent), device_(device) {}
-
-  // RPC methods for PciProxy
-  zx_status_t RpcEnableBusMaster(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcResetDevice(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcConfigRead(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcConfigWrite(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcSetIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcQueryIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcConfigureIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcMapInterrupt(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcAckInterrupt(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcGetBar(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcGetBti(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcGetDeviceInfo(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcGetNextCapability(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
-  zx_status_t RpcConnectSysmem(zx_handle_t ch, zx_handle_t handle, PciRpcMsg* req, PciRpcMsg* resp);
-
   kpci_device device_;
 };
 

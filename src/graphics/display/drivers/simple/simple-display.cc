@@ -213,8 +213,10 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
                                     uint32_t width, uint32_t height, uint32_t stride,
                                     zx_pixel_format_t format) {
   pci_protocol_t pci;
-  zx_status_t status;
-  if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci)) {
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  zx_device_t* fragment;
+  if (!device_get_fragment(dev, "pci", &fragment) ||
+      (status = device_get_protocol(fragment, ZX_PROTOCOL_PCI, &pci)) != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

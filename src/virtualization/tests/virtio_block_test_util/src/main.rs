@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fdio::clone_channel;
+use fdio::{clone_channel, watch_directory, WatchEvent};
 use fidl_fuchsia_hardware_block::BlockSynchronousProxy;
 use fuchsia_zircon as zx;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::vec;
 use structopt::StructOpt;
+use zx::Status;
 
-const PCI_DIR: &str = "/dev/sys/platform/pci/";
+const BLOCK_CLASS_PATH: &str = "/dev/class/block/";
 
 #[derive(StructOpt, Debug)]
 struct Config {
@@ -32,15 +33,45 @@ enum Command {
     Write { offset: u64, value: u8 },
 }
 
-fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, zx::Status> {
-    // The filename is in the format <bus>:<device>.<function>. The function is always zero for
-    // virtio block devices.
-    let mut path = PathBuf::from(PCI_DIR);
-    path.push(format!("{:02}:{:02}.0", pci_bus, pci_device));
-    path.push("virtio-block");
-    path.push("block");
+// This tool has access to block nodes in the /dev/class/block path, but we need
+// to match against composite PCI devices which sit in the /dev/ root we cannot
+// get blanket access to. To achieve this, we walk all the block devices and
+// look up their corresponding topological path to see if it corresponds to the
+// device we're looking for.
+fn get_class_path_from_topological(topological_path: &PathBuf) -> Result<PathBuf, zx::Status> {
+    let mut class_path = PathBuf::new();
+    let watch_callback = |_: WatchEvent, filename: &Path| -> Result<(), Status> {
+        let mut block_path = PathBuf::from(BLOCK_CLASS_PATH);
+        block_path.push(filename);
+        let block_dev = File::open(&block_path).or(Err(zx::Status::IO))?;
+        let topo_path = PathBuf::from(fdio::device_get_topo_path(&block_dev)?);
+        if topo_path == *topological_path {
+            class_path = block_path.to_path_buf();
+            Err(zx::Status::STOP)
+        } else {
+            Ok(())
+        }
+    };
 
-    let file = OpenOptions::new().read(true).write(true).open(path)?;
+    // Scan current files in the directory and watch for new ones in case we
+    // don't find the block device we're looking for. There's a slim possibility
+    // a partition may not yet be available when this tool is executed in a
+    // test.
+    let block_dir = File::open(BLOCK_CLASS_PATH)?;
+    match watch_directory(&block_dir, zx::sys::ZX_TIME_INFINITE, watch_callback) {
+        zx::Status::STOP => Ok(class_path),
+        _ => Err(zx::Status::NOT_FOUND),
+    }
+}
+
+fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, zx::Status> {
+    // The filename is in the format pci-<bus>:<device>.<function>. The function
+    // is always zero for virtio block devices.
+    let topo_path =
+        PathBuf::from(format!("/dev/pci-{:02}:{:02}.0/virtio-block/block", pci_bus, pci_device));
+
+    let class_path = get_class_path_from_topological(&topo_path)?;
+    let file = OpenOptions::new().read(true).write(true).open(&class_path)?;
 
     Ok(file)
 }

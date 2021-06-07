@@ -27,7 +27,15 @@ class FakeDdkTesterPci : public FakeDdkTester {
  public:
   FakeDdkTesterPci() : FakeDdkTester() {
     // PCI is the only protocol of interest here.
-    SetProtocol(ZX_PROTOCOL_PCI, &fake_pci_.get_protocol());
+
+    fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[1], 1);
+    fragments[0].name = "pci";
+    fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
+        .id = ZX_PROTOCOL_PCI,
+        .proto = {.ops = fake_pci_.get_protocol().ops, .ctx = fake_pci_.get_protocol().ctx},
+    });
+
+    SetFragments(std::move(fragments));
 
     // Set up the first BAR.
     fake_pci_.CreateBar(/*bar_id=*/0, /*size=*/4096);

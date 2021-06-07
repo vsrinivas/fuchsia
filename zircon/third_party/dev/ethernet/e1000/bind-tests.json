@@ -6,7 +6,7 @@
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_VID": "0x8086",
             "fuchsia.BIND_PCI_DID": "0x100e",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -16,7 +16,7 @@
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_VID": "0x8086",
             "fuchsia.BIND_PCI_DID": "0x156f",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -24,7 +24,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -34,7 +34,7 @@
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_VID": "0x8087",
             "fuchsia.BIND_PCI_DID": "0x100e",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -44,7 +44,7 @@
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_VID": "0x8086",
             "fuchsia.BIND_PCI_DID": "0x24fd",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     }
 ]

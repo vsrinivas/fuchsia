@@ -37,4 +37,4 @@ accept fuchsia.BIND_PCI_DID {
   0x591d,
   0x3ea5,
 }
-fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
+fuchsia.BIND_COMPOSITE == 1;

@@ -16,4 +16,4 @@ accept fuchsia.BIND_PCI_DID {
   0xA170,  // Intel 100/C230 PCH Spec
   0xA1F0,  // Intel 200/C400 PCH Spec
 }
-fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
+fuchsia.BIND_COMPOSITE == 1;

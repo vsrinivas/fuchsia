@@ -6,7 +6,7 @@
             "fuchsia.BIND_PCI_SUBCLASS": "fuchsia.pci.network.BIND_PCI_SUBCLASS.NETWORK",
             "fuchsia.BIND_PCI_VID": "fuchsia.brcmfmac.BIND_PCI_VID.BROADCOM",
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "match",
         "name": "PCI"
@@ -18,7 +18,7 @@
             "fuchsia.BIND_PCI_SUBCLASS": "fuchsia.pci.network.BIND_PCI_SUBCLASS.NETWORK",
             "fuchsia.BIND_PCI_VID": "fuchsia.brcmfmac.BIND_PCI_VID.BROADCOM",
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         },
         "expected": "abort",
         "name": "PCI incorrect class"

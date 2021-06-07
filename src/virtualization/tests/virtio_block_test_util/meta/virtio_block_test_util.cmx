@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "dev": [
-            "sys/platform/pci"
+            "class/block"
         ]
     }
 }

@@ -63,7 +63,8 @@ zx_status_t PcieInterruptProvider::Create(
 
   // Get the PCI resources necessary to operate this device.
   auto pci_proto = std::make_unique<ddk::PciProtocolClient>();
-  if ((status = ddk::PciProtocolClient::CreateFromDevice(device, pci_proto.get())) != ZX_OK) {
+  if ((status = ddk::PciProtocolClient::CreateFromDevice(device, "pci", pci_proto.get())) !=
+      ZX_OK) {
     BRCMF_ERR("ddk::PciProtocolClient::CreateFromDevice() failed: %s",
               zx_status_get_string(status));
     return status;

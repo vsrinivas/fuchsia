@@ -310,8 +310,8 @@ func (d *Distribution) runNonInteractive(root, toRun, hostPathMinfsBinary, hostP
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
 	script := `mkdir /tmp/testdata-fs
-waitfor class=block topo=/dev/sys/platform/pci/00:06.0/virtio-block/block timeout=60000
-mount /dev/sys/platform/pci/00:06.0/virtio-block/block /tmp/testdata-fs
+waitfor class=block topo=/dev/pci-00:06.0/virtio-block/block timeout=60000
+mount /dev/pci-00:06.0/virtio-block/block /tmp/testdata-fs
 ` + toRun + ` 2>/tmp/testdata-fs/err.txt >/tmp/testdata-fs/log.txt
 umount /tmp/testdata-fs
 dm poweroff

@@ -797,7 +797,7 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "class/sysmem/000",
 
       "sys/platform/pci/00:00.0",
-      "sys/platform/pci/00:1f.2/ahci",
+      "pci-00:1f.2/ahci",
 
       "sys/platform/acpi",
       "sys/platform/acpi/acpi-pwrbtn",
@@ -813,9 +813,9 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   printf("INFO: AEMU board detected. Test enumerating AEMU-specific devices.\n");
 
   static const char* kAemuDevicePaths[] = {
-      "sys/platform/pci/00:01.0/virtio-input",
-      "sys/platform/pci/00:02.0/virtio-input",
-      "sys/platform/pci/00:0b.0/goldfish-address-space",
+      "pci-00:01.0/virtio-input",
+      "pci-00:02.0/virtio-input",
+      "pci-00:0b.0/goldfish-address-space",
 
       "sys/platform/acpi/goldfish",
       "sys/platform/acpi/goldfish/goldfish-pipe",

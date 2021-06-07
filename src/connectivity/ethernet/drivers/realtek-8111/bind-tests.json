@@ -6,7 +6,7 @@
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.REALTEK",
             "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.RTL8111",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -15,7 +15,7 @@
         "device": {
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.REALTEK",
             "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.RTL8111",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -24,7 +24,7 @@
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.RTL8111",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     },
     {
@@ -33,7 +33,7 @@
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.REALTEK",
-            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
+            "fuchsia.BIND_COMPOSITE": "1"
         }
     }
 ]

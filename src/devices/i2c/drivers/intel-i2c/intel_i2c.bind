@@ -16,4 +16,4 @@ accept fuchsia.BIND_PCI_DID {
   fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C3,
   fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C4,
 }
-fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
+fuchsia.BIND_COMPOSITE == 1;
