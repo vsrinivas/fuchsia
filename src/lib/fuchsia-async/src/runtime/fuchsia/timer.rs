@@ -175,10 +175,10 @@ mod test {
 
     #[test]
     fn shorter_fires_first_multithreaded() {
-        let mut exec = SendExecutor::new().unwrap();
+        let mut exec = SendExecutor::new(4).unwrap();
         let shorter = Timer::new(Time::after(100.millis()));
         let longer = Timer::new(Time::after(1.second()));
-        match exec.run(shorter.select(longer), 4) {
+        match exec.run(shorter.select(longer)) {
             Either::Left(()) => {}
             Either::Right(()) => panic!("wrong timer fired"),
         }

@@ -179,7 +179,8 @@ fn main() {
 
 fn main_ds() -> Result<(), Error> {
     syslog::init_with_tags(&["device_settings"])?;
-    let mut core = fasync::SendExecutor::new().context("unable to create executor")?;
+    let mut core =
+        fasync::SendExecutor::new(/* num_threads */ 2).context("unable to create executor")?;
 
     let watchers = Arc::new(Mutex::new(HashMap::new()));
     // Attempt to create data directory
@@ -201,7 +202,7 @@ fn main_ds() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
 
-    Ok(core.run(fs.collect(), /* threads */ 2))
+    Ok(core.run(fs.collect()))
 }
 
 #[cfg(test)]

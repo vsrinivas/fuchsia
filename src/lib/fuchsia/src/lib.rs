@@ -139,7 +139,7 @@ where
     Fut: Future<Output = R> + Send + 'static,
     R: Send + 'static,
 {
-    fuchsia_async::SendExecutor::new().expect("Failed to create executor").run(f(), num_threads)
+    fuchsia_async::SendExecutor::new(num_threads).expect("Failed to create executor").run(f())
 }
 
 //

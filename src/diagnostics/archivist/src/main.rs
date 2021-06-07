@@ -81,8 +81,8 @@ fn main() -> Result<(), Error> {
 
     let num_threads = config.num_threads;
     debug!("Running executor with {} threads.", num_threads);
-    SendExecutor::new()?
-        .run(async_main(opt, config, log_server), num_threads)
+    SendExecutor::new(num_threads)?
+        .run(async_main(opt, config, log_server))
         .context("async main")?;
     debug!("Exiting.");
     Ok(())

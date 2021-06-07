@@ -39,6 +39,8 @@ pub struct SendExecutor {
     inner: Arc<Inner>,
     /// Worker thread handles
     threads: Vec<thread::JoinHandle<()>>,
+    /// Number of worker threads
+    num_threads: usize,
 }
 
 impl fmt::Debug for SendExecutor {
@@ -49,16 +51,15 @@ impl fmt::Debug for SendExecutor {
 
 impl SendExecutor {
     /// Create a new multi-threaded executor.
-    // TODO(fxbug.dev/76550) move the number of threads here
-    pub fn new() -> Result<Self, zx::Status> {
+    pub fn new(num_threads: usize) -> Result<Self, zx::Status> {
         let inner = Arc::new(Inner::new(ExecutorTime::RealTime, /* is_local */ false)?);
         inner.clone().set_local(TimerHeap::new());
-        Ok(Self { inner, threads: Vec::default() })
+        Ok(Self { inner, threads: Vec::default(), num_threads })
     }
 
-    /// Run `future` to completion, using this thread and `num_threads - 1` workers in a pool to
+    /// Run `future` to completion, using this thread and `num_threads` workers in a pool to
     /// poll active tasks.
-    pub fn run<F>(&mut self, future: F, num_threads: usize) -> F::Output
+    pub fn run<F>(&mut self, future: F) -> F::Output
     where
         F: Future + Send + 'static,
         F::Output: Send + 'static,
@@ -84,7 +85,7 @@ impl SendExecutor {
         self.inner.done.store(false, Ordering::SeqCst);
         with_local_timer_heap(|timer_heap| {
             let timer_heap = mem::replace(timer_heap, TimerHeap::new());
-            self.create_worker_threads(num_threads, Some(timer_heap));
+            self.create_worker_threads(Some(timer_heap));
         });
 
         // Wait until the signal the future has completed.
@@ -102,10 +103,10 @@ impl SendExecutor {
         result.take().unwrap()
     }
 
-    /// Add `num_workers` worker threads to the executor's thread pool.
+    /// Add `self.num_threads` worker threads to the executor's thread pool.
     /// `timers`: timers from the "master" thread which would otherwise be lost.
-    fn create_worker_threads(&mut self, num_workers: usize, mut timers: Option<TimerHeap>) {
-        for _ in 0..num_workers {
+    fn create_worker_threads(&mut self, mut timers: Option<TimerHeap>) {
+        for _ in 0..self.num_threads {
             self.threads.push(self.new_worker(timers.take()));
         }
     }

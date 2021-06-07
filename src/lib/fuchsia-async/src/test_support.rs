@@ -100,12 +100,13 @@ impl<E: 'static + Send> MultithreadedTestResult for Result<(), E> {
         threads: usize,
         cfg: Config,
     ) -> Self {
-        crate::SendExecutor::new().expect("Failed to create executor").run(
-            stream::iter(0..cfg.repeat_count)
-                .map(Ok)
-                .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
-            cfg.scale_threads(threads),
-        )
+        crate::SendExecutor::new(cfg.scale_threads(threads))
+            .expect("Failed to create executor")
+            .run(
+                stream::iter(0..cfg.repeat_count)
+                    .map(Ok)
+                    .try_for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
+            )
     }
 }
 
@@ -155,11 +156,12 @@ impl MultithreadedTestResult for () {
         threads: usize,
         cfg: Config,
     ) -> Self {
-        crate::SendExecutor::new().expect("Failed to create executor").run(
-            stream::iter(0..cfg.repeat_count)
-                .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
-            cfg.scale_threads(threads),
-        )
+        crate::SendExecutor::new(cfg.scale_threads(threads))
+            .expect("Failed to create executor")
+            .run(
+                stream::iter(0..cfg.repeat_count)
+                    .for_each_concurrent(cfg.max_concurrency, apply_timeout!(cfg, test)),
+            )
     }
 }
 

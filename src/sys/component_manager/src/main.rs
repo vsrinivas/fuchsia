@@ -78,8 +78,8 @@ fn main() -> Result<(), Error> {
         }
     };
 
-    let mut executor = fasync::SendExecutor::new().context("error creating executor")?;
-    executor.run(fut, num_threads);
+    let mut executor = fasync::SendExecutor::new(num_threads).context("error creating executor")?;
+    executor.run(fut);
 
     Ok(())
 }

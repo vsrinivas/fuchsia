@@ -57,12 +57,12 @@ pub mod executor {
 
     impl SendExecutor {
         /// Stub new, panics if used.
-        pub fn new() -> Result<Self, Status> {
+        pub fn new(_: usize) -> Result<Self, Status> {
             unimplemented!();
         }
 
         /// Stub run, panics if used.
-        pub fn run<F>(&mut self, _: F, __: usize) -> F::Output
+        pub fn run<F>(&mut self, _: F) -> F::Output
         where
             F: core::future::Future + Send + 'static,
             F::Output: Send + 'static,

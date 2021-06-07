@@ -114,16 +114,18 @@ pub mod executor {
     ///
     /// The current implementation of Executor does not isolate work
     /// (as the underlying executor is not yet capable of this).
-    pub struct SendExecutor {}
+    pub struct SendExecutor {
+        num_threads: usize,
+    }
 
     impl SendExecutor {
         /// Create a new executor running with actual time.
-        pub fn new() -> Result<Self, zx_status::Status> {
-            Ok(Self {})
+        pub fn new(num_threads: usize) -> Result<Self, zx_status::Status> {
+            Ok(Self { num_threads })
         }
 
         /// Run a single future to completion using multiple threads.
-        pub fn run<F>(&mut self, main_future: F, num_threads: usize) -> F::Output
+        pub fn run<F>(&mut self, main_future: F) -> F::Output
         where
             F: Future + Send + 'static,
             F::Output: Send + 'static,
@@ -131,7 +133,7 @@ pub mod executor {
             let (signal, shutdown) = async_channel::unbounded::<()>();
 
             let (_, res) = Parallel::new()
-                .each(0..num_threads, |_| {
+                .each(0..self.num_threads, |_| {
                     LOCAL.with(|local| {
                         let _ = async_io::block_on(local.run(GLOBAL.run(shutdown.recv())));
                     })
