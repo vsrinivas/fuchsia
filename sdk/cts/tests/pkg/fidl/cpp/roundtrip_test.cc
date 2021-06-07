@@ -4,15 +4,14 @@
 
 // Check that we can decode things that we can encode.
 
-#include <lib/fidl/internal.h>
-
 #include <iostream>
 
 #include <fidl/test/misc/cpp/fidl.h>
 #include <zxtest/zxtest.h>
+#include <lib/fidl/internal.h>
 
-#include "cts/tests/pkg/fidl/cpp/test/test_util.h"
 #include "lib/fidl/cpp/clone.h"
+#include "test/test_util.h"
 
 namespace fidl {
 namespace test {
