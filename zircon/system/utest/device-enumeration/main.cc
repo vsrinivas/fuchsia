@@ -208,6 +208,8 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "display/amlogic-display/display-controller",
       "sys/platform/05:06:2b/aml-hdmi",
       "sys/platform/05:06:1d",  // pwm
+      "vreg/pwm-0-regulator",
+      "vreg/pwm-9-regulator",
 
       // Thermal
       "sys/platform/05:06:28",

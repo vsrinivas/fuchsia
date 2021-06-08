@@ -31,6 +31,7 @@ driver_module("vim3") {
     "vim3-i2c.cc",
     "vim3-mali.cc",
     "vim3-nna.cc",
+    "vim3-power.cc",
     "vim3-pwm.cc",
     "vim3-registers.cc",
     "vim3-sd.cc",

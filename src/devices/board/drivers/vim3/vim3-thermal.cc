@@ -7,10 +7,10 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
-
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/metadata/camera.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
@@ -321,29 +321,9 @@ const device_fragment_t fragments[] = {
 }  // namespace
 
 zx_status_t Vim3::ThermalInit() {
-  // Configure the GPIO to be Output & set it to alternate
-  // function 3 which puts in PWM_D mode. A53 cluster (Small)
-  gpio_impl_.SetAltFunction(A311D_GPIOE(1), A311D_GPIOE_1_PWM_D_FN);
-
-  zx_status_t status = gpio_impl_.ConfigOut(A311D_GPIOE(1), 0);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
-    return status;
-  }
-
-  // Configure the GPIO to be Output & set it to alternate
-  // function 3 which puts in PWM_D mode. A73 cluster (Big)
-  gpio_impl_.SetAltFunction(A311D_GPIOE(2), A311D_GPIOE_2_PWM_D_FN);
-
-  status = gpio_impl_.ConfigOut(A311D_GPIOE(2), 0);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ConfigOut failed: %d", __func__, status);
-    return status;
-  }
-
   // The PLL sensor is controlled by a legacy thermal device, which performs DVFS.
-  status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), UINT32_MAX);
+  auto status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

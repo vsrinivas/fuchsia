@@ -34,6 +34,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   SSD1306 = 0x20,
   OT_RADIO = 0x23,
   POWER_DOMAIN_COMPOSITE = 0x27,
+  PWM_VREG = 0x2B,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {

@@ -3,8 +3,12 @@
 # found in the LICENSE file.
 
 source_set("llcpp") {
-  sources = [ "llcpp/registers.h" ]
+  sources = [
+    "llcpp/registers.h",
+    "llcpp/vreg.h",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
+    "//sdk/fidl/fuchsia.hardware.vreg:fuchsia.hardware.vreg_llcpp",
   ]
 }

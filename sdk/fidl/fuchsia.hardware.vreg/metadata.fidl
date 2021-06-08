@@ -1,0 +1,30 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.vreg;
+
+table PwmVregMetadataEntry {
+    /// PWM index corresponding to the voltage regulator. Should correspond to id in pwm_id_t
+    /// defined in //src/lib/ddk/include/ddk/metadata/pwm.h
+    1: uint32 pwm_index;
+
+    /// PWM period in nanoseconds.
+    2: uint32 period_ns;
+
+    /// Minimum voltage of voltage regulator in microvolts.
+    3: uint32 min_voltage_uv;
+
+    /// Size of a voltage step in microvolts.
+    4: uint32 voltage_step_uv;
+
+    /// Number of voltage steps. For example, voltage regulator with voltage range 400 uV- 1000 uV
+    /// inclusive and step size 20 uV. Total number of steps is (1000 uV - 400 uV) / 20 uV + 1 = 31
+    /// steps.
+    5: uint32 num_steps;
+};
+
+table Metadata {
+    /// Vector of PWM Vreg metadata. One for each PWM voltage regulator.
+    1: vector<PwmVregMetadataEntry>:MAX pwm_vreg;
+};

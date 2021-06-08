@@ -135,6 +135,10 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // to drivers.
 #define DEVICE_METADATA_ACPI_HDA_NHLT 0x544C484E  // NHLT
 
+// Encodings of Metadata for fuchsia::hardware::vreg::Metadata
+// list of linearized bytes as in fidl_outgoing_msg_t
+#define DEVICE_METADATA_VREG 0x47455256  // VREG
+
 // Device metadata fetched from ACPI for I2C bus drivers.  This signals a list
 // of acpi_i2c_device_t structures.
 //
