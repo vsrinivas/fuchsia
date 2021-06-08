@@ -95,7 +95,9 @@ async fn sme_scan(
                 }
             };
         }
-        error!("SME closed scan result channel without sending OnFinished");
+        // This case can happen when an interface is removed mid-scan. Any other cases are
+        // unexpected.
+        warn!("SME closed scan result channel without sending OnFinished");
         Err(SmeScanError::Other)
     }
 
