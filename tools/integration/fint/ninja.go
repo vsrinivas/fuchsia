@@ -19,6 +19,7 @@ import (
 	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 var (
@@ -264,13 +265,15 @@ func checkNinjaNoop(
 
 // touchFiles updates the modified time on all the specified files to the
 // current timestamp, skipping any nonexistent files.
-func touchFiles(paths []string) error {
+func touchFiles(ctx context.Context, paths []string) error {
 	now := time.Now()
 	for _, path := range paths {
+		// TODO(fxbug.dev/75371): Delete this log once we're done debugging
+		// discrepancies between fint and affected_tests.py.
+		logger.Debugf(ctx, "Touch: %s", path)
 		err := os.Chtimes(path, now, now)
-		// Skip any paths that don't exist.
-		// TODO(olivernewman): Should we somehow include deleted files in the
-		// build graph analysis for determining affected tests?
+		// Skip any paths that don't exist, e.g. because the file was deleted in
+		// the change under test.
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
@@ -309,10 +312,12 @@ func affectedTestsNoWork(
 		testsByStamp[stamp] = append(testsByStamp[stamp], test.Name)
 	}
 
-	var nonGNFiles []string
+	var gnFiles, nonGNFiles []string
 	for _, path := range affectedFiles {
 		ext := filepath.Ext(path)
-		if ext != ".gn" && ext != ".gni" {
+		if ext == ".gn" || ext == ".gni" {
+			gnFiles = append(gnFiles, path)
+		} else {
 			nonGNFiles = append(nonGNFiles, path)
 		}
 	}
@@ -321,7 +326,7 @@ func affectedTestsNoWork(
 	// triggers an action to regenerate the entire graph. So if GN files were
 	// modified and we touched them then the following dry run results are not
 	// useful for determining affected tests.
-	if err := touchFiles(nonGNFiles); err != nil {
+	if err := touchFiles(ctx, nonGNFiles); err != nil {
 		return nil, false, err
 	}
 	stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
@@ -361,8 +366,10 @@ func affectedTestsNoWork(
 	// *including* GN files. If no GN files are affected, then we already have
 	// the necessary output from the first ninja dry run, so we can skip doing
 	// the second dry run that includes GN files.
-	if len(nonGNFiles) < len(affectedFiles) {
-		if err := touchFiles(affectedFiles); err != nil {
+	if len(gnFiles) > 0 {
+		// Since we only did a Ninja dry run, the non-GN files will still be
+		// considered dirty, so we need only touch the GN files.
+		if err := touchFiles(ctx, gnFiles); err != nil {
 			return nil, false, err
 		}
 		stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
