@@ -236,8 +236,7 @@ mod tests {
     use crate::display::light_sensor::testing;
     use crate::service_context::{ExternalServiceProxy, ServiceContext};
     use fidl_fuchsia_input_report::{InputReport, InputReportsReaderReadInputReportsResponder};
-    use futures::channel::mpsc::UnboundedSender;
-    use std::sync::atomic::{AtomicBool, Ordering};
+    use futures::channel::mpsc::{self, UnboundedSender};
 
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
@@ -310,7 +309,7 @@ mod tests {
         let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
-        let (_cancellation_tx, cancellation_rx) = oneshot::channel();
+        let (cancellation_tx, cancellation_rx) = oneshot::channel();
         let (task, mut receiver) = start_light_sensor_scanner(sensor, 1, cancellation_rx);
 
         let sleep_duration = zx::Duration::from_millis(5);
@@ -331,7 +330,8 @@ mod tests {
             assert_eq!(data.unwrap().illuminance, 32.0);
         }
 
-        task.cancel().await;
+        cancellation_tx.send(()).expect("could not send cancellation message");
+        task.await;
         receiver.close();
 
         // Make sure we don't panic after receiver closes
@@ -346,11 +346,10 @@ mod tests {
         let proxy = ExternalServiceProxy::new(proxy, None);
 
         let receiver: Arc<Mutex<Option<UnboundedReceiver<LightData>>>> = Arc::new(Mutex::new(None));
-        let completed = Arc::new(AtomicBool::new(false));
         let (axes, data_fn) = testing::get_mock_sensor_response();
         let mut counter = 0;
         let receiver_clone = Arc::clone(&receiver);
-        let completed_clone = Arc::clone(&completed);
+        let (completed_tx, mut completed_rx) = mpsc::channel(0);
         let data_fn = move |responder: InputReportsReaderReadInputReportsResponder| {
             let mut data = data_fn();
 
@@ -360,7 +359,7 @@ mod tests {
             let should_close_receiver = counter == 2;
 
             let receiver = Arc::clone(&receiver_clone);
-            let completed = Arc::clone(&completed_clone);
+            let mut completed_tx = completed_tx.clone();
             async move {
                 if should_close_receiver {
                     receiver.lock().await.as_mut().unwrap().close();
@@ -371,7 +370,7 @@ mod tests {
                 responder.send(&mut Ok(data)).unwrap();
 
                 if should_close_receiver {
-                    completed.swap(true, Ordering::Relaxed);
+                    completed_tx.send(()).await.expect("Could not send completion signal");
                 }
             }
         };
@@ -381,14 +380,13 @@ mod tests {
         let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
-        let (_cancellation_tx, cancellation_rx) = oneshot::channel();
+        let (cancellation_tx, cancellation_rx) = oneshot::channel();
         let (task, data_receiver) = start_light_sensor_scanner(sensor, 1, cancellation_rx);
         *receiver.lock().await = Some(data_receiver);
 
-        fasync::Timer::new(zx::Duration::from_millis(5).after_now()).await;
-        // Allow multiple iterations
-        assert!(completed.load(Ordering::Relaxed));
-        task.cancel().await;
+        assert_eq!(completed_rx.next().await, Some(()));
+        cancellation_tx.send(()).expect("could not send cancellation message");
+        task.await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
