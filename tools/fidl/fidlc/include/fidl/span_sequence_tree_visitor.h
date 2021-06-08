@@ -27,22 +27,16 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
     NotYetImplemented();
   };
   void OnBinaryOperatorConstant(
-      std::unique_ptr<raw::BinaryOperatorConstant> const& element) override {
-    NotYetImplemented();
-  };
+      std::unique_ptr<raw::BinaryOperatorConstant> const& element) override;
   void OnComposeProtocol(std::unique_ptr<raw::ComposeProtocol> const& element) override {
     NotYetImplemented();
   };
   void OnCompoundIdentifier(std::unique_ptr<raw::CompoundIdentifier> const& element) override;
-  void OnConstant(std::unique_ptr<raw::Constant> const& element) override { NotYetImplemented(); };
-  void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override {
-    NotYetImplemented();
-  }
+  void OnConstant(std::unique_ptr<raw::Constant> const& element) override;
+  void OnConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const& element) override;
   void OnFile(std::unique_ptr<raw::File> const& element) override;
   void OnIdentifier(std::unique_ptr<raw::Identifier> const& element) override;
-  void OnIdentifierConstant(std::unique_ptr<raw::IdentifierConstant> const& element) override {
-    NotYetImplemented();
-  };
+  void OnIdentifierConstant(std::unique_ptr<raw::IdentifierConstant> const& element) override;
   void OnIdentifierLayoutParameter(
       std::unique_ptr<raw::IdentifierLayoutParameter> const& element) override {
     NotYetImplemented();
@@ -63,10 +57,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   }
   // void OnLayoutReference(std::unique_ptr<raw::LayoutReference> const& element) override;
   void OnLibraryDecl(std::unique_ptr<raw::LibraryDecl> const& element) override;
-  void OnLiteral(std::unique_ptr<raw::Literal> const& element) override { NotYetImplemented(); };
-  void OnLiteralConstant(std::unique_ptr<raw::LiteralConstant> const& element) override {
-    NotYetImplemented();
-  };
+  void OnLiteral(std::unique_ptr<raw::Literal> const& element) override;
+  void OnLiteralConstant(std::unique_ptr<raw::LiteralConstant> const& element) override;
   void OnLiteralLayoutParameter(
       std::unique_ptr<raw::LiteralLayoutParameter> const& element) override {
     NotYetImplemented();
@@ -166,10 +158,17 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
  private:
   enum struct VisitorKind {
     kAliasDeclaration,
+    kBinaryOperatorFirstConstant,
+    kBinaryOperatorSecondConstant,
     kCompoundIdentifier,
+    kConstant,
+    kConstDeclaration,
     kFile,
     kIdentifier,
+    kIdentifierConstant,
     kLibraryDecl,
+    kLiteral,
+    kLiteralConstant,
     kNamedLayoutReference,
     kTypeConstructorNew,
     kUsing,
@@ -206,15 +205,18 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
                   "T of Builder<T> must inherit from SpanSequence");
 
    public:
-    Builder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element, bool new_list);
-    virtual ~Builder();
+    Builder(SpanSequenceTreeVisitor* ftv, const Token& start, const Token& end, bool new_list);
+    Builder(SpanSequenceTreeVisitor* ftv, const Token& start, bool new_list)
+        : Builder(ftv, start, start, new_list){};
+    ~Builder();
 
    protected:
     SpanSequenceTreeVisitor* GetFormattingTreeVisitor() { return ftv_; }
 
    private:
     SpanSequenceTreeVisitor* ftv_;
-    const raw::SourceElement& el_;
+    const Token& start_;
+    const Token& end_;
   };
 
   // Builds a single TokenSpanSequence.  For example, consider the following FIDL:
@@ -227,7 +229,8 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // consists of a single token.
   class TokenBuilder : public Builder<TokenSpanSequence> {
    public:
-    TokenBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element);
+    TokenBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
+                 bool trailing_space);
   };
 
   // Builds a CompositeSpanSequence that is smaller than a standalone statement (see the comment on
@@ -248,8 +251,12 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
                   "T of SpanBuilder<T> must inherit from CompositeSpanSequence");
 
    public:
-    SpanBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element, const Token& start,
-                SpanSequence::Position position = SpanSequence::Position::kDefault);
+    SpanBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
+                SpanSequence::Position position = SpanSequence::Position::kDefault)
+        : Builder<T>(ftv, element.start_, element.end_, true), position_(position) {}
+    SpanBuilder(SpanSequenceTreeVisitor* ftv, const Token& start,
+                SpanSequence::Position position = SpanSequence::Position::kDefault)
+        : Builder<T>(ftv, start, start, true), position_(position) {}
     ~SpanBuilder();
 
    protected:
@@ -283,7 +290,11 @@ class SpanSequenceTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   class StatementBuilder : public Builder<T> {
    public:
     StatementBuilder(SpanSequenceTreeVisitor* ftv, const raw::SourceElement& element,
-                     SpanSequence::Position position = SpanSequence::Position::kDefault);
+                     SpanSequence::Position position = SpanSequence::Position::kDefault)
+        : Builder<T>(ftv, element.start_, element.end_, true), position_(position) {}
+    StatementBuilder(SpanSequenceTreeVisitor* ftv, const Token& start,
+                     SpanSequence::Position position = SpanSequence::Position::kDefault)
+        : Builder<T>(ftv, start, start, true), position_(position) {}
     ~StatementBuilder();
 
    protected:

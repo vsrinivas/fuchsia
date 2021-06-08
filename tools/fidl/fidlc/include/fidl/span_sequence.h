@@ -81,16 +81,8 @@ class SpanSequence {
   Position GetPosition() const { return position_; }
   bool HasTrailingSpace() const { return has_trailing_space_; }
   bool IsClosed() const { return closed_; }
-
- protected:
-  void SetRequiredSize(size_t required_size) {
-    assert(!IsClosed() && "must not be closed");
-    required_size_ = required_size;
-  }
-  void SetTrailingSpace(bool has_trailing_space) {
-    assert(!IsClosed() && "must not be closed");
-    has_trailing_space_ = has_trailing_space;
-  }
+  void SetRequiredSize(size_t required_size) { required_size_ = required_size; }
+  void SetTrailingSpace(bool has_trailing_space) { has_trailing_space_ = has_trailing_space; }
 
  private:
   const enum Kind kind_;
@@ -136,12 +128,10 @@ class SpanSequence {
 // source code in the SpanSequence tree.
 class TokenSpanSequence final : public SpanSequence {
  public:
-  explicit TokenSpanSequence(const std::string_view span, bool allow_trailing_space,
-                             size_t leading_blank_lines = 0)
+  explicit TokenSpanSequence(const std::string_view span, size_t leading_blank_lines = 0)
       : SpanSequence(SpanSequence::Kind::kToken, SpanSequence::Position::kDefault,
                      leading_blank_lines),
-        span_(span),
-        allow_trailing_space_(allow_trailing_space) {}
+        span_(span) {}
 
   void Close() override;
   bool HasComments() const override { return false; }
@@ -155,7 +145,6 @@ class TokenSpanSequence final : public SpanSequence {
 
  private:
   const std::string_view span_;
-  const bool allow_trailing_space_;
 };
 
 // A CompositeSpanSequence is a base class for all branch nodes in the SpanSequence tree

@@ -16,7 +16,7 @@ const size_t kWrappedIndentation = kIndentation * 2;
 // Before printing some text after a newline, we want to make sure to indent to the proper position.
 // No indentation is performed if we are not on a newline, or are on the first line of the output.
 void MaybeIndentLine(size_t indentation, std::string* out) {
-  if (out->empty() || out->at(out->size() - 1) == '\n')
+  if (out->empty() || out->back() == '\n')
     *out += std::string(indentation, ' ');
 }
 
@@ -51,13 +51,6 @@ void SpanSequence::Close() { closed_ = true; }
 void TokenSpanSequence::Close() {
   if (!IsClosed()) {
     SetRequiredSize(span_.size());
-    // TODO(fxbug.dev/73507): add more variants to the regex as we run across them when adding
-    //  support for more raw AST node types.
-    static std::regex needs_trailing_space_regex("[a-z_]+|=|:");
-
-    if (allow_trailing_space_ && std::regex_match(std::string(span_), needs_trailing_space_regex)) {
-      SetTrailingSpace(true);
-    }
     SpanSequence::Close();
   }
 }
@@ -99,8 +92,7 @@ size_t CompositeSpanSequence::CalculateRequiredSize() const {
       }
       default: {
         required_size += child->GetRequiredSize();
-        if (i < last.value_or(0) &&
-            (child->HasTrailingSpace() || GetKind() == SpanSequence::Kind::kDivisible)) {
+        if (i < last.value_or(0) && child->HasTrailingSpace()) {
           required_size += 1;
         }
         break;
@@ -123,8 +115,10 @@ void CompositeSpanSequence::Close() {
     SetRequiredSize(CalculateRequiredSize());
 
     auto last_non_comment_index = LastNonCommentChildIndex(children_);
-    if (last_non_comment_index.has_value()) {
-      SetTrailingSpace(children_[last_non_comment_index.value()]->HasTrailingSpace());
+    if (last_non_comment_index.has_value() && last_non_comment_index == children_.size() - 1 &&
+        children_[last_non_comment_index.value()]->HasTrailingSpace()) {
+      SetTrailingSpace(true);
+      children_[last_non_comment_index.value()]->SetTrailingSpace(false);
     }
     SpanSequence::Close();
   }
@@ -200,7 +194,7 @@ std::optional<SpanSequence::Kind> AtomicSpanSequence::Print(
         // A standalone comment forces a newline, but its possible that the preceding token already
         // printed its trailing space.  We don't want to leave that trailing space hanging before a
         // newline, so delete the space.
-        if (!out->empty() && out->at(out->size() - 1) == ' ')
+        if (!out->empty() && out->back() == ' ')
           out->pop_back();
 
         // A standalone comment always forces the rest of the AtomicSpanSequence content to be
@@ -300,9 +294,12 @@ std::optional<SpanSequence::Kind> DivisibleSpanSequence::Print(
       }
     }
 
-    // Always put spaces between the unwrapped elements of the DivisibleSpanSequence if they are
-    // tokens.
-    if (last_printed_kind == SpanSequence::Kind::kToken && i < last.value_or(0)) {
+    // If the last printed SpanSequence was a token, and that token has declared itself to have a
+    // trailing space, we print that space.  However, if this is the last non-whitespace token in
+    // the current AtomicSpanSequence, this decision is delegated to its parent, so avoid printing
+    // for now.
+    if (child->HasTrailingSpace() && last_printed_kind == SpanSequence::Kind::kToken &&
+        i < last.value_or(0)) {
       *out += " ";
     }
   }

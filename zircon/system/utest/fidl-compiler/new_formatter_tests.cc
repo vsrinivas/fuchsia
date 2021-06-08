@@ -80,6 +80,193 @@ alias MyAlias_Abcdefghijklmnopqr = bool;
   ASSERT_STR_EQ(formatted, Format(unformatted));
 }
 
+// Ensure that already properly formatted const declarations are not modified by another run
+// through the formatter.
+TEST(NewFormatterTests, ConstFormatted) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+const MY_FALSE_ABCDEFGHIJK bool = false;
+const MY_UINT64_AB uint64 = 12345678900;
+const MY_FLOAT64_ABCDEF float64 = 12.34;
+const MY_STRING_ABCDEFGH string = "foo";
+const MY_OR_A uint64 = 1 | MY_UINT64_AB;
+const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
+const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+const MY_FALSE_ABCDEFGHIJK bool = false;
+const MY_UINT64_AB uint64 = 12345678900;
+const MY_FLOAT64_ABCDEF float64 = 12.34;
+const MY_STRING_ABCDEFGH string = "foo";
+const MY_OR_A uint64 = 1 | MY_UINT64_AB;
+const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
+const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// The const declaration has two levels of subspanning: the first is split at the equal sign, while
+// the second is split at the type declaration.  This test cases tests for "partial" overflows where
+// the first level of subspanning is invoked: the whole line is too long, but the `const NAME TYPE`
+// portion still fits on the first line.
+TEST(NewFormatterTests, ConstPartialOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+const MY_TRUE_ABCDEFGHIJKLMN bool = true;
+const MY_FALSE_ABCDEFGHIJKL bool = false;
+const MY_UINT64_ABC uint64 = 12345678900;
+const MY_FLOAT64_ABCDEFG float64 = 12.34;
+const MY_STRING_ABCDEFGHI string = "foo";
+const MY_REF_ABCD uint64 = MY_UINT64_ABC;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+const MY_TRUE_ABCDEFGHIJKLMN bool
+        = true;
+const MY_FALSE_ABCDEFGHIJKL bool
+        = false;
+const MY_UINT64_ABC uint64
+        = 12345678900;
+const MY_FLOAT64_ABCDEFG float64
+        = 12.34;
+const MY_STRING_ABCDEFGHI string
+        = "foo";
+const MY_REF_ABCD uint64
+        = MY_UINT64_ABC;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Tests cases where even the nested subspan to the left of the equal sign is longer than the
+// overflow window.  Note that this test case looks a bit unusual because the name is very long, but
+// the type is very short.  In reality, both would probably have to be quite long to cause this kind
+// of overflow, so the output will look less "lopsided."
+TEST(NewFormatterTests, ConstTotalOverflow) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+const MY_WAY_TOO_LONG_TRUE_ABCDEFGHIJKLMN bool = true;
+const MY_WAY_TOO_LONG_FALSE_ABCDEFGHIJKLM bool = false;
+const MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL uint64 = 12345678900;
+const MY_WAY_TOO_LONG_FLOAT64_ABCDEFGHIJK float64 = 12.34;
+const MY_WAY_TOO_LONG_STRING_ABCDEFGHIJKL string = "foo";
+const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO uint64 = MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+const MY_WAY_TOO_LONG_TRUE_ABCDEFGHIJKLMN
+        bool
+        = true;
+const MY_WAY_TOO_LONG_FALSE_ABCDEFGHIJKLM
+        bool
+        = false;
+const MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL
+        uint64
+        = 12345678900;
+const MY_WAY_TOO_LONG_FLOAT64_ABCDEFGHIJK
+        float64
+        = 12.34;
+const MY_WAY_TOO_LONG_STRING_ABCDEFGHIJKL
+        string
+        = "foo";
+const MY_WAY_TOO_LONG_REF_ABCDEFGHIJKLMNO
+        uint64
+        = MY_WAY_TOO_LONG_UINT64_ABCDEFGHIJKL;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
+// Test const declarations where every token is placed on a newline.
+TEST(NewFormatterTests, ConstMaximalNewlines) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+const
+MY_TRUE_ABCDEFGHIJKLM
+bool
+=
+true
+;
+const
+MY_FALSE_ABCDEFGHIJK
+bool
+=
+false
+;
+const
+MY_UINT64_AB
+uint64
+=
+12345678900
+;
+const
+MY_FLOAT64_ABCDEF
+float64
+=
+12.34
+;
+const
+MY_STRING_ABCDEFGH
+string
+=
+"foo"
+;
+const
+MY_OR_A
+uint64
+=
+1
+|
+MY_UINT64_AB
+;
+const
+MY_ORS_ABCDEFG
+uint64
+=
+1
+|
+2
+|
+3
+;
+const
+MY_REF_ABCD
+uint64
+=
+MY_UINT64_AB
+;
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+const MY_TRUE_ABCDEFGHIJKLM bool = true;
+const MY_FALSE_ABCDEFGHIJK bool = false;
+const MY_UINT64_AB uint64 = 12345678900;
+const MY_FLOAT64_ABCDEF float64 = 12.34;
+const MY_STRING_ABCDEFGH string = "foo";
+const MY_OR_A uint64 = 1 | MY_UINT64_AB;
+const MY_ORS_ABCDEFG uint64 = 1 | 2 | 3;
+const MY_REF_ABCD uint64 = MY_UINT64_AB;
+)FIDL";
+
+  ASSERT_STR_EQ(formatted, Format(unformatted));
+}
+
 // Ensure that an already properly formatted library declaration is not modified by another run
 // through the formatter.
 TEST(NewFormatterTests, LibraryFormatted) {
