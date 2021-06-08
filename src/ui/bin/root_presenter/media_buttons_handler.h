@@ -18,7 +18,11 @@ namespace root_presenter {
 // registration.
 class MediaButtonsHandler {
  public:
+  // * `RegisterListener` adds listeners to `old_media_buttons_listeners_`
+  // * `RegisterListener2` adds listeners to `media_buttons_listeners_`
+  // TODO: Clean up old listener implementation after transition
   void RegisterListener(fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener);
+  void RegisterListener2(fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener);
   bool OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
   bool OnDeviceRemoved(uint32_t device_id);
   bool OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
@@ -31,6 +35,10 @@ class MediaButtonsHandler {
 
   // A registry of listeners for media button events.
   std::vector<fuchsia::ui::policy::MediaButtonsListenerPtr> media_buttons_listeners_;
+  // This registry of listeners is necessary to keep track of which listeners are using the old API
+  // so that the media handler can call the correct method on them. This can be removed as part of
+  // fxb/68960
+  std::vector<fuchsia::ui::policy::MediaButtonsListenerPtr> old_media_buttons_listeners_;
 
   std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
       device_states_by_id_;

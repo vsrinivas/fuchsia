@@ -102,6 +102,13 @@ void App::RegisterMediaButtonsListener(
   media_buttons_handler_.RegisterListener(std::move(listener));
 }
 
+void App::RegisterListener(
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener,
+    RegisterListenerCallback callback) {
+  media_buttons_handler_.RegisterListener2(std::move(listener));
+  callback();
+}
+
 void App::RegisterDevice(
     fuchsia::ui::input::DeviceDescriptor descriptor,
     fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {

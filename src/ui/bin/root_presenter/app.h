@@ -69,6 +69,10 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
 
+  // |DeviceListenerRegistry|
+  void RegisterListener(fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener,
+                        RegisterListenerCallback callback) override;
+
   // |InputDeviceRegistry|
   void RegisterDevice(
       fuchsia::ui::input::DeviceDescriptor descriptor,

@@ -116,14 +116,50 @@ fuchsia::ui::input::MediaButtonsEvent CreateMediaButtonsEvent(
 
 void MediaButtonsHandler::OnEvent(fuchsia::ui::input::InputReport report) {
   FX_CHECK(report.media_buttons);
-  for (auto& listener : media_buttons_listeners_) {
+  for (auto& listener : old_media_buttons_listeners_) {
     fuchsia::ui::input::MediaButtonsEvent event = CreateMediaButtonsEvent(report);
     ChattyEventLog(event, listener);
     listener->OnMediaButtonsEvent(std::move(event));
   }
+
+  for (auto& listener : media_buttons_listeners_) {
+    fuchsia::ui::input::MediaButtonsEvent event = CreateMediaButtonsEvent(report);
+    fit::function<void()> on_event_callback = [] {};
+    ChattyEventLog(event, listener);
+    listener->OnEvent(std::move(event), std::move(on_event_callback));
+  }
 }
 
 void MediaButtonsHandler::RegisterListener(
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle) {
+  MediaButtonsListenerPtr listener;
+
+  listener.Bind(std::move(listener_handle));
+
+  // Auto-remove listeners if the interface closes.
+  listener.set_error_handler([this, listener = listener.get()](zx_status_t status) {
+    old_media_buttons_listeners_.erase(
+        std::remove_if(old_media_buttons_listeners_.begin(), old_media_buttons_listeners_.end(),
+                       [listener](const MediaButtonsListenerPtr& item) -> bool {
+                         return item.get() == listener;
+                       }),
+        old_media_buttons_listeners_.end());
+  });
+
+  // Send the last seen report to the listener so they have the information
+  // about the media button's state.
+  for (auto it = device_states_by_id_.begin(); it != device_states_by_id_.end(); it++) {
+    const ui_input::InputDeviceImpl* device_impl = it->second.first;
+    const fuchsia::ui::input::InputReport* report = device_impl->LastReport();
+    if (report) {
+      listener->OnMediaButtonsEvent(CreateMediaButtonsEvent(*report));
+    }
+  }
+
+  old_media_buttons_listeners_.push_back(std::move(listener));
+}
+
+void MediaButtonsHandler::RegisterListener2(
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle) {
   MediaButtonsListenerPtr listener;
 
