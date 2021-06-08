@@ -62,7 +62,7 @@ pub async fn get_daemon_proxy_single_link(
             Err(ffx_error!("Daemon link lost while attempting to connect: {:?}\nRun `ffx doctor` for further diagnostics.", r))
         }
         _ = timeout => {
-            Err(ffx_error!("Timed out waiting for Daemon connection.\nRun `ffx doctor` for futher diagnostics."))
+            Err(ffx_error!("Timed out waiting for the ffx daemon on the Overnet mesh.\nRun `ffx doctor --restart-daemon` for futher diagnostics."))
         }
         proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon: {}.\nRun `ffx doctor` for fruther diagnostics.", e)),
     };

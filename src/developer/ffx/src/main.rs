@@ -4,10 +4,10 @@
 
 use {
     analytics::{add_crash_event, get_notice},
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context as _, Result},
     async_once::Once,
     async_trait::async_trait,
-    errors::{ffx_bail, ffx_error, ResultExt as _},
+    errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
     ffx_core::metrics::{add_fx_launch_event, init_metrics_svc},
     ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
@@ -32,72 +32,7 @@ use {
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
 
-// TODO(72818): improve error text for these cases
-const TARGET_AMBIGUOUS_MSG: &str = "\
-We found multiple target devices matching your request.
-
-If a target matcher was given with --target, or a default target match is
-set, we may have found multiple targets that match. If no target matcher was
-specified, we may simply have found more than one potential target.
-
-Use `ffx target list` to list the currently visible targets.
-
-Use `ffx --target <matcher>` to specify a matcher for the execution of a
-single command, or `ffx target default set <matcher>` to set the default
-matcher.";
-
-const NO_TARGETS_CONNECTED: &str = "\
-No devices found.
-
-Use `ffx target list` to view connected targets or run `ffx doctor` for further
-diagnostics.";
-
-// TODO(72818): improve error text for these cases
-const TARGET_NOT_FOUND_MSG_1: &str = "\
-We weren't able to find a target matching";
-
-const TARGET_NOT_FOUND_MSG_2: &str = "\n\n\
-Use `ffx target list` to verify the state of connected devices, or use `ffx
---target <matcher>` to specify a different target for your request. To set
-the default target to be used in requests without an explicit matcher, use
-`ffx target default set <matcher>`.";
-
-// TODO(72818): improve error text for these cases
-const TARGET_FAILURE_MSG: &str = "\n\
-We weren't able to open a connection to a target device.
-
-Use `ffx target list` to verify the state of connected devices. This error
-probably means that either:
-
-1) There are no available targets. Make sure your device is connected.
-2) There are multiple available targets and you haven't specified a target or
-provided a default.
-Tip: You can use `ffx --target \"my-nodename\" <command>` to specify a target
-for a particular command, or use `ffx target default set \"my-nodename\"` if
-you always want to use a particular target.";
-
 const CURRENT_EXE_HASH: &str = "current.hash";
-
-// TODO(72818): improve error text for these cases
-const NON_FASTBOOT_MSG: &str = "\
-This command needs to be run against a target in the Fastboot state.
-Try rebooting the device into Fastboot with the command `ffx target
-reboot --bootloader` and try re-running this command.";
-
-// TODO(72818): improve error text for these cases
-const TARGET_IN_FASTBOOT: &str = "\
-This command cannot be run against a target in the Fastboot state. Try
-rebooting the device or flashing the device into a running state.";
-
-const TARGET_IN_ZEDBOOT: &str = "\
-This command cannot be run against a target in the Zedboot state. Try
-rebooting the device.";
-
-const DAEMON_CONNECTION_ISSUE: &str = "\
-Timed out waiting on the Daemon.\nRun `ffx doctor` for further diagnostics";
-
-const DOCTOR_HELP_MSG: &str = "\
-\nRun `ffx doctor` for further diagnostics";
 
 struct Injection {
     daemon_once: Once<DaemonProxy>,
@@ -116,24 +51,15 @@ impl Injection {
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
         let app: Ffx = argh::from_env();
         let target = app.target().await?;
-        let result = timeout(
-            proxy_timeout().await?,
-            daemon_proxy.get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end),
-        )
-        .await
-        .context("timeout connecting to RCS via daemon")
-        .map_err(|_| ffx_error!("{}", DAEMON_CONNECTION_ISSUE))?
-        .context(ffx_error!("Failed to connect to target via daemon. {}", DOCTOR_HELP_MSG))?;
+        let result = daemon_proxy
+            .get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end)
+            .on_timeout(proxy_timeout().await?, || Ok(Err(DaemonError::Timeout)))
+            .await?;
 
-        match result {
-            Ok(_) => Ok(remote_proxy),
-            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
-            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
-            Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
-            Err(DaemonError::TargetInZedboot) => Err(ffx_error!(TARGET_IN_ZEDBOOT).into()),
-            Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
-        }
+        result
+            .map_err(|err| FfxError::DaemonError { err, target })
+            .map(|_| remote_proxy)
+            .context("init_remote_proxy")
     }
 }
 
@@ -150,22 +76,16 @@ impl Injector for Injection {
         let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
         let app: Ffx = argh::from_env();
         let target = app.target().await?;
-        let result = timeout(
-            proxy_timeout().await?,
-            daemon_proxy.get_fastboot(target.as_ref().map(|s| s.as_str()), fastboot_server_end),
-        )
-        .await
-        .context("Timed out connecting to fastboot")?
-        .context("connecting to Fastboot")?;
 
-        match result {
-            Ok(_) => Ok(fastboot_proxy),
-            Err(DaemonError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
-            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
-            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
-            Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
-        }
+        let result = daemon_proxy
+            .get_fastboot(target.as_ref().map(|s| s.as_str()), fastboot_server_end)
+            .on_timeout(proxy_timeout().await?, || Ok(Err(DaemonError::Timeout)))
+            .await?;
+
+        result
+            .map_err(|err| FfxError::DaemonError { err, target })
+            .map(|_| fastboot_proxy)
+            .context("fastboot_factory")
     }
 
     async fn target_factory(&self) -> Result<TargetControlProxy> {
@@ -173,24 +93,15 @@ impl Injector for Injection {
         let (target_proxy, target_server_end) = create_proxy::<TargetControlMarker>()?;
         let app: Ffx = argh::from_env();
         let target = app.target().await?;
-        let result = timeout(
-            proxy_timeout().await?,
-            daemon_proxy.get_target(target.as_ref().map(|s| s.as_str()), target_server_end),
-        )
-        .await
-        .context(ffx_error!(
-            "Timed out getting a TargetControl from the daemon. {}",
-            DOCTOR_HELP_MSG
-        ))?
-        .context(ffx_error!("Timed out connecting to TargetControl. {}", DOCTOR_HELP_MSG))?;
+        let result = daemon_proxy
+            .get_target(target.as_ref().map(|s| s.as_str()), target_server_end)
+            .on_timeout(proxy_timeout().await?, || Ok(Err(DaemonError::Timeout)))
+            .await?;
 
-        match result {
-            Ok(_) => Ok(target_proxy),
-            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
-            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
-            Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
-        }
+        result
+            .map_err(|err| FfxError::DaemonError { err, target })
+            .map(|_| target_proxy)
+            .context("target_factory")
     }
 
     async fn remote_factory(&self) -> Result<RemoteControlProxy> {
@@ -199,20 +110,6 @@ impl Injector for Injection {
 
     async fn is_experiment(&self, key: &str) -> bool {
         ffx_config::get(key).await.unwrap_or(false)
-    }
-}
-
-fn target_not_found(target: Option<String>) -> anyhow::Error {
-    match target {
-        None => ffx_error!(NO_TARGETS_CONNECTED).into(),
-        Some(t) => {
-            if t.is_empty() {
-                ffx_error!(NO_TARGETS_CONNECTED).into()
-            } else {
-                ffx_error!("{} \"{}\". {}", TARGET_NOT_FOUND_MSG_1, t, TARGET_NOT_FOUND_MSG_2)
-                    .into()
-            }
-        }
     }
 }
 
@@ -244,7 +141,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
     let daemon_hash = timeout(proxy_timeout().await?, proxy.get_hash())
         .await
         .context("timeout")
-        .map_err(|_| ffx_error!("{}", DAEMON_CONNECTION_ISSUE))?
+        .map_err(|_| ffx_error!("ffx was unable to query the version of the running ffx daemon. Run `ffx doctor --restart-daemon` and try again."))?
         .context("Getting hash from daemon")?;
     if hash == daemon_hash {
         link_task.detach();
