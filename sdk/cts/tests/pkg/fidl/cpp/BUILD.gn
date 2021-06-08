@@ -29,9 +29,9 @@ cts_source_set("host_test_sources") {
   suite_name = "fidl"
 
   sources = [
-    "//sdk/lib/fidl/cpp/internal/bitset_unittest.cc",
     "array_unittest.cc",
     "bits_unittest.cc",
+    "bitset_unittest.cc",
     "clone_unittest.cc",
     "comparison_unittest.cc",
     "defaults_unittest.cc",
