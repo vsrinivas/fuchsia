@@ -31,10 +31,10 @@ protocol Loader {
 
     /// Connects to a FS serving fuchsia.io containing all Vulkan ICD manifests.
     /// See
-    /// https://github.com/KhronosGroup/Vulkan-Loader/blob/master/loader/LoaderAndLayerInterface.md#icd-manifest-file-format
+    /// <https://github.com/KhronosGroup/Vulkan-Loader/blob/master/loader/LoaderAndLayerInterface.md#icd-manifest-file-format>
     /// for a description of the manifest file format.  Manifests will always
     /// appear in this directory after the relevant device appears in
-    /// ConnectToDeviceFs().
+    /// `ConnectToDeviceFs()`.
     ConnectToManifestFs(ConnectToManifestOptions options, zx.handle:CHANNEL channel);
 
     /// Connects to a FS serving fuchsia.io containing all device nodes
