@@ -184,32 +184,32 @@ space required to reserve inodes and data may exceed sum of the space
 needed for inodes and data.
 maximum_bytes puts an upper bound on the total bytes reserved for inodes,
 data bytes and reservation for all other internal fs metadata.
-An empty string does not put any upper bound. A filesystem may
+A value of false does not put any upper bound. A filesystem may
 reserve few blocks required for its operations.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:84
+From //build/images/fvm.gni:101
 
 ### blobfs_board_minimum_data_bytes
 Number of bytes to reserve for data in the fs. This is in addition
 to what is reserved, if any, for the inodes. Data bytes constitutes
 "usable" space of the fs.
-An empty string does not reserve any additional space than minimum
+A value of false does not reserve any additional space than minimum
 required for the filesystem.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:71
+From //build/images/fvm.gni:88
 
 ### blobfs_board_minimum_inodes
 minimum_inodes is the number of inodes to reserve for the fs
-An empty string does not reserve any additional space than minimum
+A value of false does not reserve any additional space than minimum
 required for the filesystem.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:61
+From //build/images/fvm.gni:78
 
 ### blobfs_enable_streaming_writes
 Set this to true when configuring gn args to enable blobfs streaming writes.
@@ -243,21 +243,21 @@ From //src/storage/blobfs/BUILD.gn:13
 
 ### blobfs_product_maximum_bytes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:85
+From //build/images/fvm.gni:102
 
 ### blobfs_product_minimum_data_bytes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:72
+From //build/images/fvm.gni:89
 
 ### blobfs_product_minimum_inodes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:62
+From //build/images/fvm.gni:79
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -1278,21 +1278,21 @@ The size in bytes of the FVM partition on the target eMMC devices.
 Specifying this parameter will lead build to generate a fvm.fastboot.blk
 suitable for flashing through fastboot for eMMC devices.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:17
+From //build/images/fvm.gni:34
 
 ### fvm_ftl_nand_block_count
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:99
+From //build/images/fvm.gni:116
 
 ### fvm_ftl_nand_oob_size
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:97
+From //build/images/fvm.gni:114
 
 ### fvm_ftl_nand_page_size
 Specifying these variables will generate a NAND FVM image suitable for
@@ -1301,25 +1301,25 @@ in order to properly initialize the FTL metadata in the OOB area.
 `max_fvm_size` should also be nonzero or else minfs will not have any
 room to initialize on boot.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:96
+From //build/images/fvm.gni:113
 
 ### fvm_ftl_nand_pages_per_block
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:98
+From //build/images/fvm.gni:115
 
 ### fvm_image_size
 The size in bytes of the FVM partition image to create. Normally this is
 computed to be just large enough to fit the blob and data images. The
-default value is "", which means to size based on inputs. Specifying a size
+default value is false, which means to size based on inputs. Specifying a size
 that is too small will result in build failure.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:12
+From //build/images/fvm.gni:29
 
 ### fvm_max_disk_size
 The max size of the disk where the FVM is written. This is used for
@@ -1331,12 +1331,12 @@ time, the FVM will be sized to the target's disk size up to
 the FVM will resize up to `fvm_max_disk_size`. During paving, if the target
 FVM has declared a smaller size than `fvm_max_disk_size`, the FVM is
 reinitialized to the larger size.
-The default value is "" which sets the max disk size to the size of the disk
+The default value is false which sets the max disk size to the size of the disk
 at pave/format time.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:30
+From //build/images/fvm.gni:47
 
 ### fvm_partition
 
@@ -1351,9 +1351,9 @@ If set to the empty string, then no reservation partition will be added.
 Set to 1 by default so that we exercise this feature on all product
 configurations.
 
-**Current value (from the default):** `"1"`
+**Current value (from the default):** `1`
 
-From //build/images/fvm.gni:44
+From //build/images/fvm.gni:61
 
 ### fvm_slice_size
 The size of the FVM partition images "slice size". The FVM slice size is a
@@ -1362,9 +1362,9 @@ FVM. A very small slice size may lead to decreased throughput. A very large
 slice size may lead to wasted space. The selected default size of 8mb is
 selected for conservation of space, rather than performance.
 
-**Current value (from the default):** `"8388608"`
+**Current value (from the default):** `8388608`
 
-From //build/images/fvm.gni:37
+From //build/images/fvm.gni:54
 
 ### gcc_tool_dir
 Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are found.
@@ -2103,21 +2103,21 @@ From //build/images/args.gni:69
 
 ### minfs_board_maximum_bytes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:86
+From //build/images/fvm.gni:103
 
 ### minfs_board_minimum_data_bytes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:73
+From //build/images/fvm.gni:90
 
 ### minfs_board_minimum_inodes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:63
+From //build/images/fvm.gni:80
 
 ### minfs_enable_dirty_cache
 Set this to true when configuring gn args to enable minfs dirty cache.
@@ -2144,21 +2144,21 @@ From //src/storage/fshost/BUILD.gn:23
 
 ### minfs_product_maximum_bytes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:87
+From //build/images/fvm.gni:104
 
 ### minfs_product_minimum_data_bytes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:74
+From //build/images/fvm.gni:91
 
 ### minfs_product_minimum_inodes
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `false`
 
-From //build/images/fvm.gni:64
+From //build/images/fvm.gni:81
 
 ### mini_chromium_is_chromeos_ash
 
